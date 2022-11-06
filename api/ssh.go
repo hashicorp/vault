@@ -26,12 +26,12 @@ func (c *Client) SSHWithMountPoint(mountPoint string) *SSH {
 }
 
 // Credential wraps CredentialWithContext using context.Background.
-func (c *SSH) Credential(role string, data map[string]interface{}) (*Secret, error) {
+func (c *SSH) Credential(role string, data map[string]any) (*Secret, error) {
 	return c.CredentialWithContext(context.Background(), role, data)
 }
 
 // CredentialWithContext invokes the SSH backend API to create a credential to establish an SSH session.
-func (c *SSH) CredentialWithContext(ctx context.Context, role string, data map[string]interface{}) (*Secret, error) {
+func (c *SSH) CredentialWithContext(ctx context.Context, role string, data map[string]any) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
@@ -50,13 +50,13 @@ func (c *SSH) CredentialWithContext(ctx context.Context, role string, data map[s
 }
 
 // SignKey wraps SignKeyWithContext using context.Background.
-func (c *SSH) SignKey(role string, data map[string]interface{}) (*Secret, error) {
+func (c *SSH) SignKey(role string, data map[string]any) (*Secret, error) {
 	return c.SignKeyWithContext(context.Background(), role, data)
 }
 
 // SignKeyWithContext signs the given public key and returns a signed public key to pass
 // along with the SSH request.
-func (c *SSH) SignKeyWithContext(ctx context.Context, role string, data map[string]interface{}) (*Secret, error) {
+func (c *SSH) SignKeyWithContext(ctx context.Context, role string, data map[string]any) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 

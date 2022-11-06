@@ -12,7 +12,7 @@ import (
 )
 
 func TestJSONUtil_CompressDecompressJSON(t *testing.T) {
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"test":       "data",
 		"validation": "process",
 	}
@@ -33,7 +33,7 @@ func TestJSONUtil_CompressDecompressJSON(t *testing.T) {
 
 	// Decompress and decode the compressed information and verify the functional
 	// behavior
-	var actual map[string]interface{}
+	var actual map[string]any
 	if err = DecodeJSON(compressedBytes, &actual); err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestJSONUtil_CompressDecompressJSON(t *testing.T) {
 }
 
 func TestJSONUtil_EncodeJSON(t *testing.T) {
-	input := map[string]interface{}{
+	input := map[string]any{
 		"test":       "data",
 		"validation": "process",
 	}
@@ -105,14 +105,14 @@ func TestJSONUtil_EncodeJSON(t *testing.T) {
 func TestJSONUtil_DecodeJSON(t *testing.T) {
 	input := `{"test":"data","validation":"process"}`
 
-	var actual map[string]interface{}
+	var actual map[string]any
 
 	err := DecodeJSON([]byte(input), &actual)
 	if err != nil {
 		fmt.Printf("decoding err: %v\n", err)
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"test":       "data",
 		"validation": "process",
 	}
@@ -124,14 +124,14 @@ func TestJSONUtil_DecodeJSON(t *testing.T) {
 func TestJSONUtil_DecodeJSONFromReader(t *testing.T) {
 	input := `{"test":"data","validation":"process"}`
 
-	var actual map[string]interface{}
+	var actual map[string]any
 
 	err := DecodeJSONFromReader(bytes.NewReader([]byte(input)), &actual)
 	if err != nil {
 		fmt.Printf("decoding err: %v\n", err)
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"test":       "data",
 		"validation": "process",
 	}

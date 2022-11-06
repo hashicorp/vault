@@ -193,7 +193,7 @@ func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (
 	switch {
 	case len(c.flagVersions) > 0:
 		path = addPrefixToKVPath(path, mountPath, "delete")
-		data := map[string]interface{}{
+		data := map[string]any{
 			"versions": kvParseVersionsFlags(c.flagVersions),
 		}
 		secret, err = client.Logical().Write(path, data)

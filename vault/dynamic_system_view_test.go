@@ -72,7 +72,7 @@ func TestIdentity_BackendTemplating(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	accessor := resp.Data["ldap/"].(map[string]interface{})["accessor"].(string)
+	accessor := resp.Data["ldap/"].(map[string]any)["accessor"].(string)
 
 	// Create an entity
 	req = logical.TestRequest(t, logical.UpdateOperation, "identity/entity")

@@ -70,7 +70,7 @@ func (b *backend) pathLookupWrite(ctx context.Context, req *logical.Request, d *
 	// Ideally, the role names should be filtered and only the roles which
 	// the client is authorized to see, should be returned.
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"roles": matchingRoles,
 		},
 	}, nil

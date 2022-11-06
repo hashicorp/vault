@@ -85,7 +85,7 @@ func TestBackend_KeyName(t *testing.T) {
 			Path:      "keys/" + tc.KeyName,
 			Operation: logical.UpdateOperation,
 			Storage:   config.StorageView,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"generate":     true,
 				"account_name": "vault",
 				"issuer":       "hashicorp",
@@ -124,12 +124,12 @@ func TestBackend_readCredentialsDefaultValues(t *testing.T) {
 	// Generate a new shared key
 	key, _ := createKey()
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"key":      key,
 		"generate": false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "",
 		"account_name": "",
 		"digits":       otplib.DigitsSix,
@@ -159,7 +159,7 @@ func TestBackend_readCredentialsEightDigitsThirtySecondPeriod(t *testing.T) {
 	// Generate a new shared key
 	key, _ := createKey()
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"key":          key,
@@ -167,7 +167,7 @@ func TestBackend_readCredentialsEightDigitsThirtySecondPeriod(t *testing.T) {
 		"generate":     false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"digits":       otplib.DigitsEight,
@@ -197,7 +197,7 @@ func TestBackend_readCredentialsSixDigitsNinetySecondPeriod(t *testing.T) {
 	// Generate a new shared key
 	key, _ := createKey()
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"key":          key,
@@ -205,7 +205,7 @@ func TestBackend_readCredentialsSixDigitsNinetySecondPeriod(t *testing.T) {
 		"generate":     false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"digits":       otplib.DigitsSix,
@@ -235,7 +235,7 @@ func TestBackend_readCredentialsSHA256(t *testing.T) {
 	// Generate a new shared key
 	key, _ := createKey()
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"key":          key,
@@ -243,7 +243,7 @@ func TestBackend_readCredentialsSHA256(t *testing.T) {
 		"generate":     false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"digits":       otplib.DigitsSix,
@@ -273,7 +273,7 @@ func TestBackend_readCredentialsSHA512(t *testing.T) {
 	// Generate a new shared key
 	key, _ := createKey()
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"key":          key,
@@ -281,7 +281,7 @@ func TestBackend_readCredentialsSHA512(t *testing.T) {
 		"generate":     false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"digits":       otplib.DigitsSix,
@@ -310,14 +310,14 @@ func TestBackend_keyCrudDefaultValues(t *testing.T) {
 
 	key, _ := createKey()
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"key":          key,
 		"generate":     false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"digits":       otplib.DigitsSix,
@@ -352,7 +352,7 @@ func TestBackend_createKeyMissingKeyValue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"generate":     false,
@@ -375,7 +375,7 @@ func TestBackend_createKeyInvalidKeyValue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"key":          "1",
@@ -402,7 +402,7 @@ func TestBackend_createKeyInvalidAlgorithm(t *testing.T) {
 	// Generate a new shared key
 	key, _ := createKey()
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"key":          key,
@@ -430,7 +430,7 @@ func TestBackend_createKeyInvalidPeriod(t *testing.T) {
 	// Generate a new shared key
 	key, _ := createKey()
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"key":          key,
@@ -458,7 +458,7 @@ func TestBackend_createKeyInvalidDigits(t *testing.T) {
 	// Generate a new shared key
 	key, _ := createKey()
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"key":          key,
@@ -483,7 +483,7 @@ func TestBackend_generatedKeyDefaultValues(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"generate":     true,
@@ -492,7 +492,7 @@ func TestBackend_generatedKeyDefaultValues(t *testing.T) {
 		"qr_size":      200,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"digits":       otplib.DigitsSix,
@@ -517,7 +517,7 @@ func TestBackend_generatedKeyDefaultValuesNoQR(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"generate":     true,
@@ -542,7 +542,7 @@ func TestBackend_generatedKeyNonDefaultKeySize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"generate":     true,
@@ -551,7 +551,7 @@ func TestBackend_generatedKeyNonDefaultKeySize(t *testing.T) {
 		"qr_size":      200,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"digits":       otplib.DigitsSix,
@@ -578,7 +578,7 @@ func TestBackend_urlPassedNonGeneratedKeyInvalidPeriod(t *testing.T) {
 
 	urlString := "otpauth://totp/Vault:test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=AZ"
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"url":      urlString,
 		"generate": false,
 	}
@@ -602,7 +602,7 @@ func TestBackend_urlPassedNonGeneratedKeyInvalidDigits(t *testing.T) {
 
 	urlString := "otpauth://totp/Vault:test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=Q&period=60"
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"url":      urlString,
 		"generate": false,
 	}
@@ -626,12 +626,12 @@ func TestBackend_urlPassedNonGeneratedKeyIssuerInFirstPosition(t *testing.T) {
 
 	urlString := "otpauth://totp/Vault:test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60"
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"url":      urlString,
 		"generate": false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "test@email.com",
 		"digits":       otplib.DigitsSix,
@@ -660,12 +660,12 @@ func TestBackend_urlPassedNonGeneratedKeyIssuerInQueryString(t *testing.T) {
 
 	urlString := "otpauth://totp/test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60&issuer=Vault"
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"url":      urlString,
 		"generate": false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "test@email.com",
 		"digits":       otplib.DigitsSix,
@@ -694,12 +694,12 @@ func TestBackend_urlPassedNonGeneratedKeyMissingIssuer(t *testing.T) {
 
 	urlString := "otpauth://totp/test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60"
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"url":      urlString,
 		"generate": false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "",
 		"account_name": "test@email.com",
 		"digits":       otplib.DigitsSix,
@@ -728,12 +728,12 @@ func TestBackend_urlPassedNonGeneratedKeyMissingAccountName(t *testing.T) {
 
 	urlString := "otpauth://totp/Vault:?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60"
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"url":      urlString,
 		"generate": false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "",
 		"digits":       otplib.DigitsSix,
@@ -762,12 +762,12 @@ func TestBackend_urlPassedNonGeneratedKeyMissingAccountNameandIssuer(t *testing.
 
 	urlString := "otpauth://totp/?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60"
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"url":      urlString,
 		"generate": false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "",
 		"account_name": "",
 		"digits":       otplib.DigitsSix,
@@ -796,12 +796,12 @@ func TestBackend_urlPassedNonGeneratedKeyMissingAccountNameandIssuerandPadding(t
 
 	urlString := "otpauth://totp/?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZAU&algorithm=SHA512&digits=6&period=60"
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"url":      urlString,
 		"generate": false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "",
 		"account_name": "",
 		"digits":       otplib.DigitsSix,
@@ -828,7 +828,7 @@ func TestBackend_generatedKeyInvalidSkew(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"skew":         "2",
@@ -852,7 +852,7 @@ func TestBackend_generatedKeyInvalidQRSize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"qr_size":      "-100",
@@ -876,7 +876,7 @@ func TestBackend_generatedKeyInvalidKeySize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "Test",
 		"key_size":     "-100",
@@ -900,7 +900,7 @@ func TestBackend_generatedKeyMissingAccountName(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":   "Vault",
 		"generate": true,
 	}
@@ -922,7 +922,7 @@ func TestBackend_generatedKeyMissingIssuer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"account_name": "test@email.com",
 		"generate":     true,
 	}
@@ -944,7 +944,7 @@ func TestBackend_invalidURLValue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"url":      "notaurl",
 		"generate": false,
 	}
@@ -966,7 +966,7 @@ func TestBackend_urlAndGenerateTrue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"url":      "otpauth://totp/Vault:test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60",
 		"generate": true,
 	}
@@ -988,7 +988,7 @@ func TestBackend_keyAndGenerateTrue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"key":      "HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ",
 		"generate": true,
 	}
@@ -1010,14 +1010,14 @@ func TestBackend_generatedKeyExportedFalse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyData := map[string]interface{}{
+	keyData := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "test@email.com",
 		"generate":     true,
 		"exported":     false,
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"issuer":       "Vault",
 		"account_name": "test@email.com",
 		"digits":       otplib.DigitsSix,
@@ -1034,7 +1034,7 @@ func TestBackend_generatedKeyExportedFalse(t *testing.T) {
 	})
 }
 
-func testAccStepCreateKey(t *testing.T, name string, keyData map[string]interface{}, expectFail bool) logicaltest.TestStep {
+func testAccStepCreateKey(t *testing.T, name string, keyData map[string]any, expectFail bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      path.Join("keys", name),
@@ -1113,7 +1113,7 @@ func testAccStepDeleteKey(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, name string, validation map[string]interface{}) logicaltest.TestStep {
+func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, name string, validation map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      path.Join("code", name),
@@ -1149,7 +1149,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 	}
 }
 
-func testAccStepReadKey(t *testing.T, name string, expected map[string]interface{}) logicaltest.TestStep {
+func testAccStepReadKey(t *testing.T, name string, expected map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "keys/" + name,
@@ -1206,7 +1206,7 @@ func testAccStepValidateCode(t *testing.T, name string, code string, valid, expe
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "code/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"code": code,
 		},
 		ErrorOk: expectError,

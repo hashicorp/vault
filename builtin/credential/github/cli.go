@@ -52,7 +52,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 
 	path := fmt.Sprintf("auth/%s/login", mount)
-	secret, err := c.Logical().Write(path, map[string]interface{}{
+	secret, err := c.Logical().Write(path, map[string]any{
 		"token": strings.TrimSpace(token),
 	})
 	if err != nil {

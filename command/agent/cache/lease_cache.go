@@ -738,7 +738,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 	switch {
 	case path == vaultPathTokenRevoke:
 		// Get the token from the request body
-		jsonBody := map[string]interface{}{}
+		jsonBody := map[string]any{}
 		if err := json.Unmarshal(req.RequestBody, &jsonBody); err != nil {
 			return false, err
 		}
@@ -773,7 +773,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		}
 
 	case path == vaultPathTokenRevokeAccessor:
-		jsonBody := map[string]interface{}{}
+		jsonBody := map[string]any{}
 		if err := json.Unmarshal(req.RequestBody, &jsonBody); err != nil {
 			return false, err
 		}
@@ -795,7 +795,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		}
 
 	case path == vaultPathTokenRevokeOrphan:
-		jsonBody := map[string]interface{}{}
+		jsonBody := map[string]any{}
 		if err := json.Unmarshal(req.RequestBody, &jsonBody); err != nil {
 			return false, err
 		}
@@ -850,7 +850,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 	case path == vaultPathLeaseRevoke:
 		// TODO: Should lease present in the URL itself be considered here?
 		// Get the lease from the request body
-		jsonBody := map[string]interface{}{}
+		jsonBody := map[string]any{}
 		if err := json.Unmarshal(req.RequestBody, &jsonBody); err != nil {
 			return false, err
 		}

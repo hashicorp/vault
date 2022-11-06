@@ -112,7 +112,7 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 
 	// Generate the response
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"type":     role.TokenType,
 			"global":   role.Global,
 			"policies": role.Policies,

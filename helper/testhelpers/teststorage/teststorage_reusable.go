@@ -42,7 +42,7 @@ func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.Physica
 		IsRaft: false,
 
 		Setup: func(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
-			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]any) *vault.PhysicalBackendBundle {
 				if coreIdx == 0 {
 					// We intentionally do not clone the backend's Cleanup func,
 					// because we don't want it to be run until the entire test has
@@ -83,7 +83,7 @@ func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int, add
 		Setup: func(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 			conf.DisablePerformanceStandby = true
 			opts.KeepStandbysSealed = true
-			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]any) *vault.PhysicalBackendBundle {
 				return makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx], addressProvider, false)
 			}
 		},
@@ -122,7 +122,7 @@ func MakeReusableRaftHAStorage(t testing.T, logger hclog.Logger, numCores int, b
 	storage := ReusableStorage{
 		Setup: func(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 			opts.KeepStandbysSealed = true
-			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]any) *vault.PhysicalBackendBundle {
 				haBundle := makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx], nil, true)
 
 				return &vault.PhysicalBackendBundle{

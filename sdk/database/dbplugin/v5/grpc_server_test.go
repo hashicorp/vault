@@ -47,7 +47,7 @@ func TestGRPCServer_Initialize(t *testing.T) {
 		"newConfig can't marshal to JSON": {
 			db: fakeDatabase{
 				initResp: InitializeResponse{
-					Config: map[string]interface{}{
+					Config: map[string]any{
 						"bad-data": badJSONValue{},
 					},
 				},
@@ -61,18 +61,18 @@ func TestGRPCServer_Initialize(t *testing.T) {
 		"happy path with config data for multiplexed plugin": {
 			db: fakeDatabase{
 				initResp: InitializeResponse{
-					Config: map[string]interface{}{
+					Config: map[string]any{
 						"foo": "bar",
 					},
 				},
 			},
 			req: &proto.InitializeRequest{
-				ConfigData: marshal(t, map[string]interface{}{
+				ConfigData: marshal(t, map[string]any{
 					"foo": "bar",
 				}),
 			},
 			expectedResp: &proto.InitializeResponse{
-				ConfigData: marshal(t, map[string]interface{}{
+				ConfigData: marshal(t, map[string]any{
 					"foo": "bar",
 				}),
 			},
@@ -83,18 +83,18 @@ func TestGRPCServer_Initialize(t *testing.T) {
 		"happy path with config data for non-multiplexed plugin": {
 			db: fakeDatabase{
 				initResp: InitializeResponse{
-					Config: map[string]interface{}{
+					Config: map[string]any{
 						"foo": "bar",
 					},
 				},
 			},
 			req: &proto.InitializeRequest{
-				ConfigData: marshal(t, map[string]interface{}{
+				ConfigData: marshal(t, map[string]any{
 					"foo": "bar",
 				}),
 			},
 			expectedResp: &proto.InitializeResponse{
-				ConfigData: marshal(t, map[string]interface{}{
+				ConfigData: marshal(t, map[string]any{
 					"foo": "bar",
 				}),
 			},
@@ -130,40 +130,40 @@ func TestGRPCServer_Initialize(t *testing.T) {
 
 func TestCoerceFloatsToInt(t *testing.T) {
 	type testCase struct {
-		input    map[string]interface{}
-		expected map[string]interface{}
+		input    map[string]any
+		expected map[string]any
 	}
 
 	tests := map[string]testCase{
 		"no numbers": {
-			input: map[string]interface{}{
+			input: map[string]any{
 				"foo": "bar",
 			},
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"foo": "bar",
 			},
 		},
 		"raw integers": {
-			input: map[string]interface{}{
+			input: map[string]any{
 				"foo": 42,
 			},
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"foo": 42,
 			},
 		},
 		"floats ": {
-			input: map[string]interface{}{
+			input: map[string]any{
 				"foo": 42.2,
 			},
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"foo": 42.2,
 			},
 		},
 		"floats coerced to ints": {
-			input: map[string]interface{}{
+			input: map[string]any{
 				"foo": float64(42),
 			},
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"foo": int64(42),
 			},
 		},
@@ -180,8 +180,8 @@ func TestCoerceFloatsToInt(t *testing.T) {
 	}
 }
 
-func copyMap(m map[string]interface{}) map[string]interface{} {
-	newMap := map[string]interface{}{}
+func copyMap(m map[string]any) map[string]any {
+	newMap := map[string]any{}
 	for k, v := range m {
 		newMap[k] = v
 	}
@@ -636,7 +636,7 @@ func TestGRPCServer_Version(t *testing.T) {
 func testGrpcServer(t *testing.T, db Database) (context.Context, gRPCServer) {
 	t.Helper()
 	g := gRPCServer{
-		factoryFunc: func() (interface{}, error) {
+		factoryFunc: func() (any, error) {
 			return db, nil
 		},
 		instances: make(map[string]Database),
@@ -671,7 +671,7 @@ func idCtx(t *testing.T, ids ...string) context.Context {
 	return metadata.NewIncomingContext(ctx, md)
 }
 
-func marshal(t *testing.T, m map[string]interface{}) *structpb.Struct {
+func marshal(t *testing.T, m map[string]any) *structpb.Struct {
 	t.Helper()
 
 	strct, err := mapToStruct(m)

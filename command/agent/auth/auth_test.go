@@ -32,14 +32,14 @@ func newUserpassTestMethod(t *testing.T, client *api.Client) AuthMethod {
 	return &userpassTestMethod{}
 }
 
-func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
-	_, err := client.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
+func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]any, error) {
+	_, err := client.Logical().Write("auth/userpass/users/foo", map[string]any{
 		"password": "bar",
 	})
 	if err != nil {
 		return "", nil, nil, err
 	}
-	return "auth/userpass/login/foo", nil, map[string]interface{}{
+	return "auth/userpass/login/foo", nil, map[string]any{
 		"password": "bar",
 	}, nil
 }

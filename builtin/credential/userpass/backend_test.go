@@ -51,7 +51,7 @@ func TestBackend_CRUD(t *testing.T) {
 		Path:      "users/testuser",
 		Operation: logical.CreateOperation,
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"password":          "testpassword",
 			"token_ttl":         5,
 			"token_max_ttl":     10,
@@ -92,7 +92,7 @@ func TestBackend_CRUD(t *testing.T) {
 		Path:      "users/testuser",
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"ttl":         "5m",
 			"max_ttl":     "10m",
 			"policies":    []string{"bar"},
@@ -251,7 +251,7 @@ func testUpdatePassword(t *testing.T, user, password string) logicaltest.TestSte
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "users/" + user + "/password",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"password": password,
 		},
 	}
@@ -261,7 +261,7 @@ func testUpdatePolicies(t *testing.T, user, policies string) logicaltest.TestSte
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "users/" + user + "/policies",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"policies": policies,
 		},
 	}
@@ -289,7 +289,7 @@ func testAccStepLogin(t *testing.T, user string, pass string, policies []string)
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login/" + user,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"password": pass,
 		},
 		Unauthenticated: true,
@@ -305,7 +305,7 @@ func testUserCreateOperation(
 	return logicaltest.TestStep{
 		Operation: logical.CreateOperation,
 		Path:      "users/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"password": password,
 			"policies": policies,
 		},
@@ -318,7 +318,7 @@ func testAccStepUser(
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "users/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"password": password,
 			"policies": policies,
 		},

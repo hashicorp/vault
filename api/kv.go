@@ -18,9 +18,9 @@ var ErrSecretNotFound = errors.New("secret not found")
 // The Raw field can be inspected for information about the lease,
 // and passed to a LifetimeWatcher object for periodic renewal.
 type KVSecret struct {
-	Data            map[string]interface{}
+	Data            map[string]any
 	VersionMetadata *KVVersionMetadata
-	CustomMetadata  map[string]interface{}
+	CustomMetadata  map[string]any
 	Raw             *Secret
 }
 

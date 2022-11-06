@@ -25,7 +25,7 @@ type Looker interface {
 // logical.SystemView implementations satisfy this interface.
 type RunnerUtil interface {
 	NewPluginClient(ctx context.Context, config PluginClientConfig) (PluginClient, error)
-	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
+	ResponseWrapData(ctx context.Context, data map[string]any, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
 }
 
@@ -46,15 +46,15 @@ const MultiplexingCtxKey string = "multiplex_id"
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
 type PluginRunner struct {
-	Name           string                      `json:"name" structs:"name"`
-	Type           consts.PluginType           `json:"type" structs:"type"`
-	Version        string                      `json:"version" structs:"version"`
-	Command        string                      `json:"command" structs:"command"`
-	Args           []string                    `json:"args" structs:"args"`
-	Env            []string                    `json:"env" structs:"env"`
-	Sha256         []byte                      `json:"sha256" structs:"sha256"`
-	Builtin        bool                        `json:"builtin" structs:"builtin"`
-	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
+	Name           string              `json:"name" structs:"name"`
+	Type           consts.PluginType   `json:"type" structs:"type"`
+	Version        string              `json:"version" structs:"version"`
+	Command        string              `json:"command" structs:"command"`
+	Args           []string            `json:"args" structs:"args"`
+	Env            []string            `json:"env" structs:"env"`
+	Sha256         []byte              `json:"sha256" structs:"sha256"`
+	Builtin        bool                `json:"builtin" structs:"builtin"`
+	BuiltinFactory func() (any, error) `json:"-" structs:"-"`
 }
 
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and

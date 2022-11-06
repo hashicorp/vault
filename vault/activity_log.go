@@ -1513,7 +1513,7 @@ func (a *ActivityLog) DefaultStartTime(endTime time.Time) time.Time {
 	return monthStart.AddDate(0, -a.defaultReportMonths+1, 0)
 }
 
-func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.Time, limitNamespaces int) (map[string]interface{}, error) {
+func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.Time, limitNamespaces int) (map[string]any, error) {
 	var computePartial bool
 
 	// Change the start time to the beginning of the month, and the end time to be the end
@@ -1617,7 +1617,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	}
 
 	// Now populate the response based on breakdowns.
-	responseData := make(map[string]interface{})
+	responseData := make(map[string]any)
 	responseData["start_time"] = pq.StartTime.Format(time.RFC3339)
 	responseData["end_time"] = pq.EndTime.Format(time.RFC3339)
 	responseData["by_namespace"] = byNamespaceResponse
@@ -2484,7 +2484,7 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 
 // partialMonthClientCount returns the number of clients used so far this month.
 // If activity log is not enabled, the response will be nil
-func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]interface{}, error) {
+func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]any, error) {
 	a.fragmentLock.RLock()
 	defer a.fragmentLock.RUnlock()
 
@@ -2513,7 +2513,7 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 	a.sortALResponseNamespaces(byNamespaceResponse)
 
 	// Now populate the response based on breakdowns.
-	responseData := make(map[string]interface{})
+	responseData := make(map[string]any)
 	responseData["by_namespace"] = byNamespaceResponse
 	responseData["distinct_entities"] = totalEntities
 	responseData["entity_clients"] = totalEntities

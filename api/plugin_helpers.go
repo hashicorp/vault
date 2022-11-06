@@ -137,7 +137,7 @@ func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig)
 			return nil, errwrap.Wrapf("error parsing wrapping token: {{err}}", err)
 		}
 
-		allClaims := make(map[string]interface{})
+		allClaims := make(map[string]any)
 		if err = parsedJWT.UnsafeClaimsWithoutVerification(&allClaims); err != nil {
 			return nil, errwrap.Wrapf("error parsing claims from wrapping token: {{err}}", err)
 		}

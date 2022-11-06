@@ -101,7 +101,7 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"hosts":            config.Hosts,
 			"username":         config.Username,
 			"tls":              config.TLS,

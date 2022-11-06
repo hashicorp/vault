@@ -53,7 +53,7 @@ var (
 	ReportedVersion = ""
 )
 
-func New() (interface{}, error) {
+func New() (any, error) {
 	db := new()
 	// Wrap the plugin with middleware to sanitize errors
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)

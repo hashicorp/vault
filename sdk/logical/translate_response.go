@@ -87,15 +87,15 @@ func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 }
 
 type HTTPResponse struct {
-	RequestID     string                 `json:"request_id"`
-	LeaseID       string                 `json:"lease_id"`
-	Renewable     bool                   `json:"renewable"`
-	LeaseDuration int                    `json:"lease_duration"`
-	Data          map[string]interface{} `json:"data"`
-	WrapInfo      *HTTPWrapInfo          `json:"wrap_info"`
-	Warnings      []string               `json:"warnings"`
-	Headers       map[string][]string    `json:"-"`
-	Auth          *HTTPAuth              `json:"auth"`
+	RequestID     string              `json:"request_id"`
+	LeaseID       string              `json:"lease_id"`
+	Renewable     bool                `json:"renewable"`
+	LeaseDuration int                 `json:"lease_duration"`
+	Data          map[string]any      `json:"data"`
+	WrapInfo      *HTTPWrapInfo       `json:"wrap_info"`
+	Warnings      []string            `json:"warnings"`
+	Headers       map[string][]string `json:"-"`
+	Auth          *HTTPAuth           `json:"auth"`
 }
 
 type HTTPAuth struct {

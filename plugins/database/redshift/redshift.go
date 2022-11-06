@@ -39,7 +39,7 @@ var _ dbplugin.Database = (*RedShift)(nil)
 // New implements builtinplugins.BuiltinFactory
 // Redshift implements (mostly) a postgres 8 interface, and part of that is
 // under the hood, it's lower-casing the usernames.
-func New() (interface{}, error) {
+func New() (any, error) {
 	db := newRedshift()
 	// Wrap the plugin with middleware to sanitize errors
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)

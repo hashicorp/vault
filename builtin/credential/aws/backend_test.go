@@ -43,7 +43,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// create a role entry
-	data := map[string]interface{}{
+	data := map[string]any{
 		"auth_type":    "ec2",
 		"policies":     "p,q,r,s",
 		"bound_ami_id": "abcd-123",
@@ -274,7 +274,7 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 			Path:      path,
 			Storage:   storage,
 		}
-		data := map[string]interface{}{
+		data := map[string]any{
 			"safety_buffer":         "60",
 			"disable_periodic_tidy": true,
 		}
@@ -331,7 +331,7 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 			Path:      path,
 			Storage:   storage,
 		}
-		data := map[string]interface{}{
+		data := map[string]any{
 			"safety_buffer":         "60",
 			"disable_periodic_tidy": true,
 		}
@@ -481,7 +481,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"access_key": "AKIAJBRHKV6EVTTNXDHA",
 		"secret_key": "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",
 	}
@@ -498,7 +498,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 		Data:      data,
 	}
 
-	data3 := map[string]interface{}{
+	data3 := map[string]any{
 		"access_key": "",
 		"secret_key": "mCtSM8ZUEQ3mOFVZYPBQkf2sO6F/W7a5TVzrl3Oj",
 	}
@@ -509,7 +509,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 		ErrorOk:   true,
 	}
 
-	data4 := map[string]interface{}{
+	data4 := map[string]any{
 		"access_key": "accesskey",
 		"secret_key": "",
 	}
@@ -575,7 +575,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 		t.Fatal("existence check should have returned 'true' for 'config/client'")
 	}
 
-	endpointData := map[string]interface{}{
+	endpointData := map[string]any{
 		"secret_key": "secretkey",
 		"access_key": "accesskey",
 		"endpoint":   "endpointvalue",
@@ -638,7 +638,7 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 		t.Fatal("existence check should have returned 'false' for 'config/certificate/cert1'")
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"type": "pkcs7",
 		"aws_public_cert": `LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM3VENDQXEwQ0NRQ1d1a2paNVY0YVp6QUpC
 Z2NxaGtqT09BUURNRnd4Q3pBSkJnTlZCQVlUQWxWVE1Sa3cKRndZRFZRUUlFeEJYWVhOb2FXNW5k
@@ -779,7 +779,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	}
 
 	// create a role
-	data := map[string]interface{}{
+	data := map[string]any{
 		"auth_type":    "ec2",
 		"policies":     "p,q,r,s",
 		"max_ttl":      "120s",
@@ -813,7 +813,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	}
 
 	// create a role tag
-	data2 := map[string]interface{}{
+	data2 := map[string]any{
 		"policies": "p,q,r,s",
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -860,7 +860,7 @@ func TestBackend_PathRoleTag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"auth_type":    "ec2",
 		"policies":     "p,q,r,s",
 		"max_ttl":      "120s",
@@ -928,7 +928,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		}
 
 		// create an role entry
-		data := map[string]interface{}{
+		data := map[string]any{
 			"auth_type":    "ec2",
 			"policies":     "p,q,r,s",
 			"role_tag":     "VaultRole",
@@ -948,7 +948,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		}
 
 		// create a role tag against an role registered before
-		data2 := map[string]interface{}{
+		data2 := map[string]any{
 			"policies": "p,q,r,s",
 		}
 		resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -1117,7 +1117,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing
 		// instance with permissions to get the credentials using EC2RoleProvider.
 		if accessKey != "" && secretKey != "" {
 			// get the API credentials from env vars
-			clientConfig := map[string]interface{}{
+			clientConfig := map[string]any{
 				"access_key": accessKey,
 				"secret_key": secretKey,
 			}
@@ -1139,7 +1139,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing
 		}
 
 		// Configure additional metadata to be returned for ec2 logins.
-		identity := map[string]interface{}{
+		identity := map[string]any{
 			"ec2_metadata": []string{"instance_id", "region", "ami_id"},
 		}
 
@@ -1154,7 +1154,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing
 			t.Fatal(err)
 		}
 
-		loginInput := map[string]interface{}{
+		loginInput := map[string]any{
 			"pkcs7": pkcs7,
 			"nonce": "vault-client-nonce",
 		}
@@ -1174,7 +1174,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing
 		}
 
 		// Baseline role data that should succeed permit login
-		data := map[string]interface{}{
+		data := map[string]any{
 			"auth_type":             "ec2",
 			"policies":              "root",
 			"max_ttl":               "120s",
@@ -1400,7 +1400,7 @@ func TestBackend_pathStsConfig(t *testing.T) {
 		t.Fatal("existence check should have returned 'false' for 'config/sts/account1'")
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"sts_role": "arn:aws:iam:account1:role/myRole",
 	}
 
@@ -1487,7 +1487,7 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	}
 }
 
-func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[string]interface{}, error) {
+func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[string]any, error) {
 	headersJson, err := json.Marshal(request.Header)
 	if err != nil {
 		return nil, err
@@ -1496,7 +1496,7 @@ func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[s
 	if err != nil {
 		return nil, err
 	}
-	return map[string]interface{}{
+	return map[string]any{
 		"iam_http_request_method": request.Method,
 		"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(request.URL.String())),
 		"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJson),
@@ -1590,7 +1590,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// 7. Pass in a request that has a validly signed request, asking for
 	//    the other role, ensure it fails
 
-	clientConfigData := map[string]interface{}{
+	clientConfigData := map[string]any{
 		"iam_server_id_header_value": testVaultHeaderValue,
 	}
 	clientRequest := &logical.Request{
@@ -1604,7 +1604,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configIdentityData := map[string]interface{}{
+	configIdentityData := map[string]any{
 		"iam_alias": identityAliasIAMFullArn,
 	}
 	configIdentityRequest := &logical.Request{
@@ -1622,7 +1622,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 
 	// configuring the valid role we'll be able to login to
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"bound_iam_principal_arn": []string{entity.canonicalArn(), "arn:aws:iam::123456789012:role/FakeRoleArn1*"}, // Fake ARN MUST be wildcard terminated because we're resolving unique IDs, and the wildcard termination prevents unique ID resolution
 		"policies":                "root",
 		"auth_type":               iamAuthType,
@@ -1639,7 +1639,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 
 	// configuring a valid role we won't be able to login to
-	roleDataEc2 := map[string]interface{}{
+	roleDataEc2 := map[string]any{
 		"auth_type":    "ec2",
 		"policies":     "root",
 		"bound_ami_id": "ami-1234567",
@@ -1763,7 +1763,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// at the unique ID that has been generated
 	renewReq.Auth.Metadata["canonical_arn"] = "fake_arn"
 	emptyLoginFd := &framework.FieldData{
-		Raw:    map[string]interface{}{},
+		Raw:    map[string]any{},
 		Schema: b.pathLogin().Fields,
 	}
 	// ensure we can renew

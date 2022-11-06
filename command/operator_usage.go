@@ -172,7 +172,7 @@ func (c *OperatorUsageCommand) noReportAvailable(client *api.Client) bool {
 	return !qa
 }
 
-func (c *OperatorUsageCommand) outputTimestamps(data map[string]interface{}) {
+func (c *OperatorUsageCommand) outputTimestamps(data map[string]any) {
 	c.UI.Output(fmt.Sprintf("Period start: %v\nPeriod end: %v\n",
 		data["start_time"].(string),
 		data["end_time"].(string)))
@@ -198,7 +198,7 @@ type UsageResponse struct {
 	clientCount int64
 }
 
-func jsonNumberOK(m map[string]interface{}, key string) (int64, bool) {
+func jsonNumberOK(m map[string]any, key string) (int64, bool) {
 	val, ok := m[key].(json.Number)
 	if !ok {
 		return 0, false
@@ -211,10 +211,10 @@ func jsonNumberOK(m map[string]interface{}, key string) (int64, bool) {
 }
 
 // TODO: provide a function in the API module for doing this conversion?
-func (c *OperatorUsageCommand) parseNamespaceCount(rawVal interface{}) (UsageResponse, error) {
+func (c *OperatorUsageCommand) parseNamespaceCount(rawVal any) (UsageResponse, error) {
 	var ret UsageResponse
 
-	val, ok := rawVal.(map[string]interface{})
+	val, ok := rawVal.(map[string]any)
 	if !ok {
 		return ret, errors.New("value is not a map")
 	}
@@ -224,7 +224,7 @@ func (c *OperatorUsageCommand) parseNamespaceCount(rawVal interface{}) (UsageRes
 		return ret, errors.New("bad namespace path")
 	}
 
-	counts, ok := val["counts"].(map[string]interface{})
+	counts, ok := val["counts"].(map[string]any)
 	if !ok {
 		return ret, errors.New("missing counts")
 	}
@@ -247,8 +247,8 @@ func (c *OperatorUsageCommand) parseNamespaceCount(rawVal interface{}) (UsageRes
 	return ret, nil
 }
 
-func (c *OperatorUsageCommand) namespacesOutput(data map[string]interface{}) []string {
-	byNs, ok := data["by_namespace"].([]interface{})
+func (c *OperatorUsageCommand) namespacesOutput(data map[string]any) []string {
+	byNs, ok := data["by_namespace"].([]any)
 	if !ok {
 		c.UI.Error("missing namespace breakdown in response")
 		return nil
@@ -291,11 +291,11 @@ func (c *OperatorUsageCommand) namespacesOutput(data map[string]interface{}) []s
 	return out
 }
 
-func (c *OperatorUsageCommand) totalOutput(data map[string]interface{}) []string {
+func (c *OperatorUsageCommand) totalOutput(data map[string]any) []string {
 	// blank line separating it from namespaces
 	out := []string{"  |  |  |  "}
 
-	total, ok := data["total"].(map[string]interface{})
+	total, ok := data["total"].(map[string]any)
 	if !ok {
 		c.UI.Error("missing total in response")
 		return out

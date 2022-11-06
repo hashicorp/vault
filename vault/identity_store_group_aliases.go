@@ -257,7 +257,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"id":           groupAlias.ID,
 			"canonical_id": newGroup.ID,
 		},

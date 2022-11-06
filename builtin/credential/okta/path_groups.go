@@ -128,7 +128,7 @@ func (b *backend) pathGroupRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"policies": group.Policies,
 		},
 	}, nil

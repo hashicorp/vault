@@ -34,7 +34,7 @@ type PolicyParser struct {
 
 // ParsePolicy parses the provided HCL into a StringGenerator.
 func (p PolicyParser) ParsePolicy(raw string) (sg StringGenerator, err error) {
-	rawData := map[string]interface{}{}
+	rawData := map[string]any{}
 	err = hcl.Decode(&rawData, raw)
 	if err != nil {
 		return sg, fmt.Errorf("unable to decode: %w", err)
@@ -79,7 +79,7 @@ func (p PolicyParser) ParsePolicy(raw string) (sg StringGenerator, err error) {
 	return gen, nil
 }
 
-func parseRules(registry Registry, rawRules []map[string]interface{}) (rules []Rule, err error) {
+func parseRules(registry Registry, rawRules []map[string]any) (rules []Rule, err error) {
 	for _, rawRule := range rawRules {
 		info, err := getRuleInfo(rawRule)
 		if err != nil {
@@ -99,13 +99,13 @@ func parseRules(registry Registry, rawRules []map[string]interface{}) (rules []R
 // getMapSlice from the provided map. This will retrieve and type-assert a []map[string]interface{} from the map
 // This will not error if the key does not exist
 // This will return an error if the value at the provided key is not of type []map[string]interface{}
-func getMapSlice(m map[string]interface{}, key string) (mapSlice []map[string]interface{}, err error) {
+func getMapSlice(m map[string]any, key string) (mapSlice []map[string]any, err error) {
 	rawSlice, exists := m[key]
 	if !exists {
 		return nil, nil
 	}
 
-	mapSlice = []map[string]interface{}{}
+	mapSlice = []map[string]any{}
 	err = mapstructure.Decode(rawSlice, &mapSlice)
 	if err != nil {
 		return nil, err
@@ -115,11 +115,11 @@ func getMapSlice(m map[string]interface{}, key string) (mapSlice []map[string]in
 
 type ruleInfo struct {
 	ruleType string
-	data     map[string]interface{}
+	data     map[string]any
 }
 
 // getRuleInfo splits the provided HCL-decoded rule into its rule type along with the data associated with it
-func getRuleInfo(rule map[string]interface{}) (data ruleInfo, err error) {
+func getRuleInfo(rule map[string]any) (data ruleInfo, err error) {
 	// There should only be one key, but it's a dynamic key yay!
 	for key := range rule {
 		slice, err := getMapSlice(rule, key)
@@ -141,7 +141,7 @@ func getRuleInfo(rule map[string]interface{}) (data ruleInfo, err error) {
 }
 
 // stringToRunesFunc converts a string to a []rune for use in the mapstructure library
-func stringToRunesFunc(from reflect.Kind, to reflect.Kind, data interface{}) (interface{}, error) {
+func stringToRunesFunc(from reflect.Kind, to reflect.Kind, data any) (any, error) {
 	if from != reflect.String || to != reflect.Slice {
 		return data, nil
 	}

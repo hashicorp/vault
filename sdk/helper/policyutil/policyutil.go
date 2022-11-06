@@ -18,7 +18,7 @@ const (
 // all other policies will be ignored, the result will contain
 // just the 'root'. In cases where 'root' is not present, if
 // 'default' policy is not already present, it will be added.
-func ParsePolicies(policiesRaw interface{}) []string {
+func ParsePolicies(policiesRaw any) []string {
 	if policiesRaw == nil {
 		return []string{"default"}
 	}

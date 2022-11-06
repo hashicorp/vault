@@ -570,7 +570,7 @@ func TestExpiration_Tidy(t *testing.T) {
 					TTL: 100 * time.Millisecond,
 				},
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"test_key": "test_value",
 			},
 		}
@@ -728,7 +728,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 					TTL: 400 * time.Second,
 				},
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"access_key": "xyz",
 				"secret_key": "abcd",
 			},
@@ -788,7 +788,7 @@ func BenchmarkExpiration_Create_Leases(b *testing.B) {
 				TTL: 400 * time.Second,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "xyz",
 			"secret_key": "abcd",
 		},
@@ -837,7 +837,7 @@ func TestExpiration_Restore(t *testing.T) {
 					TTL: time.Second,
 				},
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"access_key": "xyz",
 				"secret_key": "abcd",
 			},
@@ -908,7 +908,7 @@ func TestExpiration_Register(t *testing.T) {
 				TTL: time.Hour,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "xyz",
 			"secret_key": "abcd",
 		},
@@ -943,7 +943,7 @@ func TestExpiration_Register_Role(t *testing.T) {
 				TTL: time.Hour,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "xyz",
 			"secret_key": "abcd",
 		},
@@ -1019,7 +1019,7 @@ func TestExpiration_Register_BatchToken(t *testing.T) {
 				TTL: time.Hour,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "xyz",
 			"secret_key": "abcd",
 		},
@@ -1268,7 +1268,7 @@ func TestExpiration_Revoke(t *testing.T) {
 				TTL: time.Hour,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "xyz",
 			"secret_key": "abcd",
 		},
@@ -1315,7 +1315,7 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 				TTL: 20 * time.Millisecond,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "xyz",
 			"secret_key": "abcd",
 		},
@@ -1379,7 +1379,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 					TTL: time.Second,
 				},
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"access_key": "xyz",
 				"secret_key": "abcd",
 			},
@@ -1448,7 +1448,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 					TTL: time.Second,
 				},
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"access_key": "xyz",
 				"secret_key": "abcd",
 			},
@@ -1547,7 +1547,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 					TTL: 1 * time.Minute,
 				},
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"access_key": "xyz",
 				"secret_key": "abcd",
 			},
@@ -1858,7 +1858,7 @@ func TestExpiration_Renew(t *testing.T) {
 				Renewable: true,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "xyz",
 			"secret_key": "abcd",
 		},
@@ -1875,7 +1875,7 @@ func TestExpiration_Renew(t *testing.T) {
 				TTL: time.Second,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "123",
 			"secret_key": "abcd",
 		},
@@ -1929,7 +1929,7 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 				Renewable: false,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "xyz",
 			"secret_key": "abcd",
 		},
@@ -1980,7 +1980,7 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 				Renewable: true,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "xyz",
 			"secret_key": "abcd",
 		},
@@ -1997,7 +1997,7 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 				TTL: 20 * time.Millisecond,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "123",
 			"secret_key": "abcd",
 		},
@@ -2056,7 +2056,7 @@ func TestExpiration_Renew_FinalSecond(t *testing.T) {
 				Renewable: true,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "xyz",
 			"secret_key": "abcd",
 		},
@@ -2086,7 +2086,7 @@ func TestExpiration_Renew_FinalSecond(t *testing.T) {
 				MaxTTL: 2 * time.Second,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "123",
 			"secret_key": "abcd",
 		},
@@ -2131,7 +2131,7 @@ func TestExpiration_Renew_FinalSecond_Lease(t *testing.T) {
 			},
 			LeaseID: "abcde",
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": "xyz",
 			"secret_key": "abcd",
 		},
@@ -2183,7 +2183,7 @@ func TestExpiration_revokeEntry(t *testing.T) {
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
 		Path:    "foo/bar",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"testing": true,
 		},
 		Secret: &logical.Secret{
@@ -2306,7 +2306,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 					TTL:       time.Hour,
 				},
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"testing": false,
 			},
 		},
@@ -2325,7 +2325,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
 		Path:    "foo/bar",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"testing": true,
 		},
 		Secret: &logical.Secret{
@@ -2391,7 +2391,7 @@ func TestExpiration_revokeEntry_rejected_fairsharing(t *testing.T) {
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
 		Path:    "foo/bar",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"testing": true,
 		},
 		Secret: &logical.Secret{
@@ -2483,7 +2483,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 				Renewable: true,
 				TTL:       time.Minute,
 			},
-			InternalData: map[string]interface{}{
+			InternalData: map[string]any{
 				"MySecret": "secret",
 			},
 		},
@@ -2522,7 +2522,7 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
 		Path:    "foo/bar",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"testing": true,
 		},
 		Secret: &logical.Secret{
@@ -2573,7 +2573,7 @@ func TestLeaseEntry(t *testing.T) {
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
 		Path:    "foo/bar",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"testing": true,
 		},
 		Secret: &logical.Secret{
@@ -2722,7 +2722,7 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 
 	req.Operation = logical.UpdateOperation
 	req.Path = "sys/leases/lookup"
-	req.Data = map[string]interface{}{"lease_id": leaseID}
+	req.Data = map[string]any{"lease_id": leaseID}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
@@ -2748,7 +2748,7 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 	}
 
 	req.Path = "sys/leases/lookup"
-	req.Data = map[string]interface{}{"lease_id": leaseID}
+	req.Data = map[string]any{"lease_id": leaseID}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil {
 		t.Fatal("expected error")
@@ -2767,7 +2767,7 @@ func badRenewFactory(ctx context.Context, conf *logical.BackendConfig) (logical.
 					logical.ReadOperation: func(context.Context, *logical.Request, *framework.FieldData) (*logical.Response, error) {
 						resp := &logical.Response{
 							Secret: &logical.Secret{
-								InternalData: map[string]interface{}{
+								InternalData: map[string]any{
 									"secret_type": "badRenewBackend",
 								},
 							},

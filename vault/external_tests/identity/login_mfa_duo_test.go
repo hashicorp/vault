@@ -71,7 +71,7 @@ path "secret/foo" {
 		return fmt.Errorf("failed to create mfa_policy: %v", err)
 	}
 
-	_, err = client.Logical().Write("auth/userpass/users/vaultmfa", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/vaultmfa", map[string]any{
 		"password": "testpassword",
 		"policies": "mfa_policy",
 	})
@@ -79,7 +79,7 @@ path "secret/foo" {
 		return fmt.Errorf("failed to configure userpass backend: %v", err)
 	}
 
-	secret, err := client.Logical().Write("auth/userpass/login/vaultmfa", map[string]interface{}{
+	secret, err := client.Logical().Write("auth/userpass/login/vaultmfa", map[string]any{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -88,7 +88,7 @@ path "secret/foo" {
 
 	userpassToken := secret.Auth.ClientToken
 
-	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]any{
 		"token": userpassToken,
 	})
 	if err != nil {
@@ -97,7 +97,7 @@ path "secret/foo" {
 
 	// entityID := secret.Data["entity_id"].(string)
 
-	mfaConfigData := map[string]interface{}{
+	mfaConfigData := map[string]any{
 		"mount_accessor":  mountAccessor,
 		"secret_key":      secret_key,
 		"integration_key": integration_key,
@@ -109,7 +109,7 @@ path "secret/foo" {
 	}
 
 	// Write some data in the path that requires TOTP MFA
-	genericData := map[string]interface{}{
+	genericData := map[string]any{
 		"somedata": "which can only be read if MFA succeeds",
 	}
 	_, err = client.Logical().Write("secret/foo", genericData)
@@ -186,13 +186,13 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	}
 	mountAccessor := auths["userpass/"].Accessor
 
-	_, err = client.Logical().Write("auth/userpass/users/vaultmfa", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/vaultmfa", map[string]any{
 		"password": "testpassword",
 	})
 	if err != nil {
 		return fmt.Errorf("failed to configure userpass backend: %v", err)
 	}
-	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
+	secret, err := client.Logical().Write("identity/entity", map[string]any{
 		"name": "test",
 	})
 	if err != nil {
@@ -200,7 +200,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	}
 	entityID := secret.Data["id"].(string)
 
-	_, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
+	_, err = client.Logical().Write("identity/entity-alias", map[string]any{
 		"name":           "vaultmfa",
 		"canonical_id":   entityID,
 		"mount_accessor": mountAccessor,
@@ -213,7 +213,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	// login MFA
 	{
 		// create a config
-		mfaConfigData := map[string]interface{}{
+		mfaConfigData := map[string]any{
 			"username_format": fmt.Sprintf("{{identity.entity.aliases.%s.name}}", mountAccessor),
 			"secret_key":      secret_key,
 			"integration_key": integration_key,
@@ -231,7 +231,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 		}
 
 		// creating MFAEnforcementConfig
-		_, err = client.Logical().Write("identity/mfa/login-enforcement/randomName", map[string]interface{}{
+		_, err = client.Logical().Write("identity/mfa/login-enforcement/randomName", map[string]any{
 			"auth_method_accessors": []string{mountAccessor},
 			"auth_method_types":     []string{"userpass"},
 			"identity_entity_ids":   []string{entityID},
@@ -242,7 +242,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 			return fmt.Errorf("failed to configure MFAEnforcementConfig: %v", err)
 		}
 	}
-	secret, err = client.Logical().Write("auth/userpass/login/vaultmfa", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/userpass/login/vaultmfa", map[string]any{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -274,7 +274,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	// validation
 	secret, err = client.Sys().MFAValidateWithContext(context.Background(),
 		secret.Auth.MFARequirement.MFARequestID,
-		map[string]interface{}{
+		map[string]any{
 			methodID: []string{},
 		})
 	if err != nil {

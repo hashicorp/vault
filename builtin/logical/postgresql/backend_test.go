@@ -26,7 +26,7 @@ func TestBackend_config_connection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configData := map[string]interface{}{
+	configData := map[string]any{
 		"connection_url":       "sample_connection_url",
 		"max_open_connections": 9,
 		"max_idle_connections": 7,
@@ -68,7 +68,7 @@ func TestBackend_basic(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -92,7 +92,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -118,7 +118,7 @@ func TestBackend_BlockStatements(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"connection_url": connURL,
 	}
 	jsonBlockStatement, err := json.Marshal(testBlockStatementRoleSlice)
@@ -148,7 +148,7 @@ func TestBackend_roleReadOnly(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -179,7 +179,7 @@ func TestBackend_roleReadOnly_revocationSQL(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -199,7 +199,7 @@ func TestBackend_roleReadOnly_revocationSQL(t *testing.T) {
 	})
 }
 
-func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool) logicaltest.TestStep {
+func testAccStepConfig(t *testing.T, d map[string]any, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
@@ -232,7 +232,7 @@ func testAccStepCreateRole(t *testing.T, name string, sql string, expectFail boo
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      path.Join("roles", name),
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"sql": sql,
 		},
 		ErrorOk: expectFail,
@@ -243,7 +243,7 @@ func testAccStepCreateRoleWithRevocationSQL(t *testing.T, name, sql, revocationS
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      path.Join("roles", name),
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"sql":            sql,
 			"revocation_sql": revocationSQL,
 		},
@@ -309,7 +309,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 				Operation: logical.RevokeOperation,
 				Storage:   s,
 				Secret: &logical.Secret{
-					InternalData: map[string]interface{}{
+					InternalData: map[string]any{
 						"secret_type": "creds",
 						"username":    d.Username,
 						"role":        name,
@@ -364,7 +364,7 @@ func testAccStepCreateTable(t *testing.T, b logical.Backend, s logical.Storage, 
 				Operation: logical.RevokeOperation,
 				Storage:   s,
 				Secret: &logical.Secret{
-					InternalData: map[string]interface{}{
+					InternalData: map[string]any{
 						"secret_type": "creds",
 						"username":    d.Username,
 					},
@@ -412,7 +412,7 @@ func testAccStepDropTable(t *testing.T, b logical.Backend, s logical.Storage, na
 				Operation: logical.RevokeOperation,
 				Storage:   s,
 				Secret: &logical.Secret{
-					InternalData: map[string]interface{}{
+					InternalData: map[string]any{
 						"secret_type": "creds",
 						"username":    d.Username,
 					},

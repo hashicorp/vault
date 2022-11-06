@@ -45,7 +45,7 @@ func TestCopy_auth(t *testing.T) {
 func TestCopy_request(t *testing.T) {
 	// Make a non-pointer one so that it can't be modified directly
 	expected := logical.Request{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"foo": "bar",
 		},
 		WrapInfo: &logical.RequestWrapInfo{
@@ -70,7 +70,7 @@ func TestCopy_request(t *testing.T) {
 func TestCopy_response(t *testing.T) {
 	// Make a non-pointer one so that it can't be modified directly
 	expected := logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"foo": "bar",
 		},
 		WrapInfo: &wrapping.ResponseWrapInfo{
@@ -188,7 +188,7 @@ func TestHashRequest(t *testing.T) {
 	}{
 		{
 			&logical.Request{
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"foo":              "bar",
 					"baz":              "foobar",
 					"private_key_type": certutil.PrivateKeyType("rsa"),
@@ -196,7 +196,7 @@ func TestHashRequest(t *testing.T) {
 				},
 			},
 			&logical.Request{
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"foo":              "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 					"baz":              "foobar",
 					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
@@ -243,7 +243,7 @@ func TestHashResponse(t *testing.T) {
 	}{
 		{
 			&logical.Response{
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"foo": "bar",
 					"baz": "foobar",
 					// Responses can contain time values, so test that with
@@ -260,7 +260,7 @@ func TestHashResponse(t *testing.T) {
 				},
 			},
 			&logical.Response{
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 					"baz": "foobar",
 					"bar": now.Format(time.RFC3339Nano),
@@ -307,24 +307,24 @@ func TestHashWalker(t *testing.T) {
 	replaceText := "foo"
 
 	cases := []struct {
-		Input  map[string]interface{}
-		Output map[string]interface{}
+		Input  map[string]any
+		Output map[string]any
 	}{
 		{
-			map[string]interface{}{
+			map[string]any{
 				"hello": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"hello": replaceText,
 			},
 		},
 
 		{
-			map[string]interface{}{
-				"hello": []interface{}{"world"},
+			map[string]any{
+				"hello": []any{"world"},
 			},
-			map[string]interface{}{
-				"hello": []interface{}{replaceText},
+			map[string]any{
+				"hello": []any{replaceText},
 			},
 		},
 	}
@@ -347,17 +347,17 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 
 	now := time.Now()
 	cases := []struct {
-		Input  map[string]interface{}
-		Output map[string]interface{}
+		Input  map[string]any
+		Output map[string]any
 	}{
 		// Should not touch map keys of type time.Time.
 		{
-			map[string]interface{}{
+			map[string]any{
 				"hello": map[time.Time]struct{}{
 					now: {},
 				},
 			},
-			map[string]interface{}{
+			map[string]any{
 				"hello": map[time.Time]struct{}{
 					now: {},
 				},
@@ -365,20 +365,20 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 		},
 		// Should handle map values of type time.Time.
 		{
-			map[string]interface{}{
+			map[string]any{
 				"hello": now,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"hello": now.Format(time.RFC3339Nano),
 			},
 		},
 		// Should handle slice values of type time.Time.
 		{
-			map[string]interface{}{
-				"hello": []interface{}{"foo", now, "foo2"},
+			map[string]any{
+				"hello": []any{"foo", now, "foo2"},
 			},
-			map[string]interface{}{
-				"hello": []interface{}{"foobar", now.Format(time.RFC3339Nano), "foo2bar"},
+			map[string]any{
+				"hello": []any{"foobar", now.Format(time.RFC3339Nano), "foo2bar"},
 			},
 		},
 	}

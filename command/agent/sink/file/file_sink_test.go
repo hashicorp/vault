@@ -27,7 +27,7 @@ func testFileSink(t *testing.T, log hclog.Logger) (*sink.SinkConfig, string) {
 
 	config := &sink.SinkConfig{
 		Logger: log.Named("sink.file"),
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"path": path,
 		},
 	}
@@ -91,7 +91,7 @@ func testFileSinkMode(t *testing.T, log hclog.Logger) (*sink.SinkConfig, string)
 
 	config := &sink.SinkConfig{
 		Logger: log.Named("sink.file"),
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"path": path,
 			"mode": 0o644,
 		},

@@ -85,7 +85,7 @@ func TestLeaseRevokeCommand_Run(t *testing.T) {
 				}
 
 				path := "secret-leased/revoke/" + tc.name
-				data := map[string]interface{}{
+				data := map[string]any{
 					"key":   "value",
 					"lease": "1m",
 				}

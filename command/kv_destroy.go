@@ -158,7 +158,7 @@ func (c *KVDestroyCommand) Run(args []string) int {
 		return 2
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"versions": kvParseVersionsFlags(c.flagVersions),
 	}
 

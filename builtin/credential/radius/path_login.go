@@ -113,7 +113,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			"username": username,
 			"policies": strings.Join(policies, ","),
 		},
-		InternalData: map[string]interface{}{
+		InternalData: map[string]any{
 			"password": password,
 		},
 		DisplayName: username,

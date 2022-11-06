@@ -77,7 +77,7 @@ func TestListCommand_Run(t *testing.T) {
 					"secret/list/baz",
 				}
 				for _, k := range keys {
-					if _, err := client.Logical().Write(k, map[string]interface{}{
+					if _, err := client.Logical().Write(k, map[string]any{
 						"foo": "bar",
 					}); err != nil {
 						t.Fatal(err)

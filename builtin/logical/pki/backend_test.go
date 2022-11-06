@@ -106,7 +106,7 @@ func TestPKI_RequireCN(t *testing.T) {
 	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "myvault.com",
 	})
 	if err != nil {
@@ -117,7 +117,7 @@ func TestPKI_RequireCN(t *testing.T) {
 	}
 
 	// Create a role which does require CN (default)
-	_, err = CBWrite(b, s, "roles/example", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/example", map[string]any{
 		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -129,7 +129,7 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to true and with common name supplied.
 	// It should succeed.
-	_, err = CBWrite(b, s, "issue/example", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/example", map[string]any{
 		"common_name": "foobar.com",
 	})
 	if err != nil {
@@ -138,13 +138,13 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to true and with out supplying the
 	// common name. It should error out.
-	_, err = CBWrite(b, s, "issue/example", map[string]interface{}{})
+	_, err = CBWrite(b, s, "issue/example", map[string]any{})
 	if err == nil {
 		t.Fatalf("expected an error due to missing common_name")
 	}
 
 	// Modify the role to make the common name optional
-	_, err = CBWrite(b, s, "roles/example", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/example", map[string]any{
 		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -157,7 +157,7 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to false and without supplying the
 	// common name. It should succeed.
-	resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{})
+	resp, err = CBWrite(b, s, "issue/example", map[string]any{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +168,7 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to false and with a common name. It
 	// should succeed.
-	resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{})
+	resp, err = CBWrite(b, s, "issue/example", map[string]any{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +182,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name":         "myvault.com",
 		"not_after":           "9999-12-31T23:59:59Z",
 		"not_before_duration": "2h",
@@ -213,7 +213,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 	}
 
 	// Create a role which does require CN (default)
-	_, err = CBWrite(b, s, "roles/example", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/example", map[string]any{
 		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -225,7 +225,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 
 	// Issue a cert with require_cn set to true and with common name supplied.
 	// It should succeed.
-	resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/example", map[string]any{
 		"common_name": "foobar.com",
 	})
 	if err != nil {
@@ -251,7 +251,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
-	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "myvault.com",
 		"not_after":   "9999-12-31T23:59:59Z",
 		"ttl":         "25h",
@@ -260,7 +260,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "myvault.com",
 		"not_after":   "9999-12-31T23:59:59",
 	})
@@ -279,8 +279,8 @@ func TestBackend_CSRValues(t *testing.T) {
 		Steps:          []logicaltest.TestStep{},
 	}
 
-	intdata := map[string]interface{}{}
-	reqdata := map[string]interface{}{}
+	intdata := map[string]any{}
+	reqdata := map[string]any{}
 	testCase.Steps = append(testCase.Steps, generateCSRSteps(t, ecCACert, ecCAKey, intdata, reqdata)...)
 
 	logicaltest.Test(t, testCase)
@@ -296,8 +296,8 @@ func TestBackend_URLsCRUD(t *testing.T) {
 		Steps:          []logicaltest.TestStep{},
 	}
 
-	intdata := map[string]interface{}{}
-	reqdata := map[string]interface{}{}
+	intdata := map[string]any{}
+	reqdata := map[string]any{}
 	testCase.Steps = append(testCase.Steps, generateURLSteps(t, ecCACert, ecCAKey, intdata, reqdata)...)
 
 	logicaltest.Test(t, testCase)
@@ -333,7 +333,7 @@ func TestBackend_Roles(t *testing.T) {
 					{
 						Operation: logical.UpdateOperation,
 						Path:      "config/ca",
-						Data: map[string]interface{}{
+						Data: map[string]any{
 							"pem_bundle": *tc.key + "\n" + *tc.cert,
 						},
 					},
@@ -343,7 +343,7 @@ func TestBackend_Roles(t *testing.T) {
 			testCase.Steps = append(testCase.Steps, generateRoleSteps(t, tc.useCSR)...)
 			if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 				for i, v := range testCase.Steps {
-					data := map[string]interface{}{}
+					data := map[string]any{}
 					var keys []string
 					for k := range v.Data {
 						keys = append(keys, k)
@@ -478,7 +478,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 	return parsedCertBundle, nil
 }
 
-func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
+func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]any) []logicaltest.TestStep {
 	expected := certutil.URLEntries{
 		IssuingCertificates: []string{
 			"http://example.com/ca1",
@@ -517,7 +517,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"common_name": "Root Cert",
 				"ttl":         "180h",
 			},
@@ -532,7 +532,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		{
 			Operation: logical.UpdateOperation,
 			Path:      "config/urls",
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"issuing_certificates":    strings.Join(expected.IssuingCertificates, ","),
 				"crl_distribution_points": strings.Join(expected.CRLDistributionPoints, ","),
 				"ocsp_servers":            strings.Join(expected.OCSPServers, ","),
@@ -563,7 +563,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"common_name": "intermediate.cert.com",
 				"csr":         csrPem1024,
 				"format":      "der",
@@ -584,7 +584,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"common_name":         "intermediate.cert.com",
 				"csr":                 csrPem2048,
 				"signature_bits":      512,
@@ -640,7 +640,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"common_name":          "intermediate.cert.com",
 				"csr":                  csrPem2048,
 				"format":               "der",
@@ -682,8 +682,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 	return ret
 }
 
-func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType string, keyBits int) (interface{}, []byte, string) {
-	var priv interface{}
+func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType string, keyBits int) (any, []byte, string) {
+	var priv any
 	var err error
 	switch keyType {
 	case "rsa":
@@ -722,14 +722,14 @@ func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType str
 	return priv, csr, csrPem
 }
 
-func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
+func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]any) []logicaltest.TestStep {
 	csrTemplate, csrPem := generateTestCsr(t, certutil.RSAPrivateKey, 2048)
 
 	ret := []logicaltest.TestStep{
 		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"common_name":     "Root Cert",
 				"ttl":             "180h",
 				"max_path_length": 0,
@@ -739,7 +739,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"use_csr_values": true,
 				"csr":            csrPem,
 				"format":         "der",
@@ -755,7 +755,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"common_name":     "Root Cert",
 				"ttl":             "180h",
 				"max_path_length": 1,
@@ -765,7 +765,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"use_csr_values": true,
 				"csr":            csrPem,
 				"format":         "der",
@@ -1378,7 +1378,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	funcs := []interface{}{
+	funcs := []any{
 		addCnTests, getCnCheck, getCountryCheck, getLocalityCheck, getNotBeforeCheck,
 		getOrganizationCheck, getOuCheck, getPostalCodeCheck, getRandCsr, getStreetAddressCheck,
 		getProvinceCheck,
@@ -1738,7 +1738,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	// Create two issuers.
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "root a - example.com",
 		"issuer_name": "root-a",
 		"key_type":    "ec",
@@ -1748,7 +1748,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	rootAPem := resp.Data["certificate"].(string)
 	rootACert := parseCert(t, rootAPem)
 
-	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "root b - example.com",
 		"issuer_name": "root-b",
 		"key_type":    "ec",
@@ -1760,14 +1760,14 @@ func TestRolesAltIssuer(t *testing.T) {
 
 	// Create three roles: one with no assignment, one with explicit root-a,
 	// one with explicit root-b.
-	_, err = CBWrite(b, s, "roles/use-default", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/use-default", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
 	})
 	require.NoError(t, err)
 
-	_, err = CBWrite(b, s, "roles/use-root-a", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/use-root-a", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
@@ -1775,7 +1775,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = CBWrite(b, s, "roles/use-root-b", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/use-root-b", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"issuer_ref":        "root-b",
@@ -1783,7 +1783,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Now issue certs against these roles.
-	resp, err = CBWrite(b, s, "issue/use-default", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/use-default", map[string]any{
 		"common_name": "testing",
 		"ttl":         "5s",
 	})
@@ -1793,7 +1793,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	err = leafCert.CheckSignatureFrom(rootACert)
 	require.NoError(t, err, "should be signed by root-a but wasn't")
 
-	resp, err = CBWrite(b, s, "issue/use-root-a", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/use-root-a", map[string]any{
 		"common_name": "testing",
 		"ttl":         "5s",
 	})
@@ -1803,7 +1803,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	err = leafCert.CheckSignatureFrom(rootACert)
 	require.NoError(t, err, "should be signed by root-a but wasn't")
 
-	resp, err = CBWrite(b, s, "issue/use-root-b", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/use-root-b", map[string]any{
 		"common_name": "testing",
 		"ttl":         "5s",
 	})
@@ -1815,12 +1815,12 @@ func TestRolesAltIssuer(t *testing.T) {
 
 	// Update the default issuer to be root B and make sure that the
 	// use-default role updates.
-	_, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
+	_, err = CBWrite(b, s, "config/issuers", map[string]any{
 		"default": "root-b",
 	})
 	require.NoError(t, err)
 
-	resp, err = CBWrite(b, s, "issue/use-default", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/use-default", map[string]any{
 		"common_name": "testing",
 		"ttl":         "5s",
 	})
@@ -1839,7 +1839,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"common_name": "test.com",
 			"ttl":         "6h",
 		},
@@ -1856,7 +1856,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		Operation:  logical.ReadOperation,
 		Path:       "ca_chain",
 		Storage:    storage,
-		Data:       map[string]interface{}{},
+		Data:       map[string]any{},
 		MountPoint: "pki/",
 	})
 	require.NoError(t, err)
@@ -1872,7 +1872,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		Operation:  logical.ReadOperation,
 		Path:       "ca/pem",
 		Storage:    storage,
-		Data:       map[string]interface{}{},
+		Data:       map[string]any{},
 		MountPoint: "pki/",
 	})
 	require.NoError(t, err)
@@ -1888,7 +1888,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "roles/example",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"allowed_domains":  "example.com",
 			"allow_subdomains": "true",
 			"max_ttl":          "1h",
@@ -1903,7 +1903,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "issue/example",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"common_name": "test.example.com",
 			"ttl":         "5m",
 		},
@@ -1968,7 +1968,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	b, storage := createBackendWithStorage(t)
 
 	// generate root
-	rootData := map[string]interface{}{
+	rootData := map[string]any{
 		"common_name": "test.com",
 		"ttl":         "6h",
 	}
@@ -1988,7 +1988,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	}
 
 	// config urls
-	urlsData := map[string]interface{}{
+	urlsData := map[string]any{
 		"issuing_certificates":    "http://127.0.0.1:8200/v1/pki/ca",
 		"crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl",
 	}
@@ -2008,7 +2008,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	}
 
 	// create a role entry
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"allowed_domains":  "test.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "4h",
@@ -2031,7 +2031,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	// issue some certs
 	i := 1
 	for i < 10 {
-		certData := map[string]interface{}{
+		certData := map[string]any{
 			"common_name": "example.test.com",
 		}
 		resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -2112,7 +2112,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	b, storage := createBackendWithStorage(t)
 
 	// generate root
-	rootData := map[string]interface{}{
+	rootData := map[string]any{
 		"common_name": "test.com",
 		"not_after":   "9999-12-31T23:59:59Z",
 	}
@@ -2167,7 +2167,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatal("pem csr is empty")
 	}
 
-	signVerbatimData := map[string]interface{}{
+	signVerbatimData := map[string]any{
 		"csr": pemCSR,
 	}
 	if keyType == "rsa" {
@@ -2191,7 +2191,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 
 	// create a role entry; we use this to check that sign-verbatim when used with a role is still honoring TTLs
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"ttl":                 "4h",
 		"max_ttl":             "8h",
 		"key_type":            keyType,
@@ -2214,7 +2214,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"csr": pemCSR,
 			"ttl": "5h",
 		},
@@ -2233,7 +2233,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"csr": pemCSR,
 			"ttl": "12h",
 		},
@@ -2273,7 +2273,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"csr":       pemCSR,
 			"not_after": "9999-12-31T23:59:59Z",
 		},
@@ -2320,7 +2320,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 
 	// now check that if we set generate-lease it takes it from the role and the TTLs match
-	roleData = map[string]interface{}{
+	roleData = map[string]any{
 		"ttl":            "4h",
 		"max_ttl":        "8h",
 		"generate_lease": true,
@@ -2343,7 +2343,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"csr": pemCSR,
 			"ttl": "5h",
 		},
@@ -2368,7 +2368,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	// This is a change within 1.11, we are no longer idempotent across generate/internal calls.
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "myvault.com",
 	})
 	require.NoError(t, err)
@@ -2382,7 +2382,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	r1Data := resp.Data
 
 	// Calling generate/internal should generate a new CA as well.
-	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "myvault.com",
 	})
 	require.NoError(t, err)
@@ -2405,7 +2405,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 
 	// Now let's validate that the import bundle is idempotent.
 	pemBundleRootCA := rootCACertPEM + "\n" + rootCAKeyPEM
-	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
+	resp, err = CBWrite(b, s, "config/ca", map[string]any{
 		"pem_bundle": pemBundleRootCA,
 	})
 	require.NoError(t, err)
@@ -2419,7 +2419,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotContains(t, firstImportedIssuers, issuerId2)
 
 	// Performing this again should result in no key/issuer ids being imported/generated.
-	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
+	resp, err = CBWrite(b, s, "config/ca", map[string]any{
 		"pem_bundle": pemBundleRootCA,
 	})
 	require.NoError(t, err)
@@ -2445,7 +2445,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.Error(t, err, "expected an error fetching deleted ca_chain")
 
 	// We should be able to import the same ca bundle as before and get a different key/issuer ids
-	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
+	resp, err = CBWrite(b, s, "config/ca", map[string]any{
 		"pem_bundle": pemBundleRootCA,
 	})
 	require.NoError(t, err)
@@ -2475,7 +2475,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	var err error
 
 	// Direct issuing from root
-	_, err = CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b_root, s_root, "root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -2483,7 +2483,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = CBWrite(b_root, s_root, "roles/test", map[string]interface{}{
+	_, err = CBWrite(b_root, s_root, "roles/test", map[string]any{
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
 	})
@@ -2491,7 +2491,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]any{
 		"common_name": "myint.com",
 	})
 	if err != nil {
@@ -2500,7 +2500,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 
 	csr := resp.Data["csr"]
 
-	_, err = CBWrite(b_root, s_root, "sign/test", map[string]interface{}{
+	_, err = CBWrite(b_root, s_root, "sign/test", map[string]any{
 		"common_name": "myint.com",
 		"csr":         csr,
 		"ttl":         "60h",
@@ -2509,7 +2509,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	_, err = CBWrite(b_root, s_root, "sign-verbatim/test", map[string]interface{}{
+	_, err = CBWrite(b_root, s_root, "sign-verbatim/test", map[string]any{
 		"common_name": "myint.com",
 		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
 		"csr":         csr,
@@ -2519,7 +2519,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
+	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]any{
 		"common_name": "myint.com",
 		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
 		"csr":         csr,
@@ -2542,7 +2542,7 @@ func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	// generate root
-	data, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	data, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -2550,7 +2550,7 @@ func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
 	rootCaPem := data.Data["certificate"].(string)
 
 	// Create a signing role like Consul did with the default args prior to Vault 1.10
-	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/test", map[string]any{
 		"allow_any_name":         true,
 		"allowed_serial_numbers": []string{"MySerialNumber"},
 		"key_type":               "any",
@@ -2560,7 +2560,7 @@ func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
 	require.NoError(t, err, "failed creating legacy role")
 
 	_, csrPem := generateTestCsr(t, certutil.ECPrivateKey, 256)
-	data, err = CBWrite(b, s, "sign/test", map[string]interface{}{
+	data, err = CBWrite(b, s, "sign/test", map[string]any{
 		"csr": csrPem,
 	})
 	require.NoError(t, err, "failed signing csr")
@@ -2577,7 +2577,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	b, storage := createBackendWithStorage(t)
 
 	// generate root
-	rootData := map[string]interface{}{
+	rootData := map[string]any{
 		"common_name": "test.com",
 		"ttl":         "172800",
 	}
@@ -2615,7 +2615,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"certificate": ss,
 		},
 		MountPoint: "pki/",
@@ -2646,7 +2646,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"certificate": ss,
 		},
 		MountPoint: "pki/",
@@ -2666,7 +2666,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"certificate": ss,
 		},
 		MountPoint: "pki/",
@@ -2718,7 +2718,7 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 	b, storage := createBackendWithStorage(t)
 
 	// generate root
-	rootData := map[string]interface{}{
+	rootData := map[string]any{
 		"common_name": "test.com",
 		"ttl":         "172800",
 		"key_type":    "ec",
@@ -2759,7 +2759,7 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"certificate": ss,
 		},
 		MountPoint: "pki/",
@@ -2780,7 +2780,7 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"certificate": ss,
 			"require_matching_certificate_algorithms": false,
 		},
@@ -2799,7 +2799,7 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"certificate": ss,
 			"require_matching_certificate_algorithms": true,
 		},
@@ -2848,7 +2848,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	var block *pem.Block
 	var cert *x509.Certificate
 
-	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -2856,7 +2856,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/test", map[string]any{
 		"allowed_domains":    []string{"foobar.com", "zipzap.com"},
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -2870,7 +2870,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	// Get a baseline before adding OID SANs. In the next sections we'll verify
 	// that the SANs are all added even as the OID SAN inclusion forces other
 	// adding logic (custom rather than built-in Golang logic)
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foobar.com,foo.foobar.com,bar.foobar.com",
@@ -2896,7 +2896,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	}
 
 	// First test some bad stuff that shouldn't work
-	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2908,7 +2908,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2920,7 +2920,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2932,7 +2932,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2944,7 +2944,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2957,7 +2957,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	}
 
 	// Valid for first possibility
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2987,7 +2987,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	}
 
 	// Valid for second possibility
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3023,7 +3023,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		fmt.Sprintf("%s;%s:%s", oid1, type1, val1),
 		fmt.Sprintf("%s;%s:%s", oid2, type2, val2),
 	}
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3071,7 +3071,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	var block *pem.Block
 	var cert *x509.Certificate
 
-	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -3080,7 +3080,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// First test that Serial Numbers are not allowed
-	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/test", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 	})
@@ -3088,7 +3088,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar",
 		"ttl":         "1h",
 	})
@@ -3096,7 +3096,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name":   "foobar",
 		"ttl":           "1h",
 		"serial_number": "foobar",
@@ -3106,7 +3106,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// Update the role to allow serial numbers
-	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/test", map[string]any{
 		"allow_any_name":         true,
 		"enforce_hostnames":      false,
 		"allowed_serial_numbers": "f00*,b4r*",
@@ -3115,7 +3115,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar",
 		"ttl":         "1h",
 		// Not a valid serial number
@@ -3126,7 +3126,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// Valid for first possibility
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name":   "foobar",
 		"serial_number": "f00bar",
 	})
@@ -3147,7 +3147,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// Valid for second possibility
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name":   "foobar",
 		"serial_number": "b4rf00",
 	})
@@ -3174,7 +3174,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 
 	var err error
 
-	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -3182,7 +3182,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/test", map[string]any{
 		"allowed_domains":    []string{"foobar.com", "zipzap.com"},
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -3194,7 +3194,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// First test some bad stuff that shouldn't work
-	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3206,7 +3206,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// Test valid single entry
-	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3218,7 +3218,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// Test globed entry
-	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3230,7 +3230,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// Test multiple entries
-	resp, err := CBWrite(b, s, "issue/test", map[string]interface{}{
+	resp, err := CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3294,7 +3294,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	}
 
 	// Configure test role for userpass.
-	if _, err := client.Logical().Write("auth/userpass/users/userpassname", map[string]interface{}{
+	if _, err := client.Logical().Write("auth/userpass/users/userpassname", map[string]any{
 		"password": "test",
 		"policies": "test",
 	}); err != nil {
@@ -3302,7 +3302,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	}
 
 	// Login userpass for test role and keep client token.
-	secret, err := client.Logical().Write("auth/userpass/login/userpassname", map[string]interface{}{
+	secret, err := client.Logical().Write("auth/userpass/login/userpassname", map[string]any{
 		"password": "test",
 	})
 	if err != nil || secret == nil {
@@ -3330,7 +3330,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	}
 
 	// Generate internal CA.
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -3339,7 +3339,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	}
 
 	// Write role PKI.
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write("pki/roles/test", map[string]any{
 		"allowed_uri_sans": []string{
 			"spiffe://domain/{{identity.entity.aliases." + userpassAccessor + ".name}}",
 			"spiffe://domain/{{identity.entity.aliases." + userpassAccessor + ".name}}/*", "spiffe://domain/foo",
@@ -3353,27 +3353,27 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 
 	// Issue certificate with identity templating
 	client.SetToken(userpassToken)
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/userpassname, spiffe://domain/foo"})
+	_, err = client.Logical().Write("pki/issue/test", map[string]any{"uri_sans": "spiffe://domain/userpassname, spiffe://domain/foo"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Issue certificate with identity templating and glob
 	client.SetToken(userpassToken)
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/userpassname/bar"})
+	_, err = client.Logical().Write("pki/issue/test", map[string]any{"uri_sans": "spiffe://domain/userpassname/bar"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Issue certificate with non-matching identity template parameter
 	client.SetToken(userpassToken)
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/unknownuser"})
+	_, err = client.Logical().Write("pki/issue/test", map[string]any{"uri_sans": "spiffe://domain/unknownuser"})
 	if err == nil {
 		t.Fatal(err)
 	}
 
 	// Set allowed_uri_sans_template to false.
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write("pki/roles/test", map[string]any{
 		"allowed_uri_sans_template": false,
 	})
 	if err != nil {
@@ -3381,7 +3381,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	}
 
 	// Issue certificate with userpassToken.
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/users/userpassname"})
+	_, err = client.Logical().Write("pki/issue/test", map[string]any{"uri_sans": "spiffe://domain/users/userpassname"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -3419,7 +3419,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 
 	// Configure test role for userpass.
-	if _, err := client.Logical().Write("auth/userpass/users/userpassname", map[string]interface{}{
+	if _, err := client.Logical().Write("auth/userpass/users/userpassname", map[string]any{
 		"password": "test",
 		"policies": "test",
 	}); err != nil {
@@ -3452,7 +3452,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 
 	// Generate internal CA.
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -3461,7 +3461,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 
 	// Write role PKI.
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write("pki/roles/test", map[string]any{
 		"allowed_domains": []string{
 			"foobar.com", "zipzap.com", "{{identity.entity.aliases." + userpassAccessor + ".name}}",
 			"foo.{{identity.entity.aliases." + userpassAccessor + ".name}}.example.com",
@@ -3481,31 +3481,31 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	if err != nil || secret == nil {
 		t.Fatal(err)
 	}
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
+	_, err = client.Logical().Write("pki/issue/test", map[string]any{"common_name": "userpassname"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Issue certificate for foobar.com to verify allowed_domain_template doesn't break plain domains.
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "foobar.com"})
+	_, err = client.Logical().Write("pki/issue/test", map[string]any{"common_name": "foobar.com"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Issue certificate for unknown userpassname.
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "unknownuserpassname"})
+	_, err = client.Logical().Write("pki/issue/test", map[string]any{"common_name": "unknownuserpassname"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
 
 	// Issue certificate for foo.userpassname.domain.
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "foo.userpassname.example.com"})
+	_, err = client.Logical().Write("pki/issue/test", map[string]any{"common_name": "foo.userpassname.example.com"})
 	if err != nil {
 		t.Fatal("expected error")
 	}
 
 	// Set allowed_domains_template to false.
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write("pki/roles/test", map[string]any{
 		"allowed_domains_template": false,
 	})
 	if err != nil {
@@ -3513,7 +3513,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 
 	// Issue certificate with userpassToken.
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
+	_, err = client.Logical().Write("pki/issue/test", map[string]any{"common_name": "userpassname"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -3559,7 +3559,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	}
 
 	// Write role PKI.
-	_, err = client.Logical().WriteWithContext(ctx, "pki/roles/test", map[string]interface{}{})
+	_, err = client.Logical().WriteWithContext(ctx, "pki/roles/test", map[string]any{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3575,53 +3575,53 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	}
 
 	// Validate that we have not changed any defaults unknowingly
-	expectedData := map[string]interface{}{
+	expectedData := map[string]any{
 		"key_type":                           "rsa",
 		"use_csr_sans":                       true,
 		"client_flag":                        true,
-		"allowed_serial_numbers":             []interface{}{},
+		"allowed_serial_numbers":             []any{},
 		"generate_lease":                     false,
 		"signature_bits":                     json.Number("256"),
 		"use_pss":                            false,
-		"allowed_domains":                    []interface{}{},
+		"allowed_domains":                    []any{},
 		"allowed_uri_sans_template":          false,
 		"enforce_hostnames":                  true,
-		"policy_identifiers":                 []interface{}{},
+		"policy_identifiers":                 []any{},
 		"require_cn":                         true,
 		"allowed_domains_template":           false,
 		"allow_token_displayname":            false,
-		"country":                            []interface{}{},
+		"country":                            []any{},
 		"not_after":                          "",
-		"postal_code":                        []interface{}{},
+		"postal_code":                        []any{},
 		"use_csr_common_name":                true,
 		"allow_localhost":                    true,
 		"allow_subdomains":                   false,
 		"allow_wildcard_certificates":        true,
-		"allowed_other_sans":                 []interface{}{},
-		"allowed_uri_sans":                   []interface{}{},
+		"allowed_other_sans":                 []any{},
+		"allowed_uri_sans":                   []any{},
 		"basic_constraints_valid_for_non_ca": false,
-		"key_usage":                          []interface{}{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+		"key_usage":                          []any{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
 		"not_before_duration":                json.Number("30"),
 		"allow_glob_domains":                 false,
 		"ttl":                                json.Number("0"),
-		"ou":                                 []interface{}{},
+		"ou":                                 []any{},
 		"email_protection_flag":              false,
-		"locality":                           []interface{}{},
+		"locality":                           []any{},
 		"server_flag":                        true,
 		"allow_bare_domains":                 false,
 		"allow_ip_sans":                      true,
-		"ext_key_usage_oids":                 []interface{}{},
+		"ext_key_usage_oids":                 []any{},
 		"allow_any_name":                     false,
-		"ext_key_usage":                      []interface{}{},
+		"ext_key_usage":                      []any{},
 		"key_bits":                           json.Number("2048"),
 		"max_ttl":                            json.Number("0"),
 		"no_store":                           false,
-		"organization":                       []interface{}{},
-		"province":                           []interface{}{},
-		"street_address":                     []interface{}{},
+		"organization":                       []any{},
+		"province":                           []any{},
+		"street_address":                     []any{},
 		"code_signing_flag":                  false,
 		"issuer_ref":                         "default",
-		"cn_validations":                     []interface{}{"email", "hostname"},
+		"cn_validations":                     []any{"email", "hostname"},
 	}
 
 	if diff := deep.Equal(expectedData, resp.Data); len(diff) > 0 {
@@ -3811,7 +3811,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 
 	// Set the cluster's certificate as the root CA in /pki
 	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
-	_, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+	_, err = client.Logical().Write("pki/config/ca", map[string]any{
 		"pem_bundle": pemBundleRootCA,
 	})
 	if err != nil {
@@ -3838,7 +3838,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	intermediateCSR := secret.Data["csr"].(string)
 
 	// Sign the intermediate CSR using /pki
-	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
+	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]any{
 		"permitted_dns_domains": ".myvault.com",
 		"csr":                   intermediateCSR,
 		"ttl":                   "10s",
@@ -3859,7 +3859,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	}
 
 	// Issue a revoke on on /pki
-	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+	_, err = client.Logical().Write("pki/revoke", map[string]any{
 		"serial_number": intermediateCertSerial,
 	})
 	if err != nil {
@@ -3886,7 +3886,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	// Issue a tidy on /pki
-	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+	_, err = client.Logical().Write("pki/tidy", map[string]any{
 		"tidy_cert_store":    true,
 		"tidy_revoked_certs": true,
 		"safety_buffer":      "1s",
@@ -3916,7 +3916,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	time.Sleep(10 * time.Second)
 
 	// Issue a tidy on /pki
-	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+	_, err = client.Logical().Write("pki/tidy", map[string]any{
 		"tidy_cert_store":    true,
 		"tidy_revoked_certs": true,
 		"safety_buffer":      "1s",
@@ -3934,7 +3934,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		expectedData := map[string]interface{}{
+		expectedData := map[string]any{
 			"safety_buffer":                         json.Number("1"),
 			"tidy_cert_store":                       true,
 			"tidy_revoked_certs":                    true,
@@ -4054,7 +4054,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 
 	var err error
 
-	resp, err := CBWrite(b_root, s_root, "root/generate/exported", map[string]interface{}{
+	resp, err := CBWrite(b_root, s_root, "root/generate/exported", map[string]any{
 		"common_name": "root myvault.com",
 		"key_type":    keyType,
 	})
@@ -4080,14 +4080,14 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	requireCertInCaChainString(t, fullChain, rootCert, "expected root cert within root cert/ca_chain")
 
 	// Make sure when we issue a leaf certificate we get the full chain back.
-	_, err = CBWrite(b_root, s_root, "roles/example", map[string]interface{}{
+	_, err = CBWrite(b_root, s_root, "roles/example", map[string]any{
 		"allowed_domains":  "example.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
 	require.NoError(t, err, "error setting up pki root role: %v", err)
 
-	resp, err = CBWrite(b_root, s_root, "issue/example", map[string]interface{}{
+	resp, err = CBWrite(b_root, s_root, "issue/example", map[string]any{
 		"common_name": "test.example.com",
 		"ttl":         "5m",
 	})
@@ -4098,7 +4098,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	// Now generate an intermediate at /pki-intermediate, signed by the root.
 	b_int, s_int := createBackendWithStorage(t)
 
-	resp, err = CBWrite(b_int, s_int, "intermediate/generate/exported", map[string]interface{}{
+	resp, err = CBWrite(b_int, s_int, "intermediate/generate/exported", map[string]any{
 		"common_name": "intermediate myvault.com",
 		"key_type":    keyType,
 	})
@@ -4111,7 +4111,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	intermediateData := resp.Data
 	intermediateKey := intermediateData["private_key"].(string)
 
-	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
+	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]any{
 		"csr":    intermediateData["csr"],
 		"format": "pem",
 	})
@@ -4132,7 +4132,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	require.Equal(t, parseCert(t, intermediateCaChain[0]), intermediaryCaCert, "intermediate signed cert should have been part of ca_chain")
 	require.Equal(t, parseCert(t, intermediateCaChain[1]), rootCaCert, "root cert should have been part of ca_chain")
 
-	_, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]interface{}{
+	_, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]any{
 		"certificate": intermediateCert + "\n" + rootCert + "\n",
 	})
 	if err != nil {
@@ -4158,14 +4158,14 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	requireCertInCaChainString(t, fullChain, rootCert, "expected full chain to contain root certificate from pki-intermediate/cert/ca_chain")
 
 	// Make sure when we issue a leaf certificate we get the full chain back.
-	_, err = CBWrite(b_int, s_int, "roles/example", map[string]interface{}{
+	_, err = CBWrite(b_int, s_int, "roles/example", map[string]any{
 		"allowed_domains":  "example.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
 	require.NoError(t, err, "error setting up pki intermediate role: %v", err)
 
-	resp, err = CBWrite(b_int, s_int, "issue/example", map[string]interface{}{
+	resp, err = CBWrite(b_int, s_int, "issue/example", map[string]any{
 		"common_name": "test.example.com",
 		"ttl":         "5m",
 	})
@@ -4178,7 +4178,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	// "external" CAs behave as expected.
 	b_ext, s_ext := createBackendWithStorage(t)
 
-	_, err = CBWrite(b_ext, s_ext, "config/ca", map[string]interface{}{
+	_, err = CBWrite(b_ext, s_ext, "config/ca", map[string]any{
 		"pem_bundle": intermediateKey + "\n" + intermediateCert + "\n" + rootCert + "\n",
 	})
 	if err != nil {
@@ -4203,14 +4203,14 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	}
 
 	// Now issue a short-lived certificate from our pki-external.
-	_, err = CBWrite(b_ext, s_ext, "roles/example", map[string]interface{}{
+	_, err = CBWrite(b_ext, s_ext, "roles/example", map[string]any{
 		"allowed_domains":  "example.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
 	require.NoError(t, err, "error setting up pki role: %v", err)
 
-	resp, err = CBWrite(b_ext, s_ext, "issue/example", map[string]interface{}{
+	resp, err = CBWrite(b_ext, s_ext, "issue/example", map[string]any{
 		"common_name": "test.example.com",
 		"ttl":         "5m",
 	})
@@ -4223,7 +4223,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	requireSignedBy(t, issuedCrt, intermediaryCaCert)
 
 	// Test that we can request that the root ca certificate not appear in the ca_chain field
-	resp, err = CBWrite(b_ext, s_ext, "issue/example", map[string]interface{}{
+	resp, err = CBWrite(b_ext, s_ext, "issue/example", map[string]any{
 		"common_name":             "test.example.com",
 		"ttl":                     "5m",
 		"remove_roots_from_chain": "true",
@@ -4238,7 +4238,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	}
 }
 
-func requireCertInCaChainArray(t *testing.T, chain []string, cert string, msgAndArgs ...interface{}) {
+func requireCertInCaChainArray(t *testing.T, chain []string, cert string, msgAndArgs ...any) {
 	var fullChain string
 	for _, caCert := range chain {
 		fullChain = fullChain + "\n" + caCert
@@ -4247,7 +4247,7 @@ func requireCertInCaChainArray(t *testing.T, chain []string, cert string, msgAnd
 	requireCertInCaChainString(t, fullChain, cert, msgAndArgs)
 }
 
-func requireCertInCaChainString(t *testing.T, chain string, cert string, msgAndArgs ...interface{}) {
+func requireCertInCaChainString(t *testing.T, chain string, cert string, msgAndArgs ...any) {
 	count := strings.Count(chain, cert)
 	if count != 1 {
 		failMsg := fmt.Sprintf("Found %d occurrances of the cert in the provided chain", count)
@@ -4299,7 +4299,7 @@ func RoleIssuanceRegressionHelper(t *testing.T, b *backend, s logical.Storage, i
 				for _, AllowLocalhost := range test.AllowLocalhost.ToValues() {
 					for _, AllowWildcardCertificates := range test.AllowWildcardCertificates.ToValues() {
 						role := fmt.Sprintf("issuance-regression-%d-bare-%v-glob-%v-subdomains-%v-localhost-%v-wildcard-%v", index, AllowBareDomains, AllowGlobDomains, AllowSubdomains, AllowLocalhost, AllowWildcardCertificates)
-						_, err := CBWrite(b, s, "roles/"+role, map[string]interface{}{
+						_, err := CBWrite(b, s, "roles/"+role, map[string]any{
 							"allowed_domains":             test.AllowedDomains,
 							"allow_bare_domains":          AllowBareDomains,
 							"allow_glob_domains":          AllowGlobDomains,
@@ -4320,7 +4320,7 @@ func RoleIssuanceRegressionHelper(t *testing.T, b *backend, s logical.Storage, i
 							t.Fatal(err)
 						}
 
-						resp, err := CBWrite(b, s, "issue/"+role, map[string]interface{}{
+						resp, err := CBWrite(b, s, "issue/"+role, map[string]any{
 							"common_name":          test.CommonName,
 							"exclude_cn_from_sans": true,
 						})
@@ -4518,7 +4518,7 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	// We need a RSA key so all signature sizes are valid with it.
-	resp, err := CBWrite(b, s, "root/generate/exported", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/exported", map[string]any{
 		"common_name": "myvault.com",
 		"ttl":         "128h",
 		"key_type":    "rsa",
@@ -4570,7 +4570,7 @@ func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, in
 	for _, caKeyType := range test.KeyTypeValues() {
 		for _, caKeyBits := range test.RoleKeyBits {
 			// Generate a new CA key.
-			resp, err := CBWrite(b, s, "root/generate/exported", map[string]interface{}{
+			resp, err := CBWrite(b, s, "root/generate/exported", map[string]any{
 				"common_name": "myvault.com",
 				"ttl":         "128h",
 				"key_type":    caKeyType,
@@ -4586,7 +4586,7 @@ func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, in
 			for _, roleKeyBits := range test.RoleKeyBits {
 				for _, roleSignatureBits := range test.RoleSignatureBits {
 					role := fmt.Sprintf("key-size-regression-%d-keytype-%v-keybits-%d-signature-bits-%d", index, test.RoleKeyType, roleKeyBits, roleSignatureBits)
-					_, err := CBWrite(b, s, "roles/"+role, map[string]interface{}{
+					_, err := CBWrite(b, s, "roles/"+role, map[string]any{
 						"key_type":       test.RoleKeyType,
 						"key_bits":       roleKeyBits,
 						"signature_bits": roleSignatureBits,
@@ -4605,7 +4605,7 @@ func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, in
 							},
 						}, keyType, keyBits)
 
-						resp, err = CBWrite(b, s, "sign/"+role, map[string]interface{}{
+						resp, err = CBWrite(b, s, "sign/"+role, map[string]any{
 							"common_name": "localhost",
 							"csr":         csrPem,
 						})
@@ -4700,7 +4700,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	var err error
 
 	// Fail requests if type is existing, and we specify the key_type param
-	_, err = CBWrite(b, s, "root/generate/existing", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/existing", map[string]any{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 	})
@@ -4708,7 +4708,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
 
 	// Fail requests if type is existing, and we specify the key_bits param
-	_, err = CBWrite(b, s, "root/generate/existing", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/existing", map[string]any{
 		"common_name": "root myvault.com",
 		"key_bits":    "2048",
 	})
@@ -4716,7 +4716,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
 
 	// Fail if the specified key does not exist.
-	_, err = CBWrite(b, s, "issuers/generate/root/existing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/generate/root/existing", map[string]any{
 		"common_name": "root myvault.com",
 		"issuer_name": "my-issuer1",
 		"key_ref":     "my-key1",
@@ -4725,7 +4725,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "unable to find PKI key for reference: my-key1")
 
 	// Fail if the specified key name is default.
-	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]any{
 		"common_name": "root myvault.com",
 		"issuer_name": "my-issuer1",
 		"key_name":    "Default",
@@ -4734,7 +4734,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "reserved keyword 'default' can not be used as key name")
 
 	// Fail if the specified issuer name is default.
-	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]any{
 		"common_name": "root myvault.com",
 		"issuer_name": "DEFAULT",
 	})
@@ -4742,7 +4742,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "reserved keyword 'default' can not be used as issuer name")
 
 	// Create the first CA
-	resp, err := CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "issuers/generate/root/internal", map[string]any{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 		"issuer_name": "my-issuer1",
@@ -4759,7 +4759,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Equal(t, len(parsedCrl.TBSCertList.RevokedCertificates), 0, "should have no revoked certificates")
 
 	// Fail if the specified issuer name is re-used.
-	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]any{
 		"common_name": "root myvault.com",
 		"issuer_name": "my-issuer1",
 	})
@@ -4767,7 +4767,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "issuer name already in use")
 
 	// Create the second CA
-	resp, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]any{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 		"issuer_name": "my-issuer2",
@@ -4785,7 +4785,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Equal(t, len(parsedCrl.TBSCertList.RevokedCertificates), 0, "should have no revoked certificates")
 
 	// Fail if the specified key name is re-used.
-	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]any{
 		"common_name": "root myvault.com",
 		"issuer_name": "my-issuer3",
 		"key_name":    "root-key2",
@@ -4794,7 +4794,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "key name already in use")
 
 	// Create a third CA re-using key from CA 1
-	resp, err = CBWrite(b, s, "issuers/generate/root/existing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuers/generate/root/existing", map[string]any{
 		"common_name": "root myvault.com",
 		"issuer_name": "my-issuer3",
 		"key_ref":     myKeyId1,
@@ -4834,7 +4834,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	var err error
 
 	// Fail requests if type is existing, and we specify the key_type param
-	_, err = CBWrite(b, s, "intermediate/generate/existing", map[string]interface{}{
+	_, err = CBWrite(b, s, "intermediate/generate/existing", map[string]any{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 	})
@@ -4842,7 +4842,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
 
 	// Fail requests if type is existing, and we specify the key_bits param
-	_, err = CBWrite(b, s, "intermediate/generate/existing", map[string]interface{}{
+	_, err = CBWrite(b, s, "intermediate/generate/existing", map[string]any{
 		"common_name": "root myvault.com",
 		"key_bits":    "2048",
 	})
@@ -4850,7 +4850,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
 
 	// Fail if the specified key does not exist.
-	_, err = CBWrite(b, s, "issuers/generate/intermediate/existing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/generate/intermediate/existing", map[string]any{
 		"common_name": "root myvault.com",
 		"key_ref":     "my-key1",
 	})
@@ -4858,7 +4858,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "unable to find PKI key for reference: my-key1")
 
 	// Create the first intermediate CA
-	resp, err := CBWrite(b, s, "issuers/generate/intermediate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "issuers/generate/intermediate/internal", map[string]any{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 	})
@@ -4868,7 +4868,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	require.NotEmpty(t, myKeyId1)
 
 	// Create the second intermediate CA
-	resp, err = CBWrite(b, s, "issuers/generate/intermediate/internal", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuers/generate/intermediate/internal", map[string]any{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 		"key_name":    "interkey1",
@@ -4879,7 +4879,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	require.NotEmpty(t, myKeyId2)
 
 	// Create a third intermediate CA re-using key from intermediate CA 1
-	resp, err = CBWrite(b, s, "issuers/generate/intermediate/existing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuers/generate/intermediate/existing", map[string]any{
 		"common_name": "root myvault.com",
 		"key_ref":     myKeyId1,
 	})
@@ -4896,7 +4896,7 @@ func TestIssuanceTTLs(t *testing.T) {
 	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "root example.com",
 		"issuer_name": "root",
 		"ttl":         "10s",
@@ -4906,44 +4906,44 @@ func TestIssuanceTTLs(t *testing.T) {
 	require.NotNil(t, resp)
 	rootCert := parseCert(t, resp.Data["certificate"].(string))
 
-	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
 	})
 	require.NoError(t, err)
 
-	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing",
 		"ttl":         "1s",
 	})
 	require.NoError(t, err, "expected issuance to succeed due to shorter ttl than cert ttl")
 
-	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing",
 	})
 	require.Error(t, err, "expected issuance to fail due to longer default ttl than cert ttl")
 
-	resp, err = CBWrite(b, s, "issuer/root", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/root", map[string]any{
 		"issuer_name":             "root",
 		"leaf_not_after_behavior": "permit",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 
-	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing",
 	})
 	require.NoError(t, err, "expected issuance to succeed due to permitted longer TTL")
 
-	resp, err = CBWrite(b, s, "issuer/root", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/root", map[string]any{
 		"issuer_name":             "root",
 		"leaf_not_after_behavior": "truncate",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 
-	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing",
 	})
 	require.NoError(t, err, "expected issuance to succeed due to truncated ttl")
@@ -4952,7 +4952,7 @@ func TestIssuanceTTLs(t *testing.T) {
 	// to the next second.
 	time.Sleep(time.Until(rootCert.NotAfter) + (1500 * time.Millisecond))
 
-	resp, err = CBWrite(b, s, "issuer/root", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/root", map[string]any{
 		"issuer_name":             "root",
 		"leaf_not_after_behavior": "err",
 	})
@@ -4960,7 +4960,7 @@ func TestIssuanceTTLs(t *testing.T) {
 	require.NotNil(t, resp)
 
 	// Even 1s ttl should now fail.
-	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing",
 		"ttl":         "1s",
 	})
@@ -4987,7 +4987,7 @@ func TestBackend_ConfigCA_WithECParams(t *testing.T) {
 	// $ openssl ecparam -out p256.key -name prime256v1 -genkey
 	//
 	// Regression test for https://github.com/hashicorp/vault/issues/16667
-	resp, err := CBWrite(b, s, "config/ca", map[string]interface{}{
+	resp, err := CBWrite(b, s, "config/ca", map[string]any{
 		"pem_bundle": `
 -----BEGIN EC PARAMETERS-----
 BggqhkjOPQMBBw==
@@ -5013,7 +5013,7 @@ func TestPerIssuerAIA(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	// Generating a root without anything should not have AIAs.
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "root example.com",
 		"issuer_name": "root",
 		"key_type":    "ec",
@@ -5026,12 +5026,12 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Empty(t, rootCert.CRLDistributionPoints)
 
 	// Set some local URLs on the issuer.
-	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuer/default", map[string]any{
 		"issuing_certificates": []string{"https://google.com"},
 	})
 	require.NoError(t, err)
 
-	_, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/testing", map[string]any{
 		"allow_any_name": true,
 		"ttl":            "85s",
 		"key_type":       "ec",
@@ -5039,7 +5039,7 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue something with this re-configured issuer.
-	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]any{
 		"common_name": "localhost.com",
 	})
 	require.NoError(t, err)
@@ -5050,13 +5050,13 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Empty(t, leafCert.CRLDistributionPoints)
 
 	// Set global URLs and ensure they don't appear on this issuer's leaf.
-	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+	_, err = CBWrite(b, s, "config/urls", map[string]any{
 		"issuing_certificates":    []string{"https://example.com/ca", "https://backup.example.com/ca"},
 		"crl_distribution_points": []string{"https://example.com/crl", "https://backup.example.com/crl"},
 		"ocsp_servers":            []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"},
 	})
 	require.NoError(t, err)
-	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]any{
 		"common_name": "localhost.com",
 	})
 	require.NoError(t, err)
@@ -5068,11 +5068,11 @@ func TestPerIssuerAIA(t *testing.T) {
 
 	// Now come back and remove the local modifications and ensure we get
 	// the defaults again.
-	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+	_, err = CBPatch(b, s, "issuer/default", map[string]any{
 		"issuing_certificates": []string{},
 	})
 	require.NoError(t, err)
-	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]any{
 		"common_name": "localhost.com",
 	})
 	require.NoError(t, err)
@@ -5137,7 +5137,7 @@ wL7EZNzwxITLqBnnHQbdLdAvYxB43kvWTy+JRK8qY9LAMCCFeDoYwXkWV4Wkx/b0
 TgM7RZnmEjNdeaa4M52o7VY=
 -----END PRIVATE KEY-----
 	`
-	resp, err := CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+	resp, err := CBWrite(b, s, "issuers/import/bundle", map[string]any{
 		"pem_bundle": customBundleWithoutCRLBits,
 	})
 	require.NoError(t, err)
@@ -5156,14 +5156,14 @@ TgM7RZnmEjNdeaa4M52o7VY=
 	require.NotContains(t, resp.Data["usage"], "crl-signing")
 
 	// Modifying to set CRL should fail.
-	resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+	resp, err = CBPatch(b, s, "issuer/default", map[string]any{
 		"usage": "issuing-certificates,crl-signing",
 	})
 	require.Error(t, err)
 	require.True(t, resp.IsError())
 
 	// Modifying to set issuing-certificates and ocsp-signing should succeed.
-	resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+	resp, err = CBPatch(b, s, "issuer/default", map[string]any{
 		"usage": "issuing-certificates,ocsp-signing",
 	})
 	require.NoError(t, err)
@@ -5206,7 +5206,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	beforeOldCAGeneration := time.Now().Add(-2 * time.Second)
 
 	// Generate an internal CA. This one is the default.
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "Root X1",
 		"key_type":    "ec",
@@ -5269,7 +5269,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	beforeNewCAGeneration := time.Now().Add(-2 * time.Second)
 
 	// Generate an internal CA. This one is the default.
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "Root X1",
 		"key_type":    "ec",
@@ -5321,7 +5321,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	// Now swap the default issuers around.
-	_, err = client.Logical().Write("pki/config/issuers", map[string]interface{}{
+	_, err = client.Logical().Write("pki/config/issuers", map[string]any{
 		"default": "new-root",
 	})
 	require.NoError(t, err)
@@ -5377,7 +5377,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	// We could generate some leaves and verify the revocation updates the
 	// CRL. But, revoking the issuer behaves the same, so let's do that
 	// instead.
-	_, err = client.Logical().Write("pki/issuer/old-root/revoke", map[string]interface{}{})
+	_, err = client.Logical().Write("pki/issuer/old-root/revoke", map[string]any{})
 	require.NoError(t, err)
 
 	// CA should still be valid.
@@ -5429,15 +5429,15 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 
 	// Now, do a three-way swap of names (old->tmp; new->old; tmp->new). This
 	// should result in all names/CRLs being invalidated.
-	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/old-root", map[string]interface{}{
+	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/old-root", map[string]any{
 		"issuer_name": "tmp-root",
 	})
 	require.NoError(t, err)
-	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/new-root", map[string]interface{}{
+	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/new-root", map[string]any{
 		"issuer_name": "old-root",
 	})
 	require.NoError(t, err)
-	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/tmp-root", map[string]interface{}{
+	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/tmp-root", map[string]any{
 		"issuer_name": "new-root",
 	})
 	require.NoError(t, err)
@@ -5476,7 +5476,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 
 	// Finally, rebuild the delta CRL and ensure that only that is
 	// invalidated. We first need to enable it though.
-	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
+	_, err = client.Logical().Write("pki/config/crl", map[string]any{
 		"auto_rebuild": true,
 		"enable_delta": true,
 	})
@@ -5535,7 +5535,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 
 	// Set up an Issuer and Role
 	// We need a root certificate to write/revoke certificates with
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "myvault.com",
 	})
 	if err != nil {
@@ -5546,7 +5546,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	}
 
 	// Create a role
-	_, err = CBWrite(b, s, "roles/example", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/example", map[string]any{
 		"allowed_domains":    "myvault.com",
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -5560,7 +5560,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	var certificates []string = []string{"a", "b", "c", "d", "e"}
 	serials := make([]string, 5)
 	for i, cn := range certificates {
-		resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
+		resp, err = CBWrite(b, s, "issue/example", map[string]any{
 			"common_name": cn + ".myvault.com",
 		})
 		if err != nil {
@@ -5572,7 +5572,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	// Revoke certificates A + B
 	revocations := serials[0:2]
 	for _, key := range revocations {
-		resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		resp, err = CBWrite(b, s, "revoke", map[string]any{
 			"serial_number": key,
 		})
 		if err != nil {
@@ -5597,7 +5597,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	// Revoke certificates C, D
 	dirtyRevocations := serials[2:4]
 	for _, key := range dirtyRevocations {
-		resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		resp, err = CBWrite(b, s, "revoke", map[string]any{
 			"serial_number": key,
 		})
 		if err != nil {
@@ -5608,7 +5608,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	// Put certificates F, G in the backend
 	dirtyCertificates := []string{"f", "g"}
 	for _, cn := range dirtyCertificates {
-		resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
+		resp, err = CBWrite(b, s, "issue/example", map[string]any{
 			"common_name": cn + ".myvault.com",
 		})
 		if err != nil {
@@ -5638,7 +5638,7 @@ func TestBackend_VerifyIssuerUpdateDefaultsMatchCreation(t *testing.T) {
 	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "myvault.com",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed generating root issuer")
@@ -5651,7 +5651,7 @@ func TestBackend_VerifyIssuerUpdateDefaultsMatchCreation(t *testing.T) {
 	// (meaning Go will auto-detect the rev-sig-algo).
 	preUpdateValues["revocation_signature_algorithm"] = ""
 
-	resp, err = CBWrite(b, s, "issuer/default", map[string]interface{}{})
+	resp, err = CBWrite(b, s, "issuer/default", map[string]any{})
 	requireSuccessNonNilResponse(t, resp, err, "failed updating default issuer with no values")
 
 	resp, err = CBRead(b, s, "issuer/default")
@@ -5698,12 +5698,12 @@ cWNUzs1+/6aFsi41UX7EFn3zAFhQUPxT59hXspuWuKbRAWc5fMnxbCfI/Cr8wTLJ
 E/0kiZ4swUMyI4tYSbM=
 -----END PRIVATE KEY-----
 `
-	_, err := CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+	_, err := CBWrite(b, s, "issuers/import/bundle", map[string]any{
 		"pem_bundle": rsaOIDKey,
 	})
 	require.Error(t, err, "expected error importing PKCS8 rsaPSS OID key")
 
-	_, err = CBWrite(b, s, "keys/import", map[string]interface{}{
+	_, err = CBWrite(b, s, "keys/import", map[string]any{
 		"key": rsaOIDKey,
 	})
 	require.Error(t, err, "expected error importing PKCS8 rsaPSS OID key")
@@ -5732,17 +5732,17 @@ m0hI4QDfVfHtnBp2VMCvhj0yzowtwF4BFIhv4EXZBU10mzxVj0zyKKft9++X8auH
 nebuK22ZwzbPe4NhOvAdfNDElkrrtGvTnzkDB7ezPYjelA==
 -----END CERTIFICATE-----
 `
-	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]any{
 		"pem_bundle": rsaOIDCert,
 	})
 	require.Error(t, err, "expected error importing PKCS8 rsaPSS OID cert")
 
-	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]any{
 		"pem_bundle": rsaOIDKey + "\n" + rsaOIDCert,
 	})
 	require.Error(t, err, "expected error importing PKCS8 rsaPSS OID key+cert")
 
-	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]any{
 		"pem_bundle": rsaOIDCert + "\n" + rsaOIDKey,
 	})
 	require.Error(t, err, "expected error importing PKCS8 rsaPSS OID cert+key")
@@ -5758,7 +5758,7 @@ nebuK22ZwzbPe4NhOvAdfNDElkrrtGvTnzkDB7ezPYjelA==
 
 	// If we create a new PSS root, we should be able to issue an intermediate
 	// under it.
-	resp, err = CBWrite(b, s, "root/generate/exported", map[string]interface{}{
+	resp, err = CBWrite(b, s, "root/generate/exported", map[string]any{
 		"use_pss":     "true",
 		"common_name": "root x1 - pss",
 		"key_type":    "ec",
@@ -5769,7 +5769,7 @@ nebuK22ZwzbPe4NhOvAdfNDElkrrtGvTnzkDB7ezPYjelA==
 	require.NotEmpty(t, resp.Data["certificate"])
 	require.NotEmpty(t, resp.Data["private_key"])
 
-	resp, err = CBWrite(b, s, "intermediate/generate/exported", map[string]interface{}{
+	resp, err = CBWrite(b, s, "intermediate/generate/exported", map[string]any{
 		"use_pss":     "true",
 		"common_name": "int x1 - pss",
 		"key_type":    "ec",
@@ -5780,7 +5780,7 @@ nebuK22ZwzbPe4NhOvAdfNDElkrrtGvTnzkDB7ezPYjelA==
 	require.NotEmpty(t, resp.Data["csr"])
 	require.NotEmpty(t, resp.Data["private_key"])
 
-	resp, err = CBWrite(b, s, "issuer/default/sign-intermediate", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/default/sign-intermediate", map[string]any{
 		"use_pss":     "true",
 		"common_name": "int x1 - pss",
 		"csr":         resp.Data["csr"].(string),
@@ -5790,14 +5790,14 @@ nebuK22ZwzbPe4NhOvAdfNDElkrrtGvTnzkDB7ezPYjelA==
 	require.NotNil(t, resp.Data)
 	require.NotEmpty(t, resp.Data["certificate"])
 
-	resp, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuers/import/bundle", map[string]any{
 		"pem_bundle": resp.Data["certificate"].(string),
 	})
 	require.NoError(t, err)
 
 	// Finally, if we were to take an rsaPSS OID'd CSR and use it against this
 	// mount, it will fail.
-	_, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/testing", map[string]any{
 		"allow_any_name": true,
 		"ttl":            "85s",
 		"key_type":       "any",
@@ -5822,20 +5822,20 @@ EBuOIhCv6WiwVyGeTVynuHYkHyw3rIL/zU7N8+zIFV2G2M1UAv5D/eyh/74cr9Of
 82dGIH2PTbXZ0k7iAAwLaPjzOv1v58Wq90o35d4iEsOfJ8v98Q==
 -----END CERTIFICATE REQUEST-----`
 
-	_, err = CBWrite(b, s, "issuer/default/sign/testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuer/default/sign/testing", map[string]any{
 		"common_name": "example.com",
 		"csr":         rsaOIDCSR,
 	})
 	require.Error(t, err)
 
-	_, err = CBWrite(b, s, "issuer/default/sign-verbatim", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuer/default/sign-verbatim", map[string]any{
 		"common_name": "example.com",
 		"use_pss":     true,
 		"csr":         rsaOIDCSR,
 	})
 	require.Error(t, err)
 
-	_, err = CBWrite(b, s, "issuer/default/sign-intermediate", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuer/default/sign-intermediate", map[string]any{
 		"common_name": "faulty x1 - pss",
 		"use_pss":     true,
 		"csr":         rsaOIDCSR,
@@ -5844,14 +5844,14 @@ EBuOIhCv6WiwVyGeTVynuHYkHyw3rIL/zU7N8+zIFV2G2M1UAv5D/eyh/74cr9Of
 
 	// Vault has a weird API for signing self-signed certificates. Ensure
 	// that doesn't accept rsaPSS OID'd certificates either.
-	_, err = CBWrite(b, s, "issuer/default/sign-self-issued", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuer/default/sign-self-issued", map[string]any{
 		"use_pss":     true,
 		"certificate": rsaOIDCert,
 	})
 	require.Error(t, err)
 
 	// Issuing a regular leaf should succeed.
-	_, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/testing", map[string]any{
 		"allow_any_name": true,
 		"ttl":            "85s",
 		"key_type":       "rsa",
@@ -5859,7 +5859,7 @@ EBuOIhCv6WiwVyGeTVynuHYkHyw3rIL/zU7N8+zIFV2G2M1UAv5D/eyh/74cr9Of
 	})
 	require.NoError(t, err)
 
-	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]any{
 		"common_name": "example.com",
 		"use_pss":     "true",
 	})
@@ -5899,7 +5899,7 @@ func TestPKI_ListRevokedCerts(t *testing.T) {
 	require.Empty(t, resp.Data, "response map contained data that we did not expect")
 
 	// Set up a mount that we can revoke under (We will create 3 leaf certs, 2 of which will be revoked)
-	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "test.com",
 		"key_type":    "ec",
 	})
@@ -5907,38 +5907,38 @@ func TestPKI_ListRevokedCerts(t *testing.T) {
 	requireFieldsSetInResp(t, resp, "serial_number")
 	issuerSerial := resp.Data["serial_number"]
 
-	resp, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "roles/test", map[string]any{
 		"allowed_domains":  "test.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
 	requireSuccessNilResponse(t, resp, err, "error setting up pki role")
 
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "test1.test.com",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "error issuing cert 1")
 	requireFieldsSetInResp(t, resp, "serial_number")
 	serial1 := resp.Data["serial_number"]
 
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "test2.test.com",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "error issuing cert 2")
 	requireFieldsSetInResp(t, resp, "serial_number")
 	serial2 := resp.Data["serial_number"]
 
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]any{
 		"common_name": "test3.test.com",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "error issuing cert 2")
 	requireFieldsSetInResp(t, resp, "serial_number")
 	serial3 := resp.Data["serial_number"]
 
-	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{"serial_number": serial1})
+	resp, err = CBWrite(b, s, "revoke", map[string]any{"serial_number": serial1})
 	requireSuccessNonNilResponse(t, resp, err, "error revoking cert 1")
 
-	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{"serial_number": serial2})
+	resp, err = CBWrite(b, s, "revoke", map[string]any{"serial_number": serial2})
 	requireSuccessNonNilResponse(t, resp, err, "error revoking cert 2")
 
 	// Test that we get back the expected revoked serial numbers.

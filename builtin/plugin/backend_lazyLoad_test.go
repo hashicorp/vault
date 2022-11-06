@@ -179,7 +179,7 @@ func (v testSystemView) LookupPlugin(context.Context, string, consts.PluginType)
 	return &pluginutil.PluginRunner{
 		Name:    "test-plugin-runner",
 		Builtin: true,
-		BuiltinFactory: func() (interface{}, error) {
+		BuiltinFactory: func() (any, error) {
 			return v.factory, nil
 		},
 	}, nil
@@ -189,7 +189,7 @@ func (v testSystemView) LookupPluginVersion(context.Context, string, consts.Plug
 	return &pluginutil.PluginRunner{
 		Name:    "test-plugin-runner",
 		Builtin: true,
-		BuiltinFactory: func() (interface{}, error) {
+		BuiltinFactory: func() (any, error) {
 			return v.factory, nil
 		},
 	}, nil

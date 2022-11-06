@@ -30,7 +30,7 @@ const (
 var (
 	caseSensitivityKey           = "casesensitivity"
 	parseExtraEntityFromBucket   = func(context.Context, *IdentityStore, *identity.Entity) (bool, error) { return false, nil }
-	addExtraEntityDataToResponse = func(*identity.Entity, map[string]interface{}) {}
+	addExtraEntityDataToResponse = func(*identity.Entity, map[string]any) {}
 )
 
 func (c *Core) IdentityStore() *IdentityStore {

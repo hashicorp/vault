@@ -802,7 +802,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		defaults := map[string]interface{}{
+		defaults := map[string]any{
 			"default_report_months": 12,
 			"retention_months":      24,
 			"enabled":               activityLogEnabledDefaultValue,
@@ -883,7 +883,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		expected := map[string]interface{}{
+		expected := map[string]any{
 			"default_report_months": 1,
 			"retention_months":      2,
 			"enabled":               "enable",
@@ -919,7 +919,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 
-		defaults := map[string]interface{}{
+		defaults := map[string]any{
 			"default_report_months": 12,
 			"retention_months":      24,
 			"enabled":               activityLogEnabledDefaultValue,

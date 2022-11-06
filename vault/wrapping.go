@@ -248,7 +248,7 @@ DONELISTHANDLING:
 
 	// During a rewrap, store the original response, don't wrap it again.
 	if req.Path == "sys/wrapping/rewrap" {
-		cubbyReq.Data = map[string]interface{}{
+		cubbyReq.Data = map[string]any{
 			"response": resp.Data["response"],
 		}
 	} else {
@@ -271,7 +271,7 @@ DONELISTHANDLING:
 			return nil, ErrInternalError
 		}
 
-		cubbyReq.Data = map[string]interface{}{
+		cubbyReq.Data = map[string]any{
 			"response": string(marshaledResponse),
 		}
 	}
@@ -292,7 +292,7 @@ DONELISTHANDLING:
 	// Store info for lookup
 	cubbyReq.WrapInfo = nil
 	cubbyReq.Path = "cubbyhole/wrapinfo"
-	cubbyReq.Data = map[string]interface{}{
+	cubbyReq.Data = map[string]any{
 		"creation_ttl":  resp.WrapInfo.TTL,
 		"creation_time": creationTime,
 	}
@@ -409,7 +409,7 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 			return false, fmt.Errorf("wrapping token could not be parsed: %w", err)
 		}
 		var claims squarejwt.Claims
-		allClaims := make(map[string]interface{})
+		allClaims := make(map[string]any)
 		if err = parsedJWT.Claims(&c.wrappingJWTKey.PublicKey, &claims, &allClaims); err != nil {
 			return false, fmt.Errorf("wrapping token signature could not be validated: %w", err)
 		}

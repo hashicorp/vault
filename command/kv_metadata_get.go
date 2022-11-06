@@ -163,7 +163,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		OutputSecret(c.UI, secret)
 		return 2
 	}
-	versions := versionsRaw.(map[string]interface{})
+	versions := versionsRaw.(map[string]any)
 
 	delete(secret.Data, "versions")
 
@@ -186,7 +186,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 	sort.Ints(versionKeys)
 
 	for _, v := range versionKeys {
-		c.UI.Info("\n" + getHeaderForMap(fmt.Sprintf("Version %d", v), versions[strconv.Itoa(v)].(map[string]interface{})))
+		c.UI.Info("\n" + getHeaderForMap(fmt.Sprintf("Version %d", v), versions[strconv.Itoa(v)].(map[string]any)))
 		OutputData(c.UI, versions[strconv.Itoa(v)])
 	}
 

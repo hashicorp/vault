@@ -17,7 +17,7 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configData := map[string]interface{}{
+	configData := map[string]any{
 		"access_key":        "AKIAEXAMPLE",
 		"secret_key":        "RandomData",
 		"region":            "us-west-2",

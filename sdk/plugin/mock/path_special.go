@@ -20,7 +20,7 @@ func pathSpecial(b *backend) *framework.Path {
 func (b *backend) pathSpecialRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Return the secret
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"data": "foo",
 		},
 	}, nil

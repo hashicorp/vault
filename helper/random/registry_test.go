@@ -16,7 +16,7 @@ type testCharsetRule struct {
 	fail bool
 }
 
-func newTestRule(data map[string]interface{}) (rule Rule, err error) {
+func newTestRule(data map[string]any) (rule Rule, err error) {
 	tr := &testCharsetRule{}
 	err = mapstructure.Decode(data, tr)
 	if err != nil {
@@ -34,7 +34,7 @@ func TestParseRule(t *testing.T) {
 		rules map[string]ruleConstructor
 
 		ruleType string
-		ruleData map[string]interface{}
+		ruleData map[string]any
 
 		expectedRule Rule
 		expectErr    bool
@@ -44,7 +44,7 @@ func TestParseRule(t *testing.T) {
 		"missing rule": {
 			rules:    map[string]ruleConstructor{},
 			ruleType: "testrule",
-			ruleData: map[string]interface{}{
+			ruleData: map[string]any{
 				"string": "teststring",
 				"int":    123,
 			},
@@ -65,7 +65,7 @@ func TestParseRule(t *testing.T) {
 				"testrule": newTestRule,
 			},
 			ruleType: "testrule",
-			ruleData: map[string]interface{}{
+			ruleData: map[string]any{
 				"string": "teststring",
 				"int":    123,
 			},
@@ -103,7 +103,7 @@ func TestParseRule(t *testing.T) {
 func TestDefaultRuleNameMapping(t *testing.T) {
 	for expectedType, constructor := range defaultRuleNameMapping {
 		// In this case, we don't care about the error since we're checking the types, not the contents
-		instance, _ := constructor(map[string]interface{}{})
+		instance, _ := constructor(map[string]any{})
 		actualType := instance.Type()
 		if actualType != expectedType {
 			t.Fatalf("Default registry mismatched types: Actual: %s Expected: %s", actualType, expectedType)

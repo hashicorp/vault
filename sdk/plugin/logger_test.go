@@ -162,7 +162,7 @@ type deprecatedLoggerClient struct {
 	client *rpc.Client
 }
 
-func (l *deprecatedLoggerClient) Trace(msg string, args ...interface{}) {
+func (l *deprecatedLoggerClient) Trace(msg string, args ...any) {
 	cArgs := &LoggerArgs{
 		Msg:  msg,
 		Args: args,
@@ -170,7 +170,7 @@ func (l *deprecatedLoggerClient) Trace(msg string, args ...interface{}) {
 	l.client.Call("Plugin.Trace", cArgs, &struct{}{})
 }
 
-func (l *deprecatedLoggerClient) Debug(msg string, args ...interface{}) {
+func (l *deprecatedLoggerClient) Debug(msg string, args ...any) {
 	cArgs := &LoggerArgs{
 		Msg:  msg,
 		Args: args,
@@ -178,7 +178,7 @@ func (l *deprecatedLoggerClient) Debug(msg string, args ...interface{}) {
 	l.client.Call("Plugin.Debug", cArgs, &struct{}{})
 }
 
-func (l *deprecatedLoggerClient) Info(msg string, args ...interface{}) {
+func (l *deprecatedLoggerClient) Info(msg string, args ...any) {
 	cArgs := &LoggerArgs{
 		Msg:  msg,
 		Args: args,
@@ -186,7 +186,7 @@ func (l *deprecatedLoggerClient) Info(msg string, args ...interface{}) {
 	l.client.Call("Plugin.Info", cArgs, &struct{}{})
 }
 
-func (l *deprecatedLoggerClient) Warn(msg string, args ...interface{}) error {
+func (l *deprecatedLoggerClient) Warn(msg string, args ...any) error {
 	var reply LoggerReply
 	cArgs := &LoggerArgs{
 		Msg:  msg,
@@ -203,7 +203,7 @@ func (l *deprecatedLoggerClient) Warn(msg string, args ...interface{}) error {
 	return nil
 }
 
-func (l *deprecatedLoggerClient) Error(msg string, args ...interface{}) error {
+func (l *deprecatedLoggerClient) Error(msg string, args ...any) error {
 	var reply LoggerReply
 	cArgs := &LoggerArgs{
 		Msg:  msg,
@@ -220,11 +220,11 @@ func (l *deprecatedLoggerClient) Error(msg string, args ...interface{}) error {
 	return nil
 }
 
-func (l *deprecatedLoggerClient) Fatal(msg string, args ...interface{}) {
+func (l *deprecatedLoggerClient) Fatal(msg string, args ...any) {
 	// NOOP since it's not actually used within vault
 }
 
-func (l *deprecatedLoggerClient) Log(level int, msg string, args []interface{}) {
+func (l *deprecatedLoggerClient) Log(level int, msg string, args []any) {
 	cArgs := &LoggerArgs{
 		Level: level,
 		Msg:   msg,
@@ -239,24 +239,24 @@ func (l *deprecatedLoggerClient) SetLevel(level int) {
 
 func (l *deprecatedLoggerClient) IsTrace() bool {
 	var reply LoggerReply
-	l.client.Call("Plugin.IsTrace", new(interface{}), &reply)
+	l.client.Call("Plugin.IsTrace", new(any), &reply)
 	return reply.IsTrue
 }
 
 func (l *deprecatedLoggerClient) IsDebug() bool {
 	var reply LoggerReply
-	l.client.Call("Plugin.IsDebug", new(interface{}), &reply)
+	l.client.Call("Plugin.IsDebug", new(any), &reply)
 	return reply.IsTrue
 }
 
 func (l *deprecatedLoggerClient) IsInfo() bool {
 	var reply LoggerReply
-	l.client.Call("Plugin.IsInfo", new(interface{}), &reply)
+	l.client.Call("Plugin.IsInfo", new(any), &reply)
 	return reply.IsTrue
 }
 
 func (l *deprecatedLoggerClient) IsWarn() bool {
 	var reply LoggerReply
-	l.client.Call("Plugin.IsWarn", new(interface{}), &reply)
+	l.client.Call("Plugin.IsWarn", new(any), &reply)
 	return reply.IsTrue
 }

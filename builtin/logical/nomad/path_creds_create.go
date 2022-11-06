@@ -84,10 +84,10 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Use the helper to create the secret
-	resp := b.Secret(SecretTokenType).Response(map[string]interface{}{
+	resp := b.Secret(SecretTokenType).Response(map[string]any{
 		"secret_id":   token.SecretID,
 		"accessor_id": token.AccessorID,
-	}, map[string]interface{}{
+	}, map[string]any{
 		"accessor_id": token.AccessorID,
 	})
 	resp.Secret.TTL = leaseConfig.TTL

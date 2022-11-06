@@ -104,7 +104,7 @@ func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *fram
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"issuing_certificates":    entries.IssuingCertificates,
 			"crl_distribution_points": entries.CRLDistributionPoints,
 			"ocsp_servers":            entries.OCSPServers,

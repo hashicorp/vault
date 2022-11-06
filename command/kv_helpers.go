@@ -97,7 +97,7 @@ re-run this command with a token with read access to %s`, path)
 	if options == nil {
 		return mountPath, 1, nil
 	}
-	versionRaw := options.(map[string]interface{})["version"]
+	versionRaw := options.(map[string]any)["version"]
 	if versionRaw == nil {
 		return mountPath, 1, nil
 	}
@@ -146,7 +146,7 @@ func addPrefixToKVPath(p, mountPath, apiPrefix string) string {
 	return path.Join(mountPath, apiPrefix, tp)
 }
 
-func getHeaderForMap(header string, data map[string]interface{}) string {
+func getHeaderForMap(header string, data map[string]any) string {
 	maxKey := 0
 	for k := range data {
 		if len(k) > maxKey {

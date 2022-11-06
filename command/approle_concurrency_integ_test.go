@@ -45,7 +45,7 @@ func TestAppRole_Integ_ConcurrentLogins(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("auth/approle/role/role1", map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/role1", map[string]any{
 		"bind_secret_id": "true",
 		"period":         "300",
 	})

@@ -161,7 +161,7 @@ func getParsedCrlFromBackend(t *testing.T, b *backend, s logical.Storage, path s
 // are mostly compatible with client.Logical() operations. The main difference
 // is that the JSON round-tripping hasn't occurred, so values are as the
 // backend returns them (e.g., []string instead of []interface{}).
-func CBReq(b *backend, s logical.Storage, operation logical.Operation, path string, data map[string]interface{}) (*logical.Response, error) {
+func CBReq(b *backend, s logical.Storage, operation logical.Operation, path string, data map[string]any) (*logical.Response, error) {
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  operation,
 		Path:       path,
@@ -181,23 +181,23 @@ func CBReq(b *backend, s logical.Storage, operation logical.Operation, path stri
 }
 
 func CBRead(b *backend, s logical.Storage, path string) (*logical.Response, error) {
-	return CBReq(b, s, logical.ReadOperation, path, make(map[string]interface{}))
+	return CBReq(b, s, logical.ReadOperation, path, make(map[string]any))
 }
 
-func CBWrite(b *backend, s logical.Storage, path string, data map[string]interface{}) (*logical.Response, error) {
+func CBWrite(b *backend, s logical.Storage, path string, data map[string]any) (*logical.Response, error) {
 	return CBReq(b, s, logical.UpdateOperation, path, data)
 }
 
-func CBPatch(b *backend, s logical.Storage, path string, data map[string]interface{}) (*logical.Response, error) {
+func CBPatch(b *backend, s logical.Storage, path string, data map[string]any) (*logical.Response, error) {
 	return CBReq(b, s, logical.PatchOperation, path, data)
 }
 
 func CBList(b *backend, s logical.Storage, path string) (*logical.Response, error) {
-	return CBReq(b, s, logical.ListOperation, path, make(map[string]interface{}))
+	return CBReq(b, s, logical.ListOperation, path, make(map[string]any))
 }
 
 func CBDelete(b *backend, s logical.Storage, path string) (*logical.Response, error) {
-	return CBReq(b, s, logical.DeleteOperation, path, make(map[string]interface{}))
+	return CBReq(b, s, logical.DeleteOperation, path, make(map[string]any))
 }
 
 func requireFieldsSetInResp(t *testing.T, resp *logical.Response, fields ...string) {
@@ -212,13 +212,13 @@ func requireFieldsSetInResp(t *testing.T, resp *logical.Response, fields ...stri
 	require.Empty(t, missingFields, "The following fields were required but missing from response:\n%v", resp.Data)
 }
 
-func requireSuccessNonNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
+func requireSuccessNonNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...any) {
 	require.NoError(t, err, msgAndArgs...)
 	require.False(t, resp.IsError(), msgAndArgs...)
 	require.NotNil(t, resp, msgAndArgs...)
 }
 
-func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
+func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...any) {
 	require.NoError(t, err, msgAndArgs...)
 	require.False(t, resp.IsError(), msgAndArgs...)
 	require.Nil(t, resp, msgAndArgs...)

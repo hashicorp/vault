@@ -115,10 +115,10 @@ func NewGCPAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return g, nil
 }
 
-func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPath string, header http.Header, retData map[string]interface{}, retErr error) {
+func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPath string, header http.Header, retData map[string]any, retErr error) {
 	g.logger.Trace("beginning authentication")
 
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	var jwt string
 
 	switch g.authType {
@@ -185,7 +185,7 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 		}
 		ttl := time.Minute * time.Duration(ttlMin)
 
-		jwtPayload := map[string]interface{}{
+		jwtPayload := map[string]any{
 			"aud": fmt.Sprintf("http://vault/%s", g.role),
 			"sub": serviceAccount,
 			"exp": time.Now().Add(ttl).Unix(),

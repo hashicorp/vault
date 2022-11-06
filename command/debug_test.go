@@ -642,7 +642,7 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 	defer closer()
 
 	// Create a new token with default policy
-	resp, err := client.Logical().Write("auth/token/create", map[string]interface{}{
+	resp, err := client.Logical().Write("auth/token/create", map[string]any{
 		"policies": "default",
 	})
 	if err != nil {

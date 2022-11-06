@@ -147,7 +147,7 @@ func idCtx(t *testing.T, ids ...string) context.Context {
 
 type MockClientConnInterfaceNoop struct{}
 
-func (m *MockClientConnInterfaceNoop) Invoke(_ context.Context, _ string, _ interface{}, reply interface{}, _ ...grpc.CallOption) error {
+func (m *MockClientConnInterfaceNoop) Invoke(_ context.Context, _ string, _ any, reply any, _ ...grpc.CallOption) error {
 	reply.(*MultiplexingSupportResponse).Supported = true
 	return nil
 }

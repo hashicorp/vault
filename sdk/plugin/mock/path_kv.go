@@ -62,7 +62,7 @@ func (b *backend) pathKVRead(ctx context.Context, req *logical.Request, data *fr
 	b.Logger().Info("reading value", "key", req.Path, "value", value)
 	// Return the secret
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"value":   value,
 			"version": version,
 		},
@@ -89,7 +89,7 @@ func (b *backend) pathKVCreateUpdate(ctx context.Context, req *logical.Request, 
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"value": value,
 		},
 	}, nil

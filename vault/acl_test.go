@@ -401,8 +401,8 @@ func testACLPolicyMerge(t *testing.T, ns *namespace.Namespace) {
 		path           string
 		minWrappingTTL *time.Duration
 		maxWrappingTTL *time.Duration
-		allowed        map[string][]interface{}
-		denied         map[string][]interface{}
+		allowed        map[string][]any
+		denied         map[string][]any
 		required       []string
 	}
 
@@ -412,14 +412,14 @@ func testACLPolicyMerge(t *testing.T, ns *namespace.Namespace) {
 	}
 
 	tcases := []tcase{
-		{"foo/bar", nil, nil, nil, map[string][]interface{}{"zip": {}, "baz": {}}, []string{"baz"}},
-		{"hello/universe", createDuration(50), createDuration(200), map[string][]interface{}{"foo": {}, "bar": {}}, nil, []string{"foo", "bar"}},
-		{"allow/all", nil, nil, map[string][]interface{}{"*": {}, "test": {}, "test1": {"foo"}}, nil, nil},
-		{"allow/all1", nil, nil, map[string][]interface{}{"*": {}, "test": {}, "test1": {"foo"}}, nil, nil},
-		{"deny/all", nil, nil, nil, map[string][]interface{}{"*": {}, "test": {}}, nil},
-		{"deny/all1", nil, nil, nil, map[string][]interface{}{"*": {}, "test": {}}, nil},
-		{"value/merge", nil, nil, map[string][]interface{}{"test": {3, 4, 1, 2}}, map[string][]interface{}{"test": {3, 4, 1, 2}}, nil},
-		{"value/empty", nil, nil, map[string][]interface{}{"empty": {}}, map[string][]interface{}{"empty": {}}, nil},
+		{"foo/bar", nil, nil, nil, map[string][]any{"zip": {}, "baz": {}}, []string{"baz"}},
+		{"hello/universe", createDuration(50), createDuration(200), map[string][]any{"foo": {}, "bar": {}}, nil, []string{"foo", "bar"}},
+		{"allow/all", nil, nil, map[string][]any{"*": {}, "test": {}, "test1": {"foo"}}, nil, nil},
+		{"allow/all1", nil, nil, map[string][]any{"*": {}, "test": {}, "test1": {"foo"}}, nil, nil},
+		{"deny/all", nil, nil, nil, map[string][]any{"*": {}, "test": {}}, nil},
+		{"deny/all1", nil, nil, nil, map[string][]any{"*": {}, "test": {}}, nil},
+		{"value/merge", nil, nil, map[string][]any{"test": {3, 4, 1, 2}}, map[string][]any{"test": {3, 4, 1, 2}}, nil},
+		{"value/empty", nil, nil, map[string][]any{"empty": {}}, map[string][]any{"empty": {}}, nil},
 	}
 
 	for _, tc := range tcases {
@@ -510,7 +510,7 @@ func testACLAllowOperation(t *testing.T, ns *namespace.Namespace) {
 	for _, tc := range tcases {
 		request := &logical.Request{
 			Path: tc.path,
-			Data: make(map[string]interface{}),
+			Data: make(map[string]any),
 		}
 
 		for _, parameter := range tc.parameters {
@@ -558,55 +558,55 @@ func testACLValuePermissions(t *testing.T, ns *namespace.Namespace) {
 	type tcase struct {
 		path       string
 		parameters []string
-		values     []interface{}
+		values     []any
 		allowed    bool
 	}
 
 	tcases := []tcase{
-		{"dev/ops", []string{"allow"}, []interface{}{"good"}, true},
-		{"dev/ops", []string{"allow"}, []interface{}{"bad"}, false},
-		{"foo/bar", []string{"deny"}, []interface{}{"bad"}, false},
-		{"foo/bar", []string{"deny"}, []interface{}{"bad glob"}, false},
-		{"foo/bar", []string{"deny"}, []interface{}{"good"}, true},
-		{"foo/bar", []string{"allow"}, []interface{}{"good"}, true},
-		{"foo/bar", []string{"deny"}, []interface{}{nil}, true},
-		{"foo/bar", []string{"allow"}, []interface{}{nil}, true},
-		{"foo/baz", []string{"aLLow"}, []interface{}{"good"}, true},
-		{"foo/baz", []string{"deny"}, []interface{}{"bad"}, false},
-		{"foo/baz", []string{"deny"}, []interface{}{"good"}, false},
-		{"foo/baz", []string{"allow", "deny"}, []interface{}{"good", "bad"}, false},
-		{"foo/baz", []string{"deny", "allow"}, []interface{}{"good", "bad"}, false},
-		{"foo/baz", []string{"deNy", "allow"}, []interface{}{"bad", "good"}, false},
-		{"foo/baz", []string{"aLLow"}, []interface{}{"bad"}, false},
-		{"foo/baz", []string{"Neither"}, []interface{}{"bad"}, false},
-		{"foo/baz", []string{"allow"}, []interface{}{nil}, false},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good"}, true},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good1"}, true},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good2"}, true},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"glob good2"}, false},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"glob good3"}, true},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
-		{"fizz/buzz", []string{"allow_multi", "allow"}, []interface{}{"good1", "good"}, true},
-		{"fizz/buzz", []string{"deny_multi"}, []interface{}{"bad2"}, false},
-		{"fizz/buzz", []string{"deny_multi", "allow_multi"}, []interface{}{"good", "good2"}, false},
+		{"dev/ops", []string{"allow"}, []any{"good"}, true},
+		{"dev/ops", []string{"allow"}, []any{"bad"}, false},
+		{"foo/bar", []string{"deny"}, []any{"bad"}, false},
+		{"foo/bar", []string{"deny"}, []any{"bad glob"}, false},
+		{"foo/bar", []string{"deny"}, []any{"good"}, true},
+		{"foo/bar", []string{"allow"}, []any{"good"}, true},
+		{"foo/bar", []string{"deny"}, []any{nil}, true},
+		{"foo/bar", []string{"allow"}, []any{nil}, true},
+		{"foo/baz", []string{"aLLow"}, []any{"good"}, true},
+		{"foo/baz", []string{"deny"}, []any{"bad"}, false},
+		{"foo/baz", []string{"deny"}, []any{"good"}, false},
+		{"foo/baz", []string{"allow", "deny"}, []any{"good", "bad"}, false},
+		{"foo/baz", []string{"deny", "allow"}, []any{"good", "bad"}, false},
+		{"foo/baz", []string{"deNy", "allow"}, []any{"bad", "good"}, false},
+		{"foo/baz", []string{"aLLow"}, []any{"bad"}, false},
+		{"foo/baz", []string{"Neither"}, []any{"bad"}, false},
+		{"foo/baz", []string{"allow"}, []any{nil}, false},
+		{"fizz/buzz", []string{"allow_multi"}, []any{"good"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []any{"good1"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []any{"good2"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []any{"glob good2"}, false},
+		{"fizz/buzz", []string{"allow_multi"}, []any{"glob good3"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []any{"bad"}, false},
+		{"fizz/buzz", []string{"allow_multi"}, []any{"bad"}, false},
+		{"fizz/buzz", []string{"allow_multi", "allow"}, []any{"good1", "good"}, true},
+		{"fizz/buzz", []string{"deny_multi"}, []any{"bad2"}, false},
+		{"fizz/buzz", []string{"deny_multi", "allow_multi"}, []any{"good", "good2"}, false},
 		//	{"test/types", []string{"array"}, []interface{}{[1]string{"good"}}, true},
-		{"test/types", []string{"map"}, []interface{}{map[string]interface{}{"good": "one"}}, true},
-		{"test/types", []string{"map"}, []interface{}{map[string]interface{}{"bad": "one"}}, false},
-		{"test/types", []string{"int"}, []interface{}{1}, true},
-		{"test/types", []string{"int"}, []interface{}{3}, false},
-		{"test/types", []string{"bool"}, []interface{}{false}, true},
-		{"test/types", []string{"bool"}, []interface{}{true}, false},
-		{"test/star", []string{"anything"}, []interface{}{true}, true},
-		{"test/star", []string{"foo"}, []interface{}{true}, true},
-		{"test/star", []string{"bar"}, []interface{}{false}, true},
-		{"test/star", []string{"bar"}, []interface{}{true}, false},
+		{"test/types", []string{"map"}, []any{map[string]any{"good": "one"}}, true},
+		{"test/types", []string{"map"}, []any{map[string]any{"bad": "one"}}, false},
+		{"test/types", []string{"int"}, []any{1}, true},
+		{"test/types", []string{"int"}, []any{3}, false},
+		{"test/types", []string{"bool"}, []any{false}, true},
+		{"test/types", []string{"bool"}, []any{true}, false},
+		{"test/star", []string{"anything"}, []any{true}, true},
+		{"test/star", []string{"foo"}, []any{true}, true},
+		{"test/star", []string{"bar"}, []any{false}, true},
+		{"test/star", []string{"bar"}, []any{true}, false},
 	}
 
 	for _, tc := range tcases {
 		request := &logical.Request{
 			Path: tc.path,
-			Data: make(map[string]interface{}),
+			Data: make(map[string]any),
 		}
 		ctx := namespace.ContextWithNamespace(context.Background(), ns)
 

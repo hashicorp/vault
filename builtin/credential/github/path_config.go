@@ -153,7 +153,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 		return nil, nil
 	}
 
-	d := map[string]interface{}{
+	d := map[string]any{
 		"organization_id": config.OrganizationID,
 		"organization":    config.Organization,
 		"base_url":        config.BaseURL,

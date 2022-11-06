@@ -40,8 +40,8 @@ type MySQL struct {
 }
 
 // New implements builtinplugins.BuiltinFactory
-func New(defaultUsernameTemplate string) func() (interface{}, error) {
-	return func() (interface{}, error) {
+func New(defaultUsernameTemplate string) func() (any, error) {
+	return func() (any, error) {
 		if defaultUsernameTemplate == "" {
 			return nil, fmt.Errorf("missing default username template")
 		}

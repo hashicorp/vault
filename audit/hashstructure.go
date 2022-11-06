@@ -71,17 +71,17 @@ func HashRequest(salter *salt.Salt, in *logical.Request, HMACAccessor bool, nonH
 			return nil, err
 		}
 
-		err = hashMap(fn, copy.(map[string]interface{}), nonHMACDataKeys)
+		err = hashMap(fn, copy.(map[string]any), nonHMACDataKeys)
 		if err != nil {
 			return nil, err
 		}
-		req.Data = copy.(map[string]interface{})
+		req.Data = copy.(map[string]any)
 	}
 
 	return &req, nil
 }
 
-func hashMap(fn func(string) string, data map[string]interface{}, nonHMACDataKeys []string) error {
+func hashMap(fn func(string) string, data map[string]any, nonHMACDataKeys []string) error {
 	for k, v := range data {
 		if o, ok := v.(logical.OptMarshaler); ok {
 			marshaled, err := o.MarshalJSONWithOptions(&logical.MarshalOptions{
@@ -124,7 +124,7 @@ func HashResponse(salter *salt.Salt, in *logical.Response, HMACAccessor bool, no
 			return nil, err
 		}
 
-		mapCopy := copy.(map[string]interface{})
+		mapCopy := copy.(map[string]any)
 		if b, ok := mapCopy[logical.HTTPRawBody].([]byte); ok {
 			mapCopy[logical.HTTPRawBody] = string(b)
 		}
@@ -172,7 +172,7 @@ func HashWrapInfo(salter *salt.Salt, in *wrapping.ResponseWrapInfo, HMACAccessor
 // the structure. Only _values_ are hashed: keys of objects are not.
 //
 // For the HashCallback, see the built-in HashCallbacks below.
-func HashStructure(s interface{}, cb HashCallback, ignoredKeys []string) error {
+func HashStructure(s any, cb HashCallback, ignoredKeys []string) error {
 	walker := &hashWalker{Callback: cb, IgnoredKeys: ignoredKeys}
 	return reflectwalk.Walk(s, walker)
 }

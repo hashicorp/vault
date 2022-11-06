@@ -245,7 +245,7 @@ func (m *CouchDBBackend) List(ctx context.Context, prefix string) ([]string, err
 	}
 
 	var out []string
-	seen := make(map[string]interface{})
+	seen := make(map[string]any)
 	for _, result := range items {
 		trimmed := strings.TrimPrefix(result.ID, prefix)
 		sep := strings.Index(trimmed, "/")

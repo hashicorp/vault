@@ -81,7 +81,7 @@ func TestDeleteCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		if _, err := client.Logical().Write("secret/delete/foo", map[string]interface{}{
+		if _, err := client.Logical().Write("secret/delete/foo", map[string]any{
 			"foo": "bar",
 		}); err != nil {
 			t.Fatal(err)

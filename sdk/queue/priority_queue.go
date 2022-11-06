@@ -63,7 +63,7 @@ type Item struct {
 	Key string
 	// Value is an unspecified type that implementations can use to store
 	// information
-	Value interface{}
+	Value any
 
 	// Priority determines ordering in the queue, with the lowest value being the
 	// highest priority
@@ -172,7 +172,7 @@ func (q queue) Swap(i, j int) {
 // Push is used by heap.Interface to push items onto the heap. This method is
 // invoked by container/heap, and should not be used directly.
 // See: https://golang.org/pkg/container/heap/#Interface
-func (q *queue) Push(x interface{}) {
+func (q *queue) Push(x any) {
 	n := len(*q)
 	item := x.(*Item)
 	item.index = n
@@ -182,7 +182,7 @@ func (q *queue) Push(x interface{}) {
 // Pop is used by heap.Interface to pop items off of the heap. This method is
 // invoked by container/heap, and should not be used directly.
 // See: https://golang.org/pkg/container/heap/#Interface
-func (q *queue) Pop() interface{} {
+func (q *queue) Pop() any {
 	old := *q
 	n := len(old)
 	item := old[n-1]

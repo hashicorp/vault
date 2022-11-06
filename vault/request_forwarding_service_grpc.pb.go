@@ -118,7 +118,7 @@ func RegisterRequestForwardingServer(s grpc.ServiceRegistrar, srv RequestForward
 	s.RegisterService(&RequestForwarding_ServiceDesc, srv)
 }
 
-func _RequestForwarding_ForwardRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _RequestForwarding_ForwardRequest_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(forwarding.Request)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -130,13 +130,13 @@ func _RequestForwarding_ForwardRequest_Handler(srv interface{}, ctx context.Cont
 		Server:     srv,
 		FullMethod: "/vault.RequestForwarding/ForwardRequest",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(RequestForwardingServer).ForwardRequest(ctx, req.(*forwarding.Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RequestForwarding_Echo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _RequestForwarding_Echo_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(EchoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -148,13 +148,13 @@ func _RequestForwarding_Echo_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/vault.RequestForwarding/Echo",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(RequestForwardingServer).Echo(ctx, req.(*EchoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RequestForwarding_PerformanceStandbyElectionRequest_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _RequestForwarding_PerformanceStandbyElectionRequest_Handler(srv any, stream grpc.ServerStream) error {
 	m := new(PerfStandbyElectionInput)
 	if err := stream.RecvMsg(m); err != nil {
 		return err

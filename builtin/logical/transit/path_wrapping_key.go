@@ -48,7 +48,7 @@ func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request,
 	publicKeyString := string(pemBytes)
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"public_key": publicKeyString,
 		},
 	}

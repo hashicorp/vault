@@ -8,34 +8,34 @@ import (
 	sockaddr "github.com/hashicorp/go-sockaddr"
 )
 
-func ParseCapacityString(in interface{}) (uint64, error) {
+func ParseCapacityString(in any) (uint64, error) {
 	return extparseutil.ParseCapacityString(in)
 }
 
-func ParseDurationSecond(in interface{}) (time.Duration, error) {
+func ParseDurationSecond(in any) (time.Duration, error) {
 	return extparseutil.ParseDurationSecond(in)
 }
 
-func ParseAbsoluteTime(in interface{}) (time.Time, error) {
+func ParseAbsoluteTime(in any) (time.Time, error) {
 	return extparseutil.ParseAbsoluteTime(in)
 }
 
-func ParseInt(in interface{}) (int64, error) {
+func ParseInt(in any) (int64, error) {
 	return extparseutil.ParseInt(in)
 }
 
-func ParseBool(in interface{}) (bool, error) {
+func ParseBool(in any) (bool, error) {
 	return extparseutil.ParseBool(in)
 }
 
-func ParseString(in interface{}) (string, error) {
+func ParseString(in any) (string, error) {
 	return extparseutil.ParseString(in)
 }
 
-func ParseCommaStringSlice(in interface{}) ([]string, error) {
+func ParseCommaStringSlice(in any) ([]string, error) {
 	return extparseutil.ParseCommaStringSlice(in)
 }
 
-func ParseAddrs(addrs interface{}) ([]*sockaddr.SockAddrMarshaler, error) {
+func ParseAddrs(addrs any) ([]*sockaddr.SockAddrMarshaler, error) {
 	return extparseutil.ParseAddrs(addrs)
 }

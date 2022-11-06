@@ -134,7 +134,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"name": p.Name,
 			"type": p.Type.String(),
 			"keys": retKeys,

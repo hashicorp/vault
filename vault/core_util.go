@@ -30,7 +30,7 @@ func (e entCoreConfig) Clone() entCoreConfig {
 }
 
 type LicensingConfig struct {
-	AdditionalPublicKeys []interface{}
+	AdditionalPublicKeys []any
 }
 
 func coreInit(c *Core, conf *CoreConfig) error {

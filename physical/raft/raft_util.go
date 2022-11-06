@@ -28,11 +28,11 @@ func autopilotToAPIStateEnterprise(_ *autopilot.State, _ *AutopilotState) error 
 	return nil
 }
 
-func (d *Delegate) autopilotConfigExt() interface{} {
+func (d *Delegate) autopilotConfigExt() any {
 	return nil
 }
 
-func (d *Delegate) autopilotServerExt(_ *FollowerState) interface{} {
+func (d *Delegate) autopilotServerExt(_ *FollowerState) any {
 	return nil
 }
 

@@ -23,7 +23,7 @@ func TestBackend_config_connection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configData := map[string]interface{}{
+	configData := map[string]any{
 		"connection_url":       "sample_connection_url",
 		"max_open_connections": 9,
 		"max_idle_connections": 7,
@@ -65,7 +65,7 @@ func TestBackend_basic(t *testing.T) {
 	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -91,7 +91,7 @@ func TestBackend_basicHostRevoke(t *testing.T) {
 	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -117,7 +117,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -148,7 +148,7 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -162,7 +162,7 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 	})
 }
 
-func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool) logicaltest.TestStep {
+func testAccStepConfig(t *testing.T, d map[string]any, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
@@ -192,13 +192,13 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 }
 
 func testAccStepRole(t *testing.T, wildCard bool) logicaltest.TestStep {
-	pathData := make(map[string]interface{})
+	pathData := make(map[string]any)
 	if wildCard {
-		pathData = map[string]interface{}{
+		pathData = map[string]any{
 			"sql": testRoleWildCard,
 		}
 	} else {
-		pathData = map[string]interface{}{
+		pathData = map[string]any{
 			"sql":            testRoleHost,
 			"revocation_sql": testRevocationSQL,
 		}
@@ -270,7 +270,7 @@ func testAccStepWriteLease(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/lease",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"lease":     "1h5m",
 			"lease_max": "24h",
 		},

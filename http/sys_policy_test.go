@@ -16,20 +16,20 @@ func TestSysPolicies(t *testing.T) {
 
 	resp := testHttpGet(t, token, addr+"/v1/sys/policy")
 
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
+	var actual map[string]any
+	expected := map[string]any{
 		"lease_id":       "",
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
-		"data": map[string]interface{}{
-			"policies": []interface{}{"default", "root"},
-			"keys":     []interface{}{"default", "root"},
+		"data": map[string]any{
+			"policies": []any{"default", "root"},
+			"keys":     []any{"default", "root"},
 		},
-		"policies": []interface{}{"default", "root"},
-		"keys":     []interface{}{"default", "root"},
+		"policies": []any{"default", "root"},
+		"keys":     []any{"default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -47,15 +47,15 @@ func TestSysReadPolicy(t *testing.T) {
 
 	resp := testHttpGet(t, token, addr+"/v1/sys/policy/root")
 
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
+	var actual map[string]any
+	expected := map[string]any{
 		"lease_id":       "",
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"name":  "root",
 			"rules": "",
 		},
@@ -76,27 +76,27 @@ func TestSysWritePolicy(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPost(t, token, addr+"/v1/sys/policy/foo", map[string]interface{}{
+	resp := testHttpPost(t, token, addr+"/v1/sys/policy/foo", map[string]any{
 		"rules": `path "*" { capabilities = ["read"] }`,
 	})
 	testResponseStatus(t, resp, 200)
 
 	resp = testHttpGet(t, token, addr+"/v1/sys/policy")
 
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
+	var actual map[string]any
+	expected := map[string]any{
 		"lease_id":       "",
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
-		"data": map[string]interface{}{
-			"policies": []interface{}{"default", "foo", "root"},
-			"keys":     []interface{}{"default", "foo", "root"},
+		"data": map[string]any{
+			"policies": []any{"default", "foo", "root"},
+			"keys":     []any{"default", "foo", "root"},
 		},
-		"policies": []interface{}{"default", "foo", "root"},
-		"keys":     []interface{}{"default", "foo", "root"},
+		"policies": []any{"default", "foo", "root"},
+		"keys":     []any{"default", "foo", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -105,7 +105,7 @@ func TestSysWritePolicy(t *testing.T) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	resp = testHttpPost(t, token, addr+"/v1/sys/policy/response-wrapping", map[string]interface{}{
+	resp = testHttpPost(t, token, addr+"/v1/sys/policy/response-wrapping", map[string]any{
 		"rules": ``,
 	})
 	testResponseStatus(t, resp, 400)
@@ -117,7 +117,7 @@ func TestSysDeletePolicy(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPost(t, token, addr+"/v1/sys/policy/foo", map[string]interface{}{
+	resp := testHttpPost(t, token, addr+"/v1/sys/policy/foo", map[string]any{
 		"rules": `path "*" { capabilities = ["read"] }`,
 	})
 	testResponseStatus(t, resp, 200)
@@ -132,20 +132,20 @@ func TestSysDeletePolicy(t *testing.T) {
 
 	resp = testHttpGet(t, token, addr+"/v1/sys/policy")
 
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
+	var actual map[string]any
+	expected := map[string]any{
 		"lease_id":       "",
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
-		"data": map[string]interface{}{
-			"policies": []interface{}{"default", "root"},
-			"keys":     []interface{}{"default", "root"},
+		"data": map[string]any{
+			"policies": []any{"default", "root"},
+			"keys":     []any{"default", "root"},
 		},
-		"policies": []interface{}{"default", "root"},
-		"keys":     []interface{}{"default", "root"},
+		"policies": []any{"default", "root"},
+		"keys":     []any{"default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

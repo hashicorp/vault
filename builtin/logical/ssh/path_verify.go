@@ -50,7 +50,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	// connection to Vault server is proper.
 	if otp == api.VerifyEchoRequest {
 		return &logical.Response{
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"message": api.VerifyEchoResponse,
 			},
 		}, nil
@@ -82,7 +82,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	// Return username and IP only if there were no problems uptill this point.
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"username":  otpEntry.Username,
 			"ip":        otpEntry.IP,
 			"role_name": otpEntry.RoleName,

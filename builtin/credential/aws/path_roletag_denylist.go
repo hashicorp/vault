@@ -132,7 +132,7 @@ func (b *backend) pathRoletagDenyListRead(ctx context.Context, req *logical.Requ
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"creation_time":   entry.CreationTime.Format(time.RFC3339Nano),
 			"expiration_time": entry.ExpirationTime.Format(time.RFC3339Nano),
 		},

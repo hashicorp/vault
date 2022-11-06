@@ -428,17 +428,17 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath, 
 	}
 
 	idx := indexNamespace
-	args := []interface{}{nsPath, false, false, false}
+	args := []any{nsPath, false, false, false}
 	if mountPath != "" {
 		if pathSuffix != "" {
 			idx = indexNamespaceMountPath
-			args = []interface{}{nsPath, mountPath, pathSuffix, false}
+			args = []any{nsPath, mountPath, pathSuffix, false}
 		} else if role != "" {
 			idx = indexNamespaceMountRole
-			args = []interface{}{nsPath, mountPath, false, role}
+			args = []any{nsPath, mountPath, false, role}
 		} else {
 			idx = indexNamespaceMount
-			args = []interface{}{nsPath, mountPath, false, false}
+			args = []any{nsPath, mountPath, false, false}
 		}
 	}
 
@@ -493,7 +493,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	//
 	// Find a match from most specific applicable quota rule to less specific one.
 	//
-	quotaFetchFunc := func(idx string, args ...interface{}) (Quota, error) {
+	quotaFetchFunc := func(idx string, args ...any) (Quota, error) {
 		iter, err := txn.Get(req.Type.String(), idx, args...)
 		if err != nil {
 			return nil, err
@@ -1125,7 +1125,7 @@ func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPat
 
 	leaseQuotaUpdated := false
 
-	updateMounts := func(idx string, args ...interface{}) error {
+	updateMounts := func(idx string, args ...any) error {
 		for _, quotaType := range quotaTypes() {
 			iter, err := txn.Get(quotaType, idx, args...)
 			if err != nil {
@@ -1203,7 +1203,7 @@ func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath 
 
 	leaseQuotaDeleted := false
 
-	updateMounts := func(idx string, args ...interface{}) error {
+	updateMounts := func(idx string, args ...any) error {
 		for _, quotaType := range quotaTypes() {
 			iter, err := txn.Get(quotaType, idx, args...)
 			if err != nil {

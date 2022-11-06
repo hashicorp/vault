@@ -54,13 +54,13 @@ func TestBackend_Config(t *testing.T) {
 	groupIDs := createOktaGroups(t, username, token, os.Getenv("OKTA_ORG"))
 	defer deleteOktaGroups(t, token, os.Getenv("OKTA_ORG"), groupIDs)
 
-	configData := map[string]interface{}{
+	configData := map[string]any{
 		"org_name": os.Getenv("OKTA_ORG"),
 		"base_url": "oktapreview.com",
 	}
 
 	updatedDuration := time.Hour * 1
-	configDataToken := map[string]interface{}{
+	configDataToken := map[string]any{
 		"api_token": token,
 		"token_ttl": "1h",
 	}
@@ -161,7 +161,7 @@ func testLoginWrite(t *testing.T, username, password, reason string, expectedTTL
 		Operation: logical.UpdateOperation,
 		Path:      "login/" + username,
 		ErrorOk:   true,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"password": password,
 		},
 		Check: func(resp *logical.Response) error {
@@ -189,7 +189,7 @@ func testLoginWrite(t *testing.T, username, password, reason string, expectedTTL
 	}
 }
 
-func testConfigCreate(t *testing.T, d map[string]interface{}) logicaltest.TestStep {
+func testConfigCreate(t *testing.T, d map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.CreateOperation,
 		Path:      "config",
@@ -197,7 +197,7 @@ func testConfigCreate(t *testing.T, d map[string]interface{}) logicaltest.TestSt
 	}
 }
 
-func testConfigUpdate(t *testing.T, d map[string]interface{}) logicaltest.TestStep {
+func testConfigUpdate(t *testing.T, d map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
@@ -205,7 +205,7 @@ func testConfigUpdate(t *testing.T, d map[string]interface{}) logicaltest.TestSt
 	}
 }
 
-func testConfigRead(t *testing.T, token string, d map[string]interface{}) logicaltest.TestStep {
+func testConfigRead(t *testing.T, token string, d map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "config",
@@ -251,23 +251,23 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-func testAccUserGroups(t *testing.T, user string, groups interface{}, policies interface{}) logicaltest.TestStep {
+func testAccUserGroups(t *testing.T, user string, groups any, policies any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "users/" + user,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"groups":   groups,
 			"policies": policies,
 		},
 	}
 }
 
-func testAccGroups(t *testing.T, group string, policies interface{}) logicaltest.TestStep {
+func testAccGroups(t *testing.T, group string, policies any) logicaltest.TestStep {
 	t.Logf("[testAccGroups] - Registering group %s, policy %s", group, policies)
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "groups/" + group,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"policies": policies,
 		},
 	}
@@ -277,7 +277,7 @@ func testAccLogin(t *testing.T, user, password string, keys []string) logicaltes
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login/" + user,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"password": password,
 		},
 		Unauthenticated: true,

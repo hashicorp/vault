@@ -20,10 +20,10 @@ import (
 
 // mySQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type mySQLConnectionProducer struct {
-	ConnectionURL            string      `json:"connection_url"          mapstructure:"connection_url"          structs:"connection_url"`
-	MaxOpenConnections       int         `json:"max_open_connections"    mapstructure:"max_open_connections"    structs:"max_open_connections"`
-	MaxIdleConnections       int         `json:"max_idle_connections"    mapstructure:"max_idle_connections"    structs:"max_idle_connections"`
-	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
+	ConnectionURL            string `json:"connection_url"          mapstructure:"connection_url"          structs:"connection_url"`
+	MaxOpenConnections       int    `json:"max_open_connections"    mapstructure:"max_open_connections"    structs:"max_open_connections"`
+	MaxIdleConnections       int    `json:"max_idle_connections"    mapstructure:"max_idle_connections"    structs:"max_idle_connections"`
+	MaxConnectionLifetimeRaw any    `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 
 	Username string `json:"username" mapstructure:"username" structs:"username"`
 	Password string `json:"password" mapstructure:"password" structs:"password"`
@@ -34,19 +34,19 @@ type mySQLConnectionProducer struct {
 	// tlsConfigName is a globally unique name that references the TLS config for this instance in the mysql driver
 	tlsConfigName string
 
-	RawConfig             map[string]interface{}
+	RawConfig             map[string]any
 	maxConnectionLifetime time.Duration
 	Initialized           bool
 	db                    *sql.DB
 	sync.Mutex
 }
 
-func (c *mySQLConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+func (c *mySQLConnectionProducer) Initialize(ctx context.Context, conf map[string]any, verifyConnection bool) error {
 	_, err := c.Init(ctx, conf, verifyConnection)
 	return err
 }
 
-func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
+func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]any, verifyConnection bool) (map[string]any, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -123,7 +123,7 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 	return c.RawConfig, nil
 }
 
-func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
+func (c *mySQLConnectionProducer) Connection(ctx context.Context) (any, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}

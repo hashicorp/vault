@@ -277,7 +277,7 @@ func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, 
 		return nil, nil
 	}
 
-	data := wal.Data.(map[string]interface{})
+	data := wal.Data.(map[string]any)
 	walEntry := setCredentialsWAL{
 		walID:        id,
 		walCreatedAt: wal.CreatedAt,

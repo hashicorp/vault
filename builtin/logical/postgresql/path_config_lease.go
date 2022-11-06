@@ -74,7 +74,7 @@ func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data 
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"lease":     lease.Lease.String(),
 			"lease_max": lease.LeaseMax.String(),
 		},

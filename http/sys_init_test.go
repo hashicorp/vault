@@ -27,8 +27,8 @@ func TestSysInit_get(t *testing.T) {
 			t.Fatalf("err: %s", err)
 		}
 
-		var actual map[string]interface{}
-		expected := map[string]interface{}{
+		var actual map[string]any
+		expected := map[string]any{
 			"initialized": false,
 		}
 		testResponseStatus(t, resp, 200)
@@ -47,8 +47,8 @@ func TestSysInit_get(t *testing.T) {
 			t.Fatalf("err: %s", err)
 		}
 
-		var actual map[string]interface{}
-		expected := map[string]interface{}{
+		var actual map[string]any
+		expected := map[string]any{
 			"initialized": true,
 		}
 		testResponseStatus(t, resp, 200)
@@ -66,7 +66,7 @@ func TestSysInit_pgpKeysEntries(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]any{
 		"secret_shares":    5,
 		"secret_threshold": 3,
 		"pgp_keys":         []string{"pgpkey1"},
@@ -81,7 +81,7 @@ func TestSysInit_pgpKeysEntriesForRecovery(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]any{
 		"secret_shares":      1,
 		"secret_threshold":   1,
 		"stored_shares":      1,
@@ -97,12 +97,12 @@ func TestSysInit_put(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]any{
 		"secret_shares":    5,
 		"secret_threshold": 3,
 	})
 
-	var actual map[string]interface{}
+	var actual map[string]any
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	keysRaw, ok := actual["keys"]
@@ -114,7 +114,7 @@ func TestSysInit_put(t *testing.T) {
 		t.Fatal("no root token")
 	}
 
-	for _, key := range keysRaw.([]interface{}) {
+	for _, key := range keysRaw.([]any) {
 		keySlice, err := hex.DecodeString(key.(string))
 		if err != nil {
 			t.Fatalf("bad: %s", err)
@@ -135,7 +135,7 @@ func TestSysInit_Put_ValidateParams(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]any{
 		"secret_shares":      5,
 		"secret_threshold":   3,
 		"recovery_shares":    5,
@@ -179,7 +179,7 @@ func TestSysInit_Put_ValidateParams_AutoUnseal(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]any{
 		"secret_shares":      5,
 		"secret_threshold":   3,
 		"recovery_shares":    5,

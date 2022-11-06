@@ -633,7 +633,7 @@ func testLoadConfigFile_json(t *testing.T) {
 		MaxLeaseTTLRaw:       "10h",
 		DefaultLeaseTTL:      10 * time.Hour,
 		DefaultLeaseTTLRaw:   "10h",
-		DisableCacheRaw:      interface{}(nil),
+		DisableCacheRaw:      any(nil),
 		EnableUI:             true,
 		EnableUIRaw:          true,
 		EnableRawEndpoint:    true,
@@ -722,7 +722,7 @@ func testConfig_Sanitized(t *testing.T) {
 	}
 	sanitizedConfig := config.Sanitized()
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"api_addr":                            "top_level_api_addr",
 		"cache_size":                          0,
 		"cluster_addr":                        "top_level_cluster_addr",
@@ -745,15 +745,15 @@ func testConfig_Sanitized(t *testing.T) {
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
 		"log_requests_level":                  "basic",
-		"ha_storage": map[string]interface{}{
+		"ha_storage": map[string]any{
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": true,
 			"redirect_addr":      "top_level_api_addr",
 			"type":               "consul",
 		},
-		"listeners": []interface{}{
-			map[string]interface{}{
-				"config": map[string]interface{}{
+		"listeners": []any{
+			map[string]any{
+				"config": map[string]any{
 					"address": "127.0.0.1:443",
 				},
 				"type": "tcp",
@@ -764,22 +764,22 @@ func testConfig_Sanitized(t *testing.T) {
 		"max_lease_ttl":    (30 * 24 * time.Hour) / time.Second,
 		"pid_file":         "./pidfile",
 		"plugin_directory": "",
-		"seals": []interface{}{
-			map[string]interface{}{
+		"seals": []any{
+			map[string]any{
 				"disabled": false,
 				"type":     "awskms",
 			},
 		},
-		"storage": map[string]interface{}{
+		"storage": map[string]any{
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": false,
 			"redirect_addr":      "top_level_api_addr",
 			"type":               "consul",
 		},
-		"service_registration": map[string]interface{}{
+		"service_registration": map[string]any{
 			"type": "consul",
 		},
-		"telemetry": map[string]interface{}{
+		"telemetry": map[string]any{
 			"usage_gauge_period":                     5 * time.Minute,
 			"maximum_gauge_cardinality":              100,
 			"circonus_api_app":                       "",

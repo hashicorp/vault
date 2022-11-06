@@ -68,7 +68,7 @@ func TestCFEndToEnd(t *testing.T) {
 	defer mockCFAPI.Close()
 
 	// Configure a CA certificate like a Vault operator would in setting up CF.
-	if _, err := client.Logical().Write("auth/cf/config", map[string]interface{}{
+	if _, err := client.Logical().Write("auth/cf/config", map[string]any{
 		"identity_ca_certificates": testCFCerts.CACertificate,
 		"cf_api_addr":              mockCFAPI.URL,
 		"cf_username":              cfAPI.AuthUsername,
@@ -78,7 +78,7 @@ func TestCFEndToEnd(t *testing.T) {
 	}
 
 	// Configure a role to be used for logging in, another thing a Vault operator would do.
-	if _, err := client.Logical().Write("auth/cf/roles/test-role", map[string]interface{}{
+	if _, err := client.Logical().Write("auth/cf/roles/test-role", map[string]any{
 		"bound_instance_ids":     cfAPI.FoundServiceGUID,
 		"bound_organization_ids": cfAPI.FoundOrgGUID,
 		"bound_space_ids":        cfAPI.FoundSpaceGUID,
@@ -94,7 +94,7 @@ func TestCFEndToEnd(t *testing.T) {
 
 	am, err := agentcf.NewCFAuthMethod(&auth.AuthConfig{
 		MountPath: "auth/cf",
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"role": "test-role",
 		},
 	})
@@ -133,7 +133,7 @@ func TestCFEndToEnd(t *testing.T) {
 
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"path": tokenSinkFileName,
 		},
 		WrapTTL: 10 * time.Second,

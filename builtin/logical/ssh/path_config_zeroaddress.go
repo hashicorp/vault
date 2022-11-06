@@ -54,7 +54,7 @@ func (b *backend) pathConfigZeroAddressRead(ctx context.Context, req *logical.Re
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"roles": entry.Roles,
 		},
 	}, nil

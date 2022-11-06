@@ -420,7 +420,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
-		resp.Data = map[string]interface{}{
+		resp.Data = map[string]any{
 			"batch_results": response,
 		}
 	} else {
@@ -433,7 +433,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			return nil, response[0].err
 		}
 
-		resp.Data = map[string]interface{}{
+		resp.Data = map[string]any{
 			"signature":   response[0].Signature,
 			"key_version": response[0].KeyVersion,
 		}
@@ -636,7 +636,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
-		resp.Data = map[string]interface{}{
+		resp.Data = map[string]any{
 			"batch_results": response,
 		}
 	} else {
@@ -647,7 +647,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			}
 			return nil, response[0].err
 		}
-		resp.Data = map[string]interface{}{
+		resp.Data = map[string]any{
 			"valid": response[0].Valid,
 		}
 	}

@@ -19,7 +19,7 @@ func pathRaw(b *backend) *framework.Path {
 
 func (b *backend) pathRawRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			logical.HTTPContentType: "text/plain",
 			logical.HTTPRawBody:     []byte("Response"),
 			logical.HTTPStatusCode:  200,

@@ -266,6 +266,6 @@ func isIndefiniteTermination(ber []byte, offset int) (bool, error) {
 	return bytes.Index(ber[offset:], []byte{0x0, 0x0}) == 0, nil
 }
 
-func debugprint(format string, a ...interface{}) {
+func debugprint(format string, a ...any) {
 	// fmt.Printf(format, a)
 }

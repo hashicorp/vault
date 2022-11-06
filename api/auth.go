@@ -58,7 +58,7 @@ func (a *Auth) MFALogin(ctx context.Context, authMethod AuthMethod, creds ...str
 // The Secret returned is the authentication secret, which if desired can be
 // passed as input to the NewLifetimeWatcher method in order to start
 // automatically renewing the token.
-func (a *Auth) MFAValidate(ctx context.Context, mfaSecret *Secret, payload map[string]interface{}) (*Secret, error) {
+func (a *Auth) MFAValidate(ctx context.Context, mfaSecret *Secret, payload map[string]any) (*Secret, error) {
 	if mfaSecret == nil || mfaSecret.Auth == nil || mfaSecret.Auth.MFARequirement == nil {
 		return nil, fmt.Errorf("secret does not contain MFARequirements")
 	}

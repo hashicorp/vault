@@ -19,7 +19,7 @@ type Response struct {
 // DecodeJSON will decode the response body to a JSON structure. This
 // will consume the response body, but will not close it. Close must
 // still be called.
-func (r *Response) DecodeJSON(out interface{}) error {
+func (r *Response) DecodeJSON(out any) error {
 	return jsonutil.DecodeJSONFromReader(r.Body, out)
 }
 

@@ -70,7 +70,7 @@ func TestAWSEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := client.Logical().Write("auth/aws/role/test", map[string]interface{}{
+	if _, err := client.Logical().Write("auth/aws/role/test", map[string]any{
 		"auth_type": "iam",
 		"policies":  "default",
 		// Retain thru the account number of the given arn and wildcard the rest.
@@ -94,7 +94,7 @@ func TestAWSEndToEnd(t *testing.T) {
 	am, err := agentaws.NewAWSAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.aws"),
 		MountPath: "auth/aws",
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"role":                     "test",
 			"type":                     "iam",
 			"credential_poll_interval": 1,
@@ -135,7 +135,7 @@ func TestAWSEndToEnd(t *testing.T) {
 
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"path": tokenSinkFileName,
 		},
 		WrapTTL: 10 * time.Second,

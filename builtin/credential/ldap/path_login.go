@@ -91,7 +91,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		Metadata: map[string]string{
 			"username": username,
 		},
-		InternalData: map[string]interface{}{
+		InternalData: map[string]any{
 			"password": password,
 		},
 		DisplayName: username,

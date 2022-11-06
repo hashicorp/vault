@@ -161,7 +161,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	var revocationTimeRfc3339 string
 
 	response = &logical.Response{
-		Data: map[string]interface{}{},
+		Data: map[string]any{},
 	}
 	sc := b.makeStorageContext(ctx, req.Storage)
 
@@ -337,7 +337,7 @@ reply:
 	switch {
 	case len(contentType) != 0:
 		response = &logical.Response{
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				logical.HTTPContentType: contentType,
 				logical.HTTPRawBody:     certificate,
 			},

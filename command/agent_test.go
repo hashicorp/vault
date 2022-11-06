@@ -263,7 +263,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("auth/jwt/config", map[string]interface{}{
+	_, err = client.Logical().Write("auth/jwt/config", map[string]any{
 		"bound_issuer":           "https://team-vault.auth0.com/",
 		"jwt_validation_pubkeys": agent.TestECDSAPubKey,
 		"jwt_supported_algs":     "ES256",
@@ -272,7 +272,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("auth/jwt/role/test", map[string]interface{}{
+	_, err = client.Logical().Write("auth/jwt/role/test", map[string]any{
 		"role_type":       "jwt",
 		"bound_subject":   "r3qXcK2bix9eFECzsU3Sbmh0K16fatW6@clients",
 		"bound_audiences": "https://vault.plugin.auth.jwt.test",
@@ -479,13 +479,13 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	// Fetch the RoleID of the named role
 	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
 	body := request(t, serverClient, req, 200)
-	data := body["data"].(map[string]interface{})
+	data := body["data"].(map[string]any)
 	roleID := data["role_id"].(string)
 
 	// Get a SecretID issued against the named role
 	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
 	body = request(t, serverClient, req, 200)
-	data = body["data"].(map[string]interface{})
+	data = body["data"].(map[string]any)
 	secretID := data["secret_id"].(string)
 
 	// Write the RoleID and SecretID to temp files
@@ -706,13 +706,13 @@ func TestAgent_Template_Basic(t *testing.T) {
 	// Fetch the RoleID of the named role
 	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
 	body := request(t, serverClient, req, 200)
-	data := body["data"].(map[string]interface{})
+	data := body["data"].(map[string]any)
 	roleID := data["role_id"].(string)
 
 	// Get a SecretID issued against the named role
 	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
 	body = request(t, serverClient, req, 200)
-	data = body["data"].(map[string]interface{})
+	data = body["data"].(map[string]any)
 	secretID := data["secret_id"].(string)
 
 	// Write the RoleID and SecretID to temp files
@@ -1009,13 +1009,13 @@ func TestAgent_Template_ExitCounter(t *testing.T) {
 	// Fetch the RoleID of the named role
 	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
 	body := request(t, serverClient, req, 200)
-	data := body["data"].(map[string]interface{})
+	data := body["data"].(map[string]any)
 	roleID := data["role_id"].(string)
 
 	// Get a SecretID issued against the named role
 	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
 	body = request(t, serverClient, req, 200)
-	data = body["data"].(map[string]interface{})
+	data = body["data"].(map[string]any)
 	secretID := data["secret_id"].(string)
 
 	// Write the RoleID and SecretID to temp files
@@ -1206,7 +1206,7 @@ template {
 `
 
 // request issues HTTP requests.
-func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusCode int) map[string]interface{} {
+func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusCode int) map[string]any {
 	t.Helper()
 	resp, err := client.RawRequest(req)
 	if err != nil {
@@ -1224,7 +1224,7 @@ func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusC
 		return nil
 	}
 
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(bytes, &body)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -1315,8 +1315,8 @@ func TestAgent_Template_Retry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = serverClient.Logical().Write("secret/data/otherapp", map[string]interface{}{
-		"data": map[string]interface{}{
+	_, err = serverClient.Logical().Write("secret/data/otherapp", map[string]any{
+		"data": map[string]any{
 			"username": "barstuff",
 			"password": "zap",
 			"cert":     "something",
@@ -1511,7 +1511,7 @@ path "/secret/*" {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/test1", map[string]any{
 		"bind_secret_id": "true",
 		"token_ttl":      "1h",
 		"token_max_ttl":  "2h",
@@ -1590,7 +1590,7 @@ func TestAgent_Cache_Retry(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Unsetenv(api.EnvVaultAddress)
 
-	_, err := serverClient.Logical().Write("secret/foo", map[string]interface{}{
+	_, err := serverClient.Logical().Write("secret/foo", map[string]any{
 		"bar": "baz",
 	})
 	if err != nil {
@@ -1696,8 +1696,8 @@ vault {
 				t.Fatalf("%s expectError=%v error=%v secret=%v", tcname, tc.expectError, err, secret)
 			}
 			if secret != nil && secret.Data["foo"] != nil {
-				val := secret.Data["foo"].(map[string]interface{})
-				if !reflect.DeepEqual(val, map[string]interface{}{"bar": "baz"}) {
+				val := secret.Data["foo"].(map[string]any)
+				if !reflect.DeepEqual(val, map[string]any{"bar": "baz"}) {
 					t.Fatalf("expected key 'foo' to yield bar=baz, got: %v", val)
 				}
 			}
@@ -1751,8 +1751,8 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = serverClient.Logical().Write("secret/data/otherapp", map[string]interface{}{
-		"data": map[string]interface{}{
+	_, err = serverClient.Logical().Write("secret/data/otherapp", map[string]any{
+		"data": map[string]any{
 			"username": "barstuff",
 			"password": "zap",
 			"cert":     "something",

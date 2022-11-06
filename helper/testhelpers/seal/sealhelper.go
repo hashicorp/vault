@@ -50,7 +50,7 @@ func (tss *TransitSealServer) MakeKey(t testing.T, key string) {
 	if _, err := client.Logical().Write(path.Join("transit", "keys", key), nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.Logical().Write(path.Join("transit", "keys", key, "config"), map[string]interface{}{
+	if _, err := client.Logical().Write(path.Join("transit", "keys", key, "config"), map[string]any{
 		"deletion_allowed": true,
 	}); err != nil {
 		t.Fatal(err)

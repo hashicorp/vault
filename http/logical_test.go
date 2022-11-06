@@ -40,7 +40,7 @@ func TestLogical(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	// WRITE
-	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]any{
 		"data": "bar",
 	})
 	testResponseStatus(t, resp, 204)
@@ -51,12 +51,12 @@ func TestLogical(t *testing.T) {
 	testResponseStatus(t, resp, 403)
 
 	resp = testHttpGet(t, token, addr+"/v1/secret/foo")
-	var actual map[string]interface{}
-	var nilWarnings interface{}
-	expected := map[string]interface{}{
+	var actual map[string]any
+	var nilWarnings any
+	expected := map[string]any{
 		"renewable":      false,
 		"lease_duration": json.Number(strconv.Itoa(int((32 * 24 * time.Hour) / time.Second))),
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"data": "bar",
 		},
 		"auth":      nil,
@@ -147,7 +147,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	TestServerAuth(t, addr1, root)
 
 	// WRITE to STANDBY
-	resp := testHttpPutDisableRedirect(t, root, addr2+"/v1/secret/foo", map[string]interface{}{
+	resp := testHttpPutDisableRedirect(t, root, addr2+"/v1/secret/foo", map[string]any{
 		"data": "bar",
 	})
 	logger.Debug("307 test one starting")
@@ -156,16 +156,16 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 
 	//// READ to standby
 	resp = testHttpGet(t, root, addr2+"/v1/auth/token/lookup-self")
-	var actual map[string]interface{}
-	var nilWarnings interface{}
-	expected := map[string]interface{}{
+	var actual map[string]any
+	var nilWarnings any
+	expected := map[string]any{
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"meta":             nil,
 			"num_uses":         json.Number("0"),
 			"path":             "auth/token/root",
-			"policies":         []interface{}{"root"},
+			"policies":         []any{"root"},
 			"display_name":     "root",
 			"orphan":           true,
 			"id":               root,
@@ -183,7 +183,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	actualDataMap := actual["data"].(map[string]interface{})
+	actualDataMap := actual["data"].(map[string]any)
 	delete(actualDataMap, "creation_time")
 	delete(actualDataMap, "accessor")
 	actual["data"] = actualDataMap
@@ -207,20 +207,20 @@ func TestLogical_CreateToken(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	// WRITE
-	resp := testHttpPut(t, token, addr+"/v1/auth/token/create", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/auth/token/create", map[string]any{
 		"data": "bar",
 	})
 
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
+	var actual map[string]any
+	expected := map[string]any{
 		"lease_id":       "",
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
 		"data":           nil,
 		"wrap_info":      nil,
-		"auth": map[string]interface{}{
-			"policies":        []interface{}{"root"},
-			"token_policies":  []interface{}{"root"},
+		"auth": map[string]any{
+			"policies":        []any{"root"},
+			"token_policies":  []any{"root"},
 			"metadata":        nil,
 			"lease_duration":  json.Number("0"),
 			"renewable":       false,
@@ -233,8 +233,8 @@ func TestLogical_CreateToken(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	delete(actual["auth"].(map[string]interface{}), "client_token")
-	delete(actual["auth"].(map[string]interface{}), "accessor")
+	delete(actual["auth"].(map[string]any), "client_token")
+	delete(actual["auth"].(map[string]any), "accessor")
 	delete(actual, "warnings")
 	expected["request_id"] = actual["request_id"]
 	if !reflect.DeepEqual(actual, expected) {
@@ -248,7 +248,7 @@ func TestLogical_RawHTTP(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo", map[string]interface{}{
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo", map[string]any{
 		"type": "http",
 	})
 	testResponseStatus(t, resp, 204)
@@ -279,7 +279,7 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 	// Write a very large object, should fail. This test works because Go will
 	// convert the byte slice to base64, which makes it significantly larger
 	// than the default max request size.
-	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]any{
 		"data": make([]byte, DefaultMaxRequestSize),
 	})
 	testResponseStatus(t, resp, http.StatusRequestEntityTooLarge)
@@ -303,7 +303,7 @@ func TestLogical_RequestSizeDisableLimit(t *testing.T) {
 
 	// Write a very large object, should pass as MaxRequestSize set to -1/Negative value
 
-	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]any{
 		"data": make([]byte, DefaultMaxRequestSize),
 	})
 	testResponseStatus(t, resp, http.StatusNoContent)
@@ -369,13 +369,13 @@ func TestLogical_ListWithQueryParameters(t *testing.T) {
 		name          string
 		requestMethod string
 		url           string
-		expectedData  map[string]interface{}
+		expectedData  map[string]any
 	}{
 		{
 			name:          "LIST request method parses query parameter",
 			requestMethod: "LIST",
 			url:           "http://127.0.0.1:8200/v1/secret/foo?key1=value1",
-			expectedData: map[string]interface{}{
+			expectedData: map[string]any{
 				"key1": "value1",
 			},
 		},
@@ -383,7 +383,7 @@ func TestLogical_ListWithQueryParameters(t *testing.T) {
 			name:          "LIST request method parses query multiple parameters",
 			requestMethod: "LIST",
 			url:           "http://127.0.0.1:8200/v1/secret/foo?key1=value1&key2=value2",
-			expectedData: map[string]interface{}{
+			expectedData: map[string]any{
 				"key1": "value1",
 				"key2": "value2",
 			},
@@ -392,7 +392,7 @@ func TestLogical_ListWithQueryParameters(t *testing.T) {
 			name:          "GET request method with list=true parses query parameter",
 			requestMethod: "GET",
 			url:           "http://127.0.0.1:8200/v1/secret/foo?list=true&key1=value1",
-			expectedData: map[string]interface{}{
+			expectedData: map[string]any{
 				"key1": "value1",
 			},
 		},
@@ -400,7 +400,7 @@ func TestLogical_ListWithQueryParameters(t *testing.T) {
 			name:          "GET request method with list=true parses multiple query parameters",
 			requestMethod: "GET",
 			url:           "http://127.0.0.1:8200/v1/secret/foo?list=true&key1=value1&key2=value2",
-			expectedData: map[string]interface{}{
+			expectedData: map[string]any{
 				"key1": "value1",
 				"key2": "value2",
 			},
@@ -409,7 +409,7 @@ func TestLogical_ListWithQueryParameters(t *testing.T) {
 			name:          "GET request method with alternate order list=true parses multiple query parameters",
 			requestMethod: "GET",
 			url:           "http://127.0.0.1:8200/v1/secret/foo?key1=value1&list=true&key2=value2",
-			expectedData: map[string]interface{}{
+			expectedData: map[string]any{
 				"key1": "value1",
 				"key2": "value2",
 			},
@@ -443,7 +443,7 @@ func TestLogical_ListWithQueryParameters(t *testing.T) {
 
 func TestLogical_RespondWithStatusCode(t *testing.T) {
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"test-data": "foo",
 		},
 	}
@@ -490,14 +490,14 @@ func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 
 	// Enable the audit backend
 
-	resp := testHttpPost(t, root, addr+"/v1/sys/audit/noop", map[string]interface{}{
+	resp := testHttpPost(t, root, addr+"/v1/sys/audit/noop", map[string]any{
 		"type": "noop",
 	})
 	testResponseStatus(t, resp, 204)
 
 	{
 		// Make a wrapping/unwrap request with an invalid token
-		resp := testHttpPost(t, root, addr+"/v1/sys/wrapping/unwrap", map[string]interface{}{
+		resp := testHttpPost(t, root, addr+"/v1/sys/wrapping/unwrap", map[string]any{
 			"token": "foo",
 		})
 		testResponseStatus(t, resp, 400)
@@ -530,13 +530,13 @@ func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 	{
 		resp := testHttpPostWrapped(t, root, addr+"/v1/auth/token/create", nil, 10*time.Second)
 		testResponseStatus(t, resp, 200)
-		body := map[string]interface{}{}
+		body := map[string]any{}
 		testResponseBody(t, resp, &body)
 
-		wrapToken := body["wrap_info"].(map[string]interface{})["token"].(string)
+		wrapToken := body["wrap_info"].(map[string]any)["token"].(string)
 
 		// Make a wrapping/unwrap request with an invalid token
-		resp = testHttpPost(t, root, addr+"/v1/sys/wrapping/unwrap", map[string]interface{}{
+		resp = testHttpPost(t, root, addr+"/v1/sys/wrapping/unwrap", map[string]any{
 			"token": wrapToken,
 		})
 		testResponseStatus(t, resp, 200)
@@ -628,8 +628,8 @@ func TestLogical_AuditPort(t *testing.T) {
 		t.Fatalf("failed to enable audit file, err: %#v\n", err)
 	}
 
-	writeData := map[string]interface{}{
-		"data": map[string]interface{}{
+	writeData := map[string]any{
+		"data": map[string]any{
 			"bar": "a",
 		},
 	}
@@ -654,7 +654,7 @@ func TestLogical_AuditPort(t *testing.T) {
 
 	decoder := json.NewDecoder(auditLogFile)
 
-	var auditRecord map[string]interface{}
+	var auditRecord map[string]any
 	count := 0
 	for decoder.Decode(&auditRecord) == nil {
 		count += 1
@@ -664,10 +664,10 @@ func TestLogical_AuditPort(t *testing.T) {
 			continue
 		}
 
-		auditRequest := map[string]interface{}{}
+		auditRequest := map[string]any{}
 
 		if req, ok := auditRecord["request"]; ok {
-			auditRequest = req.(map[string]interface{})
+			auditRequest = req.(map[string]any)
 		}
 
 		if _, ok := auditRequest["remote_address"].(string); !ok {
@@ -735,7 +735,7 @@ func TestLogical_ErrRelativePath(t *testing.T) {
 		t.Errorf("expected response for read to include %q", logical.ErrRelativePath.Error())
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"password": "abc123",
 	}
 

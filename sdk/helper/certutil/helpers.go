@@ -131,7 +131,7 @@ func getSubjectKeyIDFromBundle(data *CreationBundle) ([]byte, error) {
 	return getSubjectKeyID(data.CSR.PublicKey)
 }
 
-func getSubjectKeyID(pub interface{}) ([]byte, error) {
+func getSubjectKeyID(pub any) ([]byte, error) {
 	var publicKeyBytes []byte
 	switch pub := pub.(type) {
 	case *rsa.PublicKey:
@@ -161,7 +161,7 @@ func getSubjectKeyID(pub interface{}) ([]byte, error) {
 
 // ParsePKIMap takes a map (for instance, the Secret.Data
 // returned from the PKI backend) and returns a ParsedCertBundle.
-func ParsePKIMap(data map[string]interface{}) (*ParsedCertBundle, error) {
+func ParsePKIMap(data map[string]any) (*ParsedCertBundle, error) {
 	result := &CertBundle{}
 	err := mapstructure.Decode(data, result)
 	if err != nil {
@@ -208,7 +208,7 @@ func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType
 	}
 
 	var thirdError error
-	var rawKey interface{}
+	var rawKey any
 	if rawKey, thirdError = x509.ParsePKCS8PrivateKey(privateKeyBytes); thirdError == nil {
 		switch rawSigner := rawKey.(type) {
 		case *rsa.PrivateKey:
@@ -465,13 +465,13 @@ func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
 }
 
 // ParsePublicKeyPEM is used to parse RSA and ECDSA public keys from PEMs
-func ParsePublicKeyPEM(data []byte) (interface{}, error) {
+func ParsePublicKeyPEM(data []byte) (any, error) {
 	block, data := pem.Decode(data)
 	if block != nil {
 		if len(bytes.TrimSpace(data)) > 0 {
 			return nil, errutil.UserError{Err: "unexpected trailing data after parsed PEM block"}
 		}
-		var rawKey interface{}
+		var rawKey any
 		var err error
 		if rawKey, err = x509.ParsePKIXPublicKey(block.Bytes); err != nil {
 			if cert, err := x509.ParseCertificate(block.Bytes); err == nil {

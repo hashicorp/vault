@@ -110,14 +110,14 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 	}
 
 	// Test remove peers
-	_, err = leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+	_, err = leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]any{
 		"server_id": "core-1",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+	_, err = leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]any{
 		"server_id": "core-2",
 	})
 	if err != nil {

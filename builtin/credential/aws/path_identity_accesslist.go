@@ -117,7 +117,7 @@ func (b *backend) pathIdentityAccesslistRead(ctx context.Context, req *logical.R
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"role":                      entry.Role,
 			"client_nonce":              entry.ClientNonce,
 			"creation_time":             entry.CreationTime.Format(time.RFC3339Nano),

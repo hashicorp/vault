@@ -27,23 +27,23 @@ func TestBackend_Config(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 
-	login_data := map[string]interface{}{
+	login_data := map[string]any{
 		// This token has to be replaced with a working token for the test to work.
 		"token": os.Getenv("GITHUB_TOKEN"),
 	}
-	config_data1 := map[string]interface{}{
+	config_data1 := map[string]any{
 		"organization": os.Getenv("GITHUB_ORG"),
 		"ttl":          "",
 		"max_ttl":      "",
 	}
 	expectedTTL1 := 24 * time.Hour
-	config_data2 := map[string]interface{}{
+	config_data2 := map[string]any{
 		"organization": os.Getenv("GITHUB_ORG"),
 		"ttl":          "1h",
 		"max_ttl":      "2h",
 	}
 	expectedTTL2 := time.Hour
-	config_data3 := map[string]interface{}{
+	config_data3 := map[string]any{
 		"organization": os.Getenv("GITHUB_ORG"),
 		"ttl":          "50h",
 		"max_ttl":      "50h",
@@ -64,7 +64,7 @@ func TestBackend_Config(t *testing.T) {
 	})
 }
 
-func testLoginWrite(t *testing.T, d map[string]interface{}, expectedTTL time.Duration, expectFail bool) logicaltest.TestStep {
+func testLoginWrite(t *testing.T, d map[string]any, expectedTTL time.Duration, expectFail bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
@@ -86,7 +86,7 @@ func testLoginWrite(t *testing.T, d map[string]interface{}, expectedTTL time.Dur
 	}
 }
 
-func testConfigWrite(t *testing.T, d map[string]interface{}) logicaltest.TestStep {
+func testConfigWrite(t *testing.T, d map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
@@ -154,7 +154,7 @@ func testAccStepConfig(t *testing.T, upper bool) logicaltest.TestStep {
 	ts := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"organization":   os.Getenv("GITHUB_ORG"),
 			"token_policies": []string{"abc"},
 		},
@@ -169,7 +169,7 @@ func testAccStepConfigWithBaseURL(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"organization": os.Getenv("GITHUB_ORG"),
 			"base_url":     os.Getenv("GITHUB_BASEURL"),
 		},
@@ -180,7 +180,7 @@ func testAccMap(t *testing.T, k string, v string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "map/teams/" + k,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"value": v,
 		},
 	}
@@ -190,7 +190,7 @@ func mapUserToPolicy(t *testing.T, k string, v string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "map/users/" + k,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"value": v,
 		},
 	}
@@ -200,7 +200,7 @@ func testAccLogin(t *testing.T, policies []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"token": os.Getenv("GITHUB_TOKEN"),
 		},
 		Unauthenticated: true,

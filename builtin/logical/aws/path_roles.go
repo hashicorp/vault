@@ -509,8 +509,8 @@ type awsRoleEntry struct {
 	PermissionsBoundaryARN   string            `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
 }
 
-func (r *awsRoleEntry) toResponseData() map[string]interface{} {
-	respData := map[string]interface{}{
+func (r *awsRoleEntry) toResponseData() map[string]any {
+	respData := map[string]any{
 		"credential_type":          strings.Join(r.CredentialTypes, ","),
 		"policy_arns":              r.PolicyArns,
 		"role_arns":                r.RoleArns,

@@ -467,7 +467,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 				TTL: 1 * time.Hour,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"user":     "root",
 			"password": "password",
 		},

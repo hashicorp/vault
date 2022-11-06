@@ -90,7 +90,7 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 	certificatePEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cluster.CACert.Raw})
 
 	certRoleName := "test"
-	_, err = client.Logical().Write(fmt.Sprintf("auth/cert/certs/%s", certRoleName), map[string]interface{}{
+	_, err = client.Logical().Write(fmt.Sprintf("auth/cert/certs/%s", certRoleName), map[string]any{
 		"certificate": string(certificatePEM),
 		"policies":    "default",
 	})
@@ -136,7 +136,7 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
-	aaConfig := map[string]interface{}{}
+	aaConfig := map[string]any{}
 
 	if withCertRoleName {
 		aaConfig["name"] = certRoleName
@@ -180,7 +180,7 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 		DHType:    "curve25519",
 		DHPath:    dhpath,
 		DeriveKey: true,
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"path": out,
 		},
 	}
@@ -340,7 +340,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 
 	// Set the cluster's certificate as the root CA in /pki
 	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
-	_, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+	_, err = client.Logical().Write("pki/config/ca", map[string]any{
 		"pem_bundle": pemBundleRootCA,
 	})
 	if err != nil {
@@ -367,7 +367,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	intermediateCSR := secret.Data["csr"].(string)
 
 	// Sign the intermediate CSR using /pki
-	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
+	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]any{
 		"permitted_dns_domains": ".myvault.com",
 		"csr":                   intermediateCSR,
 	})
@@ -377,7 +377,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	intermediateCertPEM := secret.Data["certificate"].(string)
 
 	// Configure the intermediate cert as the CA in /pki2
-	_, err = client.Logical().Write("pki2/intermediate/set-signed", map[string]interface{}{
+	_, err = client.Logical().Write("pki2/intermediate/set-signed", map[string]any{
 		"certificate": intermediateCertPEM,
 	})
 	if err != nil {
@@ -385,7 +385,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	}
 
 	// Create a role on the intermediate CA mount
-	_, err = client.Logical().Write("pki2/roles/myvault-dot-com", map[string]interface{}{
+	_, err = client.Logical().Write("pki2/roles/myvault-dot-com", map[string]any{
 		"allowed_domains":  "myvault.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "5m",
@@ -395,7 +395,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	}
 
 	// Issue a leaf cert using the intermediate CA
-	secret, err = client.Logical().Write("pki2/issue/myvault-dot-com", map[string]interface{}{
+	secret, err = client.Logical().Write("pki2/issue/myvault-dot-com", map[string]any{
 		"common_name": "cert.myvault.com",
 		"format":      "pem",
 		"ip_sans":     "127.0.0.1",
@@ -457,7 +457,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	}
 
 	// Set the intermediate CA cert as a trusted certificate in the backend
-	_, err = client.Logical().Write("auth/cert/certs/myvault-dot-com", map[string]interface{}{
+	_, err = client.Logical().Write("auth/cert/certs/myvault-dot-com", map[string]any{
 		"display_name": "myvault.com",
 		"policies":     "default",
 		"certificate":  intermediateCertPEM,
@@ -475,7 +475,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	am, err := agentcert.NewCertAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.cert"),
 		MountPath: "auth/cert",
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"ca_cert":     caCertFile.Name(),
 			"client_cert": leafCertFile.Name(),
 			"client_key":  leafCertKeyFile.Name(),
@@ -522,7 +522,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"path": out,
 		},
 	}

@@ -60,7 +60,7 @@ path "secret/sample" {
 	entityReq := &logical.Request{
 		Path:      "entity",
 		Operation: logical.UpdateOperation,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"policies": "policy1",
 		},
 	}
@@ -95,7 +95,7 @@ path "secret/sample" {
 	groupReq := &logical.Request{
 		Path:      "group",
 		Operation: logical.UpdateOperation,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"member_entity_ids": []string{entityID},
 			"policies":          "policy3",
 		},

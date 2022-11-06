@@ -21,7 +21,7 @@ func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -81,7 +81,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			b, s := createBackendWithStorage(t)
 
-			resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+			resp, err := CBWrite(b, s, "config/crl", map[string]any{
 				"expiry":                    tc.expiry,
 				"disable":                   tc.disable,
 				"ocsp_disable":              tc.ocspDisable,
@@ -125,7 +125,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			b, s := createBackendWithStorage(t)
 
-			_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+			_, err := CBWrite(b, s, "config/crl", map[string]any{
 				"expiry":                    tc.expiry,
 				"disable":                   tc.disable,
 				"ocsp_disable":              tc.ocspDisable,
@@ -166,7 +166,7 @@ func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
 		t.Logf("tv %v", index)
 		b, s := createBackendWithStorage(t)
 
-		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 			"ttl":            "40h",
 			"common_name":    "myvault.com",
 			"key_type":       tc.KeyType,
@@ -209,7 +209,7 @@ func TestBackend_CRL_EnableDisableIntermediateWithoutRoot(t *testing.T) {
 func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
 	b_root, s_root := createBackendWithStorage(t)
 
-	resp, err := CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b_root, s_root, "root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -220,7 +220,7 @@ func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
 
 	b_int, s_int := createBackendWithStorage(t)
 
-	resp, err = CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
+	resp, err = CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]any{
 		"common_name": "intermediate myvault.com",
 	})
 	if err != nil {
@@ -231,7 +231,7 @@ func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
 	}
 	intermediateData := resp.Data
 
-	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
+	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]any{
 		"ttl": "30h",
 		"csr": intermediateData["csr"],
 	})
@@ -251,7 +251,7 @@ func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
 		caSerials = append(caSerials, rootSerial)
 	}
 
-	_, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]interface{}{
+	_, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]any{
 		"certificate": certs,
 	})
 	if err != nil {
@@ -263,7 +263,7 @@ func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
 func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage, caSerials []string) {
 	var err error
 
-	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/test", map[string]any{
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
 		"allowed_domains":    "foobar.com",
@@ -275,7 +275,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 
 	serials := make(map[int]string)
 	for i := 0; i < 6; i++ {
-		resp, err := CBWrite(b, s, "issue/test", map[string]interface{}{
+		resp, err := CBWrite(b, s, "issue/test", map[string]any{
 			"common_name": "test.foobar.com",
 		})
 		if err != nil {
@@ -313,7 +313,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 	}
 
 	revoke := func(serialIndex int) {
-		_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		_, err = CBWrite(b, s, "revoke", map[string]any{
 			"serial_number": serials[serialIndex],
 		})
 		if err != nil {
@@ -321,7 +321,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 		}
 
 		for _, caSerial := range caSerials {
-			_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+			_, err = CBWrite(b, s, "revoke", map[string]any{
 				"serial_number": caSerial,
 			})
 			if err == nil {
@@ -331,7 +331,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 	}
 
 	toggle := func(disabled bool) {
-		_, err = CBWrite(b, s, "config/crl", map[string]interface{}{
+		_, err = CBWrite(b, s, "config/crl", map[string]any{
 			"disable": disabled,
 		})
 		if err != nil {
@@ -446,7 +446,7 @@ func TestBYOC(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	// Create a root CA.
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "root example.com",
 		"issuer_name": "root",
 		"key_type":    "ec",
@@ -457,7 +457,7 @@ func TestBYOC(t *testing.T) {
 	oldRoot := resp.Data["certificate"].(string)
 
 	// Create a role for issuance.
-	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
@@ -467,20 +467,20 @@ func TestBYOC(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a leaf cert and ensure we can revoke it.
-	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["certificate"])
 
-	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke", map[string]any{
 		"certificate": resp.Data["certificate"],
 	})
 	require.NoError(t, err)
 
 	// Issue a second leaf, but hold onto it for now.
-	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing2",
 	})
 	require.NoError(t, err)
@@ -489,7 +489,7 @@ func TestBYOC(t *testing.T) {
 	notStoredCert := resp.Data["certificate"].(string)
 
 	// Update the role to make things stored and issue another cert.
-	_, err = CBWrite(b, s, "roles/stored-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/stored-testing", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
@@ -499,7 +499,7 @@ func TestBYOC(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a leaf cert and ensure we can revoke it.
-	resp, err = CBWrite(b, s, "issue/stored-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/stored-testing", map[string]any{
 		"common_name": "testing",
 	})
 	require.NoError(t, err)
@@ -515,7 +515,7 @@ func TestBYOC(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(resp.Data), 0)
 
-	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "root2 example.com",
 		"issuer_name": "root2",
 		"key_type":    "ec",
@@ -523,37 +523,37 @@ func TestBYOC(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a new leaf and revoke that one.
-	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing3",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["certificate"])
 
-	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke", map[string]any{
 		"certificate": resp.Data["certificate"],
 	})
 	require.NoError(t, err)
 
 	// Now attempt to revoke the earlier leaves. The first should fail since
 	// we deleted its issuer, but the stored one should succeed.
-	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke", map[string]any{
 		"certificate": notStoredCert,
 	})
 	require.Error(t, err)
 
-	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke", map[string]any{
 		"certificate": storedCert,
 	})
 	require.NoError(t, err)
 
 	// Import the old root again and revoke the no stored leaf should work.
-	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]any{
 		"pem_bundle": oldRoot,
 	})
 	require.NoError(t, err)
 
-	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke", map[string]any{
 		"certificate": notStoredCert,
 	})
 	require.NoError(t, err)
@@ -565,7 +565,7 @@ func TestPoP(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	// Create a root CA.
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "root example.com",
 		"issuer_name": "root",
 		"key_type":    "ec",
@@ -576,7 +576,7 @@ func TestPoP(t *testing.T) {
 	oldRoot := resp.Data["certificate"].(string)
 
 	// Create a role for issuance.
-	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
@@ -587,21 +587,21 @@ func TestPoP(t *testing.T) {
 
 	// Issue a leaf cert and ensure we can revoke it with the private key and
 	// an explicit certificate.
-	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing1",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["certificate"])
 
-	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]any{
 		"certificate": resp.Data["certificate"],
 		"private_key": resp.Data["private_key"],
 	})
 	require.NoError(t, err)
 
 	// Issue a second leaf, but hold onto it for now.
-	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing2",
 	})
 	require.NoError(t, err)
@@ -611,7 +611,7 @@ func TestPoP(t *testing.T) {
 	notStoredKey := resp.Data["private_key"].(string)
 
 	// Update the role to make things stored and issue another cert.
-	_, err = CBWrite(b, s, "roles/stored-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/stored-testing", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
@@ -621,7 +621,7 @@ func TestPoP(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a leaf and ensure we can revoke it via serial number and private key.
-	resp, err = CBWrite(b, s, "issue/stored-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/stored-testing", map[string]any{
 		"common_name": "testing3",
 	})
 	require.NoError(t, err)
@@ -630,7 +630,7 @@ func TestPoP(t *testing.T) {
 	require.NotEmpty(t, resp.Data["serial_number"])
 	require.NotEmpty(t, resp.Data["private_key"])
 
-	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]any{
 		"serial_number": resp.Data["serial_number"],
 		"private_key":   resp.Data["private_key"],
 	})
@@ -638,7 +638,7 @@ func TestPoP(t *testing.T) {
 
 	// Issue a leaf cert and ensure we can revoke it after removing its root;
 	// hold onto it for now.
-	resp, err = CBWrite(b, s, "issue/stored-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/stored-testing", map[string]any{
 		"common_name": "testing4",
 	})
 	require.NoError(t, err)
@@ -655,7 +655,7 @@ func TestPoP(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(resp.Data), 0)
 
-	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "root2 example.com",
 		"issuer_name": "root2",
 		"key_type":    "ec",
@@ -663,14 +663,14 @@ func TestPoP(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a new leaf and revoke that one.
-	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing5",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["certificate"])
 
-	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]any{
 		"certificate": resp.Data["certificate"],
 		"private_key": resp.Data["private_key"],
 	})
@@ -678,41 +678,41 @@ func TestPoP(t *testing.T) {
 
 	// Now attempt to revoke the earlier leaves. The first should fail since
 	// we deleted its issuer, but the stored one should succeed.
-	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]any{
 		"certificate": notStoredCert,
 		"private_key": notStoredKey,
 	})
 	require.Error(t, err)
 
 	// Incorrect combination (stored with not stored key) should fail.
-	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]any{
 		"certificate": storedCert,
 		"private_key": notStoredKey,
 	})
 	require.Error(t, err)
 
 	// Correct combination (stored with stored) should succeed.
-	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]any{
 		"certificate": storedCert,
 		"private_key": storedKey,
 	})
 	require.NoError(t, err)
 
 	// Import the old root again and revoke the no stored leaf should work.
-	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]any{
 		"pem_bundle": oldRoot,
 	})
 	require.NoError(t, err)
 
 	// Incorrect combination (not stored with stored key) should fail.
-	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]any{
 		"certificate": notStoredCert,
 		"private_key": storedKey,
 	})
 	require.Error(t, err)
 
 	// Correct combination (not stored with not stored) should succeed.
-	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]any{
 		"certificate": notStoredCert,
 		"private_key": notStoredKey,
 	})
@@ -726,14 +726,14 @@ func TestIssuerRevocation(t *testing.T) {
 
 	// Write a config with auto-rebuilding so that we can verify stuff doesn't
 	// appear on the delta CRL.
-	_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+	_, err := CBWrite(b, s, "config/crl", map[string]any{
 		"auto_rebuild": true,
 		"enable_delta": true,
 	})
 	require.NoError(t, err)
 
 	// Create a root CA.
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "root example.com",
 		"issuer_name": "root",
 		"key_type":    "ec",
@@ -747,7 +747,7 @@ func TestIssuerRevocation(t *testing.T) {
 
 	// Create a second root CA. We'll revoke this one and ensure it
 	// doesn't appear on the former's CRL.
-	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "root2 example.com",
 		"issuer_name": "root2",
 		"key_type":    "ec",
@@ -760,13 +760,13 @@ func TestIssuerRevocation(t *testing.T) {
 	revokedRootSerial := resp.Data["serial_number"].(string)
 
 	// Shouldn't be able to revoke it by serial number.
-	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke", map[string]any{
 		"serial_number": revokedRootSerial,
 	})
 	require.Error(t, err)
 
 	// Revoke it.
-	resp, err = CBWrite(b, s, "issuer/root2/revoke", map[string]interface{}{})
+	resp, err = CBWrite(b, s, "issuer/root2/revoke", map[string]any{})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotZero(t, resp.Data["revocation_time"])
@@ -788,7 +788,7 @@ func TestIssuerRevocation(t *testing.T) {
 	}
 
 	// Create a role and ensure we can't use the revoked root.
-	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
@@ -797,20 +797,20 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a leaf cert and ensure it fails (because the issuer is revoked).
-	_, err = CBWrite(b, s, "issuer/root2/issue/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuer/root2/issue/local-testing", map[string]any{
 		"common_name": "testing",
 	})
 	require.Error(t, err)
 
 	// Issue an intermediate and ensure we can revoke it.
-	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]any{
 		"common_name": "intermediate example.com",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["csr"])
 	intCsr := resp.Data["csr"].(string)
-	resp, err = CBWrite(b, s, "root/sign-intermediate", map[string]interface{}{
+	resp, err = CBWrite(b, s, "root/sign-intermediate", map[string]any{
 		"ttl": "30h",
 		"csr": intCsr,
 	})
@@ -820,7 +820,7 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NotEmpty(t, resp.Data["serial_number"])
 	intCert := resp.Data["certificate"].(string)
 	intCertSerial := resp.Data["serial_number"].(string)
-	resp, err = CBWrite(b, s, "intermediate/set-signed", map[string]interface{}{
+	resp, err = CBWrite(b, s, "intermediate/set-signed", map[string]any{
 		"certificate": intCert,
 	})
 	require.NoError(t, err)
@@ -829,13 +829,13 @@ func TestIssuerRevocation(t *testing.T) {
 	importedIssuers := resp.Data["imported_issuers"].([]string)
 	require.Equal(t, len(importedIssuers), 1)
 	intId := importedIssuers[0]
-	_, err = CBPatch(b, s, "issuer/"+intId, map[string]interface{}{
+	_, err = CBPatch(b, s, "issuer/"+intId, map[string]any{
 		"issuer_name": "int1",
 	})
 	require.NoError(t, err)
 
 	// Now issue a leaf with the intermediate.
-	resp, err = CBWrite(b, s, "issuer/int1/issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/int1/issue/local-testing", map[string]any{
 		"common_name": "testing",
 	})
 	require.NoError(t, err)
@@ -845,7 +845,7 @@ func TestIssuerRevocation(t *testing.T) {
 	issuedSerial := resp.Data["serial_number"].(string)
 
 	// Now revoke the intermediate.
-	resp, err = CBWrite(b, s, "issuer/int1/revoke", map[string]interface{}{})
+	resp, err = CBWrite(b, s, "issuer/int1/revoke", map[string]any{})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotZero(t, resp.Data["revocation_time"])
@@ -861,7 +861,7 @@ func TestIssuerRevocation(t *testing.T) {
 	}
 
 	// Ensure we can still revoke the issued leaf.
-	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	resp, err = CBWrite(b, s, "revoke", map[string]any{
 		"serial_number": issuedSerial,
 	})
 	require.NoError(t, err)
@@ -926,7 +926,7 @@ func TestAutoRebuild(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate root.
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]any{
 		"ttl":         "40h",
 		"common_name": "Root X1",
 		"key_type":    "ec",
@@ -938,7 +938,7 @@ func TestAutoRebuild(t *testing.T) {
 	rootIssuer := resp.Data["issuer_id"].(string)
 
 	// Setup a testing role.
-	_, err = client.Logical().Write("pki/roles/local-testing", map[string]interface{}{
+	_, err = client.Logical().Write("pki/roles/local-testing", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
@@ -960,13 +960,13 @@ func TestAutoRebuild(t *testing.T) {
 	require.Equal(t, resp.Data["delta_rebuild_interval"], defaultCrlConfig.DeltaRebuildInterval)
 
 	// Safety guard: we play with rebuild timing below.
-	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
+	_, err = client.Logical().Write("pki/config/crl", map[string]any{
 		"expiry": crlTime,
 	})
 	require.NoError(t, err)
 
 	// Issue a cert and revoke it. It should appear on the CRL right away.
-	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]any{
 		"common_name": "example.com",
 	})
 	require.NoError(t, err)
@@ -975,7 +975,7 @@ func TestAutoRebuild(t *testing.T) {
 	require.NotEmpty(t, resp.Data["serial_number"])
 	leafSerial := resp.Data["serial_number"].(string)
 
-	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+	_, err = client.Logical().Write("pki/revoke", map[string]any{
 		"serial_number": leafSerial,
 	})
 	require.NoError(t, err)
@@ -986,7 +986,7 @@ func TestAutoRebuild(t *testing.T) {
 	requireSerialNumberInCRL(t, crl, leafSerial)
 
 	// Enable periodic rebuild of the CRL.
-	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
+	_, err = client.Logical().Write("pki/config/crl", map[string]any{
 		"expiry":                    crlTime,
 		"auto_rebuild":              true,
 		"auto_rebuild_grace_period": gracePeriod,
@@ -996,7 +996,7 @@ func TestAutoRebuild(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a cert and revoke it.
-	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]any{
 		"common_name": "example.com",
 	})
 	require.NoError(t, err)
@@ -1005,7 +1005,7 @@ func TestAutoRebuild(t *testing.T) {
 	require.NotEmpty(t, resp.Data["serial_number"])
 	newLeafSerial := resp.Data["serial_number"].(string)
 
-	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+	_, err = client.Logical().Write("pki/revoke", map[string]any{
 		"serial_number": newLeafSerial,
 	})
 	require.NoError(t, err)
@@ -1090,7 +1090,7 @@ func TestAutoRebuild(t *testing.T) {
 			require.NotEmpty(t, resp.Data["keys"])
 
 			haveRebuildMarker := false
-			for _, rawEntry := range resp.Data["keys"].([]interface{}) {
+			for _, rawEntry := range resp.Data["keys"].([]any) {
 				entry := rawEntry.(string)
 				if entry == deltaWALLastRevokedSerialName {
 					haveRebuildMarker = true
@@ -1173,7 +1173,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	// Create a root CA.
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 		"common_name": "root example.com",
 		"issuer_name": "root",
 		"key_type":    "ec",
@@ -1186,7 +1186,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	rootID := resp.Data["issuer_id"].(issuerID)
 
 	// Create a role for issuance.
-	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]any{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
@@ -1195,7 +1195,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a leaf cert and ensure we can revoke it.
-	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]any{
 		"common_name": "testing",
 	})
 	require.NoError(t, err)
@@ -1203,7 +1203,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	require.NotEmpty(t, resp.Data["serial_number"])
 	leafSerial := resp.Data["serial_number"].(string)
 
-	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	_, err = CBWrite(b, s, "revoke", map[string]any{
 		"serial_number": leafSerial,
 	})
 	require.NoError(t, err)
@@ -1223,7 +1223,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	// Now remove the root and run tidy.
 	_, err = CBDelete(b, s, "issuer/default")
 	require.NoError(t, err)
-	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+	_, err = CBWrite(b, s, "tidy", map[string]any{
 		"tidy_revoked_cert_issuer_associations": true,
 	})
 	require.NoError(t, err)
@@ -1258,7 +1258,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	require.Empty(t, leafInfo.CertificateIssuer)
 
 	// Now, re-import the root and try again.
-	resp, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuers/import/bundle", map[string]any{
 		"pem_bundle": rootCert,
 	})
 	require.NoError(t, err)
@@ -1271,7 +1271,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	require.NotEmpty(t, newRootID)
 
 	// Re-run tidy...
-	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+	_, err = CBWrite(b, s, "tidy", map[string]any{
 		"tidy_revoked_cert_issuer_associations": true,
 	})
 	require.NoError(t, err)

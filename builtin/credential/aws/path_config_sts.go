@@ -179,7 +179,7 @@ func (b *backend) pathConfigStsRead(ctx context.Context, req *logical.Request, d
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"sts_role": stsEntry.StsRole,
 		},
 	}, nil

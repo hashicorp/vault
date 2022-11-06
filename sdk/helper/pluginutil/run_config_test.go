@@ -344,7 +344,7 @@ func (m *mockRunnerUtil) NewPluginClient(ctx context.Context, config PluginClien
 	return args.Get(0).(PluginClient), args.Error(1)
 }
 
-func (m *mockRunnerUtil) ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+func (m *mockRunnerUtil) ResponseWrapData(ctx context.Context, data map[string]any, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	args := m.Called(ctx, data, ttl, jwt)
 	return args.Get(0).(*wrapping.ResponseWrapInfo), args.Error(1)
 }

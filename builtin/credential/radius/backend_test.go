@@ -119,28 +119,28 @@ func TestBackend_Config(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 
-	configDataBasic := map[string]interface{}{
+	configDataBasic := map[string]any{
 		"host":   "test.radius.hostname.com",
 		"secret": "test-secret",
 	}
 
-	configDataMissingRequired := map[string]interface{}{
+	configDataMissingRequired := map[string]any{
 		"host": "test.radius.hostname.com",
 	}
 
-	configDataEmptyPort := map[string]interface{}{
+	configDataEmptyPort := map[string]any{
 		"host":   "test.radius.hostname.com",
 		"port":   "",
 		"secret": "test-secret",
 	}
 
-	configDataInvalidPort := map[string]interface{}{
+	configDataInvalidPort := map[string]any{
 		"host":   "test.radius.hostname.com",
 		"port":   "notnumeric",
 		"secret": "test-secret",
 	}
 
-	configDataInvalidBool := map[string]interface{}{
+	configDataInvalidBool := map[string]any{
 		"host":                       "test.radius.hostname.com",
 		"secret":                     "test-secret",
 		"unregistered_user_policies": "test",
@@ -213,7 +213,7 @@ func TestBackend_acceptance(t *testing.T) {
 		secret = "testing123"
 	}
 
-	configDataAcceptanceAllowUnreg := map[string]interface{}{
+	configDataAcceptanceAllowUnreg := map[string]any{
 		"host":                       host,
 		"port":                       strconv.Itoa(port),
 		"secret":                     secret,
@@ -223,7 +223,7 @@ func TestBackend_acceptance(t *testing.T) {
 		configDataAcceptanceAllowUnreg["port"] = "1812"
 	}
 
-	configDataAcceptanceNoAllowUnreg := map[string]interface{}{
+	configDataAcceptanceNoAllowUnreg := map[string]any{
 		"host":                       host,
 		"port":                       strconv.Itoa(port),
 		"secret":                     secret,
@@ -233,11 +233,11 @@ func TestBackend_acceptance(t *testing.T) {
 		configDataAcceptanceNoAllowUnreg["port"] = "1812"
 	}
 
-	dataRealpassword := map[string]interface{}{
+	dataRealpassword := map[string]any{
 		"password": password,
 	}
 
-	dataWrongpassword := map[string]interface{}{
+	dataWrongpassword := map[string]any{
 		"password": "wrongpassword",
 	}
 
@@ -284,7 +284,7 @@ func testAccPreCheck(t *testing.T, host string, port int) func() {
 	}
 }
 
-func testConfigWrite(t *testing.T, d map[string]interface{}, expectError bool) logicaltest.TestStep {
+func testConfigWrite(t *testing.T, d map[string]any, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
@@ -323,13 +323,13 @@ func testStepUpdateUser(
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "users/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"policies": policies,
 		},
 	}
 }
 
-func testAccUserLogin(t *testing.T, user string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
+func testAccUserLogin(t *testing.T, user string, data map[string]any, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation:       logical.UpdateOperation,
 		Path:            "login/" + user,
@@ -339,7 +339,7 @@ func testAccUserLogin(t *testing.T, user string, data map[string]interface{}, ex
 	}
 }
 
-func testAccUserLoginPolicy(t *testing.T, user string, data map[string]interface{}, policies []string, expectError bool) logicaltest.TestStep {
+func testAccUserLoginPolicy(t *testing.T, user string, data map[string]any, policies []string, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation:       logical.UpdateOperation,
 		Path:            "login/" + user,

@@ -73,7 +73,7 @@ func (s *gRPCSystemViewClient) ReplicationState() consts.ReplicationState {
 	return consts.ReplicationState(reply.State)
 }
 
-func (s *gRPCSystemViewClient) ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+func (s *gRPCSystemViewClient) ResponseWrapData(ctx context.Context, data map[string]any, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	buf, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -228,7 +228,7 @@ func (s *gRPCSystemViewServer) ReplicationState(ctx context.Context, _ *pb.Empty
 }
 
 func (s *gRPCSystemViewServer) ResponseWrapData(ctx context.Context, args *pb.ResponseWrapDataArgs) (*pb.ResponseWrapDataReply, error) {
-	data := map[string]interface{}{}
+	data := map[string]any{}
 	err := json.Unmarshal([]byte(args.Data), &data)
 	if err != nil {
 		return &pb.ResponseWrapDataReply{}, err

@@ -15,7 +15,7 @@ import (
 
 // TestBackend_basic_docker is an example test using the Docker Environment
 func TestAccBackend_basic_docker(t *testing.T) {
-	decryptData := make(map[string]interface{})
+	decryptData := make(map[string]any)
 	envOptions := stepwise.MountOptions{
 		RegistryName:    "updatedtransit",
 		PluginType:      stepwise.PluginTypeSecrets,
@@ -42,7 +42,7 @@ func testAccStepwiseWritePolicy(t *testing.T, name string, derived bool) stepwis
 	ts := stepwise.Step{
 		Operation: stepwise.WriteOperation,
 		Path:      "keys/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"derived": derived,
 		},
 	}
@@ -162,12 +162,12 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 }
 
 func testAccStepwiseEncryptContext(
-	t *testing.T, name, plaintext, context string, decryptData map[string]interface{},
+	t *testing.T, name, plaintext, context string, decryptData map[string]any,
 ) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "encrypt/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
 			"context":   base64.StdEncoding.EncodeToString([]byte(context)),
 		},
@@ -189,7 +189,7 @@ func testAccStepwiseEncryptContext(
 }
 
 func testAccStepwiseDecrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+	t *testing.T, name, plaintext string, decryptData map[string]any,
 ) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
@@ -221,7 +221,7 @@ func testAccStepwiseEnableDeletion(t *testing.T, name string) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "keys/" + name + "/config",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"deletion_allowed": true,
 		},
 	}

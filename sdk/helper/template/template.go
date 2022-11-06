@@ -20,7 +20,7 @@ func Template(rawTemplate string) Opt {
 
 // Function allows the user to specify functions for use in the template. If the name provided is a function that
 // already exists in the function map, this will override the previously specified function.
-func Function(name string, f interface{}) Opt {
+func Function(name string, f any) Opt {
 	return func(up *StringTemplate) error {
 		if name == "" {
 			return fmt.Errorf("missing function name")
@@ -95,7 +95,7 @@ type StringTemplate struct {
 // The default template is specified in the DefaultTemplate constant.
 func NewTemplate(opts ...Opt) (up StringTemplate, err error) {
 	up = StringTemplate{
-		funcMap: map[string]interface{}{
+		funcMap: map[string]any{
 			"random":          base62.Random,
 			"truncate":        truncate,
 			"truncate_sha256": truncateSHA256,
@@ -138,7 +138,7 @@ func NewTemplate(opts ...Opt) (up StringTemplate, err error) {
 }
 
 // Generate based on the provided template
-func (up StringTemplate) Generate(data interface{}) (string, error) {
+func (up StringTemplate) Generate(data any) (string, error) {
 	if up.tmpl == nil || up.rawTemplate == "" {
 		return "", fmt.Errorf("failed to generate: template not initialized")
 	}

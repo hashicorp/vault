@@ -1021,7 +1021,7 @@ func file_helper_identity_mfa_types_proto_rawDescGZIP() []byte {
 }
 
 var file_helper_identity_mfa_types_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
-var file_helper_identity_mfa_types_proto_goTypes = []interface{}{
+var file_helper_identity_mfa_types_proto_goTypes = []any{
 	(*Config)(nil),               // 0: mfa.Config
 	(*TOTPConfig)(nil),           // 1: mfa.TOTPConfig
 	(*DuoConfig)(nil),            // 2: mfa.DuoConfig
@@ -1050,7 +1050,7 @@ func file_helper_identity_mfa_types_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_helper_identity_mfa_types_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_identity_mfa_types_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*Config); i {
 			case 0:
 				return &v.state
@@ -1062,7 +1062,7 @@ func file_helper_identity_mfa_types_proto_init() {
 				return nil
 			}
 		}
-		file_helper_identity_mfa_types_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_identity_mfa_types_proto_msgTypes[1].Exporter = func(v any, i int) any {
 			switch v := v.(*TOTPConfig); i {
 			case 0:
 				return &v.state
@@ -1074,7 +1074,7 @@ func file_helper_identity_mfa_types_proto_init() {
 				return nil
 			}
 		}
-		file_helper_identity_mfa_types_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_identity_mfa_types_proto_msgTypes[2].Exporter = func(v any, i int) any {
 			switch v := v.(*DuoConfig); i {
 			case 0:
 				return &v.state
@@ -1086,7 +1086,7 @@ func file_helper_identity_mfa_types_proto_init() {
 				return nil
 			}
 		}
-		file_helper_identity_mfa_types_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_identity_mfa_types_proto_msgTypes[3].Exporter = func(v any, i int) any {
 			switch v := v.(*OktaConfig); i {
 			case 0:
 				return &v.state
@@ -1098,7 +1098,7 @@ func file_helper_identity_mfa_types_proto_init() {
 				return nil
 			}
 		}
-		file_helper_identity_mfa_types_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_identity_mfa_types_proto_msgTypes[4].Exporter = func(v any, i int) any {
 			switch v := v.(*PingIDConfig); i {
 			case 0:
 				return &v.state
@@ -1110,7 +1110,7 @@ func file_helper_identity_mfa_types_proto_init() {
 				return nil
 			}
 		}
-		file_helper_identity_mfa_types_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_identity_mfa_types_proto_msgTypes[5].Exporter = func(v any, i int) any {
 			switch v := v.(*Secret); i {
 			case 0:
 				return &v.state
@@ -1122,7 +1122,7 @@ func file_helper_identity_mfa_types_proto_init() {
 				return nil
 			}
 		}
-		file_helper_identity_mfa_types_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_identity_mfa_types_proto_msgTypes[6].Exporter = func(v any, i int) any {
 			switch v := v.(*TOTPSecret); i {
 			case 0:
 				return &v.state
@@ -1134,7 +1134,7 @@ func file_helper_identity_mfa_types_proto_init() {
 				return nil
 			}
 		}
-		file_helper_identity_mfa_types_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_identity_mfa_types_proto_msgTypes[7].Exporter = func(v any, i int) any {
 			switch v := v.(*MFAEnforcementConfig); i {
 			case 0:
 				return &v.state
@@ -1147,13 +1147,13 @@ func file_helper_identity_mfa_types_proto_init() {
 			}
 		}
 	}
-	file_helper_identity_mfa_types_proto_msgTypes[0].OneofWrappers = []interface{}{
+	file_helper_identity_mfa_types_proto_msgTypes[0].OneofWrappers = []any{
 		(*Config_TOTPConfig)(nil),
 		(*Config_OktaConfig)(nil),
 		(*Config_DuoConfig)(nil),
 		(*Config_PingIDConfig)(nil),
 	}
-	file_helper_identity_mfa_types_proto_msgTypes[5].OneofWrappers = []interface{}{
+	file_helper_identity_mfa_types_proto_msgTypes[5].OneofWrappers = []any{
 		(*Secret_TOTPSecret)(nil),
 	}
 	type x struct{}

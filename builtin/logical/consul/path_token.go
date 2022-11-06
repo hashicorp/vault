@@ -78,9 +78,9 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		}
 
 		// Use the helper to create the secret
-		s := b.Secret(SecretTokenType).Response(map[string]interface{}{
+		s := b.Secret(SecretTokenType).Response(map[string]any{
 			"token": token,
-		}, map[string]interface{}{
+		}, map[string]any{
 			"token": token,
 			"role":  role,
 		})
@@ -122,13 +122,13 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Use the helper to create the secret
-	s := b.Secret(SecretTokenType).Response(map[string]interface{}{
+	s := b.Secret(SecretTokenType).Response(map[string]any{
 		"token":            token.SecretID,
 		"accessor":         token.AccessorID,
 		"local":            token.Local,
 		"consul_namespace": token.Namespace,
 		"partition":        token.Partition,
-	}, map[string]interface{}{
+	}, map[string]any{
 		"token":   token.AccessorID,
 		"role":    role,
 		"version": tokenPolicyType,

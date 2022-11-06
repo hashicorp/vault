@@ -170,7 +170,7 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 		return nil, nil
 	}
 
-	data := map[string]interface{}{}
+	data := map[string]any{}
 	user.PopulateTokenData(data)
 
 	// Add backwards compat data

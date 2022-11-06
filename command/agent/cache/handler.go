@@ -142,7 +142,7 @@ func sanitizeAutoAuthTokenResponse(ctx context.Context, logger hclog.Logger, inm
 			return nil
 		}
 	case vaultPathTokenLookup, vaultPathTokenRenew:
-		jsonBody := map[string]interface{}{}
+		jsonBody := map[string]any{}
 		if err := json.Unmarshal(req.RequestBody, &jsonBody); err != nil {
 			return err
 		}

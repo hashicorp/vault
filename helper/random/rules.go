@@ -25,7 +25,7 @@ type CharsetRule struct {
 }
 
 // ParseCharset from the provided data map. The data map is expected to be parsed from HCL.
-func ParseCharset(data map[string]interface{}) (rule Rule, err error) {
+func ParseCharset(data map[string]any) (rule Rule, err error) {
 	cr := &CharsetRule{}
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{

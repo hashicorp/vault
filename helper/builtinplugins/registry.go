@@ -68,7 +68,7 @@ var addExternalPlugins = addExtPluginsImpl
 
 // BuiltinFactory is the func signature that should be returned by
 // the plugin's New() func.
-type BuiltinFactory func() (interface{}, error)
+type BuiltinFactory func() (any, error)
 
 // There are three forms of Backends which exist in the BuiltinRegistry.
 type credentialBackend struct {
@@ -196,7 +196,7 @@ type registry struct {
 
 // Get returns the Factory func for a particular backend plugin from the
 // plugins map.
-func (r *registry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
+func (r *registry) Get(name string, pluginType consts.PluginType) (func() (any, error), bool) {
 	switch pluginType {
 	case consts.PluginTypeCredential:
 		if f, ok := r.credentialBackends[name]; ok {
@@ -268,8 +268,8 @@ func (r *registry) DeprecationStatus(name string, pluginType consts.PluginType) 
 	return consts.Unknown, false
 }
 
-func toFunc(ifc interface{}) func() (interface{}, error) {
-	return func() (interface{}, error) {
+func toFunc(ifc any) func() (any, error) {
+	return func() (any, error) {
 		return ifc, nil
 	}
 }

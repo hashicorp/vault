@@ -78,7 +78,7 @@ net:
 	mongo := new()
 
 	initReq := dbplugin.InitializeRequest{
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"connection_url":      retURL,
 			"allowed_roles":       "*",
 			"tls_certificate_key": clientCert.CombinedPEM(),
@@ -97,7 +97,7 @@ net:
 
 	// Initialization complete. The connection was established, but we need to ensure
 	// that we're connected as the right user
-	whoamiCmd := map[string]interface{}{
+	whoamiCmd := map[string]any{
 		"connectionStatus": 1,
 	}
 
@@ -253,7 +253,7 @@ func setUpX509User(t *testing.T, client *mongo.Client, cert certhelpers.Certific
 
 	cmd := &createUserCommand{
 		Username: username,
-		Roles: []interface{}{
+		Roles: []any{
 			mongodbRole{
 				Role: "readWrite",
 				DB:   "test",

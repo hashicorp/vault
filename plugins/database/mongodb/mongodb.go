@@ -34,7 +34,7 @@ type MongoDB struct {
 var _ dbplugin.Database = &MongoDB{}
 
 // New returns a new MongoDB instance
-func New() (interface{}, error) {
+func New() (any, error) {
 	db := new()
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 	return dbType, nil
@@ -227,7 +227,7 @@ func (m *MongoDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest
 
 // runCommandWithRetry runs a command and retries once more if there's a failure
 // on the first attempt. This should be called with the lock held
-func (m *MongoDB) runCommandWithRetry(ctx context.Context, db string, cmd interface{}) error {
+func (m *MongoDB) runCommandWithRetry(ctx context.Context, db string, cmd any) error {
 	// Get the client
 	client, err := m.Connection(ctx)
 	if err != nil {

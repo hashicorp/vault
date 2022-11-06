@@ -241,7 +241,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 
 	// Return the response
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"name":                   p.Name,
 			"type":                   p.Type.String(),
 			"derived":                p.Derived,
@@ -269,13 +269,13 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if p.BackupInfo != nil {
-		resp.Data["backup_info"] = map[string]interface{}{
+		resp.Data["backup_info"] = map[string]any{
 			"time":    p.BackupInfo.Time,
 			"version": p.BackupInfo.Version,
 		}
 	}
 	if p.RestoreInfo != nil {
-		resp.Data["restore_info"] = map[string]interface{}{
+		resp.Data["restore_info"] = map[string]any{
 			"time":    p.RestoreInfo.Time,
 			"version": p.RestoreInfo.Version,
 		}
@@ -313,7 +313,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 		resp.Data["keys"] = retKeys
 
 	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
-		retKeys := map[string]map[string]interface{}{}
+		retKeys := map[string]map[string]any{}
 		for k, v := range p.Keys {
 			key := asymKey{
 				PublicKey:    v.FormattedPublicKey,

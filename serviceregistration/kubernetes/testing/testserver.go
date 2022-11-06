@@ -158,14 +158,14 @@ func Server(t *testing.T) (testState *State, testConf *Conf, closeFunc func()) {
 			w.Write([]byte(getPodResponse))
 			return
 		case r.Method == http.MethodPatch:
-			var patches []interface{}
+			var patches []any
 			if err := json.NewDecoder(r.Body).Decode(&patches); err != nil {
 				w.WriteHeader(400)
 				w.Write([]byte(fmt.Sprintf("unable to decode patches %s: %s", r.URL.Path, err.Error())))
 				return
 			}
 			for _, patch := range patches {
-				patchMap := patch.(map[string]interface{})
+				patchMap := patch.(map[string]any)
 				p := patchMap["path"].(string)
 				testState.store(p, patchMap)
 			}
@@ -201,7 +201,7 @@ type State struct {
 
 func (s *State) NumPatches() int {
 	l := 0
-	f := func(key, value interface{}) bool {
+	f := func(key, value any) bool {
 		l++
 		return true
 	}
@@ -209,19 +209,19 @@ func (s *State) NumPatches() int {
 	return l
 }
 
-func (s *State) Get(key string) map[string]interface{} {
+func (s *State) Get(key string) map[string]any {
 	v, ok := s.m.Load(key)
 	if !ok {
 		return nil
 	}
-	patch, ok := v.(map[string]interface{})
+	patch, ok := v.(map[string]any)
 	if !ok {
 		return nil
 	}
 	return patch
 }
 
-func (s *State) store(k string, p map[string]interface{}) {
+func (s *State) store(k string, p map[string]any) {
 	s.m.Store(k, p)
 }
 

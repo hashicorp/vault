@@ -17,6 +17,6 @@ func (ec entConfig) Merge(ec2 entConfig) entConfig {
 	return result
 }
 
-func (ec entConfig) Sanitized() map[string]interface{} {
+func (ec entConfig) Sanitized() map[string]any {
 	return nil
 }

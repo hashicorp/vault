@@ -134,7 +134,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	}
 
 	auth := &logical.Auth{
-		InternalData: map[string]interface{}{
+		InternalData: map[string]any{
 			"subject_key_id":   skid,
 			"authority_key_id": akid,
 		},

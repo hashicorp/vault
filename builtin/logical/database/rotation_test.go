@@ -61,7 +61,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	verifyPgConn(t, dbUser, dbUserDefaultPassword, connURL)
 
 	// Configure a connection
-	data := map[string]interface{}{
+	data := map[string]any{
 		"connection_url":    connURL,
 		"plugin_name":       "postgresql-database-plugin",
 		"verify_connection": false,
@@ -80,7 +80,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	data = map[string]interface{}{
+	data = map[string]any{
 		"name":                "plugin-role-test",
 		"db_name":             "plugin-test",
 		"rotation_statements": testRoleStaticUpdate,
@@ -101,7 +101,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	// Read the creds
-	data = map[string]interface{}{}
+	data = map[string]any{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "static-creds/plugin-role-test",
@@ -124,7 +124,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	verifyPgConn(t, dbUser, password, connURL)
 
 	// Re-read the creds, verifying they aren't changing on read
-	data = map[string]interface{}{}
+	data = map[string]any{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "static-creds/plugin-role-test",
@@ -141,7 +141,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	// Trigger rotation
-	data = map[string]interface{}{"name": "plugin-role-test"}
+	data = map[string]any{"name": "plugin-role-test"}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "rotate-role/plugin-role-test",
@@ -158,7 +158,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	// Re-Read the creds
-	data = map[string]interface{}{}
+	data = map[string]any{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "static-creds/plugin-role-test",
@@ -207,7 +207,7 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
 
 	// Configure a connection
-	data := map[string]interface{}{
+	data := map[string]any{
 		"connection_url":    connURL,
 		"plugin_name":       "postgresql-database-plugin",
 		"verify_connection": false,
@@ -226,7 +226,7 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	data = map[string]interface{}{
+	data = map[string]any{
 		"name":                  "plugin-role-test",
 		"db_name":               "plugin-test",
 		"creation_statements":   testRoleStaticCreate,
@@ -247,7 +247,7 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 	}
 
 	// Read the creds
-	data = map[string]interface{}{}
+	data = map[string]any{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "creds/plugin-role-test",
@@ -268,7 +268,7 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 	// Verify username/password
 	verifyPgConn(t, dbUser, dbUserDefaultPassword, connURL)
 	// Trigger rotation
-	data = map[string]interface{}{"name": "plugin-role-test"}
+	data = map[string]any{"name": "plugin-role-test"}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "rotate-role/plugin-role-test",
@@ -311,7 +311,7 @@ func TestBackend_StaticRole_Revoke_user(t *testing.T) {
 	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
 
 	// Configure a connection
-	data := map[string]interface{}{
+	data := map[string]any{
 		"connection_url":    connURL,
 		"plugin_name":       "postgresql-database-plugin",
 		"verify_connection": false,
@@ -351,7 +351,7 @@ func TestBackend_StaticRole_Revoke_user(t *testing.T) {
 	}
 	for k, tc := range testCases {
 		t.Run(k, func(t *testing.T) {
-			data = map[string]interface{}{
+			data = map[string]any{
 				"name":                "plugin-role-test",
 				"db_name":             "plugin-test",
 				"rotation_statements": testRoleStaticUpdate,
@@ -375,7 +375,7 @@ func TestBackend_StaticRole_Revoke_user(t *testing.T) {
 			}
 
 			// Read the creds
-			data = map[string]interface{}{}
+			data = map[string]any{}
 			req = &logical.Request{
 				Operation: logical.ReadOperation,
 				Path:      "static-creds/plugin-role-test",
@@ -532,7 +532,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
 
 	// Configure a connection
-	data := map[string]interface{}{
+	data := map[string]any{
 		"connection_url":    connURL,
 		"plugin_name":       "postgresql-database-plugin",
 		"verify_connection": false,
@@ -556,7 +556,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 	roleTime := time.Now()
 
 	// Create role
-	data = map[string]interface{}{
+	data = map[string]any{
 		"name":                roleName,
 		"db_name":             "plugin-test",
 		"rotation_statements": testRoleStaticUpdate,
@@ -621,7 +621,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 	assertWALCount(t, config.StorageView, 0, staticWALKey)
 
 	// Read the role
-	data = map[string]interface{}{}
+	data = map[string]any{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "static-roles/" + roleName,
@@ -699,7 +699,7 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 	uc := userCreator(func(t *testing.T, username, password string) {
 		createTestPGUser(t, connURL, username, password, testRoleStaticCreate)
 	})
-	testBackend_StaticRole_Rotations(t, uc, map[string]interface{}{
+	testBackend_StaticRole_Rotations(t, uc, map[string]any{
 		"connection_url": connURL,
 		"plugin_name":    "postgresql-database-plugin",
 	})
@@ -712,7 +712,7 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	uc := userCreator(func(t *testing.T, username, password string) {
 		testCreateDBUser(t, connURL, "vaulttestdb", username, password)
 	})
-	testBackend_StaticRole_Rotations(t, uc, map[string]interface{}{
+	testBackend_StaticRole_Rotations(t, uc, map[string]any{
 		"connection_url": connURL,
 		"plugin_name":    "mongodb-database-plugin",
 	})
@@ -759,7 +759,7 @@ func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
-	testBackend_StaticRole_Rotations(t, uc, map[string]interface{}{
+	testBackend_StaticRole_Rotations(t, uc, map[string]any{
 		"plugin_name": "mongodbatlas-database-plugin",
 		"project_id":  projID,
 		"private_key": privKey,
@@ -767,7 +767,7 @@ func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
 	})
 }
 
-func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
+func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]any) {
 	// We need to set this value for the plugin to run, but it doesn't matter what we set it to.
 	oldToken := os.Getenv(pluginutil.PluginUnwrapTokenEnv)
 	os.Setenv(pluginutil.PluginUnwrapTokenEnv, "...")
@@ -803,7 +803,7 @@ func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts
 	}
 
 	// Configure a connection
-	data := map[string]interface{}{
+	data := map[string]any{
 		"verify_connection": false,
 		"allowed_roles":     []string{"*"},
 	}
@@ -831,7 +831,7 @@ func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts
 	// create three static roles with different rotation periods
 	for _, tc := range testCases {
 		roleName := "plugin-static-role-" + tc
-		data = map[string]interface{}{
+		data = map[string]any{
 			"name":            roleName,
 			"db_name":         "plugin-test",
 			"username":        "statictest" + tc,
@@ -857,7 +857,7 @@ func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts
 	}
 
 	// List the roles
-	data = map[string]interface{}{}
+	data = map[string]any{}
 	req = &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "static-roles/",
@@ -927,7 +927,7 @@ func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
 	createUserCmd := &createUserCommand{
 		Username: username,
 		Password: password,
-		Roles:    []interface{}{},
+		Roles:    []any{},
 	}
 	result := client.Database(db).RunCommand(ctx, createUserCmd, nil)
 	if result.Err() != nil {
@@ -936,9 +936,9 @@ func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
 }
 
 type createUserCommand struct {
-	Username string        `bson:"createUser"`
-	Password string        `bson:"pwd"`
-	Roles    []interface{} `bson:"roles"`
+	Username string `bson:"createUser"`
+	Password string `bson:"pwd"`
+	Roles    []any  `bson:"roles"`
 }
 
 // Demonstrates a bug fix for the credential rotation not releasing locks
@@ -964,7 +964,7 @@ func TestBackend_StaticRole_LockRegression(t *testing.T) {
 	defer cleanup()
 
 	// Configure a connection
-	data := map[string]interface{}{
+	data := map[string]any{
 		"connection_url":    connURL,
 		"plugin_name":       "postgresql-database-plugin",
 		"verify_connection": false,
@@ -984,7 +984,7 @@ func TestBackend_StaticRole_LockRegression(t *testing.T) {
 	}
 
 	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
-	data = map[string]interface{}{
+	data = map[string]any{
 		"name":                "plugin-role-test",
 		"db_name":             "plugin-test",
 		"rotation_statements": testRoleStaticUpdate,
@@ -1048,7 +1048,7 @@ func TestBackend_StaticRole_Rotate_Invalid_Role(t *testing.T) {
 	verifyPgConn(t, dbUser, dbUserDefaultPassword, connURL)
 
 	// Configure a connection
-	data := map[string]interface{}{
+	data := map[string]any{
 		"connection_url":    connURL,
 		"plugin_name":       "postgresql-database-plugin",
 		"verify_connection": false,
@@ -1067,7 +1067,7 @@ func TestBackend_StaticRole_Rotate_Invalid_Role(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	data = map[string]interface{}{
+	data = map[string]any{
 		"name":                "plugin-role-test",
 		"db_name":             "plugin-test",
 		"rotation_statements": testRoleStaticUpdate,
@@ -1096,7 +1096,7 @@ func TestBackend_StaticRole_Rotate_Invalid_Role(t *testing.T) {
 	}
 
 	// Trigger rotation
-	data = map[string]interface{}{"name": "plugin-role-test"}
+	data = map[string]any{"name": "plugin-role-test"}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "rotate-role/plugin-role-test",

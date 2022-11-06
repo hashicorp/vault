@@ -30,7 +30,7 @@ func (b *backend) pathFetchPublicKey(ctx context.Context, req *logical.Request, 
 	}
 
 	response := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			logical.HTTPContentType: "text/plain",
 			logical.HTTPRawBody:     []byte(publicKeyEntry.Key),
 			logical.HTTPStatusCode:  200,

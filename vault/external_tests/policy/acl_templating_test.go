@@ -58,7 +58,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 
-	resp, err := client.Logical().Write("identity/entity", map[string]interface{}{
+	resp, err := client.Logical().Write("identity/entity", map[string]any{
 		"name": "entity_name",
 		"policies": []string{
 			"goodPolicy1",
@@ -70,7 +70,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	}
 	entityID := resp.Data["id"].(string)
 
-	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
+	resp, err = client.Logical().Write("identity/group", map[string]any{
 		"policies": []string{
 			"goodPolicy2",
 		},
@@ -84,7 +84,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	}
 	groupID := resp.Data["id"]
 
-	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
+	resp, err = client.Logical().Write("identity/group", map[string]any{
 		"name": "foobar",
 	})
 	if err != nil {
@@ -109,7 +109,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	userpassAccessor := auths["userpass/"].Accessor
 
 	// Create an alias
-	resp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
+	resp, err = client.Logical().Write("identity/entity-alias", map[string]any{
 		"name":           "testuser",
 		"mount_accessor": userpassAccessor,
 		"canonical_id":   entityID,
@@ -119,7 +119,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	}
 
 	// Add a user to userpass backend
-	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]any{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -139,7 +139,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	}
 
 	// Authenticate
-	secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
+	secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]any{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -181,7 +181,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 
 	runTests := func(failGroupName bool) {
 		for _, test := range tests {
-			resp, err := client.Logical().Write(test.path, map[string]interface{}{"zip": "zap"})
+			resp, err := client.Logical().Write(test.path, map[string]any{"zip": "zap"})
 			fail := test.fail
 			if test.name == "bad group name" {
 				fail = failGroupName
@@ -213,7 +213,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 
 	// Test that adding group membership now allows access
 	client.SetToken(rootToken)
-	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
+	resp, err = client.Logical().Write("identity/group", map[string]any{
 		"id": foobarGroupID,
 		"member_entity_ids": []string{
 			entityID,

@@ -49,7 +49,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("my-auth", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().Write("auth/my-auth/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/my-auth/users/test", map[string]any{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -188,7 +188,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]any{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -266,7 +266,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]any{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -325,7 +325,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]any{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -386,7 +386,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]any{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {

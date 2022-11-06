@@ -338,7 +338,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 
 	caChainGen := newCaChainOutput(parsedBundle, data)
 
-	respData := map[string]interface{}{
+	respData := map[string]any{
 		"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 		"serial_number": cb.SerialNumber,
 	}
@@ -395,7 +395,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	default:
 		resp = b.Secret(SecretCertsType).Response(
 			respData,
-			map[string]interface{}{
+			map[string]any{
 				"serial_number": cb.SerialNumber,
 			})
 		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())

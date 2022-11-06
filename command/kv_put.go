@@ -179,13 +179,13 @@ func (c *KVPutCommand) Run(args []string) int {
 	var fullPath string
 	if v2 {
 		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
-		data = map[string]interface{}{
+		data = map[string]any{
 			"data":    data,
-			"options": map[string]interface{}{},
+			"options": map[string]any{},
 		}
 
 		if c.flagCAS > -1 {
-			data["options"].(map[string]interface{})["cas"] = c.flagCAS
+			data["options"].(map[string]any)["cas"] = c.flagCAS
 		}
 	} else {
 		// v1

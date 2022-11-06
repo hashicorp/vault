@@ -277,7 +277,7 @@ func TestFairshare_stopMultiple(t *testing.T) {
 	}
 
 	// essentially, we don't want to panic here
-	var r interface{}
+	var r any
 	go func() {
 		t.Helper()
 

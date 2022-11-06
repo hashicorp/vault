@@ -425,7 +425,7 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 		Operation:   logical.UpdateOperation,
 		ClientToken: token,
 		Path:        "sys/mounts/secret",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"type":        "kv",
 			"path":        "secret/",
 			"description": "key/value secret storage",
@@ -769,7 +769,7 @@ type rawHTTP struct{}
 
 func (n *rawHTTP) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			logical.HTTPStatusCode:  200,
 			logical.HTTPContentType: "plain/text",
 			logical.HTTPRawBody:     []byte("hello world"),
@@ -1187,7 +1187,7 @@ type TestClusterOptions struct {
 	// core in cluster will have 0, second 1, etc.
 	// If the backend is shared across the cluster (i.e. is not Raft) then it
 	// should return nil when coreIdx != 0.
-	PhysicalFactory func(t testing.T, coreIdx int, logger log.Logger, conf map[string]interface{}) *PhysicalBackendBundle
+	PhysicalFactory func(t testing.T, coreIdx int, logger log.Logger, conf map[string]any) *PhysicalBackendBundle
 	// FirstCoreNumber is used to assign a unique number to each core within
 	// a multi-cluster setup.
 	FirstCoreNumber   int
@@ -1212,7 +1212,7 @@ type TestClusterOptions struct {
 
 	CoreMetricSinkProvider func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper)
 
-	PhysicalFactoryConfig map[string]interface{}
+	PhysicalFactoryConfig map[string]any
 	LicensePublicKey      ed25519.PublicKey
 	LicensePrivateKey     ed25519.PrivateKey
 
@@ -1918,7 +1918,7 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	if opts != nil && opts.PhysicalFactory != nil {
 		pfc := opts.PhysicalFactoryConfig
 		if pfc == nil {
-			pfc = make(map[string]interface{})
+			pfc = make(map[string]any)
 		}
 		if len(opts.VersionMap) > 0 {
 			pfc["autopilot_upgrade_version"] = opts.VersionMap[idx]
@@ -2115,7 +2115,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		Operation:   logical.UpdateOperation,
 		ClientToken: tc.RootToken,
 		Path:        "sys/mounts/secret",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"type":        "kv",
 			"path":        "secret/",
 			"description": "key/value secret storage",
@@ -2186,7 +2186,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			Operation:   logical.UpdateOperation,
 			ClientToken: tc.RootToken,
 			Path:        "sys/audit/noop",
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"type": "noop",
 			},
 		}
@@ -2234,8 +2234,8 @@ func (testCluster *TestCluster) getAPIClient(
 	return apiClient
 }
 
-func toFunc(f logical.Factory) func() (interface{}, error) {
-	return func() (interface{}, error) {
+func toFunc(f logical.Factory) func() (any, error) {
+	return func() (any, error) {
 		return f, nil
 	}
 }
@@ -2256,7 +2256,7 @@ type mockBuiltinRegistry struct {
 }
 
 // Get only supports getting database plugins, and approle
-func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
+func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (any, error), bool) {
 	testPluginType, ok := m.forTesting[name]
 	if !ok {
 		return nil, false

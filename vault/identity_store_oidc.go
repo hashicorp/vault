@@ -321,7 +321,7 @@ func (i *IdentityStore) pathOIDCReadConfig(ctx context.Context, req *logical.Req
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"issuer": c.Issuer,
 		},
 	}
@@ -597,7 +597,7 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"rotation_period":    int64(storedNamedKey.RotationPeriod.Seconds()),
 			"verification_ttl":   int64(storedNamedKey.VerificationTTL.Seconds()),
 			"algorithm":          storedNamedKey.Algorithm,
@@ -908,7 +908,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		return nil, fmt.Errorf("error signing OIDC token: %w", err)
 	}
 
-	retResp.Data = map[string]interface{}{
+	retResp.Data = map[string]any{
 		"token":     signedIdToken,
 		"client_id": role.ClientID,
 		"ttl":       int64(role.TokenTTL.Seconds()),
@@ -953,7 +953,7 @@ func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name
 }
 
 func (tok *idToken) generatePayload(logger hclog.Logger, templates ...string) ([]byte, error) {
-	output := map[string]interface{}{
+	output := map[string]any{
 		"iss":       tok.Issuer,
 		"namespace": tok.Namespace,
 		"sub":       tok.Subject,
@@ -994,9 +994,9 @@ func (tok *idToken) generatePayload(logger hclog.Logger, templates ...string) ([
 // mergeJSONTemplates will merge each of the given JSON templates into the given
 // output map. It will simply merge the top-level keys of the unmarshalled JSON
 // templates into output, which means that any conflicting keys will be overwritten.
-func mergeJSONTemplates(logger hclog.Logger, output map[string]interface{}, templates ...string) error {
+func mergeJSONTemplates(logger hclog.Logger, output map[string]any, templates ...string) error {
 	for _, template := range templates {
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(template), &parsed); err != nil {
 			logger.Warn("error parsing OIDC template", "template", template, "err", err)
 		}
@@ -1140,7 +1140,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 			return logical.ErrorResponse("error parsing template: %s", err.Error()), nil
 		}
 
-		var tmp map[string]interface{}
+		var tmp map[string]any
 		if err := json.Unmarshal([]byte(populatedTemplate), &tmp); err != nil {
 			return logical.ErrorResponse("error parsing template JSON: %s", err.Error()), nil
 		}
@@ -1218,7 +1218,7 @@ func (i *IdentityStore) pathOIDCReadRole(ctx context.Context, req *logical.Reque
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"client_id": role.ClientID,
 			"key":       role.Key,
 			"template":  role.Template,
@@ -1304,7 +1304,7 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			logical.HTTPStatusCode:         200,
 			logical.HTTPRawBody:            data,
 			logical.HTTPContentType:        "application/json",
@@ -1383,7 +1383,7 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			logical.HTTPStatusCode:  200,
 			logical.HTTPRawBody:     data,
 			logical.HTTPContentType: "application/json",
@@ -1414,7 +1414,7 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 
 	// helper for preparing the non-standard introspection response
 	introspectionResp := func(errorMsg string) (*logical.Response, error) {
-		response := map[string]interface{}{
+		response := map[string]any{
 			"active": true,
 		}
 
@@ -1429,7 +1429,7 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 		}
 
 		resp := &logical.Response{
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				logical.HTTPStatusCode:  200,
 				logical.HTTPRawBody:     data,
 				logical.HTTPContentType: "application/json",
@@ -1557,7 +1557,7 @@ func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.St
 
 // generateKeys returns a signingKey and publicKey pair
 func generateKeys(algorithm string) (*jose.JSONWebKey, error) {
-	var key interface{}
+	var key any
 	var err error
 
 	switch algorithm {
@@ -1985,7 +1985,7 @@ func (c *oidcCache) nskey(ns *namespace.Namespace, key string) string {
 	return fmt.Sprintf("v0:%s:%s", ns.ID, key)
 }
 
-func (c *oidcCache) Get(ns *namespace.Namespace, key string) (interface{}, bool, error) {
+func (c *oidcCache) Get(ns *namespace.Namespace, key string) (any, bool, error) {
 	if ns == nil {
 		return nil, false, errNilNamespace
 	}
@@ -1993,7 +1993,7 @@ func (c *oidcCache) Get(ns *namespace.Namespace, key string) (interface{}, bool,
 	return v, found, nil
 }
 
-func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interface{}) error {
+func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj any) error {
 	if ns == nil {
 		return errNilNamespace
 	}

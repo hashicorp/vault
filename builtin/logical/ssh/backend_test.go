@@ -222,7 +222,7 @@ func TestBackend_AllowedUsers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"key_type":      "otp",
 		"default_user":  "ubuntu",
 		"cidr_list":     "52.207.235.245/16",
@@ -241,7 +241,7 @@ func TestBackend_AllowedUsers(t *testing.T) {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
 
-	credsData := map[string]interface{}{
+	credsData := map[string]any{
 		"ip":       "52.207.235.245",
 		"username": "ubuntu",
 	}
@@ -332,7 +332,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 		map[string]string{
 			"ssh_username": testUserName,
 		},
-		map[string]interface{}{
+		map[string]any{
 			"key_type":                 testCaKeyType,
 			"algorithm_signer":         "rsa-sha2-256",
 			"allow_host_certificates":  true,
@@ -340,7 +340,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 			"allowed_domains":          testAllowedDomainsTemplate,
 			"allowed_domains_template": true,
 		},
-		map[string]interface{}{
+		map[string]any{
 			"cert_type":        "host",
 			"public_key":       testCAPublicKey,
 			"valid_principals": expectedValidPrincipal,
@@ -401,14 +401,14 @@ func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateTrue(t *testing.T)
 	client := cluster.Cores[0].Client
 
 	// set metadata "ssh_username" to userpass username
-	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]any{
 		"token": userpassToken,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	entityID := tokenLookupResponse.Data["entity_id"].(string)
-	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]any{
 		"metadata": map[string]string{
 			"ssh_username": testUserName,
 		},
@@ -417,7 +417,7 @@ func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateTrue(t *testing.T)
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]any{
 		"key_type":                testCaKeyType,
 		"allow_user_certificates": true,
 		"default_user":            "{{identity.entity.metadata.ssh_username}}",
@@ -432,7 +432,7 @@ func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateTrue(t *testing.T)
 
 	// sign SSH key as userpass user
 	client.SetToken(userpassToken)
-	_, err = client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/sign/my-role", map[string]any{
 		"public_key": testCAPublicKey,
 	})
 	if err == nil {
@@ -451,14 +451,14 @@ func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateFalse(t *testing.T
 	client := cluster.Cores[0].Client
 
 	// set metadata "ssh_username" to userpass username
-	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]any{
 		"token": userpassToken,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	entityID := tokenLookupResponse.Data["entity_id"].(string)
-	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]any{
 		"metadata": map[string]string{
 			"ssh_username": testUserName,
 		},
@@ -467,7 +467,7 @@ func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateFalse(t *testing.T
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]any{
 		"key_type":                testCaKeyType,
 		"allow_user_certificates": true,
 		"default_user":            "{{identity.entity.metadata.ssh_username}}",
@@ -481,7 +481,7 @@ func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateFalse(t *testing.T
 
 	// sign SSH key as userpass user
 	client.SetToken(userpassToken)
-	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]any{
 		"public_key": testCAPublicKey,
 	})
 	if err != nil {
@@ -532,19 +532,19 @@ func newTestingFactory(t *testing.T) func(ctx context.Context, conf *logical.Bac
 }
 
 func TestSSHBackend_Lookup(t *testing.T) {
-	testOTPRoleData := map[string]interface{}{
+	testOTPRoleData := map[string]any{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
 		"cidr_list":    testCIDRList,
 	}
-	testDynamicRoleData := map[string]interface{}{
+	testDynamicRoleData := map[string]any{
 		"key_type":     testDynamicKeyType,
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
 		"default_user": testAdminUser,
 		"cidr_list":    testCIDRList,
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"ip": testIP,
 	}
 	resp1 := []string(nil)
@@ -574,27 +574,27 @@ func TestSSHBackend_Lookup(t *testing.T) {
 }
 
 func TestSSHBackend_RoleList(t *testing.T) {
-	testOTPRoleData := map[string]interface{}{
+	testOTPRoleData := map[string]any{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
 		"cidr_list":    testCIDRList,
 	}
-	resp1 := map[string]interface{}{}
-	resp2 := map[string]interface{}{
+	resp1 := map[string]any{}
+	resp2 := map[string]any{
 		"keys": []string{testOTPRoleName},
-		"key_info": map[string]interface{}{
-			testOTPRoleName: map[string]interface{}{
+		"key_info": map[string]any{
+			testOTPRoleName: map[string]any{
 				"key_type": testOTPKeyType,
 			},
 		},
 	}
-	resp3 := map[string]interface{}{
+	resp3 := map[string]any{
 		"keys": []string{testAtRoleName, testOTPRoleName},
-		"key_info": map[string]interface{}{
-			testOTPRoleName: map[string]interface{}{
+		"key_info": map[string]any{
+			testOTPRoleName: map[string]any{
 				"key_type": testOTPKeyType,
 			},
-			testAtRoleName: map[string]interface{}{
+			testAtRoleName: map[string]any{
 				"key_type": testOTPKeyType,
 			},
 		},
@@ -624,7 +624,7 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testDynamicRoleData := map[string]interface{}{
+	testDynamicRoleData := map[string]any{
 		"key_type":     testDynamicKeyType,
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
@@ -632,7 +632,7 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 		"cidr_list":    host + "/32",
 		"port":         port,
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"username": testUserName,
 		"ip":       host,
 	}
@@ -649,12 +649,12 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 }
 
 func TestSSHBackend_OTPRoleCrud(t *testing.T) {
-	testOTPRoleData := map[string]interface{}{
+	testOTPRoleData := map[string]any{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
 		"cidr_list":    testCIDRList,
 	}
-	respOTPRoleData := map[string]interface{}{
+	respOTPRoleData := map[string]any{
 		"key_type":     testOTPKeyType,
 		"port":         22,
 		"default_user": testUserName,
@@ -676,14 +676,14 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 }
 
 func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
-	testDynamicRoleData := map[string]interface{}{
+	testDynamicRoleData := map[string]any{
 		"key_type":     testDynamicKeyType,
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
 		"default_user": testAdminUser,
 		"cidr_list":    testCIDRList,
 	}
-	respDynamicRoleData := map[string]interface{}{
+	respDynamicRoleData := map[string]any{
 		"cidr_list":      testCIDRList,
 		"port":           22,
 		"install_script": DefaultPublicKeyInstallScript,
@@ -732,13 +732,13 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testOTPRoleData := map[string]interface{}{
+	testOTPRoleData := map[string]any{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
 		"cidr_list":    host + "/32",
 		"port":         port,
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"username": testUserName,
 		"ip":       host,
 	}
@@ -752,10 +752,10 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 }
 
 func TestSSHBackend_VerifyEcho(t *testing.T) {
-	verifyData := map[string]interface{}{
+	verifyData := map[string]any{
 		"otp": api.VerifyEchoRequest,
 	}
-	expectedData := map[string]interface{}{
+	expectedData := map[string]any{
 		"message": api.VerifyEchoResponse,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -767,31 +767,31 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 }
 
 func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
-	testOTPRoleData := map[string]interface{}{
+	testOTPRoleData := map[string]any{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
 		"cidr_list":    testCIDRList,
 	}
-	testDynamicRoleData := map[string]interface{}{
+	testDynamicRoleData := map[string]any{
 		"key_type":     testDynamicKeyType,
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
 		"default_user": testAdminUser,
 		"cidr_list":    testCIDRList,
 	}
-	req1 := map[string]interface{}{
+	req1 := map[string]any{
 		"roles": testOTPRoleName,
 	}
-	resp1 := map[string]interface{}{
+	resp1 := map[string]any{
 		"roles": []string{testOTPRoleName},
 	}
-	req2 := map[string]interface{}{
+	req2 := map[string]any{
 		"roles": fmt.Sprintf("%s,%s", testOTPRoleName, testDynamicRoleName),
 	}
-	resp2 := map[string]interface{}{
+	resp2 := map[string]any{
 		"roles": []string{testOTPRoleName, testDynamicRoleName},
 	}
-	resp3 := map[string]interface{}{
+	resp3 := map[string]any{
 		"roles": []string{},
 	}
 
@@ -815,15 +815,15 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 }
 
 func TestSSHBackend_CredsForZeroAddressRoles_otp(t *testing.T) {
-	otpRoleData := map[string]interface{}{
+	otpRoleData := map[string]any{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"username": testUserName,
 		"ip":       testIP,
 	}
-	req1 := map[string]interface{}{
+	req1 := map[string]any{
 		"roles": testOTPRoleName,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -848,18 +848,18 @@ func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dynamicRoleData := map[string]interface{}{
+	dynamicRoleData := map[string]any{
 		"key_type":     testDynamicKeyType,
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
 		"default_user": testAdminUser,
 		"port":         port,
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"username": testUserName,
 		"ip":       host,
 	}
-	req2 := map[string]interface{}{
+	req2 := map[string]any{
 		"roles": testDynamicRoleName,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1022,7 +1022,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 `
 	testKeyToSignPublic := `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCfVXbF38SAlchjnd8FO1zbST9qN6SpCeC+SkVLA0dbrdc0RArwuUU4LIZeiN70NQbGdizcX+iF+wEFaQs19Tt+IQ11IkvWluQCAn7a6FX2wtmO9iGKStdajIlcsMp9jXYuOlwFLYd4sxPTiVpn/FIms4EQkcbMfKvbBQ7Q1RBRA9Q4MAWGccqC+8DhS7v1RiBx1OEXjDzf4QCcTgnMFkwo8yPPLi7ULRH8ugPwO5qkfBfo0ZZ0RS9Rln5dFwhZ4I69HSd6oYFEffmTUy/uTrl3uSQTS68zlnfp6vDe12izPE9h/sAqc7UOl5Ta7AxzKbrE3B/DKcqOEuov8yCLi5H `
 
-	roleOptions := map[string]interface{}{
+	roleOptions := map[string]any{
 		"allow_user_certificates": true,
 		"allowed_users":           "*",
 		"default_extensions": []map[string]string{
@@ -1046,7 +1046,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testcarole",
 				ErrorOk:   expectError,
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key":       testKeyToSignPublic,
 					"valid_principals": testUserName,
 				},
@@ -1135,7 +1135,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 
 	// Old role entries between 1.4.3 and 1.5.2 had algorithm_signer default to
 	// ssh-rsa if not provided.
-	roleOptionsOldEntry := map[string]interface{}{
+	roleOptionsOldEntry := map[string]any{
 		"allow_user_certificates": true,
 		"allowed_users":           "*",
 		"default_extensions": []map[string]string{
@@ -1150,7 +1150,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 	}
 
 	// Upgrade entry by overwriting algorithm_signer with an empty value
-	roleOptionsUpgradedEntry := map[string]interface{}{
+	roleOptionsUpgradedEntry := map[string]any{
 		"allow_user_certificates": true,
 		"allowed_users":           "*",
 		"default_extensions": []map[string]string{
@@ -1174,7 +1174,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testcarole",
 				ErrorOk:   false,
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key":       testKeyToSignPublic,
 					"valid_principals": testUserName,
 				},
@@ -1308,15 +1308,15 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			configCaStep(testCAPublicKey, testCAPrivateKey),
 
-			createRoleStep("testing", map[string]interface{}{
+			createRoleStep("testing", map[string]any{
 				"key_type":                "ca",
 				"allow_host_certificates": true,
 				"allowed_domains":         "example.com,example.org",
 				"allow_subdomains":        true,
-				"default_critical_options": map[string]interface{}{
+				"default_critical_options": map[string]any{
 					"option": "value",
 				},
-				"default_extensions": map[string]interface{}{
+				"default_extensions": map[string]any{
 					"extension": "extended",
 				},
 			}),
@@ -1326,7 +1326,7 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 			}, map[string]string{
 				"extension": "extended",
 			},
-				2*time.Hour, map[string]interface{}{
+				2*time.Hour, map[string]any{
 					"public_key":       publicKey2,
 					"ttl":              "2h",
 					"cert_type":        "host",
@@ -1351,17 +1351,17 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			configCaStep(testCAPublicKey, testCAPrivateKey),
 
-			createRoleStep("testing", map[string]interface{}{
+			createRoleStep("testing", map[string]any{
 				"key_type":                 "ca",
 				"allowed_users":            "tuber",
 				"default_user":             "tuber",
 				"allow_user_certificates":  true,
 				"allowed_critical_options": "option,secondary",
 				"allowed_extensions":       "extension,additional",
-				"default_critical_options": map[string]interface{}{
+				"default_critical_options": map[string]any{
 					"option": "value",
 				},
-				"default_extensions": map[string]interface{}{
+				"default_extensions": map[string]any{
 					"extension": "extended",
 				},
 			}),
@@ -1370,13 +1370,13 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 				"secondary": "value",
 			}, map[string]string{
 				"additional": "value",
-			}, 2*time.Hour, map[string]interface{}{
+			}, 2*time.Hour, map[string]any{
 				"public_key": publicKey2,
 				"ttl":        "2h",
-				"critical_options": map[string]interface{}{
+				"critical_options": map[string]any{
 					"secondary": "value",
 				},
-				"extensions": map[string]interface{}{
+				"extensions": map[string]any{
 					"additional": "value",
 				},
 			}),
@@ -1397,17 +1397,17 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(testCAPublicKey, testCAPrivateKey),
-			createRoleStep("weakkey", map[string]interface{}{
+			createRoleStep("weakkey", map[string]any{
 				"key_type":                "ca",
 				"allow_user_certificates": true,
-				"allowed_user_key_lengths": map[string]interface{}{
+				"allowed_user_key_lengths": map[string]any{
 					"rsa": 4096,
 				},
 			}),
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/weakkey",
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key": testCAPublicKey,
 				},
 				ErrorOk: true,
@@ -1418,10 +1418,10 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 					return nil
 				},
 			},
-			createRoleStep("stdkey", map[string]interface{}{
+			createRoleStep("stdkey", map[string]any{
 				"key_type":                "ca",
 				"allow_user_certificates": true,
-				"allowed_user_key_lengths": map[string]interface{}{
+				"allowed_user_key_lengths": map[string]any{
 					"rsa": 2048,
 				},
 			}),
@@ -1429,7 +1429,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/stdkey",
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key": testCAPublicKey,
 				},
 			},
@@ -1437,7 +1437,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/stdkey",
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key": publicKey4096,
 				},
 				ErrorOk: true,
@@ -1448,10 +1448,10 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 					return nil
 				},
 			},
-			createRoleStep("multikey", map[string]interface{}{
+			createRoleStep("multikey", map[string]any{
 				"key_type":                "ca",
 				"allow_user_certificates": true,
-				"allowed_user_key_lengths": map[string]interface{}{
+				"allowed_user_key_lengths": map[string]any{
 					"rsa": []int{2048, 4096},
 				},
 			}),
@@ -1459,7 +1459,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/multikey",
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key": testCAPublicKey,
 				},
 			},
@@ -1467,7 +1467,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/multikey",
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key": publicKey4096,
 				},
 			},
@@ -1475,7 +1475,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/multikey",
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key": publicKey3072,
 				},
 				ErrorOk: true,
@@ -1490,7 +1490,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/multikey",
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key": publicKeyECDSA256,
 				},
 				ErrorOk: true,
@@ -1501,10 +1501,10 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 					return nil
 				},
 			},
-			createRoleStep("ectypes", map[string]interface{}{
+			createRoleStep("ectypes", map[string]any{
 				"key_type":                "ca",
 				"allow_user_certificates": true,
-				"allowed_user_key_lengths": map[string]interface{}{
+				"allowed_user_key_lengths": map[string]any{
 					"ec":                  []int{256},
 					"ecdsa-sha2-nistp521": 0,
 				},
@@ -1513,7 +1513,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/ectypes",
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key": publicKeyECDSA256,
 				},
 			},
@@ -1521,7 +1521,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/ectypes",
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key": publicKeyECDSA521,
 				},
 			},
@@ -1529,7 +1529,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/ectypes",
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key": publicKey3072,
 				},
 				ErrorOk: true,
@@ -1559,7 +1559,7 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			configCaStep(testCAPublicKey, testCAPrivateKey),
 
-			createRoleStep("customrole", map[string]interface{}{
+			createRoleStep("customrole", map[string]any{
 				"key_type":                 "ca",
 				"key_id_format":            "{{role_name}}-{{token_display_name}}-{{public_key_hash}}",
 				"allowed_users":            "tuber",
@@ -1567,10 +1567,10 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 				"allow_user_certificates":  true,
 				"allowed_critical_options": "option,secondary",
 				"allowed_extensions":       "extension,additional",
-				"default_critical_options": map[string]interface{}{
+				"default_critical_options": map[string]any{
 					"option": "value",
 				},
-				"default_extensions": map[string]interface{}{
+				"default_extensions": map[string]any{
 					"extension": "extended",
 				},
 			}),
@@ -1579,13 +1579,13 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 				"secondary": "value",
 			}, map[string]string{
 				"additional": "value",
-			}, 2*time.Hour, map[string]interface{}{
+			}, 2*time.Hour, map[string]any{
 				"public_key": publicKey2,
 				"ttl":        "2h",
-				"critical_options": map[string]interface{}{
+				"critical_options": map[string]any{
 					"secondary": "value",
 				},
-				"extensions": map[string]interface{}{
+				"extensions": map[string]any{
 					"additional": "value",
 				},
 			}),
@@ -1608,7 +1608,7 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			configCaStep(testCAPublicKey, testCAPrivateKey),
 
-			createRoleStep("testing", map[string]interface{}{
+			createRoleStep("testing", map[string]any{
 				"key_type":                "ca",
 				"allow_user_key_ids":      false,
 				"allow_user_certificates": true,
@@ -1616,7 +1616,7 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testing",
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"public_key": publicKey2,
 					"key_id":     "override",
 				},
@@ -1647,14 +1647,14 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	userpassAccessor := auths["userpass/"].Accessor
 
 	// Write SSH role.
-	_, err = client.Logical().Write("ssh/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/test", map[string]any{
 		"key_type":                    "ca",
 		"allowed_extensions":          "login@zipzap.com",
 		"allow_user_certificates":     true,
 		"allowed_users":               "tuber",
 		"default_user":                "tuber",
 		"default_extensions_template": true,
-		"default_extensions": map[string]interface{}{
+		"default_extensions": map[string]any{
 			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
 			"login@foobar2.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}, " +
 				"{{identity.entity.aliases." + userpassAccessor + ".name}}_foobar",
@@ -1668,7 +1668,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 
 	// Issue SSH certificate with default extensions templating enabled, and no user-provided extensions
 	client.SetToken(userpassToken)
-	resp, err := client.Logical().Write("ssh/sign/test", map[string]interface{}{
+	resp, err := client.Logical().Write("ssh/sign/test", map[string]any{
 		"public_key": publicKey4096,
 	})
 	if err != nil {
@@ -1697,7 +1697,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	userProvidedExtensionPermissions := map[string]string{
 		"login@zipzap.com": "some_other_user_name",
 	}
-	resp, err = client.Logical().Write("ssh/sign/test", map[string]interface{}{
+	resp, err = client.Logical().Write("ssh/sign/test", map[string]any{
 		"public_key": publicKey4096,
 		"extensions": userProvidedExtensionPermissions,
 	})
@@ -1721,7 +1721,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	invalidUserProvidedExtensionPermissions := map[string]string{
 		"login@foobar.com": "{{identity.entity.metadata}}",
 	}
-	resp, err = client.Logical().Write("ssh/sign/test", map[string]interface{}{
+	resp, err = client.Logical().Write("ssh/sign/test", map[string]any{
 		"public_key": publicKey4096,
 		"extensions": invalidUserProvidedExtensionPermissions,
 	})
@@ -1744,14 +1744,14 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 
 	// Write SSH role to test with no allowed extension. We also provide a templated default extension,
 	// to verify that it's not actually being evaluated
-	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]any{
 		"key_type":                    "ca",
 		"allow_user_certificates":     true,
 		"allowed_users":               "tuber",
 		"default_user":                "tuber",
 		"allowed_extensions":          "",
 		"default_extensions_template": false,
-		"default_extensions": map[string]interface{}{
+		"default_extensions": map[string]any{
 			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
 		},
 	})
@@ -1764,7 +1764,7 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 	userProvidedAnyExtensionPermissions := map[string]string{
 		"login@foobar.com": "not_userpassname",
 	}
-	_, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]any{
 		"public_key": publicKey4096,
 		"extensions": userProvidedAnyExtensionPermissions,
 	})
@@ -1791,14 +1791,14 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 
 	// Write SSH role to test with any extension. We also provide a templated default extension,
 	// to verify that it's not actually being evaluated
-	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]any{
 		"key_type":                    "ca",
 		"allow_user_certificates":     true,
 		"allowed_users":               "tuber",
 		"default_user":                "tuber",
 		"allowed_extensions":          "*",
 		"default_extensions_template": false,
-		"default_extensions": map[string]interface{}{
+		"default_extensions": map[string]any{
 			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
 		},
 	})
@@ -1814,7 +1814,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 		"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
 		"login@zipzap.com": "some_other_user_name",
 	}
-	resp, err := client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
+	resp, err := client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]any{
 		"public_key": publicKey4096,
 		"extensions": defaultExtensionPermissions,
 	})
@@ -1840,7 +1840,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 		"login@foobar.com": "not_userpassname",
 		"login@zipzap.com": "some_other_user_name",
 	}
-	resp, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
+	resp, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]any{
 		"public_key": publicKey4096,
 		"extensions": userProvidedAnyExtensionPermissions,
 	})
@@ -1873,15 +1873,15 @@ func TestSSHBackend_ValidateNotBeforeDuration(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			configCaStep(testCAPublicKey, testCAPrivateKey),
 
-			createRoleStep("testing", map[string]interface{}{
+			createRoleStep("testing", map[string]any{
 				"key_type":                "ca",
 				"allow_host_certificates": true,
 				"allowed_domains":         "example.com,example.org",
 				"allow_subdomains":        true,
-				"default_critical_options": map[string]interface{}{
+				"default_critical_options": map[string]any{
 					"option": "value",
 				},
-				"default_extensions": map[string]interface{}{
+				"default_extensions": map[string]any{
 					"extension": "extended",
 				},
 				"not_before_duration": "300s",
@@ -1892,22 +1892,22 @@ func TestSSHBackend_ValidateNotBeforeDuration(t *testing.T) {
 			}, map[string]string{
 				"extension": "extended",
 			},
-				2*time.Hour+5*time.Minute-30*time.Second, map[string]interface{}{
+				2*time.Hour+5*time.Minute-30*time.Second, map[string]any{
 					"public_key":       publicKey2,
 					"ttl":              "2h",
 					"cert_type":        "host",
 					"valid_principals": "dummy.example.org,second.example.com",
 				}),
 
-			createRoleStep("testing", map[string]interface{}{
+			createRoleStep("testing", map[string]any{
 				"key_type":                "ca",
 				"allow_host_certificates": true,
 				"allowed_domains":         "example.com,example.org",
 				"allow_subdomains":        true,
-				"default_critical_options": map[string]interface{}{
+				"default_critical_options": map[string]any{
 					"option": "value",
 				},
-				"default_extensions": map[string]interface{}{
+				"default_extensions": map[string]any{
 					"extension": "extended",
 				},
 				"not_before_duration": "2h",
@@ -1918,21 +1918,21 @@ func TestSSHBackend_ValidateNotBeforeDuration(t *testing.T) {
 			}, map[string]string{
 				"extension": "extended",
 			},
-				4*time.Hour-30*time.Second, map[string]interface{}{
+				4*time.Hour-30*time.Second, map[string]any{
 					"public_key":       publicKey2,
 					"ttl":              "2h",
 					"cert_type":        "host",
 					"valid_principals": "dummy.example.org,second.example.com",
 				}),
-			createRoleStep("testing", map[string]interface{}{
+			createRoleStep("testing", map[string]any{
 				"key_type":                "ca",
 				"allow_host_certificates": true,
 				"allowed_domains":         "example.com,example.org",
 				"allow_subdomains":        true,
-				"default_critical_options": map[string]interface{}{
+				"default_critical_options": map[string]any{
 					"option": "value",
 				},
-				"default_extensions": map[string]interface{}{
+				"default_extensions": map[string]any{
 					"extension": "extended",
 				},
 				"not_before_duration": "30s",
@@ -1943,7 +1943,7 @@ func TestSSHBackend_ValidateNotBeforeDuration(t *testing.T) {
 			}, map[string]string{
 				"extension": "extended",
 			},
-				2*time.Hour, map[string]interface{}{
+				2*time.Hour, map[string]any{
 					"public_key":       publicKey2,
 					"ttl":              "2h",
 					"cert_type":        "host",
@@ -1968,18 +1968,18 @@ func TestSSHBackend_IssueSign(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			configCaStep(testCAPublicKey, testCAPrivateKey),
 
-			createRoleStep("testing", map[string]interface{}{
+			createRoleStep("testing", map[string]any{
 				"key_type":     "otp",
 				"default_user": "user",
 			}),
 			// Key pair not issued with invalid role key type
 			issueSSHKeyPairStep("testing", "rsa", 0, true, "role key type 'otp' not allowed to issue key pairs"),
 
-			createRoleStep("testing", map[string]interface{}{
+			createRoleStep("testing", map[string]any{
 				"key_type":                "ca",
 				"allow_user_key_ids":      false,
 				"allow_user_certificates": true,
-				"allowed_user_key_lengths": map[string]interface{}{
+				"allowed_user_key_lengths": map[string]any{
 					"ssh-rsa":             []int{2048, 3072, 4096},
 					"ecdsa-sha2-nistp521": 0,
 					"ed25519":             0,
@@ -2029,7 +2029,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	// Configure test role for userpass.
-	if _, err := client.Logical().Write("auth/userpass/users/"+userIdentity, map[string]interface{}{
+	if _, err := client.Logical().Write("auth/userpass/users/"+userIdentity, map[string]any{
 		"password": "test",
 		"policies": "test",
 	}); err != nil {
@@ -2037,7 +2037,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	// Login userpass for test role and keep client token.
-	secret, err := client.Logical().Write("auth/userpass/login/"+userIdentity, map[string]interface{}{
+	secret, err := client.Logical().Write("auth/userpass/login/"+userIdentity, map[string]any{
 		"password": "test",
 	})
 	if err != nil || secret == nil {
@@ -2058,7 +2058,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	// Configure SSH CA.
-	_, err = client.Logical().Write("ssh/config/ca", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/config/ca", map[string]any{
 		"public_key":  testCAPublicKey,
 		"private_key": testCAPrivateKey,
 	})
@@ -2077,21 +2077,21 @@ func testDefaultUserTemplate(t *testing.T, testDefaultUserTemplate string,
 	client := cluster.Cores[0].Client
 
 	// set metadata "ssh_username" to userpass username
-	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]any{
 		"token": userpassToken,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	entityID := tokenLookupResponse.Data["entity_id"].(string)
-	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]any{
 		"metadata": testEntityMetadata,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]any{
 		"key_type":                testCaKeyType,
 		"allow_user_certificates": true,
 		"default_user":            testDefaultUserTemplate,
@@ -2105,7 +2105,7 @@ func testDefaultUserTemplate(t *testing.T, testDefaultUserTemplate string,
 
 	// sign SSH key as userpass user
 	client.SetToken(userpassToken)
-	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]any{
 		"public_key": testCAPublicKey,
 	})
 	if err != nil {
@@ -2130,21 +2130,21 @@ func testDefaultUserTemplate(t *testing.T, testDefaultUserTemplate string,
 
 func testAllowedPrincipalsTemplate(t *testing.T, testAllowedDomainsTemplate string,
 	expectedValidPrincipal string, testEntityMetadata map[string]string,
-	roleConfigPayload map[string]interface{}, signingPayload map[string]interface{},
+	roleConfigPayload map[string]any, signingPayload map[string]any,
 ) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// set metadata "ssh_username" to userpass username
-	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]any{
 		"token": userpassToken,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	entityID := tokenLookupResponse.Data["entity_id"].(string)
-	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]any{
 		"metadata": testEntityMetadata,
 	})
 	if err != nil {
@@ -2185,13 +2185,13 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 	testAllowedPrincipalsTemplate(
 		t, testAllowedUsersTemplate,
 		expectedValidPrincipal, testEntityMetadata,
-		map[string]interface{}{
+		map[string]any{
 			"key_type":                testCaKeyType,
 			"allow_user_certificates": true,
 			"allowed_users":           testAllowedUsersTemplate,
 			"allowed_users_template":  true,
 		},
-		map[string]interface{}{
+		map[string]any{
 			"public_key":       testCAPublicKey,
 			"valid_principals": expectedValidPrincipal,
 		},
@@ -2202,14 +2202,14 @@ func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/ca",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"public_key":  caPublicKey,
 			"private_key": caPrivateKey,
 		},
 	}
 }
 
-func createRoleStep(name string, parameters map[string]interface{}) logicaltest.TestStep {
+func createRoleStep(name string, parameters map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.CreateOperation,
 		Path:      "roles/" + name,
@@ -2221,7 +2221,7 @@ func signCertificateStep(
 	role, keyID string, certType int, validPrincipals []string,
 	criticalOptionPermissions, extensionPermissions map[string]string,
 	ttl time.Duration,
-	requestParameters map[string]interface{},
+	requestParameters map[string]any,
 ) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -2255,7 +2255,7 @@ func issueSSHKeyPairStep(role, keyType string, keyBits int, expectError bool, er
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "issue/" + role,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"key_type": keyType,
 			"key_bits": keyBits,
 		},
@@ -2359,7 +2359,7 @@ func testConfigZeroAddressDelete(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testConfigZeroAddressWrite(t *testing.T, data map[string]interface{}) logicaltest.TestStep {
+func testConfigZeroAddressWrite(t *testing.T, data map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/zeroaddress",
@@ -2367,7 +2367,7 @@ func testConfigZeroAddressWrite(t *testing.T, data map[string]interface{}) logic
 	}
 }
 
-func testConfigZeroAddressRead(t *testing.T, expected map[string]interface{}) logicaltest.TestStep {
+func testConfigZeroAddressRead(t *testing.T, expected map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "config/zeroaddress",
@@ -2391,7 +2391,7 @@ func testConfigZeroAddressRead(t *testing.T, expected map[string]interface{}) lo
 	}
 }
 
-func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[string]interface{}) logicaltest.TestStep {
+func testVerifyWrite(t *testing.T, data map[string]any, expected map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("verify"),
@@ -2418,7 +2418,7 @@ func testNamedKeysWrite(t *testing.T, name, key string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("keys/%s", name),
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"key": key,
 		},
 	}
@@ -2431,7 +2431,7 @@ func testNamedKeysDelete(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testLookupRead(t *testing.T, data map[string]interface{}, expected []string) logicaltest.TestStep {
+func testLookupRead(t *testing.T, data map[string]any, expected []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "lookup",
@@ -2448,7 +2448,7 @@ func testLookupRead(t *testing.T, data map[string]interface{}, expected []string
 	}
 }
 
-func testRoleWrite(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
+func testRoleWrite(t *testing.T, name string, data map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
@@ -2456,7 +2456,7 @@ func testRoleWrite(t *testing.T, name string, data map[string]interface{}) logic
 	}
 }
 
-func testRoleList(t *testing.T, expected map[string]interface{}) logicaltest.TestStep {
+func testRoleList(t *testing.T, expected map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ListOperation,
 		Path:      "roles",
@@ -2475,7 +2475,7 @@ func testRoleList(t *testing.T, expected map[string]interface{}) logicaltest.Tes
 	}
 }
 
-func testRoleRead(t *testing.T, roleName string, expected map[string]interface{}) logicaltest.TestStep {
+func testRoleRead(t *testing.T, roleName string, expected map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + roleName,
@@ -2514,7 +2514,7 @@ func testRoleDelete(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, expectError bool, address string) logicaltest.TestStep {
+func testCredsWrite(t *testing.T, roleName string, data map[string]any, expectError bool, address string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("creds/%s", roleName),

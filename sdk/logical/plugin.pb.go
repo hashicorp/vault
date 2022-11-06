@@ -120,7 +120,7 @@ func file_sdk_logical_plugin_proto_rawDescGZIP() []byte {
 }
 
 var file_sdk_logical_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_sdk_logical_plugin_proto_goTypes = []interface{}{
+var file_sdk_logical_plugin_proto_goTypes = []any{
 	(*PluginEnvironment)(nil), // 0: logical.PluginEnvironment
 }
 var file_sdk_logical_plugin_proto_depIdxs = []int32{
@@ -137,7 +137,7 @@ func file_sdk_logical_plugin_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_sdk_logical_plugin_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_logical_plugin_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*PluginEnvironment); i {
 			case 0:
 				return &v.state

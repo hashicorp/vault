@@ -74,7 +74,7 @@ func TestTableFormatter(t *testing.T) {
 	ui := mockUi{t: t}
 
 	// Testing secret formatting
-	s := api.Secret{Data: map[string]interface{}{"k": "something"}}
+	s := api.Secret{Data: map[string]any{"k": "something"}}
 	if err := outputWithFormat(ui, &s, &s); err != 0 {
 		t.Fatal(err)
 	}

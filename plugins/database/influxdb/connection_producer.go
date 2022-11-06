@@ -19,22 +19,22 @@ import (
 // influxdbConnectionProducer implements ConnectionProducer and provides an
 // interface for influxdb databases to make connections.
 type influxdbConnectionProducer struct {
-	Host              string      `json:"host" structs:"host" mapstructure:"host"`
-	Username          string      `json:"username" structs:"username" mapstructure:"username"`
-	Password          string      `json:"password" structs:"password" mapstructure:"password"`
-	Port              string      `json:"port" structs:"port" mapstructure:"port"` // default to 8086
-	TLS               bool        `json:"tls" structs:"tls" mapstructure:"tls"`
-	InsecureTLS       bool        `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
-	ConnectTimeoutRaw interface{} `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
-	TLSMinVersion     string      `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
-	PemBundle         string      `json:"pem_bundle" structs:"pem_bundle" mapstructure:"pem_bundle"`
-	PemJSON           string      `json:"pem_json" structs:"pem_json" mapstructure:"pem_json"`
+	Host              string `json:"host" structs:"host" mapstructure:"host"`
+	Username          string `json:"username" structs:"username" mapstructure:"username"`
+	Password          string `json:"password" structs:"password" mapstructure:"password"`
+	Port              string `json:"port" structs:"port" mapstructure:"port"` // default to 8086
+	TLS               bool   `json:"tls" structs:"tls" mapstructure:"tls"`
+	InsecureTLS       bool   `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
+	ConnectTimeoutRaw any    `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
+	TLSMinVersion     string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
+	PemBundle         string `json:"pem_bundle" structs:"pem_bundle" mapstructure:"pem_bundle"`
+	PemJSON           string `json:"pem_json" structs:"pem_json" mapstructure:"pem_json"`
 
 	connectTimeout time.Duration
 	certificate    string
 	privateKey     string
 	issuingCA      string
-	rawConfig      map[string]interface{}
+	rawConfig      map[string]any
 
 	Initialized bool
 	Type        string
@@ -122,7 +122,7 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req dbplugi
 	return resp, nil
 }
 
-func (i *influxdbConnectionProducer) Connection(_ context.Context) (interface{}, error) {
+func (i *influxdbConnectionProducer) Connection(_ context.Context) (any, error) {
 	if !i.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}

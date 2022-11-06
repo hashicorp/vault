@@ -19,7 +19,7 @@ func TestPathMap(t *testing.T) {
 	_, err := b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "map/foo/a",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"value": "bar",
 		},
 		Storage: storage,
@@ -161,7 +161,7 @@ func testSalting(t *testing.T, ctx context.Context, storage logical.Storage, sal
 	_, err = b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "map/foo/a",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"value": "bar",
 		},
 		Storage: storage,

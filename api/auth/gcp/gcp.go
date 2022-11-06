@@ -71,7 +71,7 @@ func (a *GCPAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 		ctx = context.Background()
 	}
 
-	loginData := map[string]interface{}{
+	loginData := map[string]any{
 		"role": a.roleName,
 	}
 	switch a.authType {
@@ -130,7 +130,7 @@ func (a *GCPAuth) signJWT() (*credentialspb.SignJwtResponse, error) {
 	defer iamClient.Close()
 
 	resourceName := fmt.Sprintf("projects/-/serviceAccounts/%s", a.serviceAccountEmail)
-	jwtPayload := map[string]interface{}{
+	jwtPayload := map[string]any{
 		"aud": fmt.Sprintf("vault/%s", a.roleName),
 		"sub": a.serviceAccountEmail,
 		"exp": time.Now().Add(time.Minute * 10).Unix(),

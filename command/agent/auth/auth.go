@@ -24,7 +24,7 @@ const (
 type AuthMethod interface {
 	// Authenticate returns a mount path, header, request body, and error.
 	// The header may be nil if no special header is needed.
-	Authenticate(context.Context, *api.Client) (string, http.Header, map[string]interface{}, error)
+	Authenticate(context.Context, *api.Client) (string, http.Header, map[string]any, error)
 	NewCreds() chan struct{}
 	CredSuccess()
 	Shutdown()
@@ -41,7 +41,7 @@ type AuthConfig struct {
 	Logger    hclog.Logger
 	MountPath string
 	WrapTTL   time.Duration
-	Config    map[string]interface{}
+	Config    map[string]any
 }
 
 // AuthHandler is responsible for keeping a token alive and renewed and passing
@@ -167,7 +167,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		var clientToUse *api.Client
 		var err error
 		var path string
-		var data map[string]interface{}
+		var data map[string]any
 		var header http.Header
 
 		switch am.(type) {

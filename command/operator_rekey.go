@@ -356,37 +356,37 @@ func (c *OperatorRekeyCommand) cancel(client *api.Client) int {
 // provide prompts the user for the seal key and posts it to the update root
 // endpoint. If this is the last unseal, this function outputs it.
 func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
-	var statusFn func() (interface{}, error)
-	var updateFn func(string, string) (interface{}, error)
+	var statusFn func() (any, error)
+	var updateFn func(string, string) (any, error)
 
 	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
 	case "barrier":
-		statusFn = func() (interface{}, error) {
+		statusFn = func() (any, error) {
 			return client.Sys().RekeyStatus()
 		}
-		updateFn = func(s1 string, s2 string) (interface{}, error) {
+		updateFn = func(s1 string, s2 string) (any, error) {
 			return client.Sys().RekeyUpdate(s1, s2)
 		}
 		if c.flagVerify {
-			statusFn = func() (interface{}, error) {
+			statusFn = func() (any, error) {
 				return client.Sys().RekeyVerificationStatus()
 			}
-			updateFn = func(s1 string, s2 string) (interface{}, error) {
+			updateFn = func(s1 string, s2 string) (any, error) {
 				return client.Sys().RekeyVerificationUpdate(s1, s2)
 			}
 		}
 	case "recovery", "hsm":
-		statusFn = func() (interface{}, error) {
+		statusFn = func() (any, error) {
 			return client.Sys().RekeyRecoveryKeyStatus()
 		}
-		updateFn = func(s1 string, s2 string) (interface{}, error) {
+		updateFn = func(s1 string, s2 string) (any, error) {
 			return client.Sys().RekeyRecoveryKeyUpdate(s1, s2)
 		}
 		if c.flagVerify {
-			statusFn = func() (interface{}, error) {
+			statusFn = func() (any, error) {
 				return client.Sys().RekeyRecoveryKeyVerificationStatus()
 			}
-			updateFn = func(s1 string, s2 string) (interface{}, error) {
+			updateFn = func(s1 string, s2 string) (any, error) {
 				return client.Sys().RekeyRecoveryKeyVerificationUpdate(s1, s2)
 			}
 		}
@@ -516,23 +516,23 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 // status is used just to fetch and dump the status.
 func (c *OperatorRekeyCommand) status(client *api.Client) int {
 	// Handle the different API requests
-	var fn func() (interface{}, error)
+	var fn func() (any, error)
 	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
 	case "barrier":
-		fn = func() (interface{}, error) {
+		fn = func() (any, error) {
 			return client.Sys().RekeyStatus()
 		}
 		if c.flagVerify {
-			fn = func() (interface{}, error) {
+			fn = func() (any, error) {
 				return client.Sys().RekeyVerificationStatus()
 			}
 		}
 	case "recovery", "hsm":
-		fn = func() (interface{}, error) {
+		fn = func() (any, error) {
 			return client.Sys().RekeyRecoveryKeyStatus()
 		}
 		if c.flagVerify {
-			fn = func() (interface{}, error) {
+			fn = func() (any, error) {
 				return client.Sys().RekeyRecoveryKeyVerificationStatus()
 			}
 		}
@@ -604,7 +604,7 @@ func (c *OperatorRekeyCommand) backupDelete(client *api.Client) int {
 }
 
 // printStatus dumps the status to output
-func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
+func (c *OperatorRekeyCommand) printStatus(in any) int {
 	out := []string{}
 	out = append(out, "Key | Value")
 

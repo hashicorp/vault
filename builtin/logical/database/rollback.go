@@ -27,7 +27,7 @@ type rotateRootCredentialsWAL struct {
 // to rotate the root credentials of a database. It is responsible
 // for rolling back root database credentials when doing so would
 // reconcile the credentials with Vault storage.
-func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request, kind string, data interface{}) error {
+func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request, kind string, data any) error {
 	if kind != rotateRootWALKey {
 		return errors.New("unknown type to rollback")
 	}

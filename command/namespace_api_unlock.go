@@ -81,7 +81,7 @@ func (c *NamespaceAPIUnlockCommand) Run(args []string) int {
 		optionalChildNSPath = fmt.Sprintf("/%s", namespace.Canonicalize(args[0]))
 	}
 
-	_, err = client.Logical().Write(fmt.Sprintf("sys/namespaces/api-lock/unlock%s", optionalChildNSPath), map[string]interface{}{
+	_, err = client.Logical().Write(fmt.Sprintf("sys/namespaces/api-lock/unlock%s", optionalChildNSPath), map[string]any{
 		"unlock_key": c.flagUnlockKey,
 	})
 	if err != nil {

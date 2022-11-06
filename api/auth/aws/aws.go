@@ -89,7 +89,7 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 		ctx = context.Background()
 	}
 
-	loginData := make(map[string]interface{})
+	loginData := make(map[string]any)
 	switch a.authType {
 	case ec2Type:
 		sess, err := session.NewSession()

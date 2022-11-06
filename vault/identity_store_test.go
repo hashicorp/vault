@@ -207,7 +207,7 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 	// ID received in the request object
 	requestHandler := func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 		return &logical.Response{
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"entity_id": req.EntityID,
 			},
 		}, nil
@@ -297,7 +297,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 	registerReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "entity-alias",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"name":           "githubuser2",
 			"canonical_id":   entity.ID,
 			"mount_accessor": upAccessor,
@@ -363,7 +363,7 @@ func TestIdentityStore_EntityByAliasFactors(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	is, ghAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
 
-	registerData := map[string]interface{}{
+	registerData := map[string]any{
 		"name":     "testentityname",
 		"metadata": []string{"someusefulkey=someusefulvalue"},
 		"policies": []string{"testpolicy1", "testpolicy2"},
@@ -389,7 +389,7 @@ func TestIdentityStore_EntityByAliasFactors(t *testing.T) {
 		t.Fatalf("invalid entity id")
 	}
 
-	aliasData := map[string]interface{}{
+	aliasData := map[string]any{
 		"entity_id":      entityID,
 		"name":           "alias_name",
 		"mount_accessor": ghAccessor,
@@ -427,7 +427,7 @@ func TestIdentityStore_WrapInfoInheritance(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	core, is, ts, _ := testCoreWithIdentityTokenGithub(ctx, t)
 
-	registerData := map[string]interface{}{
+	registerData := map[string]any{
 		"name":     "testentityname",
 		"metadata": []string{"someusefulkey=someusefulvalue"},
 		"policies": []string{"testpolicy1", "testpolicy2"},
@@ -468,7 +468,7 @@ func TestIdentityStore_WrapInfoInheritance(t *testing.T) {
 		Path:        "sys/wrapping/wrap",
 		ClientToken: te.ID,
 		Operation:   logical.UpdateOperation,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"foo": "bar",
 		},
 		WrapInfo: &logical.RequestWrapInfo{

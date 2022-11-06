@@ -52,7 +52,7 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected 'counts' response, got %#v", resp.Data)
 	}
-	countPerMount := countPerMountRaw.(map[string]interface{})
+	countPerMount := countPerMountRaw.(map[string]any)
 	if len(countPerMount) != 0 {
 		t.Errorf("expected no mounts with counts, got %#v", countPerMount)
 	}
@@ -93,7 +93,7 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 		t.Fatalf("expected 'counts' response, got %#v", resp.Data)
 	}
 
-	countPerMount = countPerMountRaw.(map[string]interface{})
+	countPerMount = countPerMountRaw.(map[string]any)
 	if len(countPerMount) != len(expectedCountPerMount) {
 		t.Fatalf("expected %d mounts, got %d: %#v", len(expectedCountPerMount), len(countPerMount), countPerMount)
 	}
@@ -158,7 +158,7 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected 'leases' response, got %#v", resp.Data)
 	}
-	leases := leasesRaw.([]interface{})
+	leases := leasesRaw.([]any)
 	if len(leases) != 0 {
 		t.Errorf("expected no mounts with leases, got %#v", leases)
 	}
@@ -200,10 +200,10 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 		t.Fatalf("expected 'leases' response, got %#v", resp.Data)
 	}
 
-	leases = leasesRaw.([]interface{})
+	leases = leasesRaw.([]any)
 	countPerMount := make(map[string]int)
 	for _, leaseRaw := range leases {
-		lease := leaseRaw.(map[string]interface{})
+		lease := leaseRaw.(map[string]any)
 		mount := lease["mount_id"].(string)
 
 		if _, ok := countPerMount[mount]; !ok {
@@ -283,10 +283,10 @@ func TestExpiration_irrevocableLeaseListAPI_includeAll(t *testing.T) {
 		t.Fatalf("expected 'leases' response, got %#v", resp.Data)
 	}
 
-	leases := leasesRaw.([]interface{})
+	leases := leasesRaw.([]any)
 	countPerMount := make(map[string]int)
 	for _, leaseRaw := range leases {
-		lease := leaseRaw.(map[string]interface{})
+		lease := leaseRaw.(map[string]any)
 		mount := lease["mount_id"].(string)
 
 		if _, ok := countPerMount[mount]; !ok {

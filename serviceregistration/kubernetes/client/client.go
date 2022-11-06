@@ -101,12 +101,12 @@ func (c *Client) PatchPod(namespace, podName string, patches ...*Patch) error {
 		return nil
 	}
 
-	var jsonPatches []map[string]interface{}
+	var jsonPatches []map[string]any
 	for _, patch := range patches {
 		if patch.Operation == Unset {
 			return errors.New("patch operation must be set")
 		}
-		jsonPatches = append(jsonPatches, map[string]interface{}{
+		jsonPatches = append(jsonPatches, map[string]any{
 			"op":    patch.Operation,
 			"path":  patch.Path,
 			"value": patch.Value,
@@ -125,7 +125,7 @@ func (c *Client) PatchPod(namespace, podName string, patches ...*Patch) error {
 }
 
 // do executes the given request, retrying if necessary.
-func (c *Client) do(req *http.Request, ptrToReturnObj interface{}) error {
+func (c *Client) do(req *http.Request, ptrToReturnObj any) error {
 	// Finish setting up a valid request.
 	retryableReq, err := retryablehttp.FromRequest(req)
 	if err != nil {
@@ -245,7 +245,7 @@ const (
 type Patch struct {
 	Operation PatchOperation
 	Path      string
-	Value     interface{}
+	Value     any
 }
 
 type ErrNotFound struct {

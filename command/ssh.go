@@ -378,7 +378,7 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 	}
 
 	// Attempt to sign the public key
-	secret, err := sshClient.SignKey(c.flagRole, map[string]interface{}{
+	secret, err := sshClient.SignKey(c.flagRole, map[string]any{
 		// WARNING: publicKey is []byte, which is b64 encoded on JSON upload. We
 		// have to convert it to a string. SV lost many hours to this...
 		"public_key":       string(publicKey),
@@ -680,7 +680,7 @@ func (c *SSHCommand) generateCredential(username, ip string) (*api.Secret, *SSHC
 	sshClient := c.client.SSHWithMountPoint(c.flagMountPoint)
 
 	// Attempt to generate the credential.
-	secret, err := sshClient.Credential(c.flagRole, map[string]interface{}{
+	secret, err := sshClient.Credential(c.flagRole, map[string]any{
 		"username": username,
 		"ip":       ip,
 	})
@@ -745,7 +745,7 @@ func (c *SSHCommand) writeTemporaryKey(name string, data []byte) (string, error,
 // to be established and if there is only one role associated with
 // the IP, it is used by default.
 func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
-	data := map[string]interface{}{
+	data := map[string]any{
 		"ip": ip,
 	}
 	secret, err := c.client.Logical().Write(mountPoint+"/lookup", data)
@@ -760,11 +760,11 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 		return "", fmt.Errorf("no matching roles found for IP %q", ip)
 	}
 
-	if len(secret.Data["roles"].([]interface{})) == 1 {
-		return secret.Data["roles"].([]interface{})[0].(string), nil
+	if len(secret.Data["roles"].([]any)) == 1 {
+		return secret.Data["roles"].([]any)[0].(string), nil
 	} else {
 		var roleNames string
-		for _, item := range secret.Data["roles"].([]interface{}) {
+		for _, item := range secret.Data["roles"].([]any) {
 			roleNames += item.(string) + ", "
 		}
 		roleNames = strings.TrimRight(roleNames, ", ")

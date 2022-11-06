@@ -514,7 +514,7 @@ func testCore_Unmount_Cleanup(t *testing.T, causeFailure bool) {
 				TTL: time.Hour,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"foo": "bar",
 		},
 	}
@@ -652,7 +652,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 				TTL: time.Hour,
 			},
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"foo": "bar",
 		},
 	}

@@ -51,7 +51,7 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
 	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
-	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
+	_, err = client.Logical().Write("auth/ldap/config", map[string]any{
 		"url":                     cfg.Url,
 		"userattr":                cfg.UserAttr,
 		"userdn":                  cfg.UserDN,
@@ -66,7 +66,7 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
 	}
 
 	// Create a local user in LDAP
-	secret, err := client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{
+	secret, err := client.Logical().Write("auth/ldap/users/hermes conrad", map[string]any{
 		"policies": "foo",
 	})
 	if err != nil {
@@ -74,7 +74,7 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
 	}
 
 	// Login with LDAP and create a token
-	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]any{
 		"password": "hermes",
 	})
 	if err != nil {
@@ -88,7 +88,7 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := deep.Equal(secret.Data["policies"], []interface{}{"foo"}); diff != nil {
+	if diff := deep.Equal(secret.Data["policies"], []any{"foo"}); diff != nil {
 		t.Fatal(diff)
 	}
 }
@@ -128,7 +128,7 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
-	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
+	_, err = client.Logical().Write("auth/ldap/config", map[string]any{
 		"url":       cfg.Url,
 		"userattr":  cfg.UserAttr,
 		"userdn":    cfg.UserDN,
@@ -143,13 +143,13 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 	}
 
 	// Create a local user in LDAP without any policies configured
-	secret, err := client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{})
+	secret, err := client.Logical().Write("auth/ldap/users/hermes conrad", map[string]any{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Login with LDAP and create a token
-	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]any{
 		"password": "hermes",
 	})
 	if err != nil {
@@ -163,14 +163,14 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := deep.Equal(secret.Data["policies"], []interface{}{"default"}); diff != nil {
+	if diff := deep.Equal(secret.Data["policies"], []any{"default"}); diff != nil {
 		t.Fatal(diff)
 	}
 
 	// Renew the token with an increment of 2 hours to ensure that lease renewal
 	// occurred and can be checked against the default lease duration with a
 	// big enough delta.
-	secret, err = client.Logical().Write("auth/token/renew", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/token/renew", map[string]any{
 		"token":     token,
 		"increment": "2h",
 	})
@@ -238,7 +238,7 @@ func TestPolicy_TokenRenewal(t *testing.T) {
 			}
 
 			// Add a user to userpass backend
-			data := map[string]interface{}{
+			data := map[string]any{
 				"password": "testpassword",
 			}
 			if len(tc.tokenPolicies) > 0 {
@@ -257,7 +257,7 @@ func TestPolicy_TokenRenewal(t *testing.T) {
 				}
 				userpassAccessor := auths["userpass/"].Accessor
 
-				resp, err := client.Logical().Write("identity/entity", map[string]interface{}{
+				resp, err := client.Logical().Write("identity/entity", map[string]any{
 					"name":     "test-entity",
 					"policies": tc.identityPolicies,
 				})
@@ -267,7 +267,7 @@ func TestPolicy_TokenRenewal(t *testing.T) {
 				entityID := resp.Data["id"].(string)
 
 				// Create an alias
-				resp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
+				resp, err = client.Logical().Write("identity/entity-alias", map[string]any{
 					"name":           "testuser",
 					"mount_accessor": userpassAccessor,
 					"canonical_id":   entityID,
@@ -278,7 +278,7 @@ func TestPolicy_TokenRenewal(t *testing.T) {
 			}
 
 			// Authenticate
-			secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
+			secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]any{
 				"password": "testpassword",
 			})
 			if err != nil {
@@ -302,7 +302,7 @@ func TestPolicy_TokenRenewal(t *testing.T) {
 			}
 
 			// Renew token
-			secret, err = client.Logical().Write("auth/token/renew", map[string]interface{}{
+			secret, err = client.Logical().Write("auth/token/renew", map[string]any{
 				"token": clientToken,
 			})
 			if err != nil {

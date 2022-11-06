@@ -108,7 +108,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 
 	return &logical.Response{
 		Auth: &logical.Auth{
-			InternalData: map[string]interface{}{
+			InternalData: map[string]any{
 				"app-id":  appId,
 				"user-id": userId,
 			},

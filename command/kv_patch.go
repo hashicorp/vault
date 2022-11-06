@@ -241,7 +241,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 	return OutputSecret(c.UI, secret)
 }
 
-func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData map[string]interface{}) (*api.Secret, int) {
+func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData map[string]any) (*api.Secret, int) {
 	// First, do a read.
 	// Note that we don't want to see curl output for the read request.
 	curOutputCurl := client.OutputCurlString()
@@ -268,7 +268,7 @@ func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData 
 		c.UI.Error(fmt.Sprintf("No metadata found at %s; patch only works on existing data", path))
 		return nil, 2
 	}
-	meta, ok := rawMeta.(map[string]interface{})
+	meta, ok := rawMeta.(map[string]any)
 	if !ok {
 		c.UI.Error(fmt.Sprintf("Metadata found at %s is not the expected type (JSON object)", path))
 		return nil, 2
@@ -284,7 +284,7 @@ func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData 
 		c.UI.Error(fmt.Sprintf("No data found at %s; patch only works on existing data", path))
 		return nil, 2
 	}
-	data, ok := rawData.(map[string]interface{})
+	data, ok := rawData.(map[string]any)
 	if !ok {
 		c.UI.Error(fmt.Sprintf("Data found at %s is not the expected type (JSON object)", path))
 		return nil, 2
@@ -299,9 +299,9 @@ func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData 
 		data[k] = v
 	}
 
-	secret, err = client.Logical().Write(path, map[string]interface{}{
+	secret, err = client.Logical().Write(path, map[string]any{
 		"data": data,
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"cas": meta["version"],
 		},
 	})
@@ -325,14 +325,14 @@ func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData 
 	return secret, 0
 }
 
-func (c *KVPatchCommand) mergePatch(client *api.Client, path string, newData map[string]interface{}, rwFallback bool) (*api.Secret, int) {
-	data := map[string]interface{}{
+func (c *KVPatchCommand) mergePatch(client *api.Client, path string, newData map[string]any, rwFallback bool) (*api.Secret, int) {
+	data := map[string]any{
 		"data":    newData,
-		"options": map[string]interface{}{},
+		"options": map[string]any{},
 	}
 
 	if c.flagCAS > 0 {
-		data["options"].(map[string]interface{})["cas"] = c.flagCAS
+		data["options"].(map[string]any)["cas"] = c.flagCAS
 	}
 
 	secret, err := client.Logical().JSONMergePatch(context.Background(), path, data)

@@ -88,7 +88,7 @@ func (a *LDAPAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, 
 		ctx = context.Background()
 	}
 
-	loginData := make(map[string]interface{})
+	loginData := make(map[string]any)
 
 	if a.passwordFile != "" {
 		passwordValue, err := a.readPasswordFromFile()

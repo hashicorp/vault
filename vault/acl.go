@@ -25,7 +25,7 @@ type ACL struct {
 	// prefixRules contains the path policies that are a prefix
 	prefixRules *radix.Tree
 
-	segmentWildcardPaths map[string]interface{}
+	segmentWildcardPaths map[string]any
 
 	// root is enabled if the "root" named policy is present.
 	root bool
@@ -68,7 +68,7 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 	a := &ACL{
 		exactRules:           radix.New(),
 		prefixRules:          radix.New(),
-		segmentWildcardPaths: make(map[string]interface{}, len(policies)),
+		segmentWildcardPaths: make(map[string]any, len(policies)),
 		root:                 false,
 	}
 
@@ -109,7 +109,7 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 		}
 
 		for _, pc := range policy.Paths {
-			var raw interface{}
+			var raw any
 			var ok bool
 			var tree *radix.Tree
 
@@ -196,14 +196,14 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 					if err != nil {
 						return nil, err
 					}
-					existingPerms.AllowedParameters = clonedAllowed.(map[string][]interface{})
+					existingPerms.AllowedParameters = clonedAllowed.(map[string][]any)
 				} else {
 					for key, value := range pc.Permissions.AllowedParameters {
 						pcValue, ok := existingPerms.AllowedParameters[key]
 						// If an empty array exist it should overwrite any other
 						// value.
 						if len(value) == 0 || (ok && len(pcValue) == 0) {
-							existingPerms.AllowedParameters[key] = []interface{}{}
+							existingPerms.AllowedParameters[key] = []any{}
 						} else {
 							// Merge the two maps, appending values on key conflict.
 							existingPerms.AllowedParameters[key] = append(value, existingPerms.AllowedParameters[key]...)
@@ -218,14 +218,14 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 					if err != nil {
 						return nil, err
 					}
-					existingPerms.DeniedParameters = clonedDenied.(map[string][]interface{})
+					existingPerms.DeniedParameters = clonedDenied.(map[string][]any)
 				} else {
 					for key, value := range pc.Permissions.DeniedParameters {
 						pcValue, ok := existingPerms.DeniedParameters[key]
 						// If an empty array exist it should overwrite any other
 						// value.
 						if len(value) == 0 || (ok && len(pcValue) == 0) {
-							existingPerms.DeniedParameters[key] = []interface{}{}
+							existingPerms.DeniedParameters[key] = []any{}
 						} else {
 							// Merge the two maps, appending values on key conflict.
 							existingPerms.DeniedParameters[key] = append(value, existingPerms.DeniedParameters[key]...)
@@ -729,7 +729,7 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 	return ret
 }
 
-func valueInParameterList(v interface{}, list []interface{}) bool {
+func valueInParameterList(v any, list []any) bool {
 	// Empty list is equivalent to the item always existing in the list
 	if len(list) == 0 {
 		return true
@@ -738,7 +738,7 @@ func valueInParameterList(v interface{}, list []interface{}) bool {
 	return valueInSlice(v, list)
 }
 
-func valueInSlice(v interface{}, list []interface{}) bool {
+func valueInSlice(v any, list []any) bool {
 	for _, el := range list {
 		if el == nil || v == nil {
 			// It doesn't seem possible to set up a nil entry in the list, but it is possible

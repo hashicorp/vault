@@ -73,7 +73,7 @@ func testAccStepConfig(t *testing.T, hostname string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"hosts":            hostname,
 			"username":         "cassandra",
 			"password":         "cassandra",
@@ -86,7 +86,7 @@ func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"creation_cql": testRole,
 		},
 	}
@@ -96,7 +96,7 @@ func testAccStepRoleWithOptions(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test2",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"creation_cql": testRole,
 			"lease":        "30s",
 			"consistency":  "All",

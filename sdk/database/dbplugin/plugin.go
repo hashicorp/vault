@@ -42,7 +42,7 @@ type Database interface {
 
 	// RotateRootCredentials is triggered by a root credential rotation call to
 	// the API.
-	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
+	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]any, err error)
 
 	// GenerateCredentials returns a generated password for the plugin. This is
 	// used in combination with SetCredentials to set a specific password for a
@@ -62,7 +62,7 @@ type Database interface {
 	// hold all the keys and values provided in the API call, some will be
 	// stripped by the database engine before the config is provided. The config
 	// returned will be stored, which will persist it across shutdowns.
-	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
+	Init(ctx context.Context, config map[string]any, verifyConnection bool) (saveConfig map[string]any, err error)
 
 	// Close attempts to close the underlying database connection that was
 	// established by the backend.
@@ -175,7 +175,7 @@ func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) err
 	return nil
 }
 
-func (GRPCDatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (GRPCDatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
 	return &gRPCClient{
 		client:     NewDatabaseClient(c),
 		clientConn: c,

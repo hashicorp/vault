@@ -48,7 +48,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 
-	var data map[string]interface{}
+	var data map[string]any
 	var origBody io.ReadCloser
 	var passHTTPReq bool
 	var responseWriter http.ResponseWriter
@@ -377,7 +377,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 
 func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, req *logical.Request, resp *logical.Response, injectDataIntoTopLevel bool) {
 	var httpResp *logical.HTTPResponse
-	var ret interface{}
+	var ret any
 
 	// If vault's core has already written to the response writer do not add any
 	// additional output. Headers have already been sent.

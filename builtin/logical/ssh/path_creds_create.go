@@ -125,13 +125,13 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 		// the data required for later use in the internal section of secret.
 		// In this case, saving just the OTP is sufficient since there is
 		// no need to establish connection with the remote host.
-		result = b.Secret(SecretOTPType).Response(map[string]interface{}{
+		result = b.Secret(SecretOTPType).Response(map[string]any{
 			"key_type": role.KeyType,
 			"key":      otp,
 			"username": username,
 			"ip":       ip,
 			"port":     role.Port,
-		}, map[string]interface{}{
+		}, map[string]any{
 			"otp": otp,
 		})
 	} else if role.KeyType == KeyTypeDynamic {
@@ -144,13 +144,13 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 
 		// Return the information relevant to user of dynamic type and save
 		// information required for later use in internal section of secret.
-		result = b.Secret(SecretDynamicKeyType).Response(map[string]interface{}{
+		result = b.Secret(SecretDynamicKeyType).Response(map[string]any{
 			"key":      dynamicPrivateKey,
 			"key_type": role.KeyType,
 			"username": username,
 			"ip":       ip,
 			"port":     role.Port,
-		}, map[string]interface{}{
+		}, map[string]any{
 			"admin_user":         role.AdminUser,
 			"username":           username,
 			"ip":                 ip,

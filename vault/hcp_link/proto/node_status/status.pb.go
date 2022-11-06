@@ -242,7 +242,7 @@ func file_vault_hcp_link_proto_node_status_status_proto_rawDescGZIP() []byte {
 }
 
 var file_vault_hcp_link_proto_node_status_status_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_vault_hcp_link_proto_node_status_status_proto_goTypes = []interface{}{
+var file_vault_hcp_link_proto_node_status_status_proto_goTypes = []any{
 	(*LinkedClusterNodeStatusResponse)(nil), // 0: hashicorp.vault.hcp_link.node_status.LinkedClusterNodeStatusResponse
 }
 var file_vault_hcp_link_proto_node_status_status_proto_depIdxs = []int32{
@@ -259,7 +259,7 @@ func file_vault_hcp_link_proto_node_status_status_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_vault_hcp_link_proto_node_status_status_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_vault_hcp_link_proto_node_status_status_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*LinkedClusterNodeStatusResponse); i {
 			case 0:
 				return &v.state

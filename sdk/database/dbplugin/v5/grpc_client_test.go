@@ -24,7 +24,7 @@ func TestGRPCClient_Initialize(t *testing.T) {
 		"bad config": {
 			client: fakeClient{},
 			req: InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": badJSONValue{},
 				},
 			},
@@ -35,7 +35,7 @@ func TestGRPCClient_Initialize(t *testing.T) {
 				initErr: errors.New("initialize error"),
 			},
 			req: InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 				},
 			},
@@ -44,19 +44,19 @@ func TestGRPCClient_Initialize(t *testing.T) {
 		"happy path": {
 			client: fakeClient{
 				initResp: &proto.InitializeResponse{
-					ConfigData: marshal(t, map[string]interface{}{
+					ConfigData: marshal(t, map[string]any{
 						"foo": "bar",
 						"baz": "biz",
 					}),
 				},
 			},
 			req: InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 				},
 			},
 			expectedResp: InitializeResponse{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 					"baz": "biz",
 				},
@@ -66,20 +66,20 @@ func TestGRPCClient_Initialize(t *testing.T) {
 		"JSON number type in initialize request": {
 			client: fakeClient{
 				initResp: &proto.InitializeResponse{
-					ConfigData: marshal(t, map[string]interface{}{
+					ConfigData: marshal(t, map[string]any{
 						"foo": "bar",
 						"max": "10",
 					}),
 				},
 			},
 			req: InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 					"max": json.Number("10"),
 				},
 			},
 			expectedResp: InitializeResponse{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 					"max": "10",
 				},

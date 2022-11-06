@@ -68,15 +68,15 @@ type Retry struct {
 
 // Vault contains configuration for connecting to Vault servers
 type Vault struct {
-	Address          string      `hcl:"address"`
-	CACert           string      `hcl:"ca_cert"`
-	CAPath           string      `hcl:"ca_path"`
-	TLSSkipVerify    bool        `hcl:"-"`
-	TLSSkipVerifyRaw interface{} `hcl:"tls_skip_verify"`
-	ClientCert       string      `hcl:"client_cert"`
-	ClientKey        string      `hcl:"client_key"`
-	TLSServerName    string      `hcl:"tls_server_name"`
-	Retry            *Retry      `hcl:"retry"`
+	Address          string `hcl:"address"`
+	CACert           string `hcl:"ca_cert"`
+	CAPath           string `hcl:"ca_path"`
+	TLSSkipVerify    bool   `hcl:"-"`
+	TLSSkipVerifyRaw any    `hcl:"tls_skip_verify"`
+	ClientCert       string `hcl:"client_cert"`
+	ClientKey        string `hcl:"client_key"`
+	TLSServerName    string `hcl:"tls_server_name"`
+	Retry            *Retry `hcl:"retry"`
 }
 
 // transportDialer is an interface that allows passing a custom dialer function
@@ -91,7 +91,7 @@ type transportDialer interface {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthTokenRaw interface{}     `hcl:"use_auto_auth_token"`
+	UseAutoAuthTokenRaw any             `hcl:"use_auto_auth_token"`
 	UseAutoAuthToken    bool            `hcl:"-"`
 	ForceAutoAuthToken  bool            `hcl:"-"`
 	EnforceConsistency  string          `hcl:"enforce_consistency"`
@@ -123,34 +123,34 @@ type AutoAuth struct {
 type Method struct {
 	Type          string
 	MountPath     string        `hcl:"mount_path"`
-	WrapTTLRaw    interface{}   `hcl:"wrap_ttl"`
+	WrapTTLRaw    any           `hcl:"wrap_ttl"`
 	WrapTTL       time.Duration `hcl:"-"`
-	MinBackoffRaw interface{}   `hcl:"min_backoff"`
+	MinBackoffRaw any           `hcl:"min_backoff"`
 	MinBackoff    time.Duration `hcl:"-"`
-	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
+	MaxBackoffRaw any           `hcl:"max_backoff"`
 	MaxBackoff    time.Duration `hcl:"-"`
 	Namespace     string        `hcl:"namespace"`
 	ExitOnError   bool          `hcl:"exit_on_err"`
-	Config        map[string]interface{}
+	Config        map[string]any
 }
 
 // Sink defines a location to write the authenticated token
 type Sink struct {
 	Type       string
-	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
+	WrapTTLRaw any           `hcl:"wrap_ttl"`
 	WrapTTL    time.Duration `hcl:"-"`
 	DHType     string        `hcl:"dh_type"`
 	DeriveKey  bool          `hcl:"derive_key"`
 	DHPath     string        `hcl:"dh_path"`
 	AAD        string        `hcl:"aad"`
 	AADEnvVar  string        `hcl:"aad_env_var"`
-	Config     map[string]interface{}
+	Config     map[string]any
 }
 
 // TemplateConfig defines global behaviors around template
 type TemplateConfig struct {
 	ExitOnRetryFailure       bool          `hcl:"exit_on_retry_failure"`
-	StaticSecretRenderIntRaw interface{}   `hcl:"static_secret_render_interval"`
+	StaticSecretRenderIntRaw any           `hcl:"static_secret_render_interval"`
 	StaticSecretRenderInt    time.Duration `hcl:"-"`
 }
 
@@ -697,13 +697,13 @@ func parseTemplates(result *Config, list *ast.ObjectList) error {
 	var tcs []*ctconfig.TemplateConfig
 
 	for _, item := range templateList.Items {
-		var shadow interface{}
+		var shadow any
 		if err := hcl.DecodeObject(&shadow, item.Val); err != nil {
 			return fmt.Errorf("error decoding config: %s", err)
 		}
 
 		// Convert to a map and flatten the keys we want to flatten
-		parsed, ok := shadow.(map[string]interface{})
+		parsed, ok := shadow.(map[string]any)
 		if !ok {
 			return errors.New("error converting config")
 		}
@@ -716,12 +716,12 @@ func parseTemplates(result *Config, list *ast.ObjectList) error {
 		// with multiple instead it flattens them down, with last value winning.
 		// Here we take the last element of the parsed["wait"] or parsed["exec"] slice to keep
 		// consistency with Consul Template behavior.
-		wait, ok := parsed["wait"].([]map[string]interface{})
+		wait, ok := parsed["wait"].([]map[string]any)
 		if ok {
 			parsed["wait"] = wait[len(wait)-1]
 		}
 
-		exec, ok := parsed["exec"].([]map[string]interface{})
+		exec, ok := parsed["exec"].([]map[string]any)
 		if ok {
 			parsed["exec"] = exec[len(exec)-1]
 		}

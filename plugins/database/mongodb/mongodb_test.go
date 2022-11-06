@@ -32,7 +32,7 @@ func TestMongoDB_Initialize(t *testing.T) {
 	db := new()
 	defer dbtesting.AssertClose(t, db)
 
-	config := map[string]interface{}{
+	config := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -126,7 +126,7 @@ func TestNewUser_usernameTemplate(t *testing.T) {
 			defer dbtesting.AssertClose(t, db)
 
 			initReq := dbplugin.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"connection_url":    connURL,
 					"username_template": test.usernameTemplate,
 				},
@@ -152,7 +152,7 @@ func TestMongoDB_CreateUser(t *testing.T) {
 	defer dbtesting.AssertClose(t, db)
 
 	initReq := dbplugin.InitializeRequest{
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"connection_url": connURL,
 		},
 		VerifyConnection: true,
@@ -181,7 +181,7 @@ func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
 	defer cleanup()
 
 	initReq := dbplugin.InitializeRequest{
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"connection_url": connURL,
 			"write_concern":  `{ "wmode": "majority", "wtimeout": 5000 }`,
 		},
@@ -218,7 +218,7 @@ func TestMongoDB_DeleteUser(t *testing.T) {
 	defer dbtesting.AssertClose(t, db)
 
 	initReq := dbplugin.InitializeRequest{
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"connection_url": connURL,
 		},
 		VerifyConnection: true,
@@ -261,7 +261,7 @@ func TestMongoDB_UpdateUser_Password(t *testing.T) {
 	defer dbtesting.AssertClose(t, db)
 
 	initReq := dbplugin.InitializeRequest{
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"connection_url": connURL,
 		},
 		VerifyConnection: true,
@@ -414,7 +414,7 @@ func createDBUser(t testing.TB, connURL, db, username, password string) {
 	createUserCmd := &createUserCommand{
 		Username: username,
 		Password: password,
-		Roles:    []interface{}{},
+		Roles:    []any{},
 	}
 	result := client.Database(db).RunCommand(ctx, createUserCmd, nil)
 	if result.Err() != nil {
@@ -459,8 +459,8 @@ func assertCredsDoNotExist(t testing.TB, username, password, connURL string) {
 	t.Fatalf("User %q exists and was able to authenticate", username)
 }
 
-func copyConfig(config map[string]interface{}) map[string]interface{} {
-	newConfig := map[string]interface{}{}
+func copyConfig(config map[string]any) map[string]any {
+	newConfig := map[string]any{}
 	for k, v := range config {
 		newConfig[k] = v
 	}

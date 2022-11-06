@@ -145,7 +145,7 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		meta, ok := secret.Data["meta"].(map[string]interface{})
+		meta, ok := secret.Data["meta"].(map[string]any)
 		if !ok {
 			t.Fatalf("missing meta: %#v", secret)
 		}
@@ -181,7 +181,7 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		raw, ok := secret.Data["policies"].([]interface{})
+		raw, ok := secret.Data["policies"].([]any)
 		if !ok {
 			t.Fatalf("missing policies: %#v", secret)
 		}

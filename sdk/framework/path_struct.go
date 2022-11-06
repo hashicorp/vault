@@ -23,7 +23,7 @@ type PathStruct struct {
 }
 
 // Get reads the structure.
-func (p *PathStruct) Get(ctx context.Context, s logical.Storage) (map[string]interface{}, error) {
+func (p *PathStruct) Get(ctx context.Context, s logical.Storage) (map[string]any, error) {
 	entry, err := s.Get(ctx, fmt.Sprintf("struct/%s", p.Name))
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func (p *PathStruct) Get(ctx context.Context, s logical.Storage) (map[string]int
 		return nil, nil
 	}
 
-	var result map[string]interface{}
+	var result map[string]any
 	if err := jsonutil.DecodeJSON(entry.Value, &result); err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (p *PathStruct) Get(ctx context.Context, s logical.Storage) (map[string]int
 }
 
 // Put writes the structure.
-func (p *PathStruct) Put(ctx context.Context, s logical.Storage, v map[string]interface{}) error {
+func (p *PathStruct) Put(ctx context.Context, s logical.Storage, v map[string]any) error {
 	bytes, err := json.Marshal(v)
 	if err != nil {
 		return err

@@ -21,8 +21,8 @@ func DefaultTokenHelper() (token.TokenHelper, error) {
 
 // RawField extracts the raw field from the given data and returns it as a
 // string for printing purposes.
-func RawField(secret *api.Secret, field string) interface{} {
-	var val interface{}
+func RawField(secret *api.Secret, field string) any {
+	var val any
 	switch {
 	case secret.Auth != nil:
 		switch field {
@@ -89,12 +89,12 @@ func RawField(secret *api.Secret, field string) interface{} {
 }
 
 // PrintRawField prints raw field from the secret.
-func PrintRawField(ui cli.Ui, data interface{}, field string) int {
-	var val interface{}
+func PrintRawField(ui cli.Ui, data any, field string) int {
+	var val any
 	switch data := data.(type) {
 	case *api.Secret:
 		val = RawField(data, field)
-	case map[string]interface{}:
+	case map[string]any:
 		val = data[field]
 	}
 

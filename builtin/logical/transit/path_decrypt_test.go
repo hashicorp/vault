@@ -18,12 +18,12 @@ func TestTransit_BatchDecryption(t *testing.T) {
 
 	b, s := createBackendWithStorage(t)
 
-	batchEncryptionInput := []interface{}{
-		map[string]interface{}{"plaintext": ""},     // empty string
-		map[string]interface{}{"plaintext": "Cg=="}, // newline
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+	batchEncryptionInput := []any{
+		map[string]any{"plaintext": ""},     // empty string
+		map[string]any{"plaintext": "Cg=="}, // newline
+		map[string]any{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
 	}
-	batchEncryptionData := map[string]interface{}{
+	batchEncryptionData := map[string]any{
 		"batch_input": batchEncryptionInput,
 	}
 
@@ -39,11 +39,11 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	}
 
 	batchResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
-	batchDecryptionInput := make([]interface{}, len(batchResponseItems))
+	batchDecryptionInput := make([]any, len(batchResponseItems))
 	for i, item := range batchResponseItems {
-		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}
+		batchDecryptionInput[i] = map[string]any{"ciphertext": item.Ciphertext}
 	}
-	batchDecryptionData := map[string]interface{}{
+	batchDecryptionData := map[string]any{
 		"batch_input": batchDecryptionInput,
 	}
 
@@ -79,7 +79,7 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/existing_key",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"derived": true,
 		},
 	}
@@ -99,10 +99,10 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/existing_key",
 		Storage:   s,
-		Data: map[string]interface{}{
-			"batch_input": []interface{}{
-				map[string]interface{}{"plaintext": plaintextItems[0].plaintext, "context": plaintextItems[0].context},
-				map[string]interface{}{"plaintext": plaintextItems[1].plaintext, "context": plaintextItems[1].context},
+		Data: map[string]any{
+			"batch_input": []any{
+				map[string]any{"plaintext": plaintextItems[0].plaintext, "context": plaintextItems[0].context},
+				map[string]any{"plaintext": plaintextItems[1].plaintext, "context": plaintextItems[1].context},
 			},
 		},
 	}
@@ -115,11 +115,11 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		in             []interface{}
+		in             []any
 		want           []DecryptBatchResponseItem
 		shouldErr      bool
 		wantHTTPStatus int
-		params         map[string]interface{}
+		params         map[string]any
 	}{
 		{
 			name:      "nil-input",
@@ -128,13 +128,13 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		},
 		{
 			name:      "empty-input",
-			in:        []interface{}{},
+			in:        []any{},
 			shouldErr: true,
 		},
 		{
 			name: "single-item-success",
-			in: []interface{}{
-				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[0].context},
+			in: []any{
+				map[string]any{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[0].context},
 			},
 			want: []DecryptBatchResponseItem{
 				{Plaintext: plaintextItems[0].plaintext},
@@ -142,8 +142,8 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		},
 		{
 			name: "single-item-invalid-ciphertext",
-			in: []interface{}{
-				map[string]interface{}{"ciphertext": "xxx", "context": plaintextItems[0].context},
+			in: []any{
+				map[string]any{"ciphertext": "xxx", "context": plaintextItems[0].context},
 			},
 			want: []DecryptBatchResponseItem{
 				{Error: "invalid ciphertext: no prefix"},
@@ -152,8 +152,8 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		},
 		{
 			name: "single-item-wrong-context",
-			in: []interface{}{
-				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+			in: []any{
+				map[string]any{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
 			},
 			want: []DecryptBatchResponseItem{
 				{Error: "cipher: message authentication failed"},
@@ -162,9 +162,9 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		},
 		{
 			name: "batch-full-success",
-			in: []interface{}{
-				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[0].context},
-				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].context},
+			in: []any{
+				map[string]any{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[0].context},
+				map[string]any{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].context},
 			},
 			want: []DecryptBatchResponseItem{
 				{Plaintext: plaintextItems[0].plaintext},
@@ -173,9 +173,9 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		},
 		{
 			name: "batch-partial-success",
-			in: []interface{}{
-				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
-				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].context},
+			in: []any{
+				map[string]any{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+				map[string]any{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].context},
 			},
 			want: []DecryptBatchResponseItem{
 				{Error: "cipher: message authentication failed"},
@@ -185,22 +185,22 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		},
 		{
 			name: "batch-partial-success-overridden-response",
-			in: []interface{}{
-				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
-				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].context},
+			in: []any{
+				map[string]any{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+				map[string]any{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].context},
 			},
 			want: []DecryptBatchResponseItem{
 				{Error: "cipher: message authentication failed"},
 				{Plaintext: plaintextItems[1].plaintext},
 			},
-			params:         map[string]interface{}{"partial_failure_response_code": http.StatusAccepted},
+			params:         map[string]any{"partial_failure_response_code": http.StatusAccepted},
 			wantHTTPStatus: http.StatusAccepted,
 		},
 		{
 			name: "batch-full-failure",
-			in: []interface{}{
-				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
-				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[0].context},
+			in: []any{
+				map[string]any{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+				map[string]any{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[0].context},
 			},
 			want: []DecryptBatchResponseItem{
 				{Error: "cipher: message authentication failed"},
@@ -210,15 +210,15 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		},
 		{
 			name: "batch-full-failure-overridden-response",
-			in: []interface{}{
-				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
-				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[0].context},
+			in: []any{
+				map[string]any{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+				map[string]any{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[0].context},
 			},
 			want: []DecryptBatchResponseItem{
 				{Error: "cipher: message authentication failed"},
 				{Error: "cipher: message authentication failed"},
 			},
-			params: map[string]interface{}{"partial_failure_response_code": http.StatusAccepted},
+			params: map[string]any{"partial_failure_response_code": http.StatusAccepted},
 			// Full failure, shouldn't affect status code
 			wantHTTPStatus: http.StatusBadRequest,
 		},
@@ -230,7 +230,7 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "decrypt/existing_key",
 				Storage:   s,
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"batch_input": tt.in,
 				},
 			}

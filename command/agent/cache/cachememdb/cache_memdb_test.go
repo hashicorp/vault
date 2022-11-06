@@ -62,32 +62,32 @@ func TestCacheMemDB_Get(t *testing.T) {
 	testCases := []struct {
 		name        string
 		indexName   string
-		indexValues []interface{}
+		indexValues []any
 	}{
 		{
 			"by_index_id",
 			"id",
-			[]interface{}{in.ID},
+			[]any{in.ID},
 		},
 		{
 			"by_request_path",
 			"request_path",
-			[]interface{}{in.Namespace, in.RequestPath},
+			[]any{in.Namespace, in.RequestPath},
 		},
 		{
 			"by_lease",
 			"lease",
-			[]interface{}{in.Lease},
+			[]any{in.Lease},
 		},
 		{
 			"by_token",
 			"token",
-			[]interface{}{in.Token},
+			[]any{in.Token},
 		},
 		{
 			"by_token_accessor",
 			"token_accessor",
-			[]interface{}{in.TokenAccessor},
+			[]any{in.TokenAccessor},
 		},
 	}
 
@@ -162,27 +162,27 @@ func TestCacheMemDB_GetByPrefix(t *testing.T) {
 	testCases := []struct {
 		name        string
 		indexName   string
-		indexValues []interface{}
+		indexValues []any
 	}{
 		{
 			"by_request_path",
 			"request_path",
-			[]interface{}{"test_ns/", "/v1/request/path"},
+			[]any{"test_ns/", "/v1/request/path"},
 		},
 		{
 			"by_lease",
 			"lease",
-			[]interface{}{"path/to/test_lease"},
+			[]any{"path/to/test_lease"},
 		},
 		{
 			"by_token_parent",
 			"token_parent",
-			[]interface{}{"test_token_parent"},
+			[]any{"test_token_parent"},
 		},
 		{
 			"by_lease_token",
 			"lease_token",
-			[]interface{}{"test_lease_token"},
+			[]any{"test_lease_token"},
 		},
 	}
 
@@ -276,56 +276,56 @@ func TestCacheMemDB_Evict(t *testing.T) {
 	testCases := []struct {
 		name        string
 		indexName   string
-		indexValues []interface{}
+		indexValues []any
 		insertIndex *Index
 		wantErr     bool
 	}{
 		{
 			"empty_params",
 			"",
-			[]interface{}{""},
+			[]any{""},
 			nil,
 			true,
 		},
 		{
 			"invalid_params",
 			"foo",
-			[]interface{}{"bar"},
+			[]any{"bar"},
 			nil,
 			true,
 		},
 		{
 			"by_id",
 			"id",
-			[]interface{}{"test_id"},
+			[]any{"test_id"},
 			testIndex,
 			false,
 		},
 		{
 			"by_request_path",
 			"request_path",
-			[]interface{}{"test_ns/", "/v1/request/path"},
+			[]any{"test_ns/", "/v1/request/path"},
 			testIndex,
 			false,
 		},
 		{
 			"by_token",
 			"token",
-			[]interface{}{"test_token"},
+			[]any{"test_token"},
 			testIndex,
 			false,
 		},
 		{
 			"by_token_accessor",
 			"token_accessor",
-			[]interface{}{"test_accessor"},
+			[]any{"test_accessor"},
 			testIndex,
 			false,
 		},
 		{
 			"by_lease",
 			"lease",
-			[]interface{}{"test_lease"},
+			[]any{"test_lease"},
 			testIndex,
 			false,
 		},

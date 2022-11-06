@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) walRollback(ctx context.Context, req *logical.Request, kind string, data interface{}) error {
+func (b *backend) walRollback(ctx context.Context, req *logical.Request, kind string, data any) error {
 	walRollbackMap := map[string]framework.WALRollbackFunc{
 		"user": b.pathUserRollback,
 	}

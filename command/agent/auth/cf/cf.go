@@ -42,7 +42,7 @@ func NewCFAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (p *cfMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
+func (p *cfMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]any, error) {
 	pathToClientCert := os.Getenv(cf.EnvVarInstanceCertificate)
 	if pathToClientCert == "" {
 		return "", nil, nil, fmt.Errorf("missing %q value", cf.EnvVarInstanceCertificate)
@@ -65,7 +65,7 @@ func (p *cfMethod) Authenticate(ctx context.Context, client *api.Client) (string
 	if err != nil {
 		return "", nil, nil, err
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"role":             p.roleName,
 		"cf_instance_cert": string(certBytes),
 		"signing_time":     signingTime.Format(signatures.TimeFormat),

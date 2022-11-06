@@ -51,7 +51,7 @@ func testBackendConfigAccess(t *testing.T, version string, autoBootstrap bool) {
 	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, autoBootstrap)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": consulConfig.Address(),
 	}
 	if autoBootstrap || strings.HasPrefix(version, "1.3") {
@@ -76,7 +76,7 @@ func testBackendConfigAccess(t *testing.T, version string, autoBootstrap bool) {
 		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"address": connData["address"].(string),
 		"scheme":  "http",
 	}
@@ -129,7 +129,7 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	}
@@ -146,7 +146,7 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	}
 
 	req.Path = "roles/test"
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"policy": base64.StdEncoding.EncodeToString([]byte(testPolicy)),
 		"lease":  "6h",
 	}
@@ -231,7 +231,7 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	}
@@ -248,7 +248,7 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 	}
 
 	req.Path = "roles/test"
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"lease": "6h",
 	}
 	if policiesParam == "both" {
@@ -362,7 +362,7 @@ func TestBackend_LocalToken(t *testing.T) {
 	cleanup, consulConfig := consul.PrepareTestContainer(t, "", false, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	}
@@ -379,7 +379,7 @@ func TestBackend_LocalToken(t *testing.T) {
 	}
 
 	req.Path = "roles/test"
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"consul_policies": []string{"test"},
 		"ttl":             "6h",
 		"local":           false,
@@ -390,7 +390,7 @@ func TestBackend_LocalToken(t *testing.T) {
 	}
 
 	req.Path = "roles/test_local"
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"consul_policies": []string{"test"},
 		"ttl":             "6h",
 		"local":           true,
@@ -503,7 +503,7 @@ func testBackendManagement(t *testing.T, version string) {
 	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	}
@@ -548,7 +548,7 @@ func testBackendBasic(t *testing.T, version string) {
 	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	}
@@ -590,7 +590,7 @@ func TestBackend_role_lease(t *testing.T) {
 	})
 }
 
-func testAccStepConfig(t *testing.T, config map[string]interface{}) logicaltest.TestStep {
+func testAccStepConfig(t *testing.T, config map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/access",
@@ -598,7 +598,7 @@ func testAccStepConfig(t *testing.T, config map[string]interface{}) logicaltest.
 	}
 }
 
-func testAccStepReadToken(t *testing.T, name string, conf map[string]interface{}) logicaltest.TestStep {
+func testAccStepReadToken(t *testing.T, name string, conf map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
@@ -634,7 +634,7 @@ func testAccStepReadToken(t *testing.T, name string, conf map[string]interface{}
 	}
 }
 
-func testAccStepReadManagementToken(t *testing.T, name string, conf map[string]interface{}) logicaltest.TestStep {
+func testAccStepReadManagementToken(t *testing.T, name string, conf map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
@@ -674,7 +674,7 @@ func testAccStepWritePolicy(t *testing.T, name string, policy string, lease stri
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"policy": base64.StdEncoding.EncodeToString([]byte(policy)),
 			"lease":  lease,
 		},
@@ -685,7 +685,7 @@ func testAccStepWriteManagementPolicy(t *testing.T, name string, lease string) l
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"token_type": "management",
 			"lease":      lease,
 		},
@@ -747,7 +747,7 @@ func TestBackend_Roles(t *testing.T) {
 	cleanup, consulConfig := consul.PrepareTestContainer(t, "", false, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	}
@@ -765,7 +765,7 @@ func TestBackend_Roles(t *testing.T) {
 
 	// Create the consul_roles role
 	req.Path = "roles/test-consul-roles"
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"consul_roles": []string{"role-test"},
 		"lease":        "6h",
 	}
@@ -873,7 +873,7 @@ func testBackendEntNamespace(t *testing.T) {
 	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	}
@@ -891,7 +891,7 @@ func testBackendEntNamespace(t *testing.T) {
 
 	// Create the role in namespace "ns1"
 	req.Path = "roles/test-ns"
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"consul_policies":  []string{"ns-test"},
 		"lease":            "6h",
 		"consul_namespace": "ns1",
@@ -990,7 +990,7 @@ func testBackendEntPartition(t *testing.T) {
 	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	}
@@ -1008,7 +1008,7 @@ func testBackendEntPartition(t *testing.T) {
 
 	// Create the role in partition "part1"
 	req.Path = "roles/test-part"
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"consul_policies": []string{"part-test"},
 		"lease":           "6h",
 		"partition":       "part1",
@@ -1107,7 +1107,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 	cleanup, consulConfig := consul.PrepareTestContainer(t, "", false, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	}
@@ -1125,18 +1125,18 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 
 	cases := map[string]struct {
 		RoleName string
-		RoleData map[string]interface{}
+		RoleData map[string]any
 	}{
 		"just role": {
 			"r",
-			map[string]interface{}{
+			map[string]any{
 				"consul_roles": []string{"role-test"},
 				"lease":        "6h",
 			},
 		},
 		"role and policies": {
 			"rp",
-			map[string]interface{}{
+			map[string]any{
 				"consul_policies": []string{"test"},
 				"consul_roles":    []string{"role-test"},
 				"lease":           "6h",
@@ -1144,14 +1144,14 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		},
 		"service identity": {
 			"si",
-			map[string]interface{}{
+			map[string]any{
 				"service_identities": "service1",
 				"lease":              "6h",
 			},
 		},
 		"service identity and policies": {
 			"sip",
-			map[string]interface{}{
+			map[string]any{
 				"consul_policies":    []string{"test"},
 				"service_identities": "service1",
 				"lease":              "6h",
@@ -1159,7 +1159,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		},
 		"service identity and role": {
 			"sir",
-			map[string]interface{}{
+			map[string]any{
 				"consul_roles":       []string{"role-test"},
 				"service_identities": "service1",
 				"lease":              "6h",
@@ -1167,7 +1167,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		},
 		"service identity and role and policies": {
 			"sirp",
-			map[string]interface{}{
+			map[string]any{
 				"consul_policies":    []string{"test"},
 				"consul_roles":       []string{"role-test"},
 				"service_identities": "service1",
@@ -1176,14 +1176,14 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		},
 		"node identity": {
 			"ni",
-			map[string]interface{}{
+			map[string]any{
 				"node_identities": []string{"node1:dc1"},
 				"lease":           "6h",
 			},
 		},
 		"node identity and policies": {
 			"nip",
-			map[string]interface{}{
+			map[string]any{
 				"consul_policies": []string{"test"},
 				"node_identities": []string{"node1:dc1"},
 				"lease":           "6h",
@@ -1191,7 +1191,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		},
 		"node identity and role": {
 			"nir",
-			map[string]interface{}{
+			map[string]any{
 				"consul_roles":    []string{"role-test"},
 				"node_identities": []string{"node1:dc1"},
 				"lease":           "6h",
@@ -1199,7 +1199,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		},
 		"node identity and role and policies": {
 			"nirp",
-			map[string]interface{}{
+			map[string]any{
 				"consul_policies": []string{"test"},
 				"consul_roles":    []string{"role-test"},
 				"node_identities": []string{"node1:dc1"},
@@ -1208,7 +1208,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		},
 		"node identity and service identity": {
 			"nisi",
-			map[string]interface{}{
+			map[string]any{
 				"service_identities": "service1",
 				"node_identities":    []string{"node1:dc1"},
 				"lease":              "6h",
@@ -1216,7 +1216,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		},
 		"node identity and service identity and policies": {
 			"nisip",
-			map[string]interface{}{
+			map[string]any{
 				"consul_policies":    []string{"test"},
 				"service_identities": "service1",
 				"node_identities":    []string{"node1:dc1"},
@@ -1225,7 +1225,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		},
 		"node identity and service identity and role": {
 			"nisir",
-			map[string]interface{}{
+			map[string]any{
 				"consul_roles":       []string{"role-test"},
 				"service_identities": "service1",
 				"node_identities":    []string{"node1:dc1"},
@@ -1234,7 +1234,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		},
 		"node identity and service identity and role and policies": {
 			"nisirp",
-			map[string]interface{}{
+			map[string]any{
 				"consul_policies":    []string{"test"},
 				"consul_roles":       []string{"role-test"},
 				"service_identities": "service1",

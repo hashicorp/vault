@@ -42,7 +42,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
-		PhysicalFactoryConfig: map[string]interface{}{
+		PhysicalFactoryConfig: map[string]any{
 			"performance_multiplier": "5",
 		},
 	})
@@ -58,7 +58,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	require.Equal(t, "alive", state.Servers["core-0"].NodeStatus)
 	require.Equal(t, "leader", state.Servers["core-0"].Status)
 
-	writeConfig := func(config map[string]interface{}, expectError bool) {
+	writeConfig := func(config map[string]any, expectError bool) {
 		resp, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", config)
 		if expectError {
 			require.Error(t, err)
@@ -68,7 +68,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 		require.Nil(t, resp)
 	}
 
-	writableConfig := map[string]interface{}{
+	writableConfig := map[string]any{
 		"last_contact_threshold":    "5s",
 		"max_trailing_logs":         100,
 		"server_stabilization_time": "10s",
@@ -123,7 +123,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 		require.Equal(t, config, conf)
 	}
 
-	writeConfigFunc := func(config map[string]interface{}, expectError bool) {
+	writeConfigFunc := func(config map[string]any, expectError bool) {
 		resp, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", config)
 		if expectError {
 			require.Error(t, err)
@@ -144,7 +144,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	configCheckFunc(config)
 
 	// Update config
-	writableConfig := map[string]interface{}{
+	writableConfig := map[string]any{
 		"cleanup_dead_servers":               true,
 		"dead_server_last_contact_threshold": "100h",
 		"last_contact_threshold":             "100s",
@@ -164,7 +164,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	configCheckFunc(config)
 
 	// Update some fields and leave the rest as it is.
-	writableConfig = map[string]interface{}{
+	writableConfig = map[string]any{
 		"dead_server_last_contact_threshold": "50h",
 		"max_trailing_logs":                  50,
 		"server_stabilization_time":          "50s",
@@ -178,7 +178,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	configCheckFunc(config)
 
 	// Check error case
-	writableConfig = map[string]interface{}{
+	writableConfig = map[string]any{
 		"min_quorum":                         2,
 		"dead_server_last_contact_threshold": "48h",
 	}
@@ -202,8 +202,8 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	opts.KeepStandbysSealed = true
 	opts.SetupFunc = nil
 	timeToHealthyCore2 := 5 * time.Second
-	opts.PhysicalFactory = func(t testingintf.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
-		config := map[string]interface{}{
+	opts.PhysicalFactory = func(t testingintf.T, coreIdx int, logger hclog.Logger, conf map[string]any) *vault.PhysicalBackendBundle {
+		config := map[string]any{
 			"snapshot_threshold":           "50",
 			"trailing_logs":                "100",
 			"autopilot_reconcile_interval": "1s",
@@ -232,7 +232,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	require.Equal(t, "alive", state.Servers["core-0"].NodeStatus)
 	require.Equal(t, "leader", state.Servers["core-0"].Status)
 
-	_, err = client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]interface{}{
+	_, err = client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]any{
 		"server_stabilization_time": "5s",
 	})
 	require.NoError(t, err)
@@ -247,7 +247,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	cli := cluster.Cores[0].Client
 	// Write more keys than snapshot_threshold
 	for i := 0; i < 250; i++ {
-		_, err := cli.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
+		_, err := cli.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]any{
 			"test": "data",
 		})
 		if err != nil {
@@ -312,7 +312,7 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 	// Create a very large stabilization time so we can test the state between
 	// joining and promotions
 	client := cluster.Cores[0].Client
-	_, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]interface{}{
+	_, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]any{
 		"server_stabilization_time": "1h",
 	})
 	require.NoError(t, err)
@@ -421,7 +421,7 @@ func TestRaft_VotersStayVoters(t *testing.T) {
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
-		PhysicalFactoryConfig: map[string]interface{}{
+		PhysicalFactoryConfig: map[string]any{
 			"performance_multiplier":       "5",
 			"autopilot_reconcile_interval": "300ms",
 			"autopilot_update_interval":    "100ms",

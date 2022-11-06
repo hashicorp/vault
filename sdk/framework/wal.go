@@ -15,10 +15,10 @@ import (
 const WALPrefix = "wal/"
 
 type WALEntry struct {
-	ID        string      `json:"-"`
-	Kind      string      `json:"type"`
-	Data      interface{} `json:"data"`
-	CreatedAt int64       `json:"created_at"`
+	ID        string `json:"-"`
+	Kind      string `json:"type"`
+	Data      any    `json:"data"`
+	CreatedAt int64  `json:"created_at"`
 }
 
 // PutWAL writes some data to the WAL.
@@ -36,7 +36,7 @@ type WALEntry struct {
 // This returns a unique ID that can be used to reference this WAL data.
 // WAL data cannot be modified. You can only add to the WAL and commit existing
 // WAL entries.
-func PutWAL(ctx context.Context, s logical.Storage, kind string, data interface{}) (string, error) {
+func PutWAL(ctx context.Context, s logical.Storage, kind string, data any) (string, error) {
 	value, err := json.Marshal(&WALEntry{
 		Kind:      kind,
 		Data:      data,

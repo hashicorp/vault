@@ -176,10 +176,10 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retToken string, header http.Header, retData map[string]interface{}, retErr error) {
+func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retToken string, header http.Header, retData map[string]any, retErr error) {
 	a.logger.Trace("beginning authentication")
 
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	sess, err := session.NewSession()
 	if err != nil {
 		retErr = fmt.Errorf("error creating session: %w", err)

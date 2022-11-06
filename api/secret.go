@@ -23,7 +23,7 @@ type Secret struct {
 
 	// Data is the actual contents of the secret. The format of the data
 	// is arbitrary and up to the secret backend.
-	Data map[string]interface{} `json:"data"`
+	Data map[string]any `json:"data"`
 
 	// Warnings contains any warnings related to the operation. These
 	// are not issues that caused the command to fail, but that the
@@ -128,7 +128,7 @@ func (s *Secret) TokenPolicies() ([]string, error) {
 			goto TOKEN_DONE
 		}
 
-		list, ok := s.Data["policies"].([]interface{})
+		list, ok := s.Data["policies"].([]any)
 		if !ok {
 			return nil, fmt.Errorf("unable to convert token policies to expected format")
 		}
@@ -157,7 +157,7 @@ TOKEN_DONE:
 			goto DONE
 		}
 
-		list, ok := s.Data["identity_policies"].([]interface{})
+		list, ok := s.Data["identity_policies"].([]any)
 		if !ok {
 			return nil, fmt.Errorf("unable to convert identity policies to expected format")
 		}
@@ -201,9 +201,9 @@ func (s *Secret) TokenMetadata() (map[string]string, error) {
 		return nil, nil
 	}
 
-	data, ok := s.Data["metadata"].(map[string]interface{})
+	data, ok := s.Data["metadata"].(map[string]any)
 	if !ok {
-		data, ok = s.Data["meta"].(map[string]interface{})
+		data, ok = s.Data["meta"].(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("unable to convert metadata field to expected format")
 		}

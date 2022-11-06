@@ -468,7 +468,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	defer b.tidyStatusLock.RUnlock()
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"safety_buffer":                         nil,
 			"tidy_cert_store":                       nil,
 			"tidy_revoked_certs":                    nil,
@@ -541,7 +541,7 @@ func (b *backend) pathConfigAutoTidyRead(ctx context.Context, req *logical.Reque
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"enabled":                               config.Enabled,
 			"interval_duration":                     int(config.Interval / time.Second),
 			"tidy_cert_store":                       config.CertStore,

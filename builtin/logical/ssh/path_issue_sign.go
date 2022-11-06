@@ -134,7 +134,7 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 	}
 
 	response := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"serial_number": strconv.FormatUint(certificate.Serial, 16),
 			"signed_key":    string(signedSSHCertificate),
 		},
@@ -275,7 +275,7 @@ func (b *backend) calculateKeyID(data *framework.FieldData, req *logical.Request
 }
 
 func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshRole) (map[string]string, error) {
-	unparsedCriticalOptions := data.Get("critical_options").(map[string]interface{})
+	unparsedCriticalOptions := data.Get("critical_options").(map[string]any)
 	if len(unparsedCriticalOptions) == 0 {
 		return role.DefaultCriticalOptions, nil
 	}
@@ -301,7 +301,7 @@ func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshR
 }
 
 func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Request, role *sshRole) (map[string]string, bool, error) {
-	unparsedExtensions := data.Get("extensions").(map[string]interface{})
+	unparsedExtensions := data.Get("extensions").(map[string]any)
 	extensions := make(map[string]string)
 
 	if len(unparsedExtensions) > 0 {

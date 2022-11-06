@@ -106,7 +106,7 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return j, nil
 }
 
-func (j *jwtMethod) Authenticate(_ context.Context, _ *api.Client) (string, http.Header, map[string]interface{}, error) {
+func (j *jwtMethod) Authenticate(_ context.Context, _ *api.Client) (string, http.Header, map[string]any, error) {
 	j.logger.Trace("beginning authentication")
 
 	j.ingressToken()
@@ -116,7 +116,7 @@ func (j *jwtMethod) Authenticate(_ context.Context, _ *api.Client) (string, http
 		return "", nil, nil, errors.New("latest known jwt is empty, cannot authenticate")
 	}
 
-	return fmt.Sprintf("%s/login", j.mountPath), nil, map[string]interface{}{
+	return fmt.Sprintf("%s/login", j.mountPath), nil, map[string]any{
 		"role": j.role,
 		"jwt":  latestToken,
 	}, nil

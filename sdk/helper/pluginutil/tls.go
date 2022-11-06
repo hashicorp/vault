@@ -94,7 +94,7 @@ func wrapServerConfig(ctx context.Context, sys RunnerUtil, certBytes []byte, key
 		return "", err
 	}
 
-	wrapInfo, err := sys.ResponseWrapData(ctx, map[string]interface{}{
+	wrapInfo, err := sys.ResponseWrapData(ctx, map[string]any{
 		"ServerCert": certBytes,
 		"ServerKey":  rawKey,
 	}, time.Second*60, true)

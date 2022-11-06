@@ -66,9 +66,9 @@ func (m *mockLegacyDatabase) RevokeUser(ctx context.Context, statements v4.State
 	return args.Error(0)
 }
 
-func (m *mockLegacyDatabase) RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error) {
+func (m *mockLegacyDatabase) RotateRootCredentials(ctx context.Context, statements []string) (config map[string]any, err error) {
 	args := m.Called(ctx, statements)
-	return args.Get(0).(map[string]interface{}), args.Error(1)
+	return args.Get(0).(map[string]any), args.Error(1)
 }
 
 func (m *mockLegacyDatabase) GenerateCredentials(ctx context.Context) (string, error) {
@@ -81,9 +81,9 @@ func (m *mockLegacyDatabase) SetCredentials(ctx context.Context, statements v4.S
 	return args.String(0), args.String(1), args.Error(2)
 }
 
-func (m *mockLegacyDatabase) Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error) {
+func (m *mockLegacyDatabase) Init(ctx context.Context, config map[string]any, verifyConnection bool) (saveConfig map[string]any, err error) {
 	args := m.Called(ctx, config, verifyConnection)
-	return args.Get(0).(map[string]interface{}), args.Error(1)
+	return args.Get(0).(map[string]any), args.Error(1)
 }
 
 func (m *mockLegacyDatabase) Type() (string, error) {
@@ -96,6 +96,6 @@ func (m *mockLegacyDatabase) Close() error {
 	return args.Error(0)
 }
 
-func (m *mockLegacyDatabase) Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error) {
+func (m *mockLegacyDatabase) Initialize(ctx context.Context, config map[string]any, verifyConnection bool) (err error) {
 	panic("Initialize should not be called")
 }

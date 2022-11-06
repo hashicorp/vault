@@ -103,7 +103,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	}
 
 	resp = &logical.Response{
-		Data: map[string]interface{}{},
+		Data: map[string]any{},
 	}
 
 	entries, err := getGlobalAIAURLs(ctx, req.Storage)

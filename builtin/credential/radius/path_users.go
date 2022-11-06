@@ -109,7 +109,7 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"policies": user.Policies,
 		},
 	}, nil

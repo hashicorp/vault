@@ -83,7 +83,7 @@ func (c *OperatorRaftListPeersCommand) Run(args []string) int {
 	var secret *api.Secret
 	switch {
 	case c.flagDRToken != "":
-		secret, err = client.Logical().Write("sys/storage/raft/configuration", map[string]interface{}{
+		secret, err = client.Logical().Write("sys/storage/raft/configuration", map[string]any{
 			"dr_operation_token": c.flagDRToken,
 		})
 	default:
@@ -102,12 +102,12 @@ func (c *OperatorRaftListPeersCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
-	config := secret.Data["config"].(map[string]interface{})
+	config := secret.Data["config"].(map[string]any)
 
-	servers := config["servers"].([]interface{})
+	servers := config["servers"].([]any)
 	out := []string{"Node | Address | State | Voter"}
 	for _, serverRaw := range servers {
-		server := serverRaw.(map[string]interface{})
+		server := serverRaw.(map[string]any)
 		state := "follower"
 		if server["leader"].(bool) {
 			state = "leader"

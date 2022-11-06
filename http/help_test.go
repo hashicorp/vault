@@ -24,7 +24,7 @@ func TestHelp(t *testing.T) {
 
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts?help=1")
 
-	var actual map[string]interface{}
+	var actual map[string]any
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if _, ok := actual["help"]; !ok {

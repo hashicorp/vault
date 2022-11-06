@@ -21,7 +21,7 @@ import (
 // instead of the raw (*vault.Request).Data to access data in a type-safe
 // way.
 type FieldData struct {
-	Raw    map[string]interface{}
+	Raw    map[string]any
 	Schema map[string]*FieldSchema
 }
 
@@ -57,7 +57,7 @@ func (d *FieldData) Validate() error {
 // FieldData will panic. If you want a safer version of this method, use
 // GetOk. If the field k is not set, the default value (if set) will be
 // returned, otherwise the zero value will be returned.
-func (d *FieldData) Get(k string) interface{} {
+func (d *FieldData) Get(k string) any {
 	schema, ok := d.Schema[k]
 	if !ok {
 		panic(fmt.Sprintf("field %s not in the schema", k))
@@ -76,7 +76,7 @@ func (d *FieldData) Get(k string) interface{} {
 // GetDefaultOrZero gets the default value set on the schema for the given
 // field. If there is no default value set, the zero value of the type
 // will be returned.
-func (d *FieldData) GetDefaultOrZero(k string) interface{} {
+func (d *FieldData) GetDefaultOrZero(k string) any {
 	schema, ok := d.Schema[k]
 	if !ok {
 		panic(fmt.Sprintf("field %s not in the schema", k))
@@ -89,7 +89,7 @@ func (d *FieldData) GetDefaultOrZero(k string) interface{} {
 // to last. This can be useful for fields with a current name, and one or
 // more deprecated names. The second return value will be false if the keys
 // are invalid or the keys are not set at all.
-func (d *FieldData) GetFirst(k ...string) (interface{}, bool) {
+func (d *FieldData) GetFirst(k ...string) (any, bool) {
 	for _, v := range k {
 		if result, ok := d.GetOk(v); ok {
 			return result, ok
@@ -102,7 +102,7 @@ func (d *FieldData) GetFirst(k ...string) (interface{}, bool) {
 // false if the key is invalid or the key is not set at all. If the field k is
 // set and the decoded value is nil, the default or zero value
 // will be returned instead.
-func (d *FieldData) GetOk(k string) (interface{}, bool) {
+func (d *FieldData) GetOk(k string) (any, bool) {
 	schema, ok := d.Schema[k]
 	if !ok {
 		return nil, false
@@ -124,7 +124,7 @@ func (d *FieldData) GetOk(k string) (interface{}, bool) {
 // whether key is set or not, but also an error value. The error value is
 // non-nil if the field doesn't exist or there was an error parsing the
 // field value.
-func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
+func (d *FieldData) GetOkErr(k string) (any, bool, error) {
 	schema, ok := d.Schema[k]
 	if !ok {
 		return nil, false, fmt.Errorf("unknown field: %q", k)
@@ -141,7 +141,7 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	}
 }
 
-func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bool, error) {
+func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (any, bool, error) {
 	raw, ok := d.Raw[k]
 	if !ok {
 		return nil, false, nil
@@ -205,7 +205,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		return result, true, nil
 
 	case TypeMap:
-		var result map[string]interface{}
+		var result map[string]any
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, false, err
 		}
@@ -267,12 +267,12 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		return result, true, nil
 
 	case TypeSlice:
-		var result []interface{}
+		var result []any
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, false, err
 		}
 		if len(result) == 0 {
-			return make([]interface{}, 0), true, nil
+			return make([]any, 0), true, nil
 		}
 		return result, true, nil
 
@@ -344,7 +344,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		*/
 		result := http.Header{}
 
-		toHeader := func(resultMap map[string]interface{}) (http.Header, error) {
+		toHeader := func(resultMap map[string]any) (http.Header, error) {
 			header := http.Header{}
 			for headerKey, headerValGroup := range resultMap {
 				switch typedHeader := headerValGroup.(type) {
@@ -356,7 +356,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 					}
 				case json.Number:
 					header.Add(headerKey, typedHeader.String())
-				case []interface{}:
+				case []any:
 					for _, headerVal := range typedHeader {
 						switch typedHeader := headerVal.(type) {
 						case string:
@@ -376,7 +376,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			return header, nil
 		}
 
-		resultMap := make(map[string]interface{})
+		resultMap := make(map[string]any)
 
 		// 1. Are we getting a map from the API?
 		if err := mapstructure.WeakDecode(raw, &resultMap); err == nil {
@@ -406,7 +406,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		}
 
 		// 3. Are we getting an array of fields like "content-type:encoding/json" from the CLI?
-		var keyPairs []interface{}
+		var keyPairs []any
 		if err := mapstructure.WeakDecode(raw, &keyPairs); err == nil {
 			for _, keyPairIfc := range keyPairs {
 				keyPair, ok := keyPairIfc.(string)

@@ -92,7 +92,7 @@ func TestRaft_Chunking_Lifecycle(t *testing.T) {
 	t.Log("applying rest of the logs")
 
 	// Apply the rest of the logs
-	var resp interface{}
+	var resp any
 	for i := 1; i < len(logs); i += 2 {
 		resp = b.fsm.chunker.Apply(logs[i])
 		if resp != nil {

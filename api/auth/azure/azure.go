@@ -104,7 +104,7 @@ func (a *AzureAuth) Login(ctx context.Context, client *api.Client) (*api.Secret,
 		return nil, fmt.Errorf("unable to get instance metadata: %w", err)
 	}
 
-	loginData := map[string]interface{}{
+	loginData := map[string]any{
 		"role":                a.roleName,
 		"jwt":                 jwtResp,
 		"vm_name":             metadataRespJSON.Compute.VMName,

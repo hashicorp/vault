@@ -66,7 +66,7 @@ func (e *environment) TestInitialFieldsAreDefault(t *testing.T) {
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"role_name": "something",
 		},
 	})
@@ -94,7 +94,7 @@ func (e *environment) TestAuthMetadataCanBeUnset(t *testing.T) {
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			authMetadataFields.FieldName: []string{},
 		},
 	})
@@ -132,7 +132,7 @@ func (e *environment) TestAuthMetadataCanBeUnset(t *testing.T) {
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"role_name": "something",
 		},
 	})
@@ -157,7 +157,7 @@ func (e *environment) TestDefaultCanBeReused(t *testing.T) {
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			authMetadataFields.FieldName: []string{"default"},
 		},
 	})
@@ -195,7 +195,7 @@ func (e *environment) TestDefaultCanBeReused(t *testing.T) {
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"role_name": "something",
 		},
 	})
@@ -222,7 +222,7 @@ func (e *environment) TestDefaultPlusMoreCannotBeSelected(t *testing.T) {
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			authMetadataFields.FieldName: []string{"default", "remote_addr"},
 		},
 	})
@@ -240,7 +240,7 @@ func (e *environment) TestOnlyNonDefaultsCanBeSelected(t *testing.T) {
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			authMetadataFields.FieldName: []string{"remote_addr"},
 		},
 	})
@@ -279,7 +279,7 @@ func (e *environment) TestOnlyNonDefaultsCanBeSelected(t *testing.T) {
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"role_name": "something",
 		},
 	})
@@ -306,7 +306,7 @@ func (e *environment) TestAddingBadField(t *testing.T) {
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			authMetadataFields.FieldName: []string{"asl;dfkj"},
 		},
 	})
@@ -372,7 +372,7 @@ func configPath() *framework.Path {
 					// a populated response to give info on what the default
 					// auth metadata is when unconfigured.
 					return &logical.Response{
-						Data: map[string]interface{}{
+						Data: map[string]any{
 							authMetadataFields.FieldName: conf.AuthMetadata(),
 						},
 					}, nil

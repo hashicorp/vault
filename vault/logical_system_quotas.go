@@ -145,7 +145,7 @@ func (b *SystemBackend) handleQuotasConfigRead() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		config := b.Core.quotaManager.Config()
 		return &logical.Response{
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"enable_rate_limit_audit_logging":    config.EnableRateLimitAuditLogging,
 				"enable_rate_limit_response_headers": config.EnableRateLimitResponseHeaders,
 				"rate_limit_exempt_paths":            config.RateLimitExemptPaths,
@@ -293,7 +293,7 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 			nsPath = ""
 		}
 
-		data := map[string]interface{}{
+		data := map[string]any{
 			"type":           qType,
 			"name":           rlq.Name,
 			"path":           nsPath + rlq.MountPath + rlq.PathSuffix,

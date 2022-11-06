@@ -15,7 +15,7 @@ func TestPredictVaultPaths(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
-	data := map[string]interface{}{"a": "b"}
+	data := map[string]any{"a": "b"}
 	if _, err := client.Logical().Write("secret/bar", data); err != nil {
 		t.Fatal(err)
 	}
@@ -496,7 +496,7 @@ func TestPredict_Paths(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
-	data := map[string]interface{}{"a": "b"}
+	data := map[string]any{"a": "b"}
 	if _, err := client.Logical().Write("secret/bar", data); err != nil {
 		t.Fatal(err)
 	}
@@ -569,7 +569,7 @@ func TestPredict_PathsKVv2(t *testing.T) {
 	client, closer := testVaultServerWithKVVersion(t, "2")
 	defer closer()
 
-	data := map[string]interface{}{"data": map[string]interface{}{"a": "b"}}
+	data := map[string]any{"data": map[string]any{"a": "b"}}
 	if _, err := client.Logical().Write("secret/data/bar", data); err != nil {
 		t.Fatal(err)
 	}
@@ -645,7 +645,7 @@ func TestPredict_ListPaths(t *testing.T) {
 	badClient, badCloser := testVaultServerBad(t)
 	defer badCloser()
 
-	data := map[string]interface{}{"a": "b"}
+	data := map[string]any{"a": "b"}
 	if _, err := client.Logical().Write("secret/bar", data); err != nil {
 		t.Fatal(err)
 	}

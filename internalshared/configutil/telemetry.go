@@ -42,7 +42,7 @@ type Telemetry struct {
 	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
 	MetricsPrefix       string `hcl:"metrics_prefix"`
 	UsageGaugePeriod    time.Duration
-	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period,alias:UsageGaugePeriod"`
+	UsageGaugePeriodRaw any `hcl:"usage_gauge_period,alias:UsageGaugePeriod"`
 
 	MaximumGaugeCardinality int `hcl:"maximum_gauge_cardinality"`
 
@@ -130,7 +130,7 @@ type Telemetry struct {
 	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
 	// Default: 24h
 	PrometheusRetentionTime    time.Duration `hcl:"-"`
-	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
+	PrometheusRetentionTimeRaw any           `hcl:"prometheus_retention_time"`
 
 	// Stackdriver:
 	// StackdriverProjectID is the project to publish stackdriver metrics to.
@@ -144,7 +144,7 @@ type Telemetry struct {
 
 	// How often metrics for lease expiry will be aggregated
 	LeaseMetricsEpsilon    time.Duration
-	LeaseMetricsEpsilonRaw interface{} `hcl:"lease_metrics_epsilon"`
+	LeaseMetricsEpsilonRaw any `hcl:"lease_metrics_epsilon"`
 
 	// Number of buckets by time that will be used in lease aggregation
 	NumLeaseMetricsTimeBuckets int `hcl:"num_lease_metrics_buckets"`

@@ -55,7 +55,7 @@ func (b GRPCBackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server)
 	return nil
 }
 
-func (b *GRPCBackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (b *GRPCBackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
 	ret := &backendGRPCPluginClient{
 		client:        pb.NewBackendClient(c),
 		versionClient: logical.NewPluginVersionClient(c),

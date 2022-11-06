@@ -260,7 +260,7 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 		return nil, nil
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"db_name":             role.DBName,
 		"rotation_statements": role.Statements.Rotation,
 		"credential_type":     role.CredentialType.String(),
@@ -297,7 +297,7 @@ func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request
 		return nil, nil
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"db_name":               role.DBName,
 		"creation_statements":   role.Statements.Creation,
 		"revocation_statements": role.Statements.Revocation,
@@ -611,13 +611,13 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 }
 
 type roleEntry struct {
-	DBName           string                 `json:"db_name"`
-	Statements       v4.Statements          `json:"statements"`
-	DefaultTTL       time.Duration          `json:"default_ttl"`
-	MaxTTL           time.Duration          `json:"max_ttl"`
-	CredentialType   v5.CredentialType      `json:"credential_type"`
-	CredentialConfig map[string]interface{} `json:"credential_config"`
-	StaticAccount    *staticAccount         `json:"static_account" mapstructure:"static_account"`
+	DBName           string            `json:"db_name"`
+	Statements       v4.Statements     `json:"statements"`
+	DefaultTTL       time.Duration     `json:"default_ttl"`
+	MaxTTL           time.Duration     `json:"max_ttl"`
+	CredentialType   v5.CredentialType `json:"credential_type"`
+	CredentialConfig map[string]any    `json:"credential_config"`
+	StaticAccount    *staticAccount    `json:"static_account" mapstructure:"static_account"`
 }
 
 // setCredentialType sets the credential type for the role given its string form.
@@ -639,7 +639,7 @@ func (r *roleEntry) setCredentialType(credentialType string) error {
 // for the role using the role's credential type. It will also populate
 // all default values. Returns an error if the configuration is invalid.
 func (r *roleEntry) setCredentialConfig(config map[string]string) error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	for k, v := range config {
 		c[k] = v
 	}

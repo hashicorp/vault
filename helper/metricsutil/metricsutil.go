@@ -103,7 +103,7 @@ func (m *MetricsHelper) ResponseForFormat(format string) *logical.Response {
 		return m.GenericResponse()
 	default:
 		return &logical.Response{
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				logical.HTTPContentType: ErrorContentType,
 				logical.HTTPRawBody:     fmt.Sprintf("metric response format %q unknown", format),
 				logical.HTTPStatusCode:  http.StatusBadRequest,
@@ -114,7 +114,7 @@ func (m *MetricsHelper) ResponseForFormat(format string) *logical.Response {
 
 func (m *MetricsHelper) PrometheusResponse() *logical.Response {
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			logical.HTTPContentType: ErrorContentType,
 			logical.HTTPStatusCode:  http.StatusBadRequest,
 		},
@@ -150,7 +150,7 @@ func (m *MetricsHelper) PrometheusResponse() *logical.Response {
 
 func (m *MetricsHelper) GenericResponse() *logical.Response {
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			logical.HTTPContentType: ErrorContentType,
 			logical.HTTPStatusCode:  http.StatusBadRequest,
 		},

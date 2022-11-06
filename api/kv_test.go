@@ -28,11 +28,11 @@ func TestExtractVersionMetadata(t *testing.T) {
 		{
 			name: "a secret",
 			input: &Secret{
-				Data: map[string]interface{}{
-					"data": map[string]interface{}{
+				Data: map[string]any{
+					"data": map[string]any{
 						"password": "Hashi123",
 					},
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"version":         10,
 						"created_time":    inputCreatedTimeStr,
 						"deletion_time":   "",
@@ -51,11 +51,11 @@ func TestExtractVersionMetadata(t *testing.T) {
 		{
 			name: "a secret that has been deleted",
 			input: &Secret{
-				Data: map[string]interface{}{
-					"data": map[string]interface{}{
+				Data: map[string]any{
+					"data": map[string]any{
 						"password": "Hashi123",
 					},
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"version":         10,
 						"created_time":    inputCreatedTimeStr,
 						"deletion_time":   inputDeletionTimeStr,
@@ -74,7 +74,7 @@ func TestExtractVersionMetadata(t *testing.T) {
 		{
 			name: "a response from a Write operation",
 			input: &Secret{
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"version":         10,
 					"created_time":    inputCreatedTimeStr,
 					"deletion_time":   "",
@@ -118,11 +118,11 @@ func TestExtractDataAndVersionMetadata(t *testing.T) {
 	}
 
 	readResp := &Secret{
-		Data: map[string]interface{}{
-			"data": map[string]interface{}{
+		Data: map[string]any{
+			"data": map[string]any{
 				"password": "Hashi123",
 			},
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"version":         10,
 				"created_time":    inputCreatedTimeStr,
 				"deletion_time":   "",
@@ -133,9 +133,9 @@ func TestExtractDataAndVersionMetadata(t *testing.T) {
 	}
 
 	readRespDeleted := &Secret{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"data": nil,
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"version":         10,
 				"created_time":    inputCreatedTimeStr,
 				"deletion_time":   inputDeletionTimeStr,
@@ -154,7 +154,7 @@ func TestExtractDataAndVersionMetadata(t *testing.T) {
 			name:  "a response from a Read operation",
 			input: readResp,
 			expected: &KVSecret{
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"password": "Hashi123",
 				},
 				VersionMetadata: &KVVersionMetadata{
@@ -220,24 +220,24 @@ func TestExtractFullMetadata(t *testing.T) {
 	}
 
 	metadataResp := &Secret{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"cas_required":    true,
 			"created_time":    inputCreatedTimeStr,
 			"current_version": 2,
-			"custom_metadata": map[string]interface{}{
+			"custom_metadata": map[string]any{
 				"org": "eng",
 			},
 			"delete_version_after": "200s",
 			"max_versions":         3,
 			"oldest_version":       1,
 			"updated_time":         inputUpdatedTimeStr,
-			"versions": map[string]interface{}{
-				"2": map[string]interface{}{
+			"versions": map[string]any{
+				"2": map[string]any{
 					"created_time":  inputUpdatedTimeStr,
 					"deletion_time": "",
 					"destroyed":     false,
 				},
-				"1": map[string]interface{}{
+				"1": map[string]any{
 					"created_time":  inputCreatedTimeStr,
 					"deletion_time": inputDeletedTimeStr,
 					"destroyed":     false,
@@ -258,7 +258,7 @@ func TestExtractFullMetadata(t *testing.T) {
 				CASRequired:    true,
 				CreatedTime:    expectedCreatedTimeParsed,
 				CurrentVersion: 2,
-				CustomMetadata: map[string]interface{}{
+				CustomMetadata: map[string]any{
 					"org": "eng",
 				},
 				DeleteVersionAfter: time.Duration(200 * time.Second),
@@ -297,83 +297,83 @@ func TestExtractCustomMetadata(t *testing.T) {
 	testCases := []struct {
 		name         string
 		inputAPIResp *Secret
-		expected     map[string]interface{}
+		expected     map[string]any
 	}{
 		{
 			name: "a read response with some custom metadata",
 			inputAPIResp: &Secret{
-				Data: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"custom_metadata": map[string]interface{}{"org": "eng"},
+				Data: map[string]any{
+					"metadata": map[string]any{
+						"custom_metadata": map[string]any{"org": "eng"},
 					},
 				},
 			},
-			expected: map[string]interface{}{"org": "eng"},
+			expected: map[string]any{"org": "eng"},
 		},
 		{
 			name: "a write response with some (pre-existing) custom metadata",
 			inputAPIResp: &Secret{
-				Data: map[string]interface{}{
-					"custom_metadata": map[string]interface{}{"org": "eng"},
+				Data: map[string]any{
+					"custom_metadata": map[string]any{"org": "eng"},
 				},
 			},
-			expected: map[string]interface{}{"org": "eng"},
+			expected: map[string]any{"org": "eng"},
 		},
 		{
 			name: "a read response with no custom metadata from a pre-1.9 Vault server",
 			inputAPIResp: &Secret{
-				Data: map[string]interface{}{
-					"metadata": map[string]interface{}{},
+				Data: map[string]any{
+					"metadata": map[string]any{},
 				},
 			},
-			expected: map[string]interface{}(nil),
+			expected: map[string]any(nil),
 		},
 		{
 			name: "a write response with no custom metadata from a pre-1.9 Vault server",
 			inputAPIResp: &Secret{
-				Data: map[string]interface{}{},
+				Data: map[string]any{},
 			},
-			expected: map[string]interface{}(nil),
+			expected: map[string]any(nil),
 		},
 		{
 			name: "a read response with no custom metadata from a post-1.9 Vault server",
 			inputAPIResp: &Secret{
-				Data: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Data: map[string]any{
+					"metadata": map[string]any{
 						"custom_metadata": nil,
 					},
 				},
 			},
-			expected: map[string]interface{}(nil),
+			expected: map[string]any(nil),
 		},
 		{
 			name: "a write response with no custom metadata from a post-1.9 Vault server",
 			inputAPIResp: &Secret{
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"custom_metadata": nil,
 				},
 			},
-			expected: map[string]interface{}(nil),
+			expected: map[string]any(nil),
 		},
 		{
 			name: "a read response where custom metadata was deleted",
 			inputAPIResp: &Secret{
-				Data: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"custom_metadata": map[string]interface{}{},
+				Data: map[string]any{
+					"metadata": map[string]any{
+						"custom_metadata": map[string]any{},
 					},
 				},
 			},
-			expected: map[string]interface{}{},
+			expected: map[string]any{},
 		},
 		{
 			name: "a write response where custom metadata was deleted",
 			inputAPIResp: &Secret{
-				Data: map[string]interface{}{
-					"custom_metadata": map[string]interface{}{},
+				Data: map[string]any{
+					"custom_metadata": map[string]any{},
 				},
 			},
-			expected: map[string]interface{}{},
+			expected: map[string]any{},
 		},
 	}
 

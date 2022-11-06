@@ -117,7 +117,7 @@ func pathConfigIdentityRead(ctx context.Context, req *logical.Request, _ *framew
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"iam_alias":                     config.IAMAlias,
 			iamAuthMetadataFields.FieldName: config.IAMAuthMetadataHandler.AuthMetadata(),
 			"ec2_alias":                     config.EC2Alias,

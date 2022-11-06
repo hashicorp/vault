@@ -22,7 +22,7 @@ func TestGitHub_Login(t *testing.T) {
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "config",
 		Operation: logical.UpdateOperation,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"organization": "foo-org",
 			"base_url":     ts.URL, // base_url will call the test server
 		},

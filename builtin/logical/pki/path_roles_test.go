@@ -22,7 +22,7 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"allowed_domains": "myvault.com",
 		"ttl":             "5h",
 	}
@@ -127,7 +127,7 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"allowed_domains": "myvault.com",
 		"ttl":             "5h",
 		"key_usage":       []string{"KeyEncipherment", "DigitalSignature"},
@@ -218,7 +218,7 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"allowed_domains": "myvault.com",
 		"ttl":             "5h",
 		"ou":              []string{"abc", "123"},
@@ -324,7 +324,7 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"allowed_domains": []string{"foobar.com", "*example.com"},
 		"ttl":             "5h",
 	}
@@ -412,7 +412,7 @@ func TestPki_RoleAllowedURISANs(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"allowed_uri_sans": []string{"http://foobar.com", "spiffe://*"},
 		"ttl":              "5h",
 	}
@@ -447,7 +447,7 @@ func TestPki_RolePkixFields(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"ttl":            "5h",
 		"country":        []string{"c1", "c2"},
 		"ou":             []string{"abc", "123"},
@@ -539,7 +539,7 @@ func TestPki_RoleNoStore(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"allowed_domains": "myvault.com",
 		"ttl":             "5h",
 	}
@@ -606,7 +606,7 @@ func TestPki_RoleNoStore(t *testing.T) {
 	}
 
 	// issue a certificate and test that it's not stored
-	caData := map[string]interface{}{
+	caData := map[string]any{
 		"common_name": "myvault.com",
 		"ttl":         "5h",
 		"ip_sans":     "127.0.0.1",
@@ -622,7 +622,7 @@ func TestPki_RoleNoStore(t *testing.T) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
-	issueData := map[string]interface{}{
+	issueData := map[string]any{
 		"common_name": "cert.myvault.com",
 		"format":      "pem",
 		"ip_sans":     "127.0.0.1",
@@ -660,7 +660,7 @@ func TestPki_CertsLease(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	caData := map[string]interface{}{
+	caData := map[string]any{
 		"common_name": "myvault.com",
 		"ttl":         "5h",
 		"ip_sans":     "127.0.0.1",
@@ -678,7 +678,7 @@ func TestPki_CertsLease(t *testing.T) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"allowed_domains":  "myvault.com",
 		"allow_subdomains": true,
 		"ttl":              "2h",
@@ -696,7 +696,7 @@ func TestPki_CertsLease(t *testing.T) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
-	issueData := map[string]interface{}{
+	issueData := map[string]any{
 		"common_name": "cert.myvault.com",
 		"format":      "pem",
 		"ip_sans":     "127.0.0.1",
@@ -740,8 +740,8 @@ func TestPki_RolePatch(t *testing.T) {
 	t.Parallel()
 	type TestCase struct {
 		Field   string
-		Before  interface{}
-		Patched interface{}
+		Before  any
+		Patched any
 	}
 
 	testCases := []TestCase{
@@ -958,7 +958,7 @@ func TestPki_RolePatch(t *testing.T) {
 		var err error
 
 		// Create the role
-		roleData := map[string]interface{}{}
+		roleData := map[string]any{}
 		roleData[testCase.Field] = testCase.Before
 
 		roleReq := &logical.Request{
@@ -1019,8 +1019,8 @@ func TestPki_RolePatch(t *testing.T) {
 func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
 	t.Parallel()
 	type TestCase struct {
-		Input   interface{}
-		ASN     interface{}
+		Input   any
+		ASN     any
 		OidList []string
 	}
 
@@ -1047,7 +1047,7 @@ func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
 
 	b, storage := createBackendWithStorage(t)
 
-	caData := map[string]interface{}{
+	caData := map[string]any{
 		"common_name": "myvault.com",
 		"ttl":         "5h",
 		"ip_sans":     "127.0.0.1",
@@ -1069,7 +1069,7 @@ func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
 		var err error
 
 		// Create/update the role
-		roleData := map[string]interface{}{}
+		roleData := map[string]any{}
 		roleData[policyIdentifiersParam] = testCase.Input
 
 		roleReq := &logical.Request{
@@ -1085,7 +1085,7 @@ func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
 		}
 
 		// Issue Using this role
-		issueData := map[string]interface{}{}
+		issueData := map[string]any{}
 		issueData["common_name"] = "localhost"
 		issueData["ttl"] = "2s"
 

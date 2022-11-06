@@ -279,7 +279,7 @@ func (b *backend) pathConfigCertificateRead(ctx context.Context, req *logical.Re
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"aws_public_cert": certificateEntry.AWSPublicCert,
 			"type":            certificateEntry.Type,
 		},

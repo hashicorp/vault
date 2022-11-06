@@ -12,15 +12,15 @@ func NewTransitLRU(size int) (*TransitLRU, error) {
 	return &TransitLRU{lru: lru, size: size}, err
 }
 
-func (c *TransitLRU) Delete(key interface{}) {
+func (c *TransitLRU) Delete(key any) {
 	c.lru.Remove(key)
 }
 
-func (c *TransitLRU) Load(key interface{}) (value interface{}, ok bool) {
+func (c *TransitLRU) Load(key any) (value any, ok bool) {
 	return c.lru.Get(key)
 }
 
-func (c *TransitLRU) Store(key, value interface{}) {
+func (c *TransitLRU) Store(key, value any) {
 	c.lru.Add(key, value)
 }
 

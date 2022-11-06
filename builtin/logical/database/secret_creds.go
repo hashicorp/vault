@@ -129,7 +129,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			// set in the role, we'll end up with an empty one and the
 			// default for the db type will be attempted
 			if statementsRaw != nil {
-				statementsSlice, ok := statementsRaw.([]interface{})
+				statementsSlice, ok := statementsRaw.([]any)
 				if !ok {
 					return nil, fmt.Errorf("error during revoke: could not find role with name %q and embedded reovcation data could not be read", req.Secret.InternalData["role"])
 				}

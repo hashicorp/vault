@@ -337,7 +337,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	metadata["role_name"] = role.name
 
 	auth := &logical.Auth{
-		InternalData: map[string]interface{}{
+		InternalData: map[string]any{
 			"role_name": role.name,
 		},
 		Metadata: metadata,

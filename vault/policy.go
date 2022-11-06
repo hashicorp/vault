@@ -130,17 +130,17 @@ type PathRules struct {
 
 	// These keys are used at the top level to make the HCL nicer; we store in
 	// the ACLPermissions object though
-	MinWrappingTTLHCL     interface{}              `hcl:"min_wrapping_ttl"`
-	MaxWrappingTTLHCL     interface{}              `hcl:"max_wrapping_ttl"`
-	AllowedParametersHCL  map[string][]interface{} `hcl:"allowed_parameters"`
-	DeniedParametersHCL   map[string][]interface{} `hcl:"denied_parameters"`
-	RequiredParametersHCL []string                 `hcl:"required_parameters"`
-	MFAMethodsHCL         []string                 `hcl:"mfa_methods"`
-	ControlGroupHCL       *ControlGroupHCL         `hcl:"control_group"`
+	MinWrappingTTLHCL     any              `hcl:"min_wrapping_ttl"`
+	MaxWrappingTTLHCL     any              `hcl:"max_wrapping_ttl"`
+	AllowedParametersHCL  map[string][]any `hcl:"allowed_parameters"`
+	DeniedParametersHCL   map[string][]any `hcl:"denied_parameters"`
+	RequiredParametersHCL []string         `hcl:"required_parameters"`
+	MFAMethodsHCL         []string         `hcl:"mfa_methods"`
+	ControlGroupHCL       *ControlGroupHCL `hcl:"control_group"`
 }
 
 type ControlGroupHCL struct {
-	TTL     interface{}                    `hcl:"ttl"`
+	TTL     any                            `hcl:"ttl"`
 	Factors map[string]*ControlGroupFactor `hcl:"factor"`
 }
 
@@ -176,8 +176,8 @@ type ACLPermissions struct {
 	CapabilitiesBitmap  uint32
 	MinWrappingTTL      time.Duration
 	MaxWrappingTTL      time.Duration
-	AllowedParameters   map[string][]interface{}
-	DeniedParameters    map[string][]interface{}
+	AllowedParameters   map[string][]any
+	DeniedParameters    map[string][]any
 	RequiredParameters  []string
 	MFAMethods          []string
 	ControlGroup        *ControlGroup
@@ -195,25 +195,25 @@ func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 	switch {
 	case p.AllowedParameters == nil:
 	case len(p.AllowedParameters) == 0:
-		ret.AllowedParameters = make(map[string][]interface{})
+		ret.AllowedParameters = make(map[string][]any)
 	default:
 		clonedAllowed, err := copystructure.Copy(p.AllowedParameters)
 		if err != nil {
 			return nil, err
 		}
-		ret.AllowedParameters = clonedAllowed.(map[string][]interface{})
+		ret.AllowedParameters = clonedAllowed.(map[string][]any)
 	}
 
 	switch {
 	case p.DeniedParameters == nil:
 	case len(p.DeniedParameters) == 0:
-		ret.DeniedParameters = make(map[string][]interface{})
+		ret.DeniedParameters = make(map[string][]any)
 	default:
 		clonedDenied, err := copystructure.Copy(p.DeniedParameters)
 		if err != nil {
 			return nil, err
 		}
-		ret.DeniedParameters = clonedDenied.(map[string][]interface{})
+		ret.DeniedParameters = clonedDenied.(map[string][]any)
 	}
 
 	switch {
@@ -448,13 +448,13 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		}
 
 		if pc.AllowedParametersHCL != nil {
-			pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(pc.AllowedParametersHCL))
+			pc.Permissions.AllowedParameters = make(map[string][]any, len(pc.AllowedParametersHCL))
 			for k, v := range pc.AllowedParametersHCL {
 				pc.Permissions.AllowedParameters[strings.ToLower(k)] = v
 			}
 		}
 		if pc.DeniedParametersHCL != nil {
-			pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(pc.DeniedParametersHCL))
+			pc.Permissions.DeniedParameters = make(map[string][]any, len(pc.DeniedParametersHCL))
 
 			for k, v := range pc.DeniedParametersHCL {
 				pc.Permissions.DeniedParameters[strings.ToLower(k)] = v

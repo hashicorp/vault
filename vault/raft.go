@@ -919,7 +919,7 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 	apiClient.ClearNamespace()
 
 	// Attempt to join the leader by requesting for the bootstrap challenge
-	secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+	secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]any{
 		"server_id": c.getRaftBackend().NodeID(),
 	})
 	if err != nil {
@@ -1286,7 +1286,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 	}
 
 	answerReq := raftInfo.leaderClient.NewRequest("PUT", "/v1/sys/storage/raft/bootstrap/answer")
-	if err := answerReq.SetJSONBody(map[string]interface{}{
+	if err := answerReq.SetJSONBody(map[string]any{
 		"answer":       base64.StdEncoding.EncodeToString(plaintext),
 		"cluster_addr": clusterAddr,
 		"server_id":    raftBackend.NodeID(),

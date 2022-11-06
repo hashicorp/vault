@@ -78,10 +78,10 @@ func NewCertAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return c, nil
 }
 
-func (c *certMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
+func (c *certMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]any, error) {
 	c.logger.Trace("beginning authentication")
 
-	authMap := map[string]interface{}{}
+	authMap := map[string]any{}
 
 	if c.name != "" {
 		authMap["name"] = c.name

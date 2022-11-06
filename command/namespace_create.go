@@ -93,7 +93,7 @@ func (c *NamespaceCreateCommand) Run(args []string) int {
 		return 2
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"custom_metadata": c.flagCustomMetadata,
 	}
 

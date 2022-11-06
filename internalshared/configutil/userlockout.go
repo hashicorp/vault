@@ -23,13 +23,13 @@ const (
 type UserLockout struct {
 	Type                   string
 	LockoutThreshold       uint64        `hcl:"-"`
-	LockoutThresholdRaw    interface{}   `hcl:"lockout_threshold"`
+	LockoutThresholdRaw    any           `hcl:"lockout_threshold"`
 	LockoutDuration        time.Duration `hcl:"-"`
-	LockoutDurationRaw     interface{}   `hcl:"lockout_duration"`
+	LockoutDurationRaw     any           `hcl:"lockout_duration"`
 	LockoutCounterReset    time.Duration `hcl:"-"`
-	LockoutCounterResetRaw interface{}   `hcl:"lockout_counter_reset"`
+	LockoutCounterResetRaw any           `hcl:"lockout_counter_reset"`
 	DisableLockout         bool          `hcl:"-"`
-	DisableLockoutRaw      interface{}   `hcl:"disable_lockout"`
+	DisableLockoutRaw      any           `hcl:"disable_lockout"`
 }
 
 func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {

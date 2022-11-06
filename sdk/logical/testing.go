@@ -16,7 +16,7 @@ func TestRequest(t testing.T, op Operation, path string) *Request {
 	return &Request{
 		Operation:  op,
 		Path:       path,
-		Data:       make(map[string]interface{}),
+		Data:       make(map[string]any),
 		Storage:    new(InmemStorage),
 		Connection: &Connection{},
 	}

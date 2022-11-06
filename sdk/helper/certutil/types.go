@@ -47,7 +47,7 @@ type ClusterKeyParams struct {
 // Secret is used to attempt to unmarshal a Vault secret
 // JSON response, as a convenience
 type Secret struct {
-	Data map[string]interface{} `json:"data"`
+	Data map[string]any `json:"data"`
 }
 
 // PrivateKeyType holds a string representation of the type of private key (ec
@@ -936,7 +936,7 @@ var policyInformationOid = asn1.ObjectIdentifier{2, 5, 29, 32}
 
 type policyInformation struct {
 	PolicyIdentifier asn1.ObjectIdentifier
-	Qualifiers       []interface{} `asn1:"tag:optional,omitempty"`
+	Qualifiers       []any `asn1:"tag:optional,omitempty"`
 }
 
 var cpsPolicyQualifierID = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 1}

@@ -977,8 +977,8 @@ type awsRoleEntry struct {
 	BoundVpcID                 string `json:"bound_vpc_id,omitempty"`
 }
 
-func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
-	responseData := map[string]interface{}{
+func (r *awsRoleEntry) ToResponseData() map[string]any {
+	responseData := map[string]any{
 		"auth_type":                      r.AuthType,
 		"bound_ami_id":                   r.BoundAmiIDs,
 		"bound_account_id":               r.BoundAccountIDs,
@@ -1013,7 +1013,7 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 		responseData["policies"] = responseData["token_policies"]
 	}
 
-	convertNilToEmptySlice := func(data map[string]interface{}, field string) {
+	convertNilToEmptySlice := func(data map[string]any, field string) {
 		if data[field] == nil || len(data[field].([]string)) == 0 {
 			data[field] = []string{}
 		}

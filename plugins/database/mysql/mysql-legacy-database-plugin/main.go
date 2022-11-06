@@ -18,7 +18,7 @@ func main() {
 
 // Run instantiates a MySQL object, and runs the RPC server for the plugin
 func Run() error {
-	var f func() (interface{}, error)
+	var f func() (any, error)
 	f = mysql.New(mysql.DefaultLegacyUserNameTemplate)
 	dbType, err := f()
 	if err != nil {

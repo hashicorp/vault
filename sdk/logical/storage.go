@@ -36,12 +36,12 @@ type StorageEntry struct {
 }
 
 // DecodeJSON decodes the 'Value' present in StorageEntry.
-func (e *StorageEntry) DecodeJSON(out interface{}) error {
+func (e *StorageEntry) DecodeJSON(out any) error {
 	return jsonutil.DecodeJSON(e.Value, out)
 }
 
 // StorageEntryJSON creates a StorageEntry with a JSON-encoded value.
-func StorageEntryJSON(k string, v interface{}) (*StorageEntry, error) {
+func StorageEntryJSON(k string, v any) (*StorageEntry, error) {
 	encodedBytes, err := jsonutil.EncodeJSON(v)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to encode storage entry: {{err}}", err)

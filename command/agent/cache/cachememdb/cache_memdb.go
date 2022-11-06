@@ -128,7 +128,7 @@ func newDB() (*memdb.MemDB, error) {
 }
 
 // Get returns the index based on the indexer and the index values provided.
-func (c *CacheMemDB) Get(indexName string, indexValues ...interface{}) (*Index, error) {
+func (c *CacheMemDB) Get(indexName string, indexValues ...any) (*Index, error) {
 	if !validIndexName(indexName) {
 		return nil, fmt.Errorf("invalid index name %q", indexName)
 	}
@@ -172,7 +172,7 @@ func (c *CacheMemDB) Set(index *Index) error {
 
 // GetByPrefix returns all the cached indexes based on the index name and the
 // value prefix.
-func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...interface{}) ([]*Index, error) {
+func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...any) ([]*Index, error) {
 	if !validIndexName(indexName) {
 		return nil, fmt.Errorf("invalid index name %q", indexName)
 	}
@@ -205,7 +205,7 @@ func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...interface{}) (
 }
 
 // Evict removes an index from the cache based on index name and value.
-func (c *CacheMemDB) Evict(indexName string, indexValues ...interface{}) error {
+func (c *CacheMemDB) Evict(indexName string, indexValues ...any) error {
 	index, err := c.Get(indexName, indexValues...)
 	if err != nil {
 		return fmt.Errorf("unable to fetch index on cache deletion: %v", err)

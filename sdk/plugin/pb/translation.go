@@ -168,7 +168,7 @@ func ProtoSecretToLogicalSecret(s *Secret) (*logical.Secret, error) {
 		return nil, nil
 	}
 
-	data := map[string]interface{}{}
+	data := map[string]any{}
 	err := json.Unmarshal([]byte(s.InternalData), &data)
 	if err != nil {
 		return nil, err
@@ -262,7 +262,7 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		return nil, nil
 	}
 
-	data := map[string]interface{}{}
+	data := map[string]any{}
 	err := json.Unmarshal([]byte(r.Data), &data)
 	if err != nil {
 		return nil, err
@@ -381,7 +381,7 @@ func ProtoResponseToLogicalResponse(r *Response) (*logical.Response, error) {
 		return nil, err
 	}
 
-	data := map[string]interface{}{}
+	data := map[string]any{}
 	err = json.Unmarshal([]byte(r.Data), &data)
 	if err != nil {
 		return nil, err
@@ -545,7 +545,7 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		return nil, nil
 	}
 
-	data := map[string]interface{}{}
+	data := map[string]any{}
 	err := json.Unmarshal([]byte(a.InternalData), &data)
 	if err != nil {
 		return nil, err

@@ -183,10 +183,10 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	success = true
 
 	// Return the secret
-	response := b.Secret(SecretCredsType).Response(map[string]interface{}{
+	response := b.Secret(SecretCredsType).Response(map[string]any{
 		"username": username,
 		"password": password,
-	}, map[string]interface{}{
+	}, map[string]any{
 		"username": username,
 	})
 

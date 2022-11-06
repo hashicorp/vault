@@ -19,7 +19,7 @@ type ProxyProtoConfig struct {
 	AuthorizedAddrs []*sockaddr.SockAddrMarshaler `json:"authorized_addrs"`
 }
 
-func (p *ProxyProtoConfig) SetAuthorizedAddrs(addrs interface{}) error {
+func (p *ProxyProtoConfig) SetAuthorizedAddrs(addrs any) error {
 	aa, err := parseutil.ParseAddrs(addrs)
 	if err != nil {
 		return err

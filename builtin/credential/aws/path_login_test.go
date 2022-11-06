@@ -199,7 +199,7 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 	ts := setupIAMTestServer()
 	defer ts.Close()
 
-	clientConfigData := map[string]interface{}{
+	clientConfigData := map[string]any{
 		"iam_server_id_header_value": testVaultHeaderValue,
 		"sts_endpoint":               ts.URL,
 	}
@@ -219,7 +219,7 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "config/identity",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"iam_alias": "role_id",
 			"iam_metadata": []string{
 				"account_id",
@@ -277,7 +277,7 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 
 	testCases := []struct {
 		Name      string
-		Header    interface{}
+		Header    any
 		ExpectErr error
 	}{
 		{
@@ -285,7 +285,7 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		},
 		{
 			Name: "Map-complete",
-			Header: map[string]interface{}{
+			Header: map[string]any{
 				"Content-Length":            "43",
 				"Content-Type":              "application/x-www-form-urlencoded; charset=utf-8",
 				"User-Agent":                "aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
@@ -296,7 +296,7 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		},
 		{
 			Name: "Map-incomplete",
-			Header: map[string]interface{}{
+			Header: map[string]any{
 				"Content-Length": "43",
 				"Content-Type":   "application/x-www-form-urlencoded; charset=utf-8",
 				"User-Agent":     "aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
@@ -307,7 +307,7 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		},
 		{
 			Name: "Map-illegal-header",
-			Header: map[string]interface{}{
+			Header: map[string]any{
 				"Content-Length":            "43",
 				"Content-Type":              "application/x-www-form-urlencoded; charset=utf-8",
 				"User-Agent":                "aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
@@ -405,7 +405,7 @@ func TestBackend_pathLogin_IAMRoleResolution(t *testing.T) {
 	ts := setupIAMTestServer()
 	defer ts.Close()
 
-	clientConfigData := map[string]interface{}{
+	clientConfigData := map[string]any{
 		"iam_server_id_header_value": testVaultHeaderValue,
 		"sts_endpoint":               ts.URL,
 	}
@@ -425,7 +425,7 @@ func TestBackend_pathLogin_IAMRoleResolution(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "config/identity",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"iam_alias": "role_id",
 			"iam_metadata": []string{
 				"account_id",
@@ -504,7 +504,7 @@ func TestBackend_defaultAliasMetadata(t *testing.T) {
 	ts := setupIAMTestServer()
 	defer ts.Close()
 
-	clientConfigData := map[string]interface{}{
+	clientConfigData := map[string]any{
 		"iam_server_id_header_value": testVaultHeaderValue,
 		"sts_endpoint":               ts.URL,
 	}
@@ -524,7 +524,7 @@ func TestBackend_defaultAliasMetadata(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "config/identity",
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"iam_alias": "role_id",
 			"ec2_alias": "role_id",
 		},
@@ -559,7 +559,7 @@ func TestBackend_defaultAliasMetadata(t *testing.T) {
 
 	testCases := []struct {
 		Name      string
-		Header    interface{}
+		Header    any
 		ExpectErr error
 	}{
 		{
@@ -567,7 +567,7 @@ func TestBackend_defaultAliasMetadata(t *testing.T) {
 		},
 		{
 			Name: "Map-complete",
-			Header: map[string]interface{}{
+			Header: map[string]any{
 				"Content-Length":            "43",
 				"Content-Type":              "application/x-www-form-urlencoded; charset=utf-8",
 				"User-Agent":                "aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
@@ -622,7 +622,7 @@ func TestBackend_defaultAliasMetadata(t *testing.T) {
 	}
 }
 
-func defaultLoginData() (map[string]interface{}, error) {
+func defaultLoginData() (map[string]any, error) {
 	awsSession, err := session.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %s", err)

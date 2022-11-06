@@ -152,7 +152,7 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 
 	// Generate the response
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"lease":            int64(roleConfigData.TTL.Seconds()),
 			"ttl":              int64(roleConfigData.TTL.Seconds()),
 			"max_ttl":          int64(roleConfigData.MaxTTL.Seconds()),

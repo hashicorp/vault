@@ -42,9 +42,9 @@ func (s *Secret) Renewable() bool {
 }
 
 func (s *Secret) Response(
-	data, internal map[string]interface{},
+	data, internal map[string]any,
 ) *logical.Response {
-	internalData := make(map[string]interface{})
+	internalData := make(map[string]any)
 	for k, v := range internal {
 		internalData[k] = v
 	}

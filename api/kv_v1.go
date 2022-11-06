@@ -33,7 +33,7 @@ func (kv *KVv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 // KV v1 secrets engine.
 //
 // If the secret already exists, it will be overwritten.
-func (kv *KVv1) Put(ctx context.Context, secretPath string, data map[string]interface{}) error {
+func (kv *KVv1) Put(ctx context.Context, secretPath string, data map[string]any) error {
 	pathToWriteTo := fmt.Sprintf("%s/%s", kv.mountPath, secretPath)
 
 	_, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, data)

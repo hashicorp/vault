@@ -18,7 +18,7 @@ func TestBackend_ConfigConnection_DefaultUsernameTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configData := map[string]interface{}{
+	configData := map[string]any{
 		"connection_uri":    "uri",
 		"username":          "username",
 		"password":          "password",
@@ -65,7 +65,7 @@ func TestBackend_ConfigConnection_CustomUsernameTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configData := map[string]interface{}{
+	configData := map[string]any{
 		"connection_uri":    "uri",
 		"username":          "username",
 		"password":          "password",

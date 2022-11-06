@@ -407,7 +407,7 @@ func (f *FDBBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry)
 		}
 	}
 
-	_, err := f.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	_, err := f.db.Transact(func(tr fdb.Transaction) (any, error) {
 		for _, txnTodo := range todo {
 			var err error
 			switch txnTodo.op.Operation {
@@ -440,7 +440,7 @@ func (f *FDBBackend) Put(ctx context.Context, entry *physical.Entry) error {
 		return fmt.Errorf("could not build decorated path to put item %s: %w", entry.Key, err)
 	}
 
-	_, err = f.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	_, err = f.db.Transact(func(tr fdb.Transaction) (any, error) {
 		err := f.internalPut(tr, decoratedPath, entry.Key, entry.Value)
 		if err != nil {
 			return nil, err
@@ -468,7 +468,7 @@ func (f *FDBBackend) Get(ctx context.Context, key string) (*physical.Entry, erro
 
 	fkey := fdb.Key(concat(f.dataSpace.Bytes(), decoratedPath...))
 
-	value, err := f.db.ReadTransact(func(rtr fdb.ReadTransaction) (interface{}, error) {
+	value, err := f.db.ReadTransact(func(rtr fdb.ReadTransaction) (any, error) {
 		value, err := rtr.Get(fkey).Get()
 		if err != nil {
 			return nil, err
@@ -498,7 +498,7 @@ func (f *FDBBackend) Delete(ctx context.Context, key string) error {
 		return fmt.Errorf("could not build decorated path to delete item %s: %w", key, err)
 	}
 
-	_, err = f.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	_, err = f.db.Transact(func(tr fdb.Transaction) (any, error) {
 		err := f.internalClear(tr, decoratedPath, key)
 		if err != nil {
 			return nil, err
@@ -533,7 +533,7 @@ func (f *FDBBackend) List(ctx context.Context, prefix string) ([]string, error) 
 	pathRange := fdb.KeyRange{rangeBegin, rangeEnd}
 	keyPrefixLen := len(rangeBegin)
 
-	content, err := f.db.ReadTransact(func(rtr fdb.ReadTransaction) (interface{}, error) {
+	content, err := f.db.ReadTransact(func(rtr fdb.ReadTransaction) (any, error) {
 		dirList := make([]string, 0, 0)
 
 		ri := rtr.GetRange(pathRange, fdb.RangeOptions{Mode: fdb.StreamingModeWantAll}).Iterator()
@@ -653,7 +653,7 @@ func (fl *FDBBackendLock) isExpired(content *FDBBackendLockContent) bool {
 }
 
 func (fl *FDBBackendLock) acquireTryLock(acquired chan struct{}, errors chan error) (bool, error) {
-	wonTheRace, err := fl.f.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	wonTheRace, err := fl.f.db.Transact(func(tr fdb.Transaction) (any, error) {
 		tupleContent, err := tr.Get(fl.fkey).Get()
 		if err != nil {
 			return nil, fmt.Errorf("could not read lock: %w", err)
@@ -726,7 +726,7 @@ func (fl *FDBBackendLock) maintainLock(lost <-chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			_, err := fl.f.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+			_, err := fl.f.db.Transact(func(tr fdb.Transaction) (any, error) {
 				content, err := fl.getLockContent(tr)
 				if err != nil {
 					return nil, err
@@ -763,7 +763,7 @@ func (fl *FDBBackendLock) maintainLock(lost <-chan struct{}) {
 
 func (fl *FDBBackendLock) watchLock(lost chan struct{}) {
 	for {
-		watch, err := fl.f.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+		watch, err := fl.f.db.Transact(func(tr fdb.Transaction) (any, error) {
 			content, err := fl.getLockContent(tr)
 			if err != nil {
 				return nil, err
@@ -838,7 +838,7 @@ func (fl *FDBBackendLock) Unlock() error {
 	fl.lock.Lock()
 	defer fl.lock.Unlock()
 
-	_, err := fl.f.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	_, err := fl.f.db.Transact(func(tr fdb.Transaction) (any, error) {
 		content, err := fl.getLockContent(tr)
 		if err != nil {
 			return nil, fmt.Errorf("could not get lock content: %w", err)
@@ -861,7 +861,7 @@ func (fl *FDBBackendLock) Unlock() error {
 }
 
 func (fl *FDBBackendLock) Value() (bool, string, error) {
-	tupleContent, err := fl.f.db.ReadTransact(func(rtr fdb.ReadTransaction) (interface{}, error) {
+	tupleContent, err := fl.f.db.ReadTransact(func(rtr fdb.ReadTransaction) (any, error) {
 		tupleContent, err := rtr.Get(fl.fkey).Get()
 		if err != nil {
 			return nil, fmt.Errorf("could not read lock: %w", err)

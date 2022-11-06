@@ -33,7 +33,7 @@ func (b *backend) pathBackupRead(ctx context.Context, req *logical.Request, d *f
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"backup": backup,
 		},
 	}, nil

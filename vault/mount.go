@@ -461,8 +461,8 @@ func (e *MountEntry) SyncCache() {
 	}
 }
 
-func (entry *MountEntry) Deserialize() map[string]interface{} {
-	return map[string]interface{}{
+func (entry *MountEntry) Deserialize() map[string]any {
+	return map[string]any{
 		"mount_path":      entry.Path,
 		"mount_namespace": entry.Namespace().Path,
 		"uuid":            entry.UUID,

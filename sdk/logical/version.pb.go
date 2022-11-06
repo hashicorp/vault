@@ -138,7 +138,7 @@ func file_sdk_logical_version_proto_rawDescGZIP() []byte {
 }
 
 var file_sdk_logical_version_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_sdk_logical_version_proto_goTypes = []interface{}{
+var file_sdk_logical_version_proto_goTypes = []any{
 	(*Empty)(nil),        // 0: logical.Empty
 	(*VersionReply)(nil), // 1: logical.VersionReply
 }
@@ -158,7 +158,7 @@ func file_sdk_logical_version_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_sdk_logical_version_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_logical_version_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*Empty); i {
 			case 0:
 				return &v.state
@@ -170,7 +170,7 @@ func file_sdk_logical_version_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_logical_version_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_logical_version_proto_msgTypes[1].Exporter = func(v any, i int) any {
 			switch v := v.(*VersionReply); i {
 			case 0:
 				return &v.state

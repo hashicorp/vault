@@ -111,7 +111,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			"username": username,
 			"policies": strings.Join(policies, ","),
 		},
-		InternalData: map[string]interface{}{
+		InternalData: map[string]any{
 			"password": password,
 		},
 		DisplayName: username,
@@ -209,7 +209,7 @@ func (b *backend) pathVerify(ctx context.Context, req *logical.Request, d *frame
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"correct_answer": correctRaw.(int),
 		},
 	}

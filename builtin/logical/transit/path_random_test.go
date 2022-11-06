@@ -27,7 +27,7 @@ func TestTransit_Random(t *testing.T) {
 		Storage:   storage,
 		Operation: logical.UpdateOperation,
 		Path:      "random",
-		Data:      map[string]interface{}{},
+		Data:      map[string]any{},
 	}
 
 	doRequest := func(req *logical.Request, errExpected bool, format string, numBytes int) {

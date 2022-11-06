@@ -95,7 +95,7 @@ func testAccStepMapAppId(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "map/app-id/foo",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"value": "foo,bar",
 		},
 	}
@@ -105,7 +105,7 @@ func testAccStepMapAppIdDisplayName(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "map/app-id/foo",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"display_name": "tubbin",
 			"value":        "foo,bar",
 		},
@@ -116,7 +116,7 @@ func testAccStepMapUserId(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "map/user-id/42",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"value": "foo",
 		},
 	}
@@ -133,7 +133,7 @@ func testAccStepMapUserIdCidr(t *testing.T, cidr string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "map/user-id/42",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"value":      "foo",
 			"cidr_block": cidr,
 		},
@@ -150,7 +150,7 @@ func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"app_id":  "foo",
 			"user_id": "42",
 		},
@@ -174,7 +174,7 @@ func testAccLoginAppIDInPath(t *testing.T, display string) logicaltest.TestStep 
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login/foo",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"user_id": "42",
 		},
 		Unauthenticated: true,
@@ -196,7 +196,7 @@ func testAccLoginCidr(t *testing.T, ip string, err bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"app_id":  "foo",
 			"user_id": "42",
 		},
@@ -212,7 +212,7 @@ func testAccLoginInvalid(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"app_id":  "foo",
 			"user_id": "48",
 		},
@@ -227,7 +227,7 @@ func testAccLoginDeleted(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"app_id":  "foo",
 			"user_id": "42",
 		},

@@ -13,7 +13,7 @@ func TestAppRole_SecretIDNumUsesUpgrade(t *testing.T) {
 
 	b, storage := createBackendWithStorage(t)
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"secret_id_num_uses": 10,
 	}
 
@@ -42,7 +42,7 @@ func TestAppRole_SecretIDNumUsesUpgrade(t *testing.T) {
 
 	secretIDReq.Operation = logical.UpdateOperation
 	secretIDReq.Path = "role/role1/secret-id/lookup"
-	secretIDReq.Data = map[string]interface{}{
+	secretIDReq.Data = map[string]any{
 		"secret_id": resp.Data["secret_id"].(string),
 	}
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)

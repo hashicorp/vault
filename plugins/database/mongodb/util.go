@@ -3,9 +3,9 @@ package mongodb
 import "go.mongodb.org/mongo-driver/mongo/writeconcern"
 
 type createUserCommand struct {
-	Username string        `bson:"createUser"`
-	Password string        `bson:"pwd,omitempty"`
-	Roles    []interface{} `bson:"roles"`
+	Username string `bson:"createUser"`
+	Password string `bson:"pwd,omitempty"`
+	Roles    []any  `bson:"roles"`
 }
 
 type updateUserCommand struct {
@@ -39,8 +39,8 @@ type mongoDBStatement struct {
 // [ "readWrite", { "role": "readWrite", "db": "test" } ]
 //
 // MongoDB's createUser command accepts the latter.
-func (roles mongodbRoles) toStandardRolesArray() []interface{} {
-	var standardRolesArray []interface{}
+func (roles mongodbRoles) toStandardRolesArray() []any {
+	var standardRolesArray []any
 	for _, role := range roles {
 		if role.DB == "" {
 			standardRolesArray = append(standardRolesArray, role.Role)

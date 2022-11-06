@@ -53,7 +53,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("auth/jwt/config", map[string]interface{}{
+	_, err = client.Logical().Write("auth/jwt/config", map[string]any{
 		"bound_issuer":           "https://team-vault.auth0.com/",
 		"jwt_validation_pubkeys": TestECDSAPubKey,
 		"jwt_supported_algs":     "ES256",
@@ -62,7 +62,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("auth/jwt/role/test", map[string]interface{}{
+	_, err = client.Logical().Write("auth/jwt/role/test", map[string]any{
 		"role_type":       "jwt",
 		"bound_subject":   "r3qXcK2bix9eFECzsU3Sbmh0K16fatW6@clients",
 		"bound_audiences": "https://vault.plugin.auth.jwt.test",
@@ -127,7 +127,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	am, err := agentjwt.NewJWTAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.jwt"),
 		MountPath: "auth/jwt",
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"path": in,
 			"role": "test",
 		},
@@ -165,7 +165,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		DHType:    "curve25519",
 		DHPath:    dhpath,
 		DeriveKey: true,
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"path": out,
 		},
 	}

@@ -159,7 +159,7 @@ func (b *backend) pathKeyRead(ctx context.Context, req *logical.Request, data *f
 
 	// Return values of key
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"issuer":       key.Issuer,
 			"account_name": key.AccountName,
 			"period":       key.Period,
@@ -349,7 +349,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			// Don't include QR code if size is set to zero
 			if qrSize == 0 {
 				response = &logical.Response{
-					Data: map[string]interface{}{
+					Data: map[string]any{
 						"url": urlString,
 					},
 				}
@@ -363,7 +363,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 				png.Encode(&buff, barcode)
 				b64Barcode := base64.StdEncoding.EncodeToString(buff.Bytes())
 				response = &logical.Response{
-					Data: map[string]interface{}{
+					Data: map[string]any{
 						"url":     urlString,
 						"barcode": b64Barcode,
 					},

@@ -978,7 +978,7 @@ func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.R
 		}
 	}
 
-	resp.Data = map[string]interface{}{
+	resp.Data = map[string]any{
 		"keys": ret,
 	}
 	return resp, nil
@@ -2467,7 +2467,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 
 	// Prepare the field data required for a lookup call
 	d := &framework.FieldData{
-		Raw: map[string]interface{}{
+		Raw: map[string]any{
 			"token": aEntry.TokenID,
 		},
 		Schema: map[string]*framework.FieldSchema{
@@ -2512,7 +2512,7 @@ func (ts *TokenStore) handleUpdateRenewAccessor(ctx context.Context, req *logica
 
 	// Prepare the field data required for a lookup call
 	d := &framework.FieldData{
-		Raw: map[string]interface{}{
+		Raw: map[string]any{
 			"token": aEntry.TokenID,
 		},
 		Schema: map[string]*framework.FieldSchema{
@@ -3354,7 +3354,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	// Generate a response. We purposely omit the parent reference otherwise
 	// you could escalate your privileges.
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"id":               out.ID,
 			"accessor":         out.Accessor,
 			"policies":         out.Policies,
@@ -3587,7 +3587,7 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 
 	// TODO (1.4): Remove "period" and "explicit_max_ttl" if they're zero
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"period":                   int64(role.Period.Seconds()),
 			"token_period":             int64(role.TokenPeriod.Seconds()),
 			"explicit_max_ttl":         int64(role.ExplicitMaxTTL.Seconds()),

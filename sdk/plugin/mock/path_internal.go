@@ -32,7 +32,7 @@ func (b *backend) pathInternalUpdate(ctx context.Context, req *logical.Request, 
 func (b *backend) pathInternalRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Return the secret
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"value": b.internal,
 		},
 	}, nil

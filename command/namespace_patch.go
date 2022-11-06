@@ -104,8 +104,8 @@ func (c *NamespacePatchCommand) Run(args []string) int {
 		return 2
 	}
 
-	data := make(map[string]interface{})
-	customMetadata := make(map[string]interface{})
+	data := make(map[string]any)
+	customMetadata := make(map[string]any)
 
 	for key, value := range c.flagCustomMetadata {
 		customMetadata[key] = value

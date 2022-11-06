@@ -68,7 +68,7 @@ func RegisterPluginVersionServer(s grpc.ServiceRegistrar, srv PluginVersionServe
 	s.RegisterService(&PluginVersion_ServiceDesc, srv)
 }
 
-func _PluginVersion_Version_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _PluginVersion_Version_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func _PluginVersion_Version_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/logical.PluginVersion/Version",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(PluginVersionServer).Version(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)

@@ -182,7 +182,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
-		resp.Data = map[string]interface{}{
+		resp.Data = map[string]any{
 			"batch_results": batchResponseItems,
 		}
 	} else {
@@ -190,7 +190,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			p.Unlock()
 			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
-		resp.Data = map[string]interface{}{
+		resp.Data = map[string]any{
 			"ciphertext":  batchResponseItems[0].Ciphertext,
 			"key_version": batchResponseItems[0].KeyVersion,
 		}

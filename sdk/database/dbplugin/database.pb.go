@@ -1177,7 +1177,7 @@ func file_sdk_database_dbplugin_database_proto_rawDescGZIP() []byte {
 }
 
 var file_sdk_database_dbplugin_database_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
-var file_sdk_database_dbplugin_database_proto_goTypes = []interface{}{
+var file_sdk_database_dbplugin_database_proto_goTypes = []any{
 	(*InitializeRequest)(nil),             // 0: dbplugin.InitializeRequest
 	(*InitRequest)(nil),                   // 1: dbplugin.InitRequest
 	(*CreateUserRequest)(nil),             // 2: dbplugin.CreateUserRequest
@@ -1239,7 +1239,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_sdk_database_dbplugin_database_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*InitializeRequest); i {
 			case 0:
 				return &v.state
@@ -1251,7 +1251,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[1].Exporter = func(v any, i int) any {
 			switch v := v.(*InitRequest); i {
 			case 0:
 				return &v.state
@@ -1263,7 +1263,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[2].Exporter = func(v any, i int) any {
 			switch v := v.(*CreateUserRequest); i {
 			case 0:
 				return &v.state
@@ -1275,7 +1275,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[3].Exporter = func(v any, i int) any {
 			switch v := v.(*RenewUserRequest); i {
 			case 0:
 				return &v.state
@@ -1287,7 +1287,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[4].Exporter = func(v any, i int) any {
 			switch v := v.(*RevokeUserRequest); i {
 			case 0:
 				return &v.state
@@ -1299,7 +1299,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[5].Exporter = func(v any, i int) any {
 			switch v := v.(*RotateRootCredentialsRequest); i {
 			case 0:
 				return &v.state
@@ -1311,7 +1311,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[6].Exporter = func(v any, i int) any {
 			switch v := v.(*Statements); i {
 			case 0:
 				return &v.state
@@ -1323,7 +1323,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[7].Exporter = func(v any, i int) any {
 			switch v := v.(*UsernameConfig); i {
 			case 0:
 				return &v.state
@@ -1335,7 +1335,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[8].Exporter = func(v any, i int) any {
 			switch v := v.(*InitResponse); i {
 			case 0:
 				return &v.state
@@ -1347,7 +1347,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[9].Exporter = func(v any, i int) any {
 			switch v := v.(*CreateUserResponse); i {
 			case 0:
 				return &v.state
@@ -1359,7 +1359,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[10].Exporter = func(v any, i int) any {
 			switch v := v.(*TypeResponse); i {
 			case 0:
 				return &v.state
@@ -1371,7 +1371,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[11].Exporter = func(v any, i int) any {
 			switch v := v.(*RotateRootCredentialsResponse); i {
 			case 0:
 				return &v.state
@@ -1383,7 +1383,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[12].Exporter = func(v any, i int) any {
 			switch v := v.(*Empty); i {
 			case 0:
 				return &v.state
@@ -1395,7 +1395,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[13].Exporter = func(v any, i int) any {
 			switch v := v.(*GenerateCredentialsResponse); i {
 			case 0:
 				return &v.state
@@ -1407,7 +1407,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[14].Exporter = func(v any, i int) any {
 			switch v := v.(*StaticUserConfig); i {
 			case 0:
 				return &v.state
@@ -1419,7 +1419,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[15].Exporter = func(v any, i int) any {
 			switch v := v.(*SetCredentialsRequest); i {
 			case 0:
 				return &v.state
@@ -1431,7 +1431,7 @@ func file_sdk_database_dbplugin_database_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_database_dbplugin_database_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_database_dbplugin_database_proto_msgTypes[16].Exporter = func(v any, i int) any {
 			switch v := v.(*SetCredentialsResponse); i {
 			case 0:
 				return &v.state

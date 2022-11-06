@@ -378,7 +378,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "roles/allow-all",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"allow_any_name": "true",
 			"no_store":       "false",
 		},
@@ -416,7 +416,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "issue/allow-all",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"common_name": "test.com",
 			"ttl":         "60s",
 		},
@@ -445,7 +445,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "revoke",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"serial_number": serialNum,
 		},
 		MountPoint: "pki/",
@@ -464,7 +464,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "config/crl",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"expiry":  "72h",
 			"disable": "false",
 		},
@@ -478,7 +478,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "config/urls",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"ocsp_servers": []string{"https://localhost:8080"},
 		},
 		MountPoint: "pki/",
@@ -506,7 +506,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 			Operation: logical.UpdateOperation,
 			Path:      path,
 			Storage:   s,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"csr": csr,
 			},
 			MountPoint: "pki/",
@@ -521,7 +521,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"certificate": csr,
 		},
 		MountPoint: "pki/",

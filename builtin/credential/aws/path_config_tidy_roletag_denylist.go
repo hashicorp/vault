@@ -130,7 +130,7 @@ func (b *backend) pathConfigTidyRoletagDenyListRead(ctx context.Context, req *lo
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"safety_buffer":         clientConfig.SafetyBuffer,
 			"disable_periodic_tidy": clientConfig.DisablePeriodicTidy,
 		},

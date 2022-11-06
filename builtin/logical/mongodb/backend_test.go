@@ -26,7 +26,7 @@ func TestBackend_config_connection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configData := map[string]interface{}{
+	configData := map[string]any{
 		"uri":               "sample_connection_uri",
 		"verify_connection": false,
 	}
@@ -59,7 +59,7 @@ func TestBackend_basic(t *testing.T) {
 
 	cleanup, connURI := mongodb.PrepareTestContainer(t, "5.0.10")
 	defer cleanup()
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"uri": connURI,
 	}
 
@@ -83,7 +83,7 @@ func TestBackend_roleCrud(t *testing.T) {
 
 	cleanup, connURI := mongodb.PrepareTestContainer(t, "5.0.10")
 	defer cleanup()
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"uri": connURI,
 	}
 
@@ -109,7 +109,7 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 
 	cleanup, connURI := mongodb.PrepareTestContainer(t, "5.0.10")
 	defer cleanup()
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"uri": connURI,
 	}
 
@@ -123,7 +123,7 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 	})
 }
 
-func testAccStepConfig(d map[string]interface{}, expectError bool) logicaltest.TestStep {
+func testAccStepConfig(d map[string]any, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
@@ -156,7 +156,7 @@ func testAccStepRole() logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/web",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"db":    testDb,
 			"roles": testMongoDBRoles,
 		},
@@ -241,7 +241,7 @@ func testAccStepWriteLease() logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/lease",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"ttl":     "1h5m",
 			"max_ttl": "24h",
 		},

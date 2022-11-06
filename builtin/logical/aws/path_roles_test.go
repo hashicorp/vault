@@ -23,7 +23,7 @@ func TestBackend_PathListRoles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"role_arns":       []string{"arn:aws:iam::123456789012:role/path/RoleName"},
 		"credential_type": assumedRoleCred,
 		"default_sts_ttl": 3600,
@@ -228,7 +228,7 @@ func TestRoleCRUDWithPermissionsBoundary(t *testing.T) {
 
 	permissionsBoundaryARN := "arn:aws:iam::aws:policy/EC2FullAccess"
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"credential_type":          iamUserCred,
 		"policy_arns":              []string{adminAccessPolicyARN},
 		"permissions_boundary_arn": permissionsBoundaryARN,
@@ -270,7 +270,7 @@ func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"credential_type":          assumedRoleCred, // only iamUserCred supported with permissions_boundary_arn
 		"role_arns":                []string{"arn:aws:iam::123456789012:role/VaultRole"},
 		"permissions_boundary_arn": "arn:aws:iam::aws:policy/FooBar",
@@ -286,7 +286,7 @@ func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
 		t.Fatalf("bad: expected role creation to fail due to bad credential_type, but it didn't. resp:%#v\nerr:%v", resp, err)
 	}
 
-	roleData = map[string]interface{}{
+	roleData = map[string]any{
 		"credential_type":          iamUserCred,
 		"policy_arns":              []string{adminAccessPolicyARN},
 		"permissions_boundary_arn": "arn:aws:notiam::aws:policy/FooBar",

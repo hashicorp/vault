@@ -86,7 +86,7 @@ func (c *VersionHistoryCommand) Run(args []string) int {
 		return OutputData(c.UI, resp)
 	}
 
-	var keyInfo map[string]interface{}
+	var keyInfo map[string]any
 
 	keys, ok := extractListData(resp)
 	if !ok {
@@ -94,7 +94,7 @@ func (c *VersionHistoryCommand) Run(args []string) int {
 		return 2
 	}
 
-	keyInfo, ok = resp.Data["key_info"].(map[string]interface{})
+	keyInfo, ok = resp.Data["key_info"].(map[string]any)
 	if !ok {
 		c.UI.Error("Expected key_info in response to be a map")
 		return 2
@@ -113,7 +113,7 @@ func (c *VersionHistoryCommand) Run(args []string) int {
 
 		versionInfoRaw := keyInfo[version]
 
-		versionInfo, ok := versionInfoRaw.(map[string]interface{})
+		versionInfo, ok := versionInfoRaw.(map[string]any)
 		if !ok {
 			c.UI.Error(fmt.Sprintf("Expected version info for %q to be map", version))
 			return 2

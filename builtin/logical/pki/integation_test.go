@@ -22,7 +22,7 @@ func TestIntegration_RotateRootUsesNext(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/rotate/internal",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"common_name": "test.com",
 		},
 		MountPoint: "pki/",
@@ -42,7 +42,7 @@ func TestIntegration_RotateRootUsesNext(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/rotate/internal",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"common_name": "test.com",
 		},
 		MountPoint: "pki/",
@@ -63,7 +63,7 @@ func TestIntegration_RotateRootUsesNext(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/rotate/internal",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"common_name": "test.com",
 			"issuer_name": "next-cert",
 		},
@@ -94,7 +94,7 @@ func TestIntegration_ReplaceRootNormal(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/replace",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"default": issuerId2.String(),
 		},
 		MountPoint: "pki/",
@@ -133,7 +133,7 @@ func TestIntegration_ReplaceRootDefaultsToNext(t *testing.T) {
 		Operation:  logical.UpdateOperation,
 		Path:       "root/replace",
 		Storage:    s,
-		Data:       map[string]interface{}{},
+		Data:       map[string]any{},
 		MountPoint: "pki/",
 	})
 	require.NoError(t, err, "failed replacing root")
@@ -169,7 +169,7 @@ func TestIntegration_ReplaceRootBadIssuer(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/replace",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"default": "a-bad-issuer-id",
 		},
 		MountPoint: "pki/",
@@ -183,7 +183,7 @@ func TestIntegration_ReplaceRootBadIssuer(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/replace",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"default": "default",
 		},
 		MountPoint: "pki/",
@@ -197,7 +197,7 @@ func TestIntegration_ReplaceRootBadIssuer(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/replace",
 		Storage:   s,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"default": "",
 		},
 		MountPoint: "pki/",
@@ -217,7 +217,7 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "issuers/generate/root/internal",
 		Storage:   rootStorage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"common_name": "test.com",
 		},
 		MountPoint: "pki/",
@@ -232,7 +232,7 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "issuers/generate/intermediate/internal",
 		Storage:   intStorage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"common_name": "test.com",
 		},
 		MountPoint: "pki-int/",
@@ -247,7 +247,7 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-intermediate",
 		Storage:   rootStorage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"csr":    intCsr,
 			"format": "pem_bundle",
 		},
@@ -264,7 +264,7 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "intermediate/set-signed",
 		Storage:   intStorage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"certificate": rootCert + "\n" + intCert + "\n",
 		},
 		MountPoint: "pki-int/",
@@ -278,7 +278,7 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "roles/example",
 		Storage:   intStorage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"allowed_domains":  "example.com",
 			"allow_subdomains": "true",
 			"max_ttl":          "1h",
@@ -293,7 +293,7 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "issue/example",
 		Storage:   intStorage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"common_name": "test.example.com",
 			"ttl":         "5m",
 		},
@@ -334,7 +334,7 @@ func TestIntegration_CSRGeneration(t *testing.T) {
 		}
 		testName := fmt.Sprintf("%s-%d-%d", keyTypeName, tc.keyBits, tc.sigBits)
 		t.Run(testName, func(t *testing.T) {
-			resp, err := CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+			resp, err := CBWrite(b, s, "intermediate/generate/internal", map[string]any{
 				"common_name":    "myint.com",
 				"key_type":       tc.keyType,
 				"key_bits":       tc.keyBits,
@@ -362,7 +362,7 @@ func genTestRootCa(t *testing.T, b *backend, s logical.Storage) (issuerID, keyID
 }
 
 func genTestRootCaWithIssuerName(t *testing.T, b *backend, s logical.Storage, issuerName string) (issuerID, keyID) {
-	data := map[string]interface{}{
+	data := map[string]any{
 		"common_name": "test.com",
 	}
 	if len(issuerName) > 0 {

@@ -71,7 +71,7 @@ type TestStep struct {
 	Path string
 
 	// Arguments to pass in
-	Data map[string]interface{}
+	Data map[string]any
 
 	// Check is called after this step is executed in order to test that
 	// the step executed successfully. If this is not set, then the next
@@ -266,7 +266,7 @@ func Test(tt TestT, c TestCase) {
 	}
 	var tokenPolicies []string
 	if tokenPoliciesRaw, ok := tokenInfo.Data["policies"]; ok {
-		if tokenPoliciesSliceRaw, ok := tokenPoliciesRaw.([]interface{}); ok {
+		if tokenPoliciesSliceRaw, ok := tokenPoliciesRaw.([]any); ok {
 			for _, p := range tokenPoliciesSliceRaw {
 				tokenPolicies = append(tokenPolicies, p.(string))
 			}
@@ -522,9 +522,9 @@ func TestCheckError() TestCheckFunc {
 //
 // Users should just use a *testing.T object, which implements this.
 type TestT interface {
-	Error(args ...interface{})
-	Fatal(args ...interface{})
-	Skip(args ...interface{})
+	Error(args ...any)
+	Fatal(args ...any)
+	Skip(args ...any)
 }
 
 var testTesting = false

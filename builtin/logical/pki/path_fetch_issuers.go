@@ -34,7 +34,7 @@ func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Reque
 	}
 
 	var responseKeys []string
-	responseInfo := make(map[string]interface{})
+	responseInfo := make(map[string]any)
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 	entries, err := sc.listIssuers()
@@ -57,7 +57,7 @@ func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Reque
 		}
 
 		responseKeys = append(responseKeys, string(identifier))
-		responseInfo[string(identifier)] = map[string]interface{}{
+		responseInfo[string(identifier)] = map[string]any{
 			"issuer_name": issuer.Name,
 			"is_default":  identifier == config.DefaultIssuerId,
 		}
@@ -215,7 +215,7 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		}
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"issuer_id":                      issuer.ID,
 		"issuer_name":                    issuer.Name,
 		"key_id":                         issuer.KeyID,
@@ -796,7 +796,7 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 
 	if strings.HasSuffix(req.Path, "/pem") || strings.HasSuffix(req.Path, "/der") {
 		return &logical.Response{
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				logical.HTTPContentType: contentType,
 				logical.HTTPRawBody:     certificate,
 				logical.HTTPStatusCode:  statusCode,
@@ -804,7 +804,7 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 		}, nil
 	} else {
 		return &logical.Response{
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"certificate": string(certificate),
 				"ca_chain":    issuer.CAChain,
 			},
@@ -1001,7 +1001,7 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 
 	if strings.HasSuffix(req.Path, "/der") || strings.HasSuffix(req.Path, "/pem") {
 		return &logical.Response{
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				logical.HTTPContentType: contentType,
 				logical.HTTPRawBody:     certificate,
 				logical.HTTPStatusCode:  statusCode,
@@ -1010,7 +1010,7 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"crl": string(certificate),
 		},
 	}, nil

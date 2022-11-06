@@ -24,8 +24,8 @@ var (
 
 	getSystemSchemas = func() []func() *memdb.TableSchema { return nil }
 
-	getEGPListResponseKeyInfo = func(*SystemBackend, *namespace.Namespace) map[string]interface{} { return nil }
-	addSentinelPolicyData     = func(map[string]interface{}, *Policy) {}
+	getEGPListResponseKeyInfo = func(*SystemBackend, *namespace.Namespace) map[string]any { return nil }
+	addSentinelPolicyData     = func(map[string]any, *Policy) {}
 	inputSentinelPolicyData   = func(*framework.FieldData, *Policy) *logical.Response { return nil }
 
 	controlGroupUnwrap = func(context.Context, *SystemBackend, string, bool) (string, error) {
@@ -64,7 +64,7 @@ var (
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 						resp := &logical.Response{
-							Data: map[string]interface{}{
+							Data: map[string]any{
 								"mode": "disabled",
 							},
 						}

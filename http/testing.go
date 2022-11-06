@@ -11,7 +11,7 @@ import (
 )
 
 func TestListener(tb testing.TB) (net.Listener, string) {
-	fail := func(format string, args ...interface{}) {
+	fail := func(format string, args ...any) {
 		panic(fmt.Sprintf(format, args...))
 	}
 	if tb != nil {

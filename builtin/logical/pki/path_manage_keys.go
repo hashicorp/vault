@@ -25,7 +25,7 @@ func pathGenerateKey(b *backend) *framework.Path {
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
 "ec" and "ed25519" are the only valid values.`,
-				AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
+				AllowedValues: []any{"rsa", "ec", "ed25519"},
 				DisplayAttrs: &framework.DisplayAttributes{
 					Value: "rsa",
 				},
@@ -132,7 +132,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return nil, err
 	}
-	responseData := map[string]interface{}{
+	responseData := map[string]any{
 		keyIdParam:   key.ID,
 		keyNameParam: key.Name,
 		keyTypeParam: string(actualPrivateKeyType),
@@ -237,7 +237,7 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 	}
 
 	resp := logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			keyIdParam:   key.ID,
 			keyNameParam: key.Name,
 			keyTypeParam: key.PrivateKeyType,

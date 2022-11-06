@@ -195,7 +195,7 @@ func RegisterDatabaseServer(s grpc.ServiceRegistrar, srv DatabaseServer) {
 	s.RegisterService(&Database_ServiceDesc, srv)
 }
 
-func _Database_Type_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Database_Type_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -207,13 +207,13 @@ func _Database_Type_Handler(srv interface{}, ctx context.Context, dec func(inter
 		Server:     srv,
 		FullMethod: "/dbplugin.Database/Type",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(DatabaseServer).Type(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Database_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Database_CreateUser_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(CreateUserRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -225,13 +225,13 @@ func _Database_CreateUser_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/dbplugin.Database/CreateUser",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(DatabaseServer).CreateUser(ctx, req.(*CreateUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Database_RenewUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Database_RenewUser_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(RenewUserRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -243,13 +243,13 @@ func _Database_RenewUser_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/dbplugin.Database/RenewUser",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(DatabaseServer).RenewUser(ctx, req.(*RenewUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Database_RevokeUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Database_RevokeUser_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(RevokeUserRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -261,13 +261,13 @@ func _Database_RevokeUser_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/dbplugin.Database/RevokeUser",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(DatabaseServer).RevokeUser(ctx, req.(*RevokeUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Database_RotateRootCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Database_RotateRootCredentials_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(RotateRootCredentialsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -279,13 +279,13 @@ func _Database_RotateRootCredentials_Handler(srv interface{}, ctx context.Contex
 		Server:     srv,
 		FullMethod: "/dbplugin.Database/RotateRootCredentials",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(DatabaseServer).RotateRootCredentials(ctx, req.(*RotateRootCredentialsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Database_Init_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Database_Init_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(InitRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -297,13 +297,13 @@ func _Database_Init_Handler(srv interface{}, ctx context.Context, dec func(inter
 		Server:     srv,
 		FullMethod: "/dbplugin.Database/Init",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(DatabaseServer).Init(ctx, req.(*InitRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Database_Close_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Database_Close_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -315,13 +315,13 @@ func _Database_Close_Handler(srv interface{}, ctx context.Context, dec func(inte
 		Server:     srv,
 		FullMethod: "/dbplugin.Database/Close",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(DatabaseServer).Close(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Database_SetCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Database_SetCredentials_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(SetCredentialsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -333,13 +333,13 @@ func _Database_SetCredentials_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/dbplugin.Database/SetCredentials",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(DatabaseServer).SetCredentials(ctx, req.(*SetCredentialsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Database_GenerateCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Database_GenerateCredentials_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -351,13 +351,13 @@ func _Database_GenerateCredentials_Handler(srv interface{}, ctx context.Context,
 		Server:     srv,
 		FullMethod: "/dbplugin.Database/GenerateCredentials",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(DatabaseServer).GenerateCredentials(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Database_Initialize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Database_Initialize_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(InitializeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -369,7 +369,7 @@ func _Database_Initialize_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/dbplugin.Database/Initialize",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(DatabaseServer).Initialize(ctx, req.(*InitializeRequest))
 	}
 	return interceptor(ctx, in, info, handler)

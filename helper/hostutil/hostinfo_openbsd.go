@@ -9,12 +9,12 @@ import (
 )
 
 type HostInfo struct {
-	Timestamp time.Time     `json:"timestamp"`
-	CPU       []interface{} `json:"cpu"`
-	CPUTimes  []interface{} `json:"cpu_times"`
-	Disk      []interface{} `json:"disk"`
-	Host      interface{}   `json:"host"`
-	Memory    interface{}   `json:"memory"`
+	Timestamp time.Time `json:"timestamp"`
+	CPU       []any     `json:"cpu"`
+	CPUTimes  []any     `json:"cpu_times"`
+	Disk      []any     `json:"disk"`
+	Host      any       `json:"host"`
+	Memory    any       `json:"memory"`
 }
 
 func CollectHostInfo(ctx context.Context) (*HostInfo, error) {

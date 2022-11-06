@@ -108,7 +108,7 @@ func (b *backend) pathCAIssuersRead(ctx context.Context, req *logical.Request, _
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			defaultRef: config.DefaultIssuerId,
 		},
 	}, nil
@@ -136,7 +136,7 @@ func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, 
 	}
 
 	response := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"default": parsedIssuer,
 		},
 	}
@@ -213,7 +213,7 @@ func (b *backend) pathKeyDefaultRead(ctx context.Context, req *logical.Request, 
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			defaultRef: config.DefaultKeyId,
 		},
 	}, nil
@@ -246,7 +246,7 @@ func (b *backend) pathKeyDefaultWrite(ctx context.Context, req *logical.Request,
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			defaultRef: parsedKey,
 		},
 	}, nil

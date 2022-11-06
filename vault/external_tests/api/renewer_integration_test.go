@@ -17,7 +17,7 @@ func TestRenewer_Renew(t *testing.T) {
 		t.Run("kv", func(t *testing.T) {
 			t.Parallel()
 
-			if _, err := client.Logical().Write("secret/value", map[string]interface{}{
+			if _, err := client.Logical().Write("secret/value", map[string]any{
 				"foo": "bar",
 			}); err != nil {
 				t.Fatal(err)
@@ -58,7 +58,7 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			secret, err := client.Logical().Write("transit/encrypt/my-app", map[string]interface{}{
+			secret, err := client.Logical().Write("transit/encrypt/my-app", map[string]any{
 				"plaintext": "Zm9vCg==",
 			})
 			if err != nil {

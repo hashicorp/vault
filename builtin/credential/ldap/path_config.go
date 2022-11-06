@@ -205,7 +205,7 @@ func (b *backend) getConfigFieldData() (*framework.FieldData, error) {
 		return nil, logical.ErrUnsupportedPath
 	}
 
-	raw := make(map[string]interface{}, len(configPath.Fields))
+	raw := make(map[string]any, len(configPath.Fields))
 
 	fd := framework.FieldData{
 		Raw:    raw,

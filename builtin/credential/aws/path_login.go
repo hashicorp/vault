@@ -994,7 +994,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		Alias: &logical.Alias{
 			Name: identityAlias,
 		},
-		InternalData: map[string]interface{}{
+		InternalData: map[string]any{
 			"instance_id": identityDocParsed.InstanceID,
 			"region":      identityDocParsed.Region,
 			"account_id":  identityDocParsed.AccountID,
@@ -1458,7 +1458,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		Metadata: map[string]string{
 			"role_id": roleEntry.RoleID,
 		},
-		InternalData: map[string]interface{}{
+		InternalData: map[string]any{
 			"role_name":           roleName,
 			"role_id":             roleEntry.RoleID,
 			"canonical_arn":       entity.canonicalArn(),
@@ -1773,12 +1773,12 @@ type ResponseMetadata struct {
 // identityDocument represents the items of interest from the EC2 instance
 // identity document
 type identityDocument struct {
-	Tags        map[string]interface{} `json:"tags,omitempty"`
-	InstanceID  string                 `json:"instanceId,omitempty"`
-	AmiID       string                 `json:"imageId,omitempty"`
-	AccountID   string                 `json:"accountId,omitempty"`
-	Region      string                 `json:"region,omitempty"`
-	PendingTime string                 `json:"pendingTime,omitempty"`
+	Tags        map[string]any `json:"tags,omitempty"`
+	InstanceID  string         `json:"instanceId,omitempty"`
+	AmiID       string         `json:"imageId,omitempty"`
+	AccountID   string         `json:"accountId,omitempty"`
+	Region      string         `json:"region,omitempty"`
+	PendingTime string         `json:"pendingTime,omitempty"`
 }
 
 // roleTagLoginResponse represents the return values required after the process

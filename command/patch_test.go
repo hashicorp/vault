@@ -92,7 +92,7 @@ func TestPatchCommand_Run(t *testing.T) {
 				t.Fatalf("failed to prime role: %v", err)
 			}
 
-			if _, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+			if _, err := client.Logical().Write("pki/root/generate/internal", map[string]any{
 				"key_type":    "ec",
 				"common_name": "Root X1",
 			}); err != nil {
@@ -130,7 +130,7 @@ func TestPatchCommand_Run(t *testing.T) {
 			t.Fatalf("failed to prime role: %v", err)
 		}
 
-		if _, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		if _, err := client.Logical().Write("pki/root/generate/internal", map[string]any{
 			"key_type":    "ec",
 			"common_name": "Root X1",
 		}); err != nil {

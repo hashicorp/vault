@@ -19,7 +19,7 @@ func testUnwrapCommand(tb testing.TB) (*cli.MockUi, *UnwrapCommand) {
 	}
 }
 
-func testUnwrapWrappedToken(tb testing.TB, client *api.Client, data map[string]interface{}) string {
+func testUnwrapWrappedToken(tb testing.TB, client *api.Client, data map[string]any) string {
 	tb.Helper()
 
 	wrapped, err := client.Logical().Write("sys/wrapping/wrap", data)
@@ -79,7 +79,7 @@ func TestUnwrapCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				wrappedToken := testUnwrapWrappedToken(t, client, map[string]interface{}{
+				wrappedToken := testUnwrapWrappedToken(t, client, map[string]any{
 					"foo": "bar",
 				})
 
@@ -131,7 +131,7 @@ func TestUnwrapCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		wrappedToken := testUnwrapWrappedToken(t, client, map[string]interface{}{
+		wrappedToken := testUnwrapWrappedToken(t, client, map[string]any{
 			"foo": "bar",
 		})
 

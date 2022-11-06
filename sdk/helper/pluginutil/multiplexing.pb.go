@@ -147,7 +147,7 @@ func file_sdk_helper_pluginutil_multiplexing_proto_rawDescGZIP() []byte {
 }
 
 var file_sdk_helper_pluginutil_multiplexing_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_sdk_helper_pluginutil_multiplexing_proto_goTypes = []interface{}{
+var file_sdk_helper_pluginutil_multiplexing_proto_goTypes = []any{
 	(*MultiplexingSupportRequest)(nil),  // 0: pluginutil.multiplexing.MultiplexingSupportRequest
 	(*MultiplexingSupportResponse)(nil), // 1: pluginutil.multiplexing.MultiplexingSupportResponse
 }
@@ -167,7 +167,7 @@ func file_sdk_helper_pluginutil_multiplexing_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_sdk_helper_pluginutil_multiplexing_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_helper_pluginutil_multiplexing_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*MultiplexingSupportRequest); i {
 			case 0:
 				return &v.state
@@ -179,7 +179,7 @@ func file_sdk_helper_pluginutil_multiplexing_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_helper_pluginutil_multiplexing_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_helper_pluginutil_multiplexing_proto_msgTypes[1].Exporter = func(v any, i int) any {
 			switch v := v.(*MultiplexingSupportResponse); i {
 			case 0:
 				return &v.state

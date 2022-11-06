@@ -55,19 +55,19 @@ const (
 
 // debugIndex represents the data structure in the index file
 type debugIndex struct {
-	Version                int                    `json:"version"`
-	VaultAddress           string                 `json:"vault_address"`
-	ClientVersion          string                 `json:"client_version"`
-	ServerVersion          string                 `json:"server_version"`
-	Timestamp              time.Time              `json:"timestamp"`
-	DurationSeconds        int                    `json:"duration_seconds"`
-	IntervalSeconds        int                    `json:"interval_seconds"`
-	MetricsIntervalSeconds int                    `json:"metrics_interval_seconds"`
-	Compress               bool                   `json:"compress"`
-	RawArgs                []string               `json:"raw_args"`
-	Targets                []string               `json:"targets"`
-	Output                 map[string]interface{} `json:"output"`
-	Errors                 []*captureError        `json:"errors"`
+	Version                int             `json:"version"`
+	VaultAddress           string          `json:"vault_address"`
+	ClientVersion          string          `json:"client_version"`
+	ServerVersion          string          `json:"server_version"`
+	Timestamp              time.Time       `json:"timestamp"`
+	DurationSeconds        int             `json:"duration_seconds"`
+	IntervalSeconds        int             `json:"interval_seconds"`
+	MetricsIntervalSeconds int             `json:"metrics_interval_seconds"`
+	Compress               bool            `json:"compress"`
+	RawArgs                []string        `json:"raw_args"`
+	Targets                []string        `json:"targets"`
+	Output                 map[string]any  `json:"output"`
+	Errors                 []*captureError `json:"errors"`
 }
 
 // captureError holds an error entry that can occur during polling capture.
@@ -109,11 +109,11 @@ type DebugCommand struct {
 	ShutdownCh chan struct{}
 
 	// Collection slices to hold data
-	hostInfoCollection          []map[string]interface{}
-	metricsCollection           []map[string]interface{}
-	replicationStatusCollection []map[string]interface{}
-	serverStatusCollection      []map[string]interface{}
-	inFlightReqStatusCollection []map[string]interface{}
+	hostInfoCollection          []map[string]any
+	metricsCollection           []map[string]any
+	replicationStatusCollection []map[string]any
+	serverStatusCollection      []map[string]any
+	inFlightReqStatusCollection []map[string]any
 
 	// cachedClient holds the client retrieved during preflight
 	cachedClient *api.Client
@@ -313,7 +313,7 @@ func (c *DebugCommand) Synopsis() string {
 }
 
 func (c *DebugCommand) generateIndex() error {
-	outputLayout := map[string]interface{}{
+	outputLayout := map[string]any{
 		"files": []string{},
 	}
 	// Walk the directory to generate the output layout
@@ -335,7 +335,7 @@ func (c *DebugCommand) generateIndex() error {
 				return err
 			}
 
-			outputLayout[info.Name()] = map[string]interface{}{
+			outputLayout[info.Name()] = map[string]any{
 				"timestamp": parsedTime,
 				"files":     []string{},
 			}
@@ -350,8 +350,8 @@ func (c *DebugCommand) generateIndex() error {
 		dir, file := filepath.Split(relPath)
 		if len(dir) != 0 {
 			dir = filepath.Clean(dir)
-			filesArr := outputLayout[dir].(map[string]interface{})["files"]
-			outputLayout[dir].(map[string]interface{})["files"] = append(filesArr.([]string), file)
+			filesArr := outputLayout[dir].(map[string]any)["files"]
+			outputLayout[dir].(map[string]any)["files"] = append(filesArr.([]string), file)
 		} else {
 			outputLayout["files"] = append(outputLayout["files"].([]string), file)
 		}
@@ -529,7 +529,7 @@ func (c *DebugCommand) captureStaticTargets() error {
 		}
 
 		if resp != nil && resp.Data != nil {
-			collection := []map[string]interface{}{
+			collection := []map[string]any{
 				{
 					"timestamp": time.Now().UTC(),
 					"config":    resp.Data,
@@ -725,7 +725,7 @@ func (c *DebugCommand) collectMetrics(ctx context.Context) {
 		if resp != nil {
 			defer resp.Body.Close()
 
-			metricsEntry := make(map[string]interface{})
+			metricsEntry := make(map[string]any)
 			err := json.NewDecoder(resp.Body).Decode(&metricsEntry)
 			if err != nil {
 				c.captureError("metrics", err)
@@ -906,7 +906,7 @@ func (c *DebugCommand) collectServerStatus(ctx context.Context) {
 			c.captureError("server-status.seal", err)
 		}
 
-		statusEntry := map[string]interface{}{
+		statusEntry := map[string]any{
 			"timestamp": time.Now().UTC(),
 			"health":    healthInfo,
 			"seal":      sealInfo,
@@ -938,7 +938,7 @@ func (c *DebugCommand) collectInFlightRequestStatus(ctx context.Context) {
 			return
 		}
 
-		var data map[string]interface{}
+		var data map[string]any
 		if resp != nil {
 			defer resp.Body.Close()
 			err = jsonutil.DecodeJSONFromReader(resp.Body, &data)
@@ -947,7 +947,7 @@ func (c *DebugCommand) collectInFlightRequestStatus(ctx context.Context) {
 				return
 			}
 
-			statusEntry := map[string]interface{}{
+			statusEntry := map[string]any{
 				"timestamp":          time.Now().UTC(),
 				"in_flight_requests": data,
 			}
@@ -958,7 +958,7 @@ func (c *DebugCommand) collectInFlightRequestStatus(ctx context.Context) {
 
 // persistCollection writes the collected data for a particular target onto the
 // specified file. If the collection is empty, it returns immediately.
-func (c *DebugCommand) persistCollection(collection []map[string]interface{}, outFile string) error {
+func (c *DebugCommand) persistCollection(collection []map[string]any, outFile string) error {
 	if len(collection) == 0 {
 		return nil
 	}

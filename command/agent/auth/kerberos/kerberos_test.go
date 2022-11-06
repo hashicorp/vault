@@ -73,7 +73,7 @@ func simpleAuthConfig() *auth.AuthConfig {
 		Logger:    hclog.NewNullLogger(),
 		MountPath: "kerberos",
 		WrapTTL:   20,
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"username":      "grace",
 			"service":       "HTTP/05a65fad28ef.matrix.lan:8200",
 			"realm":         "MATRIX.LAN",

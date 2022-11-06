@@ -37,7 +37,7 @@ func TestOcsp_Disabled(t *testing.T) {
 		localTT := tt
 		t.Run(localTT.reqType, func(t *testing.T) {
 			b, s, testEnv := setupOcspEnv(t, "rsa")
-			resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+			resp, err := CBWrite(b, s, "config/crl", map[string]any{
 				"ocsp_disable": "true",
 			})
 			requireSuccessNilResponse(t, resp, err)
@@ -80,7 +80,7 @@ func TestOcsp_WrongIssuerInRequest(t *testing.T) {
 
 	b, s, testEnv := setupOcspEnv(t, "ec")
 	serial := serialFromCert(testEnv.leafCertIssuer1)
-	resp, err := CBWrite(b, s, "revoke", map[string]interface{}{
+	resp, err := CBWrite(b, s, "revoke", map[string]any{
 		"serial_number": serial,
 	})
 	requireSuccessNonNilResponse(t, resp, err, "revoke")
@@ -148,7 +148,7 @@ func TestOcsp_InvalidIssuerIdInRevocationEntry(t *testing.T) {
 
 	// Revoke the entry
 	serial := serialFromCert(testEnv.leafCertIssuer1)
-	resp, err := CBWrite(b, s, "revoke", map[string]interface{}{
+	resp, err := CBWrite(b, s, "revoke", map[string]any{
 		"serial_number": serial,
 	})
 	requireSuccessNonNilResponse(t, resp, err, "revoke")
@@ -191,7 +191,7 @@ func TestOcsp_UnknownIssuerIdWithDefaultHavingOcspUsageRemoved(t *testing.T) {
 
 	// Revoke the entry
 	serial := serialFromCert(testEnv.leafCertIssuer1)
-	resp, err := CBWrite(b, s, "revoke", map[string]interface{}{
+	resp, err := CBWrite(b, s, "revoke", map[string]any{
 		"serial_number": serial,
 	})
 	requireSuccessNonNilResponse(t, resp, err, "revoke")
@@ -210,11 +210,11 @@ func TestOcsp_UnknownIssuerIdWithDefaultHavingOcspUsageRemoved(t *testing.T) {
 	require.NoError(t, err, "failed writing out new revocation entry: %v", revEntry)
 
 	// Update our issuers to no longer have the OcspSigning usage
-	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId1.String(), map[string]interface{}{
+	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId1.String(), map[string]any{
 		"usage": "read-only,issuing-certificates,crl-signing",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed resetting usage flags on issuer1")
-	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId2.String(), map[string]interface{}{
+	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId2.String(), map[string]any{
 		"usage": "read-only,issuing-certificates,crl-signing",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed resetting usage flags on issuer2")
@@ -237,13 +237,13 @@ func TestOcsp_RevokedCertHasIssuerWithoutOcspUsage(t *testing.T) {
 	b, s, testEnv := setupOcspEnv(t, "ec")
 
 	// Revoke our certificate
-	resp, err := CBWrite(b, s, "revoke", map[string]interface{}{
+	resp, err := CBWrite(b, s, "revoke", map[string]any{
 		"serial_number": serialFromCert(testEnv.leafCertIssuer1),
 	})
 	requireSuccessNonNilResponse(t, resp, err, "revoke")
 
 	// Update our issuer to no longer have the OcspSigning usage
-	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId1.String(), map[string]interface{}{
+	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId1.String(), map[string]any{
 		"usage": "read-only,issuing-certificates,crl-signing",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed resetting usage flags on issuer")
@@ -273,7 +273,7 @@ func TestOcsp_RevokedCertHasIssuerWithoutAKey(t *testing.T) {
 	b, s, testEnv := setupOcspEnv(t, "ec")
 
 	// Revoke our certificate
-	resp, err := CBWrite(b, s, "revoke", map[string]interface{}{
+	resp, err := CBWrite(b, s, "revoke", map[string]any{
 		"serial_number": serialFromCert(testEnv.leafCertIssuer1),
 	})
 	requireSuccessNonNilResponse(t, resp, err, "revoke")
@@ -319,7 +319,7 @@ func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 	b, s, testEnv := setupOcspEnv(t, "ec")
 
 	// Create a matching issuer as issuer1 with the same backing key
-	resp, err := CBWrite(b, s, "root/rotate/existing", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/rotate/existing", map[string]any{
 		"key_ref":     testEnv.keyId1,
 		"ttl":         "40h",
 		"common_name": "example-ocsp.com",
@@ -329,7 +329,7 @@ func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 	rotatedCert := parseCert(t, resp.Data["certificate"].(string))
 
 	// Remove ocsp signing from our issuer
-	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId1.String(), map[string]interface{}{
+	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId1.String(), map[string]any{
 		"usage": "read-only,issuing-certificates,crl-signing",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed resetting usage flags on issuer")
@@ -430,7 +430,7 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKe
 	requireOcspResponseSignedBy(t, ocspResp, testEnv.issuer1)
 
 	// Now revoke it
-	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	resp, err = CBWrite(b, s, "revoke", map[string]any{
 		"serial_number": serialFromCert(testEnv.leafCertIssuer1),
 	})
 	requireSuccessNonNilResponse(t, resp, err, "revoke")
@@ -517,7 +517,7 @@ func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, ca
 	var keyIds []keyID
 
 	for i := 0; i < 2; i++ {
-		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		resp, err := CBWrite(b, s, "root/generate/internal", map[string]any{
 			"key_type":       keyType,
 			"key_bits":       caKeyBits,
 			"signature_bits": caKeySigBits,
@@ -529,7 +529,7 @@ func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, ca
 		issuerId := resp.Data["issuer_id"].(issuerID)
 		keyId := resp.Data["key_id"].(keyID)
 
-		resp, err = CBWrite(b, s, "roles/test"+strconv.FormatInt(int64(i), 10), map[string]interface{}{
+		resp, err = CBWrite(b, s, "roles/test"+strconv.FormatInt(int64(i), 10), map[string]any{
 			"allow_bare_domains": true,
 			"allow_subdomains":   true,
 			"allowed_domains":    "foobar.com",
@@ -540,7 +540,7 @@ func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, ca
 		})
 		requireSuccessNilResponse(t, resp, err, "roles/test"+strconv.FormatInt(int64(i), 10))
 
-		resp, err = CBWrite(b, s, "issue/test"+strconv.FormatInt(int64(i), 10), map[string]interface{}{
+		resp, err = CBWrite(b, s, "issue/test"+strconv.FormatInt(int64(i), 10), map[string]any{
 			"common_name": "test.foobar.com",
 		})
 		requireSuccessNonNilResponse(t, resp, err, "roles/test"+strconv.FormatInt(int64(i), 10))

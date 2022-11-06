@@ -168,7 +168,7 @@ func prepareTestContainer(t *testing.T) (func(), *DockerVaultConfig) {
 		}
 
 		// Create default aesgcm key
-		if _, err := vault.Logical().Write(path.Join(testMountPath, "keys", testKeyName), map[string]interface{}{}); err != nil {
+		if _, err := vault.Logical().Write(path.Join(testMountPath, "keys", testKeyName), map[string]any{}); err != nil {
 			return nil, err
 		}
 

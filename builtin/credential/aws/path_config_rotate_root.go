@@ -181,7 +181,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, errs
 	}
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key": clientConf.AccessKey,
 		},
 	}, nil

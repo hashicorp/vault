@@ -120,7 +120,7 @@ func (c *PluginInfoCommand) Run(args []string) int {
 		return 2
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"args":               resp.Args,
 		"builtin":            resp.Builtin,
 		"command":            resp.Command,

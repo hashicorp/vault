@@ -173,7 +173,7 @@ type alicloudMethod struct {
 	stopCh chan struct{}
 }
 
-func (a *alicloudMethod) Authenticate(context.Context, *api.Client) (string, http.Header, map[string]interface{}, error) {
+func (a *alicloudMethod) Authenticate(context.Context, *api.Client) (string, http.Header, map[string]any, error) {
 	a.credLock.Lock()
 	defer a.credLock.Unlock()
 

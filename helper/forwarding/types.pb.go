@@ -419,7 +419,7 @@ func file_helper_forwarding_types_proto_rawDescGZIP() []byte {
 }
 
 var file_helper_forwarding_types_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_helper_forwarding_types_proto_goTypes = []interface{}{
+var file_helper_forwarding_types_proto_goTypes = []any{
 	(*Request)(nil),     // 0: forwarding.Request
 	(*URL)(nil),         // 1: forwarding.URL
 	(*HeaderEntry)(nil), // 2: forwarding.HeaderEntry
@@ -446,7 +446,7 @@ func file_helper_forwarding_types_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_helper_forwarding_types_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_forwarding_types_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*Request); i {
 			case 0:
 				return &v.state
@@ -458,7 +458,7 @@ func file_helper_forwarding_types_proto_init() {
 				return nil
 			}
 		}
-		file_helper_forwarding_types_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_forwarding_types_proto_msgTypes[1].Exporter = func(v any, i int) any {
 			switch v := v.(*URL); i {
 			case 0:
 				return &v.state
@@ -470,7 +470,7 @@ func file_helper_forwarding_types_proto_init() {
 				return nil
 			}
 		}
-		file_helper_forwarding_types_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_forwarding_types_proto_msgTypes[2].Exporter = func(v any, i int) any {
 			switch v := v.(*HeaderEntry); i {
 			case 0:
 				return &v.state
@@ -482,7 +482,7 @@ func file_helper_forwarding_types_proto_init() {
 				return nil
 			}
 		}
-		file_helper_forwarding_types_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_helper_forwarding_types_proto_msgTypes[3].Exporter = func(v any, i int) any {
 			switch v := v.(*Response); i {
 			case 0:
 				return &v.state

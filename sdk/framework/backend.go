@@ -112,7 +112,7 @@ type OperationFunc func(context.Context, *logical.Request, *FieldData) (*logical
 type ExistenceFunc func(context.Context, *logical.Request, *FieldData) (bool, error)
 
 // WALRollbackFunc is the callback for rollbacks.
-type WALRollbackFunc func(context.Context, *logical.Request, string, interface{}) error
+type WALRollbackFunc func(context.Context, *logical.Request, string, any) error
 
 // CleanupFunc is the callback for backend unload.
 type CleanupFunc func(context.Context)
@@ -126,7 +126,7 @@ type InitializeFunc func(context.Context, *logical.InitializationRequest) error
 
 // PatchPreprocessorFunc is used by HandlePatchOperation in order to shape
 // the input as defined by request handler prior to JSON marshaling
-type PatchPreprocessorFunc func(map[string]interface{}) (map[string]interface{}, error)
+type PatchPreprocessorFunc func(map[string]any) (map[string]any, error)
 
 // Initialize is the logical.Backend implementation.
 func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -162,7 +162,7 @@ func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 
 	// Build up the data for the route, with the URL taking priority
 	// for the fields over the PUT data.
-	raw := make(map[string]interface{}, len(path.Fields))
+	raw := make(map[string]any, len(path.Fields))
 	for k, v := range req.Data {
 		raw[k] = v
 	}
@@ -221,7 +221,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	// Build up the data for the route, with the URL taking priority
 	// for the fields over the PUT data.
-	raw := make(map[string]interface{}, len(path.Fields))
+	raw := make(map[string]any, len(path.Fields))
 	var ignored []string
 	for k, v := range req.Data {
 		raw[k] = v
@@ -324,14 +324,14 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 // MergePatch function accepts and returns byte arrays. Null values will unset
 // fields defined within the input's FieldData (as if they were never specified)
 // and remove user-specified keys that exist within a map field.
-func HandlePatchOperation(input *FieldData, resource map[string]interface{}, preprocessor PatchPreprocessorFunc) ([]byte, error) {
+func HandlePatchOperation(input *FieldData, resource map[string]any, preprocessor PatchPreprocessorFunc) ([]byte, error) {
 	var err error
 
 	if resource == nil {
 		return nil, fmt.Errorf("resource does not exist")
 	}
 
-	inputMap := map[string]interface{}{}
+	inputMap := map[string]any{}
 
 	for key := range input.Raw {
 		if _, ok := input.Schema[key]; !ok {
@@ -683,7 +683,7 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 // FieldSchema is a basic schema to describe the format of a path field.
 type FieldSchema struct {
 	Type        FieldType
-	Default     interface{}
+	Default     any
 	Description string
 
 	// The Required and Deprecated members are only used by openapi, and are not actually
@@ -702,7 +702,7 @@ type FieldSchema struct {
 	// This constraint is not (yet) enforced by the framework, but the list is
 	// output as part of OpenAPI generation and may effect documentation and
 	// dynamic UI generation.
-	AllowedValues []interface{}
+	AllowedValues []any
 
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
@@ -711,7 +711,7 @@ type FieldSchema struct {
 
 // DefaultOrZero returns the default value if it is set, or otherwise
 // the zero value of the type.
-func (s *FieldSchema) DefaultOrZero() interface{} {
+func (s *FieldSchema) DefaultOrZero() any {
 	if s.Default != nil {
 		switch s.Type {
 		case TypeDurationSecond, TypeSignedDurationSecond:
@@ -730,7 +730,7 @@ func (s *FieldSchema) DefaultOrZero() interface{} {
 }
 
 // Zero returns the correct zero-value for a specific FieldType
-func (t FieldType) Zero() interface{} {
+func (t FieldType) Zero() any {
 	switch t {
 	case TypeString, TypeNameString, TypeLowerCaseString:
 		return ""
@@ -739,13 +739,13 @@ func (t FieldType) Zero() interface{} {
 	case TypeBool:
 		return false
 	case TypeMap:
-		return map[string]interface{}{}
+		return map[string]any{}
 	case TypeKVPairs:
 		return map[string]string{}
 	case TypeDurationSecond, TypeSignedDurationSecond:
 		return 0
 	case TypeSlice:
-		return []interface{}{}
+		return []any{}
 	case TypeStringSlice, TypeCommaStringSlice:
 		return []string{}
 	case TypeCommaIntSlice:

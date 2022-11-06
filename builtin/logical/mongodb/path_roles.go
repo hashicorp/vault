@@ -91,7 +91,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"db":    role.DB,
 			"roles": string(rolesJsonBytes),
 		},
@@ -129,7 +129,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	var roles []mongodbRole
 	rolesJson := []byte(data.Get("roles").(string))
 	if len(rolesJson) > 0 {
-		var rolesArray []interface{}
+		var rolesArray []any
 		err := json.Unmarshal(rolesJson, &rolesArray)
 		if err != nil {
 			return nil, err
@@ -138,7 +138,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 			switch role := rawRole.(type) {
 			case string:
 				roles = append(roles, mongodbRole{Role: role})
-			case map[string]interface{}:
+			case map[string]any:
 				if db, ok := role["db"].(string); ok {
 					if roleName, ok := role["role"].(string); ok {
 						roles = append(roles, mongodbRole{Role: roleName, DB: db})
@@ -163,7 +163,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	return nil, nil
 }
 
-func (roles mongodbRoles) toStandardRolesArray() []interface{} {
+func (roles mongodbRoles) toStandardRolesArray() []any {
 	// Convert array of role documents like:
 	//
 	// [ { "role": "readWrite" }, { "role": "readWrite", "db": "test" } ]
@@ -174,7 +174,7 @@ func (roles mongodbRoles) toStandardRolesArray() []interface{} {
 	//
 	// MongoDB's createUser command accepts the latter.
 	//
-	var standardRolesArray []interface{}
+	var standardRolesArray []any
 	for _, role := range roles {
 		if role.DB == "" {
 			standardRolesArray = append(standardRolesArray, role.Role)

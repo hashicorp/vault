@@ -72,7 +72,7 @@ func NewKubernetesAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return k, nil
 }
 
-func (k *kubernetesMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
+func (k *kubernetesMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]any, error) {
 	k.logger.Trace("beginning authentication")
 
 	jwtString, err := k.readJWT()
@@ -80,7 +80,7 @@ func (k *kubernetesMethod) Authenticate(ctx context.Context, client *api.Client)
 		return "", nil, nil, fmt.Errorf("error reading JWT with Kubernetes Auth: %w", err)
 	}
 
-	return fmt.Sprintf("%s/login", k.mountPath), nil, map[string]interface{}{
+	return fmt.Sprintf("%s/login", k.mountPath), nil, map[string]any{
 		"role": k.role,
 		"jwt":  jwtString,
 	}, nil

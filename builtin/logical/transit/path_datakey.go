@@ -154,7 +154,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 
 	// Generate the response
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"ciphertext":  ciphertext,
 			"key_version": keyVersion,
 		},

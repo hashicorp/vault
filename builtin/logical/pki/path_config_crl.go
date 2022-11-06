@@ -107,7 +107,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"expiry":                    config.Expiry,
 			"disable":                   config.Disable,
 			"ocsp_disable":              config.OcspDisable,

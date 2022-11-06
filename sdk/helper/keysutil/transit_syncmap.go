@@ -12,15 +12,15 @@ func NewTransitSyncMap() *TransitSyncMap {
 	return &TransitSyncMap{syncmap: sync.Map{}}
 }
 
-func (c *TransitSyncMap) Delete(key interface{}) {
+func (c *TransitSyncMap) Delete(key any) {
 	c.syncmap.Delete(key)
 }
 
-func (c *TransitSyncMap) Load(key interface{}) (value interface{}, ok bool) {
+func (c *TransitSyncMap) Load(key any) (value any, ok bool) {
 	return c.syncmap.Load(key)
 }
 
-func (c *TransitSyncMap) Store(key, value interface{}) {
+func (c *TransitSyncMap) Store(key, value any) {
 	c.syncmap.Store(key, value)
 }
 

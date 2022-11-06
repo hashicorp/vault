@@ -73,7 +73,7 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 		// We first decode into a map[string]interface{} because purpose isn't
 		// necessarily a string. Then we migrate everything else over to
 		// map[string]string and error if it doesn't work.
-		var m map[string]interface{}
+		var m map[string]any
 		if err := hcl.DecodeObject(&m, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 		}

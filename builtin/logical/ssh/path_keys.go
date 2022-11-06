@@ -83,7 +83,7 @@ func (b *backend) pathKeysWrite(ctx context.Context, req *logical.Request, d *fr
 	keyPath := fmt.Sprintf("keys/%s", keyName)
 
 	// Store the key
-	entry, err := logical.StorageEntryJSON(keyPath, map[string]interface{}{
+	entry, err := logical.StorageEntryJSON(keyPath, map[string]any{
 		"key": keyString,
 	})
 	if err != nil {

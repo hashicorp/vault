@@ -26,7 +26,7 @@ func TestPathStruct(t *testing.T) {
 	_, err := b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "bar",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"value": "baz",
 		},
 		Storage: storage,

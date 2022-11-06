@@ -37,7 +37,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		}
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"password": password,
 	}
 

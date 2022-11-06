@@ -31,15 +31,15 @@ func (r serializableRules) MarshalJSON() (b []byte, err error) {
 	//     ]
 	//   }
 	// ]
-	data := []map[string][]map[string]interface{}{} // Totally not confusing at all
+	data := []map[string][]map[string]any{} // Totally not confusing at all
 	for _, rule := range r {
-		ruleData := map[string]interface{}{}
+		ruleData := map[string]any{}
 		err = mapstructure.Decode(rule, &ruleData)
 		if err != nil {
 			return nil, fmt.Errorf("unable to decode rule: %w", err)
 		}
 
-		ruleMap := map[string][]map[string]interface{}{
+		ruleMap := map[string][]map[string]any{
 			rule.Type(): {
 				ruleData,
 			},
@@ -52,7 +52,7 @@ func (r serializableRules) MarshalJSON() (b []byte, err error) {
 }
 
 func (r *serializableRules) UnmarshalJSON(data []byte) (err error) {
-	mapData := []map[string]interface{}{}
+	mapData := []map[string]any{}
 	err = json.Unmarshal(data, &mapData)
 	if err != nil {
 		return err

@@ -19,7 +19,7 @@ type PolicyDocument struct {
 }
 
 // StatementEntries is a slice of statements that make up a PolicyDocument
-type StatementEntries []interface{}
+type StatementEntries []any
 
 // UnmarshalJSON is defined here for StatementEntries because the Statement
 // portion of an IAM Policy can either be a list or a single element, so if it's
@@ -29,16 +29,16 @@ type StatementEntries []interface{}
 func (se *StatementEntries) UnmarshalJSON(b []byte) error {
 	var out StatementEntries
 
-	var data interface{}
+	var data any
 	if err := json.Unmarshal(b, &data); err != nil {
 		return err
 	}
 
 	switch t := data.(type) {
-	case []interface{}:
+	case []any:
 		out = t
-	case interface{}:
-		out = []interface{}{t}
+	case any:
+		out = []any{t}
 	default:
 		return fmt.Errorf("unsupported data type %T for StatementEntries", t)
 	}

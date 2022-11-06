@@ -70,7 +70,7 @@ func testAccStepResolveRoleWithName(t *testing.T, connState tls.ConnectionState,
 			}
 			return nil
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"name": certName,
 		},
 	}
@@ -127,7 +127,7 @@ func testAccStepResolveRoleWithEmptyDataMap(t *testing.T, connState tls.Connecti
 			}
 			return nil
 		},
-		Data: map[string]interface{}{},
+		Data: map[string]any{},
 	}
 }
 
@@ -153,7 +153,7 @@ func testAccStepResolveRoleExpectRoleResolutionToFail(t *testing.T, connState tl
 			}
 			return nil
 		},
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"name": certName,
 		},
 	}

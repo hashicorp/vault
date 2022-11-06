@@ -60,7 +60,7 @@ func TestAcceptanceBackend_basic(t *testing.T) {
 
 func TestAcceptanceBackend_IamUserWithPermissionsBoundary(t *testing.T) {
 	t.Parallel()
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"credential_type":          iamUserCred,
 		"policy_arns":              adminAccessPolicyArn,
 		"permissions_boundary_arn": iamPolicyArn,
@@ -148,7 +148,7 @@ func TestBackend_throttled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"credential_type": "iam_user",
 	}
 
@@ -567,7 +567,7 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/root",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"region": os.Getenv("AWS_DEFAULT_REGION"),
 		},
 	}
@@ -577,7 +577,7 @@ func testAccStepConfigWithCreds(t *testing.T, accessKey *awsAccessKey) logicalte
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/root",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"region": os.Getenv("AWS_DEFAULT_REGION"),
 		},
 		PreFlight: func(req *logical.Request) error {
@@ -845,7 +845,7 @@ func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltes
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"policy": policy,
 		},
 	}
@@ -871,7 +871,7 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
-			expected := map[string]interface{}{
+			expected := map[string]any{
 				"policy_arns":              []string(nil),
 				"role_arns":                []string(nil),
 				"policy_document":          value,
@@ -929,7 +929,7 @@ const (
 	dynamoPolicyArn      = "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"
 )
 
-func testAccStepWriteRole(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
+func testAccStepWriteRole(t *testing.T, name string, data map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
@@ -937,7 +937,7 @@ func testAccStepWriteRole(t *testing.T, name string, data map[string]interface{}
 	}
 }
 
-func testAccStepReadRole(t *testing.T, name string, expected map[string]interface{}) logicaltest.TestStep {
+func testAccStepReadRole(t *testing.T, name string, expected map[string]any) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + name,
@@ -960,7 +960,7 @@ func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logical
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"arn": ec2PolicyArn,
 		},
 	}
@@ -987,14 +987,14 @@ func TestAcceptanceBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 		t.Fatalf("bad: %#v", err)
 	}
 	groupName := generateUniqueGroupName(t.Name())
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"policy_document": testDynamoPolicy,
 		"policy_arns":     []string{ec2PolicyArn, iamPolicyArn},
 		"iam_groups":      []string{groupName},
 		"credential_type": iamUserCred,
 		"user_path":       "/path/",
 	}
-	expectedRoleData := map[string]interface{}{
+	expectedRoleData := map[string]any{
 		"policy_document":          compacted,
 		"policy_arns":              []string{ec2PolicyArn, iamPolicyArn},
 		"credential_type":          iamUserCred,
@@ -1033,12 +1033,12 @@ func TestAcceptanceBackend_iamUserGroups(t *testing.T) {
 	t.Parallel()
 	group1Name := generateUniqueGroupName(t.Name())
 	group2Name := generateUniqueGroupName(t.Name())
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"iam_groups":      []string{group1Name, group2Name},
 		"credential_type": iamUserCred,
 		"user_path":       "/path/",
 	}
-	expectedRoleData := map[string]interface{}{
+	expectedRoleData := map[string]any{
 		"policy_document":          "",
 		"policy_arns":              []string(nil),
 		"credential_type":          iamUserCred,
@@ -1099,7 +1099,7 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"policy_document": allowAllButDescribeAzs,
 		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
 		"credential_type": assumedRoleCred,
@@ -1135,7 +1135,7 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"policy_arns":     iamPolicyArn,
 		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
 		"credential_type": assumedRoleCred,
@@ -1187,7 +1187,7 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"iam_groups":      []string{groupName},
 		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
 		"credential_type": assumedRoleCred,
@@ -1223,7 +1223,7 @@ func TestAcceptanceBackend_FederationTokenWithPolicyARN(t *testing.T) {
 	userName := generateUniqueUserName(t.Name())
 	accessKey := &awsAccessKey{}
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"policy_arns":     dynamoPolicyArn,
 		"credential_type": federationTokenCred,
 	}
@@ -1268,7 +1268,7 @@ func TestAcceptanceBackend_FederationTokenWithGroups(t *testing.T) {
 		}
 	}`
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"iam_groups":      []string{groupName},
 		"policy_document": iamSingleStatementPolicy,
 		"credential_type": federationTokenCred,
@@ -1308,7 +1308,7 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
 		"credential_type": assumedRoleCred,
 		"default_sts_ttl": minAwsAssumeRoleDuration,
@@ -1362,7 +1362,7 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
-			expected := map[string]interface{}{
+			expected := map[string]any{
 				"policy_arns":              []string{value},
 				"role_arns":                []string(nil),
 				"policy_document":          "",
@@ -1387,7 +1387,7 @@ func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAcc
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + vaultRoleName,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"arn": fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, awsRoleName),
 		},
 	}
@@ -1412,7 +1412,7 @@ func testAccStepWriteIamGroups(t *testing.T, name string, groups []string) logic
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"credential_type": iamUserCred,
 			"iam_groups":      groups,
 		},
@@ -1432,7 +1432,7 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
-			expected := map[string]interface{}{
+			expected := map[string]any{
 				"policy_arns":              []string(nil),
 				"role_arns":                []string(nil),
 				"policy_document":          "",
@@ -1471,7 +1471,7 @@ func testAccStepWriteIamTags(t *testing.T, name string, tags map[string]string) 
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"credential_type": iamUserCred,
 			"iam_tags":        tags,
 		},
@@ -1491,7 +1491,7 @@ func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) l
 				return fmt.Errorf("vault response not received")
 			}
 
-			expected := map[string]interface{}{
+			expected := map[string]any{
 				"policy_arns":              []string(nil),
 				"role_arns":                []string(nil),
 				"policy_document":          "",

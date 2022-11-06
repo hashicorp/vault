@@ -548,7 +548,7 @@ func (c *Core) cachedGaugeMetricsEmitter() {
 
 	loopMetrics := &c.metricsHelper.LoopMetrics.Metrics
 
-	emit := func(key interface{}, value interface{}) bool {
+	emit := func(key any, value any) bool {
 		metricValue := value.(metricsutil.GaugeMetric)
 		c.metricSink.SetGaugeWithLabels(metricValue.Key, metricValue.Value, metricValue.Labels)
 		return true

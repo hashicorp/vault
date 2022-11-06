@@ -646,7 +646,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"revocation_time": revInfo.RevocationTime,
 		},
 	}

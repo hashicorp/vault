@@ -54,7 +54,7 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"max_open_connections": config.MaxOpenConnections,
 		},
 	}, nil

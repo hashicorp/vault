@@ -262,7 +262,7 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"default_report_months": config.DefaultReportMonths,
 			"retention_months":      config.RetentionMonths,
 			"enabled":               config.Enabled,

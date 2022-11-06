@@ -25,7 +25,7 @@ const StrictTransportSecurity = "max-age=31536000; includeSubDomains"
 // as a map of status code to a map of header name and header values. It
 // verifies the validity of the status codes, and header values. It also
 // adds the default headers values.
-func ParseCustomResponseHeaders(responseHeaders interface{}) (map[string]map[string]string, error) {
+func ParseCustomResponseHeaders(responseHeaders any) (map[string]map[string]string, error) {
 	h := make(map[string]map[string]string)
 	// if r is nil, we still should set the default custom headers
 	if responseHeaders == nil {
@@ -33,14 +33,14 @@ func ParseCustomResponseHeaders(responseHeaders interface{}) (map[string]map[str
 		return h, nil
 	}
 
-	customResponseHeader, ok := responseHeaders.([]map[string]interface{})
+	customResponseHeader, ok := responseHeaders.([]map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("response headers were not configured correctly. please make sure they're in a slice of maps")
 	}
 
 	for _, crh := range customResponseHeader {
 		for statusCode, responseHeader := range crh {
-			headerValList, ok := responseHeader.([]map[string]interface{})
+			headerValList, ok := responseHeader.([]map[string]any)
 			if !ok {
 				return nil, fmt.Errorf("response headers were not configured correctly. please make sure they're in a slice of maps")
 			}
@@ -91,7 +91,7 @@ func IsValidStatusCode(sc string) bool {
 	return true
 }
 
-func parseHeaders(in map[string]interface{}) (map[string]string, error) {
+func parseHeaders(in map[string]any) (map[string]string, error) {
 	hvMap := make(map[string]string)
 	for k, v := range in {
 		// parsing header name
@@ -106,12 +106,12 @@ func parseHeaders(in map[string]interface{}) (map[string]string, error) {
 	return hvMap, nil
 }
 
-func parseHeaderValues(header interface{}) (string, error) {
+func parseHeaderValues(header any) (string, error) {
 	var sl []string
-	if _, ok := header.([]interface{}); !ok {
+	if _, ok := header.([]any); !ok {
 		return "", fmt.Errorf("headers must be given in a list of strings")
 	}
-	headerValList := header.([]interface{})
+	headerValList := header.([]any)
 	for _, vh := range headerValList {
 		if _, ok := vh.(string); !ok {
 			return "", fmt.Errorf("found a non-string header value: %v", vh)

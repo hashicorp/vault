@@ -97,10 +97,10 @@ func (b *boolPtrValue) Set(s string) error {
 	return b.target.Set(s)
 }
 
-func (b *boolPtrValue) Get() interface{} { return *b.target }
-func (b *boolPtrValue) String() string   { return b.target.String() }
-func (b *boolPtrValue) Example() string  { return "*bool" }
-func (b *boolPtrValue) Hidden() bool     { return b.hidden }
+func (b *boolPtrValue) Get() any        { return *b.target }
+func (b *boolPtrValue) String() string  { return b.target.String() }
+func (b *boolPtrValue) Example() string { return "*bool" }
+func (b *boolPtrValue) Hidden() bool    { return b.hidden }
 
 type BoolPtrVar struct {
 	Name       string
@@ -188,7 +188,7 @@ func (b *boolValue) Set(s string) error {
 	return nil
 }
 
-func (b *boolValue) Get() interface{} { return *b.target }
+func (b *boolValue) Get() any         { return *b.target }
 func (b *boolValue) String() string   { return strconv.FormatBool(*b.target) }
 func (b *boolValue) Example() string  { return "" }
 func (b *boolValue) Hidden() bool     { return b.hidden }
@@ -255,10 +255,10 @@ func (i *intValue) Set(s string) error {
 	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
 }
 
-func (i *intValue) Get() interface{} { return int(*i.target) }
-func (i *intValue) String() string   { return strconv.Itoa(int(*i.target)) }
-func (i *intValue) Example() string  { return "int" }
-func (i *intValue) Hidden() bool     { return i.hidden }
+func (i *intValue) Get() any        { return int(*i.target) }
+func (i *intValue) String() string  { return strconv.Itoa(int(*i.target)) }
+func (i *intValue) Example() string { return "int" }
+func (i *intValue) Hidden() bool    { return i.hidden }
 
 // -- Int64Var and int64Value
 type Int64Var struct {
@@ -319,10 +319,10 @@ func (i *int64Value) Set(s string) error {
 	return nil
 }
 
-func (i *int64Value) Get() interface{} { return int64(*i.target) }
-func (i *int64Value) String() string   { return strconv.FormatInt(int64(*i.target), 10) }
-func (i *int64Value) Example() string  { return "int" }
-func (i *int64Value) Hidden() bool     { return i.hidden }
+func (i *int64Value) Get() any        { return int64(*i.target) }
+func (i *int64Value) String() string  { return strconv.FormatInt(int64(*i.target), 10) }
+func (i *int64Value) Example() string { return "int" }
+func (i *int64Value) Hidden() bool    { return i.hidden }
 
 // -- UintVar && uintValue
 type UintVar struct {
@@ -386,10 +386,10 @@ func (i *uintValue) Set(s string) error {
 	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for uint32", v)
 }
 
-func (i *uintValue) Get() interface{} { return uint(*i.target) }
-func (i *uintValue) String() string   { return strconv.FormatUint(uint64(*i.target), 10) }
-func (i *uintValue) Example() string  { return "uint" }
-func (i *uintValue) Hidden() bool     { return i.hidden }
+func (i *uintValue) Get() any        { return uint(*i.target) }
+func (i *uintValue) String() string  { return strconv.FormatUint(uint64(*i.target), 10) }
+func (i *uintValue) Example() string { return "uint" }
+func (i *uintValue) Hidden() bool    { return i.hidden }
 
 // -- Uint64Var and uint64Value
 type Uint64Var struct {
@@ -450,10 +450,10 @@ func (i *uint64Value) Set(s string) error {
 	return nil
 }
 
-func (i *uint64Value) Get() interface{} { return uint64(*i.target) }
-func (i *uint64Value) String() string   { return strconv.FormatUint(uint64(*i.target), 10) }
-func (i *uint64Value) Example() string  { return "uint" }
-func (i *uint64Value) Hidden() bool     { return i.hidden }
+func (i *uint64Value) Get() any        { return uint64(*i.target) }
+func (i *uint64Value) String() string  { return strconv.FormatUint(uint64(*i.target), 10) }
+func (i *uint64Value) Example() string { return "uint" }
+func (i *uint64Value) Hidden() bool    { return i.hidden }
 
 // -- StringVar and stringValue
 type StringVar struct {
@@ -507,10 +507,10 @@ func (s *stringValue) Set(val string) error {
 	return nil
 }
 
-func (s *stringValue) Get() interface{} { return *s.target }
-func (s *stringValue) String() string   { return *s.target }
-func (s *stringValue) Example() string  { return "string" }
-func (s *stringValue) Hidden() bool     { return s.hidden }
+func (s *stringValue) Get() any        { return *s.target }
+func (s *stringValue) String() string  { return *s.target }
+func (s *stringValue) Example() string { return "string" }
+func (s *stringValue) Hidden() bool    { return s.hidden }
 
 // -- Float64Var and float64Value
 type Float64Var struct {
@@ -571,10 +571,10 @@ func (f *float64Value) Set(s string) error {
 	return nil
 }
 
-func (f *float64Value) Get() interface{} { return float64(*f.target) }
-func (f *float64Value) String() string   { return strconv.FormatFloat(float64(*f.target), 'g', -1, 64) }
-func (f *float64Value) Example() string  { return "float" }
-func (f *float64Value) Hidden() bool     { return f.hidden }
+func (f *float64Value) Get() any        { return float64(*f.target) }
+func (f *float64Value) String() string  { return strconv.FormatFloat(float64(*f.target), 'g', -1, 64) }
+func (f *float64Value) Example() string { return "float" }
+func (f *float64Value) Hidden() bool    { return f.hidden }
 
 // -- DurationVar and durationValue
 type DurationVar struct {
@@ -639,10 +639,10 @@ func (d *durationValue) Set(s string) error {
 	return nil
 }
 
-func (d *durationValue) Get() interface{} { return time.Duration(*d.target) }
-func (d *durationValue) String() string   { return (*d.target).String() }
-func (d *durationValue) Example() string  { return "duration" }
-func (d *durationValue) Hidden() bool     { return d.hidden }
+func (d *durationValue) Get() any        { return time.Duration(*d.target) }
+func (d *durationValue) String() string  { return (*d.target).String() }
+func (d *durationValue) Example() string { return "duration" }
+func (d *durationValue) Hidden() bool    { return d.hidden }
 
 // appendDurationSuffix is used as a backwards-compat tool for assuming users
 // meant "seconds" when they do not provide a suffixed duration value.
@@ -709,10 +709,10 @@ func (s *stringSliceValue) Set(val string) error {
 	return nil
 }
 
-func (s *stringSliceValue) Get() interface{} { return *s.target }
-func (s *stringSliceValue) String() string   { return strings.Join(*s.target, ",") }
-func (s *stringSliceValue) Example() string  { return "string" }
-func (s *stringSliceValue) Hidden() bool     { return s.hidden }
+func (s *stringSliceValue) Get() any        { return *s.target }
+func (s *stringSliceValue) String() string  { return strings.Join(*s.target, ",") }
+func (s *stringSliceValue) Example() string { return "string" }
+func (s *stringSliceValue) Hidden() bool    { return s.hidden }
 
 // -- StringMapVar and stringMapValue
 type StringMapVar struct {
@@ -769,10 +769,10 @@ func (s *stringMapValue) Set(val string) error {
 	return nil
 }
 
-func (s *stringMapValue) Get() interface{} { return *s.target }
-func (s *stringMapValue) String() string   { return mapToKV(*s.target) }
-func (s *stringMapValue) Example() string  { return "key=value" }
-func (s *stringMapValue) Hidden() bool     { return s.hidden }
+func (s *stringMapValue) Get() any        { return *s.target }
+func (s *stringMapValue) String() string  { return mapToKV(*s.target) }
+func (s *stringMapValue) Example() string { return "key=value" }
+func (s *stringMapValue) Hidden() bool    { return s.hidden }
 
 func mapToKV(m map[string]string) string {
 	list := make([]string, 0, len(m))
@@ -982,10 +982,10 @@ func (d *timeValue) Set(s string) error {
 	return nil
 }
 
-func (d *timeValue) Get() interface{} { return *d.target }
-func (d *timeValue) String() string   { return (*d.target).String() }
-func (d *timeValue) Example() string  { return "time" }
-func (d *timeValue) Hidden() bool     { return d.hidden }
+func (d *timeValue) Get() any        { return *d.target }
+func (d *timeValue) String() string  { return (*d.target).String() }
+func (d *timeValue) Example() string { return "time" }
+func (d *timeValue) Hidden() bool    { return d.hidden }
 
 // -- helpers
 func envDefault(key, def string) string {

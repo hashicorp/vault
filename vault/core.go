@@ -2956,7 +2956,7 @@ func (c *Core) ReloadCustomResponseHeaders() error {
 
 // SanitizedConfig returns a sanitized version of the current config.
 // See server.Config.Sanitized for specific values omitted.
-func (c *Core) SanitizedConfig() map[string]interface{} {
+func (c *Core) SanitizedConfig() map[string]any {
 	conf := c.rawConfig.Load()
 	if conf == nil {
 		return nil
@@ -2986,7 +2986,7 @@ func (c *Core) MetricSink() *metricsutil.ClusterMetricSink {
 // also allows for mocking the registry easily.
 type BuiltinRegistry interface {
 	Contains(name string, pluginType consts.PluginType) bool
-	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
+	Get(name string, pluginType consts.PluginType) (func() (any, error), bool)
 	Keys(pluginType consts.PluginType) []string
 	DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool)
 }
@@ -3256,7 +3256,7 @@ func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
 // in-flight requests
 func (c *Core) LoadInFlightReqData() map[string]InFlightReqData {
 	currentInFlightReqMap := make(map[string]InFlightReqData)
-	c.inFlightReqData.InFlightReqMap.Range(func(key, value interface{}) bool {
+	c.inFlightReqData.InFlightReqMap.Range(func(key, value any) bool {
 		// there is only one writer to this map, so skip checking for errors
 		v := value.(InFlightReqData)
 		currentInFlightReqMap[key.(string)] = v
@@ -3382,7 +3382,7 @@ func (c *Core) LoadNodeID() (string, error) {
 // DetermineRoleFromLoginRequestFromBytes will determine the role that should be applied to a quota for a given
 // login request, accepting a byte payload
 func (c *Core) DetermineRoleFromLoginRequestFromBytes(mountPoint string, payload []byte, ctx context.Context) string {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	err := jsonutil.DecodeJSON(payload, &data)
 	if err != nil {
 		// Cannot discern a role from a request we cannot parse
@@ -3394,7 +3394,7 @@ func (c *Core) DetermineRoleFromLoginRequestFromBytes(mountPoint string, payload
 
 // DetermineRoleFromLoginRequest will determine the role that should be applied to a quota for a given
 // login request
-func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]interface{}, ctx context.Context) string {
+func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]any, ctx context.Context) string {
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
 	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)

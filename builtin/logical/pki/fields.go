@@ -37,7 +37,7 @@ or "pem_bundle". If "pem_bundle", any private
 key and issuing cert will be appended to the
 certificate pem. If "der", the value will be
 base64 encoded. Defaults to "pem".`,
-		AllowedValues: []interface{}{"pem", "der", "pem_bundle"},
+		AllowedValues: []any{"pem", "der", "pem_bundle"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "pem",
 		},
@@ -52,7 +52,7 @@ parameter as either base64-encoded DER or PEM-encoded DER.
 However, this can be set to "pkcs8" to have the returned
 private key contain base64-encoded pkcs8 or PEM-encoded
 pkcs8 instead. Defaults to "der".`,
-		AllowedValues: []interface{}{"", "der", "pem", "pkcs8"},
+		AllowedValues: []any{"", "der", "pem", "pkcs8"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "der",
 		},
@@ -289,7 +289,7 @@ func addCAKeyGenerationFields(fields map[string]*framework.FieldSchema) map[stri
 "exported", the generated private key will be
 returned. This is your *only* chance to retrieve
 the private key!`,
-		AllowedValues: []interface{}{"internal", "external", "kms"},
+		AllowedValues: []any{"internal", "external", "kms"},
 	}
 
 	fields["managed_key_name"] = &framework.FieldSchema{
@@ -342,7 +342,7 @@ RSA key-type issuer. Defaults to false.`,
 		Default: "rsa",
 		Description: `The type of key to use; defaults to RSA. "rsa"
 "ec" and "ed25519" are the only valid values.`,
-		AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
+		AllowedValues: []any{"rsa", "ec", "ed25519"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "rsa",
 		},

@@ -78,26 +78,26 @@ func TestVersionHistoryCommand_JsonOutput(t *testing.T) {
 		t.Fatalf("expected output %q to be valid JSON", stdoutBytes)
 	}
 
-	var versionHistoryResp map[string]interface{}
+	var versionHistoryResp map[string]any
 	err := json.Unmarshal(stdoutBytes, &versionHistoryResp)
 	if err != nil {
 		t.Fatalf("failed to unmarshal json from STDOUT, err: %s", err.Error())
 	}
 
-	var respData map[string]interface{}
+	var respData map[string]any
 	var ok bool
-	var keys []interface{}
-	var keyInfo map[string]interface{}
+	var keys []any
+	var keyInfo map[string]any
 
-	if respData, ok = versionHistoryResp["data"].(map[string]interface{}); !ok {
+	if respData, ok = versionHistoryResp["data"].(map[string]any); !ok {
 		t.Fatalf("expected data key to be map, actual: %#v", versionHistoryResp["data"])
 	}
 
-	if keys, ok = respData["keys"].([]interface{}); !ok {
+	if keys, ok = respData["keys"].([]any); !ok {
 		t.Fatalf("expected keys to be array, actual: %#v", respData["keys"])
 	}
 
-	if keyInfo, ok = respData["key_info"].(map[string]interface{}); !ok {
+	if keyInfo, ok = respData["key_info"].(map[string]any); !ok {
 		t.Fatalf("expected key_info to be map, actual: %#v", respData["key_info"])
 	}
 

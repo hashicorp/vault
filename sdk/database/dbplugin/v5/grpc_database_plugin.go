@@ -20,7 +20,7 @@ var HandshakeConfig = plugin.HandshakeConfig{
 }
 
 // Factory is the factory function to create a dbplugin Database.
-type Factory func() (interface{}, error)
+type Factory func() (any, error)
 
 type GRPCDatabasePlugin struct {
 	FactoryFunc Factory
@@ -59,7 +59,7 @@ func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) err
 	return nil
 }
 
-func (GRPCDatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (GRPCDatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
 	client := gRPCClient{
 		client:        proto.NewDatabaseClient(c),
 		versionClient: logical.NewPluginVersionClient(c),

@@ -26,15 +26,15 @@ type SharedConfig struct {
 	Seals   []*KMS   `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
 
-	DisableMlock    bool        `hcl:"-"`
-	DisableMlockRaw interface{} `hcl:"disable_mlock"`
+	DisableMlock    bool `hcl:"-"`
+	DisableMlockRaw any  `hcl:"disable_mlock"`
 
 	Telemetry *Telemetry `hcl:"telemetry"`
 
 	HCPLinkConf *HCPLinkConfig `hcl:"cloud"`
 
 	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
-	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
+	DefaultMaxRequestDurationRaw any           `hcl:"default_max_request_duration"`
 
 	// LogFormat specifies the log format. Valid values are "standard" and
 	// "json". The values are case-insenstive. If no log format is specified,
@@ -172,12 +172,12 @@ func ParseConfig(d string) (*SharedConfig, error) {
 // Specifically, the fields that this method strips are:
 // - KMS.Config
 // - Telemetry.CirconusAPIToken
-func (c *SharedConfig) Sanitized() map[string]interface{} {
+func (c *SharedConfig) Sanitized() map[string]any {
 	if c == nil {
 		return nil
 	}
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"disable_mlock": c.DisableMlock,
 
 		"default_max_request_duration": c.DefaultMaxRequestDuration,
@@ -192,9 +192,9 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 
 	// Sanitize listeners
 	if len(c.Listeners) != 0 {
-		var sanitizedListeners []interface{}
+		var sanitizedListeners []any
 		for _, ln := range c.Listeners {
-			cleanLn := map[string]interface{}{
+			cleanLn := map[string]any{
 				"type":   ln.Type,
 				"config": ln.RawConfig,
 			}
@@ -205,9 +205,9 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 
 	// Sanitize user lockout stanza
 	if len(c.UserLockouts) != 0 {
-		var sanitizedUserLockouts []interface{}
+		var sanitizedUserLockouts []any
 		for _, userlockout := range c.UserLockouts {
-			cleanUserLockout := map[string]interface{}{
+			cleanUserLockout := map[string]any{
 				"type":                  userlockout.Type,
 				"lockout_threshold":     userlockout.LockoutThreshold,
 				"lockout_duration":      userlockout.LockoutDuration,
@@ -221,9 +221,9 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 
 	// Sanitize seals stanza
 	if len(c.Seals) != 0 {
-		var sanitizedSeals []interface{}
+		var sanitizedSeals []any
 		for _, s := range c.Seals {
-			cleanSeal := map[string]interface{}{
+			cleanSeal := map[string]any{
 				"type":     s.Type,
 				"disabled": s.Disabled,
 			}
@@ -234,7 +234,7 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 
 	// Sanitize telemetry stanza
 	if c.Telemetry != nil {
-		sanitizedTelemetry := map[string]interface{}{
+		sanitizedTelemetry := map[string]any{
 			"statsite_address":                       c.Telemetry.StatsiteAddr,
 			"statsd_address":                         c.Telemetry.StatsdAddr,
 			"disable_hostname":                       c.Telemetry.DisableHostname,

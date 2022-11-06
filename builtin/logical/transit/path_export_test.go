@@ -36,7 +36,7 @@ func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/foo",
 	}
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"exportable": true,
 		"type":       keyType,
 	}
@@ -126,7 +126,7 @@ func TestTransit_Export_ValidVersionsOnly(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/foo",
 	}
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"exportable": true,
 	}
 	_, err := b.HandleRequest(context.Background(), req)
@@ -181,7 +181,7 @@ func TestTransit_Export_ValidVersionsOnly(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/foo/config",
 	}
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"min_decryption_version": 3,
 	}
 	_, err = b.HandleRequest(context.Background(), req)
@@ -195,7 +195,7 @@ func TestTransit_Export_ValidVersionsOnly(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/foo/config",
 	}
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"min_decryption_version": 2,
 	}
 	_, err = b.HandleRequest(context.Background(), req)
@@ -225,7 +225,7 @@ func TestTransit_Export_KeysNotMarkedExportable_ReturnsError(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/foo",
 	}
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"exportable": false,
 	}
 	_, err := b.HandleRequest(context.Background(), req)
@@ -255,7 +255,7 @@ func TestTransit_Export_SigningDoesNotSupportSigning_ReturnsError(t *testing.T) 
 		Operation: logical.UpdateOperation,
 		Path:      "keys/foo",
 	}
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"exportable": true,
 		"type":       "aes256-gcm96",
 	}
@@ -290,7 +290,7 @@ func testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t *testi
 		Operation: logical.UpdateOperation,
 		Path:      "keys/foo",
 	}
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"exportable": true,
 		"type":       keyType,
 	}
@@ -333,7 +333,7 @@ func TestTransit_Export_EncryptionKey_DoesNotExportHMACKey(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/foo",
 	}
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"exportable": true,
 		"type":       "aes256-gcm96",
 	}

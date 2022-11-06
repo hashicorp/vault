@@ -24,7 +24,7 @@ func Backend_config_connection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configData := map[string]interface{}{
+	configData := map[string]any{
 		"connection_string":    "sample_connection_string",
 		"max_open_connections": 7,
 		"verify_connection":    false,
@@ -119,7 +119,7 @@ func testAccStepConfig(t *testing.T, connURL string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"connection_string": connURL,
 		},
 	}
@@ -129,7 +129,7 @@ func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/web",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"sql": testRoleSQL,
 		},
 	}
@@ -194,7 +194,7 @@ func testAccStepWriteLease(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/lease",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"ttl":     "1h5m",
 			"max_ttl": "24h",
 		},

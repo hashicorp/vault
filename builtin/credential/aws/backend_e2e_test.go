@@ -58,7 +58,7 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	}
 
 	// Create a role
-	data := map[string]interface{}{
+	data := map[string]any{
 		"auth_type":       "ec2",
 		"policies":        "default",
 		"bound_subnet_id": "subnet-abcdef",

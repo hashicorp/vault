@@ -23,7 +23,7 @@ type PKCS7 struct {
 	Certificates []*x509.Certificate
 	CRLs         []pkix.CertificateList
 	Signers      []signerInfo
-	raw          interface{}
+	raw          any
 }
 
 type contentInfo struct {
@@ -222,16 +222,16 @@ func isCertMatchForIssuerAndSerial(cert *x509.Certificate, ias issuerAndSerial) 
 // `encoding/asn1`
 type Attribute struct {
 	Type  asn1.ObjectIdentifier
-	Value interface{}
+	Value any
 }
 
 type attributes struct {
 	types  []asn1.ObjectIdentifier
-	values []interface{}
+	values []any
 }
 
 // Add adds the attribute, maintaining insertion order
-func (attrs *attributes) Add(attrType asn1.ObjectIdentifier, value interface{}) {
+func (attrs *attributes) Add(attrType asn1.ObjectIdentifier, value any) {
 	attrs.types = append(attrs.types, attrType)
 	attrs.values = append(attrs.values, value)
 }

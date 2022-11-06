@@ -96,7 +96,7 @@ func HandleRandomAPI(d *framework.FieldData, additionalSource io.Reader) (*logic
 
 	// Generate the response
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"random_bytes": retStr,
 		},
 	}

@@ -158,7 +158,7 @@ func TestBackend_config_Bootstrap(t *testing.T) {
 	cleanup, svccfg := prepareTestContainer(t, false)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": svccfg.URL().String(),
 		"token":   "",
 	}
@@ -181,7 +181,7 @@ func TestBackend_config_Bootstrap(t *testing.T) {
 		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"address":               connData["address"].(string),
 		"max_token_name_length": 0,
 		"ca_cert":               "",
@@ -218,7 +218,7 @@ func TestBackend_config_access(t *testing.T) {
 	cleanup, svccfg := prepareTestContainer(t, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": svccfg.URL().String(),
 		"token":   svccfg.Token,
 	}
@@ -241,7 +241,7 @@ func TestBackend_config_access(t *testing.T) {
 		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"address":               connData["address"].(string),
 		"max_token_name_length": 0,
 		"ca_cert":               "",
@@ -266,7 +266,7 @@ func TestBackend_config_access_with_certs(t *testing.T) {
 	cleanup, svccfg := prepareTestContainer(t, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address":     svccfg.URL().String(),
 		"token":       svccfg.Token,
 		"ca_cert":     caCert,
@@ -292,7 +292,7 @@ func TestBackend_config_access_with_certs(t *testing.T) {
 		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"address":               connData["address"].(string),
 		"max_token_name_length": 0,
 		"ca_cert":               caCert,
@@ -317,7 +317,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 	cleanup, svccfg := prepareTestContainer(t, true)
 	defer cleanup()
 
-	connData := map[string]interface{}{
+	connData := map[string]any{
 		"address": svccfg.URL().String(),
 		"token":   svccfg.Token,
 	}
@@ -334,7 +334,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 	}
 
 	req.Path = "role/test"
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"policies": []string{"policy"},
 		"lease":    "6h",
 	}
@@ -431,7 +431,7 @@ func TestBackend_CredsCreateEnvVar(t *testing.T) {
 	defer cleanup()
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "role/test")
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"policies": []string{"policy"},
 		"lease":    "6h",
 	}
@@ -496,12 +496,12 @@ func TestBackend_max_token_name_length(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.title, func(t *testing.T) {
 			// setup config/access
-			connData := map[string]interface{}{
+			connData := map[string]any{
 				"address":               svccfg.URL().String(),
 				"token":                 svccfg.Token,
 				"max_token_name_length": tc.tokenLength,
 			}
-			expected := map[string]interface{}{
+			expected := map[string]any{
 				"address":               svccfg.URL().String(),
 				"max_token_name_length": tc.tokenLength,
 				"ca_cert":               "",
@@ -549,7 +549,7 @@ func TestBackend_max_token_name_length(t *testing.T) {
 
 			confReq.Path = "role/" + roleTokenName
 			confReq.Operation = logical.UpdateOperation
-			confReq.Data = map[string]interface{}{
+			confReq.Data = map[string]any{
 				"policies": []string{"policy"},
 				"lease":    "6h",
 			}

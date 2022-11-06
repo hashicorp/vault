@@ -12,7 +12,7 @@ const MockPluginVersionEnv = "TESTING_MOCK_VAULT_PLUGIN_VERSION"
 
 // New returns a new backend as an interface. This func
 // is only necessary for builtin backend plugins.
-func New() (interface{}, error) {
+func New() (any, error) {
 	return Backend(), nil
 }
 

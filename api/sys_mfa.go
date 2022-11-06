@@ -6,15 +6,15 @@ import (
 	"net/http"
 )
 
-func (c *Sys) MFAValidate(requestID string, payload map[string]interface{}) (*Secret, error) {
+func (c *Sys) MFAValidate(requestID string, payload map[string]any) (*Secret, error) {
 	return c.MFAValidateWithContext(context.Background(), requestID, payload)
 }
 
-func (c *Sys) MFAValidateWithContext(ctx context.Context, requestID string, payload map[string]interface{}) (*Secret, error) {
+func (c *Sys) MFAValidateWithContext(ctx context.Context, requestID string, payload map[string]any) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"mfa_request_id": requestID,
 		"mfa_payload":    payload,
 	}

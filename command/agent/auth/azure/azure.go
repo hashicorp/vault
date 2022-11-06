@@ -93,7 +93,7 @@ func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (retPath string, header http.Header, retData map[string]interface{}, retErr error) {
+func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (retPath string, header http.Header, retData map[string]any, retErr error) {
 	a.logger.Trace("beginning authentication")
 
 	// Fetch instance data
@@ -136,7 +136,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 	}
 
 	// Attempt login
-	data := map[string]interface{}{
+	data := map[string]any{
 		"role":                a.role,
 		"vm_name":             instance.Compute.Name,
 		"vmss_name":           instance.Compute.VMScaleSetName,

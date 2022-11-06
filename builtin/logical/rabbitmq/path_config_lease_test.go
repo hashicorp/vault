@@ -18,7 +18,7 @@ func TestBackend_config_lease_RU(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configData := map[string]interface{}{
+	configData := map[string]any{
 		"ttl":     "10h",
 		"max_ttl": "20h",
 	}

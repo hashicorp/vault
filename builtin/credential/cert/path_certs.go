@@ -241,7 +241,7 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 		return nil, nil
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"certificate":                  cert.Certificate,
 		"display_name":                 cert.DisplayName,
 		"allowed_names":                cert.AllowedNames,

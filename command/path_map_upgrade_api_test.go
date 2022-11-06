@@ -45,7 +45,7 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 	}
 
 	// Create an app-id
-	_, err = client.Logical().Write("auth/app-id/map/app-id/test-app-id", map[string]interface{}{
+	_, err = client.Logical().Write("auth/app-id/map/app-id/test-app-id", map[string]any{
 		"policy": "test-policy",
 	})
 	if err != nil {
@@ -53,7 +53,7 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 	}
 
 	// Create a user-id
-	_, err = client.Logical().Write("auth/app-id/map/user-id/test-user-id", map[string]interface{}{
+	_, err = client.Logical().Write("auth/app-id/map/user-id/test-user-id", map[string]any{
 		"value": "test-app-id",
 	})
 	if err != nil {
@@ -61,7 +61,7 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 	}
 
 	// Perform a login. It should succeed.
-	_, err = client.Logical().Write("auth/app-id/login", map[string]interface{}{
+	_, err = client.Logical().Write("auth/app-id/login", map[string]any{
 		"app_id":  "test-app-id",
 		"user_id": "test-user-id",
 	})
@@ -74,7 +74,7 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashedAppID := secret.Data["keys"].([]interface{})[0].(string)
+	hashedAppID := secret.Data["keys"].([]any)[0].(string)
 
 	// Try reading it. This used to cause an issue which is fixed in [GH-3806].
 	_, err = client.Logical().Read("auth/app-id/map/app-id/" + hashedAppID)
@@ -83,7 +83,7 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 	}
 
 	// Ensure that there was no issue by performing another login
-	_, err = client.Logical().Write("auth/app-id/login", map[string]interface{}{
+	_, err = client.Logical().Write("auth/app-id/login", map[string]any{
 		"app_id":  "test-app-id",
 		"user_id": "test-user-id",
 	})

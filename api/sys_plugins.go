@@ -78,7 +78,7 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 				continue
 			}
 
-			pluginsIfc, ok := pluginsRaw.([]interface{})
+			pluginsIfc, ok := pluginsRaw.([]any)
 			if !ok {
 				return nil, fmt.Errorf("unable to parse plugins for %q type", pluginType.String())
 			}

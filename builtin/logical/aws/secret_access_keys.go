@@ -157,7 +157,7 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 
 	// STS credentials cannot be revoked so do not create a lease
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key":     *tokenResp.Credentials.AccessKeyId,
 			"secret_key":     *tokenResp.Credentials.SecretAccessKey,
 			"security_token": *tokenResp.Credentials.SessionToken,
@@ -232,7 +232,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 
 	// STS credentials cannot be revoked so do not create a lease
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key":     *tokenResp.Credentials.AccessKeyId,
 			"secret_key":     *tokenResp.Credentials.SecretAccessKey,
 			"security_token": *tokenResp.Credentials.SessionToken,
@@ -390,11 +390,11 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Return the info!
-	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
+	resp := b.Secret(secretAccessKeyType).Response(map[string]any{
 		"access_key":     *keyResp.AccessKey.AccessKeyId,
 		"secret_key":     *keyResp.AccessKey.SecretAccessKey,
 		"security_token": nil,
-	}, map[string]interface{}{
+	}, map[string]any{
 		"username": username,
 		"policy":   role,
 		"is_sts":   false,
@@ -464,7 +464,7 @@ func (b *backend) secretAccessKeysRevoke(ctx context.Context, req *logical.Reque
 	}
 
 	// Use the user rollback mechanism to delete this user
-	err := b.pathUserRollback(ctx, req, "user", map[string]interface{}{
+	err := b.pathUserRollback(ctx, req, "user", map[string]any{
 		"username": username,
 	})
 	if err != nil {

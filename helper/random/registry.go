@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type ruleConstructor func(map[string]interface{}) (Rule, error)
+type ruleConstructor func(map[string]any) (Rule, error)
 
 var (
 	// defaultRuleNameMapping is the default mapping of HCL rule names to the appropriate rule constructor.
@@ -24,7 +24,7 @@ type Registry struct {
 	Rules map[string]ruleConstructor
 }
 
-func (r Registry) parseRule(ruleType string, ruleData map[string]interface{}) (rule Rule, err error) {
+func (r Registry) parseRule(ruleType string, ruleData map[string]any) (rule Rule, err error) {
 	constructor, exists := r.Rules[ruleType]
 	if !exists {
 		return nil, fmt.Errorf("unrecognized rule type %s", ruleType)

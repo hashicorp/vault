@@ -19,7 +19,7 @@ type BarrierView struct {
 	storage         *logical.StorageView
 	readOnlyErr     error
 	readOnlyErrLock sync.RWMutex
-	iCheck          interface{}
+	iCheck          any
 }
 
 // NewBarrierView takes an underlying security barrier and returns
@@ -30,7 +30,7 @@ func NewBarrierView(barrier logical.Storage, prefix string) *BarrierView {
 	}
 }
 
-func (v *BarrierView) setICheck(iCheck interface{}) {
+func (v *BarrierView) setICheck(iCheck any) {
 	v.iCheck = iCheck
 }
 

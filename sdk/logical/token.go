@@ -213,7 +213,7 @@ func (te *TokenEntry) CreateClientID() (string, bool) {
 	return base64.StdEncoding.EncodeToString(hashed[:]), true
 }
 
-func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
+func (te *TokenEntry) SentinelGet(key string) (any, error) {
 	if te == nil {
 		return nil, nil
 	}

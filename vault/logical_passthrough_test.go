@@ -52,10 +52,10 @@ func TestPassthroughBackend_Write(t *testing.T) {
 }
 
 func TestPassthroughBackend_Read(t *testing.T) {
-	test := func(b logical.Backend, ttlType string, ttl interface{}, leased bool) {
+	test := func(b logical.Backend, ttlType string, ttl any, leased bool) {
 		req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 		req.Data["raw"] = "test"
-		var reqTTL interface{}
+		var reqTTL any
 		switch ttl.(type) {
 		case int64:
 			reqTTL = ttl.(int64)
@@ -87,7 +87,7 @@ func TestPassthroughBackend_Read(t *testing.T) {
 		// What comes back if an int is passed in is a json.Number which is
 		// actually aliased as a string so to make the deep equal happy if it's
 		// actually a number we set it to an int64
-		var respTTL interface{} = resp.Data[ttlType]
+		var respTTL any = resp.Data[ttlType]
 		_, ok := respTTL.(json.Number)
 		if ok {
 			respTTL, err = respTTL.(json.Number).Int64()
@@ -104,7 +104,7 @@ func TestPassthroughBackend_Read(t *testing.T) {
 					TTL:       expectedTTL,
 				},
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"raw":   "test",
 				ttlType: reqTTL,
 			},
@@ -181,7 +181,7 @@ func TestPassthroughBackend_List(t *testing.T) {
 		}
 
 		expected := &logical.Response{
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"keys": []string{"foo"},
 			},
 		}
@@ -200,7 +200,7 @@ func TestPassthroughBackend_Revoke(t *testing.T) {
 	test := func(b logical.Backend) {
 		req := logical.TestRequest(t, logical.RevokeOperation, "kv")
 		req.Secret = &logical.Secret{
-			InternalData: map[string]interface{}{
+			InternalData: map[string]any{
 				"secret_type": "kv",
 			},
 		}

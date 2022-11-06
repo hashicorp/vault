@@ -380,7 +380,7 @@ func file_vault_activity_activity_log_proto_rawDescGZIP() []byte {
 }
 
 var file_vault_activity_activity_log_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
-var file_vault_activity_activity_log_proto_goTypes = []interface{}{
+var file_vault_activity_activity_log_proto_goTypes = []any{
 	(*EntityRecord)(nil),        // 0: activity.EntityRecord
 	(*LogFragment)(nil),         // 1: activity.LogFragment
 	(*EntityActivityLog)(nil),   // 2: activity.EntityActivityLog
@@ -407,7 +407,7 @@ func file_vault_activity_activity_log_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_vault_activity_activity_log_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_vault_activity_activity_log_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*EntityRecord); i {
 			case 0:
 				return &v.state
@@ -419,7 +419,7 @@ func file_vault_activity_activity_log_proto_init() {
 				return nil
 			}
 		}
-		file_vault_activity_activity_log_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_vault_activity_activity_log_proto_msgTypes[1].Exporter = func(v any, i int) any {
 			switch v := v.(*LogFragment); i {
 			case 0:
 				return &v.state
@@ -431,7 +431,7 @@ func file_vault_activity_activity_log_proto_init() {
 				return nil
 			}
 		}
-		file_vault_activity_activity_log_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_vault_activity_activity_log_proto_msgTypes[2].Exporter = func(v any, i int) any {
 			switch v := v.(*EntityActivityLog); i {
 			case 0:
 				return &v.state
@@ -443,7 +443,7 @@ func file_vault_activity_activity_log_proto_init() {
 				return nil
 			}
 		}
-		file_vault_activity_activity_log_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_vault_activity_activity_log_proto_msgTypes[3].Exporter = func(v any, i int) any {
 			switch v := v.(*TokenCount); i {
 			case 0:
 				return &v.state
@@ -455,7 +455,7 @@ func file_vault_activity_activity_log_proto_init() {
 				return nil
 			}
 		}
-		file_vault_activity_activity_log_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_vault_activity_activity_log_proto_msgTypes[4].Exporter = func(v any, i int) any {
 			switch v := v.(*LogFragmentResponse); i {
 			case 0:
 				return &v.state

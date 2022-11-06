@@ -46,28 +46,28 @@ func TestTest_preCheck(t *testing.T) {
 // mockT implements TestT for testing
 type mockT struct {
 	ErrorCalled bool
-	ErrorArgs   []interface{}
+	ErrorArgs   []any
 	FatalCalled bool
-	FatalArgs   []interface{}
+	FatalArgs   []any
 	SkipCalled  bool
-	SkipArgs    []interface{}
+	SkipArgs    []any
 
 	f bool
 }
 
-func (t *mockT) Error(args ...interface{}) {
+func (t *mockT) Error(args ...any) {
 	t.ErrorCalled = true
 	t.ErrorArgs = args
 	t.f = true
 }
 
-func (t *mockT) Fatal(args ...interface{}) {
+func (t *mockT) Fatal(args ...any) {
 	t.FatalCalled = true
 	t.FatalArgs = args
 	t.f = true
 }
 
-func (t *mockT) Skip(args ...interface{}) {
+func (t *mockT) Skip(args ...any) {
 	t.SkipCalled = true
 	t.SkipArgs = args
 	t.f = true

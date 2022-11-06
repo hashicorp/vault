@@ -28,7 +28,7 @@ func TestInitialize(t *testing.T) {
 	tests := map[string]testCase{
 		"happy path": {
 			req: dbplugin.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"connection_url": connURL,
 				},
 				VerifyConnection: true,
@@ -36,7 +36,7 @@ func TestInitialize(t *testing.T) {
 		},
 		"max_open_connections set": {
 			dbplugin.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"connection_url":       connURL,
 					"max_open_connections": "5",
 				},
@@ -45,7 +45,7 @@ func TestInitialize(t *testing.T) {
 		},
 		"contained_db set": {
 			dbplugin.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"connection_url": connURL,
 					"contained_db":   true,
 				},
@@ -54,7 +54,7 @@ func TestInitialize(t *testing.T) {
 		},
 		"contained_db set string": {
 			dbplugin.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"connection_url": connURL,
 					"contained_db":   "true",
 				},
@@ -146,7 +146,7 @@ func TestNewUser(t *testing.T) {
 			}
 
 			initReq := dbplugin.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"connection_url":    connURL,
 					"username_template": test.usernameTemplate,
 				},
@@ -253,7 +253,7 @@ func TestUpdateUser_password(t *testing.T) {
 			defer cleanup()
 
 			initReq := dbplugin.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"connection_url": connURL,
 				},
 				VerifyConnection: true,
@@ -319,7 +319,7 @@ func TestDeleteUser(t *testing.T) {
 	initPassword := "p4$sw0rd"
 
 	initReq := dbplugin.InitializeRequest{
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"connection_url": connURL,
 		},
 		VerifyConnection: true,
@@ -365,7 +365,7 @@ func TestDeleteUserContainedDB(t *testing.T) {
 	initPassword := "p4$sw0rd"
 
 	initReq := dbplugin.InitializeRequest{
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"connection_url": connURL,
 			"contained_db":   true,
 		},
@@ -413,7 +413,7 @@ func TestContainedDBSQLSanitization(t *testing.T) {
 	initPassword := "p4$sw0rd"
 
 	initReq := dbplugin.InitializeRequest{
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"connection_url": connURL,
 		},
 		VerifyConnection: true,
@@ -451,7 +451,7 @@ func TestSQLSanitization(t *testing.T) {
 	initPassword := "p4$sw0rd"
 
 	initReq := dbplugin.InitializeRequest{
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"connection_url": connURL,
 		},
 		VerifyConnection: true,

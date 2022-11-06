@@ -27,7 +27,7 @@ type SinkReader interface {
 type SinkConfig struct {
 	Sink
 	Logger             hclog.Logger
-	Config             map[string]interface{}
+	Config             map[string]any
 	Client             *api.Client
 	WrapTTL            time.Duration
 	DHType             string
@@ -243,7 +243,7 @@ func (s *SinkConfig) wrapToken(client *api.Client, wrapTTL time.Duration, token 
 		return wrapTTL.String()
 	})
 
-	secret, err := wrapClient.Logical().Write("sys/wrapping/wrap", map[string]interface{}{
+	secret, err := wrapClient.Logical().Write("sys/wrapping/wrap", map[string]any{
 		"token": token,
 	})
 	if err != nil {

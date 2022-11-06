@@ -55,77 +55,77 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 		t.Fatal("nil data")
 	}
 
-	exp := map[string]interface{}{
-		"exact_paths": map[string]interface{}{
-			"auth/token/lookup-self": map[string]interface{}{
-				"capabilities": []interface{}{
+	exp := map[string]any{
+		"exact_paths": map[string]any{
+			"auth/token/lookup-self": map[string]any{
+				"capabilities": []any{
 					"read",
 				},
 			},
-			"auth/token/renew-self": map[string]interface{}{
-				"capabilities": []interface{}{
+			"auth/token/renew-self": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
-			"auth/token/revoke-self": map[string]interface{}{
-				"capabilities": []interface{}{
+			"auth/token/revoke-self": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
-			"sys/capabilities-self": map[string]interface{}{
-				"capabilities": []interface{}{
+			"sys/capabilities-self": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
-			"sys/control-group/request": map[string]interface{}{
-				"capabilities": []interface{}{
+			"sys/control-group/request": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
-			"sys/internal/ui/resultant-acl": map[string]interface{}{
-				"capabilities": []interface{}{
+			"sys/internal/ui/resultant-acl": map[string]any{
+				"capabilities": []any{
 					"read",
 				},
 			},
-			"sys/leases/lookup": map[string]interface{}{
-				"capabilities": []interface{}{
+			"sys/leases/lookup": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
-			"sys/leases/renew": map[string]interface{}{
-				"capabilities": []interface{}{
+			"sys/leases/renew": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
-			"sys/renew": map[string]interface{}{
-				"capabilities": []interface{}{
+			"sys/renew": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
-			"sys/tools/hash": map[string]interface{}{
-				"capabilities": []interface{}{
+			"sys/tools/hash": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
-			"sys/wrapping/lookup": map[string]interface{}{
-				"capabilities": []interface{}{
+			"sys/wrapping/lookup": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
-			"sys/wrapping/unwrap": map[string]interface{}{
-				"capabilities": []interface{}{
+			"sys/wrapping/unwrap": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
-			"sys/wrapping/wrap": map[string]interface{}{
-				"capabilities": []interface{}{
+			"sys/wrapping/wrap": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
 		},
-		"glob_paths": map[string]interface{}{
-			"cubbyhole/": map[string]interface{}{
-				"capabilities": []interface{}{
+		"glob_paths": map[string]any{
+			"cubbyhole/": map[string]any{
+				"capabilities": []any{
 					"create",
 					"delete",
 					"list",
@@ -133,8 +133,8 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 					"update",
 				},
 			},
-			"sys/tools/hash/": map[string]interface{}{
-				"capabilities": []interface{}{
+			"sys/tools/hash/": map[string]any{
+				"capabilities": []any{
 					"update",
 				},
 			},
@@ -233,14 +233,14 @@ func TestSystemBackend_VersionHistory_authenticated(t *testing.T) {
 	}
 
 	var ok bool
-	var keys []interface{}
-	var keyInfo map[string]interface{}
+	var keys []any
+	var keyInfo map[string]any
 
-	if keys, ok = resp.Data["keys"].([]interface{}); !ok {
+	if keys, ok = resp.Data["keys"].([]any); !ok {
 		t.Fatalf("expected keys to be array, actual: %#v", resp.Data["keys"])
 	}
 
-	if keyInfo, ok = resp.Data["key_info"].(map[string]interface{}); !ok {
+	if keyInfo, ok = resp.Data["key_info"].(map[string]any); !ok {
 		t.Fatalf("expected key_info to be map, actual: %#v", resp.Data["key_info"])
 	}
 

@@ -129,7 +129,7 @@ func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request,
 	}
 
 	// Decode the data
-	var rawData map[string]interface{}
+	var rawData map[string]any
 	if err := jsonutil.DecodeJSON(out.Value, &rawData); err != nil {
 		return nil, fmt.Errorf("json decoding failed: %w", err)
 	}

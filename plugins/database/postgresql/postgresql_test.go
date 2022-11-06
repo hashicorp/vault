@@ -18,10 +18,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
+func getPostgreSQL(t *testing.T, options map[string]any) (*PostgreSQL, func()) {
 	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": connURL,
 	}
 	for k, v := range options {
@@ -43,7 +43,7 @@ func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, f
 }
 
 func TestPostgreSQL_Initialize(t *testing.T) {
-	db, cleanup := getPostgreSQL(t, map[string]interface{}{
+	db, cleanup := getPostgreSQL(t, map[string]any{
 		"max_open_connections": 5,
 	})
 	defer cleanup()
@@ -54,7 +54,7 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 }
 
 func TestPostgreSQL_InitializeWithStringVals(t *testing.T) {
-	db, cleanup := getPostgreSQL(t, map[string]interface{}{
+	db, cleanup := getPostgreSQL(t, map[string]any{
 		"max_open_connections": "5",
 	})
 	defer cleanup()
@@ -73,7 +73,7 @@ func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": dsnConnURL,
 	}
 
@@ -951,7 +951,7 @@ func TestNewUser_CustomUsername(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			initReq := dbplugin.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"connection_url":    connURL,
 					"username_template": test.usernameTemplate,
 				},
@@ -1031,7 +1031,7 @@ func TestPostgreSQL_Repmgr(t *testing.T) {
 	}
 
 	// Open a connection to both databases using the multihost connection string
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": fmt.Sprintf("postgresql://{{username}}:{{password}}@%s,%s/postgres?target_session_attrs=read-write", getHost(url0), getHost(url1)),
 		"username":       "postgres",
 		"password":       "secret",
@@ -1092,7 +1092,7 @@ func testPostgreSQL_Repmgr_Container(t *testing.T, name string) (*PostgreSQL, *d
 	runner, cleanup, connURL, containerID := postgresql.PrepareTestContainerRepmgr(t, name, "13.4.0", envVars)
 	t.Cleanup(cleanup)
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": connURL,
 	}
 	req := dbplugin.InitializeRequest{

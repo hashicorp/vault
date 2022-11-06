@@ -168,7 +168,7 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 
 	// Return the key to be used for the tag and the value to be used for that tag key.
 	// This key value pair should be set on the EC2 instance.
-	resp.Data = map[string]interface{}{
+	resp.Data = map[string]any{
 		"tag_key":   roleEntry.RoleTag,
 		"tag_value": rTagValue,
 	}

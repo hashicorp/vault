@@ -13,13 +13,13 @@ const mockV5Type = "mockv5"
 
 // MockDatabaseV5 is an implementation of Database interface
 type MockDatabaseV5 struct {
-	config map[string]interface{}
+	config map[string]any
 }
 
 var _ v5.Database = &MockDatabaseV5{}
 
 // New returns a new in-memory instance
-func New() (interface{}, error) {
+func New() (any, error) {
 	db := MockDatabaseV5{}
 	return db, nil
 }

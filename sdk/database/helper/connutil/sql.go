@@ -20,28 +20,28 @@ var _ ConnectionProducer = &SQLConnectionProducer{}
 
 // SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type SQLConnectionProducer struct {
-	ConnectionURL            string      `json:"connection_url" mapstructure:"connection_url" structs:"connection_url"`
-	MaxOpenConnections       int         `json:"max_open_connections" mapstructure:"max_open_connections" structs:"max_open_connections"`
-	MaxIdleConnections       int         `json:"max_idle_connections" mapstructure:"max_idle_connections" structs:"max_idle_connections"`
-	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
-	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
-	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
-	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
+	ConnectionURL            string `json:"connection_url" mapstructure:"connection_url" structs:"connection_url"`
+	MaxOpenConnections       int    `json:"max_open_connections" mapstructure:"max_open_connections" structs:"max_open_connections"`
+	MaxIdleConnections       int    `json:"max_idle_connections" mapstructure:"max_idle_connections" structs:"max_idle_connections"`
+	MaxConnectionLifetimeRaw any    `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
+	Username                 string `json:"username" mapstructure:"username" structs:"username"`
+	Password                 string `json:"password" mapstructure:"password" structs:"password"`
+	DisableEscaping          bool   `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
 
 	Type                  string
-	RawConfig             map[string]interface{}
+	RawConfig             map[string]any
 	maxConnectionLifetime time.Duration
 	Initialized           bool
 	db                    *sql.DB
 	sync.Mutex
 }
 
-func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]any, verifyConnection bool) error {
 	_, err := c.Init(ctx, conf, verifyConnection)
 	return err
 }
 
-func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
+func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]any, verifyConnection bool) (map[string]any, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -121,7 +121,7 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 	return c.RawConfig, nil
 }
 
-func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
+func (c *SQLConnectionProducer) Connection(ctx context.Context) (any, error) {
 	if !c.Initialized {
 		return nil, ErrNotInitialized
 	}
@@ -175,8 +175,8 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	return c.db, nil
 }
 
-func (c *SQLConnectionProducer) SecretValues() map[string]interface{} {
-	return map[string]interface{}{
+func (c *SQLConnectionProducer) SecretValues() map[string]any {
+	return map[string]any{
 		c.Password: "[password]",
 	}
 }

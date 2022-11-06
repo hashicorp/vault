@@ -44,7 +44,7 @@ func TestIdentityStore_GroupAliasLocalMount(t *testing.T) {
 	ldapMountAccessor := auths["ldap/"].Accessor
 
 	// Create an external group
-	secret, err := client.Logical().Write("identity/group", map[string]interface{}{
+	secret, err := client.Logical().Write("identity/group", map[string]any{
 		"type": "external",
 	})
 	if err != nil {
@@ -53,7 +53,7 @@ func TestIdentityStore_GroupAliasLocalMount(t *testing.T) {
 	groupID := secret.Data["id"].(string)
 
 	// Attempt to create a group alias against a local mount should fail
-	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
+	secret, err = client.Logical().Write("identity/group-alias", map[string]any{
 		"name":           "testuser",
 		"mount_accessor": ldapMountAccessor,
 		"canonical_id":   groupID,

@@ -89,6 +89,6 @@ func Difference(a, b []string, lowercase bool) []string {
 	return extstrutil.Difference(a, b, lowercase)
 }
 
-func GetString(m map[string]interface{}, key string) (string, error) {
+func GetString(m map[string]any, key string) (string, error) {
 	return extstrutil.GetString(m, key)
 }

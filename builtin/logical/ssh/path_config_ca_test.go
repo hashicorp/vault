@@ -133,7 +133,7 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 	}
 
 	caReq.Operation = logical.UpdateOperation
-	caReq.Data = map[string]interface{}{
+	caReq.Data = map[string]any{
 		"public_key":  testCAPublicKey,
 		"private_key": testCAPrivateKey,
 	}
@@ -184,7 +184,7 @@ func createDeleteHelper(t *testing.T, b logical.Backend, config *logical.Backend
 		Operation: logical.UpdateOperation,
 		Storage:   config.StorageView,
 	}
-	caReq.Data = map[string]interface{}{
+	caReq.Data = map[string]any{
 		"generate_signing_key": true,
 		"key_type":             keyType,
 		"key_bits":             keyBits,
@@ -197,7 +197,7 @@ func createDeleteHelper(t *testing.T, b logical.Backend, config *logical.Backend
 		t.Fatalf("bad case %v: expected public key of type %v but was %v", index, caReq.Data["key_type"], resp.Data["public_key"])
 	}
 
-	issueOptions := map[string]interface{}{
+	issueOptions := map[string]any{
 		"public_key": testCAPublicKeyEd25519,
 	}
 	issueReq := &logical.Request{
@@ -250,7 +250,7 @@ func TestSSH_ConfigCAKeyTypes(t *testing.T) {
 	}
 
 	// Create a role for ssh signing.
-	roleOptions := map[string]interface{}{
+	roleOptions := map[string]any{
 		"allow_user_certificates": true,
 		"allowed_users":           "*",
 		"key_type":                "ca",

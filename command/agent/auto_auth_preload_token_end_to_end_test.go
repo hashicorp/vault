@@ -48,7 +48,7 @@ func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 	}
 
 	// Setup Approle
-	_, err := client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
+	_, err := client.Logical().Write("auth/approle/role/test1", map[string]any{
 		"bind_secret_id": "true",
 		"token_ttl":      "3s",
 		"token_max_ttl":  "10s",
@@ -90,7 +90,7 @@ func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
-	conf := map[string]interface{}{
+	conf := map[string]any{
 		"role_id_file_path":   role,
 		"secret_id_file_path": secret,
 	}
@@ -108,7 +108,7 @@ func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 	}
 
 	// Setup Preload Token
-	tokenRespRaw, err := client.Logical().Write("auth/token/create", map[string]interface{}{
+	tokenRespRaw, err := client.Logical().Write("auth/token/create", map[string]any{
 		"ttl":              "10s",
 		"explicit-max-ttl": "15s",
 		"policies":         []string{""},
@@ -150,7 +150,7 @@ func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"path": tokenSinkFileName,
 		},
 		WrapTTL: 10 * time.Second,
@@ -219,7 +219,7 @@ func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 		t.Fatal("expected token but didn't receive it")
 	}
 
-	wrappedToken := map[string]interface{}{
+	wrappedToken := map[string]any{
 		"token": authToken.Token,
 	}
 	unwrapResp, err := client.Logical().Write("sys/wrapping/unwrap", wrappedToken)

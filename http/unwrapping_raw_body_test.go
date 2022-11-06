@@ -37,7 +37,7 @@ func TestUnwrapping_Raw_Body(t *testing.T) {
 	client.SetWrappingLookupFunc(func(operation, path string) string {
 		return "5m"
 	})
-	secret, err := client.Logical().Write("kv/foo/bar", map[string]interface{}{
+	secret, err := client.Logical().Write("kv/foo/bar", map[string]any{
 		"a": "b",
 	})
 	if err != nil {

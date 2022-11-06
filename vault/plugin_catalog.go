@@ -191,7 +191,7 @@ type pluginClientConn struct {
 
 var _ grpc.ClientConnInterface = &pluginClientConn{}
 
-func (d *pluginClientConn) Invoke(ctx context.Context, method string, args interface{}, reply interface{}, opts ...grpc.CallOption) error {
+func (d *pluginClientConn) Invoke(ctx context.Context, method string, args any, reply any, opts ...grpc.CallOption) error {
 	// Inject ID to the context
 	md := metadata.Pairs(pluginutil.MultiplexingCtxKey, d.id)
 	idCtx := metadata.NewOutgoingContext(ctx, md)

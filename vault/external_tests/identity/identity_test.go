@@ -38,7 +38,7 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 	vault.TestWaitActive(t, core)
 
 	// Create a entity
-	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
+	secret, err := client.Logical().Write("identity/entity", map[string]any{
 		"name": "testentityname",
 	})
 	require.NoError(t, err)
@@ -52,7 +52,7 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 
 	setupFunc := func(path string, cfg *ldaputil.ConfigEntry) string {
 		// Create an external group
-		resp, err := client.Logical().Write("identity/group", map[string]interface{}{
+		resp, err := client.Logical().Write("identity/group", map[string]any{
 			"type":     "external",
 			"name":     path + "ldap_admin_staff",
 			"policies": []string{"admin-policy"},
@@ -75,7 +75,7 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 		require.NotEmpty(t, accessor)
 
 		// Create an external group alias
-		resp, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
+		resp, err = client.Logical().Write("identity/group-alias", map[string]any{
 			"name":           "admin_staff",
 			"canonical_id":   groupID,
 			"mount_accessor": accessor,
@@ -83,20 +83,20 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create a user in Vault
-		_, err = client.Logical().Write("auth/"+path+"/users/hermes conrad", map[string]interface{}{
+		_, err = client.Logical().Write("auth/"+path+"/users/hermes conrad", map[string]any{
 			"password": "hermes",
 		})
 		require.NoError(t, err)
 
 		// Create an entity alias
-		client.Logical().Write("identity/entity-alias", map[string]interface{}{
+		client.Logical().Write("identity/entity-alias", map[string]any{
 			"name":           "hermes conrad",
 			"canonical_id":   entityID,
 			"mount_accessor": accessor,
 		})
 
 		// Configure LDAP auth
-		secret, err = client.Logical().Write("auth/"+path+"/config", map[string]interface{}{
+		secret, err = client.Logical().Write("auth/"+path+"/config", map[string]any{
 			"url":       cfg.Url,
 			"userattr":  cfg.UserAttr,
 			"userdn":    cfg.UserDN,
@@ -107,7 +107,7 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		secret, err = client.Logical().Write("auth/"+path+"/login/hermes conrad", map[string]interface{}{
+		secret, err = client.Logical().Write("auth/"+path+"/login/hermes conrad", map[string]any{
 			"password": "hermes",
 		})
 		require.NoError(t, err)
@@ -127,7 +127,7 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 
 	// Remove hermes conrad from admin_staff group
 	removeLdapGroupMember(t, config1, "admin_staff", "hermes conrad")
-	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]any{
 		"password": "hermes",
 	})
 	require.NoError(t, err)
@@ -181,7 +181,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 
 	accessor := auth["ldap/"].Accessor
 
-	secret, err := client.Logical().Write("identity/group", map[string]interface{}{
+	secret, err := client.Logical().Write("identity/group", map[string]any{
 		"type": "external",
 		"name": "ldap_ship_crew",
 	})
@@ -190,7 +190,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 	shipCrewGroupID := secret.Data["id"].(string)
 
-	secret, err = client.Logical().Write("identity/group", map[string]interface{}{
+	secret, err = client.Logical().Write("identity/group", map[string]any{
 		"type": "external",
 		"name": "ldap_admin_staff",
 	})
@@ -199,7 +199,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 	adminStaffGroupID := secret.Data["id"].(string)
 
-	secret, err = client.Logical().Write("identity/group", map[string]interface{}{
+	secret, err = client.Logical().Write("identity/group", map[string]any{
 		"type": "external",
 		"name": "ldap_devops",
 	})
@@ -208,7 +208,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 	devopsGroupID := secret.Data["id"].(string)
 
-	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
+	secret, err = client.Logical().Write("identity/group-alias", map[string]any{
 		"name":           "ship_crew",
 		"canonical_id":   shipCrewGroupID,
 		"mount_accessor": accessor,
@@ -217,7 +217,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
+	secret, err = client.Logical().Write("identity/group-alias", map[string]any{
 		"name":           "admin_staff",
 		"canonical_id":   adminStaffGroupID,
 		"mount_accessor": accessor,
@@ -226,7 +226,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
+	secret, err = client.Logical().Write("identity/group-alias", map[string]any{
 		"name":           "devops",
 		"canonical_id":   devopsGroupID,
 		"mount_accessor": accessor,
@@ -239,7 +239,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	aliasMap := secret.Data["alias"].(map[string]interface{})
+	aliasMap := secret.Data["alias"].(map[string]any)
 	if aliasMap["canonical_id"] != shipCrewGroupID ||
 		aliasMap["name"] != "ship_crew" ||
 		aliasMap["mount_accessor"] != accessor {
@@ -250,7 +250,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	aliasMap = secret.Data["alias"].(map[string]interface{})
+	aliasMap = secret.Data["alias"].(map[string]any)
 	if aliasMap["canonical_id"] != adminStaffGroupID ||
 		aliasMap["name"] != "admin_staff" ||
 		aliasMap["mount_accessor"] != accessor {
@@ -261,7 +261,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	defer cleanup()
 
 	// Configure LDAP auth
-	secret, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/config", map[string]any{
 		"url":       cfg.Url,
 		"userattr":  cfg.UserAttr,
 		"userdn":    cfg.UserDN,
@@ -275,7 +275,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 
 	// Create a local group in LDAP backend
-	secret, err = client.Logical().Write("auth/ldap/groups/devops", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/groups/devops", map[string]any{
 		"policies": "default",
 	})
 	if err != nil {
@@ -283,7 +283,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 
 	// Create a local group in LDAP backend
-	secret, err = client.Logical().Write("auth/ldap/groups/engineers", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/groups/engineers", map[string]any{
 		"policies": "default",
 	})
 	if err != nil {
@@ -291,7 +291,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 
 	// Create a local user in LDAP
-	secret, err = client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/users/hermes conrad", map[string]any{
 		"policies": "default",
 		"groups":   "engineers,devops",
 	})
@@ -300,7 +300,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 
 	// Login with LDAP and create a token
-	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]any{
 		"password": "hermes",
 	})
 	if err != nil {
@@ -326,7 +326,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	addLdapGroupMember(t, cfg, "ship_crew", "hermes conrad")
 
 	// Re-login with LDAP
-	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]any{
 		"password": "hermes",
 	})
 	if err != nil {
@@ -417,7 +417,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	assertMember(t, client, entityID, "engineer", devopsGroupID, true)
 
 	// Remove user hermes conrad from the devops group in LDAP backend
-	secret, err = client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/users/hermes conrad", map[string]any{
 		"policies": "default",
 		"groups":   "engineers",
 	})
@@ -478,7 +478,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 	accessor := auth["ldap/"].Accessor
 
 	adminPolicy := "admin_policy"
-	secret, err := client.Logical().Write("identity/group", map[string]interface{}{
+	secret, err := client.Logical().Write("identity/group", map[string]any{
 		"type":     "external",
 		"name":     "ldap_admin_staff",
 		"policies": []string{adminPolicy},
@@ -489,7 +489,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 	adminStaffGroupID := secret.Data["id"].(string)
 	adminGroupName := "admin_staff"
 
-	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
+	secret, err = client.Logical().Write("identity/group-alias", map[string]any{
 		"name":           adminGroupName,
 		"canonical_id":   adminStaffGroupID,
 		"mount_accessor": accessor,
@@ -502,7 +502,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	aliasMap := secret.Data["alias"].(map[string]interface{})
+	aliasMap := secret.Data["alias"].(map[string]any)
 	if aliasMap["canonical_id"] != adminStaffGroupID ||
 		aliasMap["name"] != adminGroupName ||
 		aliasMap["mount_accessor"] != accessor {
@@ -513,7 +513,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 	defer cleanup()
 
 	// Configure LDAP auth
-	secret, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/config", map[string]any{
 		"url":       cfg.Url,
 		"userattr":  cfg.UserAttr,
 		"userdn":    cfg.UserDN,
@@ -527,7 +527,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 	}
 
 	// Create a local user in LDAP
-	secret, err = client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/users/hermes conrad", map[string]any{
 		"policies": "default",
 	})
 	if err != nil {
@@ -535,7 +535,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 	}
 
 	// Login with LDAP and create a token
-	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]any{
 		"password": "hermes",
 	})
 	if err != nil {
@@ -563,7 +563,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 	removeLdapGroupMember(t, cfg, adminGroupName, "hermes conrad")
 
 	// Re-login with LDAP
-	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]any{
 		"password": "hermes",
 	})
 	if err != nil {
@@ -584,7 +584,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 	addLdapGroupMember(t, cfg, adminGroupName, "hermes conrad")
 
 	// Re-login with LDAP
-	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]any{
 		"password": "hermes",
 	})
 	if err != nil {
@@ -629,7 +629,7 @@ func assertMember(t *testing.T, client *api.Client, entityID, groupName, groupID
 	}
 	groupMap := secret.Data
 
-	groupEntityMembers, ok := groupMap["member_entity_ids"].([]interface{})
+	groupEntityMembers, ok := groupMap["member_entity_ids"].([]any)
 	if !ok && expectFound {
 		t.Fatalf("expected member_entity_ids not to be nil")
 	}

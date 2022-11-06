@@ -91,7 +91,7 @@ func (b *backend) pathConfigCARead(ctx context.Context, req *logical.Request, da
 	}
 
 	response := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"public_key": publicKeyEntry.Key,
 		},
 	}
@@ -274,7 +274,7 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 
 	if generateSigningKey {
 		response := &logical.Response{
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"public_key": publicKey,
 			},
 		}

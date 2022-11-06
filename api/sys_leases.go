@@ -16,7 +16,7 @@ func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*
 
 	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/renew")
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"increment": increment,
 		"lease_id":  id,
 	}
@@ -43,7 +43,7 @@ func (c *Sys) LookupWithContext(ctx context.Context, id string) (*Secret, error)
 
 	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/lookup")
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"lease_id": id,
 	}
 	if err := r.SetJSONBody(body); err != nil {
@@ -68,7 +68,7 @@ func (c *Sys) RevokeWithContext(ctx context.Context, id string) error {
 	defer cancelFunc()
 
 	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/revoke")
-	body := map[string]interface{}{
+	body := map[string]any{
 		"lease_id": id,
 	}
 	if err := r.SetJSONBody(body); err != nil {
@@ -140,7 +140,7 @@ func (c *Sys) RevokeWithOptionsWithContext(ctx context.Context, opts *RevokeOpti
 
 	r := c.c.NewRequest(http.MethodPut, path)
 	if !opts.Force {
-		body := map[string]interface{}{
+		body := map[string]any{
 			"sync": opts.Sync,
 		}
 		if err := r.SetJSONBody(body); err != nil {

@@ -122,7 +122,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	keyReq := &logical.Request{
 		Path:      "keys/rsa",
 		Operation: logical.UpdateOperation,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"type": keyType,
 		},
 		Storage: storage,
@@ -139,7 +139,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		Path:      "encrypt/rsa",
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"plaintext": plaintext,
 		},
 	}
@@ -155,7 +155,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		Path:      "decrypt/rsa",
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"ciphertext": ciphertext1,
 		},
 	}
@@ -203,7 +203,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	}
 
 	// Decrypt the new ciphertext
-	decryptReq.Data = map[string]interface{}{
+	decryptReq.Data = map[string]any{
 		"ciphertext": ciphertext2,
 	}
 	resp, err = b.HandleRequest(context.Background(), decryptReq)
@@ -218,7 +218,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		Path:      "sign/rsa",
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"input": plaintext,
 		},
 	}
@@ -232,7 +232,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		Path:      "verify/rsa",
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"input":     plaintext,
 			"signature": signature,
 		},
@@ -246,7 +246,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		t.Fatalf("failed to verify the RSA signature")
 	}
 
-	signReq.Data = map[string]interface{}{
+	signReq.Data = map[string]any{
 		"input":          plaintext,
 		"hash_algorithm": "invalid",
 	}
@@ -255,7 +255,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		t.Fatal(err)
 	}
 
-	signReq.Data = map[string]interface{}{
+	signReq.Data = map[string]any{
 		"input":          plaintext,
 		"hash_algorithm": "sha2-512",
 	}
@@ -265,7 +265,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	}
 	signature = resp.Data["signature"].(string)
 
-	verifyReq.Data = map[string]interface{}{
+	verifyReq.Data = map[string]any{
 		"input":     plaintext,
 		"signature": signature,
 	}
@@ -277,7 +277,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		t.Fatalf("expected validation to fail")
 	}
 
-	verifyReq.Data = map[string]interface{}{
+	verifyReq.Data = map[string]any{
 		"input":          plaintext,
 		"signature":      signature,
 		"hash_algorithm": "sha2-512",
@@ -292,7 +292,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 
 	// Take a random hash and sign it using PKCSv1_5_NoOID.
 	hash := "P8m2iUWdc4+MiKOkiqnjNUIBa3pAUuABqqU2/KdIE8s="
-	signReq.Data = map[string]interface{}{
+	signReq.Data = map[string]any{
 		"input":               hash,
 		"hash_algorithm":      "none",
 		"signature_algorithm": "pkcs1v15",
@@ -304,7 +304,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	}
 	signature = resp.Data["signature"].(string)
 
-	verifyReq.Data = map[string]interface{}{
+	verifyReq.Data = map[string]any{
 		"input":               hash,
 		"signature":           signature,
 		"hash_algorithm":      "none",
@@ -321,7 +321,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	decryptData := make(map[string]interface{})
+	decryptData := make(map[string]any)
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalFactory: Factory,
 		Steps: []logicaltest.TestStep{
@@ -348,7 +348,7 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_upsert(t *testing.T) {
-	decryptData := make(map[string]interface{})
+	decryptData := make(map[string]any)
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalFactory: Factory,
 		Steps: []logicaltest.TestStep{
@@ -363,7 +363,7 @@ func TestBackend_upsert(t *testing.T) {
 }
 
 func TestBackend_datakey(t *testing.T) {
-	dataKeyInfo := make(map[string]interface{})
+	dataKeyInfo := make(map[string]any)
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalFactory: Factory,
 		Steps: []logicaltest.TestStep{
@@ -386,8 +386,8 @@ func TestBackend_rotation(t *testing.T) {
 }
 
 func testBackendRotation(t *testing.T) {
-	decryptData := make(map[string]interface{})
-	encryptHistory := make(map[int]map[string]interface{})
+	decryptData := make(map[string]any)
+	encryptHistory := make(map[int]map[string]any)
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalFactory: Factory,
 		Steps: []logicaltest.TestStep{
@@ -450,7 +450,7 @@ func testBackendRotation(t *testing.T) {
 }
 
 func TestBackend_basic_derived(t *testing.T) {
-	decryptData := make(map[string]interface{})
+	decryptData := make(map[string]any)
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalFactory: Factory,
 		Steps: []logicaltest.TestStep{
@@ -471,7 +471,7 @@ func testAccStepWritePolicy(t *testing.T, name string, derived bool) logicaltest
 	ts := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"derived": derived,
 		},
 	}
@@ -521,7 +521,7 @@ func testAccStepAdjustPolicyMinDecryption(t *testing.T, name string, minVer int)
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name + "/config",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"min_decryption_version": minVer,
 		},
 	}
@@ -531,7 +531,7 @@ func testAccStepAdjustPolicyMinEncryption(t *testing.T, name string, minVer int)
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name + "/config",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"min_encryption_version": minVer,
 		},
 	}
@@ -541,7 +541,7 @@ func testAccStepDisableDeletion(t *testing.T, name string) logicaltest.TestStep 
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name + "/config",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"deletion_allowed": false,
 		},
 	}
@@ -551,7 +551,7 @@ func testAccStepEnableDeletion(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name + "/config",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"deletion_allowed": true,
 		},
 	}
@@ -652,12 +652,12 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 }
 
 func testAccStepEncrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+	t *testing.T, name, plaintext string, decryptData map[string]any,
 ) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
 		},
 		Check: func(resp *logical.Response) error {
@@ -677,12 +677,12 @@ func testAccStepEncrypt(
 }
 
 func testAccStepEncryptUpsert(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+	t *testing.T, name, plaintext string, decryptData map[string]any,
 ) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.CreateOperation,
 		Path:      "encrypt/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
 		},
 		Check: func(resp *logical.Response) error {
@@ -702,12 +702,12 @@ func testAccStepEncryptUpsert(
 }
 
 func testAccStepEncryptContext(
-	t *testing.T, name, plaintext, context string, decryptData map[string]interface{},
+	t *testing.T, name, plaintext, context string, decryptData map[string]any,
 ) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
 			"context":   base64.StdEncoding.EncodeToString([]byte(context)),
 		},
@@ -729,7 +729,7 @@ func testAccStepEncryptContext(
 }
 
 func testAccStepDecrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+	t *testing.T, name, plaintext string, decryptData map[string]any,
 ) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -758,7 +758,7 @@ func testAccStepDecrypt(
 }
 
 func testAccStepRewrap(
-	t *testing.T, name string, decryptData map[string]interface{}, expectedVer int,
+	t *testing.T, name string, decryptData map[string]any, expectedVer int,
 ) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -790,13 +790,13 @@ func testAccStepRewrap(
 }
 
 func testAccStepEncryptVX(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{},
-	ver int, encryptHistory map[int]map[string]interface{},
+	t *testing.T, name, plaintext string, decryptData map[string]any,
+	ver int, encryptHistory map[int]map[string]any,
 ) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
 		},
 		Check: func(resp *logical.Response) error {
@@ -813,7 +813,7 @@ func testAccStepEncryptVX(
 			splitStrings[1] = "v" + strconv.Itoa(ver)
 			ciphertext := strings.Join(splitStrings, ":")
 			decryptData["ciphertext"] = ciphertext
-			encryptHistory[ver] = map[string]interface{}{
+			encryptHistory[ver] = map[string]any{
 				"ciphertext": ciphertext,
 			}
 			return nil
@@ -822,8 +822,8 @@ func testAccStepEncryptVX(
 }
 
 func testAccStepLoadVX(
-	t *testing.T, name string, decryptData map[string]interface{},
-	ver int, encryptHistory map[int]map[string]interface{},
+	t *testing.T, name string, decryptData map[string]any,
+	ver int, encryptHistory map[int]map[string]any,
 ) logicaltest.TestStep {
 	// This is really a no-op to allow us to do data manip in the check function
 	return logicaltest.TestStep{
@@ -837,7 +837,7 @@ func testAccStepLoadVX(
 }
 
 func testAccStepDecryptExpectFailure(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+	t *testing.T, name, plaintext string, decryptData map[string]any,
 ) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -862,9 +862,9 @@ func testAccStepRotate(t *testing.T, name string) logicaltest.TestStep {
 
 func testAccStepWriteDatakey(t *testing.T, name string,
 	noPlaintext bool, bits int,
-	dataKeyInfo map[string]interface{},
+	dataKeyInfo map[string]any,
 ) logicaltest.TestStep {
-	data := map[string]interface{}{}
+	data := map[string]any{}
 	subPath := "plaintext"
 	if noPlaintext {
 		subPath = "wrapped"
@@ -907,7 +907,7 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 }
 
 func testAccStepDecryptDatakey(t *testing.T, name string,
-	dataKeyInfo map[string]interface{},
+	dataKeyInfo map[string]any,
 ) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -1026,7 +1026,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		Storage:   storage,
 		Operation: logical.UpdateOperation,
 		Path:      "keys/testkeynonderived",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"derived":               false,
 			"convergent_encryption": true,
 			"type":                  keyType.String(),
@@ -1047,7 +1047,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		Storage:   storage,
 		Operation: logical.UpdateOperation,
 		Path:      "keys/testkey",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"derived":               true,
 			"convergent_encryption": true,
 			"type":                  keyType.String(),
@@ -1111,7 +1111,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 	// First, test using an invalid length of nonce -- this is only used for v1 convergent
 	req.Path = "encrypt/testkey"
 	if ver < 2 {
-		req.Data = map[string]interface{}{
+		req.Data = map[string]any{
 			"plaintext": "emlwIHphcA==", // "zip zap"
 			"nonce":     "Zm9vIGJhcg==", // "foo bar"
 			"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
@@ -1128,7 +1128,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		}
 
 		// Ensure we fail if we do not provide a nonce
-		req.Data = map[string]interface{}{
+		req.Data = map[string]any{
 			"plaintext": "emlwIHphcA==", // "zip zap"
 			"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 		}
@@ -1139,7 +1139,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 	}
 
 	// Now test encrypting the same value twice
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"plaintext": "emlwIHphcA==",     // "zip zap"
 		"nonce":     "b25ldHdvdGhyZWVl", // "onetwothreee"
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
@@ -1173,7 +1173,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 	}
 
 	// For sanity, also check a different nonce value...
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"plaintext": "emlwIHphcA==",     // "zip zap"
 		"nonce":     "dHdvdGhyZWVmb3Vy", // "twothreefour"
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
@@ -1216,7 +1216,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 	}
 
 	// ...and a different context value
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"plaintext": "emlwIHphcA==",     // "zip zap"
 		"nonce":     "dHdvdGhyZWVmb3Vy", // "twothreefour"
 		"context":   "qV4h9iQyvn+raODOer4JNAsOhkXBwdT4HZ677Ql4KLqXSU+Jk4C/fXBWbv6xkSYT",
@@ -1331,7 +1331,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 
 	// Finally, check operations on empty values
 	// First, check without setting a plaintext at all
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"nonce":   "b25ldHdvdGhyZWVl", // "onetwothreee"
 		"context": "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
@@ -1347,7 +1347,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 	}
 
 	// Now set plaintext to empty
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"plaintext": "",
 		"nonce":     "b25ldHdvdGhyZWVl", // "onetwothreee"
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
@@ -1420,7 +1420,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 		startTime := time.Now()
 		req := &logical.Request{
 			Storage: storage,
-			Data:    map[string]interface{}{},
+			Data:    map[string]any{},
 		}
 		fd := &framework.FieldData{}
 
@@ -1437,7 +1437,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 			chosenFunc = funcs[rand.Int()%len(funcs)]
 			chosenKey = keys[rand.Int()%len(keys)]
 
-			fd.Raw = map[string]interface{}{
+			fd.Raw = map[string]any{
 				"name": chosenKey,
 			}
 			fd.Schema = be.pathKeys().Fields
@@ -1550,7 +1550,7 @@ func TestBadInput(t *testing.T) {
 	}
 
 	req.Path = "decrypt/test"
-	req.Data = map[string]interface{}{
+	req.Data = map[string]any{
 		"ciphertext": "vault:v1:abcd",
 	}
 
@@ -1645,7 +1645,7 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 					Storage:   storage,
 					Operation: logical.UpdateOperation,
 					Path:      "keys/test2",
-					Data: map[string]interface{}{
+					Data: map[string]any{
 						"auto_rotate_period": 24 * time.Hour,
 					},
 				}
@@ -1761,7 +1761,7 @@ func testTransit_AEAD(t *testing.T, keyType string) {
 	keyReq := &logical.Request{
 		Path:      "keys/aead",
 		Operation: logical.UpdateOperation,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"type": keyType,
 		},
 		Storage: storage,
@@ -1780,7 +1780,7 @@ func testTransit_AEAD(t *testing.T, keyType string) {
 		Path:      "encrypt/aead",
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"plaintext": plaintext,
 		},
 	}
@@ -1796,7 +1796,7 @@ func testTransit_AEAD(t *testing.T, keyType string) {
 		Path:      "decrypt/aead",
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"ciphertext": ciphertext1,
 		},
 	}
@@ -1841,7 +1841,7 @@ func testTransit_AEAD(t *testing.T, keyType string) {
 	}
 
 	// Removing the associated_data should break the decryption.
-	decryptReq.Data = map[string]interface{}{
+	decryptReq.Data = map[string]any{
 		"ciphertext": ciphertext2,
 	}
 	resp, err = b.HandleRequest(context.Background(), decryptReq)

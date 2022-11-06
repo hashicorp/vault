@@ -524,7 +524,7 @@ func (p *Predict) listPaths(path string) []string {
 		return nil
 	}
 
-	paths, ok := secret.Data["keys"].([]interface{})
+	paths, ok := secret.Data["keys"].([]any)
 	if !ok {
 		return nil
 	}

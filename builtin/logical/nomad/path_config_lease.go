@@ -70,7 +70,7 @@ func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data 
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"ttl":     int64(lease.TTL.Seconds()),
 			"max_ttl": int64(lease.MaxTTL.Seconds()),
 		},

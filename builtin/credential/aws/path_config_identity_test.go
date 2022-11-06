@@ -39,7 +39,7 @@ func TestBackend_pathConfigIdentity(t *testing.T) {
 	}
 
 	// Invalid value for iam_alias
-	data := map[string]interface{}{
+	data := map[string]any{
 		"iam_alias": "invalid",
 	}
 

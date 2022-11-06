@@ -183,7 +183,7 @@ func file_vault_tokens_token_proto_rawDescGZIP() []byte {
 }
 
 var file_vault_tokens_token_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_vault_tokens_token_proto_goTypes = []interface{}{
+var file_vault_tokens_token_proto_goTypes = []any{
 	(*SignedToken)(nil), // 0: tokens.SignedToken
 	(*Token)(nil),       // 1: tokens.Token
 }
@@ -201,7 +201,7 @@ func file_vault_tokens_token_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_vault_tokens_token_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_vault_tokens_token_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*SignedToken); i {
 			case 0:
 				return &v.state
@@ -213,7 +213,7 @@ func file_vault_tokens_token_proto_init() {
 				return nil
 			}
 		}
-		file_vault_tokens_token_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_vault_tokens_token_proto_msgTypes[1].Exporter = func(v any, i int) any {
 			switch v := v.(*Token); i {
 			case 0:
 				return &v.state

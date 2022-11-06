@@ -60,7 +60,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := client.Logical().Write("auth/alicloud/role/test", map[string]interface{}{
+	if _, err := client.Logical().Write("auth/alicloud/role/test", map[string]any{
 		"arn": os.Getenv(envVarAlicloudRoleArn),
 	}); err != nil {
 		t.Fatal(err)
@@ -81,7 +81,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	am, err := agentalicloud.NewAliCloudAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.alicloud"),
 		MountPath: "auth/alicloud",
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"role":                     "test",
 			"region":                   "us-west-1",
 			"credential_poll_interval": 1,
@@ -122,7 +122,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"path": tokenSinkFileName,
 		},
 		WrapTTL: 10 * time.Second,

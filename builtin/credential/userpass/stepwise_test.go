@@ -37,7 +37,7 @@ func testAccStepwiseUser(
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "users/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"password": password,
 			"policies": policies,
 		},

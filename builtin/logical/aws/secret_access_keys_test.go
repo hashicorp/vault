@@ -123,7 +123,7 @@ func TestReadConfig_DefaultTemplate(t *testing.T) {
 	}
 
 	testTemplate := ""
-	configData := map[string]interface{}{
+	configData := map[string]any{
 		"connection_uri":    "test_uri",
 		"username":          "guest",
 		"password":          "guest",
@@ -167,7 +167,7 @@ func TestReadConfig_CustomTemplate(t *testing.T) {
 	}
 
 	testTemplate := "`foo-{{ .DisplayName }}`"
-	configData := map[string]interface{}{
+	configData := map[string]any{
 		"connection_uri":    "test_uri",
 		"username":          "guest",
 		"password":          "guest",

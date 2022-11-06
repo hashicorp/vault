@@ -52,7 +52,7 @@ func TestGetAuthMetadata(t *testing.T) {
 func TestParseAuthMetadata(t *testing.T) {
 	h := NewHandler(testFields)
 	data := &framework.FieldData{
-		Raw: map[string]interface{}{
+		Raw: map[string]any{
 			testFields.FieldName: []string{"default"},
 		},
 		Schema: map[string]*framework.FieldSchema{
@@ -74,7 +74,7 @@ func TestParseAuthMetadata(t *testing.T) {
 func TestPopulateDesiredAuthMetadata(t *testing.T) {
 	h := NewHandler(testFields)
 	data := &framework.FieldData{
-		Raw: map[string]interface{}{
+		Raw: map[string]any{
 			testFields.FieldName: []string{"foo"},
 		},
 		Schema: map[string]*framework.FieldSchema{

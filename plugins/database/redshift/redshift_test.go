@@ -75,7 +75,7 @@ func TestRedshift_Initialize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url":       connURL,
 		"max_open_connections": 73,
 	}
@@ -89,7 +89,7 @@ func TestRedshift_Initialize(t *testing.T) {
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
 	}
-	expectedConfig := make(map[string]interface{})
+	expectedConfig := make(map[string]any)
 	for k, v := range connectionDetails {
 		expectedConfig[k] = v
 	}
@@ -113,7 +113,7 @@ func TestRedshift_NewUser(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -163,7 +163,7 @@ func TestRedshift_NewUser_NoCreationStatement_ShouldError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -206,7 +206,7 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -266,7 +266,7 @@ func TestRedshift_UpdateUser_Password(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -320,7 +320,7 @@ func TestRedshift_DeleteUser(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -385,7 +385,7 @@ func TestRedshift_DefaultUsernameTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -433,7 +433,7 @@ func TestRedshift_CustomUsernameTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url":    connURL,
 		"username_template": "{{.DisplayName}}-{{random 10}}",
 	}

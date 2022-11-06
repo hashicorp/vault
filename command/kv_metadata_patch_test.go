@@ -91,14 +91,14 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 		args            []string
 		out             string
 		code            int
-		expectedUpdates map[string]interface{}
+		expectedUpdates map[string]any
 	}{
 		{
 			"cas_required_success",
 			[]string{"-cas-required=true"},
 			"Success!",
 			0,
-			map[string]interface{}{
+			map[string]any{
 				"cas_required": true,
 			},
 		},
@@ -107,15 +107,15 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 			[]string{"-cas-required=12345"},
 			"invalid boolean value",
 			1,
-			map[string]interface{}{},
+			map[string]any{},
 		},
 		{
 			"custom_metadata_success",
 			[]string{"-custom-metadata=baz=ghi"},
 			"Success!",
 			0,
-			map[string]interface{}{
-				"custom_metadata": map[string]interface{}{
+			map[string]any{
+				"custom_metadata": map[string]any{
 					"foo": "abc",
 					"bar": "def",
 					"baz": "ghi",
@@ -127,7 +127,7 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 			[]string{"-delete-version-after=5s"},
 			"Success!",
 			0,
-			map[string]interface{}{
+			map[string]any{
 				"delete_version_after": "5s",
 			},
 		},
@@ -136,14 +136,14 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 			[]string{"-delete-version-after=false"},
 			"invalid duration",
 			1,
-			map[string]interface{}{},
+			map[string]any{},
 		},
 		{
 			"max_versions_success",
 			[]string{"-max-versions=10"},
 			"Success!",
 			0,
-			map[string]interface{}{
+			map[string]any{
 				"max_versions": json.Number("10"),
 			},
 		},
@@ -152,16 +152,16 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 			[]string{"-max-versions=false"},
 			"invalid syntax",
 			1,
-			map[string]interface{}{},
+			map[string]any{},
 		},
 		{
 			"multiple_flags_success",
 			[]string{"-max-versions=20", "-custom-metadata=baz=123"},
 			"Success!",
 			0,
-			map[string]interface{}{
+			map[string]any{
 				"max_versions": json.Number("20"),
-				"custom_metadata": map[string]interface{}{
+				"custom_metadata": map[string]any{
 					"foo": "abc",
 					"bar": "def",
 					"baz": "123",
@@ -214,7 +214,7 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 			}
 
 			for k, v := range patchedMetadata.Data {
-				var expectedVal interface{}
+				var expectedVal any
 
 				if inputVal, ok := tc.expectedUpdates[k]; ok {
 					expectedVal = inputVal
@@ -250,7 +250,7 @@ func TestKvMetadataPatchCommand_CasWarning(t *testing.T) {
 		t.Fatalf("metadata put failed, code: %d, output: %s", code, combined)
 	}
 
-	casConfig := map[string]interface{}{
+	casConfig := map[string]any{
 		"cas_required": true,
 	}
 

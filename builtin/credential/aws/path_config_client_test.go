@@ -42,7 +42,7 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		}
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"sts_endpoint":               "https://my-custom-sts-endpoint.example.com",
 		"sts_region":                 "us-east-2",
 		"iam_server_id_header_value": "vault_server_identification_314159",
@@ -84,7 +84,7 @@ func TestBackend_pathConfigClient(t *testing.T) {
 			data["sts_region"], resp.Data["sts_region"])
 	}
 
-	data = map[string]interface{}{
+	data = map[string]any{
 		"sts_endpoint":               "https://my-custom-sts-endpoint2.example.com",
 		"sts_region":                 "us-west-1",
 		"iam_server_id_header_value": "vault_server_identification_2718281",

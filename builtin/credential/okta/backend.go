@@ -114,7 +114,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 		StateToken   string         `json:"stateToken"`
 	}
 
-	authReq, err := shim.NewRequest("POST", "authn", map[string]interface{}{
+	authReq, err := shim.NewRequest("POST", "authn", map[string]any{
 		"username": username,
 		"password": password,
 	})
@@ -135,7 +135,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 	}
 
 	oktaResponse := &logical.Response{
-		Data: map[string]interface{}{},
+		Data: map[string]any{},
 	}
 
 	// More about Okta's Auth transaction state here:
@@ -219,7 +219,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 
 		requestPath := fmt.Sprintf("authn/factors/%s/verify", selectedFactor.Id)
 
-		payload := map[string]interface{}{
+		payload := map[string]any{
 			"stateToken": result.StateToken,
 		}
 		if selectedFactor.Type == mfaTOTPMethod {

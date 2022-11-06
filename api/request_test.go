@@ -7,7 +7,7 @@ import (
 
 func TestRequestSetJSONBody(t *testing.T) {
 	var r Request
-	raw := map[string]interface{}{"foo": "bar"}
+	raw := map[string]any{"foo": "bar"}
 	if err := r.SetJSONBody(raw); err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -21,7 +21,7 @@ func TestRequestSetJSONBody(t *testing.T) {
 
 func TestRequestResetJSONBody(t *testing.T) {
 	var r Request
-	raw := map[string]interface{}{"foo": "bar"}
+	raw := map[string]any{"foo": "bar"}
 	if err := r.SetJSONBody(raw); err != nil {
 		t.Fatalf("err: %s", err)
 	}

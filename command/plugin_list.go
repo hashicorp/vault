@@ -130,7 +130,7 @@ func (c *PluginListCommand) Run(args []string) int {
 		c.UI.Output(tableOutput(c.simpleResponse(resp, pluginType), nil))
 		return 0
 	default:
-		res := make(map[string]interface{})
+		res := make(map[string]any)
 		for k, v := range resp.PluginsByType {
 			res[k.String()] = v
 		}

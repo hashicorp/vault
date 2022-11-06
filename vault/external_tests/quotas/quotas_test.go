@@ -43,7 +43,7 @@ func setupMounts(t *testing.T, client *api.Client) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/foo", map[string]any{
 		"password": "bar",
 	})
 	if err != nil {
@@ -57,7 +57,7 @@ func setupMounts(t *testing.T, client *api.Client) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]any{
 		"common_name": "testvault.com",
 		"ttl":         "200h",
 		"ip_sans":     "127.0.0.1",
@@ -66,7 +66,7 @@ func setupMounts(t *testing.T, client *api.Client) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write("pki/roles/test", map[string]any{
 		"require_cn":       false,
 		"allowed_domains":  "testvault.com",
 		"allow_subdomains": true,
@@ -137,7 +137,7 @@ func TestQuotas_RateLimit_DupName(t *testing.T) {
 	vault.TestWaitActive(t, core)
 
 	// create a rate limit quota w/ 'secret' path
-	_, err := client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+	_, err := client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]any{
 		"rate": 7.7,
 		"path": "secret",
 	})
@@ -148,7 +148,7 @@ func TestQuotas_RateLimit_DupName(t *testing.T) {
 	require.NotEmpty(t, s.Data)
 
 	// create a rate limit quota w/ empty path (same name)
-	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]any{
 		"rate": 7.7,
 		"path": "",
 	})
@@ -171,14 +171,14 @@ func TestQuotas_RateLimit_DupPath(t *testing.T) {
 	client := cluster.Cores[0].Client
 	vault.TestWaitActive(t, core)
 	// create a global rate limit quota
-	_, err := client.Logical().Write("sys/quotas/rate-limit/global-rlq", map[string]interface{}{
+	_, err := client.Logical().Write("sys/quotas/rate-limit/global-rlq", map[string]any{
 		"rate": 10,
 		"path": "",
 	})
 	require.NoError(t, err)
 
 	// create a rate limit quota w/ 'secret' path
-	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]any{
 		"rate": 7.7,
 		"path": "secret",
 	})
@@ -189,7 +189,7 @@ func TestQuotas_RateLimit_DupPath(t *testing.T) {
 	require.NotEmpty(t, s.Data)
 
 	// create a rate limit quota w/ empty path (same name)
-	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]any{
 		"rate": 7.7,
 		"path": "",
 	})
@@ -210,7 +210,7 @@ func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
 	client := cluster.Cores[0].Client
 	vault.TestWaitActive(t, core)
 
-	_, err := client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
+	_, err := client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]any{
 		"rate": 7.7,
 	})
 	require.NoError(t, err)
@@ -218,7 +218,7 @@ func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
 	// ensure exempt paths are not empty by default
 	resp, err := client.Logical().Read("sys/quotas/config")
 	require.NoError(t, err)
-	require.NotEmpty(t, resp.Data["rate_limit_exempt_paths"].([]interface{}), "expected no exempt paths by default")
+	require.NotEmpty(t, resp.Data["rate_limit_exempt_paths"].([]any), "expected no exempt paths by default")
 
 	reqFunc := func(numSuccess, numFail *atomic.Int32) {
 		_, err := client.Logical().Read("sys/quotas/rate-limit/rlq")
@@ -239,7 +239,7 @@ func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
 	// allow time (1s) for rate limit to refill before updating the quota config
 	time.Sleep(time.Second)
 
-	_, err = client.Logical().Write("sys/quotas/config", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/config", map[string]any{
 		"rate_limit_exempt_paths": []string{"sys/quotas/rate-limit"},
 	})
 	require.NoError(t, err)
@@ -267,7 +267,7 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]any{
 		"common_name": "testvault.com",
 		"ttl":         "200h",
 		"ip_sans":     "127.0.0.1",
@@ -276,7 +276,7 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write("pki/roles/test", map[string]any{
 		"require_cn":       false,
 		"allowed_domains":  "testvault.com",
 		"allow_subdomains": true,
@@ -300,7 +300,7 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 	// Create a rate limit quota with a low RPS of 7.7, which means we can process
 	// ⌈7.7⌉*2 requests in the span of roughly a second -- 8 initially, followed
 	// by a refill rate of 7.7 per-second.
-	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]any{
 		"rate": 7.7,
 		"path": "pki/",
 	})
@@ -324,7 +324,7 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 	}
 
 	// update the rate limit quota with a high RPS such that no requests should fail
-	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]any{
 		"rate": 10000.0,
 		"path": "pki/",
 	})
@@ -357,7 +357,7 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]any{
 		"common_name": "testvault.com",
 		"ttl":         "200h",
 		"ip_sans":     "127.0.0.1",
@@ -366,7 +366,7 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write("pki/roles/test", map[string]any{
 		"require_cn":       false,
 		"allowed_domains":  "testvault.com",
 		"allow_subdomains": true,
@@ -378,7 +378,7 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 	}
 
 	// create a root rate limit quota
-	_, err = client.Logical().Write("sys/quotas/rate-limit/root-rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/root-rlq", map[string]any{
 		"name": "root-rlq",
 		"rate": 14.7,
 	})
@@ -387,7 +387,7 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 	}
 
 	// create a mount rate limit quota with a lower RPS than the root rate limit quota
-	_, err = client.Logical().Write("sys/quotas/rate-limit/mount-rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/mount-rlq", map[string]any{
 		"name": "mount-rlq",
 		"rate": 7.7,
 		"path": "pki/",
@@ -442,7 +442,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/foo", map[string]any{
 		"password": "bar",
 	})
 	if err != nil {
@@ -452,7 +452,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 	// Create a rate limit quota with a low RPS of 7.7, which means we can process
 	// ⌈7.7⌉*2 requests in the span of roughly a second -- 8 initially, followed
 	// by a refill rate of 7.7 per-second.
-	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]any{
 		"rate": 7.7,
 	})
 	if err != nil {
@@ -488,7 +488,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// update the rate limit quota with a high RPS such that no requests should fail
-	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]any{
 		"rate": 10000.0,
 	})
 	if err != nil {

@@ -14,13 +14,13 @@ const mockV4Type = "mockv4"
 
 // MockDatabaseV4 is an implementation of Database interface
 type MockDatabaseV4 struct {
-	config map[string]interface{}
+	config map[string]any
 }
 
 var _ v4.Database = &MockDatabaseV4{}
 
 // New returns a new in-memory instance
-func NewV4() (interface{}, error) {
+func NewV4() (any, error) {
 	return MockDatabaseV4{}, nil
 }
 
@@ -36,7 +36,7 @@ func RunV4(apiTLSConfig *api.TLSConfig) error {
 	return nil
 }
 
-func (m MockDatabaseV4) Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error) {
+func (m MockDatabaseV4) Init(ctx context.Context, config map[string]any, verifyConnection bool) (saveConfig map[string]any, err error) {
 	log.Default().Info("Init called",
 		"config", config,
 		"verifyConnection", verifyConnection)
@@ -44,7 +44,7 @@ func (m MockDatabaseV4) Init(ctx context.Context, config map[string]interface{},
 	return config, nil
 }
 
-func (m MockDatabaseV4) Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error) {
+func (m MockDatabaseV4) Initialize(ctx context.Context, config map[string]any, verifyConnection bool) (err error) {
 	_, err = m.Init(ctx, config, verifyConnection)
 	return err
 }
@@ -81,7 +81,7 @@ func (m MockDatabaseV4) RevokeUser(ctx context.Context, statements v4.Statements
 	return nil
 }
 
-func (m MockDatabaseV4) RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error) {
+func (m MockDatabaseV4) RotateRootCredentials(ctx context.Context, statements []string) (config map[string]any, err error) {
 	log.Default().Info("RotateRootCredentials called",
 		"statements", statements)
 

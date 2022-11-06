@@ -124,7 +124,7 @@ func (b *backend) pathHashWrite(ctx context.Context, req *logical.Request, d *fr
 
 	// Generate the response
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"sum": retStr,
 		},
 	}

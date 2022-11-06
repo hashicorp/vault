@@ -36,10 +36,10 @@ func (c *Config) apiConfig() influx.HTTPConfig {
 	}
 }
 
-func (c *Config) connectionParams() map[string]interface{} {
+func (c *Config) connectionParams() map[string]any {
 	pieces := strings.Split(c.Address(), ":")
 	port, _ := strconv.Atoi(pieces[1])
-	return map[string]interface{}{
+	return map[string]any{
 		"host":     pieces[0],
 		"port":     port,
 		"username": c.Username,
@@ -203,13 +203,13 @@ func TestInfluxdb_Initialize(t *testing.T) {
 	}
 }
 
-func makeConfig(rootConfig map[string]interface{}, keyValues ...interface{}) map[string]interface{} {
+func makeConfig(rootConfig map[string]any, keyValues ...any) map[string]any {
 	if len(keyValues)%2 != 0 {
 		panic("makeConfig must be provided with key and value pairs")
 	}
 
 	// Make a copy of the map so there isn't a chance of test bleedover between maps
-	config := make(map[string]interface{}, len(rootConfig)+(len(keyValues)/2))
+	config := make(map[string]any, len(rootConfig)+(len(keyValues)/2))
 	for k, v := range rootConfig {
 		config[k] = v
 	}

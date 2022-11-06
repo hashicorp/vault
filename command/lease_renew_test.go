@@ -28,7 +28,7 @@ func testLeaseRenewCommandMountAndLease(tb testing.TB, client *api.Client) strin
 		tb.Fatal(err)
 	}
 
-	if _, err := client.Logical().Write("testing/foo", map[string]interface{}{
+	if _, err := client.Logical().Write("testing/foo", map[string]any{
 		"key":   "value",
 		"lease": "5m",
 	}); err != nil {

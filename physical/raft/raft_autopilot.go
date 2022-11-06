@@ -136,7 +136,7 @@ func (ac *AutopilotConfig) Clone() *AutopilotConfig {
 
 // MarshalJSON makes the autopilot config fields JSON compatible
 func (ac *AutopilotConfig) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"cleanup_dead_servers":               ac.CleanupDeadServers,
 		"cleanup_dead_servers_value":         ac.CleanupDeadServersValue,
 		"last_contact_threshold":             ac.LastContactThreshold.String(),
@@ -152,13 +152,13 @@ func (ac *AutopilotConfig) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON parses the autopilot config JSON blob
 func (ac *AutopilotConfig) UnmarshalJSON(b []byte) error {
-	var data interface{}
+	var data any
 	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
 
-	conf := data.(map[string]interface{})
+	conf := data.(map[string]any)
 	if err = mapstructure.WeakDecode(conf, ac); err != nil {
 		return err
 	}

@@ -54,13 +54,13 @@ func TestOIDC_Auth_Code_Flow_Default_Resources(t *testing.T) {
 		Type: "userpass",
 	})
 	require.NoError(t, err)
-	_, err = active.Logical().Write("auth/userpass/users/end-user", map[string]interface{}{
+	_, err = active.Logical().Write("auth/userpass/users/end-user", map[string]any{
 		"password": testPassword,
 	})
 	require.NoError(t, err)
 
 	// Create a confidential client
-	_, err = active.Logical().Write("identity/oidc/client/confidential", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/client/confidential", map[string]any{
 		"redirect_uris":    []string{testRedirectURI},
 		"assignments":      []string{"allow_all"},
 		"id_token_ttl":     "1h",
@@ -77,7 +77,7 @@ func TestOIDC_Auth_Code_Flow_Default_Resources(t *testing.T) {
 	// We aren't going to open up a browser to facilitate the login and redirect
 	// from this test, so we'll log in via userpass and set the client's token as
 	// the token that results from the authentication.
-	resp, err = active.Logical().Write("auth/userpass/login/end-user", map[string]interface{}{
+	resp, err = active.Logical().Write("auth/userpass/login/end-user", map[string]any{
 		"password": testPassword,
 	})
 	require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestOIDC_Auth_Code_Flow_Default_Resources(t *testing.T) {
 
 	// Look up the token to get its creation time. This will be used for test
 	// cases that make assertions on the max_age parameter and auth_time claim.
-	resp, err = active.Logical().Write("auth/token/lookup", map[string]interface{}{
+	resp, err = active.Logical().Write("auth/token/lookup", map[string]any{
 		"token": clientToken,
 	})
 	require.NoError(t, err)
@@ -231,7 +231,7 @@ func TestOIDC_Auth_Code_Flow_Default_Resources(t *testing.T) {
 			accessToken := token.StaticTokenSource()
 
 			// Get the ID token claims
-			allClaims := make(map[string]interface{})
+			allClaims := make(map[string]any)
 			require.NoError(t, idToken.Claims(&allClaims))
 
 			// Get the sub claim for userinfo validation
@@ -250,7 +250,7 @@ func TestOIDC_Auth_Code_Flow_Default_Resources(t *testing.T) {
 			}
 
 			// Assert that all other expected claims are populated
-			expectedClaims := make(map[string]interface{})
+			expectedClaims := make(map[string]any)
 			require.NoError(t, json.Unmarshal([]byte(tt.expected), &expectedClaims))
 			for k, expectedVal := range expectedClaims {
 				actualVal, ok := allClaims[k]
@@ -273,7 +273,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 	standby := cluster.Cores[1].Client
 
 	// Create an entity with some metadata
-	resp, err := active.Logical().Write("identity/entity", map[string]interface{}{
+	resp, err := active.Logical().Write("identity/entity", map[string]any{
 		"name": "test-entity",
 		"metadata": map[string]string{
 			"email":        "test@hashicorp.com",
@@ -284,7 +284,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 	entityID := resp.Data["id"].(string)
 
 	// Create a group
-	resp, err = active.Logical().Write("identity/group", map[string]interface{}{
+	resp, err = active.Logical().Write("identity/group", map[string]any{
 		"name":              "engineering",
 		"member_entity_ids": []string{entityID},
 	})
@@ -304,7 +304,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 		Type: "userpass",
 	})
 	require.NoError(t, err)
-	_, err = active.Logical().Write("auth/userpass/users/end-user", map[string]interface{}{
+	_, err = active.Logical().Write("auth/userpass/users/end-user", map[string]any{
 		"password":       testPassword,
 		"token_policies": "test-policy",
 	})
@@ -323,7 +323,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 	require.NotEmpty(t, mountAccessor)
 
 	// Create an entity alias
-	_, err = active.Logical().Write("identity/entity-alias", map[string]interface{}{
+	_, err = active.Logical().Write("identity/entity-alias", map[string]any{
 		"name":           "end-user",
 		"canonical_id":   entityID,
 		"mount_accessor": mountAccessor,
@@ -331,31 +331,31 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create some custom scopes
-	_, err = active.Logical().Write("identity/oidc/scope/groups", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/scope/groups", map[string]any{
 		"template": testGroupScopeTemplate,
 	})
 	require.NoError(t, err)
-	_, err = active.Logical().Write("identity/oidc/scope/user", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/scope/user", map[string]any{
 		"template": fmt.Sprintf(testUserScopeTemplate, mountAccessor),
 	})
 	require.NoError(t, err)
 
 	// Create a key
-	_, err = active.Logical().Write("identity/oidc/key/test-key", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/key/test-key", map[string]any{
 		"allowed_client_ids": []string{"*"},
 		"algorithm":          "RS256",
 	})
 	require.NoError(t, err)
 
 	// Create an assignment
-	_, err = active.Logical().Write("identity/oidc/assignment/test-assignment", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/assignment/test-assignment", map[string]any{
 		"entity_ids": []string{entityID},
 		"group_ids":  []string{groupID},
 	})
 	require.NoError(t, err)
 
 	// Create a confidential client
-	_, err = active.Logical().Write("identity/oidc/client/confidential", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/client/confidential", map[string]any{
 		"key":              "test-key",
 		"redirect_uris":    []string{testRedirectURI},
 		"assignments":      []string{"test-assignment"},
@@ -371,7 +371,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 	clientSecret := resp.Data["client_secret"].(string)
 
 	// Create the OIDC provider
-	_, err = active.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/provider/test-provider", map[string]any{
 		"allowed_client_ids": []string{clientID},
 		"scopes_supported":   []string{"user", "groups"},
 	})
@@ -380,7 +380,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 	// We aren't going to open up a browser to facilitate the login and redirect
 	// from this test, so we'll log in via userpass and set the client's token as
 	// the token that results from the authentication.
-	resp, err = active.Logical().Write("auth/userpass/login/end-user", map[string]interface{}{
+	resp, err = active.Logical().Write("auth/userpass/login/end-user", map[string]any{
 		"password": testPassword,
 	})
 	require.NoError(t, err)
@@ -388,7 +388,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 
 	// Look up the token to get its creation time. This will be used for test
 	// cases that make assertions on the max_age parameter and auth_time claim.
-	resp, err = active.Logical().Write("auth/token/lookup", map[string]interface{}{
+	resp, err = active.Logical().Write("auth/token/lookup", map[string]any{
 		"token": clientToken,
 	})
 	require.NoError(t, err)
@@ -529,7 +529,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 			client.SetToken(clientToken)
 
 			// Update allowed client IDs before the authentication flow
-			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
+			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]any{
 				"allowed_client_ids": []string{clientID},
 			})
 			require.NoError(t, err)
@@ -570,7 +570,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 			accessToken := token.StaticTokenSource()
 
 			// Get the ID token claims
-			allClaims := make(map[string]interface{})
+			allClaims := make(map[string]any)
 			require.NoError(t, idToken.Claims(&allClaims))
 
 			// Get the sub claim for userinfo validation
@@ -589,7 +589,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 			}
 
 			// Assert that all other expected claims are populated
-			expectedClaims := make(map[string]interface{})
+			expectedClaims := make(map[string]any)
 			require.NoError(t, json.Unmarshal([]byte(tt.expected), &expectedClaims))
 			for k, expectedVal := range expectedClaims {
 				actualVal, ok := allClaims[k]
@@ -599,7 +599,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 
 			// Assert that the access token is no longer able to obtain user info
 			// after removing the client from the provider's allowed client ids
-			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
+			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]any{
 				"allowed_client_ids": []string{},
 			})
 			require.NoError(t, err)
@@ -623,7 +623,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 	standby := cluster.Cores[1].Client
 
 	// Create an entity with some metadata
-	resp, err := active.Logical().Write("identity/entity", map[string]interface{}{
+	resp, err := active.Logical().Write("identity/entity", map[string]any{
 		"name": "test-entity",
 		"metadata": map[string]string{
 			"email":        "test@hashicorp.com",
@@ -634,7 +634,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 	entityID := resp.Data["id"].(string)
 
 	// Create a group
-	resp, err = active.Logical().Write("identity/group", map[string]interface{}{
+	resp, err = active.Logical().Write("identity/group", map[string]any{
 		"name":              "engineering",
 		"member_entity_ids": []string{entityID},
 	})
@@ -654,7 +654,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 		Type: "userpass",
 	})
 	require.NoError(t, err)
-	_, err = active.Logical().Write("auth/userpass/users/end-user", map[string]interface{}{
+	_, err = active.Logical().Write("auth/userpass/users/end-user", map[string]any{
 		"password":       testPassword,
 		"token_policies": "test-policy",
 	})
@@ -673,7 +673,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 	require.NotEmpty(t, mountAccessor)
 
 	// Create an entity alias
-	_, err = active.Logical().Write("identity/entity-alias", map[string]interface{}{
+	_, err = active.Logical().Write("identity/entity-alias", map[string]any{
 		"name":           "end-user",
 		"canonical_id":   entityID,
 		"mount_accessor": mountAccessor,
@@ -681,31 +681,31 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create some custom scopes
-	_, err = active.Logical().Write("identity/oidc/scope/groups", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/scope/groups", map[string]any{
 		"template": testGroupScopeTemplate,
 	})
 	require.NoError(t, err)
-	_, err = active.Logical().Write("identity/oidc/scope/user", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/scope/user", map[string]any{
 		"template": fmt.Sprintf(testUserScopeTemplate, mountAccessor),
 	})
 	require.NoError(t, err)
 
 	// Create a key
-	_, err = active.Logical().Write("identity/oidc/key/test-key", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/key/test-key", map[string]any{
 		"allowed_client_ids": []string{"*"},
 		"algorithm":          "RS256",
 	})
 	require.NoError(t, err)
 
 	// Create an assignment
-	_, err = active.Logical().Write("identity/oidc/assignment/test-assignment", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/assignment/test-assignment", map[string]any{
 		"entity_ids": []string{entityID},
 		"group_ids":  []string{groupID},
 	})
 	require.NoError(t, err)
 
 	// Create a public client
-	_, err = active.Logical().Write("identity/oidc/client/public", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/client/public", map[string]any{
 		"key":              "test-key",
 		"redirect_uris":    []string{testRedirectURI},
 		"assignments":      []string{"test-assignment"},
@@ -721,7 +721,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 	clientID := resp.Data["client_id"].(string)
 
 	// Create the OIDC provider
-	_, err = active.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
+	_, err = active.Logical().Write("identity/oidc/provider/test-provider", map[string]any{
 		"allowed_client_ids": []string{clientID},
 		"scopes_supported":   []string{"user", "groups"},
 	})
@@ -730,7 +730,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 	// We aren't going to open up a browser to facilitate the login and redirect
 	// from this test, so we'll log in via userpass and set the client's token as
 	// the token that results from the authentication.
-	resp, err = active.Logical().Write("auth/userpass/login/end-user", map[string]interface{}{
+	resp, err = active.Logical().Write("auth/userpass/login/end-user", map[string]any{
 		"password": testPassword,
 	})
 	require.NoError(t, err)
@@ -738,7 +738,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 
 	// Look up the token to get its creation time. This will be used for test
 	// cases that make assertions on the max_age parameter and auth_time claim.
-	resp, err = active.Logical().Write("auth/token/lookup", map[string]interface{}{
+	resp, err = active.Logical().Write("auth/token/lookup", map[string]any{
 		"token": clientToken,
 	})
 	require.NoError(t, err)
@@ -860,7 +860,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 			client.SetToken(clientToken)
 
 			// Update allowed client IDs before the authentication flow
-			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
+			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]any{
 				"allowed_client_ids": []string{clientID},
 			})
 			require.NoError(t, err)
@@ -906,7 +906,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 			accessToken := token.StaticTokenSource()
 
 			// Get the ID token claims
-			allClaims := make(map[string]interface{})
+			allClaims := make(map[string]any)
 			require.NoError(t, idToken.Claims(&allClaims))
 
 			// Get the sub claim for userinfo validation
@@ -925,7 +925,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 			}
 
 			// Assert that all other expected claims are populated
-			expectedClaims := make(map[string]interface{})
+			expectedClaims := make(map[string]any)
 			require.NoError(t, json.Unmarshal([]byte(tt.expected), &expectedClaims))
 			for k, expectedVal := range expectedClaims {
 				actualVal, ok := allClaims[k]
@@ -935,7 +935,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 
 			// Assert that the access token is no longer able to obtain user info
 			// after removing the client from the provider's allowed client ids
-			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
+			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]any{
 				"allowed_client_ids": []string{},
 			})
 			require.NoError(t, err)
@@ -966,7 +966,7 @@ func setupOIDCTestCluster(t *testing.T, numCores int) *vault.TestCluster {
 	return cluster
 }
 
-func decodeRawRequest(t *testing.T, client *api.Client, method, path string, params url.Values, v interface{}) {
+func decodeRawRequest(t *testing.T, client *api.Client, method, path string, params url.Values, v any) {
 	t.Helper()
 
 	// Create the request and add query params if provided

@@ -217,7 +217,7 @@ protection use. Defaults to false. See also RFC 5280 Section 4.2.1.12.`,
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
 "ec", "ed25519" and "any" are the only valid values.`,
-				AllowedValues: []interface{}{"rsa", "ec", "ed25519", "any"},
+				AllowedValues: []any{"rsa", "ec", "ed25519", "any"},
 			},
 
 			"key_bits": {
@@ -831,7 +831,7 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 	return resp, nil
 }
 
-func getWithExplicitDefault(data *framework.FieldData, field string, defaultValue interface{}) interface{} {
+func getWithExplicitDefault(data *framework.FieldData, field string, defaultValue any) any {
 	assignedValue, ok := data.GetOk(field)
 	if ok {
 		return assignedValue
@@ -1110,8 +1110,8 @@ type roleEntry struct {
 	Issuer                        string        `json:"issuer"`
 }
 
-func (r *roleEntry) ToResponseData() map[string]interface{} {
-	responseData := map[string]interface{}{
+func (r *roleEntry) ToResponseData() map[string]any {
+	responseData := map[string]any{
 		"ttl":                                int64(r.TTL.Seconds()),
 		"max_ttl":                            int64(r.MaxTTL.Seconds()),
 		"allow_localhost":                    r.AllowLocalhost,

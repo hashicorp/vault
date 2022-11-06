@@ -86,7 +86,7 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 	for _, p := range v2secrets {
 		for i := 0; i < 50; i++ {
 			req := logical.TestRequest(t, logical.CreateOperation, p)
-			req.Data["data"] = map[string]interface{}{"foo": "bar"}
+			req.Data["data"] = map[string]any{"foo": "bar"}
 			req.ClientToken = root
 			resp, err := core.HandleRequest(ctx, req)
 			if err != nil {
@@ -278,7 +278,7 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 	registerReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "entity-alias",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"name":           "userpassuser",
 			"canonical_id":   entity.ID,
 			"mount_accessor": upAccessor,

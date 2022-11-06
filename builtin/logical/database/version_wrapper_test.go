@@ -45,19 +45,19 @@ func TestInitDatabase_newDB(t *testing.T) {
 	tests := map[string]testCase{
 		"success": {
 			req: v5.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 				},
 				VerifyConnection: true,
 			},
 			newInitResp: v5.InitializeResponse{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 				},
 			},
 			newInitCalls: 1,
 			expectedResp: v5.InitializeResponse{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 				},
 			},
@@ -65,7 +65,7 @@ func TestInitDatabase_newDB(t *testing.T) {
 		},
 		"error": {
 			req: v5.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 				},
 				VerifyConnection: true,
@@ -108,7 +108,7 @@ func TestInitDatabase_legacyDB(t *testing.T) {
 	type testCase struct {
 		req v5.InitializeRequest
 
-		initConfig map[string]interface{}
+		initConfig map[string]any
 		initErr    error
 		initCalls  int
 
@@ -119,17 +119,17 @@ func TestInitDatabase_legacyDB(t *testing.T) {
 	tests := map[string]testCase{
 		"success": {
 			req: v5.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 				},
 				VerifyConnection: true,
 			},
-			initConfig: map[string]interface{}{
+			initConfig: map[string]any{
 				"foo": "bar",
 			},
 			initCalls: 1,
 			expectedResp: v5.InitializeResponse{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 				},
 			},
@@ -137,7 +137,7 @@ func TestInitDatabase_legacyDB(t *testing.T) {
 		},
 		"error": {
 			req: v5.InitializeRequest{
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"foo": "bar",
 				},
 				VerifyConnection: true,
@@ -347,7 +347,7 @@ func TestUpdateUser_missingDB(t *testing.T) {
 		t.Fatalf("err expected, got nil")
 	}
 
-	expectedConfig := map[string]interface{}(nil)
+	expectedConfig := map[string]any(nil)
 	if !reflect.DeepEqual(resp, expectedConfig) {
 		t.Fatalf("Actual config: %#v\nExpected config: %#v", resp, expectedConfig)
 	}
@@ -412,14 +412,14 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 		setCredentialsErr   error
 		setCredentialsCalls int
 
-		rotateRootConfig map[string]interface{}
+		rotateRootConfig map[string]any
 		rotateRootErr    error
 		rotateRootCalls  int
 
 		renewUserErr   error
 		renewUserCalls int
 
-		expectedConfig map[string]interface{}
+		expectedConfig map[string]any
 		expectErr      bool
 	}
 
@@ -514,14 +514,14 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			setCredentialsErr:   status.Error(codes.Unimplemented, "SetCredentials is not implemented"),
 			setCredentialsCalls: 1,
 
-			rotateRootConfig: map[string]interface{}{
+			rotateRootConfig: map[string]any{
 				"foo": "bar",
 			},
 			rotateRootCalls: 1,
 
 			renewUserCalls: 0,
 
-			expectedConfig: map[string]interface{}{
+			expectedConfig: map[string]any{
 				"foo": "bar",
 			},
 			expectErr: false,
@@ -538,14 +538,14 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			setCredentialsErr:   v4.ErrPluginStaticUnsupported,
 			setCredentialsCalls: 1,
 
-			rotateRootConfig: map[string]interface{}{
+			rotateRootConfig: map[string]any{
 				"foo": "bar",
 			},
 			rotateRootCalls: 1,
 
 			renewUserCalls: 0,
 
-			expectedConfig: map[string]interface{}{
+			expectedConfig: map[string]any{
 				"foo": "bar",
 			},
 			expectErr: false,
@@ -801,7 +801,7 @@ func TestStoreConfig(t *testing.T) {
 		"bad config": {
 			config: &DatabaseConfig{
 				PluginName: "testplugin",
-				ConnectionDetails: map[string]interface{}{
+				ConnectionDetails: map[string]any{
 					"bad value": badValue{},
 				},
 			},
@@ -811,7 +811,7 @@ func TestStoreConfig(t *testing.T) {
 		"storage error": {
 			config: &DatabaseConfig{
 				PluginName: "testplugin",
-				ConnectionDetails: map[string]interface{}{
+				ConnectionDetails: map[string]any{
 					"foo": "bar",
 				},
 			},
@@ -821,7 +821,7 @@ func TestStoreConfig(t *testing.T) {
 		"happy path": {
 			config: &DatabaseConfig{
 				PluginName: "testplugin",
-				ConnectionDetails: map[string]interface{}{
+				ConnectionDetails: map[string]any{
 					"foo": "bar",
 				},
 			},

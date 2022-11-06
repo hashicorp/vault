@@ -135,7 +135,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"organization":    cfg.Org,
 		"org_name":        cfg.Org,
 		"bypass_okta_mfa": cfg.BypassOktaMFA,
@@ -270,8 +270,8 @@ func (b *backend) pathConfigExistenceCheck(ctx context.Context, req *logical.Req
 
 type oktaShim interface {
 	Client() (*oktanew.Client, context.Context)
-	NewRequest(method string, url string, body interface{}) (*http.Request, error)
-	Do(req *http.Request, v interface{}) (interface{}, error)
+	NewRequest(method string, url string, body any) (*http.Request, error)
+	Do(req *http.Request, v any) (any, error)
 }
 
 type oktaShimNew struct {
@@ -283,14 +283,14 @@ func (new *oktaShimNew) Client() (*oktanew.Client, context.Context) {
 	return new.client, new.ctx
 }
 
-func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) (*http.Request, error) {
+func (new *oktaShimNew) NewRequest(method string, url string, body any) (*http.Request, error) {
 	if !strings.HasPrefix(url, "/") {
 		url = "/api/v1/" + url
 	}
 	return new.client.GetRequestExecutor().NewRequest(method, url, body)
 }
 
-func (new *oktaShimNew) Do(req *http.Request, v interface{}) (interface{}, error) {
+func (new *oktaShimNew) Do(req *http.Request, v any) (any, error) {
 	return new.client.GetRequestExecutor().Do(new.ctx, req, v)
 }
 
@@ -302,11 +302,11 @@ func (new *oktaShimOld) Client() (*oktanew.Client, context.Context) {
 	return nil, nil
 }
 
-func (new *oktaShimOld) NewRequest(method string, url string, body interface{}) (*http.Request, error) {
+func (new *oktaShimOld) NewRequest(method string, url string, body any) (*http.Request, error) {
 	return new.client.NewRequest(method, url, body)
 }
 
-func (new *oktaShimOld) Do(req *http.Request, v interface{}) (interface{}, error) {
+func (new *oktaShimOld) Do(req *http.Request, v any) (any, error) {
 	return new.client.Do(req, v)
 }
 

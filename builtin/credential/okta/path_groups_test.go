@@ -30,7 +30,7 @@ func TestGroupsList(t *testing.T) {
 			Operation: logical.UpdateOperation,
 			Path:      "groups/" + group,
 			Storage:   storage,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"policies": []string{group + "_a", group + "_b"},
 			},
 		}

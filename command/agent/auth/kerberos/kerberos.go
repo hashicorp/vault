@@ -71,7 +71,7 @@ func NewKerberosAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	}, nil
 }
 
-func (k *kerberosMethod) Authenticate(context.Context, *api.Client) (string, http.Header, map[string]interface{}, error) {
+func (k *kerberosMethod) Authenticate(context.Context, *api.Client) (string, http.Header, map[string]any, error) {
 	k.logger.Trace("beginning authentication")
 	authHeaderVal, err := kerberos.GetAuthHeaderVal(k.loginCfg)
 	if err != nil {
@@ -80,7 +80,7 @@ func (k *kerberosMethod) Authenticate(context.Context, *api.Client) (string, htt
 	var header http.Header
 	header = make(map[string][]string)
 	header.Set(spnego.HTTPHeaderAuthRequest, authHeaderVal)
-	return k.mountPath + "/login", header, make(map[string]interface{}), nil
+	return k.mountPath + "/login", header, make(map[string]any), nil
 }
 
 // These functions are implemented to meet the AuthHandler interface,
@@ -90,7 +90,7 @@ func (k *kerberosMethod) CredSuccess()            {}
 func (k *kerberosMethod) Shutdown()               {}
 
 // read reads a key from a map and convert its value to a string.
-func read(key string, m map[string]interface{}) (string, error) {
+func read(key string, m map[string]any) (string, error) {
 	raw, ok := m[key]
 	if !ok {
 		return "", fmt.Errorf("%q is required", key)

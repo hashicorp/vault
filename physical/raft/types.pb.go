@@ -414,7 +414,7 @@ func file_physical_raft_types_proto_rawDescGZIP() []byte {
 }
 
 var file_physical_raft_types_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_physical_raft_types_proto_goTypes = []interface{}{
+var file_physical_raft_types_proto_goTypes = []any{
 	(*LogOperation)(nil),         // 0: raft.LogOperation
 	(*LogData)(nil),              // 1: raft.LogData
 	(*IndexValue)(nil),           // 2: raft.IndexValue
@@ -438,7 +438,7 @@ func file_physical_raft_types_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_physical_raft_types_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_physical_raft_types_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*LogOperation); i {
 			case 0:
 				return &v.state
@@ -450,7 +450,7 @@ func file_physical_raft_types_proto_init() {
 				return nil
 			}
 		}
-		file_physical_raft_types_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_physical_raft_types_proto_msgTypes[1].Exporter = func(v any, i int) any {
 			switch v := v.(*LogData); i {
 			case 0:
 				return &v.state
@@ -462,7 +462,7 @@ func file_physical_raft_types_proto_init() {
 				return nil
 			}
 		}
-		file_physical_raft_types_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_physical_raft_types_proto_msgTypes[2].Exporter = func(v any, i int) any {
 			switch v := v.(*IndexValue); i {
 			case 0:
 				return &v.state
@@ -474,7 +474,7 @@ func file_physical_raft_types_proto_init() {
 				return nil
 			}
 		}
-		file_physical_raft_types_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_physical_raft_types_proto_msgTypes[3].Exporter = func(v any, i int) any {
 			switch v := v.(*Server); i {
 			case 0:
 				return &v.state
@@ -486,7 +486,7 @@ func file_physical_raft_types_proto_init() {
 				return nil
 			}
 		}
-		file_physical_raft_types_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_physical_raft_types_proto_msgTypes[4].Exporter = func(v any, i int) any {
 			switch v := v.(*ConfigurationValue); i {
 			case 0:
 				return &v.state
@@ -498,7 +498,7 @@ func file_physical_raft_types_proto_init() {
 				return nil
 			}
 		}
-		file_physical_raft_types_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+		file_physical_raft_types_proto_msgTypes[5].Exporter = func(v any, i int) any {
 			switch v := v.(*LocalNodeConfigValue); i {
 			case 0:
 				return &v.state

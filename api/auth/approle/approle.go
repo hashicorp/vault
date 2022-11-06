@@ -104,7 +104,7 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 		ctx = context.Background()
 	}
 
-	loginData := map[string]interface{}{
+	loginData := map[string]any{
 		"role_id": a.roleID,
 	}
 

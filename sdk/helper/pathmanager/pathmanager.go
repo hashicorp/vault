@@ -91,7 +91,7 @@ func (p *PathManager) Paths() []string {
 	defer p.l.RUnlock()
 
 	paths := make([]string, 0, p.paths.Len())
-	walkFn := func(k []byte, v interface{}) bool {
+	walkFn := func(k []byte, v any) bool {
 		paths = append(paths, string(k))
 		return false
 	}

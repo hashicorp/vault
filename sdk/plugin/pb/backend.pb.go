@@ -3958,7 +3958,7 @@ func file_sdk_plugin_pb_backend_proto_rawDescGZIP() []byte {
 }
 
 var file_sdk_plugin_pb_backend_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
-var file_sdk_plugin_pb_backend_proto_goTypes = []interface{}{
+var file_sdk_plugin_pb_backend_proto_goTypes = []any{
 	(*Empty)(nil),                             // 0: pb.Empty
 	(*Header)(nil),                            // 1: pb.Header
 	(*ProtoError)(nil),                        // 2: pb.ProtoError
@@ -4121,7 +4121,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_sdk_plugin_pb_backend_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*Empty); i {
 			case 0:
 				return &v.state
@@ -4133,7 +4133,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[1].Exporter = func(v any, i int) any {
 			switch v := v.(*Header); i {
 			case 0:
 				return &v.state
@@ -4145,7 +4145,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[2].Exporter = func(v any, i int) any {
 			switch v := v.(*ProtoError); i {
 			case 0:
 				return &v.state
@@ -4157,7 +4157,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[3].Exporter = func(v any, i int) any {
 			switch v := v.(*Paths); i {
 			case 0:
 				return &v.state
@@ -4169,7 +4169,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[4].Exporter = func(v any, i int) any {
 			switch v := v.(*Request); i {
 			case 0:
 				return &v.state
@@ -4181,7 +4181,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[5].Exporter = func(v any, i int) any {
 			switch v := v.(*Auth); i {
 			case 0:
 				return &v.state
@@ -4193,7 +4193,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[6].Exporter = func(v any, i int) any {
 			switch v := v.(*TokenEntry); i {
 			case 0:
 				return &v.state
@@ -4205,7 +4205,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[7].Exporter = func(v any, i int) any {
 			switch v := v.(*LeaseOptions); i {
 			case 0:
 				return &v.state
@@ -4217,7 +4217,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[8].Exporter = func(v any, i int) any {
 			switch v := v.(*Secret); i {
 			case 0:
 				return &v.state
@@ -4229,7 +4229,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[9].Exporter = func(v any, i int) any {
 			switch v := v.(*Response); i {
 			case 0:
 				return &v.state
@@ -4241,7 +4241,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[10].Exporter = func(v any, i int) any {
 			switch v := v.(*ResponseWrapInfo); i {
 			case 0:
 				return &v.state
@@ -4253,7 +4253,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[11].Exporter = func(v any, i int) any {
 			switch v := v.(*RequestWrapInfo); i {
 			case 0:
 				return &v.state
@@ -4265,7 +4265,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[12].Exporter = func(v any, i int) any {
 			switch v := v.(*HandleRequestArgs); i {
 			case 0:
 				return &v.state
@@ -4277,7 +4277,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[13].Exporter = func(v any, i int) any {
 			switch v := v.(*HandleRequestReply); i {
 			case 0:
 				return &v.state
@@ -4289,7 +4289,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[14].Exporter = func(v any, i int) any {
 			switch v := v.(*InitializeArgs); i {
 			case 0:
 				return &v.state
@@ -4301,7 +4301,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[15].Exporter = func(v any, i int) any {
 			switch v := v.(*InitializeReply); i {
 			case 0:
 				return &v.state
@@ -4313,7 +4313,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[16].Exporter = func(v any, i int) any {
 			switch v := v.(*SpecialPathsReply); i {
 			case 0:
 				return &v.state
@@ -4325,7 +4325,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[17].Exporter = func(v any, i int) any {
 			switch v := v.(*HandleExistenceCheckArgs); i {
 			case 0:
 				return &v.state
@@ -4337,7 +4337,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[18].Exporter = func(v any, i int) any {
 			switch v := v.(*HandleExistenceCheckReply); i {
 			case 0:
 				return &v.state
@@ -4349,7 +4349,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[19].Exporter = func(v any, i int) any {
 			switch v := v.(*SetupArgs); i {
 			case 0:
 				return &v.state
@@ -4361,7 +4361,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[20].Exporter = func(v any, i int) any {
 			switch v := v.(*SetupReply); i {
 			case 0:
 				return &v.state
@@ -4373,7 +4373,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[21].Exporter = func(v any, i int) any {
 			switch v := v.(*TypeReply); i {
 			case 0:
 				return &v.state
@@ -4385,7 +4385,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[22].Exporter = func(v any, i int) any {
 			switch v := v.(*InvalidateKeyArgs); i {
 			case 0:
 				return &v.state
@@ -4397,7 +4397,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[23].Exporter = func(v any, i int) any {
 			switch v := v.(*StorageEntry); i {
 			case 0:
 				return &v.state
@@ -4409,7 +4409,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[24].Exporter = func(v any, i int) any {
 			switch v := v.(*StorageListArgs); i {
 			case 0:
 				return &v.state
@@ -4421,7 +4421,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[25].Exporter = func(v any, i int) any {
 			switch v := v.(*StorageListReply); i {
 			case 0:
 				return &v.state
@@ -4433,7 +4433,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[26].Exporter = func(v any, i int) any {
 			switch v := v.(*StorageGetArgs); i {
 			case 0:
 				return &v.state
@@ -4445,7 +4445,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[27].Exporter = func(v any, i int) any {
 			switch v := v.(*StorageGetReply); i {
 			case 0:
 				return &v.state
@@ -4457,7 +4457,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[28].Exporter = func(v any, i int) any {
 			switch v := v.(*StoragePutArgs); i {
 			case 0:
 				return &v.state
@@ -4469,7 +4469,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[29].Exporter = func(v any, i int) any {
 			switch v := v.(*StoragePutReply); i {
 			case 0:
 				return &v.state
@@ -4481,7 +4481,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[30].Exporter = func(v any, i int) any {
 			switch v := v.(*StorageDeleteArgs); i {
 			case 0:
 				return &v.state
@@ -4493,7 +4493,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[31].Exporter = func(v any, i int) any {
 			switch v := v.(*StorageDeleteReply); i {
 			case 0:
 				return &v.state
@@ -4505,7 +4505,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[32].Exporter = func(v any, i int) any {
 			switch v := v.(*TTLReply); i {
 			case 0:
 				return &v.state
@@ -4517,7 +4517,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[33].Exporter = func(v any, i int) any {
 			switch v := v.(*TaintedReply); i {
 			case 0:
 				return &v.state
@@ -4529,7 +4529,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[34].Exporter = func(v any, i int) any {
 			switch v := v.(*CachingDisabledReply); i {
 			case 0:
 				return &v.state
@@ -4541,7 +4541,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[35].Exporter = func(v any, i int) any {
 			switch v := v.(*ReplicationStateReply); i {
 			case 0:
 				return &v.state
@@ -4553,7 +4553,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[36].Exporter = func(v any, i int) any {
 			switch v := v.(*ResponseWrapDataArgs); i {
 			case 0:
 				return &v.state
@@ -4565,7 +4565,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[37].Exporter = func(v any, i int) any {
 			switch v := v.(*ResponseWrapDataReply); i {
 			case 0:
 				return &v.state
@@ -4577,7 +4577,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[38].Exporter = func(v any, i int) any {
 			switch v := v.(*MlockEnabledReply); i {
 			case 0:
 				return &v.state
@@ -4589,7 +4589,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[39].Exporter = func(v any, i int) any {
 			switch v := v.(*LocalMountReply); i {
 			case 0:
 				return &v.state
@@ -4601,7 +4601,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[40].Exporter = func(v any, i int) any {
 			switch v := v.(*EntityInfoArgs); i {
 			case 0:
 				return &v.state
@@ -4613,7 +4613,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[41].Exporter = func(v any, i int) any {
 			switch v := v.(*EntityInfoReply); i {
 			case 0:
 				return &v.state
@@ -4625,7 +4625,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[42].Exporter = func(v any, i int) any {
 			switch v := v.(*GroupsForEntityReply); i {
 			case 0:
 				return &v.state
@@ -4637,7 +4637,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[43].Exporter = func(v any, i int) any {
 			switch v := v.(*PluginEnvReply); i {
 			case 0:
 				return &v.state
@@ -4649,7 +4649,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[44].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[44].Exporter = func(v any, i int) any {
 			switch v := v.(*GeneratePasswordFromPolicyRequest); i {
 			case 0:
 				return &v.state
@@ -4661,7 +4661,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[45].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[45].Exporter = func(v any, i int) any {
 			switch v := v.(*GeneratePasswordFromPolicyReply); i {
 			case 0:
 				return &v.state
@@ -4673,7 +4673,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[46].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[46].Exporter = func(v any, i int) any {
 			switch v := v.(*Connection); i {
 			case 0:
 				return &v.state
@@ -4685,7 +4685,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[47].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[47].Exporter = func(v any, i int) any {
 			switch v := v.(*ConnectionState); i {
 			case 0:
 				return &v.state
@@ -4697,7 +4697,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[48].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[48].Exporter = func(v any, i int) any {
 			switch v := v.(*Certificate); i {
 			case 0:
 				return &v.state
@@ -4709,7 +4709,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 				return nil
 			}
 		}
-		file_sdk_plugin_pb_backend_proto_msgTypes[49].Exporter = func(v interface{}, i int) interface{} {
+		file_sdk_plugin_pb_backend_proto_msgTypes[49].Exporter = func(v any, i int) any {
 			switch v := v.(*CertificateChain); i {
 			case 0:
 				return &v.state

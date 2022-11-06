@@ -177,7 +177,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, d *fram
 	b.crlUpdateMutex.RLock()
 	defer b.crlUpdateMutex.RUnlock()
 
-	var retData map[string]interface{}
+	var retData map[string]any
 
 	crl, ok := b.crls[name]
 	if !ok {

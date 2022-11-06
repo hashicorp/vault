@@ -155,7 +155,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	defer lock.Unlock()
 
 	var ok bool
-	var pRaw interface{}
+	var pRaw any
 
 	// If the policy is in cache and 'force' is not specified, error out. Anywhere
 	// that would put it in the cache will also be protected by the mutex above,
@@ -241,7 +241,7 @@ func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage
 	defer lock.Unlock()
 
 	var ok bool
-	var pRaw interface{}
+	var pRaw any
 
 	if lm.useCache {
 		pRaw, ok = lm.cache.Load(name)
@@ -279,7 +279,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 	var p *Policy
 	var err error
 	var ok bool
-	var pRaw interface{}
+	var pRaw any
 
 	// Check if it's in our cache. If so, return right away.
 	if lm.useCache {
@@ -455,7 +455,7 @@ func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key 
 	var p *Policy
 	var err error
 	var ok bool
-	var pRaw interface{}
+	var pRaw any
 
 	// Check if it's in our cache
 	if lm.useCache {
@@ -511,7 +511,7 @@ func (lm *LockManager) DeletePolicy(ctx context.Context, storage logical.Storage
 	var p *Policy
 	var err error
 	var ok bool
-	var pRaw interface{}
+	var pRaw any
 
 	// We may be writing to disk, so grab an exclusive lock. This prevents bad
 	// behavior when the cache is turned off. We also lock the shared policy

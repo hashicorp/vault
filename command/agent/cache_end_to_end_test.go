@@ -79,7 +79,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	}
 
 	// Create a secret in the backend
-	_, err = client.Logical().Write("kv/foo", map[string]interface{}{
+	_, err = client.Logical().Write("kv/foo", map[string]any{
 		"value": "bar",
 		"ttl":   "1h",
 	})
@@ -100,7 +100,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/test1", map[string]any{
 		"bind_secret_id": "true",
 		"token_ttl":      "3s",
 		"token_max_ttl":  "10s",
@@ -153,7 +153,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
-	conf := map[string]interface{}{
+	conf := map[string]any{
 		"role_id_file_path":                   role,
 		"secret_id_file_path":                 secret,
 		"remove_secret_id_file_after_reading": true,
@@ -211,7 +211,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"path": out,
 		},
 	}

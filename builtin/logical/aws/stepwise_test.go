@@ -37,7 +37,7 @@ func testAccStepwiseConfig(t *testing.T) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "config/root",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"region":     os.Getenv("AWS_DEFAULT_REGION"),
 			"access_key": os.Getenv("TEST_AWS_ACCESS_KEY"),
 			"secret_key": os.Getenv("TEST_AWS_SECRET_KEY"),
@@ -49,7 +49,7 @@ func testAccStepwiseWritePolicy(t *testing.T, name string, policy string) stepwi
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "roles/" + name,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"policy_document": policy,
 			"credential_type": "iam_user",
 		},

@@ -87,7 +87,7 @@ func NewApproleAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
+func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]any, error) {
 	if _, err := os.Stat(a.roleIDFilePath); err == nil {
 		roleID, err := ioutil.ReadFile(a.roleIDFilePath)
 		if err != nil {
@@ -111,7 +111,7 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 	}
 
 	if a.secretIDFilePath == "" {
-		return fmt.Sprintf("%s/login", a.mountPath), nil, map[string]interface{}{
+		return fmt.Sprintf("%s/login", a.mountPath), nil, map[string]any{
 			"role_id": a.cachedRoleID,
 		}, nil
 	}
@@ -194,7 +194,7 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 		return "", nil, nil, errors.New("no known secret ID")
 	}
 
-	return fmt.Sprintf("%s/login", a.mountPath), nil, map[string]interface{}{
+	return fmt.Sprintf("%s/login", a.mountPath), nil, map[string]any{
 		"role_id":   a.cachedRoleID,
 		"secret_id": a.cachedSecretID,
 	}, nil

@@ -99,7 +99,7 @@ func (c *ListCommand) Run(args []string) int {
 	_, ok := extractListData(secret)
 	if Format(c.UI) != "table" {
 		if secret == nil || secret.Data == nil || !ok {
-			OutputData(c.UI, map[string]interface{}{})
+			OutputData(c.UI, map[string]any{})
 			return 2
 		}
 	}

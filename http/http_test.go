@@ -34,24 +34,24 @@ func testHttpDeleteDisableRedirect(t *testing.T, token string, addr string) *htt
 	return testHttpData(t, "DELETE", token, addr, nil, true, 0)
 }
 
-func testHttpPostWrapped(t *testing.T, token string, addr string, body interface{}, wrapTTL time.Duration) *http.Response {
+func testHttpPostWrapped(t *testing.T, token string, addr string, body any, wrapTTL time.Duration) *http.Response {
 	return testHttpData(t, "POST", token, addr, body, false, wrapTTL)
 }
 
-func testHttpPost(t *testing.T, token string, addr string, body interface{}) *http.Response {
+func testHttpPost(t *testing.T, token string, addr string, body any) *http.Response {
 	return testHttpData(t, "POST", token, addr, body, false, 0)
 }
 
-func testHttpPut(t *testing.T, token string, addr string, body interface{}) *http.Response {
+func testHttpPut(t *testing.T, token string, addr string, body any) *http.Response {
 	return testHttpData(t, "PUT", token, addr, body, false, 0)
 }
 
 // Go 1.8+ clients redirect automatically which breaks our 307 standby testing
-func testHttpPutDisableRedirect(t *testing.T, token string, addr string, body interface{}) *http.Response {
+func testHttpPutDisableRedirect(t *testing.T, token string, addr string, body any) *http.Response {
 	return testHttpData(t, "PUT", token, addr, body, true, 0)
 }
 
-func testHttpData(t *testing.T, method string, token string, addr string, body interface{}, disableRedirect bool, wrapTTL time.Duration) *http.Response {
+func testHttpData(t *testing.T, method string, token string, addr string, body any, disableRedirect bool, wrapTTL time.Duration) *http.Response {
 	bodyReader := new(bytes.Buffer)
 	if body != nil {
 		enc := json.NewEncoder(bodyReader)
@@ -135,7 +135,7 @@ func testResponseHeader(t *testing.T, resp *http.Response, expectedHeaders map[s
 	}
 }
 
-func testResponseBody(t *testing.T, resp *http.Response, out interface{}) {
+func testResponseBody(t *testing.T, resp *http.Response, out any) {
 	defer resp.Body.Close()
 
 	if err := jsonutil.DecodeJSONFromReader(resp.Body, out); err != nil {

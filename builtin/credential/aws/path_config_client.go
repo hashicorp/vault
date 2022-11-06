@@ -140,7 +140,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"access_key":                 clientConfig.AccessKey,
 			"endpoint":                   clientConfig.Endpoint,
 			"iam_endpoint":               clientConfig.IAMEndpoint,

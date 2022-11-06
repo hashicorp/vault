@@ -14,7 +14,7 @@ func TestTransit_Hash(t *testing.T) {
 		Storage:   storage,
 		Operation: logical.UpdateOperation,
 		Path:      "hash",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"input": "dGhlIHF1aWNrIGJyb3duIGZveA==",
 		},
 	}

@@ -20,14 +20,14 @@ func TestSysConfigCors(t *testing.T) {
 	corsConf := core.CORSConfig()
 
 	// Try to enable CORS without providing a value for allowed_origins
-	resp = testHttpPut(t, token, addr+"/v1/sys/config/cors", map[string]interface{}{
+	resp = testHttpPut(t, token, addr+"/v1/sys/config/cors", map[string]any{
 		"allowed_headers": "X-Custom-Header",
 	})
 
 	testResponseStatus(t, resp, 500)
 
 	// Enable CORS, but provide an origin this time.
-	resp = testHttpPut(t, token, addr+"/v1/sys/config/cors", map[string]interface{}{
+	resp = testHttpPut(t, token, addr+"/v1/sys/config/cors", map[string]any{
 		"allowed_origins": addr,
 		"allowed_headers": "X-Custom-Header",
 	})
@@ -38,31 +38,31 @@ func TestSysConfigCors(t *testing.T) {
 	resp = testHttpGet(t, token, addr+"/v1/sys/config/cors")
 	testResponseStatus(t, resp, 200)
 
-	var actual map[string]interface{}
-	var expected map[string]interface{}
+	var actual map[string]any
+	var expected map[string]any
 
 	lenStdHeaders := len(corsConf.AllowedHeaders)
 
-	expectedHeaders := make([]interface{}, lenStdHeaders)
+	expectedHeaders := make([]any, lenStdHeaders)
 
 	for i := range corsConf.AllowedHeaders {
 		expectedHeaders[i] = corsConf.AllowedHeaders[i]
 	}
 
-	expected = map[string]interface{}{
+	expected = map[string]any{
 		"lease_id":       "",
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"enabled":         true,
-			"allowed_origins": []interface{}{addr},
+			"allowed_origins": []any{addr},
 			"allowed_headers": expectedHeaders,
 		},
 		"enabled":         true,
-		"allowed_origins": []interface{}{addr},
+		"allowed_origins": []any{addr},
 		"allowed_headers": expectedHeaders,
 	}
 

@@ -257,8 +257,8 @@ func (i *InmemBackend) ListInternal(ctx context.Context, prefix string) ([]strin
 	}
 
 	var out []string
-	seen := make(map[string]interface{})
-	walkFn := func(s string, v interface{}) bool {
+	seen := make(map[string]any)
+	walkFn := func(s string, v any) bool {
 		trimmed := strings.TrimPrefix(s, prefix)
 		sep := strings.Index(trimmed, "/")
 		if sep == -1 {

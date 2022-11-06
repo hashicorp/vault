@@ -120,7 +120,7 @@ func (c *Sys) StartRemountWithContext(ctx context.Context, from, to string) (*Mo
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"from": from,
 		"to":   to,
 	}

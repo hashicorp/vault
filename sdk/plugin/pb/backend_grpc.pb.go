@@ -218,7 +218,7 @@ func RegisterBackendServer(s grpc.ServiceRegistrar, srv BackendServer) {
 	s.RegisterService(&Backend_ServiceDesc, srv)
 }
 
-func _Backend_HandleRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Backend_HandleRequest_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(HandleRequestArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -230,13 +230,13 @@ func _Backend_HandleRequest_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/pb.Backend/HandleRequest",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(BackendServer).HandleRequest(ctx, req.(*HandleRequestArgs))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Backend_SpecialPaths_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Backend_SpecialPaths_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -248,13 +248,13 @@ func _Backend_SpecialPaths_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/pb.Backend/SpecialPaths",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(BackendServer).SpecialPaths(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Backend_HandleExistenceCheck_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Backend_HandleExistenceCheck_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(HandleExistenceCheckArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -266,13 +266,13 @@ func _Backend_HandleExistenceCheck_Handler(srv interface{}, ctx context.Context,
 		Server:     srv,
 		FullMethod: "/pb.Backend/HandleExistenceCheck",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(BackendServer).HandleExistenceCheck(ctx, req.(*HandleExistenceCheckArgs))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Backend_Cleanup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Backend_Cleanup_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -284,13 +284,13 @@ func _Backend_Cleanup_Handler(srv interface{}, ctx context.Context, dec func(int
 		Server:     srv,
 		FullMethod: "/pb.Backend/Cleanup",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(BackendServer).Cleanup(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Backend_InvalidateKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Backend_InvalidateKey_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(InvalidateKeyArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -302,13 +302,13 @@ func _Backend_InvalidateKey_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/pb.Backend/InvalidateKey",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(BackendServer).InvalidateKey(ctx, req.(*InvalidateKeyArgs))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Backend_Setup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Backend_Setup_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(SetupArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -320,13 +320,13 @@ func _Backend_Setup_Handler(srv interface{}, ctx context.Context, dec func(inter
 		Server:     srv,
 		FullMethod: "/pb.Backend/Setup",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(BackendServer).Setup(ctx, req.(*SetupArgs))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Backend_Initialize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Backend_Initialize_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(InitializeArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -338,13 +338,13 @@ func _Backend_Initialize_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/pb.Backend/Initialize",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(BackendServer).Initialize(ctx, req.(*InitializeArgs))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Backend_Type_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Backend_Type_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -356,7 +356,7 @@ func _Backend_Type_Handler(srv interface{}, ctx context.Context, dec func(interf
 		Server:     srv,
 		FullMethod: "/pb.Backend/Type",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(BackendServer).Type(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
@@ -500,7 +500,7 @@ func RegisterStorageServer(s grpc.ServiceRegistrar, srv StorageServer) {
 	s.RegisterService(&Storage_ServiceDesc, srv)
 }
 
-func _Storage_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Storage_List_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(StorageListArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -512,13 +512,13 @@ func _Storage_List_Handler(srv interface{}, ctx context.Context, dec func(interf
 		Server:     srv,
 		FullMethod: "/pb.Storage/List",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(StorageServer).List(ctx, req.(*StorageListArgs))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Storage_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Storage_Get_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(StorageGetArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -530,13 +530,13 @@ func _Storage_Get_Handler(srv interface{}, ctx context.Context, dec func(interfa
 		Server:     srv,
 		FullMethod: "/pb.Storage/Get",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(StorageServer).Get(ctx, req.(*StorageGetArgs))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Storage_Put_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Storage_Put_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(StoragePutArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -548,13 +548,13 @@ func _Storage_Put_Handler(srv interface{}, ctx context.Context, dec func(interfa
 		Server:     srv,
 		FullMethod: "/pb.Storage/Put",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(StorageServer).Put(ctx, req.(*StoragePutArgs))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Storage_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Storage_Delete_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(StorageDeleteArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -566,7 +566,7 @@ func _Storage_Delete_Handler(srv interface{}, ctx context.Context, dec func(inte
 		Server:     srv,
 		FullMethod: "/pb.Storage/Delete",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(StorageServer).Delete(ctx, req.(*StorageDeleteArgs))
 	}
 	return interceptor(ctx, in, info, handler)
@@ -858,7 +858,7 @@ func RegisterSystemViewServer(s grpc.ServiceRegistrar, srv SystemViewServer) {
 	s.RegisterService(&SystemView_ServiceDesc, srv)
 }
 
-func _SystemView_DefaultLeaseTTL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_DefaultLeaseTTL_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -870,13 +870,13 @@ func _SystemView_DefaultLeaseTTL_Handler(srv interface{}, ctx context.Context, d
 		Server:     srv,
 		FullMethod: "/pb.SystemView/DefaultLeaseTTL",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).DefaultLeaseTTL(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_MaxLeaseTTL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_MaxLeaseTTL_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -888,13 +888,13 @@ func _SystemView_MaxLeaseTTL_Handler(srv interface{}, ctx context.Context, dec f
 		Server:     srv,
 		FullMethod: "/pb.SystemView/MaxLeaseTTL",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).MaxLeaseTTL(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_Tainted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_Tainted_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -906,13 +906,13 @@ func _SystemView_Tainted_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/pb.SystemView/Tainted",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).Tainted(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_CachingDisabled_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_CachingDisabled_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -924,13 +924,13 @@ func _SystemView_CachingDisabled_Handler(srv interface{}, ctx context.Context, d
 		Server:     srv,
 		FullMethod: "/pb.SystemView/CachingDisabled",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).CachingDisabled(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_ReplicationState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_ReplicationState_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -942,13 +942,13 @@ func _SystemView_ReplicationState_Handler(srv interface{}, ctx context.Context, 
 		Server:     srv,
 		FullMethod: "/pb.SystemView/ReplicationState",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).ReplicationState(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_ResponseWrapData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_ResponseWrapData_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(ResponseWrapDataArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -960,13 +960,13 @@ func _SystemView_ResponseWrapData_Handler(srv interface{}, ctx context.Context, 
 		Server:     srv,
 		FullMethod: "/pb.SystemView/ResponseWrapData",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).ResponseWrapData(ctx, req.(*ResponseWrapDataArgs))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_MlockEnabled_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_MlockEnabled_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -978,13 +978,13 @@ func _SystemView_MlockEnabled_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/pb.SystemView/MlockEnabled",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).MlockEnabled(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_LocalMount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_LocalMount_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -996,13 +996,13 @@ func _SystemView_LocalMount_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/pb.SystemView/LocalMount",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).LocalMount(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_EntityInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_EntityInfo_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(EntityInfoArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1014,13 +1014,13 @@ func _SystemView_EntityInfo_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/pb.SystemView/EntityInfo",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).EntityInfo(ctx, req.(*EntityInfoArgs))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_PluginEnv_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_PluginEnv_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1032,13 +1032,13 @@ func _SystemView_PluginEnv_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/pb.SystemView/PluginEnv",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).PluginEnv(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_GroupsForEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_GroupsForEntity_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(EntityInfoArgs)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1050,13 +1050,13 @@ func _SystemView_GroupsForEntity_Handler(srv interface{}, ctx context.Context, d
 		Server:     srv,
 		FullMethod: "/pb.SystemView/GroupsForEntity",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).GroupsForEntity(ctx, req.(*EntityInfoArgs))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_GeneratePasswordFromPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SystemView_GeneratePasswordFromPolicy_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(GeneratePasswordFromPolicyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -1068,7 +1068,7 @@ func _SystemView_GeneratePasswordFromPolicy_Handler(srv interface{}, ctx context
 		Server:     srv,
 		FullMethod: "/pb.SystemView/GeneratePasswordFromPolicy",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(SystemViewServer).GeneratePasswordFromPolicy(ctx, req.(*GeneratePasswordFromPolicyRequest))
 	}
 	return interceptor(ctx, in, info, handler)

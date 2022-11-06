@@ -266,7 +266,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		return nil, nil
 	}
 
-	respData := map[string]interface{}{
+	respData := map[string]any{
 		"id":   group.ID,
 		"name": group.Name,
 	}
@@ -326,7 +326,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
 	}
 
-	respData := map[string]interface{}{}
+	respData := map[string]any{}
 	respData["id"] = group.ID
 	respData["name"] = group.Name
 	respData["policies"] = group.Policies
@@ -339,7 +339,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 	respData["type"] = group.Type
 	respData["namespace_id"] = group.NamespaceID
 
-	aliasMap := map[string]interface{}{}
+	aliasMap := map[string]any{}
 	if group.Alias != nil {
 		aliasMap["id"] = group.Alias.ID
 		aliasMap["canonical_id"] = group.Alias.CanonicalID
@@ -485,7 +485,7 @@ func (i *IdentityStore) handleGroupListCommon(ctx context.Context, byID bool) (*
 	}
 
 	var keys []string
-	groupInfo := map[string]interface{}{}
+	groupInfo := map[string]any{}
 
 	type mountInfo struct {
 		MountType string
@@ -502,13 +502,13 @@ func (i *IdentityStore) handleGroupListCommon(ctx context.Context, byID bool) (*
 			keys = append(keys, group.Name)
 		}
 
-		groupInfoEntry := map[string]interface{}{
+		groupInfoEntry := map[string]any{
 			"name":                group.Name,
 			"num_member_entities": len(group.MemberEntityIDs),
 			"num_parent_groups":   len(group.ParentGroupIDs),
 		}
 		if group.Alias != nil {
-			entry := map[string]interface{}{
+			entry := map[string]any{
 				"id":             group.Alias.ID,
 				"name":           group.Alias.Name,
 				"mount_accessor": group.Alias.MountAccessor,

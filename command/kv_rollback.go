@@ -168,7 +168,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 	}
 
 	// First, do a read to get the current version for check-and-set
-	var meta map[string]interface{}
+	var meta map[string]any
 	{
 		secret, err := kvReadRequest(client, fullPath, nil)
 		if err != nil {
@@ -188,7 +188,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 			c.UI.Error(fmt.Sprintf("No metadata found at %s; rollback only works on existing data", fullPath))
 			return 2
 		}
-		meta, ok = rawMeta.(map[string]interface{})
+		meta, ok = rawMeta.(map[string]any)
 		if !ok {
 			c.UI.Error(fmt.Sprintf("Metadata found at %s is not the expected type (JSON object)", fullPath))
 			return 2
@@ -207,7 +207,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 	}
 
 	// Now run it again and read the version we want to roll back to
-	var data map[string]interface{}
+	var data map[string]any
 	{
 		secret, err := kvReadRequest(client, fullPath, versionParam)
 		if err != nil {
@@ -227,7 +227,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 			c.UI.Error(fmt.Sprintf("No metadata found at %s; rollback only works on existing data", fullPath))
 			return 2
 		}
-		meta, ok := rawMeta.(map[string]interface{})
+		meta, ok := rawMeta.(map[string]any)
 		if !ok {
 			c.UI.Error(fmt.Sprintf("Metadata found at %s is not the expected type (JSON object)", fullPath))
 			return 2
@@ -254,7 +254,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 			c.UI.Error(fmt.Sprintf("No data found at %s; rollback only works on existing data", fullPath))
 			return 2
 		}
-		data, ok = rawData.(map[string]interface{})
+		data, ok = rawData.(map[string]any)
 		if !ok {
 			c.UI.Error(fmt.Sprintf("Data found at %s is not the expected type (JSON object)", fullPath))
 			return 2
@@ -265,9 +265,9 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		}
 	}
 
-	secret, err := client.Logical().Write(fullPath, map[string]interface{}{
+	secret, err := client.Logical().Write(fullPath, map[string]any{
 		"data": data,
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"cas": casVersion,
 		},
 	})

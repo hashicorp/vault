@@ -109,7 +109,7 @@ func (d databaseVersionWrapper) NewUser(ctx context.Context, req v5.NewUserReque
 // UpdateUser in the underlying database. This is used to update any information currently supported
 // in the UpdateUserRequest such as password credentials or user TTL.
 // Errors if the wrapper does not contain an underlying database.
-func (d databaseVersionWrapper) UpdateUser(ctx context.Context, req v5.UpdateUserRequest, isRootUser bool) (saveConfig map[string]interface{}, err error) {
+func (d databaseVersionWrapper) UpdateUser(ctx context.Context, req v5.UpdateUserRequest, isRootUser bool) (saveConfig map[string]any, err error) {
 	if !d.isV5() && !d.isV4() {
 		return nil, fmt.Errorf("no underlying database specified")
 	}
@@ -149,7 +149,7 @@ func (d databaseVersionWrapper) UpdateUser(ctx context.Context, req v5.UpdateUse
 // changePasswordLegacy attempts to use SetCredentials to change the password for the user with the password provided
 // in ChangePassword. If that user is the root user and SetCredentials is unimplemented, it will fall back to using
 // RotateRootCredentials. If not the root user, this will not use RotateRootCredentials.
-func (d databaseVersionWrapper) changePasswordLegacy(ctx context.Context, username string, passwordChange *v5.ChangePassword, isRootUser bool) (saveConfig map[string]interface{}, err error) {
+func (d databaseVersionWrapper) changePasswordLegacy(ctx context.Context, username string, passwordChange *v5.ChangePassword, isRootUser bool) (saveConfig map[string]any, err error) {
 	err = d.changeUserPasswordLegacy(ctx, username, passwordChange)
 
 	// If changing the root user's password but SetCredentials is unimplemented, fall back to RotateRootCredentials
@@ -178,7 +178,7 @@ func (d databaseVersionWrapper) changeUserPasswordLegacy(ctx context.Context, us
 	return err
 }
 
-func (d databaseVersionWrapper) changeRootUserPasswordLegacy(ctx context.Context, passwordChange *v5.ChangePassword) (saveConfig map[string]interface{}, err error) {
+func (d databaseVersionWrapper) changeRootUserPasswordLegacy(ctx context.Context, passwordChange *v5.ChangePassword) (saveConfig map[string]any, err error) {
 	return d.v4.RotateRootCredentials(ctx, passwordChange.Statements.Commands)
 }
 

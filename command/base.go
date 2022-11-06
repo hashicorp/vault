@@ -275,7 +275,7 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) (*api.
 	}
 
 	// passcode could be an empty string
-	mfaPayload := map[string]interface{}{
+	mfaPayload := map[string]any{
 		methodInfo.methodID: []string{passcode},
 	}
 
@@ -583,7 +583,7 @@ func (f *FlagSets) Completions() complete.Flags {
 }
 
 type (
-	ParseOptions              interface{}
+	ParseOptions              any
 	ParseOptionAllowRawFormat bool
 )
 

@@ -185,7 +185,7 @@ func (c *KVGetCommand) Run(args []string) int {
 				// If they requested a literal "data" see if they meant actual
 				// value or the data block itself
 				if c.flagField == "data" {
-					if dataMap, ok := data.(map[string]interface{}); ok {
+					if dataMap, ok := data.(map[string]any); ok {
 						if _, ok := dataMap["data"]; ok {
 							return PrintRawField(c.UI, dataMap, c.flagField)
 						}
@@ -217,7 +217,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	}
 
 	if metadata, ok := secret.Data["metadata"]; ok && metadata != nil {
-		c.UI.Info(getHeaderForMap("Metadata", metadata.(map[string]interface{})))
+		c.UI.Info(getHeaderForMap("Metadata", metadata.(map[string]any)))
 		OutputData(c.UI, metadata)
 		c.UI.Info("")
 	}
@@ -227,7 +227,7 @@ func (c *KVGetCommand) Run(args []string) int {
 		data = nil
 		dataRaw := secret.Data["data"]
 		if dataRaw != nil {
-			data = dataRaw.(map[string]interface{})
+			data = dataRaw.(map[string]any)
 		}
 	}
 

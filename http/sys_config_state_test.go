@@ -20,10 +20,10 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 	resp = testHttpGet(t, token, addr+"/v1/sys/config/state/sanitized")
 	testResponseStatus(t, resp, 200)
 
-	var actual map[string]interface{}
-	var expected map[string]interface{}
+	var actual map[string]any
+	var expected map[string]any
 
-	configResp := map[string]interface{}{
+	configResp := map[string]any{
 		"api_addr":                            "",
 		"cache_size":                          json.Number("0"),
 		"cluster_addr":                        "",
@@ -53,7 +53,7 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 		"log_requests_level":                  "",
 	}
 
-	expected = map[string]interface{}{
+	expected = map[string]any{
 		"lease_id":       "",
 		"renewable":      false,
 		"lease_duration": json.Number("0"),

@@ -32,7 +32,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"auth_type":    "ec2",
 		"policies":     "p,q,r,s",
 		"max_ttl":      "2h",
@@ -194,7 +194,7 @@ func Test_enableIamIDResolution(t *testing.T) {
 	b.resolveArnToUniqueIDFunc = resolveArnToFakeUniqueId
 
 	boundIamRoleARNs := []string{"arn:aws:iam::123456789012:role/MyRole", "arn:aws:iam::123456789012:role/path/*"}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"auth_type":               iamAuthType,
 		"policies":                "p,q",
 		"bound_iam_principal_arn": boundIamRoleARNs,
@@ -229,7 +229,7 @@ func Test_enableIamIDResolution(t *testing.T) {
 		t.Fatalf("expected to get no unique ID in role, but got %q", resp.Data["bound_iam_principal_id"])
 	}
 
-	data = map[string]interface{}{
+	data = map[string]any{
 		"resolve_aws_unique_ids": true,
 	}
 	resp, err = submitRequest(roleName, logical.UpdateOperation)
@@ -288,7 +288,7 @@ func TestBackend_pathIam(t *testing.T) {
 		t.Fatalf("Received roles when expected none")
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"auth_type":               iamAuthType,
 		"policies":                "p,q,r,s",
 		"max_ttl":                 "2h",
@@ -435,7 +435,7 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"policies":     "p,q,r,s",
 		"bound_ami_id": "ami-abc1234",
 		"auth_type":    "ec2,invalid",
@@ -547,7 +547,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	role1Data := map[string]interface{}{
+	role1Data := map[string]any{
 		"auth_type":                "ec2",
 		"bound_vpc_id":             "testvpcid",
 		"allow_instance_migration": true,
@@ -565,7 +565,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"auth_type":                      "ec2",
 		"bound_ami_id":                   "testamiid",
 		"bound_account_id":               "testaccountid",
@@ -599,7 +599,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"auth_type":                      ec2AuthType,
 		"bound_ami_id":                   []string{"testamiid"},
 		"bound_account_id":               []string{"testaccountid"},
@@ -733,7 +733,7 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"auth_type":                      "ec2",
 		"bound_iam_instance_profile_arn": "arn:aws:iam::123456789012:instance-profile/test-profile-name",
 		"resolve_aws_unique_ids":         false,
@@ -1034,7 +1034,7 @@ func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 	}
 
 	// configure the client with an sts endpoint that should be used in creating the role
-	data := map[string]interface{}{
+	data := map[string]any{
 		"sts_endpoint": "https://sts.eu-west-1.amazonaws.com",
 		// Note - if you comment this out, you can reproduce the error shown
 		// in the linked GH issue above. This essentially reproduces the problem
@@ -1054,7 +1054,7 @@ func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 		t.Fatalf("failed to create the role entry; resp: %#v", resp)
 	}
 
-	data = map[string]interface{}{
+	data = map[string]any{
 		"auth_type":               iamAuthType,
 		"bound_iam_principal_arn": assumableRoleArn,
 		"resolve_aws_unique_ids":  true,

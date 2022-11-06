@@ -38,7 +38,7 @@ func (c *Sys) ResetUnsealProcess() (*SealStatusResponse, error) {
 }
 
 func (c *Sys) ResetUnsealProcessWithContext(ctx context.Context) (*SealStatusResponse, error) {
-	body := map[string]interface{}{"reset": true}
+	body := map[string]any{"reset": true}
 
 	r := c.c.NewRequest(http.MethodPut, "/v1/sys/unseal")
 	if err := r.SetJSONBody(body); err != nil {
@@ -53,7 +53,7 @@ func (c *Sys) Unseal(shard string) (*SealStatusResponse, error) {
 }
 
 func (c *Sys) UnsealWithContext(ctx context.Context, shard string) (*SealStatusResponse, error) {
-	body := map[string]interface{}{"key": shard}
+	body := map[string]any{"key": shard}
 
 	r := c.c.NewRequest(http.MethodPut, "/v1/sys/unseal")
 	if err := r.SetJSONBody(body); err != nil {

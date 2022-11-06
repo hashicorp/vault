@@ -191,7 +191,7 @@ func (d dynamicSystemView) HasFeature(feature license.Features) bool {
 
 // ResponseWrapData wraps the given data in a cubbyhole and returns the
 // token used to unwrap.
-func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string]any, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	req := &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "sys/wrapping/wrap",

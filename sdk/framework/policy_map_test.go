@@ -15,8 +15,8 @@ func TestPolicyMap(t *testing.T) {
 
 	ctx := context.Background()
 
-	p.Put(ctx, s, "foo", map[string]interface{}{"value": "bar"})
-	p.Put(ctx, s, "bar", map[string]interface{}{"value": "foo,baz "})
+	p.Put(ctx, s, "foo", map[string]any{"value": "bar"})
+	p.Put(ctx, s, "bar", map[string]any{"value": "foo,baz "})
 
 	// Read via API
 	actual, err := p.Policies(ctx, s, "foo", "bar")

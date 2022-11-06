@@ -112,7 +112,7 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	if c.flagCleanupDeadServers.IsSet() {
 		data["cleanup_dead_servers"] = c.flagCleanupDeadServers.Get()
 	}

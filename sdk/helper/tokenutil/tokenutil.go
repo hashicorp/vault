@@ -237,7 +237,7 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 }
 
 // PopulateTokenData adds information from TokenParams into the map
-func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
+func (t *TokenParams) PopulateTokenData(m map[string]any) {
 	m["token_bound_cidrs"] = t.TokenBoundCIDRs
 	m["token_explicit_max_ttl"] = int64(t.TokenExplicitMaxTTL.Seconds())
 	m["token_max_ttl"] = int64(t.TokenMaxTTL.Seconds())
@@ -367,7 +367,7 @@ func upgradeSockAddrSliceValue(d *framework.FieldData, oldKey, newKey string, ol
 // UpgradeValue takes in old/new data keys and old/new values and calls out to
 // a helper function to perform upgrades in a standardized way. It reqiures
 // pointers in all cases so that we can set directly into the target struct.
-func UpgradeValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal interface{}) error {
+func UpgradeValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal any) error {
 	switch typedOldVal := oldVal.(type) {
 	case *time.Duration:
 		typedNewVal, ok := newVal.(*time.Duration)

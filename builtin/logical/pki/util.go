@@ -287,7 +287,7 @@ func sendNotModifiedResponseIfNecessary(helper *IfModifiedSinceHelper, sc *stora
 	}
 
 	// Fill response
-	resp.Data = map[string]interface{}{
+	resp.Data = map[string]any{
 		logical.HTTPContentType: "",
 		logical.HTTPStatusCode:  304,
 	}

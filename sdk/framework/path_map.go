@@ -151,7 +151,7 @@ func (p *PathMap) pathStruct(ctx context.Context, s logical.Storage, k string) (
 }
 
 // Get reads a value out of the mapping
-func (p *PathMap) Get(ctx context.Context, s logical.Storage, k string) (map[string]interface{}, error) {
+func (p *PathMap) Get(ctx context.Context, s logical.Storage, k string) (map[string]any, error) {
 	ps, err := p.pathStruct(ctx, s, k)
 	if err != nil {
 		return nil, err
@@ -160,7 +160,7 @@ func (p *PathMap) Get(ctx context.Context, s logical.Storage, k string) (map[str
 }
 
 // Put writes a value into the mapping
-func (p *PathMap) Put(ctx context.Context, s logical.Storage, k string, v map[string]interface{}) error {
+func (p *PathMap) Put(ctx context.Context, s logical.Storage, k string, v map[string]any) error {
 	ps, err := p.pathStruct(ctx, s, k)
 	if err != nil {
 		return err

@@ -71,7 +71,7 @@ func TestLogin(t *testing.T) {
 	}
 
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		payload := make(map[string]interface{})
+		payload := make(map[string]any)
 		err := json.NewDecoder(req.Body).Decode(&payload)
 		if err != nil {
 			t.Fatalf("error decoding json: %v", err)

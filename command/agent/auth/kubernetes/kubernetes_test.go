@@ -40,7 +40,7 @@ func TestKubernetesAuth_basic(t *testing.T) {
 			authCfg := auth.AuthConfig{
 				Logger:    logging.NewVaultLogger(hclog.Trace),
 				MountPath: "kubernetes",
-				Config: map[string]interface{}{
+				Config: map[string]any{
 					"role": "plugin-test",
 				},
 			}

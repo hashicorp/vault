@@ -19,7 +19,7 @@ import (
 
 // extractListData reads the secret and returns a typed list of data and a
 // boolean indicating whether the extraction was successful.
-func extractListData(secret *api.Secret) ([]interface{}, bool) {
+func extractListData(secret *api.Secret) ([]any, bool) {
 	if secret == nil || secret.Data == nil {
 		return nil, false
 	}
@@ -29,7 +29,7 @@ func extractListData(secret *api.Secret) ([]interface{}, bool) {
 		return nil, false
 	}
 
-	i, ok := k.([]interface{})
+	i, ok := k.([]any)
 	return i, ok
 }
 
@@ -129,7 +129,7 @@ func tableOutput(list []string, c *columnize.Config) string {
 
 // parseArgsData parses the given args in the format key=value into a map of
 // the provided arguments. The given reader can also supply key=value pairs.
-func parseArgsData(stdin io.Reader, args []string) (map[string]interface{}, error) {
+func parseArgsData(stdin io.Reader, args []string) (map[string]any, error) {
 	builder := &kvbuilder.Builder{Stdin: stdin}
 	if err := builder.Add(args...); err != nil {
 		return nil, err
@@ -260,7 +260,7 @@ func humanDuration(d time.Duration) string {
 
 // humanDurationInt prints the given int as if it were a time.Duration  number
 // of seconds.
-func humanDurationInt(i interface{}) interface{} {
+func humanDurationInt(i any) any {
 	switch i := i.(type) {
 	case int:
 		return humanDuration(time.Duration(i) * time.Second)

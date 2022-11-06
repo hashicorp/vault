@@ -756,7 +756,7 @@ func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"group_ids":  assignment.GroupIDs,
 			"entity_ids": assignment.EntityIDs,
 		},
@@ -873,7 +873,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 			return logical.ErrorResponse("error parsing template: %s", err.Error()), nil
 		}
 
-		var tmp map[string]interface{}
+		var tmp map[string]any
 		if err := json.Unmarshal([]byte(populatedTemplate), &tmp); err != nil {
 			return logical.ErrorResponse("error parsing template JSON: %s", err.Error()), nil
 		}
@@ -920,7 +920,7 @@ func (i *IdentityStore) pathOIDCReadScope(ctx context.Context, req *logical.Requ
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"template":    scope.Template,
 			"description": scope.Description,
 		},
@@ -1130,10 +1130,10 @@ func (i *IdentityStore) pathOIDCListClient(ctx context.Context, req *logical.Req
 	}
 
 	keys := make([]string, 0, len(clients))
-	keyInfo := make(map[string]interface{})
+	keyInfo := make(map[string]any)
 	for _, client := range clients {
 		keys = append(keys, client.Name)
-		keyInfo[client.Name] = map[string]interface{}{
+		keyInfo[client.Name] = map[string]any{
 			"redirect_uris":    client.RedirectURIs,
 			"assignments":      client.Assignments,
 			"key":              client.Key,
@@ -1161,7 +1161,7 @@ func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Req
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"redirect_uris":    client.RedirectURIs,
 			"assignments":      client.Assignments,
 			"key":              client.Key,
@@ -1305,7 +1305,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 			return nil, fmt.Errorf("error parsing template for scope %q: %s", scopeName, err.Error())
 		}
 
-		jsonTemplate := make(map[string]interface{})
+		jsonTemplate := make(map[string]any)
 		if err = json.Unmarshal([]byte(populatedTemplate), &jsonTemplate); err != nil {
 			return nil, err
 		}
@@ -1371,10 +1371,10 @@ func (i *IdentityStore) pathOIDCListProvider(ctx context.Context, req *logical.R
 	}
 
 	keys := make([]string, 0, len(providerMap))
-	keyInfo := make(map[string]interface{})
+	keyInfo := make(map[string]any)
 	for name, provider := range providerMap {
 		keys = append(keys, name)
-		keyInfo[name] = map[string]interface{}{
+		keyInfo[name] = map[string]any{
 			"issuer":             provider.effectiveIssuer,
 			"allowed_client_ids": provider.AllowedClientIDs,
 			"scopes_supported":   provider.ScopesSupported,
@@ -1397,7 +1397,7 @@ func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.R
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"issuer":             provider.effectiveIssuer,
 			"allowed_client_ids": provider.AllowedClientIDs,
 			"scopes_supported":   provider.ScopesSupported,
@@ -1499,7 +1499,7 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			logical.HTTPStatusCode:         200,
 			logical.HTTPRawBody:            data,
 			logical.HTTPContentType:        "application/json",
@@ -1551,7 +1551,7 @@ func (i *IdentityStore) pathOIDCReadProviderPublicKeys(ctx context.Context, req 
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			logical.HTTPStatusCode:  200,
 			logical.HTTPRawBody:     data,
 			logical.HTTPContentType: "application/json",
@@ -1812,7 +1812,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 //   - https://openid.net/specs/openid-connect-core-1_0.html#AuthError
 func authResponse(code, state, errorCode, errorDescription string) (*logical.Response, error) {
 	statusCode := http.StatusOK
-	response := map[string]interface{}{
+	response := map[string]any{
 		"code":  code,
 		"state": state,
 	}
@@ -1824,7 +1824,7 @@ func authResponse(code, state, errorCode, errorDescription string) (*logical.Res
 			statusCode = http.StatusInternalServerError
 		}
 
-		response = map[string]interface{}{
+		response = map[string]any{
 			"error":             errorCode,
 			"error_description": errorDescription,
 			"state":             state,
@@ -1837,7 +1837,7 @@ func authResponse(code, state, errorCode, errorDescription string) (*logical.Res
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			logical.HTTPStatusCode:  statusCode,
 			logical.HTTPRawBody:     body,
 			logical.HTTPContentType: "application/json",
@@ -2081,7 +2081,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenServerError, err.Error())
 	}
 
-	return tokenResponse(map[string]interface{}{
+	return tokenResponse(map[string]any{
 		"token_type":   "Bearer",
 		"access_token": accessToken.ID,
 		"id_token":     signedIDToken,
@@ -2093,7 +2093,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 // returned if the given error code is non-empty. For details, see spec at
 //   - https://openid.net/specs/openid-connect-core-1_0.html#TokenResponse
 //   - https://openid.net/specs/openid-connect-core-1_0.html#TokenErrorResponse
-func tokenResponse(response map[string]interface{}, errorCode, errorDescription string) (*logical.Response, error) {
+func tokenResponse(response map[string]any, errorCode, errorDescription string) (*logical.Response, error) {
 	statusCode := http.StatusOK
 
 	// Set the error response and status code if error code isn't empty
@@ -2107,7 +2107,7 @@ func tokenResponse(response map[string]interface{}, errorCode, errorDescription 
 			statusCode = http.StatusBadRequest
 		}
 
-		response = map[string]interface{}{
+		response = map[string]any{
 			"error":             errorCode,
 			"error_description": errorDescription,
 		}
@@ -2118,7 +2118,7 @@ func tokenResponse(response map[string]interface{}, errorCode, errorDescription 
 		return nil, err
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		logical.HTTPStatusCode:  statusCode,
 		logical.HTTPRawBody:     body,
 		logical.HTTPContentType: "application/json",
@@ -2214,7 +2214,7 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 		return userInfoResponse(nil, ErrUserInfoAccessDenied, "client is not authorized to use the provider")
 	}
 
-	claims := map[string]interface{}{
+	claims := map[string]any{
 		// The subject claim must always be in the response
 		"sub": entity.ID,
 	}
@@ -2255,7 +2255,7 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 // returned if the given error code is non-empty. For details, see spec at
 //   - https://openid.net/specs/openid-connect-core-1_0.html#UserInfoResponse
 //   - https://openid.net/specs/openid-connect-core-1_0.html#UserInfoError
-func userInfoResponse(response map[string]interface{}, errorCode, errorDescription string) (*logical.Response, error) {
+func userInfoResponse(response map[string]any, errorCode, errorDescription string) (*logical.Response, error) {
 	statusCode := http.StatusOK
 
 	// Set the error response and status code if error code isn't empty
@@ -2271,7 +2271,7 @@ func userInfoResponse(response map[string]interface{}, errorCode, errorDescripti
 			statusCode = http.StatusInternalServerError
 		}
 
-		response = map[string]interface{}{
+		response = map[string]any{
 			"error":             errorCode,
 			"error_description": errorDescription,
 		}
@@ -2282,7 +2282,7 @@ func userInfoResponse(response map[string]interface{}, errorCode, errorDescripti
 		return nil, err
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		logical.HTTPStatusCode:  statusCode,
 		logical.HTTPRawBody:     body,
 		logical.HTTPContentType: "application/json",
@@ -2361,7 +2361,7 @@ func (i *IdentityStore) populateScopeTemplates(ctx context.Context, s logical.St
 		}
 
 		if populatedTemplate != "" {
-			claimsMap := make(map[string]interface{})
+			claimsMap := make(map[string]any)
 			if err := json.Unmarshal([]byte(populatedTemplate), &claimsMap); err != nil {
 				i.Logger().Warn("error parsing OIDC template", "template", template, "err", err)
 			}

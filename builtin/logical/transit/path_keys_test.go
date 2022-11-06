@@ -56,21 +56,21 @@ func TestTransit_Issue_2958(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("transit/keys/foo", map[string]interface{}{
+	_, err = client.Logical().Write("transit/keys/foo", map[string]any{
 		"type": "ecdsa-p256",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("transit/keys/foobar", map[string]interface{}{
+	_, err = client.Logical().Write("transit/keys/foobar", map[string]any{
 		"type": "ecdsa-p384",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("transit/keys/bar", map[string]interface{}{
+	_, err = client.Logical().Write("transit/keys/bar", map[string]any{
 		"type": "ed25519",
 	})
 	if err != nil {
@@ -95,7 +95,7 @@ func TestTransit_Issue_2958(t *testing.T) {
 
 func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 	tests := map[string]struct {
-		autoRotatePeriod interface{}
+		autoRotatePeriod any
 		shouldError      bool
 		expectedValue    time.Duration
 	}{
@@ -159,7 +159,7 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 			}
 			keyName := hex.EncodeToString(keyNameBytes)
 
-			_, err = client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
+			_, err = client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]any{
 				"auto_rotate_period": test.autoRotatePeriod,
 			})
 			switch {

@@ -207,7 +207,7 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer b.permitPool.Release()
 
 	// Insert
-	m := spanner.InsertOrUpdateMap(b.table, map[string]interface{}{
+	m := spanner.InsertOrUpdateMap(b.table, map[string]any{
 		"Key":   entry.Key,
 		"Value": entry.Value,
 	})
@@ -276,7 +276,7 @@ func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 	// List
 	iter := b.client.Single().Query(ctx, spanner.Statement{
 		SQL: "SELECT Key FROM " + safeTable + " WHERE STARTS_WITH(Key, @prefix)",
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"prefix": prefix,
 		},
 	})
@@ -335,7 +335,7 @@ func (b *Backend) Transaction(ctx context.Context, txns []*physical.TxnEntry) er
 		case physical.DeleteOperation:
 			ms[i] = spanner.Delete(b.table, spanner.Key{key})
 		case physical.PutOperation:
-			ms[i] = spanner.InsertOrUpdateMap(b.table, map[string]interface{}{
+			ms[i] = spanner.InsertOrUpdateMap(b.table, map[string]any{
 				"Key":   key,
 				"Value": value,
 			})

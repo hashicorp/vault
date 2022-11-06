@@ -118,7 +118,7 @@ func TestCustomResponseHeaders(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseHeader(t, resp, customHeader200)
 
-	resp = testHttpPost(t, token, addr+"/v1/sys/auth/foo", map[string]interface{}{
+	resp = testHttpPost(t, token, addr+"/v1/sys/auth/foo", map[string]any{
 		"type":        "noop",
 		"description": "foo",
 	})

@@ -21,7 +21,7 @@ func TestHANA_Initialize(t *testing.T) {
 	}
 	connURL := os.Getenv("HANA_URL")
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -70,7 +70,7 @@ func TestHANA_NewUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			connectionDetails := map[string]interface{}{
+			connectionDetails := map[string]any{
 				"connection_url": connURL,
 			}
 
@@ -134,7 +134,7 @@ func TestHANA_UpdateUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			connectionDetails := map[string]interface{}{
+			connectionDetails := map[string]any{
 				"connection_url": connURL,
 			}
 
@@ -210,7 +210,7 @@ func TestHANA_DeleteUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			connectionDetails := map[string]interface{}{
+			connectionDetails := map[string]any{
 				"connection_url": connURL,
 			}
 
@@ -281,8 +281,8 @@ func assertCredsDoNotExist(t testing.TB, connURL, username, password string) {
 	}
 }
 
-func copyConfig(config map[string]interface{}) map[string]interface{} {
-	newConfig := map[string]interface{}{}
+func copyConfig(config map[string]any) map[string]any {
+	newConfig := map[string]any{}
 	for k, v := range config {
 		newConfig[k] = v
 	}
@@ -295,7 +295,7 @@ func TestHANA_DefaultUsernameTemplate(t *testing.T) {
 	}
 	connURL := os.Getenv("HANA_URL")
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url": connURL,
 	}
 
@@ -340,7 +340,7 @@ func TestHANA_CustomUsernameTemplate(t *testing.T) {
 	}
 	connURL := os.Getenv("HANA_URL")
 
-	connectionDetails := map[string]interface{}{
+	connectionDetails := map[string]any{
 		"connection_url":    connURL,
 		"username_template": "{{.DisplayName}}_{{random 10}}",
 	}

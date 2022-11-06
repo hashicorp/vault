@@ -39,15 +39,15 @@ func BTransit_BatchEncryption(b *testing.B, bsize int) {
 
 	backend, s := createBackendWithStorage(b)
 
-	batchEncryptionInput := make([]interface{}, 0, bsize)
+	batchEncryptionInput := make([]any, 0, bsize)
 	for i := 0; i < bsize; i++ {
 		batchEncryptionInput = append(
 			batchEncryptionInput,
-			map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+			map[string]any{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
 		)
 	}
 
-	batchEncryptionData := map[string]interface{}{
+	batchEncryptionData := map[string]any{
 		"batch_input": batchEncryptionInput,
 	}
 
