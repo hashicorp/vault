@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -1344,7 +1343,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		testCluster.TempDir = opts.TempDir
 	} else {
-		tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
+		tempDir, err := os.MkdirTemp("", "vault-test-cluster-")
 		if err != nil {
 			t.Fatal(err)
 		}

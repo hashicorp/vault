@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"os"
 	paths "path"
 	"path/filepath"
@@ -169,7 +168,7 @@ ssl-key=/etc/mysql/server-key.pem`
 }
 
 func makeTempDir(t *testing.T) (confDir string) {
-	confDir, err := ioutil.TempDir(".", "mysql-test-data")
+	confDir, err := os.MkdirTemp(".", "mysql-test-data")
 	if err != nil {
 		t.Fatalf("Unable to make temp directory: %s", err)
 	}

@@ -3,7 +3,6 @@ package raft
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"sort"
@@ -17,7 +16,7 @@ import (
 )
 
 func getFSM(t testing.TB) (*FSM, string) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	raftDir, err := os.MkdirTemp("", "vault-raft-")
 	if err != nil {
 		t.Fatal(err)
 	}

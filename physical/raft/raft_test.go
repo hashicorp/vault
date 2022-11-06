@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -28,7 +27,7 @@ import (
 )
 
 func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, string) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	raftDir, err := os.MkdirTemp("", "vault-raft-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +226,7 @@ func TestRaft_Backend(t *testing.T) {
 }
 
 func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	raftDir, err := os.MkdirTemp("", "vault-raft-")
 	if err != nil {
 		t.Fatal(err)
 	}

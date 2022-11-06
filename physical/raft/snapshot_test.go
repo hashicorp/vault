@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"hash/crc64"
 	"io"
-	"io/ioutil"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -530,13 +529,13 @@ func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 }
 
 func TestBoltSnapshotStore_CreateSnapshotMissingParentDir(t *testing.T) {
-	parent, err := ioutil.TempDir("", "raft")
+	parent, err := os.MkdirTemp("", "raft")
 	if err != nil {
 		t.Fatalf("err: %v ", err)
 	}
 	defer os.RemoveAll(parent)
 
-	dir, err := ioutil.TempDir(parent, "raft")
+	dir, err := os.MkdirTemp(parent, "raft")
 	if err != nil {
 		t.Fatalf("err: %v ", err)
 	}
@@ -559,27 +558,25 @@ func TestBoltSnapshotStore_CreateSnapshotMissingParentDir(t *testing.T) {
 	}
 	defer sink.Cancel()
 
-	_, err = sink.Write([]byte("test"))
-	if err != nil {
+	if _, err := sink.Write([]byte("test")); err != nil {
 		t.Fatalf("should not fail when using non existing parent: %s", err)
 	}
 
 	// Ensure the snapshot file exists
-	_, err = os.Stat(filepath.Join(snap.path, sink.ID()+tmpSuffix, databaseFilename))
-	if err != nil {
+	if _, err := os.Stat(filepath.Join(snap.path, sink.ID()+tmpSuffix, databaseFilename)); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestBoltSnapshotStore_Listing(t *testing.T) {
 	// Create a test dir
-	parent, err := ioutil.TempDir("", "raft")
+	parent, err := os.MkdirTemp("", "raft")
 	if err != nil {
 		t.Fatalf("err: %v ", err)
 	}
 	defer os.RemoveAll(parent)
 
-	dir, err := ioutil.TempDir(parent, "raft")
+	dir, err := os.MkdirTemp(parent, "raft")
 	if err != nil {
 		t.Fatalf("err: %v ", err)
 	}
@@ -609,13 +606,13 @@ func TestBoltSnapshotStore_Listing(t *testing.T) {
 	}
 
 	// Move the fsm forward
-	err = fsm.witnessSnapshot(&raft.SnapshotMeta{
+
+	if err := fsm.witnessSnapshot(&raft.SnapshotMeta{
 		Index:              100,
 		Term:               20,
 		Configuration:      raft.Configuration{},
 		ConfigurationIndex: 0,
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -638,13 +635,13 @@ func TestBoltSnapshotStore_Listing(t *testing.T) {
 
 func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 	// Create a test dir
-	parent, err := ioutil.TempDir("", "raft")
+	parent, err := os.MkdirTemp("", "raft")
 	if err != nil {
 		t.Fatalf("err: %v ", err)
 	}
 	defer os.RemoveAll(parent)
 
-	dir, err := ioutil.TempDir(parent, "raft")
+	dir, err := os.MkdirTemp(parent, "raft")
 	if err != nil {
 		t.Fatalf("err: %v ", err)
 	}
@@ -757,14 +754,12 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = compareDBs(t, fsm.getDB(), newFSM.getDB(), true)
-	if err != nil {
+	if err := compareDBs(t, fsm.getDB(), newFSM.getDB(), true); err != nil {
 		t.Fatal(err)
 	}
 
 	// Make sure config data is different
-	err = compareDBs(t, fsm.getDB(), newFSM.getDB(), false)
-	if err == nil {
+	if err := compareDBs(t, fsm.getDB(), newFSM.getDB(), false); err == nil {
 		t.Fatal("expected error")
 	}
 
@@ -772,8 +767,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = fsm.Restore(installer)
-	if err != nil {
+	if err := fsm.Restore(installer); err != nil {
 		t.Fatal(err)
 	}
 
@@ -820,7 +814,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 
 func TestBoltSnapshotStore_CancelSnapshot(t *testing.T) {
 	// Create a test dir
-	dir, err := ioutil.TempDir("", "raft")
+	dir, err := os.MkdirTemp("", "raft")
 	if err != nil {
 		t.Fatalf("err: %v ", err)
 	}
@@ -879,7 +873,7 @@ func TestBoltSnapshotStore_BadPerm(t *testing.T) {
 
 	// Create a temp dir
 	var dir1 string
-	dir1, err = ioutil.TempDir("", "raft")
+	dir1, err = os.MkdirTemp("", "raft")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -887,7 +881,7 @@ func TestBoltSnapshotStore_BadPerm(t *testing.T) {
 
 	// Create a sub dir and remove all permissions
 	var dir2 string
-	dir2, err = ioutil.TempDir(dir1, "badperm")
+	dir2, err = os.MkdirTemp(dir1, "badperm")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -909,7 +903,7 @@ func TestBoltSnapshotStore_BadPerm(t *testing.T) {
 
 func TestBoltSnapshotStore_CloseFailure(t *testing.T) {
 	// Create a test dir
-	dir, err := ioutil.TempDir("", "raft")
+	dir, err := os.MkdirTemp("", "raft")
 	if err != nil {
 		t.Fatalf("err: %v ", err)
 	}

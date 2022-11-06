@@ -3,7 +3,6 @@ package mongodb
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	paths "path"
@@ -149,7 +148,7 @@ net:
 }
 
 func makeTempDir(t *testing.T) (confDir string) {
-	confDir, err := ioutil.TempDir(".", "mongodb-test-data")
+	confDir, err := os.MkdirTemp(".", "mongodb-test-data")
 	if err != nil {
 		t.Fatalf("Unable to make temp directory: %s", err)
 	}
