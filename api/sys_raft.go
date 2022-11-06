@@ -297,8 +297,7 @@ func (c *Sys) RaftAutopilotStateWithContext(ctx context.Context) (*AutopilotStat
 	}
 
 	var result AutopilotState
-	err = mapstructure.Decode(secret.Data, &result)
-	if err != nil {
+	if err := mapstructure.Decode(secret.Data, &result); err != nil {
 		return nil, err
 	}
 

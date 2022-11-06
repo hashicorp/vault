@@ -209,13 +209,11 @@ func (b *Backend) write(ctx context.Context, buf []byte) error {
 		}
 	}
 
-	err := b.connection.SetWriteDeadline(time.Now().Add(b.writeDuration))
-	if err != nil {
+	if err := b.connection.SetWriteDeadline(time.Now().Add(b.writeDuration)); err != nil {
 		return err
 	}
 
-	_, err = b.connection.Write(buf)
-	if err != nil {
+	if _, err := b.connection.Write(buf); err != nil {
 		return err
 	}
 

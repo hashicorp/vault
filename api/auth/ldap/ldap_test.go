@@ -46,8 +46,7 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 	defer os.Remove(tmpfile.Name()) // clean up
-	err = os.Setenv(passwordEnvVar, allowedPassword)
-	if err != nil {
+	if err := os.Setenv(passwordEnvVar, allowedPassword); err != nil {
 		t.Fatalf("error writing password to env var: %v", err)
 	}
 
@@ -72,8 +71,7 @@ func TestLogin(t *testing.T) {
 
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		payload := make(map[string]interface{})
-		err := json.NewDecoder(req.Body).Decode(&payload)
-		if err != nil {
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
 			t.Fatalf("error decoding json: %v", err)
 		}
 		if payload["password"] == allowedPassword {
@@ -136,21 +134,18 @@ func TestLogin(t *testing.T) {
 	}
 
 	// Empty User Test
-	_, err = NewLDAPAuth("", &Password{FromString: allowedPassword})
-	if err.Error() != "no user name provided for login" {
+	if _, err := NewLDAPAuth("", &Password{FromString: allowedPassword}); err.Error() != "no user name provided for login" {
 		t.Fatalf("Auth object created for empty username: %v", err)
 	}
 
 	// Empty Password Test
-	_, err = NewLDAPAuth("my-ldap-username", nil)
-	if err.Error() != "no password provided for login" {
+	if _, err := NewLDAPAuth("my-ldap-username", nil); err.Error() != "no password provided for login" {
 		t.Fatalf("Auth object created when passing a nil Password struct: %v", err)
 	}
 
 	// Auth with Custom MountPath
 	ldapMount := WithMountPath("customMount")
-	_, err = NewLDAPAuth("my-ldap-username", &Password{FromString: allowedPassword}, ldapMount)
-	if err != nil {
+	if _, err := NewLDAPAuth("my-ldap-username", &Password{FromString: allowedPassword}, ldapMount); err != nil {
 		t.Fatalf("error initializing LDAPAuth with custom mountpath: %v", err)
 	}
 }

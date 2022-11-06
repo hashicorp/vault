@@ -58,16 +58,13 @@ func (c *Sys) CapabilitiesWithContext(ctx context.Context, token, path string) (
 	}
 
 	var res []string
-	err = mapstructure.Decode(secret.Data[path], &res)
-	if err != nil {
+	if err := mapstructure.Decode(secret.Data[path], &res); err != nil {
 		return nil, err
 	}
 
 	if len(res) == 0 {
-		_, ok := secret.Data["capabilities"]
-		if ok {
-			err = mapstructure.Decode(secret.Data["capabilities"], &res)
-			if err != nil {
+		if _, ok := secret.Data["capabilities"]; ok {
+			if err := mapstructure.Decode(secret.Data["capabilities"], &res); err != nil {
 				return nil, err
 			}
 		}

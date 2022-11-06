@@ -281,8 +281,7 @@ func (kv *KVv2) PutMetadata(ctx context.Context, secretPath string, metadata KVM
 	metadataMap[casRequiredKey] = metadata.CASRequired
 	metadataMap[customMetadataKey] = metadata.CustomMetadata
 
-	_, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, metadataMap)
-	if err != nil {
+	if _, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, metadataMap); err != nil {
 		return fmt.Errorf("error writing secret metadata to %s: %w", pathToWriteTo, err)
 	}
 
@@ -608,8 +607,7 @@ func extractFullMetadata(secret *Secret) (*KVMetadata, error) {
 		return nil, fmt.Errorf("error setting up decoder for API response: %w", err)
 	}
 
-	err = d.Decode(secret.Data)
-	if err != nil {
+	if err := d.Decode(secret.Data); err != nil {
 		return nil, fmt.Errorf("error decoding metadata from API response into KVMetadata: %w", err)
 	}
 

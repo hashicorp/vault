@@ -206,8 +206,7 @@ func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	}
 
 	buf := bytes.NewBuffer(make([]byte, 0, 2000))
-	err := b.formatter.FormatRequest(ctx, buf, b.formatConfig, in)
-	if err != nil {
+	if err := b.formatter.FormatRequest(ctx, buf, b.formatConfig, in); err != nil {
 		return err
 	}
 
@@ -262,8 +261,7 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	}
 
 	buf := bytes.NewBuffer(make([]byte, 0, 6000))
-	err := b.formatter.FormatResponse(ctx, buf, b.formatConfig, in)
-	if err != nil {
+	if err := b.formatter.FormatResponse(ctx, buf, b.formatConfig, in); err != nil {
 		return err
 	}
 

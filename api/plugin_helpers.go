@@ -163,8 +163,7 @@ func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig)
 		clientConf := DefaultConfig()
 		clientConf.Address = vaultAddr
 		if apiTLSConfig != nil {
-			err := clientConf.ConfigureTLS(apiTLSConfig)
-			if err != nil {
+			if err := clientConf.ConfigureTLS(apiTLSConfig); err != nil {
 				return nil, errwrap.Wrapf("error configuring api client {{err}}", err)
 			}
 		}

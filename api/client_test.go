@@ -197,14 +197,12 @@ func TestClientBadToken(t *testing.T) {
 	}
 
 	client.SetToken("foo")
-	_, err = client.RawRequest(client.NewRequest(http.MethodPut, "/"))
-	if err != nil {
+	if _, err := client.RawRequest(client.NewRequest(http.MethodPut, "/")); err != nil {
 		t.Fatal(err)
 	}
 
 	client.SetToken("foo\u007f")
-	_, err = client.RawRequest(client.NewRequest(http.MethodPut, "/"))
-	if err == nil || !strings.Contains(err.Error(), "printable") {
+	if _, err := client.RawRequest(client.NewRequest(http.MethodPut, "/")); err == nil || !strings.Contains(err.Error(), "printable") {
 		t.Fatalf("expected error due to bad token")
 	}
 }
@@ -453,12 +451,11 @@ func TestClientEnvNamespace(t *testing.T) {
 
 	client, err := NewClient(config)
 	if err != nil {
-		t.Fatalf("err: %s", err)
+		t.Fatalf("err: %v", err)
 	}
 
-	_, err = client.RawRequest(client.NewRequest(http.MethodGet, "/"))
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	if _, err := client.RawRequest(client.NewRequest(http.MethodGet, "/")); err != nil {
+		t.Fatalf("err: %v", err)
 	}
 
 	if seenNamespace != "test" {
@@ -502,8 +499,7 @@ func TestParsingRateOnly(t *testing.T) {
 
 func TestParsingErrorCase(t *testing.T) {
 	incorrectFormat := "foobar"
-	_, _, err := parseRateLimit(incorrectFormat)
-	if err == nil {
+	if _, _, err := parseRateLimit(incorrectFormat); err == nil {
 		t.Error("Expected error, found no error")
 	}
 }
@@ -514,8 +510,7 @@ func TestClientTimeoutSetting(t *testing.T) {
 	defer os.Setenv(EnvVaultClientTimeout, oldClientTimeout)
 	config := DefaultConfig()
 	config.ReadEnvironment()
-	_, err := NewClient(config)
-	if err != nil {
+	if _, err := NewClient(config); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -531,10 +526,9 @@ func TestClientNonTransportRoundTripper(t *testing.T) {
 		Transport: roundTripperFunc(http.DefaultTransport.RoundTrip),
 	}
 
-	_, err := NewClient(&Config{
+	if _, err := NewClient(&Config{
 		HttpClient: client,
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -544,11 +538,10 @@ func TestClientNonTransportRoundTripperUnixAddress(t *testing.T) {
 		Transport: roundTripperFunc(http.DefaultTransport.RoundTrip),
 	}
 
-	_, err := NewClient(&Config{
+	if _, err := NewClient(&Config{
 		HttpClient: client,
 		Address:    "unix:///var/run/vault.sock",
-	})
-	if err == nil {
+	}); err == nil {
 		t.Fatal("bad: expected error got nil")
 	}
 }
@@ -598,8 +591,7 @@ func TestClone(t *testing.T) {
 			}
 
 			// Set all of the things that we provide setter methods for, which modify config values
-			err = parent.SetAddress("http://example.com:8080")
-			if err != nil {
+			if err := parent.SetAddress("http://example.com:8080"); err != nil {
 				t.Fatalf("SetAddress failed: %v", err)
 			}
 
@@ -1279,11 +1271,11 @@ func TestClientWithNamespace(t *testing.T) {
 	}
 	ogNS := "test"
 	client.SetNamespace(ogNS)
-	_, err = client.rawRequestWithContext(
+	if _, err := client.rawRequestWithContext(
 		context.Background(),
-		client.NewRequest(http.MethodGet, "/"))
-	if err != nil {
-		t.Fatalf("err: %s", err)
+		client.NewRequest(http.MethodGet, "/"),
+	); err != nil {
+		t.Fatalf("err: %v", err)
 	}
 	if ns != ogNS {
 		t.Fatalf("Expected namespace: %q, got %q", ogNS, ns)
@@ -1291,31 +1283,31 @@ func TestClientWithNamespace(t *testing.T) {
 
 	// make a call with a temporary namespace
 	newNS := "new-namespace"
-	_, err = client.WithNamespace(newNS).rawRequestWithContext(
+	if _, err := client.WithNamespace(newNS).rawRequestWithContext(
 		context.Background(),
-		client.NewRequest(http.MethodGet, "/"))
-	if err != nil {
-		t.Fatalf("err: %s", err)
+		client.NewRequest(http.MethodGet, "/"),
+	); err != nil {
+		t.Fatalf("err: %v", err)
 	}
 	if ns != newNS {
 		t.Fatalf("Expected new namespace: %q, got %q", newNS, ns)
 	}
 	// ensure client has not been modified
-	_, err = client.rawRequestWithContext(
+	if _, err := client.rawRequestWithContext(
 		context.Background(),
-		client.NewRequest(http.MethodGet, "/"))
-	if err != nil {
-		t.Fatalf("err: %s", err)
+		client.NewRequest(http.MethodGet, "/"),
+	); err != nil {
+		t.Fatalf("err: %v", err)
 	}
 	if ns != ogNS {
 		t.Fatalf("Expected original namespace: %q, got %q", ogNS, ns)
 	}
 
 	// make call with empty ns
-	_, err = client.WithNamespace("").rawRequestWithContext(
+	if _, err := client.WithNamespace("").rawRequestWithContext(
 		context.Background(),
-		client.NewRequest(http.MethodGet, "/"))
-	if err != nil {
+		client.NewRequest(http.MethodGet, "/"),
+	); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != "" {

@@ -173,8 +173,7 @@ func (c *Sys) GetPluginWithContext(ctx context.Context, i *GetPluginInput) (*Get
 	var result struct {
 		Data *GetPluginResponse
 	}
-	err = resp.DecodeJSON(&result)
-	if err != nil {
+	if err := resp.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
 	return result.Data, err
@@ -358,8 +357,7 @@ func (c *Sys) ReloadPluginStatusWithContext(ctx context.Context, reloadStatusInp
 		if err != nil {
 			return nil, err
 		}
-		err = d.Decode(secret.Data)
-		if err != nil {
+		if err := d.Decode(secret.Data); err != nil {
 			return nil, err
 		}
 		return &r, nil

@@ -35,8 +35,7 @@ func TestAuth_Login(t *testing.T) {
 			t.Errorf("client token was %v expected to be unset", a.c.Token())
 		}
 
-		_, err := a.Login(context.Background(), &m)
-		if err != nil {
+		if _, err := a.Login(context.Background(), &m); err != nil {
 			t.Errorf("Login() error = %v", err)
 			return
 		}
@@ -63,8 +62,7 @@ func TestAuth_MFALoginSinglePhase(t *testing.T) {
 			mockedError: nil,
 		}
 
-		_, err := a.MFALogin(context.Background(), &m, "testMethod:testPasscode")
-		if err != nil {
+		if _, err := a.MFALogin(context.Background(), &m, "testMethod:testPasscode"); err != nil {
 			t.Errorf("MFALogin() error %v", err)
 			return
 		}

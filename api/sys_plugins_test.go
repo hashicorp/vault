@@ -22,10 +22,9 @@ func TestRegisterPlugin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = client.Sys().RegisterPluginWithContext(context.Background(), &RegisterPluginInput{
+	if err := client.Sys().RegisterPluginWithContext(context.Background(), &RegisterPluginInput{
 		Version: "v1.0.0",
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 }

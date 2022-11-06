@@ -35,8 +35,7 @@ func (c *Sys) ListMountsWithContext(ctx context.Context) (map[string]*MountOutpu
 	}
 
 	mounts := map[string]*MountOutput{}
-	err = mapstructure.Decode(secret.Data, &mounts)
-	if err != nil {
+	if err := mapstructure.Decode(secret.Data, &mounts); err != nil {
 		return nil, err
 	}
 
@@ -144,8 +143,7 @@ func (c *Sys) StartRemountWithContext(ctx context.Context, from, to string) (*Mo
 	}
 
 	var result MountMigrationOutput
-	err = mapstructure.Decode(secret.Data, &result)
-	if err != nil {
+	if err := mapstructure.Decode(secret.Data, &result); err != nil {
 		return nil, err
 	}
 
@@ -178,8 +176,7 @@ func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) 
 	}
 
 	var result MountMigrationStatusOutput
-	err = mapstructure.Decode(secret.Data, &result)
-	if err != nil {
+	if err := mapstructure.Decode(secret.Data, &result); err != nil {
 		return nil, err
 	}
 
@@ -231,8 +228,7 @@ func (c *Sys) MountConfigWithContext(ctx context.Context, path string) (*MountCo
 	}
 
 	var result MountConfigOutput
-	err = mapstructure.Decode(secret.Data, &result)
-	if err != nil {
+	if err := mapstructure.Decode(secret.Data, &result); err != nil {
 		return nil, err
 	}
 

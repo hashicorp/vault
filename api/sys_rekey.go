@@ -291,8 +291,7 @@ func (c *Sys) RekeyRetrieveBackupWithContext(ctx context.Context) (*RekeyRetriev
 	}
 
 	var result RekeyRetrieveResponse
-	err = mapstructure.Decode(secret.Data, &result)
-	if err != nil {
+	if err := mapstructure.Decode(secret.Data, &result); err != nil {
 		return nil, err
 	}
 

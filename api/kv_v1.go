@@ -36,8 +36,7 @@ func (kv *KVv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 func (kv *KVv1) Put(ctx context.Context, secretPath string, data map[string]interface{}) error {
 	pathToWriteTo := fmt.Sprintf("%s/%s", kv.mountPath, secretPath)
 
-	_, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, data)
-	if err != nil {
+	if _, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, data); err != nil {
 		return fmt.Errorf("error writing secret to %s: %w", pathToWriteTo, err)
 	}
 
@@ -48,8 +47,7 @@ func (kv *KVv1) Put(ctx context.Context, secretPath string, data map[string]inte
 func (kv *KVv1) Delete(ctx context.Context, secretPath string) error {
 	pathToDelete := fmt.Sprintf("%s/%s", kv.mountPath, secretPath)
 
-	_, err := kv.c.Logical().DeleteWithContext(ctx, pathToDelete)
-	if err != nil {
+	if _, err := kv.c.Logical().DeleteWithContext(ctx, pathToDelete); err != nil {
 		return fmt.Errorf("error deleting secret at %s: %w", pathToDelete, err)
 	}
 

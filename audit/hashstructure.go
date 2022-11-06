@@ -71,8 +71,7 @@ func HashRequest(salter *salt.Salt, in *logical.Request, HMACAccessor bool, nonH
 			return nil, err
 		}
 
-		err = hashMap(fn, copy.(map[string]interface{}), nonHMACDataKeys)
-		if err != nil {
+		if err := hashMap(fn, copy.(map[string]interface{}), nonHMACDataKeys); err != nil {
 			return nil, err
 		}
 		req.Data = copy.(map[string]interface{})
@@ -129,8 +128,7 @@ func HashResponse(salter *salt.Salt, in *logical.Response, HMACAccessor bool, no
 			mapCopy[logical.HTTPRawBody] = string(b)
 		}
 
-		err = hashMap(fn, mapCopy, nonHMACDataKeys)
-		if err != nil {
+		if err := hashMap(fn, mapCopy, nonHMACDataKeys); err != nil {
 			return nil, err
 		}
 		resp.Data = mapCopy

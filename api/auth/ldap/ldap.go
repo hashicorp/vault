@@ -73,8 +73,7 @@ func NewLDAPAuth(username string, password *Password, opts ...LoginOption) (*LDA
 	for _, opt := range opts {
 		// Call the option giving the instantiated
 		// *LDAPAuth as the argument
-		err := opt(a)
-		if err != nil {
+		if err := opt(a); err != nil {
 			return nil, fmt.Errorf("error with login option: %w", err)
 		}
 	}

@@ -67,8 +67,7 @@ func NewAWSAuth(opts ...LoginOption) (*AWSAuth, error) {
 	for _, opt := range opts {
 		// Call the option giving the instantiated
 		// *AWSAuth as the argument
-		err := opt(a)
-		if err != nil {
+		if err := opt(a); err != nil {
 			return nil, fmt.Errorf("error with login option: %w", err)
 		}
 	}

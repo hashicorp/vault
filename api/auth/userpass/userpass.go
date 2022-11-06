@@ -49,8 +49,7 @@ func NewUserpassAuth(username string, password *Password, opts ...LoginOption) (
 		return nil, errors.New("no password provided for login")
 	}
 
-	err := password.validate()
-	if err != nil {
+	if err := password.validate(); err != nil {
 		return nil, fmt.Errorf("invalid password: %w", err)
 	}
 
@@ -76,8 +75,7 @@ func NewUserpassAuth(username string, password *Password, opts ...LoginOption) (
 	for _, opt := range opts {
 		// Call the option giving the instantiated
 		// *UserpassAuth as the argument
-		err := opt(a)
-		if err != nil {
+		if err := opt(a); err != nil {
 			return nil, fmt.Errorf("error with login option: %w", err)
 		}
 	}

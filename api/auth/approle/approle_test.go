@@ -47,8 +47,7 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 	defer os.Remove(tmpfile.Name()) // clean up
-	err = os.Setenv(secretIDEnvVar, allowedSecretID)
-	if err != nil {
+	if err := os.Setenv(secretIDEnvVar, allowedSecretID); err != nil {
 		t.Fatalf("error writing secret ID to env var: %v", err)
 	}
 

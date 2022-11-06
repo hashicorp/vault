@@ -46,8 +46,7 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 	defer os.Remove(tmpfile.Name()) // clean up
-	err = os.Setenv(passwordEnvVar, allowedPassword)
-	if err != nil {
+	if err := os.Setenv(passwordEnvVar, allowedPassword); err != nil {
 		t.Fatalf("error writing password to env var: %v", err)
 	}
 
@@ -72,8 +71,7 @@ func TestLogin(t *testing.T) {
 
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		payload := make(map[string]interface{})
-		err := json.NewDecoder(req.Body).Decode(&payload)
-		if err != nil {
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
 			t.Fatalf("error decoding json: %v", err)
 		}
 		if payload["password"] == allowedPassword {
