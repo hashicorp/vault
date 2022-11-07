@@ -14,6 +14,7 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 export VAULT_ADDR='http://127.0.0.1:8200'
 export VAULT_TOKEN='${vault_token}'
 
+# If approle was already enabled, disable it as we're about to re-enable it (the || true is so we don't fail if it doesn't already exist)
 $binpath auth disable approle || true
 
 approle_create_status=$($binpath auth enable approle)
