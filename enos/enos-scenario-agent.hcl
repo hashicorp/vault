@@ -104,8 +104,8 @@ scenario "agent" {
     }
 
     variables {
-      ami_id      = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
-      common_tags = local.tags
+      ami_id        = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      common_tags   = local.tags
       instance_type = var.backend_instance_type
       kms_key_arn   = step.create_vpc.kms_key_arn
       vpc_id        = step.create_vpc.vpc_id
@@ -152,28 +152,28 @@ scenario "agent" {
     }
 
     variables {
-      vault_instances  = step.create_vault_cluster.vault_instances
-      vault_root_token = step.create_vault_cluster.vault_root_token
+      vault_instances                  = step.create_vault_cluster.vault_instances
+      vault_root_token                 = step.create_vault_cluster.vault_root_token
       vault_agent_template_destination = "/tmp/agent_output.txt"
-      vault_agent_template_contents = "{{ with secret \\\"auth/token/lookup-self\\\" }}orphan={{ .Data.orphan }} display_name={{ .Data.display_name }}{{ end }}"
+      vault_agent_template_contents    = "{{ with secret \\\"auth/token/lookup-self\\\" }}orphan={{ .Data.orphan }} display_name={{ .Data.display_name }}{{ end }}"
     }
   }
 
   step "verify_vault_agent_output" {
     module = module.vault_verify_agent_output
-     depends_on = [
-       step.create_vault_cluster,
-       step.start_vault_agent,
+    depends_on = [
+      step.create_vault_cluster,
+      step.start_vault_agent,
     ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
-     }
+    }
 
     variables {
-       vault_instances  = step.create_vault_cluster.vault_instances
+      vault_instances                  = step.create_vault_cluster.vault_instances
       vault_agent_template_destination = "/tmp/agent_output.txt"
-      vault_agent_expected_output = "orphan=true display_name=approle"
+      vault_agent_expected_output      = "orphan=true display_name=approle"
     }
   }
 
