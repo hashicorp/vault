@@ -77,8 +77,15 @@ func TestSystemView() *StaticSystemView {
 }
 
 func TestBackendConfig() *BackendConfig {
+	cfg := logging.Config{
+		LogLevel: log.Trace,
+	}
+	logger, err := logging.NewVaultLogger(cfg)
+	if err != nil {
+		return nil
+	}
 	bc := &BackendConfig{
-		Logger: logging.NewVaultLogger(log.Trace),
+		Logger: logger,
 		System: TestSystemView(),
 		Config: make(map[string]string),
 	}

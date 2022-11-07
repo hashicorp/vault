@@ -48,7 +48,7 @@ func (c *MonitorCommand) Flags() *FlagSets {
 
 	f := set.NewFlagSet("Monitor Options")
 	f.StringVar(&StringVar{
-		Name:       "log-level",
+		Name:       flagNameLogLevel,
 		Target:     &c.logLevel,
 		Default:    "info",
 		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),

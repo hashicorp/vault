@@ -2,12 +2,10 @@ package fairshare
 
 import (
 	"fmt"
-	"io/ioutil"
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 // Job is an interface for jobs used with this job manager
@@ -131,9 +129,6 @@ func (d *dispatcher) stop() {
 // createDispatcher generates a new Dispatcher object, but does not initialize the
 // worker pool
 func createDispatcher(name string, numWorkers int, l log.Logger) *dispatcher {
-	if l == nil {
-		l = logging.NewVaultLoggerWithWriter(ioutil.Discard, log.NoLevel)
-	}
 	if numWorkers <= 0 {
 		numWorkers = 1
 		l.Warn("must have 1 or more workers. setting number of workers to 1")

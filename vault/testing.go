@@ -181,7 +181,14 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace)
+	cfg := logging.Config{
+		LogLevel: log.Trace,
+	}
+	l, err := logging.NewVaultLogger(cfg)
+	if err != nil {
+		t.Fatalf("error creating logger in test %w", err)
+	}
+	logger := l
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -445,7 +452,14 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	t.Helper()
-	logger := logging.NewVaultLogger(log.Trace)
+	cfg := logging.Config{
+		LogLevel: log.Trace,
+	}
+	l, err := logging.NewVaultLogger(cfg)
+	if err != nil {
+		t.Fatalf("error creating logger in test %w", err)
+	}
+	logger := l
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
 	conf.NumExpirationWorkers = numExpirationWorkersTest
@@ -793,7 +807,7 @@ func (n *rawHTTP) System() logical.SystemView {
 }
 
 func (n *rawHTTP) Logger() log.Logger {
-	return logging.NewVaultLogger(log.Trace)
+	return log.NewNullLogger()
 }
 
 func (n *rawHTTP) Cleanup(ctx context.Context) {

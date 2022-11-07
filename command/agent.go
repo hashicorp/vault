@@ -80,6 +80,7 @@ type AgentCommand struct {
 
 	flagConfigs       []string
 	flagLogLevel      string
+	flagLogFile       string
 	flagExitAfterAuth bool
 
 	flagTestVerifyOnly bool
@@ -124,13 +125,20 @@ func (c *AgentCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:       "log-level",
+		Name:       flagNameLogFile,
 		Target:     &c.flagLogLevel,
 		Default:    "info",
-		EnvVar:     "VAULT_LOG_LEVEL",
+		EnvVar:     EnvVaultLogLevel,
 		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
+	})
+
+	f.StringVar(&StringVar{
+		Name:   flagNameLogFile,
+		Target: &c.flagLogFile,
+		EnvVar: EnvVaultLogFile,
+		Usage:  "Path to the log file that Vault should use for logging",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -193,27 +201,6 @@ func (c *AgentCommand) Run(args []string) int {
 	if c.flagCombineLogs {
 		c.logWriter = os.Stdout
 	}
-	var level log.Level
-	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
-	switch c.flagLogLevel {
-	case "trace":
-		level = log.Trace
-	case "debug":
-		level = log.Debug
-	case "notice", "info", "":
-		level = log.Info
-	case "warn", "warning":
-		level = log.Warn
-	case "err", "error":
-		level = log.Error
-	default:
-		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
-		return 1
-	}
-
-	if c.logger == nil {
-		c.logger = logging.NewVaultLoggerWithWriter(c.logWriter, level)
-	}
 
 	// Validation
 	if len(c.flagConfigs) != 1 {
@@ -235,6 +222,7 @@ func (c *AgentCommand) Run(args []string) int {
 				"-config flag."))
 		return 1
 	}
+
 	if config.AutoAuth == nil && config.Cache == nil {
 		c.UI.Error("No auto_auth or cache block found in config file")
 		return 1
@@ -249,6 +237,20 @@ func (c *AgentCommand) Run(args []string) int {
 			exitAfterAuth = c.flagExitAfterAuth
 		}
 	})
+
+	c.setStringFlag(f, config.LogFile, &StringVar{
+		Name:   flagNameLogFile,
+		EnvVar: EnvVaultLogFile,
+		Target: &c.flagLogFile,
+	})
+	config.LogFile = c.flagLogFile
+
+	c.setStringFlag(f, config.LogLevel, &StringVar{
+		Name:   flagNameLogLevel,
+		EnvVar: EnvVaultLogLevel,
+		Target: &c.flagLogLevel,
+	})
+	config.LogLevel = c.flagLogLevel
 
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
 		Name:    flagNameAddress,
@@ -299,6 +301,30 @@ func (c *AgentCommand) Run(args []string) int {
 		EnvVar:  api.EnvVaultTLSServerName,
 	})
 	config.Vault.TLSServerName = c.flagTLSServerName
+
+	// Build the logger using level, format and path
+	logLevel, err := logging.ParseLogLevel(config.LogLevel)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logFormat, err := logging.ParseLogFormat(config.LogFormat)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logCfg := logging.Config{
+		LogLevel:    logLevel,
+		LogFormat:   logFormat,
+		LogFilePath: config.LogFile,
+	}
+	l, err := logging.NewVaultLoggerWithWriter(logCfg, c.logWriter)
+	if err != nil {
+		c.UI.Error(err.Error())
+	}
+	c.logger = l
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
@@ -860,7 +886,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		ts := template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
-			LogLevel:      level,
+			LogLevel:      logLevel,
 			LogWriter:     c.logWriter,
 			AgentConfig:   config,
 			Namespace:     templateNamespace,

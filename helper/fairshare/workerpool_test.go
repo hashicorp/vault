@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
 )
 
 func TestFairshare_newDispatcher(t *testing.T) {
@@ -388,7 +390,7 @@ func TestFairshare_jobFailure(t *testing.T) {
 }
 
 func TestFairshare_nilLoggerDispatcher(t *testing.T) {
-	d := newDispatcher("test-job-mgr", 1, nil)
+	d := newDispatcher("test-job-mgr", 1, hclog.NewNullLogger())
 	if d.logger == nil {
 		t.Error("logger not set up properly")
 	}

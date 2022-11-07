@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
 )
 
 func TestJobManager_NewJobManager(t *testing.T) {
@@ -510,7 +512,7 @@ func TestFairshare_StressTest(t *testing.T) {
 	}
 	onFail := func(_ error) {}
 
-	j := NewJobManager("test-job-mgr", 15, nil, nil)
+	j := NewJobManager("test-job-mgr", 15, hclog.NewNullLogger(), nil)
 	j.Start()
 	defer j.Stop()
 
@@ -546,14 +548,14 @@ func TestFairshare_StressTest(t *testing.T) {
 }
 
 func TestFairshare_nilLoggerJobManager(t *testing.T) {
-	j := NewJobManager("test-job-mgr", 1, nil, nil)
+	j := NewJobManager("test-job-mgr", 1, hclog.NewNullLogger(), nil)
 	if j.logger == nil {
 		t.Error("logger not set up properly")
 	}
 }
 
 func TestFairshare_getNextQueue(t *testing.T) {
-	j := NewJobManager("test-job-mgr", 18, nil, nil)
+	j := NewJobManager("test-job-mgr", 18, hclog.NewNullLogger(), nil)
 
 	for i := 0; i < 10; i++ {
 		job := newDefaultTestJob(t, fmt.Sprintf("job-%d", i))
@@ -603,7 +605,7 @@ func TestFairshare_getNextQueue(t *testing.T) {
 }
 
 func TestJobManager_pruneEmptyQueues(t *testing.T) {
-	j := NewJobManager("test-job-mgr", 18, nil, nil)
+	j := NewJobManager("test-job-mgr", 18, hclog.NewNullLogger(), nil)
 
 	// add a few jobs to test out queue pruning
 	// for test simplicity, we'll keep the number of workers per queue at 0
@@ -661,7 +663,7 @@ func TestJobManager_pruneEmptyQueues(t *testing.T) {
 }
 
 func TestFairshare_WorkerCount_IncrementAndDecrement(t *testing.T) {
-	j := NewJobManager("test-job-mgr", 18, nil, nil)
+	j := NewJobManager("test-job-mgr", 18, hclog.NewNullLogger(), nil)
 
 	job := newDefaultTestJob(t, "job-0")
 	j.AddJob(&job, "a")
@@ -703,7 +705,7 @@ func TestFairshare_WorkerCount_IncrementAndDecrement(t *testing.T) {
 }
 
 func TestFairshare_queueWorkersSaturated(t *testing.T) {
-	j := NewJobManager("test-job-mgr", 20, nil, nil)
+	j := NewJobManager("test-job-mgr", 20, hclog.NewNullLogger(), nil)
 
 	job := newDefaultTestJob(t, "job-0")
 	j.AddJob(&job, "a")

@@ -99,10 +99,10 @@ func (c *OperatorMigrateCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:       "log-level",
+		Name:       flagNameLogLevel,
 		Target:     &c.flagLogLevel,
 		Default:    "info",
-		EnvVar:     "VAULT_LOG_LEVEL",
+		EnvVar:     EnvVaultLogLevel,
 		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\". These are not case sensitive.",
@@ -133,7 +133,13 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("%s is an unknown log level. Valid log levels are: %s", c.flagLogLevel, validLevels))
 		return 1
 	}
-	c.logger = logging.NewVaultLogger(log.LevelFromString(c.flagLogLevel))
+
+	cfg := logging.Config{LogLevel: log.LevelFromString(c.flagLogLevel)}
+	l, err := logging.NewVaultLogger(cfg)
+	if err != nil {
+		c.UI.Error(err.Error())
+	}
+	c.logger = l
 
 	if c.flagConfig == "" {
 		c.UI.Error("Must specify exactly one config path using -config")

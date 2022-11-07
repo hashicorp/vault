@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
@@ -244,7 +245,14 @@ func (c *DebugCommand) Run(args []string) int {
 	// Initialize the logger for debug output
 	gatedWriter := gatedwriter.NewWriter(os.Stderr)
 	if c.logger == nil {
-		c.logger = logging.NewVaultLoggerWithWriter(gatedWriter, hclog.Trace)
+		cfg := logging.Config{
+			LogLevel: log.Trace,
+		}
+		l, err := logging.NewVaultLoggerWithWriter(cfg, gatedWriter)
+		if err != nil {
+			c.UI.Error(err.Error())
+		}
+		c.logger = l
 	}
 
 	dstOutputFile, err := c.preflight(args)

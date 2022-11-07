@@ -827,7 +827,14 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	// Make a default logger if not provided
 	if conf.Logger == nil {
-		conf.Logger = logging.NewVaultLogger(log.Trace)
+		cfg := logging.Config{
+			LogLevel: log.Trace,
+		}
+		l, err := logging.NewVaultLogger(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create new logger %w", err)
+		}
+		conf.Logger = l
 	}
 
 	// Make a default metric sink if not provided

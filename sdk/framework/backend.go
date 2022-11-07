@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"regexp"
 	"sort"
@@ -418,8 +417,12 @@ func (b *Backend) Logger() log.Logger {
 	if b.logger != nil {
 		return b.logger
 	}
-
-	return logging.NewVaultLoggerWithWriter(ioutil.Discard, log.NoLevel)
+	cfg := logging.Config{LogLevel: log.NoLevel}
+	logger, err := logging.NewVaultLoggerWithWriter(cfg, io.Discard)
+	if err != nil {
+		// TODO: PW: We're in a pickle here
+	}
+	return logger
 }
 
 // System returns the backend's system view.
@@ -432,7 +435,7 @@ func (b *Backend) Type() logical.BackendType {
 	return b.BackendType
 }
 
-// Version returns the plugin version information
+// PluginVersion returns the plugin version information
 func (b *Backend) PluginVersion() logical.PluginVersion {
 	return logical.PluginVersion{
 		Version: b.RunningVersion,

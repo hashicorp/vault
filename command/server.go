@@ -192,10 +192,10 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:       "log-level",
+		Name:       flagNameLogLevel,
 		Target:     &c.flagLogLevel,
 		Default:    notSetValue,
-		EnvVar:     "VAULT_LOG_LEVEL",
+		EnvVar:     EnvVaultLogLevel,
 		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
@@ -856,7 +856,12 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (hclog.L
 		}
 	}
 	if logFormat == logging.UnspecifiedFormat {
-		logFormat = logging.ParseEnvLogFormat()
+		// TODO: PW: Clean up and shift env var access higher
+		f := os.Getenv("VAULT_LOG_FORMAT")
+		logFormat, err := logging.ParseLogFormat(f)
+		if err != nil {
+			return level, logLevelString, logLevelWasNotSet, logFormat, err
+		}
 	}
 	if logFormat == logging.UnspecifiedFormat {
 		var err error

@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -60,13 +61,16 @@ func TestSysMonitorUnknownLogFormat(t *testing.T) {
 }
 
 func TestSysMonitorStreamingLogs(t *testing.T) {
+	envLogFmt := os.Getenv("VAULT_LOG_FORMAT")
+	logFormat, err := logging.ParseLogFormat(envLogFmt)
+	if err != nil {
+		t.Fatal("unable to parse log format from environment variable")
+	}
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
 		Output:     log.DefaultOutput,
 		Level:      log.Debug,
-		JSONFormat: logging.ParseEnvLogFormat() == logging.JSONFormat,
+		JSONFormat: logFormat == logging.JSONFormat,
 	})
-
-	lf := logging.ParseEnvLogFormat().String()
 
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{HandlerFunc: Handler, Logger: logger})
 	cluster.Start()
@@ -78,7 +82,7 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 	debugCount := 0
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
-	logCh, err := client.Sys().Monitor(ctx, "DEBUG", lf)
+	logCh, err := client.Sys().Monitor(ctx, "DEBUG", logFormat.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,9 +98,9 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 
 	for {
 		select {
-		case log := <-logCh:
-			if lf == "json" {
-				err := json.Unmarshal([]byte(log), jsonLog)
+		case l := <-logCh:
+			if logFormat == logging.JSONFormat {
+				err := json.Unmarshal([]byte(l), jsonLog)
 				if err != nil {
 					t.Fatal("Expected JSON log from channel")
 				}
@@ -104,7 +108,7 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 					debugCount++
 				}
 			}
-			if strings.Contains(log, "[DEBUG]") {
+			if strings.Contains(l, "[DEBUG]") {
 				debugCount++
 			}
 		case <-timeCh:

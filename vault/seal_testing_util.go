@@ -1,7 +1,7 @@
 package vault
 
 import (
-	"github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault/seal"
@@ -14,7 +14,14 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		opts = &seal.TestSealOpts{}
 	}
 	if opts.Logger == nil {
-		opts.Logger = logging.NewVaultLogger(hclog.Debug)
+		cfg := logging.Config{
+			LogLevel: log.Debug,
+		}
+		l, err := logging.NewVaultLogger(cfg)
+		if err != nil {
+			t.Fatalf("error creating logger in test %w", err)
+		}
+		opts.Logger = l
 	}
 
 	switch opts.StoredKeys {

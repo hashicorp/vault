@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -97,10 +98,16 @@ func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
 
 func testVaultServerUnsealWithKVVersion(tb testing.TB, kvVersion string) (*api.Client, []string, func()) {
 	tb.Helper()
+	envLogFmt := os.Getenv("VAULT_LOG_FORMAT")
+	logFormat, err := logging.ParseLogFormat(envLogFmt)
+	if err != nil {
+		tb.Fatal("unable to parse log format from environment variable")
+	}
+
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
 		Output:     log.DefaultOutput,
 		Level:      log.Debug,
-		JSONFormat: logging.ParseEnvLogFormat() == logging.JSONFormat,
+		JSONFormat: logFormat == logging.JSONFormat,
 	})
 
 	return testVaultServerCoreConfigWithOpts(tb, &vault.CoreConfig{
