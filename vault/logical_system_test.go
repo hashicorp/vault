@@ -3682,10 +3682,10 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		path string
 		tag  string
 	}{
-		{"/auth/token/lookup", "auth"},
-		{"/cubbyhole/{path}", "secrets"},
+		{"/auth/{mount_path}/lookup", "auth"},
+		{"/{mount_path}/{path}", "secrets"},
 		{"/identity/group/id", "identity"},
-		{"/secret/.*", "secrets"}, // TODO update after kv repo update
+		{"/{mount_path}/.*", "secrets"}, // TODO update after kv repo update
 		{"/sys/policy", "system"},
 	}
 
