@@ -28,7 +28,6 @@ func TestLogger_SetupInvalidLogLevel(t *testing.T) {
 }
 
 func TestLogger_SetupLoggerErrorLevel(t *testing.T) {
-
 	cases := []struct {
 		desc   string
 		before func(*LogConfig)
@@ -126,7 +125,6 @@ func TestLogger_SetupLoggerWithJSON(t *testing.T) {
 }
 
 func TestLogger_SetupLoggerWithValidLogPath(t *testing.T) {
-
 	tmpDir := testutil.TempDir(t, t.Name())
 
 	cfg := LogConfig{
@@ -141,7 +139,6 @@ func TestLogger_SetupLoggerWithValidLogPath(t *testing.T) {
 }
 
 func TestLogger_SetupLoggerWithInValidLogPath(t *testing.T) {
-
 	cfg := LogConfig{
 		LogLevel:    log.Info,
 		LogFilePath: "nonexistentdir/",
@@ -155,10 +152,9 @@ func TestLogger_SetupLoggerWithInValidLogPath(t *testing.T) {
 }
 
 func TestLogger_SetupLoggerWithInValidLogPathPermission(t *testing.T) {
-
 	tmpDir := "/tmp/" + t.Name()
 
-	os.Mkdir(tmpDir, 0000)
+	os.Mkdir(tmpDir, 0o000)
 	defer os.RemoveAll(tmpDir)
 
 	cfg := LogConfig{
