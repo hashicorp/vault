@@ -24,7 +24,7 @@ module('Acceptance | policies (old)', function (hooks) {
     await fillIn('[data-test-policy-input="name"]', policyName);
     await click('[data-test-policy-save]');
     assert
-      .dom(find('[data-test-error]'))
+      .dom('[data-test-error]')
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
     find('.CodeMirror').CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');

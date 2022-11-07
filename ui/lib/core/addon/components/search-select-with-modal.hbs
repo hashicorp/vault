@@ -18,7 +18,7 @@
     }}
   {{else}}
     {{#if @label}}
-      <label for={{@id}} class={{if @labelClass @labelClass "is-label"}} data-test-field-label>
+      <label for={{@id}} class={{or @labelClass "is-label"}} data-test-field-label>
         {{@label}}
         {{#if @helpText}}
           <InfoTooltip>{{@helpText}}</InfoTooltip>
