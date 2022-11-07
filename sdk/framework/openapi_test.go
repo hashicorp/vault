@@ -271,7 +271,7 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 			Root:            test.rootPaths,
 			Unauthenticated: test.unauthPaths,
 		}
-		err := documentPath(&path, sp, "kv", false, logical.TypeLogical, doc)
+		err := documentPath(&path, sp, "kv", logical.TypeLogical, doc)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -517,39 +517,33 @@ func TestOpenAPI_OperationID(t *testing.T) {
 		},
 	}
 
-	for _, context := range []string{"", "bar"} {
-		doc := NewOASDocument()
-		err := documentPath(path1, nil, "kv", false, logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = documentPath(path2, nil, "kv", false, logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		doc.CreateOperationIDs(context)
+	doc := NewOASDocument()
+	err := documentPath(path1, nil, "kv", logical.TypeLogical, doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = documentPath(path2, nil, "kv", logical.TypeLogical, doc)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		tests := []struct {
-			path string
-			op   string
-			opID string
-		}{
-			{"/Foo/{id}", "get", "getFooId"},
-			{"/foo/{id}", "get", "getFooId_2"},
-			{"/foo/{id}", "post", "postFooId"},
-			{"/foo/{id}", "delete", "deleteFooId"},
-		}
+	tests := []struct {
+		path string
+		op   string
+		opID string
+	}{
+		{"/Foo/{id}", "get", "getFooId"},
+		{"/foo/{id}", "get", "getFooId_2"},
+		{"/foo/{id}", "post", "postFooId"},
+		{"/foo/{id}", "delete", "deleteFooId"},
+	}
 
-		for _, test := range tests {
-			actual := getPathOp(doc.Paths[test.path], test.op).OperationID
-			expected := test.opID
-			if context != "" {
-				expected += "_" + context
-			}
+	for _, test := range tests {
+		actual := getPathOp(doc.Paths[test.path], test.op).OperationID
+		expected := test.opID
 
-			if actual != expected {
-				t.Fatalf("expected %v, got %v", expected, actual)
-			}
+		if actual != expected {
+			t.Fatalf("expected %v, got %v", expected, actual)
 		}
 	}
 }
@@ -583,7 +577,7 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 	}
 
 	docOrig := NewOASDocument()
-	err := documentPath(p, nil, "kv", false, logical.TypeLogical, docOrig)
+	err := documentPath(p, nil, "kv", logical.TypeLogical, docOrig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -646,10 +640,9 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	t.Helper()
 
 	doc := NewOASDocument()
-	if err := documentPath(path, sp, "kv", false, logical.TypeLogical, doc); err != nil {
+	if err := documentPath(path, sp, "kv", logical.TypeLogical, doc); err != nil {
 		t.Fatal(err)
 	}
-	doc.CreateOperationIDs("")
 
 	docJSON, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
