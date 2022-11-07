@@ -20,7 +20,7 @@ func Test_ParseLogFormat(t *testing.T) {
 		{format: "STANDARD", expected: StandardFormat, expectedErr: nil},
 		{format: "json", expected: JSONFormat, expectedErr: nil},
 		{format: " json ", expected: JSONFormat, expectedErr: nil},
-		{format: "bogus", expected: UnspecifiedFormat, expectedErr: errors.New("Unknown log format: bogus")},
+		{format: "bogus", expected: UnspecifiedFormat, expectedErr: errors.New("unknown log format: bogus")},
 	}
 
 	for _, test := range tests {
