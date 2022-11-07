@@ -461,6 +461,16 @@ func (e *MountEntry) SyncCache() {
 	}
 }
 
+func (entry *MountEntry) Deserialize() map[string]interface{} {
+	return map[string]interface{}{
+		"mount_path":      entry.Path,
+		"mount_namespace": entry.Namespace().Path,
+		"uuid":            entry.UUID,
+		"accessor":        entry.Accessor,
+		"mount_type":      entry.Type,
+	}
+}
+
 func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
 	// Decode into mount table
 	mountTable := new(MountTable)

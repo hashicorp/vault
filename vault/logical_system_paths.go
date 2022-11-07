@@ -1063,6 +1063,23 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-entities"][1]),
 		},
+		{
+			Pattern: "internal/inspect/router/" + framework.GenericNameRegex("tag"),
+			Fields: map[string]*framework.FieldSchema{
+				"tag": {
+					Type:        framework.TypeString,
+					Description: "Name of subtree being observed",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalInspectRouter,
+					Summary:  "Expose the route entry and mount entry tables present in the router",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-inspect-router"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-inspect-router"][1]),
+		},
 	}
 }
 
