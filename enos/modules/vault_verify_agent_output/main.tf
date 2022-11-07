@@ -41,8 +41,8 @@ locals {
 resource "enos_remote_exec" "verify_vault_agent_output" {
   content = templatefile("${path.module}/templates/verify-vault-agent-output.sh", {
     vault_agent_template_destination = var.vault_agent_template_destination
-    vault_agent_expected_output = var.vault_agent_expected_output
-    vault_instances   = jsonencode(local.vault_instances)
+    vault_agent_expected_output      = var.vault_agent_expected_output
+    vault_instances                  = jsonencode(local.vault_instances)
   })
 
   transport = {
