@@ -22,7 +22,6 @@ import (
 	"github.com/hashicorp/vault/command/agent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -239,7 +238,7 @@ func TestAgent_ExitAfterAuth(t *testing.T) {
 }
 
 func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := hclog.NewNullLogger()
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
@@ -285,7 +284,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 		t.Fatal(err)
 	}
 
-	inf, err := ioutil.TempFile("", "auth.jwt.test.")
+	inf, err := os.CreateTemp("", "auth.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +293,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(in)
 	t.Logf("input: %s", in)
 
-	sink1f, err := ioutil.TempFile("", "sink1.jwt.test.")
+	sink1f, err := os.CreateTemp("", "sink1.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -303,7 +302,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(sink1)
 	t.Logf("sink1: %s", sink1)
 
-	sink2f, err := ioutil.TempFile("", "sink2.jwt.test.")
+	sink2f, err := os.CreateTemp("", "sink2.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +311,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(sink2)
 	t.Logf("sink2: %s", sink2)
 
-	conff, err := ioutil.TempFile("", "conf.jwt.test.")
+	conff, err := os.CreateTemp("", "conf.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -442,7 +441,7 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	//----------------------------------------------------
 
 	// Start a vault server
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := hclog.NewNullLogger()
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
 			Logger: logger,
@@ -622,7 +621,7 @@ listener "tcp" {
 // non-zero code if configured to force the use of an auto-auth token without
 // configuring the auto_auth block
 func TestAgent_RequireAutoAuthWithForce(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := hclog.NewNullLogger()
 	// Create a config file
 	config := fmt.Sprintf(`
 cache {
@@ -655,7 +654,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := hclog.NewNullLogger()
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
 			Logger: logger,
@@ -958,7 +957,7 @@ func TestAgent_Template_ExitCounter(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := hclog.NewNullLogger()
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
 			Logger: logger,
@@ -1272,7 +1271,7 @@ func TestAgent_Template_Retry(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := hclog.NewNullLogger()
 	var h handler
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -1559,7 +1558,7 @@ func TestAgent_Cache_Retry(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := hclog.NewNullLogger()
 	var h handler
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -1713,7 +1712,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := hclog.NewNullLogger()
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
 			// Logger: logger,
@@ -2019,7 +2018,7 @@ func TestAgent_Metrics(t *testing.T) {
 	//----------------------------------------------------
 
 	// Start a vault server
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := hclog.NewNullLogger()
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
 			Logger: logger,
@@ -2100,7 +2099,7 @@ func TestAgent_Quit(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
-	logger := logging.NewVaultLogger(hclog.Error)
+	logger := hclog.NewNullLogger()
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
 			Logger: logger,
