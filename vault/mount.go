@@ -351,11 +351,26 @@ type MountConfig struct {
 	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 logical.TokenType     `json:"token_type,omitempty" structs:"token_type" mapstructure:"token_type"`
 	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
+	UserLockoutConfig         *UserLockoutConfig    `json:"user_lockout_config,omitempty" mapstructure:"user_lockout_config"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//
 	// Deprecated: MountEntry.Type should be used instead for Vault 1.0.0 and beyond.
 	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+}
+
+type UserLockoutConfig struct {
+	LockoutThreshold    uint64        `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`
+	LockoutDuration     time.Duration `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`
+	LockoutCounterReset time.Duration `json:"lockout_counter_reset,omitempty" structs:"lockout_counter_reset" mapstructure:"lockout_counter_reset"`
+	DisableLockout      bool          `json:"disable_lockout,omitempty" structs:"disable_lockout" mapstructure:"disable_lockout"`
+}
+
+type APIUserLockoutConfig struct {
+	LockoutThreshold            string `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`
+	LockoutDuration             string `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`
+	LockoutCounterResetDuration string `json:"lockout_counter_reset_duration,omitempty" structs:"lockout_counter_reset_duration" mapstructure:"lockout_counter_reset_duration"`
+	DisableLockout              *bool  `json:"lockout_disable,omitempty" structs:"lockout_disable" mapstructure:"lockout_disable"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
@@ -370,6 +385,7 @@ type APIMountConfig struct {
 	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 string                `json:"token_type" structs:"token_type" mapstructure:"token_type"`
 	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
+	UserLockoutConfig         *UserLockoutConfig    `json:"user_lockout_config,omitempty" mapstructure:"user_lockout_config"`
 	PluginVersion             string                `json:"plugin_version,omitempty" mapstructure:"plugin_version"`
 
 	// PluginName is the name of the plugin registered in the catalog.
@@ -442,6 +458,16 @@ func (e *MountEntry) SyncCache() {
 		e.synthesizedConfigCache.Delete("allowed_managed_keys")
 	} else {
 		e.synthesizedConfigCache.Store("allowed_managed_keys", e.Config.AllowedManagedKeys)
+	}
+}
+
+func (entry *MountEntry) Deserialize() map[string]interface{} {
+	return map[string]interface{}{
+		"mount_path":      entry.Path,
+		"mount_namespace": entry.Namespace().Path,
+		"uuid":            entry.UUID,
+		"accessor":        entry.Accessor,
+		"mount_type":      entry.Type,
 	}
 }
 
@@ -679,7 +705,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type)
+		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type, "version", entry.Version)
 	}
 	return nil
 }
@@ -1275,8 +1301,8 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 			entry.NamespaceID = namespace.RootNamespaceID
 			needPersist = true
 		}
-	}
 
+	}
 	// Done if we have restored the mount table and we don't need
 	// to persist
 	if !needPersist {
@@ -1298,13 +1324,6 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 		return fmt.Errorf("invalid table type given, not persisting")
 	}
 
-	for _, entry := range table.Entries {
-		if entry.Table != table.Type {
-			c.logger.Error("given entry to persist in mount table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
-			return fmt.Errorf("invalid mount entry found, not persisting")
-		}
-	}
-
 	nonLocalMounts := &MountTable{
 		Type: mountTableType,
 	}
@@ -1314,6 +1333,11 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 	}
 
 	for _, entry := range table.Entries {
+		if entry.Table != table.Type {
+			c.logger.Error("given entry to persist in mount table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
+			return fmt.Errorf("invalid mount entry found, not persisting")
+		}
+
 		if entry.Local {
 			localMounts.Entries = append(localMounts.Entries, entry)
 		} else {
@@ -1495,7 +1519,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		}
 
 		if c.logger.IsInfo() {
-			c.logger.Info("successfully mounted backend", "type", entry.Type, "path", entry.Path)
+			c.logger.Info("successfully mounted backend", "type", entry.Type, "version", entry.Version, "path", entry.Path)
 		}
 
 		// Ensure the path is tainted if set in the mount table

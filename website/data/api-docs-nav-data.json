@@ -254,8 +254,8 @@
         "path": "secret/nomad"
       },
       {
-        "title": "OpenLDAP",
-        "path": "secret/openldap"
+        "title": "LDAP",
+        "path": "secret/ldap"
       },
       {
         "title": "PKI",

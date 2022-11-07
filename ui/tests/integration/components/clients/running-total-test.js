@@ -1434,13 +1434,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::RunningTotal
-      @chartLegend={{chartLegend}}
-      @selectedAuthMethod={{selectedAuthMethod}}
-      // @lineChartData={{byMonthActivityData}}
-      // @barChartData={{byMonthNewClients}}
-      @runningTotals={{totalUsageCounts}}
-      @upgradeData={{upgradeDuringActivity}}
-      @timestamp={{timestamp}}
+      @chartLegend={{this.chartLegend}}
+      @selectedAuthMethod={{this.selectedAuthMethod}}
+      // @lineChartData={{this.byMonthActivityData}}
+      // @barChartData={{this.byMonthNewClients}}
+      @runningTotals={{this.totalUsageCounts}}
+      @upgradeData={{this.upgradeDuringActivity}}
+      @timestamp={{this.timestamp}}
     />
     `);
 
@@ -1505,11 +1505,11 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::RunningTotal
-      @chartLegend={{chartLegend}}
-      @selectedAuthMethod={{selectedAuthMethod}}
-      @lineChartData={{byMonthActivityData}}
-      @runningTotals={{totalUsageCounts}}
-      @timestamp={{timestamp}}
+      @chartLegend={{this.chartLegend}}
+      @selectedAuthMethod={{this.selectedAuthMethod}}
+      @lineChartData={{this.byMonthActivityData}}
+      @runningTotals={{this.totalUsageCounts}}
+      @timestamp={{this.timestamp}}
     />
     `);
 
@@ -1549,12 +1549,12 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::RunningTotal
-      @chartLegend={{chartLegend}}
-      @selectedAuthMethod={{selectedAuthMethod}}
-      @lineChartData={{singleMonth}}
-      @barChartData={{singleMonthNew}}
-      @runningTotals={{totalUsageCounts}}
-      @timestamp={{timestamp}}
+      @chartLegend={{this.chartLegend}}
+      @selectedAuthMethod={{this.selectedAuthMethod}}
+      @lineChartData={{this.singleMonth}}
+      @barChartData={{this.singleMonthNew}}
+      @runningTotals={{this.totalUsageCounts}}
+      @timestamp={{this.timestamp}}
     />
     `);
     assert.dom('[data-test-running-total]').exists('running total component renders');

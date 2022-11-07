@@ -65,23 +65,7 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodGet, "/v1/"+path)
-
-	var values url.Values
-	for k, v := range data {
-		if values == nil {
-			values = make(url.Values)
-		}
-		for _, val := range v {
-			values.Add(k, val)
-		}
-	}
-
-	if values != nil {
-		r.Params = values
-	}
-
-	resp, err := c.c.rawRequestWithContext(ctx, r)
+	resp, err := c.readRawWithDataWithContext(ctx, path, data)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -104,6 +88,41 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	}
 
 	return ParseSecret(resp.Body)
+}
+
+func (c *Logical) ReadRaw(path string) (*Response, error) {
+	return c.ReadRawWithData(path, nil)
+}
+
+func (c *Logical) ReadRawWithData(path string, data map[string][]string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(context.Background(), path, data)
+}
+
+func (c *Logical) ReadRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	return c.readRawWithDataWithContext(ctx, path, data)
+}
+
+func (c *Logical) readRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
+	r := c.c.NewRequest(http.MethodGet, "/v1/"+path)
+
+	var values url.Values
+	for k, v := range data {
+		if values == nil {
+			values = make(url.Values)
+		}
+		for _, val := range v {
+			values.Add(k, val)
+		}
+	}
+
+	if values != nil {
+		r.Params = values
+	}
+
+	return c.c.RawRequestWithContext(ctx, r)
 }
 
 func (c *Logical) List(path string) (*Secret, error) {

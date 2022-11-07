@@ -1,9 +1,19 @@
+<SecretListHeader
+  @model={{this.model.parentModel}}
+  @backendCrumb={{hash
+    label=this.model.parentModel.id
+    text=this.model.parentModel.id
+    path="vault.cluster.secrets.backend.list-root"
+    model=this.model.parentModel.id
+  }}
+  @isEngine={{true}}
+/>
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @params={{array "keys.import"}} @type="download">
+    <ToolbarLink @route="keys.import" @type="download">
       Import
     </ToolbarLink>
-    <ToolbarLink @params={{array "keys.generate"}} @type="add">
+    <ToolbarLink @route="keys.generate" @type="add">
       Generate
     </ToolbarLink>
   </ToolbarActions>
@@ -11,8 +21,8 @@
 <p class="has-padding">Below is information about the private keys used by the issuers to sign certificates. While
   certificates represent a public assertion of an identity, private keys represent the private part of that identity, a
   secret used to prove who they are and who they trust.</p>
-{{#if (gt this.model.length 0)}}
-  {{#each this.model as |pkiKey|}}
+{{#if this.model.keyModel.length}}
+  {{#each this.model.keyModel as |pkiKey|}}
     <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiKey.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">
         <div class="level-left">
@@ -53,7 +63,7 @@
   {{/each}}
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create.index" @model={{this.model}}>
+    <LinkTo @route="configuration.create.index" @model={{this.model.keyModel}}>
       ARG TODO waiting for language from design
     </LinkTo>
   </EmptyState>

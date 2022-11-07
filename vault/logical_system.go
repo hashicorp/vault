@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"hash"
 	"net/http"
-	"os"
 	"path"
 	"path/filepath"
 	"sort"
@@ -114,6 +113,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"leases/lookup/*",
 				"storage/raft/snapshot-auto/config/*",
 				"leases",
+				"internal/inspect/*",
 			},
 
 			Unauthenticated: []string{
@@ -474,9 +474,12 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return nil, err
 	}
 
-	pluginVersion, err := getVersion(d)
+	pluginVersion, builtin, err := getVersion(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+	if builtin {
+		return logical.ErrorResponse("version %q is not allowed because 'builtin' is a reserved metadata identifier", pluginVersion), nil
 	}
 
 	sha256 := d.Get("sha256").(string)
@@ -547,7 +550,7 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		return nil, err
 	}
 
-	pluginVersion, err := getVersion(d)
+	pluginVersion, _, err := getVersion(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -593,9 +596,12 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, _ *logica
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
 
-	pluginVersion, err := getVersion(d)
+	pluginVersion, builtin, err := getVersion(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+	if builtin {
+		return logical.ErrorResponse("version %q cannot be deleted", pluginVersion), nil
 	}
 
 	var resp *logical.Response
@@ -621,18 +627,19 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, _ *logica
 	return resp, nil
 }
 
-func getVersion(d *framework.FieldData) (string, error) {
-	version := d.Get("version").(string)
+func getVersion(d *framework.FieldData) (version string, builtin bool, err error) {
+	version = d.Get("version").(string)
 	if version != "" {
 		semanticVersion, err := semver.NewSemver(version)
 		if err != nil {
-			return "", fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
+			return "", false, fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
 		}
 
 		metadataIdentifiers := strings.Split(semanticVersion.Metadata(), ".")
 		for _, identifier := range metadataIdentifiers {
 			if identifier == "builtin" {
-				return "", fmt.Errorf("version %q is not allowed because 'builtin' is a reserved metadata identifier", version)
+				builtin = true
+				break
 			}
 		}
 
@@ -641,7 +648,7 @@ func getVersion(d *framework.FieldData) (string, error) {
 		version = "v" + semanticVersion.String()
 	}
 
-	return version, nil
+	return version, builtin, nil
 }
 
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -937,6 +944,15 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 	}
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
+	}
+	if entry.Config.UserLockoutConfig != nil {
+		userLockoutConfig := map[string]interface{}{
+			"user_lockout_counter_reset_duration": int64(entry.Config.UserLockoutConfig.LockoutCounterReset.Seconds()),
+			"user_lockout_threshold":              entry.Config.UserLockoutConfig.LockoutThreshold,
+			"user_lockout_duration":               int64(entry.Config.UserLockoutConfig.LockoutDuration.Seconds()),
+			"user_lockout_disable":                entry.Config.UserLockoutConfig.DisableLockout,
+		}
+		entryConfig["user_lockout_config"] = userLockoutConfig
 	}
 
 	// Add deprecation status only if it exists
@@ -1598,6 +1614,13 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["allowed_managed_keys"] = rawVal.([]string)
 	}
 
+	if mountEntry.Config.UserLockoutConfig != nil {
+		resp.Data["user_lockout_counter_reset_duration"] = int64(mountEntry.Config.UserLockoutConfig.LockoutCounterReset.Seconds())
+		resp.Data["user_lockout_threshold"] = mountEntry.Config.UserLockoutConfig.LockoutThreshold
+		resp.Data["user_lockout_duration"] = int64(mountEntry.Config.UserLockoutConfig.LockoutDuration.Seconds())
+		resp.Data["user_lockout_disable"] = mountEntry.Config.UserLockoutConfig.DisableLockout
+	}
+
 	if len(mountEntry.Options) > 0 {
 		resp.Data["options"] = mountEntry.Options
 	}
@@ -1717,6 +1740,111 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	// user-lockout config
+	{
+		var apiuserLockoutConfig APIUserLockoutConfig
+
+		userLockoutConfigMap := data.Get("user_lockout_config").(map[string]interface{})
+		var err error
+		if userLockoutConfigMap != nil && len(userLockoutConfigMap) != 0 {
+			err := mapstructure.Decode(userLockoutConfigMap, &apiuserLockoutConfig)
+			if err != nil {
+				return logical.ErrorResponse(
+						"unable to convert given user lockout config information"),
+					logical.ErrInvalidRequest
+			}
+
+			// Supported auth methods for user lockout configuration: ldap, approle, userpass
+			switch strings.ToLower(mountEntry.Type) {
+			case "ldap", "approle", "userpass":
+			default:
+				return logical.ErrorResponse("tuning of user lockout configuration for auth type %q not allowed", mountEntry.Type),
+					logical.ErrInvalidRequest
+
+			}
+		}
+
+		if len(userLockoutConfigMap) > 0 && mountEntry.Config.UserLockoutConfig == nil {
+			mountEntry.Config.UserLockoutConfig = &UserLockoutConfig{}
+		}
+
+		var oldUserLockoutThreshold uint64
+		var newUserLockoutDuration, oldUserLockoutDuration time.Duration
+		var newUserLockoutCounterReset, oldUserLockoutCounterReset time.Duration
+		var oldUserLockoutDisable bool
+
+		if apiuserLockoutConfig.LockoutThreshold != "" {
+			userLockoutThreshold, err := strconv.ParseUint(apiuserLockoutConfig.LockoutThreshold, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unable to parse user lockout threshold: %w", err)
+			}
+			oldUserLockoutThreshold = mountEntry.Config.UserLockoutConfig.LockoutThreshold
+			mountEntry.Config.UserLockoutConfig.LockoutThreshold = userLockoutThreshold
+		}
+
+		if apiuserLockoutConfig.LockoutDuration != "" {
+			oldUserLockoutDuration = mountEntry.Config.UserLockoutConfig.LockoutDuration
+			switch apiuserLockoutConfig.LockoutDuration {
+			case "":
+				newUserLockoutDuration = oldUserLockoutDuration
+			case "system":
+				newUserLockoutDuration = time.Duration(0)
+			default:
+				tmpUserLockoutDuration, err := parseutil.ParseDurationSecond(apiuserLockoutConfig.LockoutDuration)
+				if err != nil {
+					return handleError(err)
+				}
+				newUserLockoutDuration = tmpUserLockoutDuration
+
+			}
+			mountEntry.Config.UserLockoutConfig.LockoutDuration = newUserLockoutDuration
+		}
+
+		if apiuserLockoutConfig.LockoutCounterResetDuration != "" {
+			oldUserLockoutCounterReset = mountEntry.Config.UserLockoutConfig.LockoutCounterReset
+			switch apiuserLockoutConfig.LockoutCounterResetDuration {
+			case "":
+				newUserLockoutCounterReset = oldUserLockoutCounterReset
+			case "system":
+				newUserLockoutCounterReset = time.Duration(0)
+			default:
+				tmpUserLockoutCounterReset, err := parseutil.ParseDurationSecond(apiuserLockoutConfig.LockoutCounterResetDuration)
+				if err != nil {
+					return handleError(err)
+				}
+				newUserLockoutCounterReset = tmpUserLockoutCounterReset
+			}
+
+			mountEntry.Config.UserLockoutConfig.LockoutCounterReset = newUserLockoutCounterReset
+		}
+
+		if apiuserLockoutConfig.DisableLockout != nil {
+			oldUserLockoutDisable = mountEntry.Config.UserLockoutConfig.DisableLockout
+			userLockoutDisable := apiuserLockoutConfig.DisableLockout
+			mountEntry.Config.UserLockoutConfig.DisableLockout = *userLockoutDisable
+		}
+
+		// Update the mount table
+		if len(userLockoutConfigMap) > 0 {
+			switch {
+			case strings.HasPrefix(path, "auth/"):
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Config.UserLockoutConfig.LockoutCounterReset = oldUserLockoutCounterReset
+				mountEntry.Config.UserLockoutConfig.LockoutThreshold = oldUserLockoutThreshold
+				mountEntry.Config.UserLockoutConfig.LockoutDuration = oldUserLockoutDuration
+				mountEntry.Config.UserLockoutConfig.DisableLockout = oldUserLockoutDisable
+				return handleError(err)
+			}
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("tuning of user_lockout_config successful", "path", path)
+			}
+		}
+
+	}
 	if rawVal, ok := data.GetOk("description"); ok {
 		description := rawVal.(string)
 
@@ -4147,6 +4275,20 @@ func (b *SystemBackend) pathInternalCountersEntities(ctx context.Context, req *l
 	return resp, nil
 }
 
+func (b *SystemBackend) pathInternalInspectRouter(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	tag := d.Get("tag").(string)
+	inspectableRouter, err := b.Core.router.GetRecords(tag)
+	if err != nil {
+		return nil, err
+	}
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			tag: inspectableRouter,
+		},
+	}
+	return resp, nil
+}
+
 func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.ClientToken == "" {
 		// 204 -- no ACL
@@ -4615,42 +4757,10 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 
 func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// We're always the leader if we're handling this request.
-	hostname, err := os.Hostname()
+	nodes, err := b.Core.getHAMembers()
 	if err != nil {
 		return nil, err
 	}
-
-	leader := HAStatusNode{
-		Hostname:       hostname,
-		APIAddress:     b.Core.redirectAddr,
-		ClusterAddress: b.Core.ClusterAddr(),
-		ActiveNode:     true,
-		Version:        version.GetVersion().Version,
-	}
-
-	if rb := b.Core.getRaftBackend(); rb != nil {
-		leader.UpgradeVersion = rb.EffectiveVersion()
-		leader.RedundancyZone = rb.RedundancyZone()
-	}
-
-	nodes := []HAStatusNode{leader}
-
-	for _, peerNode := range b.Core.GetHAPeerNodesCached() {
-		lastEcho := peerNode.LastEcho
-		nodes = append(nodes, HAStatusNode{
-			Hostname:       peerNode.Hostname,
-			APIAddress:     peerNode.APIAddress,
-			ClusterAddress: peerNode.ClusterAddress,
-			LastEcho:       &lastEcho,
-			Version:        peerNode.Version,
-			UpgradeVersion: peerNode.UpgradeVersion,
-			RedundancyZone: peerNode.RedundancyZone,
-		})
-	}
-
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].APIAddress < nodes[j].APIAddress
-	})
 
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -5045,6 +5155,10 @@ in the plugin catalog.`,
 
 	"tune_mount_options": {
 		`The options to pass into the backend. Should be a json object with string keys and values.`,
+	},
+
+	"tune_user_lockout_config": {
+		`The user lockout configuration to pass into the backend. Should be a json object with string keys and values.`,
 	},
 
 	"remount": {
@@ -5586,6 +5700,14 @@ This path responds to the following HTTP methods.
 	"internal-counters-entities": {
 		"Count of active entities in this Vault cluster.",
 		"Count of active entities in this Vault cluster.",
+	},
+	"internal-inspect-router": {
+		"Information on the entries in each of the trees in the router. Inspectable trees are uuid, accessor, storage, and root.",
+		`
+This path responds to the following HTTP methods.
+		GET /
+			Returns a list of entries in specified table
+		`,
 	},
 	"host-info": {
 		"Information about the host instance that this Vault server is running on.",

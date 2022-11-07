@@ -466,8 +466,13 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		}
 	}
 
-	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 20 {
-		return nil, fmt.Errorf("certificate validity end: %s; expected within 20 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
+	// TODO: We incremented 20->25 due to CircleCI execution
+	// being slow and pausing this test. We might consider recording the
+	// actual issuance time of the cert and calculating the expected
+	// validity period +/- fuzz, but that'd require recording and passing
+	// through more information.
+	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 25 {
+		return nil, fmt.Errorf("certificate validity end: %s; expected within 25 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
 	}
 
 	return parsedCertBundle, nil
@@ -2131,9 +2136,20 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	oidExtensionSubjectAltName = []int{2, 5, 29, 17}
 	csrReq := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
+		},
+		// Check that otherName extensions are not duplicated (see hashicorp/vault#16700).
+		// If these extensions are duplicated, sign-verbatim will fail when parsing the signed certificate on Go 1.19+ (see golang/go#50988).
+		// On older versions of Go this test will fail due to an explicit check for duplicate otherNames later in this test.
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:       oidExtensionSubjectAltName,
+				Critical: false,
+				Value:    []byte{0x30, 0x26, 0xA0, 0x24, 0x06, 0x0A, 0x2B, 0x06, 0x01, 0x04, 0x01, 0x82, 0x37, 0x14, 0x02, 0x03, 0xA0, 0x16, 0x0C, 0x14, 0x75, 0x73, 0x65, 0x72, 0x6E, 0x61, 0x6D, 0x65, 0x40, 0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65, 0x2E, 0x63, 0x6F, 0x6D},
+			},
 		},
 	}
 	csr, err := x509.CreateCertificateRequest(rand.Reader, csrReq, key)
@@ -2285,6 +2301,19 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatalf("expected a single cert, got %d", len(certs))
 	}
 	cert = certs[0]
+
+	// Fallback check for duplicate otherName, necessary on Go versions before 1.19.
+	// We assume that there is only one SAN in the original CSR and that it is an otherName.
+	san_count := 0
+	for _, ext := range cert.Extensions {
+		if ext.Id.Equal(oidExtensionSubjectAltName) {
+			san_count += 1
+		}
+	}
+	if san_count != 1 {
+		t.Fatalf("expected one SAN extension, got %d", san_count)
+	}
+
 	notAfter := cert.NotAfter.Format(time.RFC3339)
 	if notAfter != "9999-12-31T23:59:59Z" {
 		t.Fatal(fmt.Errorf("not after from certificate is not matching with input parameter"))
@@ -2539,7 +2568,7 @@ func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
 
 	signedCert := parseCert(t, certAsPem)
 	rootCert := parseCert(t, rootCaPem)
-	requireSignedBy(t, signedCert, rootCert.PublicKey)
+	requireSignedBy(t, signedCert, rootCert)
 }
 
 func TestBackend_SignSelfIssued(t *testing.T) {
@@ -4097,7 +4126,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 
 	rootCaCert := parseCert(t, rootCert)
 	intermediaryCaCert := parseCert(t, intermediateCert)
-	requireSignedBy(t, intermediaryCaCert, rootCaCert.PublicKey)
+	requireSignedBy(t, intermediaryCaCert, rootCaCert)
 	intermediateCaChain := intermediateSignedData["ca_chain"].([]string)
 
 	require.Equal(t, parseCert(t, intermediateCaChain[0]), intermediaryCaCert, "intermediate signed cert should have been part of ca_chain")
@@ -4191,7 +4220,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	issuedCrt := parseCert(t, issueCrtAsPem)
 
 	// Verify that the certificates are signed by the intermediary CA key...
-	requireSignedBy(t, issuedCrt, intermediaryCaCert.PublicKey)
+	requireSignedBy(t, issuedCrt, intermediaryCaCert)
 
 	// Test that we can request that the root ca certificate not appear in the ca_chain field
 	resp, err = CBWrite(b_ext, s_ext, "issue/example", map[string]interface{}{
@@ -5618,6 +5647,10 @@ func TestBackend_VerifyIssuerUpdateDefaultsMatchCreation(t *testing.T) {
 	requireSuccessNonNilResponse(t, resp, err, "failed reading default issuer")
 	preUpdateValues := resp.Data
 
+	// This field gets reset during issuer update to the empty string
+	// (meaning Go will auto-detect the rev-sig-algo).
+	preUpdateValues["revocation_signature_algorithm"] = ""
+
 	resp, err = CBWrite(b, s, "issuer/default", map[string]interface{}{})
 	requireSuccessNonNilResponse(t, resp, err, "failed updating default issuer with no values")
 
@@ -5831,6 +5864,104 @@ EBuOIhCv6WiwVyGeTVynuHYkHyw3rIL/zU7N8+zIFV2G2M1UAv5D/eyh/74cr9Of
 		"use_pss":     "true",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to issue PSS leaf")
+}
+
+func TestPKI_EmptyCRLConfigUpgraded(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Write an empty CRLConfig into storage.
+	crlConfigEntry, err := logical.StorageEntryJSON("config/crl", &crlConfig{})
+	require.NoError(t, err)
+	err = s.Put(ctx, crlConfigEntry)
+	require.NoError(t, err)
+
+	resp, err := CBRead(b, s, "config/crl")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["expiry"], defaultCrlConfig.Expiry)
+	require.Equal(t, resp.Data["disable"], defaultCrlConfig.Disable)
+	require.Equal(t, resp.Data["ocsp_disable"], defaultCrlConfig.OcspDisable)
+	require.Equal(t, resp.Data["auto_rebuild"], defaultCrlConfig.AutoRebuild)
+	require.Equal(t, resp.Data["auto_rebuild_grace_period"], defaultCrlConfig.AutoRebuildGracePeriod)
+	require.Equal(t, resp.Data["enable_delta"], defaultCrlConfig.EnableDelta)
+	require.Equal(t, resp.Data["delta_rebuild_interval"], defaultCrlConfig.DeltaRebuildInterval)
+}
+
+func TestPKI_ListRevokedCerts(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Test empty cluster
+	resp, err := CBList(b, s, "certs/revoked")
+	requireSuccessNonNilResponse(t, resp, err, "failed listing empty cluster")
+	require.Empty(t, resp.Data, "response map contained data that we did not expect")
+
+	// Set up a mount that we can revoke under (We will create 3 leaf certs, 2 of which will be revoked)
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "test.com",
+		"key_type":    "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "error generating root CA")
+	requireFieldsSetInResp(t, resp, "serial_number")
+	issuerSerial := resp.Data["serial_number"]
+
+	resp, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+		"allowed_domains":  "test.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "1h",
+	})
+	requireSuccessNilResponse(t, resp, err, "error setting up pki role")
+
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "test1.test.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "error issuing cert 1")
+	requireFieldsSetInResp(t, resp, "serial_number")
+	serial1 := resp.Data["serial_number"]
+
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "test2.test.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "error issuing cert 2")
+	requireFieldsSetInResp(t, resp, "serial_number")
+	serial2 := resp.Data["serial_number"]
+
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "test3.test.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "error issuing cert 2")
+	requireFieldsSetInResp(t, resp, "serial_number")
+	serial3 := resp.Data["serial_number"]
+
+	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{"serial_number": serial1})
+	requireSuccessNonNilResponse(t, resp, err, "error revoking cert 1")
+
+	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{"serial_number": serial2})
+	requireSuccessNonNilResponse(t, resp, err, "error revoking cert 2")
+
+	// Test that we get back the expected revoked serial numbers.
+	resp, err = CBList(b, s, "certs/revoked")
+	requireSuccessNonNilResponse(t, resp, err, "failed listing revoked certs")
+	requireFieldsSetInResp(t, resp, "keys")
+	revokedKeys := resp.Data["keys"].([]string)
+
+	require.Contains(t, revokedKeys, serial1)
+	require.Contains(t, revokedKeys, serial2)
+	require.Equal(t, 2, len(revokedKeys), "Expected 2 revoked entries got %d: %v", len(revokedKeys), revokedKeys)
+
+	// Test that listing our certs returns a different response
+	resp, err = CBList(b, s, "certs")
+	requireSuccessNonNilResponse(t, resp, err, "failed listing written certs")
+	requireFieldsSetInResp(t, resp, "keys")
+	certKeys := resp.Data["keys"].([]string)
+
+	require.Contains(t, certKeys, serial1)
+	require.Contains(t, certKeys, serial2)
+	require.Contains(t, certKeys, serial3)
+	require.Contains(t, certKeys, issuerSerial)
+	require.Equal(t, 4, len(certKeys), "Expected 4 cert entries got %d: %v", len(certKeys), certKeys)
 }
 
 var (

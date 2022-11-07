@@ -1,12 +1,23 @@
+<SecretListHeader
+  @model={{this.model.parentModel}}
+  @backendCrumb={{hash
+    label=this.model.parentModel.id
+    text=this.model.parentModel.id
+    path="vault.cluster.secrets.backend.list-root"
+    model=this.model.parentModel.id
+  }}
+  @isEngine={{true}}
+/>
+{{outlet}}
 <Toolbar>
-  {{#if (gt this.model.length 0)}}
+  {{#if this.model.certificateModel.length}}
     <ToolbarFilters>
       {{! ARG TODO glimmerize the NavigateInput and refactor so you can use it in an engine }}
     </ToolbarFilters>
   {{/if}}
 </Toolbar>
-{{#if (gt this.model.length 0)}}
-  {{#each this.model as |pkiCertificate|}}
+{{#if this.model.certificateModel.length}}
+  {{#each this.model.certificateModel as |pkiCertificate|}}
     <LinkedBlock
       class="list-item-row"
       @params={{array "certificates.certificate.details" pkiCertificate.id}}
@@ -44,8 +55,8 @@
   {{/each}}
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create.index" @model={{this.model}}>
-      ARG TODO waiting from design for language.
+    <LinkTo @route="configuration.create.index" @model={{this.model.certificateModel}}>
+      {{! ARG TODO if configuration of engine not setup then direct toward setting that up otherwise replace with new design language }}
     </LinkTo>
   </EmptyState>
 {{/if}}

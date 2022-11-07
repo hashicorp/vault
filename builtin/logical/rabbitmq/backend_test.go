@@ -36,7 +36,7 @@ func prepareRabbitMQTestContainer(t *testing.T) (func(), string) {
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:     "rabbitmq",
+		ImageRepo:     "docker.mirror.hashicorp.services/library/rabbitmq",
 		ImageTag:      "3-management",
 		ContainerName: "rabbitmq",
 		Ports:         []string{"15672/tcp"},

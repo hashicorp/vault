@@ -20,10 +20,10 @@ module('Integration | Component | regex-validator', function (hooks) {
 
     await render(
       hbs`<RegexValidator
-        @onChange={{onChange}}
-        @attr={{attr}}
-        @value={{value}}
-        @labelString={{labelString}}
+        @onChange={{this.onChange}}
+        @attr={{this.attr}}
+        @value={{this.value}}
+        @labelString={{this.labelString}}
       />`
     );
     assert.dom('.regex-label label').hasText('Regex Example', 'Label is correct');

@@ -93,7 +93,7 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	extensions, err := b.calculateExtensions(data, req, role)
+	extensions, addExtTemplatingWarning, err := b.calculateExtensions(data, req, role)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -140,6 +140,10 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 		},
 	}
 
+	if addExtTemplatingWarning {
+		response.AddWarning("default_extension templating enabled with at least one extension requiring identity templating. However, this request lacked identity entity information, causing one or more extensions to be skipped from the generated certificate.")
+	}
+
 	return response, nil
 }
 
@@ -172,18 +176,14 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	parsedPrincipals := strutil.RemoveDuplicates(strutil.ParseStringSlice(validPrincipals, ","), false)
 	// Build list of allowed Principals from template and static principalsAllowedByRole
 	var allowedPrincipals []string
-	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
-		if enableTemplating {
-			rendered, err := b.renderPrincipal(principal, req)
-			if err != nil {
-				return nil, err
-			}
-			// Template returned a principal
-			allowedPrincipals = append(allowedPrincipals, rendered)
-		} else {
-			// Static principal
-			allowedPrincipals = append(allowedPrincipals, principal)
+	if enableTemplating {
+		rendered, err := b.renderPrincipal(principalsAllowedByRole, req)
+		if err != nil {
+			return nil, err
 		}
+		allowedPrincipals = strutil.RemoveDuplicates(strutil.ParseStringSlice(rendered, ","), false)
+	} else {
+		allowedPrincipals = strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false)
 	}
 
 	switch {
@@ -300,7 +300,7 @@ func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshR
 	return criticalOptions, nil
 }
 
-func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Request, role *sshRole) (map[string]string, error) {
+func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Request, role *sshRole) (map[string]string, bool, error) {
 	unparsedExtensions := data.Get("extensions").(map[string]interface{})
 	extensions := make(map[string]string)
 
@@ -308,7 +308,7 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 		extensions := convertMapToStringValue(unparsedExtensions)
 		if role.AllowedExtensions == "*" {
 			// Allowed extensions was configured to allow all
-			return extensions, nil
+			return extensions, false, nil
 		}
 
 		notAllowed := []string{}
@@ -320,10 +320,12 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 		}
 
 		if len(notAllowed) != 0 {
-			return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
+			return nil, false, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
 		}
-		return extensions, nil
+		return extensions, false, nil
 	}
+
+	haveMissingEntityInfoWithTemplatedExt := false
 
 	if role.DefaultExtensionsTemplate {
 		for extensionKey, extensionValue := range role.DefaultExtensions {
@@ -337,8 +339,10 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 						// Template returned an extension value that we can use
 						extensions[extensionKey] = templateExtensionValue
 					} else {
-						return nil, fmt.Errorf("template '%s' could not be rendered -> %s", extensionValue, err)
+						return nil, false, fmt.Errorf("template '%s' could not be rendered -> %s", extensionValue, err)
 					}
+				} else {
+					haveMissingEntityInfoWithTemplatedExt = true
 				}
 			} else {
 				// Static extension value or err template
@@ -349,7 +353,7 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 		extensions = role.DefaultExtensions
 	}
 
-	return extensions, nil
+	return extensions, haveMissingEntityInfoWithTemplatedExt, nil
 }
 
 func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.Duration, error) {

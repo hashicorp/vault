@@ -202,12 +202,10 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "log-format",
-		Target:  &c.flagLogFormat,
-		Default: notSetValue,
-		// EnvVar can't be just "VAULT_LOG_FORMAT", because more than one env var name is supported
-		// for backwards compatibility reasons.
-		// See github.com/hashicorp/vault/sdk/helper/logging.ParseEnvLogFormat()
+		Name:       "log-format",
+		Target:     &c.flagLogFormat,
+		Default:    notSetValue,
+		EnvVar:     "VAULT_LOG_FORMAT",
 		Completion: complete.PredictSet("standard", "json"),
 		Usage:      `Log format. Supported values are "standard" and "json".`,
 	})
@@ -1337,16 +1335,20 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	if seals != nil {
-		for _, seal := range seals {
-			// Ensure that the seal finalizer is called, even if using verify-only
-			defer func(seal *vault.Seal) {
-				err = (*seal).Finalize(context.Background())
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-				}
-			}(&seal)
+	for _, seal := range seals {
+		// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
+		// section.
+		if seal == nil {
+			continue
 		}
+		seal := seal // capture range variable
+		// Ensure that the seal finalizer is called, even if using verify-only
+		defer func(seal *vault.Seal) {
+			err = (*seal).Finalize(context.Background())
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+			}
+		}(&seal)
 	}
 
 	if barrierSeal == nil {

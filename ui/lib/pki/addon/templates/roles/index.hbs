@@ -10,13 +10,13 @@
 />
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array "roles.create"}}>
+    <ToolbarLink @type="add" @route="roles.create">
       Create role
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
 
-{{#if (gt this.model.roleModel.length 0)}}
+{{#if this.model.roleModel.length}}
   {{#each this.model.roleModel as |pkiRole|}}
     <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">

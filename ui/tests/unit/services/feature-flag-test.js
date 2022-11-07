@@ -11,11 +11,11 @@ module('Unit | Service | feature-flag', function (hooks) {
 
   test('it returns the namespace root when flag is present', function (assert) {
     let service = this.owner.lookup('service:feature-flag');
-    assert.equal(service.managedNamespaceRoot, null, 'Managed namespace root is null by default');
+    assert.strictEqual(service.managedNamespaceRoot, null, 'Managed namespace root is null by default');
     service.setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
-    assert.equal(service.managedNamespaceRoot, 'admin', 'Managed namespace is admin when flag present');
+    assert.strictEqual(service.managedNamespaceRoot, 'admin', 'Managed namespace is admin when flag present');
     service.setFeatureFlags(['SOMETHING_ELSE']);
-    assert.equal(
+    assert.strictEqual(
       service.managedNamespaceRoot,
       null,
       'Flags were overwritten and root namespace is null again'

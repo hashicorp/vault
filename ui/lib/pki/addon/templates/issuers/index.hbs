@@ -1,6 +1,16 @@
+<SecretListHeader
+  @model={{this.model.parentModel}}
+  @backendCrumb={{hash
+    label=this.model.parentModel.id
+    text=this.model.parentModel.id
+    path="vault.cluster.secrets.backend.list-root"
+    model=this.model.parentModel.id
+  }}
+  @isEngine={{true}}
+/>
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @params={{array "configuration.create.import-ca"}}>
+    <ToolbarLink @route="configuration.create.import-ca">
       Import
     </ToolbarLink>
     <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
@@ -9,7 +19,7 @@
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
       <D.Content @defaultClass="popup-menu-content">
-        <nav class="box menu">
+        <nav class="box menu" aria-label="generate options">
           <ul class="menu-list">
             <li class="action">
               <LinkTo @route="configuration.create.generate-root" {{on "click" (fn this.onLinkClick D)}}>
@@ -27,8 +37,8 @@
     </BasicDropdown>
   </ToolbarActions>
 </Toolbar>
-{{#if (gt this.model.length 0)}}
-  {{#each this.model as |pkiIssuer|}}
+{{#if this.model.issuersModel.length}}
+  {{#each this.model.issuersModel as |pkiIssuer|}}
     <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiIssuer.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">
         <div class="level-left">
@@ -50,7 +60,7 @@
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
             <PopupMenu>
-              <nav class="menu">
+              <nav class="menu" aria-label="issuer config options">
                 <ul class="menu-list">
                   <li>
                     <LinkTo @route="roles.role.details" @model={{pkiIssuer.id}}>
@@ -72,7 +82,7 @@
   {{/each}}
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create.index" @model={{this.model}}>
+    <LinkTo @route="configuration.create.index" @model={{this.model.issuersModel}}>
       Configure PKI
     </LinkTo>
   </EmptyState>

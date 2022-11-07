@@ -20,3 +20,8 @@ type Connection interface {
 	SetTimeout(timeout time.Duration)
 	UnauthenticatedBind(username string) error
 }
+
+type PagingConnection interface {
+	Connection
+	SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error)
+}

@@ -4,7 +4,7 @@ steps:
   - exit-if-ui-or-docs-branch
   - checkout
   - setup_remote_docker:
-      version: 18.09.3
+      version: 20.10.17
       docker_layer_caching: true
   - go_test:
       extra_flags: "-race"

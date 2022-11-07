@@ -21,7 +21,7 @@ import { dasherize } from 'vault/helpers/dasherize';
  *     label: "Foo", // custom label to be shown, otherwise attr.name will be displayed
  *     defaultValue: "", // default value to display if model value is not present
  *     fieldValue: "bar", // used for value lookup on model over attr.name
- *     editType: "ttl", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray,textarea, ttl, yield.
+ *     editType: "ttl", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
  *     helpText: "This will be in a tooltip",
  *     readOnly: true
  *   },

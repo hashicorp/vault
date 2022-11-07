@@ -216,7 +216,11 @@ export default Component.extend(TRANSIT_PARAMS, {
       this.toggleProperty('isModalActive');
     },
 
-    doSubmit(data, options = {}) {
+    doSubmit(data, options = {}, maybeEvent) {
+      const event = options.type === 'submit' ? options : maybeEvent;
+      if (event) {
+        event.preventDefault();
+      }
       const { backend, id } = this.getModelInfo();
       const action = this.selectedAction;
       const { encodedBase64, ...formData } = data || {};

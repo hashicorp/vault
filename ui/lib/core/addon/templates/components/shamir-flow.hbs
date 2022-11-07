@@ -47,7 +47,7 @@
     </button>
   </div>
 {{else if (and this.generateAction (not this.started))}}
-  <form {{action "startGenerate" (hash pgp_key=this.pgp_key) on="submit"}} id="shamir">
+  <form {{action "startGenerate" (hash pgp_key=this.pgp_key) on="submit"}} id="shamir" aria-label="shamir generate form">
     <MessageError @errors={{this.errors}} />
     {{#if (eq this.generateStep "chooseMethod")}}
       <div class="box is-marginless is-shadowless">
@@ -128,7 +128,7 @@
     {{/if}}
   </form>
 {{else}}
-  <form {{action "onSubmit" (hash key=this.key) on="submit"}} id="shamir">
+  <form {{action "onSubmit" (hash key=this.key) on="submit"}} id="shamir" aria-label="shamir form">
     <div class="box is-shadowless">
       {{#if this.errors}}
         <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">

@@ -29,7 +29,7 @@ module('Integration | Component | secret-list-header', function (hooks) {
         assert
           .dom(selector)
           .hasText(
-            `Version ${this.model.options.version}`,
+            `Version ${this.model.version || 1}`,
             `Badge renders with correct version for ${type} engine type`
           );
       } else {

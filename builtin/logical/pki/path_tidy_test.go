@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -33,11 +34,13 @@ func TestAutoTidy(t *testing.T) {
 		},
 		// See notes below about usage of /sys/raw for reading cluster
 		// storage without barrier encryption.
-		EnableRaw: true,
+		EnableRaw:      true,
+		RollbackPeriod: newPeriod,
 	}
-	cluster := vault.CreateTestClusterWithRollbackPeriod(t, newPeriod, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
+	cluster.Start()
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
@@ -61,6 +64,7 @@ func TestAutoTidy(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data)
 	require.NotEmpty(t, resp.Data["issuer_id"])
+	issuerId := resp.Data["issuer_id"]
 
 	// Run tidy so status is not empty when we run it later...
 	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
@@ -99,6 +103,17 @@ func TestAutoTidy(t *testing.T) {
 	leafSerial := resp.Data["serial_number"].(string)
 	leafCert := parseCert(t, resp.Data["certificate"].(string))
 
+	// Read cert before revoking
+	resp, err = client.Logical().Read("pki/cert/" + leafSerial)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["certificate"])
+	revocationTime, err := (resp.Data["revocation_time"].(json.Number)).Int64()
+	require.Equal(t, int64(0), revocationTime, "revocation time was not zero")
+	require.Empty(t, resp.Data["revocation_time_rfc3339"], "revocation_time_rfc3339 was not empty")
+	require.Empty(t, resp.Data["issuer_id"], "issuer_id was not empty")
+
 	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
 		"serial_number": leafSerial,
 	})
@@ -110,6 +125,22 @@ func TestAutoTidy(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
 	require.NotEmpty(t, resp.Data["certificate"])
+	revocationTime, err = (resp.Data["revocation_time"].(json.Number)).Int64()
+	require.NoError(t, err, "failed converting %s to int", resp.Data["revocation_time"])
+	revTime := time.Unix(revocationTime, 0)
+	now := time.Now()
+	if !(now.After(revTime) && now.Add(-10*time.Minute).Before(revTime)) {
+		t.Fatalf("parsed revocation time not within the last 10 minutes current time: %s, revocation time: %s", now, revTime)
+	}
+	utcLoc, err := time.LoadLocation("UTC")
+	require.NoError(t, err, "failed to parse UTC location?")
+
+	rfc3339RevocationTime, err := time.Parse(time.RFC3339Nano, resp.Data["revocation_time_rfc3339"].(string))
+	require.NoError(t, err, "failed parsing revocation_time_rfc3339 field: %s", resp.Data["revocation_time_rfc3339"])
+
+	require.Equal(t, revTime.In(utcLoc), rfc3339RevocationTime.Truncate(time.Second),
+		"revocation times did not match revocation_time: %s, "+"rfc3339 time: %s", revTime, rfc3339RevocationTime)
+	require.Equal(t, issuerId, resp.Data["issuer_id"], "issuer_id on leaf cert did not match")
 
 	// Wait for cert to expire and the safety buffer to elapse.
 	time.Sleep(time.Until(leafCert.NotAfter) + 3*time.Second)
