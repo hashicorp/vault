@@ -58,6 +58,11 @@ func (w noErrorWriter) Write(p []byte) (n int, err error) {
 
 // Setup creates a new logger with the specified configuration and writer
 func Setup(config LogConfig, w io.Writer) (log.InterceptLogger, error) {
+	// Validate the log level
+	if config.LogLevel.String() == "unknown" {
+		return nil, fmt.Errorf("invalid log level: %v", config.LogLevel)
+	}
+
 	// If out is os.Stdout and Vault is being run as a Windows Service, writes will
 	// fail silently, which may inadvertently prevent writes to other writers.
 	// noErrorWriter is used as a wrapper to suppress any errors when writing to out.
