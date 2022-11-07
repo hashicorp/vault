@@ -7,10 +7,11 @@ import { waitFor } from '@ember/test-waiters';
 
 export default Component.extend({
   flashMessages: service(),
+  store: service(),
   'data-test-component': 'identity-edit-form',
   attributeBindings: ['data-test-component'],
   model: null,
-
+  policyModel: null,
   // 'create', 'edit', 'merge'
   mode: 'create',
   /*
@@ -84,6 +85,12 @@ export default Component.extend({
         flash.success(message);
         return this.onSave({ saveType: 'delete', model });
       });
+    },
+    createPolicyModel({ type, name }) {
+      if (type) {
+        const model = this.store.createRecord(`policy/${type}`, { name });
+        this.set('policyModel', model);
+      }
     },
   },
 });

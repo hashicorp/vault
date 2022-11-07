@@ -33,7 +33,6 @@ export default class PolicyFormComponent extends Component {
   @tracked file = null;
   @tracked showFileUpload = false;
   @tracked showExamplePolicy = false;
-  @tracked createdModel = null; // set by createRecord() after policyType is selected
   policyOptions = [
     { label: 'ACL Policy', value: 'acl', isDisabled: false },
     { label: 'Role Governing Policy', value: 'rgp', isDisabled: !this.version.hasSentinel },
@@ -72,7 +71,7 @@ main = rule when precond {
 
   get model() {
     // the SS + modal form receives @modelData instead of @model
-    return this.args.model ? this.args.model : this.createdModel;
+    return this.args.model ? this.args.model : null;
   }
 
   @task
@@ -104,17 +103,18 @@ main = rule when precond {
   }
 
   @action
-  async setPolicyType(type) {
-    if (this.createdModel) this.cleanup();
-    this.createdModel = await this.store.createRecord(`policy/${type}`, {});
-    this.createdModel.name = this.args.modelData.name;
+  setPolicyType(type) {
+    // selecting a type only happens in the form within the modal
+    // so cleanup any model argument before firing parent action to create a new record
+    if (this.args.model) this.cleanup();
+    this.args.onModelCreate({ type, name: this.args.modelData.name });
   }
 
   @action
   setPolicyFromFile(index, fileInfo) {
     const { value, fileName } = fileInfo;
     this.model.policy = value;
-    if (!this.model.name) {
+    if (!this.args.model.name) {
       const trimmedFileName = trimRight(fileName, ['.json', '.txt', '.hcl', '.policy']);
       this.model.name = trimmedFileName.toLowerCase();
     }
@@ -130,6 +130,5 @@ main = rule when precond {
   cleanup() {
     const method = this.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
     this.model[method]();
-    if (this.createdModel) this.createdModel = null;
   }
 }

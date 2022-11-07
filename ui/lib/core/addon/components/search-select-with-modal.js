@@ -188,20 +188,14 @@ export default class SearchSelectWithModal extends Component {
   }
 
   @action
-  async selectOrCreate(selection) {
+  selectOrCreate(selection) {
     // if creating we call handleChange in the resetModal action to ensure the model is valid and successfully created
     // before adding it to the DOM (and parent model)
     // if just selecting, then we handleChange immediately
     if (selection && selection.__isSuggestion__) {
       const name = selection.__value__;
       this.showModal = true;
-      // if multiple models, parent handles creating the record so just pass modelData
-      const modelName = this.args.models.length === 1 ? this.args.models[0] : null;
-      this.createdRecord = modelName ? await this.store.createRecord(modelName) : null;
-      // pass either the created model OR modelData
-      if (this.createdRecord) this.createdRecord.name = name;
-      if (!this.createdRecord) this.modelData = { name };
-    } else {
+      this.modelData = { name }; // passed to child form component, that sends model data to fire create record action
       this.selectedOptions.pushObject(selection);
       this.dropdownOptions.removeObject(selection);
       this.handleChange();
@@ -217,7 +211,6 @@ export default class SearchSelectWithModal extends Component {
       this.selectedOptions.pushObject({ name, id: name });
       this.handleChange();
     }
-    this.createdRecord = null;
     this.modelData = null;
   }
 }
