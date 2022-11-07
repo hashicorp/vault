@@ -125,7 +125,7 @@ func (c *AgentCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:       flagNameLogFile,
+		Name:       flagNameLogLevel,
 		Target:     &c.flagLogLevel,
 		Default:    "info",
 		EnvVar:     EnvVaultLogLevel,
@@ -324,6 +324,7 @@ func (c *AgentCommand) Run(args []string) int {
 	if err != nil {
 		c.UI.Error(err.Error())
 	}
+
 	c.logger = l
 
 	infoKeys := make([]string, 0, 10)
