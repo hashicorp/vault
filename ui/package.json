@@ -138,7 +138,7 @@
     "ember-router-helpers": "^0.4.0",
     "ember-service-worker": "meirish/ember-service-worker#configurable-scope",
     "ember-sinon": "^4.0.0",
-    "ember-source": "~3.24.0",
+    "ember-source": "3.24.7",
     "ember-svg-jar": "^2.1.0",
     "ember-template-lint": "^3.14.0",
     "ember-test-selectors": "^2.1.0",
