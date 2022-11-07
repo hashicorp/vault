@@ -3597,10 +3597,10 @@ func TestSystemBackend_OASGenericMount(t *testing.T) {
 		path string
 		tag  string
 	}{
-		{"/auth/{mountPath}/lookup", "auth"},
-		{"/{mountPath}/{path}", "secrets"},
+		{"/auth/{mount_path}/lookup", "auth"},
+		{"/{mount_path}/{path}", "secrets"},
 		{"/identity/group/id", "identity"},
-		{"/{mountPath}/.*", "secrets"},
+		{"/{mount_path}/.*", "secrets"},
 		{"/sys/policy", "system"},
 	}
 
