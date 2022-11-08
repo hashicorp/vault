@@ -1,11 +1,21 @@
 name: build
 
 on:
-  workflow_dispatch:
   push:
     branches-ignore:
       - docs/**
       - backport/docs/**
+  workflow_dispatch:
+
+references:
+  runs_on_linux: &runsOnLinux ubuntu-latest
+  runs_on_macos: &runsOnMacos macos-latest
+  environment: &environment
+  buildLinuxInclude: &buildLinuxInclude
+  setupGit: &setupGit true
+  setupYarn: &setupYarn true
+  postBuild: &postBuild true
+  setenvDockerVersion: &setenvDockerVersion echo "${{env.version}} >> $GITHUB_ENV
 
 env:
   PKG_NAME: "vault"
@@ -41,7 +51,7 @@ jobs:
 
   generate-metadata-file:
     needs: product-metadata
-    runs-on: ubuntu-latest
+    runs-on: *runsOnLinux
     outputs:
       filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
     steps:
@@ -60,7 +70,7 @@ jobs:
 
   build-other:
     needs: [ product-metadata ]
-    runs-on: ubuntu-latest
+    runs-on: *runsOnLinux
     strategy:
       matrix:
         goos: [ freebsd, windows, netbsd, openbsd, solaris ]
@@ -75,21 +85,26 @@ jobs:
       fail-fast: true
 
     name: Go ${{ matrix.goos }} ${{ matrix.goarch }} build
-
+    env: *environment
     steps:
       - uses: actions/checkout@v2
       - name: Setup go
         uses: actions/setup-go@v3
         with:
           go-version-file: go.mod
+      - name: Setup Git
+        run: *setupGit
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
           node-version: '14'
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
+      - name: Install Yarn
+        run: *setupYarn
       - name: UI Build
         run: |
+          mkdir -p http/web_ui
           cd ui
           yarn install --ignore-optional
           npm rebuild node-sass
@@ -103,7 +118,10 @@ jobs:
         run: |
           mkdir dist out
           GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.product-metadata.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.product-metadata.outputs.build-date }}" make build
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+      - name: PostBuild
+        run: *postBuild
+      - name: zip
+        run: zip -r -j out/${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
@@ -111,18 +129,20 @@ jobs:
 
   build-linux:
     needs: [ product-metadata ]
-    runs-on: ubuntu-latest
+    runs-on: *runsOnLinux
     strategy:
       matrix:
         goos: [linux]
         goarch: ["arm", "arm64", "386", "amd64"]
+        include: *buildLinuxInclude
       fail-fast: true
 
     name: Go ${{ matrix.goos }} ${{ matrix.goarch }} build
-
+    env: *environment
     steps:
       - uses: actions/checkout@v2
-
+      - name: Setup Git
+        run: *setupGit
       - name: Setup go
         uses: actions/setup-go@v3
         with:
@@ -133,8 +153,11 @@ jobs:
           node-version: '14'
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
+      - name: Install Yarn
+        run: *setupYarn
       - name: UI Build
         run: |
+          mkdir -p http/web_ui
           cd ui
           yarn install --ignore-optional
           npm rebuild node-sass
@@ -148,7 +171,10 @@ jobs:
         run: |
           mkdir dist out
           GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.product-metadata.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.product-metadata.outputs.build-date }}" make build
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+      - name: PostBuild
+        run: *postBuild
+      - name: zip
+        run: zip -r -j out/${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
@@ -187,16 +213,18 @@ jobs:
 
   build-darwin:
     needs: [ product-metadata ]
-    runs-on: macos-latest
+    runs-on: *runsOnMacos
     strategy:
       matrix:
         goos: [ darwin ]
         goarch: [ "amd64", "arm64" ]
       fail-fast: true
     name: Go ${{ matrix.goos }} ${{ matrix.goarch }} build
+    env: *environment
     steps:
       - uses: actions/checkout@v2
-
+      - name: Setup Git
+        run: *setupGit
       - name: Setup go
         uses: actions/setup-go@v3
         with:
@@ -207,8 +235,11 @@ jobs:
           node-version: '14'
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
+      - name: Install Yarn
+        run: *setupYarn
       - name: UI Build
         run: |
+          mkdir -p http/web_ui
           cd ui
           yarn install --ignore-optional
           npm rebuild node-sass
@@ -223,7 +254,10 @@ jobs:
         run: |
           mkdir dist out
           GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.product-metadata.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.product-metadata.outputs.build-date }}" make build
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+      - name: PostBuild
+        run: *postBuild
+      - name: zip
+        run: zip -r -j out/${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
@@ -234,7 +268,7 @@ jobs:
     needs:
       - product-metadata
       - build-linux
-    runs-on: ubuntu-latest
+    runs-on: *runsOnLinux
     strategy:
       matrix:
         arch: ["arm", "arm64", "386", "amd64"]
@@ -243,10 +277,12 @@ jobs:
       version: ${{needs.product-metadata.outputs.product-version}}
     steps:
       - uses: actions/checkout@v2
+      - name: Set docker version env var
+        run: *setenvDockerVersion
       - name: Docker Build (Action)
         uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{env.version}}
+          version: ${{env.dockerversion}}
           target: default
           arch: ${{matrix.arch}}
           zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_linux_${{ matrix.arch }}.zip
@@ -288,10 +324,12 @@ jobs:
       version: ${{needs.product-metadata.outputs.product-version}}
     steps:
       - uses: actions/checkout@v2
+      - name: Set docker version env var
+        run: *setenvDockerVersion
       - name: Docker Build (Action)
         uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{env.version}}
+          version: ${{env.dockerversion}}
           target: ubi
           arch: ${{matrix.arch}}
           zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_linux_${{ matrix.arch }}.zip
