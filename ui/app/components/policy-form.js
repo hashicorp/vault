@@ -16,12 +16,13 @@ import trimRight from 'vault/utils/trim-right';
  *    @onCancel={{transition-to "vault.cluster.policies.index"}}
  *  />
  * ```
- * @callback onCancel
- * @callback onSave
- * @param {object} model - The parent's model
- * @param {object} modelData - If @model isn't passed in, @modelData is passed to create the record
- * @param {string} onCancel - callback triggered when cancel button is clicked
- * @param {string} onSave - callback triggered when save button is clicked
+ * @callback onCancel - callback triggered when cancel button is clicked
+ * @callback onSave - callback triggered when save button is clicked
+ * @param {object} model - ember data model from createRecord
+ * @param {boolean} [isInline=false] - true when form is rendered within a modal
+ * * search-select-with-modal.hbs template-specific params:
+ * @param {object} [nameInput] - search input from SS passed as name attr when firing createSearchSelectModel callback
+ * @callback createSearchSelectModel - callback triggered when policy type is selected
  */
 
 export default class PolicyFormComponent extends Component {
@@ -40,7 +41,8 @@ export default class PolicyFormComponent extends Component {
   // formatting here is purposeful so that whitespace renders correctly in JsonEditor
   policyTemplates = {
     acl: `
-# Grant 'create', 'read' , 'update', and ‘list’ permission to paths prefixed by 'secret/*'
+# Grant 'create', 'read' , 'update', and ‘list’ permission
+# to paths prefixed by 'secret/*'
 path "secret/*" {
   capabilities = [ "create", "read", "update", "list" ]
 }
@@ -55,13 +57,14 @@ path "secret/super-secret" {
 # Import strings library that exposes common string operations
 import "strings"
 
-# Conditional rule (precond) checks the incoming request endpoint targeted to sys/policies/acl/admin
+# Conditional rule (precond) checks the incoming request endpoint
+# targeted to sys/policies/acl/admin
 precond = rule {
     strings.has_prefix(request.path, "sys/policies/admin")
 }
 
-# Vault checks to see if the request was made be an entity named James Thomas 
-# or the 'Team Lead' role defined as its metadata
+# Vault checks to see if the request was made by an entity
+# named James Thomas or Team Lead role defined as its metadata
 main = rule when precond {
     identity.entity.metadata.role is "Team Lead" or
       identity.entity.name is "James Thomas"
@@ -69,17 +72,12 @@ main = rule when precond {
 `,
   };
 
-  get model() {
-    // the SS + modal form receives @modelData instead of @model
-    return this.args.model ? this.args.model : null;
-  }
-
   @task
   *save(event) {
     event.preventDefault();
     try {
-      const { isNew, name, policyType } = this.model;
-      yield this.model.save();
+      const { isNew, name, policyType } = this.args.model;
+      yield this.args.model.save();
       this.flashMessages.success(
         `${policyType.toUpperCase()} policy "${name}" was successfully ${isNew ? 'created' : 'updated'}.`
       );
@@ -89,7 +87,7 @@ main = rule when precond {
 
       // this form is sometimes used in modal, passing the model notifies
       // the parent if the save was successful
-      this.args.onSave(this.model);
+      this.args.onSave(this.args.model);
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.errorBanner = message;
@@ -99,24 +97,24 @@ main = rule when precond {
 
   @action
   setModelName({ target }) {
-    this.model.name = target.value.toLowerCase();
+    this.args.model.name = target.value.toLowerCase();
   }
 
   @action
   setPolicyType(type) {
-    // selecting a type only happens in the form within the modal
-    // so cleanup any model argument before firing parent action to create a new record
+    // selecting a type only happens in the modal form
+    // cleanup any model argument before firing parent action to create a new record in identity/edit-form.js
     if (this.args.model) this.cleanup();
-    this.args.onModelCreate({ type, name: this.args.modelData.name });
+    this.args.createSearchSelectModel({ type, name: this.args.nameInput });
   }
 
   @action
   setPolicyFromFile(index, fileInfo) {
     const { value, fileName } = fileInfo;
-    this.model.policy = value;
+    this.args.model.policy = value;
     if (!this.args.model.name) {
       const trimmedFileName = trimRight(fileName, ['.json', '.txt', '.hcl', '.policy']);
-      this.model.name = trimmedFileName.toLowerCase();
+      this.args.model.name = trimmedFileName.toLowerCase();
     }
     this.showFileUpload = false;
   }
@@ -128,7 +126,7 @@ main = rule when precond {
   }
 
   cleanup() {
-    const method = this.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.model[method]();
+    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
+    this.args.model[method]();
   }
 }

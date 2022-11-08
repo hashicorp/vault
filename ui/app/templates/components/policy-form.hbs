@@ -1,4 +1,4 @@
-{{#if (and @isInline this.model.policyType)}}
+{{#if (and @isInline @model.policyType)}}
   <nav class="tabs">
     <ul>
       <li class={{unless this.showExamplePolicy "active"}}>
@@ -26,7 +26,7 @@
 {{/if}}
 {{#if this.showExamplePolicy}}
   <div class="has-bottom-margin-s">
-    {{#if (eq this.model.policyType "acl")}}
+    {{#if (eq @model.policyType "acl")}}
       <p>
         ACL Policies are written in Hashicorp Configuration Language (
         <DocLink @host="https://github.com/hashicorp/hcl">HCL</DocLink>
@@ -51,36 +51,31 @@
       </p>
     {{/if}}
   </div>
-  <JsonEditor
-    @value={{get this.policyTemplates this.model.policyType}}
-    @mode="ruby"
-    @readOnly={{true}}
-    @showToolbar={{true}}
-  />
+  <JsonEditor @value={{get this.policyTemplates @model.policyType}} @mode="ruby" @readOnly={{true}} @showToolbar={{true}} />
 {{else}}
   {{#if @isInline}}
     <Select
       @label="Type"
       @options={{this.policyOptions}}
       @isFullwidth={{true}}
-      @selectedValue={{this.model.policyType}}
+      @selectedValue={{@model.policyType}}
       @onChange={{this.setPolicyType}}
       @noDefault={{true}}
     />
   {{/if}}
   {{! POLICY FORM STARTS HERE}}
-  {{#if this.model.policyType}}
+  {{#if @model.policyType}}
     <form {{on "submit" (perform this.save)}}>
       <div class="box is-bottomless is-fullwidth is-marginless">
         <MessageError @errorMessage={{this.errorBanner}} />
-        <NamespaceReminder @mode={{if this.model.isNew "create" "edit"}} @noun="policy" />
-        {{#if this.model.isNew}}
+        <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
+        {{#if @model.isNew}}
           <div class="field">
             <label for="policy-name" class="is-label">Name</label>
             <div class="control">
               <Input
                 @type="text"
-                @value={{lowercase this.model.name}}
+                @value={{lowercase @model.name}}
                 id="policy-name"
                 class="input"
                 {{on "input" this.setModelName}}
@@ -90,7 +85,7 @@
           </div>
         {{/if}}
         <div class="field">
-          {{#if this.model.isNew}}
+          {{#if @model.isNew}}
             <Toolbar>
               <label class="is-label">Policy</label>
               <ToolbarActions>
@@ -116,8 +111,8 @@
                 @title="Policy"
                 @helpText="You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field"
                 @showToolbar={{false}}
-                @value={{this.model.policy}}
-                @valueUpdated={{action (mut this.model.policy)}}
+                @value={{@model.policy}}
+                @valueUpdated={{action (mut @model.policy)}}
                 @mode="ruby"
                 @extraKeys={{hash Shift-Enter=(perform this.save)}}
               />
@@ -127,17 +122,36 @@
             <JsonEditor
               @title="Policy"
               @helpText="You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field"
-              @value={{this.model.policy}}
-              @valueUpdated={{action (mut this.model.policy)}}
+              @value={{@model.policy}}
+              @valueUpdated={{action (mut @model.policy)}}
               @mode="ruby"
               @extraKeys={{hash Shift-Enter=(perform this.save)}}
             />
           {{/if}}
         </div>
-        {{#each this.model.additionalAttrs as |attr|}}
-          <FormField data-test-field={{true}} @attr={{attr}} @model={{this.model}} />
+        {{#each @model.additionalAttrs as |attr|}}
+          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
         {{/each}}
       </div>
+      {{#if @isInline}}
+        <div class="has-bottom-margin-m">
+          <p>
+            More information about
+            {{uppercase @model.policyType}}
+            policies can be found
+            <DocLink
+              @host="https://developer.hashicorp.com"
+              @path={{if
+                (eq @model.policyType "acl")
+                "/vault/docs/concepts/policies#capabilities"
+                "/vault/tutorials/policies/sentinel#role-governing-policies-rgps"
+              }}
+            >
+              here.
+            </DocLink>
+          </p>
+        </div>
+      {{/if}}
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
           <button
@@ -146,7 +160,7 @@
             disabled={{this.save.isRunning}}
             data-test-policy-save
           >
-            {{if this.model.isNew "Create policy" "Save"}}
+            {{if @model.isNew "Create policy" "Save"}}
           </button>
           <button type="button" class="button has-left-margin-s" disabled={{this.save.isRunning}} {{on "click" this.cancel}}>
             Cancel

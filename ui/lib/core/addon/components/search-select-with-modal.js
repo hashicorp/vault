@@ -31,6 +31,8 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models
  * @param {number} [selectLimit] - Sets select limit
  * @param {array} [excludeOptions] - array of strings containing model ids to filter from the dropdown (ex: ['allow_all'])
+ * @param {function} onCreate -  callback fired with search input so parent can handle creating the model
+ * @param {object} formModel - model created by parent's onCreate callback, passed to form's @model argument
  
 // * query params for dropdown items
  * @param {array} models - model type to fetch from API (can only be a single model)
@@ -54,8 +56,7 @@ export default class SearchSelectWithModal extends Component {
   @tracked selectedOptions = []; // list of selected options
   @tracked dropdownOptions = []; // options that will render in dropdown, updates as selections are added/discarded
   @tracked showModal = false;
-  @tracked createdRecord = null;
-  @tracked modelData = null;
+  @tracked nameInput = null;
 
   get hidePowerSelect() {
     return this.selectedOptions.length >= this.args.selectLimit;
@@ -189,13 +190,17 @@ export default class SearchSelectWithModal extends Component {
 
   @action
   selectOrCreate(selection) {
-    // if creating we call handleChange in the resetModal action to ensure the model is valid and successfully created
-    // before adding it to the DOM (and parent model)
-    // if just selecting, then we handleChange immediately
     if (selection && selection.__isSuggestion__) {
+      // user has clicked to create a new item
+      // wait to handleChange below in resetModal
       const name = selection.__value__;
       this.showModal = true;
-      this.modelData = { name }; // passed to child form component, that sends model data to fire create record action
+      this.args.onCreate({ name });
+      // if firing onCreate does not generate a formModel, then pass name to form component
+      // where `onCreate` is fired by user interaction (ex: selecting a policy type)
+      if (!this.args.formModel) this.nameInput = name;
+    } else {
+      // user has selected an existing item, handleChange immediately
       this.selectedOptions.pushObject(selection);
       this.dropdownOptions.removeObject(selection);
       this.handleChange();
@@ -205,12 +210,13 @@ export default class SearchSelectWithModal extends Component {
 
   @action
   resetModal(model) {
+    // resetModal fires when the form component calls onSave or onCancel
     this.showModal = false;
     if (model && model.currentState.isSaved) {
       const { name } = model;
       this.selectedOptions.pushObject({ name, id: name });
       this.handleChange();
     }
-    this.modelData = null;
+    this.nameInput = null;
   }
 }

@@ -78,6 +78,12 @@ export default Component.extend({
   },
 
   actions: {
+    createSearchSelectModel({ type, name }) {
+      if (type && name) {
+        const model = this.store.createRecord(`policy/${type}`, { name });
+        this.set('policyModel', model);
+      }
+    },
     deleteItem(model) {
       let message = this.getMessage(model, true);
       let flash = this.flashMessages;
@@ -85,12 +91,6 @@ export default Component.extend({
         flash.success(message);
         return this.onSave({ saveType: 'delete', model });
       });
-    },
-    createPolicyModel({ type, name }) {
-      if (type) {
-        const model = this.store.createRecord(`policy/${type}`, { name });
-        this.set('policyModel', model);
-      }
     },
   },
 });

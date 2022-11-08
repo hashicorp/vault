@@ -78,7 +78,9 @@
     </ul>
 
   {{/if}}
-  {{#if (or this.createdRecord this.modelData)}}
+
+  {{! only render modal if user has selected to create a new item }}
+  {{#if (or @formModel this.nameInput)}}
     <Modal
       @title="Create new {{singularize @id}}"
       @onClose={{action (mut this.showModal) false}}
@@ -99,8 +101,9 @@
           {{! form must receive an @onSave and @onCancel arg that executes the callback}}
           {{component
             @modalFormComponent
-            model=this.createdRecord
-            modelData=this.modelData
+            model=@formModel
+            createSearchSelectModel=@onCreate
+            nameInput=this.nameInput
             onSave=this.resetModal
             onCancel=this.resetModal
             isInline=true

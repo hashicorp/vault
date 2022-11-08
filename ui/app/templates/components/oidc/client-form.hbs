@@ -63,6 +63,8 @@
         @models={{array "oidc/assignment"}}
         @inputValue={{this.modelAssignments}}
         @onChange={{this.handleAssignmentSelection}}
+        @onCreate={{this.createSearchSelectModel}}
+        @formModel={{this.assignmentModel}}
         @excludeOptions={{array "allow_all"}}
         @fallbackComponent="string-list"
         @modalFormComponent="oidc/assignment-form"

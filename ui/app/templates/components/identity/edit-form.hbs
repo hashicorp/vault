@@ -34,7 +34,7 @@
               @models={{array "policy/acl" "policy/rgp"}}
               @inputValue={{@model.policies}}
               @onChange={{action (mut this.model.policies)}}
-              @onCreate={{action "createPolicyModel"}}
+              @onCreate={{action "createSearchSelectModel"}}
               @formModel={{this.policyModel}}
               @fallbackComponent="string-list"
               @modalFormComponent="policy-form"
