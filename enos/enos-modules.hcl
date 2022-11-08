@@ -90,11 +90,23 @@ module "vault_cluster_ips" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_unseal_nodes" {
+  source = "./modules/vault_unseal_nodes"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_upgrade" {
   source = "./modules/vault_upgrade"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
+}
+
+module "vault_verify_auth" {
+  source = "./modules/vault_verify_auth"
+
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_autopilot" {
@@ -152,7 +164,7 @@ module "vault_performance_replication_secondary" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_replicated_data"{
+module "vault_verify_replicated_data" {
   source = "./modules/verify_replicated_data"
 
   vault_install_dir = var.vault_install_dir

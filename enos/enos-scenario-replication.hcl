@@ -125,8 +125,11 @@ scenario "replication" {
       storage_backend           = matrix.primary_backend
       unseal_method             = matrix.primary_seal
       vault_artifactory_release = local.install_artifactory_artifact ? step.fetch_vault_artifact.vault_artifactory_release : null
-      vault_license             = step.read_license.license
-      vpc_id                    = step.create_vpc.vpc_id
+      vault_environment = {
+        VAULT_LOG_LEVEL = "debug"
+      }
+      vault_license = step.read_license.license
+      vpc_id        = step.create_vpc.vpc_id
     }
   }
 
@@ -171,8 +174,11 @@ scenario "replication" {
       storage_backend           = matrix.secondary_backend
       unseal_method             = matrix.secondary_seal
       vault_artifactory_release = local.install_artifactory_artifact ? step.fetch_vault_artifact.vault_artifactory_release : null
-      vault_license             = step.read_license.license
-      vpc_id                    = step.create_vpc.vpc_id
+      vault_environment = {
+        VAULT_LOG_LEVEL = "debug"
+      }
+      vault_license = step.read_license.license
+      vpc_id        = step.create_vpc.vpc_id
     }
   }
 
@@ -257,7 +263,7 @@ scenario "replication" {
 
   step "configure_performance_replication_primary" {
     module     = module.vault_performance_replication_primary
-    depends_on = [step.verify_vault_primary_write_data]
+    depends_on = [step.get_primary_cluster_ips]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -300,9 +306,43 @@ scenario "replication" {
     }
   }
 
+  step "unseal_secondary_follower_1" {
+    skip_step  = matrix.primary_seal != "shamir"
+    module     = module.vault_unseal_nodes
+    depends_on = [step.configure_performance_replication_secondary]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      follower_public_ip = step.get_secondary_cluster_ips.follower_public_ip_1
+      vault_unseal_keys  = step.create_vault_primary_cluster.vault_unseal_keys_hex
+      vault_root_token   = step.create_vault_primary_cluster.vault_root_token
+      unseal_method      = matrix.primary_seal
+    }
+  }
+
+  step "unseal_secondary_follower_2" {
+    skip_step  = matrix.primary_seal != "shamir"
+    module     = module.vault_unseal_nodes
+    depends_on = [step.unseal_secondary_follower_1]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      follower_public_ip = step.get_secondary_cluster_ips.follower_public_ip_2
+      vault_unseal_keys  = step.create_vault_primary_cluster.vault_unseal_keys_hex
+      vault_root_token   = step.create_vault_primary_cluster.vault_root_token
+      unseal_method      = matrix.primary_seal
+    }
+  }
+
   step "verify_performance_replication" {
     module     = module.vault_verify_performance_replication
-    depends_on = [step.configure_performance_replication_secondary]
+    depends_on = [step.unseal_secondary_follower_2]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -318,10 +358,26 @@ scenario "replication" {
     }
   }
 
-  step "verify_pre_replicated_data" {
-    module     = module.vault_verify_replicated_data
+  step "verify_vault_secondary_unsealed_after_replication" {
+    module = module.vault_verify_unsealed
+    depends_on = [
+      step.verify_performance_replication
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances  = step.create_vault_secondary_cluster.vault_instances
+      vault_root_token = step.create_vault_secondary_cluster.vault_root_token
+    }
+  }
+
+  step "verify_secondary_auth" {
+    module = module.vault_verify_auth
     // depends_on = [step.verify_performance_replication]
-    depends_on = [step.verify_vault_secondary_unsealed]
+    depends_on = [step.verify_vault_secondary_unsealed_after_replication]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -349,6 +405,7 @@ scenario "replication" {
       secondary_vault_root_token  = step.create_vault_secondary_cluster.vault_root_token
     }
   }
+
   // step "add_primary_cluster_node" {
   //   module     = module.vault_cluster
   //   depends_on = [step.verify_replicated_data]

@@ -28,11 +28,11 @@ variable "secondary_vault_root_token" {
 
 resource "enos_remote_exec" "verify_kv_on_secondary" {
   environment = {
-    VAULT_ADDR        = "http://127.0.0.1:8200"
-    VAULT_TOKEN       = var.secondary_vault_root_token
+    VAULT_ADDR  = "http://127.0.0.1:8200"
+    VAULT_TOKEN = var.secondary_vault_root_token
   }
 
-  inline = ["${var.vault_install_dir}/vault operator raft list-peers"]
+  inline = ["${var.vault_install_dir}/vault kv get secret"]
 
   transport = {
     ssh = {

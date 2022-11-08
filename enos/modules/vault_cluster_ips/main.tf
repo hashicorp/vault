@@ -47,7 +47,7 @@ locals {
   follower_public_ips = {
     follower_public_ips = [
       for k, v in values((tomap(local.instances))) :
-      tostring(v["private_ip"]) if v["private_ip"] != trimspace(enos_remote_exec.get_leader_private_ip.stdout)
+      tostring(v["public_ip"]) if v["private_ip"] != trimspace(enos_remote_exec.get_leader_private_ip.stdout)
     ]
   }
   follower_private_ips = {
