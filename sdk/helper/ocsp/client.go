@@ -495,6 +495,7 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 		return ret, nil
 	}
 	v := ocspCachedResponse{
+		status:     ret.code,
 		time:       float64(time.Now().UTC().Unix()),
 		producedAt: float64(ocspRes.ProducedAt.UTC().Unix()),
 		thisUpdate: float64(ocspRes.ThisUpdate.UTC().Unix()),

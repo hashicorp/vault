@@ -197,7 +197,7 @@ func testAccStepResolveRoleOCSPFail(t *testing.T, connState tls.ConnectionState,
 		ConnState:       &connState,
 		ErrorOk:         true,
 		Check: func(resp *logical.Response) error {
-			if resp == nil && !resp.IsError() {
+			if resp == nil || !resp.IsError() {
 				t.Fatalf("Response was not an error: resp:%#v", resp)
 			}
 
