@@ -282,8 +282,8 @@ func (c *Client) retryOCSP(
 	ocspHost *url.URL,
 	headers map[string]string,
 	reqBody []byte,
-	issuer *x509.Certificate) (ocspRes *ocsp.Response, ocspResBytes []byte, ocspS *ocspStatus, err error) {
-
+	issuer *x509.Certificate,
+) (ocspRes *ocsp.Response, ocspResBytes []byte, ocspS *ocspStatus, err error) {
 	origHost := *ocspHost
 	doRequest := func(request *retryablehttp.Request) (*http.Response, error) {
 		if err != nil {

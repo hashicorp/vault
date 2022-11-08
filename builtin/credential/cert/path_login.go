@@ -316,7 +316,8 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 }
 
 func (b *backend) matchesConstraints(ctx context.Context, clientCert *x509.Certificate, trustedChain []*x509.Certificate,
-	config *ParsedCert, conf *ocsp.VerifyConfig) (bool, error) {
+	config *ParsedCert, conf *ocsp.VerifyConfig,
+) (bool, error) {
 	soFar := !b.checkForChainInCRLs(trustedChain) &&
 		b.matchesNames(clientCert, config) &&
 		b.matchesCommonName(clientCert, config) &&
