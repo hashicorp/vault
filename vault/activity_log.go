@@ -1515,6 +1515,7 @@ func (a *ActivityLog) DefaultStartTime(endTime time.Time) time.Time {
 
 func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.Time, limitNamespaces int) (map[string]interface{}, error) {
 	var computePartial bool
+	actualEndTime := endTime
 
 	// Change the start time to the beginning of the month, and the end time to be the end
 	// of the month.
@@ -1619,7 +1620,16 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	// Now populate the response based on breakdowns.
 	responseData := make(map[string]interface{})
 	responseData["start_time"] = pq.StartTime.Format(time.RFC3339)
-	responseData["end_time"] = pq.EndTime.Format(time.RFC3339)
+
+	// If we computed partial counts, we should return the actual end time we computed counts for, not the pre-computed
+	// query end time. If we don't do this, the end_time in the response doesn't match the actual data in the response,
+	// which is confusing.
+	if computePartial {
+		responseData["end_time"] = actualEndTime.Format(time.RFC3339)
+	} else {
+		responseData["end_time"] = pq.EndTime.Format(time.RFC3339)
+	}
+
 	responseData["by_namespace"] = byNamespaceResponse
 	responseData["total"] = &ResponseCounts{
 		DistinctEntities: distinctEntitiesResponse,
