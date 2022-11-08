@@ -23,9 +23,6 @@ type LogFile struct {
 	// FileInfo is the pointer to the current file being written to
 	FileInfo *os.File
 
-	// BytesWritten is the number of bytes written in the current log file
-	BytesWritten int64
-
 	// acquire is the mutex utilized to ensure we have no concurrency issues
 	acquire sync.Mutex
 }
@@ -41,7 +38,6 @@ func (l *LogFile) Write(b []byte) (n int, err error) {
 		}
 	}
 
-	l.BytesWritten += int64(len(b))
 	return l.FileInfo.Write(b)
 }
 
@@ -66,9 +62,8 @@ func (l *LogFile) openNew() error {
 		return err
 	}
 
+	// New file, new creation time
 	l.FileInfo = filePointer
-	// New file, new 'bytes' tracker, new creation time
 	l.LastCreated = createTime
-	l.BytesWritten = 0
 	return nil
 }
