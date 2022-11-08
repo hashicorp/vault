@@ -175,7 +175,7 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 			ClusterID:    "cluster id",
 			RecoverySeal: true,
 			StorageType:  "storage type",
-			Warnings:     append(make([]string, 0), "warning"),
+			Warnings:     []string{"warning"},
 		}
 
 		// must initialize this struct without explicit field names due to embedding
