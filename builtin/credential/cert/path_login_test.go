@@ -82,7 +82,7 @@ func TestCert_RoleResolve(t *testing.T) {
 		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
-			testAccStepLoginWithName(t, connState, "web", false),
+			testAccStepLoginWithName(t, connState, "web"),
 			testAccStepResolveRoleWithName(t, connState, "web"),
 		},
 	})
@@ -139,7 +139,7 @@ func TestCert_RoleResolveWithoutProvidingCertName(t *testing.T) {
 		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
-			testAccStepLoginWithName(t, connState, "web", false),
+			testAccStepLoginWithName(t, connState, "web"),
 			testAccStepResolveRoleWithEmptyDataMap(t, connState, "web"),
 		},
 	})
@@ -189,6 +189,34 @@ func testAccStepResolveRoleExpectRoleResolutionToFail(t *testing.T, connState tl
 	}
 }
 
+func testAccStepResolveRoleOCSPFail(t *testing.T, connState tls.ConnectionState, certName string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation:       logical.ResolveRoleOperation,
+		Path:            "login",
+		Unauthenticated: true,
+		ConnState:       &connState,
+		ErrorOk:         true,
+		Check: func(resp *logical.Response) error {
+			if resp == nil && !resp.IsError() {
+				t.Fatalf("Response was not an error: resp:%#v", resp)
+			}
+
+			errString, ok := resp.Data["error"].(string)
+			if !ok {
+				t.Fatal("Error not part of response.")
+			}
+
+			if !strings.Contains(errString, "no chain matching") {
+				t.Fatalf("Error was not due to OCSP failure. Error: %s", errString)
+			}
+			return nil
+		},
+		Data: map[string]interface{}{
+			"name": certName,
+		},
+	}
+}
+
 func TestCert_RoleResolve_RoleDoesNotExist(t *testing.T) {
 	certTemplate := &x509.Certificate{
 		Subject: pkix.Name{
@@ -222,7 +250,7 @@ func TestCert_RoleResolve_RoleDoesNotExist(t *testing.T) {
 		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
-			testAccStepLoginWithName(t, connState, "web", false),
+			testAccStepLoginWithName(t, connState, "web"),
 			testAccStepResolveRoleExpectRoleResolutionToFail(t, connState, "notweb"),
 		},
 	})
@@ -296,13 +324,22 @@ func TestCert_RoleResolveOCSP(t *testing.T) {
 
 			b := testFactory(t)
 			b.(*backend).ocspClient.ClearCache()
+			var resolveStep logicaltest.TestStep
+			var loginStep logicaltest.TestStep
+			if c.errExpected {
+				loginStep = testAccStepLoginWithNameInvalid(t, connState, "web")
+				resolveStep = testAccStepResolveRoleOCSPFail(t, connState, "web")
+			} else {
+				loginStep = testAccStepLoginWithName(t, connState, "web")
+				resolveStep = testAccStepResolveRoleWithName(t, connState, "web")
+			}
 			logicaltest.Test(t, logicaltest.TestCase{
 				CredentialBackend: b,
 				Steps: []logicaltest.TestStep{
 					testAccStepCertWithExtraParams(t, "web", ca, "foo", allowed{dns: "example.com"}, false,
 						map[string]interface{}{"ocsp_enabled": true, "ocsp_fail_open": c.failOpen}),
-					testAccStepLoginWithName(t, connState, "web", c.errExpected),
-					testAccStepResolveRoleWithName(t, connState, "web"),
+					loginStep,
+					resolveStep,
 				},
 			})
 		})

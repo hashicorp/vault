@@ -596,7 +596,7 @@ func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certi
 	}
 	b.ocspClientMutex.RLock()
 	defer b.ocspClientMutex.RUnlock()
-	err := b.ocspClient.VerifyLeafCertificate(ctx, clientCert, chain[1], conf)
+	err := b.ocspClient.VerifyLeafCertificate(ctx, clientCert, chain[len(chain)-1], conf)
 	if err != nil {
 		return false, nil
 	}

@@ -1476,7 +1476,7 @@ func TestBackend_mixed_constraints(t *testing.T) {
 			testAccStepCert(t, "3invalid", ca, "foo", allowed{names: "invalid"}, false),
 			testAccStepLogin(t, connState),
 			// Assumes CertEntries are processed in alphabetical order (due to store.List), so we only match 2matching if 1unconstrained doesn't match
-			testAccStepLoginWithName(t, connState, "2matching", false),
+			testAccStepLoginWithName(t, connState, "2matching"),
 			testAccStepLoginWithNameInvalid(t, connState, "3invalid"),
 		},
 	})
@@ -1720,22 +1720,16 @@ func testAccStepReadConfig(t *testing.T, conf config, connState tls.ConnectionSt
 }
 
 func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
-	return testAccStepLoginWithName(t, connState, "", false)
+	return testAccStepLoginWithName(t, connState, "")
 }
 
-func testAccStepLoginWithName(t *testing.T, connState tls.ConnectionState, certName string, errExpected bool) logicaltest.TestStep {
+func testAccStepLoginWithName(t *testing.T, connState tls.ConnectionState, certName string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation:       logical.UpdateOperation,
 		Path:            "login",
 		Unauthenticated: true,
 		ConnState:       &connState,
 		Check: func(resp *logical.Response) error {
-			if errExpected {
-				if !resp.IsError() {
-					t.Fatalf("expected error")
-				}
-				return nil
-			}
 			if resp.Auth.TTL != 1000*time.Second {
 				t.Fatalf("bad lease length: %#v", resp.Auth)
 			}
@@ -1750,7 +1744,6 @@ func testAccStepLoginWithName(t *testing.T, connState tls.ConnectionState, certN
 		Data: map[string]interface{}{
 			"name": certName,
 		},
-		ErrorOk: errExpected,
 	}
 }
 
