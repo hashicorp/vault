@@ -49,13 +49,18 @@ using the same name as specified here.`,
 	}
 }
 
-func (b *backend) lockThenpopulateCRLs(ctx context.Context, storage logical.Storage) error {
-	b.crlUpdateMutex.Lock()
-	defer b.crlUpdateMutex.Unlock()
-	return b.populateCRLs(ctx, storage)
+// initialize is used to initialize the cert CRLs
+func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	if err := b.populateCRLs(ctx, req.Storage); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) error {
+	b.crlUpdateMutex.Lock()
+	defer b.crlUpdateMutex.Unlock()
+
 	if b.crls != nil {
 		return nil
 	}
@@ -139,7 +144,7 @@ func (b *backend) pathCRLDelete(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil
 	}
 
-	if err := b.lockThenpopulateCRLs(ctx, req.Storage); err != nil {
+	if err := b.populateCRLs(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 
@@ -170,7 +175,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, d *fram
 		return logical.ErrorResponse(`"name" parameter must be set`), nil
 	}
 
-	if err := b.lockThenpopulateCRLs(ctx, req.Storage); err != nil {
+	if err := b.populateCRLs(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 

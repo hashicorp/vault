@@ -20,9 +20,6 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
-	if err := b.lockThenpopulateCRLs(ctx, conf.StorageView); err != nil {
-		return nil, err
-	}
 	return b, nil
 }
 
@@ -42,10 +39,11 @@ func Backend() *backend {
 			pathCerts(&b),
 			pathCRLs(&b),
 		},
-		AuthRenew:    b.pathLoginRenew,
-		Invalidate:   b.invalidate,
-		BackendType:  logical.TypeCredential,
-		PeriodicFunc: b.updateCRLs,
+		InitializeFunc: b.initialize,
+		AuthRenew:      b.pathLoginRenew,
+		Invalidate:     b.invalidate,
+		BackendType:    logical.TypeCredential,
+		PeriodicFunc:   b.updateCRLs,
 	}
 
 	b.crlUpdateMutex = &sync.RWMutex{}
