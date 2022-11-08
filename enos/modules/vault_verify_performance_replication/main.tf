@@ -109,10 +109,10 @@ output "known_primary_cluster_addrs" {
 }
 
 output "secondary_replication_status" {
-  value = local.secondary_replication_status
+  value = jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout)
 
-  precondition {
-    condition     = local.secondary_replication_status.data.mode == "secondary" && local.secondary_replication_status.data.state != "idle"
-    error_message = "Vault secondary cluster mode must be \"secondary\" and state must not be \"idle\"."
-  }
+  # precondition {
+  #   condition     = jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout).data.mode == "secondary" && jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout).data.state != "idle"
+  #   error_message = "Vault secondary cluster mode must be \"secondary\" and state must not be \"idle\"."
+  # }
 }
