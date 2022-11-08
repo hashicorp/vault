@@ -124,7 +124,6 @@ type certID struct {
 
 // cache key
 type certIDKey struct {
-	HashAlgorithm crypto.Hash
 	NameHash      string
 	IssuerKeyHash string
 	SerialNumber  string
@@ -178,7 +177,6 @@ func extractCertIDKeyFromRequest(ocspReq []byte) (*certIDKey, *ocspStatus) {
 
 	// encode CertID, used as a key in the cache
 	encodedCertID := &certIDKey{
-		r.HashAlgorithm,
 		base64.StdEncoding.EncodeToString(r.IssuerNameHash),
 		base64.StdEncoding.EncodeToString(r.IssuerKeyHash),
 		r.SerialNumber.String(),
@@ -204,41 +202,10 @@ func (c *Client) encodeCertIDKey(certIDKeyBase64 string) (*certIDKey, error) {
 		return nil, err
 	}
 	return &certIDKey{
-		c.getHashAlgorithmFromOID(cid.HashAlgorithm),
 		base64.StdEncoding.EncodeToString(cid.NameHash),
 		base64.StdEncoding.EncodeToString(cid.IssuerKeyHash),
 		cid.SerialNumber.String(),
 	}, nil
-}
-
-func decodeCertIDKey(k *certIDKey) (string, error) {
-	serialNumber := new(big.Int)
-	serialNumber.SetString(k.SerialNumber, 10)
-	nameHash, err := base64.StdEncoding.DecodeString(k.NameHash)
-	if err != nil {
-		return "", err
-	}
-	issuerKeyHash, err := base64.StdEncoding.DecodeString(k.IssuerKeyHash)
-	if err != nil {
-		return "", err
-	}
-	hashAlgoOid, err := getOIDFromHashAlgorithm(k.HashAlgorithm)
-	if err != nil {
-		return "", err
-	}
-	encodedCertID, err := asn1.Marshal(certID{
-		pkix.AlgorithmIdentifier{
-			Algorithm:  hashAlgoOid,
-			Parameters: asn1.RawValue{Tag: 5 /* ASN.1 NULL */},
-		},
-		nameHash,
-		issuerKeyHash,
-		serialNumber,
-	})
-	if err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(encodedCertID), nil
 }
 
 func (c *Client) checkOCSPResponseCache(encodedCertID *certIDKey, subject, issuer *x509.Certificate) (*ocspStatus, error) {
@@ -371,7 +338,7 @@ func (c *Client) retryOCSP(
 
 // GetRevocationStatus checks the certificate revocation status for subject using issuer certificate.
 func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.Certificate, conf *VerifyConfig) (*ocspStatus, error) {
-	status, ocspReq, encodedCertID, err := c.ValidateWithCache(subject, issuer)
+	status, ocspReq, encodedCertID, err := c.validateWithCache(subject, issuer)
 	if err != nil {
 		return nil, err
 	}
@@ -604,12 +571,12 @@ func (c *Client) canEarlyExitForOCSP(results []*ocspStatus, chainSize int, conf 
 	return nil
 }
 
-func (c *Client) ValidateWithCacheForAllCertificates(verifiedChains []*x509.Certificate) (bool, error) {
+func (c *Client) validateWithCacheForAllCertificates(verifiedChains []*x509.Certificate) (bool, error) {
 	n := len(verifiedChains) - 1
 	for j := 0; j < n; j++ {
 		subject := verifiedChains[j]
 		issuer := verifiedChains[j+1]
-		status, _, _, err := c.ValidateWithCache(subject, issuer)
+		status, _, _, err := c.validateWithCache(subject, issuer)
 		if err != nil {
 			return false, err
 		}
@@ -620,7 +587,7 @@ func (c *Client) ValidateWithCacheForAllCertificates(verifiedChains []*x509.Cert
 	return true, nil
 }
 
-func (c *Client) ValidateWithCache(subject, issuer *x509.Certificate) (*ocspStatus, []byte, *certIDKey, error) {
+func (c *Client) validateWithCache(subject, issuer *x509.Certificate) (*ocspStatus, []byte, *certIDKey, error) {
 	ocspReq, err := ocsp.CreateRequest(subject, issuer, &ocsp.RequestOptions{})
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to create OCSP request from the certificates: %v", err)
@@ -637,7 +604,7 @@ func (c *Client) ValidateWithCache(subject, issuer *x509.Certificate) (*ocspStat
 }
 
 func (c *Client) GetAllRevocationStatus(ctx context.Context, verifiedChains []*x509.Certificate, conf *VerifyConfig) ([]*ocspStatus, error) {
-	_, err := c.ValidateWithCacheForAllCertificates(verifiedChains)
+	_, err := c.validateWithCacheForAllCertificates(verifiedChains)
 	if err != nil {
 		return nil, err
 	}
