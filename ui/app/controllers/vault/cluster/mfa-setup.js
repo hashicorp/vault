@@ -30,7 +30,7 @@ export default class VaultClusterMfaSetupController extends Controller {
 
   @action
   saveUUIDandQrCode(uuid, qrCode) {
-    // qrCode could be an empty string if the admin-generate was not successful
+    // qrCode could be an empty string if the generate was not successful
     this.uuid = uuid;
     this.qrCode = qrCode;
   }

@@ -151,6 +151,33 @@ $ curl \
 }
 ```
 
+
+### Destroy TOTP MFA Secret
+
+This endpoint deletes a TOTP MFA secret in the entity of the calling token.
+
+Note that in order to overwrite a secret on the entity, it is required to
+explicitly delete the secret first. This API can be used to delete the secret
+and the `generate` or `admin-generate` APIs should be used to regenerate a new
+secret.
+
+| Method | Path                                  |
+| :----- | :------------------------------------ |
+| `POST` | `/sys/mfa/method/:name/destroy` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Name of the MFA method.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/mfa/method/totp/my_totp/destroy
+```
+
 ## Administratively Generate a TOTP MFA Secret
 
 This endpoint can be used to generate a TOTP MFA secret. Unlike the `generate`
