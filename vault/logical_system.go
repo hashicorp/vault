@@ -4393,22 +4393,36 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 }
 
 type SealStatusResponse struct {
-	Type              string `json:"type"`
-	Initialized       bool   `json:"initialized"`
-	Sealed            bool   `json:"sealed"`
-	T                 int    `json:"t"`
-	N                 int    `json:"n"`
-	Progress          int    `json:"progress"`
-	Nonce             string `json:"nonce"`
-	Version           string `json:"version"`
-	BuildDate         string `json:"build_date"`
-	Migration         bool   `json:"migration"`
-	ClusterName       string `json:"cluster_name,omitempty"`
-	ClusterID         string `json:"cluster_id,omitempty"`
-	RecoverySeal      bool   `json:"recovery_seal"`
-	StorageType       string `json:"storage_type,omitempty"`
-	HCPLinkStatus     string `json:"hcp_link_status,omitempty"`
-	HCPLinkResourceID string `json:"hcp_link_resource_ID,omitempty"`
+	Type              string   `json:"type"`
+	Initialized       bool     `json:"initialized"`
+	Sealed            bool     `json:"sealed"`
+	T                 int      `json:"t"`
+	N                 int      `json:"n"`
+	Progress          int      `json:"progress"`
+	Nonce             string   `json:"nonce"`
+	Version           string   `json:"version"`
+	BuildDate         string   `json:"build_date"`
+	Migration         bool     `json:"migration"`
+	ClusterName       string   `json:"cluster_name,omitempty"`
+	ClusterID         string   `json:"cluster_id,omitempty"`
+	RecoverySeal      bool     `json:"recovery_seal"`
+	StorageType       string   `json:"storage_type,omitempty"`
+	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
+	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`
+	Warnings          []string `json:"warnings,omitempty"`
+}
+
+// getStatusWarnings exposes potentially dangerous overrides in the status response
+// currently, this only warns about VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS,
+// but should be extended to report more warnings where appropriate
+func (core *Core) getStatusWarnings() []string {
+	var warnings []string
+	if core.GetCoreConfigInternal() != nil && core.GetCoreConfigInternal().DisableSSCTokens {
+		warnings = append(warnings, "Server Side Consistent Tokens are disabled, due to the "+
+			"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS environment variable being set. "+
+			"It is not recommended to run Vault for an extended period of time with this configuration.")
+	}
+	return warnings
 }
 
 func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
@@ -4481,6 +4495,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		ClusterID:    clusterID,
 		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 		StorageType:  core.StorageType(),
+		Warnings:     core.getStatusWarnings(),
 	}
 
 	if resourceIDonHCP != "" {
