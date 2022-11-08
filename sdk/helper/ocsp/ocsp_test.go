@@ -160,13 +160,11 @@ func TestUnitEncodeCertIDGood(t *testing.T) {
 func TestUnitCheckOCSPResponseCache(t *testing.T) {
 	c := New(testLogFactory, 10)
 	dummyKey0 := certIDKey{
-		HashAlgorithm: crypto.SHA1,
 		NameHash:      "dummy0",
 		IssuerKeyHash: "dummy0",
 		SerialNumber:  "dummy0",
 	}
 	dummyKey := certIDKey{
-		HashAlgorithm: crypto.SHA1,
 		NameHash:      "dummy1",
 		IssuerKeyHash: "dummy1",
 		SerialNumber:  "dummy1",
