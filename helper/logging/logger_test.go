@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/consul/sdk/testutil"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,7 +24,7 @@ func TestLogger_SetupInvalidLogLevel(t *testing.T) {
 	cfg := LogConfig{LogLevel: 999}
 
 	_, err := Setup(cfg, nil)
-	testutil.RequireErrorContains(t, err, "invalid log level")
+	assert.Containsf(t, err.Error(), "invalid log level", "expected error %s", err)
 }
 
 func TestLogger_SetupLoggerErrorLevel(t *testing.T) {
@@ -125,7 +125,7 @@ func TestLogger_SetupLoggerWithJSON(t *testing.T) {
 }
 
 func TestLogger_SetupLoggerWithValidLogPath(t *testing.T) {
-	tmpDir := testutil.TempDir(t, t.Name())
+	tmpDir := t.TempDir()
 
 	cfg := LogConfig{
 		LogLevel:    log.Info,
