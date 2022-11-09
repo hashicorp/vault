@@ -61,6 +61,12 @@ var (
 	_ cli.CommandAutocomplete = (*AgentCommand)(nil)
 )
 
+const (
+	// flagNameAgentExitAfterAuth is used as an Agent specific flag to indicate
+	// that agent should exit after a single successful auth
+	flagNameAgentExitAfterAuth = "exit-after-auth"
+)
+
 type AgentCommand struct {
 	*BaseCommand
 
@@ -142,7 +148,7 @@ func (c *AgentCommand) Flags() *FlagSets {
 	})
 
 	f.BoolVar(&BoolVar{
-		Name:    "exit-after-auth",
+		Name:    flagNameAgentExitAfterAuth,
 		Target:  &c.flagExitAfterAuth,
 		Default: false,
 		Usage: "If set to true, the agent will exit with code 0 after a single " +
@@ -208,7 +214,7 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Load the configuration
+	// Load the configuration file
 	config, err := agentConfig.LoadConfig(c.flagConfigs[0])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", c.flagConfigs[0], err))
@@ -231,76 +237,7 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
 	}
 
-	exitAfterAuth := config.ExitAfterAuth
-	f.Visit(func(fl *flag.Flag) {
-		if fl.Name == "exit-after-auth" {
-			exitAfterAuth = c.flagExitAfterAuth
-		}
-	})
-
-	c.setStringFlag(f, config.LogFile, &StringVar{
-		Name:   flagNameLogFile,
-		EnvVar: EnvVaultLogFile,
-		Target: &c.flagLogFile,
-	})
-	config.LogFile = c.flagLogFile
-
-	c.setStringFlag(f, config.LogLevel, &StringVar{
-		Name:   flagNameLogLevel,
-		EnvVar: EnvVaultLogLevel,
-		Target: &c.flagLogLevel,
-	})
-	config.LogLevel = c.flagLogLevel
-
-	c.setStringFlag(f, config.Vault.Address, &StringVar{
-		Name:    flagNameAddress,
-		Target:  &c.flagAddress,
-		Default: "https://127.0.0.1:8200",
-		EnvVar:  api.EnvVaultAddress,
-	})
-	config.Vault.Address = c.flagAddress
-	c.setStringFlag(f, config.Vault.CACert, &StringVar{
-		Name:    flagNameCACert,
-		Target:  &c.flagCACert,
-		Default: "",
-		EnvVar:  api.EnvVaultCACert,
-	})
-	config.Vault.CACert = c.flagCACert
-	c.setStringFlag(f, config.Vault.CAPath, &StringVar{
-		Name:    flagNameCAPath,
-		Target:  &c.flagCAPath,
-		Default: "",
-		EnvVar:  api.EnvVaultCAPath,
-	})
-	config.Vault.CAPath = c.flagCAPath
-	c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
-		Name:    flagNameClientCert,
-		Target:  &c.flagClientCert,
-		Default: "",
-		EnvVar:  api.EnvVaultClientCert,
-	})
-	config.Vault.ClientCert = c.flagClientCert
-	c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
-		Name:    flagNameClientKey,
-		Target:  &c.flagClientKey,
-		Default: "",
-		EnvVar:  api.EnvVaultClientKey,
-	})
-	config.Vault.ClientKey = c.flagClientKey
-	c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
-		Name:    flagNameTLSSkipVerify,
-		Target:  &c.flagTLSSkipVerify,
-		Default: false,
-		EnvVar:  api.EnvVaultSkipVerify,
-	})
-	config.Vault.TLSSkipVerify = c.flagTLSSkipVerify
-	c.setStringFlag(f, config.Vault.TLSServerName, &StringVar{
-		Name:    flagTLSServerName,
-		Target:  &c.flagTLSServerName,
-		Default: "",
-		EnvVar:  api.EnvVaultTLSServerName,
-	})
-	config.Vault.TLSServerName = c.flagTLSServerName
+	config = c.aggregateConfig(f, config)
 
 	// Build the logger using level, format and path
 	logLevel, err := logging.ParseLogLevel(config.LogLevel)
@@ -879,7 +816,7 @@ func (c *AgentCommand) Run(args []string) int {
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
 			Client:        ahClient,
-			ExitAfterAuth: exitAfterAuth,
+			ExitAfterAuth: config.ExitAfterAuth,
 		})
 
 		ts := template.NewServer(&template.ServerConfig{
@@ -888,7 +825,7 @@ func (c *AgentCommand) Run(args []string) int {
 			LogWriter:     c.logWriter,
 			AgentConfig:   config,
 			Namespace:     templateNamespace,
-			ExitAfterAuth: exitAfterAuth,
+			ExitAfterAuth: config.ExitAfterAuth,
 		})
 
 		g.Add(func() error {
@@ -985,6 +922,84 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	return 0
+}
+
+// aggregateConfig ensures that the config object accurately reflects the desired
+// settings as configured by the user. It applies the relevant config setting based
+// on the precedence (env var overrides file config, cli overrides env var).
+// It mutates the config object supplied and returns the updated object.
+func (c *AgentCommand) aggregateConfig(f *FlagSets, config *agentConfig.Config) *agentConfig.Config {
+	f.Visit(func(fl *flag.Flag) {
+		if fl.Name == flagNameAgentExitAfterAuth {
+			config.ExitAfterAuth = c.flagExitAfterAuth
+		}
+	})
+
+	c.setStringFlag(f, config.LogFile, &StringVar{
+		Name:   flagNameLogFile,
+		EnvVar: EnvVaultLogFile,
+		Target: &c.flagLogFile,
+	})
+	config.LogFile = c.flagLogFile
+
+	c.setStringFlag(f, config.LogLevel, &StringVar{
+		Name:   flagNameLogLevel,
+		EnvVar: EnvVaultLogLevel,
+		Target: &c.flagLogLevel,
+	})
+	config.LogLevel = c.flagLogLevel
+
+	c.setStringFlag(f, config.Vault.Address, &StringVar{
+		Name:    flagNameAddress,
+		Target:  &c.flagAddress,
+		Default: "https://127.0.0.1:8200",
+		EnvVar:  api.EnvVaultAddress,
+	})
+	config.Vault.Address = c.flagAddress
+	c.setStringFlag(f, config.Vault.CACert, &StringVar{
+		Name:    flagNameCACert,
+		Target:  &c.flagCACert,
+		Default: "",
+		EnvVar:  api.EnvVaultCACert,
+	})
+	config.Vault.CACert = c.flagCACert
+	c.setStringFlag(f, config.Vault.CAPath, &StringVar{
+		Name:    flagNameCAPath,
+		Target:  &c.flagCAPath,
+		Default: "",
+		EnvVar:  api.EnvVaultCAPath,
+	})
+	config.Vault.CAPath = c.flagCAPath
+	c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
+		Name:    flagNameClientCert,
+		Target:  &c.flagClientCert,
+		Default: "",
+		EnvVar:  api.EnvVaultClientCert,
+	})
+	config.Vault.ClientCert = c.flagClientCert
+	c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
+		Name:    flagNameClientKey,
+		Target:  &c.flagClientKey,
+		Default: "",
+		EnvVar:  api.EnvVaultClientKey,
+	})
+	config.Vault.ClientKey = c.flagClientKey
+	c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
+		Name:    flagNameTLSSkipVerify,
+		Target:  &c.flagTLSSkipVerify,
+		Default: false,
+		EnvVar:  api.EnvVaultSkipVerify,
+	})
+	config.Vault.TLSSkipVerify = c.flagTLSSkipVerify
+	c.setStringFlag(f, config.Vault.TLSServerName, &StringVar{
+		Name:    flagTLSServerName,
+		Target:  &c.flagTLSServerName,
+		Default: "",
+		EnvVar:  api.EnvVaultTLSServerName,
+	})
+	config.Vault.TLSServerName = c.flagTLSServerName
+
+	return config
 }
 
 // verifyRequestHeader wraps an http.Handler inside a Handler that checks for
