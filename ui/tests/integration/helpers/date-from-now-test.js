@@ -9,34 +9,34 @@ module('Integration | Helper | date-from-now', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it works', function (assert) {
-    let result = dateFromNow([1481022124443]);
+    const result = dateFromNow([1481022124443]);
     assert.strictEqual(typeof result, 'string', 'it is a string');
   });
 
   test('you can include a suffix', function (assert) {
-    let result = dateFromNow([1481022124443], { addSuffix: true });
+    const result = dateFromNow([1481022124443], { addSuffix: true });
     assert.ok(result.includes(' ago'));
   });
 
   test('you can pass in UTC timestamp', function (assert) {
-    let result = dateFromNow(['Fri, 11 Oct 2019 18:56:08 GMT'], { addSuffix: true });
+    const result = dateFromNow(['Fri, 11 Oct 2019 18:56:08 GMT'], { addSuffix: true });
     assert.ok(result.includes(' ago'));
   });
 
   test('you can pass in ISO timestamp', function (assert) {
-    let result = dateFromNow(['2019-10-11T18:56:08.984Z'], { addSuffix: true });
+    const result = dateFromNow(['2019-10-11T18:56:08.984Z'], { addSuffix: true });
     assert.ok(result.includes(' ago'));
   });
 
   test('you can include a suffix using date class', function (assert) {
-    let now = Date.now();
-    let pastDate = subMinutes(now, 30);
-    let result = dateFromNow([pastDate], { addSuffix: true });
+    const now = Date.now();
+    const pastDate = subMinutes(now, 30);
+    const result = dateFromNow([pastDate], { addSuffix: true });
     assert.ok(result.includes(' ago'));
   });
 
   test('you can include a suffix using ISO 8601 format', function (assert) {
-    let result = dateFromNow(['2021-02-05T20:43:09+00:00'], { addSuffix: true });
+    const result = dateFromNow(['2021-02-05T20:43:09+00:00'], { addSuffix: true });
     assert.ok(result.includes(' ago'));
   });
 

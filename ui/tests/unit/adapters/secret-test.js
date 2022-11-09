@@ -7,7 +7,7 @@ module('Unit | Adapter | secret', function (hooks) {
 
   test('secret api urls', function (assert) {
     let url, method, options;
-    let adapter = this.owner.factoryFor('adapter:secret').create({
+    const adapter = this.owner.factoryFor('adapter:secret').create({
       ajax: (...args) => {
         [url, method, options] = args;
         return resolve({});

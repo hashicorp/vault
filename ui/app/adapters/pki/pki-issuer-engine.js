@@ -5,7 +5,7 @@ export default class PkiIssuerEngineAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }

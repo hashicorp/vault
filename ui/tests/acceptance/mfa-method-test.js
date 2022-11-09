@@ -264,7 +264,7 @@ module('Acceptance | mfa-method', function (hooks) {
           .hasValue(model.period.toString(), 'Period form field is populated with model value');
         assert.dom('[data-test-select="ttl-unit"]').hasValue('s', 'Correct time unit is shown for period');
       } else if (key === 'algorithm' || key === 'digits' || key === 'skew') {
-        let radioElem = this.element.querySelector(`input[name=${key}]:checked`);
+        const radioElem = this.element.querySelector(`input[name=${key}]:checked`);
         assert
           .dom(radioElem)
           .hasValue(model[key].toString(), `${key} form field is populated with model value`);
@@ -276,7 +276,7 @@ module('Acceptance | mfa-method', function (hooks) {
     });
 
     await fillIn('[data-test-input="issuer"]', 'foo');
-    let SHA1radioBtn = this.element.querySelectorAll('input[name=algorithm]')[0];
+    const SHA1radioBtn = this.element.querySelectorAll('input[name=algorithm]')[0];
     await click(SHA1radioBtn);
     await fillIn('[data-test-input="max_validation_attempts"]', 10);
     await click('[data-test-mfa-method-save]');

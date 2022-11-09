@@ -12,7 +12,7 @@ export default Mixin.create({
   onDisable() {},
   onPromote() {},
   submitHandler: task(function* (action, clusterMode, data, event) {
-    let replicationMode = (data && data.replicationMode) || this.replicationMode;
+    const replicationMode = (data && data.replicationMode) || this.replicationMode;
     if (event && event.preventDefault) {
       event.preventDefault();
     }

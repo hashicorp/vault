@@ -34,7 +34,7 @@ module('Integration | Component | ttl-form', function (hooks) {
   });
 
   test('it correctly shows initial unit', async function (assert) {
-    let changeSpy = sinon.spy();
+    const changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
       <TtlForm

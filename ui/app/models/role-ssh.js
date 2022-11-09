@@ -120,14 +120,14 @@ export default Model.extend({
 
   showFields: computed('keyType', function () {
     const keyType = this.keyType;
-    let keys = keyType === 'ca' ? CA_FIELDS.slice(0) : OTP_FIELDS.slice(0);
+    const keys = keyType === 'ca' ? CA_FIELDS.slice(0) : OTP_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
   }),
 
   fieldGroups: computed('keyType', function () {
-    let numRequired = this.keyType === 'otp' ? 3 : 4;
-    let fields = this.keyType === 'otp' ? [...OTP_FIELDS] : [...CA_FIELDS];
-    let defaultFields = fields.splice(0, numRequired);
+    const numRequired = this.keyType === 'otp' ? 3 : 4;
+    const fields = this.keyType === 'otp' ? [...OTP_FIELDS] : [...CA_FIELDS];
+    const defaultFields = fields.splice(0, numRequired);
     const groups = [
       { default: defaultFields },
       {

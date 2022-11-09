@@ -19,7 +19,7 @@ export default Route.extend({
     if (backend != 'ssh') {
       return;
     }
-    let modelType = 'ssh-otp-credential';
+    const modelType = 'ssh-otp-credential';
     return this.pathHelp.getNewModel(modelType, backend);
   },
 
@@ -30,7 +30,7 @@ export default Route.extend({
       }
       // Unless it's a control group error, we want to pass back error info
       // so we can render it on the GenerateCredentialsDatabase component
-      let status = error?.httpStatus;
+      const status = error?.httpStatus;
       let title;
       let message = `We ran into a problem and could not continue: ${
         error?.errors ? error.errors[0] : 'See Vault logs for details.'
@@ -50,11 +50,11 @@ export default Route.extend({
   },
 
   async model(params) {
-    let role = params.secret;
-    let backendModel = this.backendModel();
-    let backendPath = backendModel.get('id');
-    let backendType = backendModel.get('type');
-    let roleType = params.roleType;
+    const role = params.secret;
+    const backendModel = this.backendModel();
+    const backendPath = backendModel.get('id');
+    const backendType = backendModel.get('type');
+    const roleType = params.roleType;
     let dbCred;
     if (backendType === 'database') {
       dbCred = await this.getDatabaseCredential(backendPath, role, roleType);

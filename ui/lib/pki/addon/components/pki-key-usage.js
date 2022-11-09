@@ -65,8 +65,8 @@ export default class PkiKeyUsage extends Component {
   }
 
   _amendList(checkboxName, value, type) {
-    let keyUsageList = this.args.model.keyUsage;
-    let extKeyUsageList = this.args.model.extKeyUsage;
+    const keyUsageList = this.args.model.keyUsage;
+    const extKeyUsageList = this.args.model.extKeyUsage;
 
     /* Process:
     1. We first check if the checkbox change is coming from the checkbox options of key_usage or ext_key_usage.
@@ -75,12 +75,12 @@ export default class PkiKeyUsage extends Component {
     3. Then if the value of checkbox is "true" we add it to the arrayList, otherwise remove it.
     */
     if (type === 'keyUsage') {
-      let keyUsageListArray = Array.isArray(keyUsageList) ? keyUsageList : keyUsageList.split(',');
+      const keyUsageListArray = Array.isArray(keyUsageList) ? keyUsageList : keyUsageList.split(',');
 
       return value ? keyUsageListArray.addObject(checkboxName) : keyUsageListArray.removeObject(checkboxName);
     } else {
       // because there is no default on init for ext_key_usage property (set normally by OpenAPI) we define it as an empty array if it is undefined.
-      let extKeyUsageListArray = !extKeyUsageList ? [] : extKeyUsageList;
+      const extKeyUsageListArray = !extKeyUsageList ? [] : extKeyUsageList;
 
       return value
         ? extKeyUsageListArray.addObject(checkboxName)

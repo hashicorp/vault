@@ -171,10 +171,10 @@ export default Model.extend({
     if (!this.plugin_name) {
       return null;
     }
-    let pluginFields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name).fields.filter(
+    const pluginFields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name).fields.filter(
       (f) => f.group === 'pluginConfig'
     );
-    let groups = fieldsToGroups(pluginFields, 'subgroup');
+    const groups = fieldsToGroups(pluginFields, 'subgroup');
     return fieldToAttrs(this, groups);
   }),
 
@@ -182,7 +182,7 @@ export default Model.extend({
     if (!this.plugin_name) {
       return expandAttributeMeta(this, ['root_rotation_statements']);
     }
-    let fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
+    const fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
       .fields.filter((f) => f.group === 'statements')
       .map((field) => field.attr);
     return expandAttributeMeta(this, fields);

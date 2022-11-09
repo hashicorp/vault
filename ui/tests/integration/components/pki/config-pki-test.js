@@ -132,7 +132,7 @@ module('Integration | Component | config pki', function (hooks) {
   test('it correctly sets toggle when initial CRL config is disable=true', async function (assert) {
     assert.expect(3);
     // change default config attrs
-    let configDisabled = this.config;
+    const configDisabled = this.config;
     configDisabled.expiry = '1m';
     configDisabled.disable = true;
     await setupAndRender(this, configDisabled, 'crl');

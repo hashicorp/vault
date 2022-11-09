@@ -39,7 +39,7 @@ export default Component.extend({
 
   actions: {
     pickedFile(e) {
-      let { files } = e.target;
+      const { files } = e.target;
       if (!files.length) {
         return;
       }
@@ -51,8 +51,8 @@ export default Component.extend({
       this.send('onChange');
     },
     onChange(fileAsBytes, fileMeta) {
-      let { name, size, lastModifiedDate } = fileMeta || {};
-      let fileSize = size ? filesize(size) : null;
+      const { name, size, lastModifiedDate } = fileMeta || {};
+      const fileSize = size ? filesize(size) : null;
       this.set('file', fileAsBytes);
       this.set('fileName', name);
       this.set('fileSize', fileSize);

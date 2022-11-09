@@ -19,7 +19,7 @@ export default Route.extend(ClusterRoute, ListRoute, {
   },
 
   model(params) {
-    let policyType = this.policyType();
+    const policyType = this.policyType();
     if (this.shouldReturnEmptyModel(policyType, this.version)) {
       return;
     }
