@@ -323,6 +323,7 @@ func (c *AgentCommand) Run(args []string) int {
 	l, err := logging.Setup(logCfg, c.logWriter)
 	if err != nil {
 		c.UI.Error(err.Error())
+		return 1
 	}
 
 	c.logger = l
