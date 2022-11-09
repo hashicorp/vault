@@ -78,9 +78,11 @@ func (c *Logical) ReadRawWithData(path string, data map[string][]string) (*Respo
 }
 
 func (c *Logical) ReadRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
-	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
-	defer cancelFunc()
-
+	// See note in client.go, RawRequestWithContext for why we do not call
+	// Cancel here. The difference between these two methods are that the
+	// former takes a Request object directly, whereas this builds one
+	// up for the caller.
+	ctx, _ = c.c.withConfiguredTimeout(ctx)
 	return c.readRawWithDataWithContext(ctx, path, data)
 }
 
