@@ -20,14 +20,23 @@ type LogFormat int
 
 // LogConfig should be used to supply configuration when creating a new Vault logger
 type LogConfig struct {
-	Name        string
-	LogLevel    log.Level
-	LogFormat   LogFormat
-	LogFilePath string
+	name        string
+	logLevel    log.Level
+	logFormat   LogFormat
+	logFilePath string
+}
+
+func NewLogConfig(name string, logLevel log.Level, logFormat LogFormat, logFilePath string) LogConfig {
+	return LogConfig{
+		name:        name,
+		logLevel:    logLevel,
+		logFormat:   logFormat,
+		logFilePath: strings.TrimSpace(logFilePath),
+	}
 }
 
 func (c LogConfig) IsFormatJson() bool {
-	return c.LogFormat == JSONFormat
+	return c.logFormat == JSONFormat
 }
 
 // Stringer implementation
@@ -59,8 +68,8 @@ func (w noErrorWriter) Write(p []byte) (n int, err error) {
 // Setup creates a new logger with the specified configuration and writer
 func Setup(config LogConfig, w io.Writer) (log.InterceptLogger, error) {
 	// Validate the log level
-	if config.LogLevel.String() == "unknown" {
-		return nil, fmt.Errorf("invalid log level: %v", config.LogLevel)
+	if config.logLevel.String() == "unknown" {
+		return nil, fmt.Errorf("invalid log level: %v", config.logLevel)
 	}
 
 	// If out is os.Stdout and Vault is being run as a Windows Service, writes will
@@ -68,15 +77,12 @@ func Setup(config LogConfig, w io.Writer) (log.InterceptLogger, error) {
 	// noErrorWriter is used as a wrapper to suppress any errors when writing to out.
 	writers := []io.Writer{noErrorWriter{w: w}}
 
-	if config.LogFilePath != "" {
-		dir, fileName := filepath.Split(config.LogFilePath)
+	if config.logFilePath != "" {
+		dir, fileName := filepath.Split(config.logFilePath)
 		if fileName == "" {
 			fileName = "vault-agent.log"
 		}
-		logFile := &LogFile{
-			fileName: fileName,
-			logPath:  dir,
-		}
+		logFile := NewLogFile(dir, fileName)
 		if err := logFile.openNew(); err != nil {
 			return nil, fmt.Errorf("failed to set up file logging: %w", err)
 		}
@@ -84,8 +90,8 @@ func Setup(config LogConfig, w io.Writer) (log.InterceptLogger, error) {
 	}
 
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
-		Name:       config.Name,
-		Level:      config.LogLevel,
+		Name:       config.name,
+		Level:      config.logLevel,
 		Output:     io.MultiWriter(writers...),
 		JSONFormat: config.IsFormatJson(),
 	})

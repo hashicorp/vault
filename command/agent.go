@@ -315,11 +315,7 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
-	logCfg := logging.LogConfig{
-		LogLevel:    logLevel,
-		LogFormat:   logFormat,
-		LogFilePath: config.LogFile,
-	}
+	logCfg := logging.NewLogConfig("agent", logLevel, logFormat, config.LogFile)
 	l, err := logging.Setup(logCfg, c.logWriter)
 	if err != nil {
 		c.UI.Error(err.Error())

@@ -19,7 +19,7 @@ func TestLogFile_openNew(t *testing.T) {
 	_, err = logFile.Write([]byte(msg))
 	require.NoError(t, err)
 
-	content, err := os.ReadFile(logFile.FileInfo.Name())
+	content, err := os.ReadFile(logFile.fileInfo.Name())
 	require.NoError(t, err)
 	require.Contains(t, string(content), msg)
 }
