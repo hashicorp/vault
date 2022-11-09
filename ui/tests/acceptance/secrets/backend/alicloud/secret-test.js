@@ -13,7 +13,7 @@ module('Acceptance | alicloud/enable', function (hooks) {
   });
 
   test('enable alicloud', async function (assert) {
-    let enginePath = `alicloud-${new Date().getTime()}`;
+    const enginePath = `alicloud-${new Date().getTime()}`;
     await mountSecrets.visit();
     await settled();
     await mountSecrets.selectType('alicloud');

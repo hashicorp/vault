@@ -29,7 +29,7 @@ export default class MfaSetupStepOne extends Component {
   @action
   async verifyUUID(evt) {
     evt.preventDefault();
-    let response = await this.postAdminGenerate();
+    const response = await this.postAdminGenerate();
 
     if (response === 'stop_progress') {
       this.args.isUUIDVerified(false);
@@ -43,7 +43,7 @@ export default class MfaSetupStepOne extends Component {
   async postAdminGenerate() {
     this.error = '';
     this.warning = '';
-    let adapter = this.store.adapterFor('mfa-setup');
+    const adapter = this.store.adapterFor('mfa-setup');
     let response;
 
     try {
@@ -53,7 +53,7 @@ export default class MfaSetupStepOne extends Component {
       });
       this.args.saveUUIDandQrCode(this.UUID, response.data?.url);
       // if there was a warning it won't fail but needs to be handled here and the flow needs to be interrupted
-      let warnings = response.warnings || [];
+      const warnings = response.warnings || [];
       if (warnings.length > 0) {
         this.UUID = ''; // clear UUID
         const alreadyGenerated = warnings.find((w) =>

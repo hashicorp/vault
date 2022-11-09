@@ -91,7 +91,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     await click('[data-test-selected-list-button="delete"]');
     await click(SELECTORS.clientSaveButton);
 
-    let validationErrors = findAll(SELECTORS.inlineAlert);
+    const validationErrors = findAll(SELECTORS.inlineAlert);
     assert
       .dom(validationErrors[0])
       .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');

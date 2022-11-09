@@ -14,7 +14,7 @@ export default class PkiRoleEngineAdapter extends ApplicationAdapter {
   }
 
   _optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }

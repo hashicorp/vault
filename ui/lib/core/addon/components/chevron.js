@@ -26,7 +26,7 @@ export default Component.extend({
   direction: 'right',
   isButton: false,
   glyph: computed('direction', function () {
-    let { direction } = this;
+    const { direction } = this;
     assert(
       `The direction property of ${this.toString()} must be one of the following: ${DIRECTIONS.join(', ')}`,
       DIRECTIONS.includes(direction)

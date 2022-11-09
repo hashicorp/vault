@@ -19,13 +19,13 @@ export default Model.extend({
   authUrl: attr('string'),
 
   providerName: computed('authUrl', function () {
-    let { hostname } = parseURL(this.authUrl);
-    let firstMatch = Object.keys(DOMAIN_STRINGS).find((name) => hostname.includes(name));
+    const { hostname } = parseURL(this.authUrl);
+    const firstMatch = Object.keys(DOMAIN_STRINGS).find((name) => hostname.includes(name));
     return DOMAIN_STRINGS[firstMatch] || null;
   }),
 
   providerButtonComponent: computed('providerName', function () {
-    let { providerName } = this;
+    const { providerName } = this;
     return PROVIDER_WITH_LOGO.includes(providerName) ? `auth-button-${providerName.toLowerCase()}` : null;
   }),
 });

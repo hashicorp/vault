@@ -37,7 +37,7 @@ module('Integration | Component | pki-key-usage', function (hooks) {
     assert.dom(SELECTORS.extKeyUsageOids).exists('Extended Key usage oids renders');
 
     // check is flexbox by checking the height of the box
-    let groupBoxHeight = document.querySelector('[data-test-surrounding-div="Key usage"]').clientHeight;
+    const groupBoxHeight = document.querySelector('[data-test-surrounding-div="Key usage"]').clientHeight;
     assert.strictEqual(
       groupBoxHeight,
       518,

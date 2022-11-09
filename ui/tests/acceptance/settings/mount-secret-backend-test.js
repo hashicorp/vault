@@ -100,7 +100,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   });
 
   test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
-    let enginePath = `kv-noUpdate-${new Date().getTime()}`;
+    const enginePath = `kv-noUpdate-${new Date().getTime()}`;
     const V2_POLICY = `
       path "${enginePath}/*" {
         capabilities = ["list","create","read","sudo","delete"]
@@ -123,7 +123,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
     await settled();
-    let userToken = consoleComponent.lastLogOutput;
+    const userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
     // create the engine

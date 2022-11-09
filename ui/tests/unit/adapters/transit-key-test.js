@@ -7,7 +7,7 @@ module('Unit | Adapter | transit key', function (hooks) {
 
   test('transit api urls', function (assert) {
     let url, method, options;
-    let adapter = this.owner.factoryFor('adapter:transit-key').create({
+    const adapter = this.owner.factoryFor('adapter:transit-key').create({
       ajax: (...args) => {
         [url, method, options] = args;
         return resolve({});

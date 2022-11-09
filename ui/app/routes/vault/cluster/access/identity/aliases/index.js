@@ -6,8 +6,8 @@ export default Route.extend(ListRoute, {
   store: service(),
 
   model(params) {
-    let itemType = this.modelFor('vault.cluster.access.identity');
-    let modelType = `identity/${itemType}-alias`;
+    const itemType = this.modelFor('vault.cluster.access.identity');
+    const modelType = `identity/${itemType}-alias`;
     return this.store
       .lazyPaginatedQuery(modelType, {
         responsePath: 'data.keys',
