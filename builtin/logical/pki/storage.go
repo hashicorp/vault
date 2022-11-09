@@ -480,7 +480,7 @@ func (i issuerEntry) CanMaybeSignWithAlgo(algo x509.SignatureAlgorithm) error {
 
 	cert, err := i.GetCertificate()
 	if err != nil {
-		return fmt.Errorf("unable to parse issuer's potential signature algorithm types: %v", err)
+		return fmt.Errorf("unable to parse issuer's potential signature algorithm types: %w", err)
 	}
 
 	switch cert.PublicKeyAlgorithm {

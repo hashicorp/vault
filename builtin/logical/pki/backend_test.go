@@ -604,7 +604,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
 				if err != nil {
-					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+					return fmt.Errorf("returned cert cannot be parsed: %w", err)
 				}
 				if len(certs) != 1 {
 					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
@@ -657,7 +657,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
 				if err != nil {
-					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+					return fmt.Errorf("returned cert cannot be parsed: %w", err)
 				}
 				if len(certs) != 1 {
 					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
@@ -778,7 +778,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
 				if err != nil {
-					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+					return fmt.Errorf("returned cert cannot be parsed: %w", err)
 				}
 				if len(certs) != 1 {
 					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -145,7 +144,6 @@ func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, 
 	parsedIssuer, err := sc.resolveIssuerReference(newDefault)
 	if err != nil {
 		return logical.ErrorResponse("Error resolving issuer reference: " + err.Error()), nil
-		return nil, errutil.UserError{Err: "Error resolving issuer reference: " + err.Error()}
 	}
 	entry, err := sc.fetchIssuerById(parsedIssuer)
 	if err != nil {
