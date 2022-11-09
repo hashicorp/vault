@@ -2315,7 +2315,7 @@ func TestAgent_LogFile_CliOverridesEnvVar(t *testing.T) {
 }
 
 func TestAgent_LogFile_Config(t *testing.T) {
-	//Sanity check, remove any env var
+	// Sanity check, remove any env var
 	os.Unsetenv(EnvVaultLogFile)
 
 	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
