@@ -244,6 +244,27 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			return nil, err
 		}
+
+		var issuersWithKeys []string
+		for _, issuer := range createdIssuers {
+			if issuerKeyMap[issuer] != "" {
+				issuersWithKeys = append(issuersWithKeys, issuer)
+			}
+		}
+
+		// Check whether we need to update our default issuer configuration.
+		config, err := getIssuersConfig(ctx, req.Storage)
+		if err != nil {
+			response.AddWarning("Unable to fetch default issuers configuration to update default issuer if necessary: " + err.Error())
+		} else if config.DefaultFollowsLatestIssuer {
+			if len(issuersWithKeys) == 1 {
+				if err := updateDefaultIssuerId(ctx, req.Storage, issuerID(issuersWithKeys[0])); err != nil {
+					response.AddWarning("Unable to update this new root as the default issuer: " + err.Error())
+				}
+			} else if len(issuersWithKeys) > 1 {
+				response.AddWarning("Default issuer left unchanged: could not select new issuer automatically as multiple imported issuers had key material in Vault.")
+			}
+		}
 	}
 
 	// While we're here, check if we should warn about a bad default key. We

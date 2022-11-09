@@ -47,9 +47,8 @@ func updateDefaultIssuerId(ctx context.Context, s logical.Storage, id issuerID) 
 	}
 
 	if config.DefaultIssuerId != id {
-		return setIssuersConfig(ctx, s, &issuerConfigEntry{
-			DefaultIssuerId: id,
-		})
+		config.DefaultIssuerId = id
+		return setIssuersConfig(ctx, s, config)
 	}
 
 	return nil
