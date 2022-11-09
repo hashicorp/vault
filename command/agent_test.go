@@ -2323,7 +2323,7 @@ func TestAgent_LogFile_Config(t *testing.T) {
 	}
 
 	// Sanity check that the config value is the current value
-	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile)
+	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "sanity check on log config failed")
 
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
 	f := cmd.Flags()
@@ -2334,7 +2334,7 @@ func TestAgent_LogFile_Config(t *testing.T) {
 
 	cfg = cmd.aggregateConfig(f, cfg)
 
-	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile)
+	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "actual config check failed")
 }
 
 // Get a randomly assigned port and then free it again before returning it.
