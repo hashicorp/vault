@@ -208,6 +208,15 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 		c.UI.Output("Health Checks:")
 		for _, checker := range executor.Checkers {
 			c.UI.Output(" - " + checker.Name())
+
+			prefix := "   "
+			cfg := checker.DefaultConfig()
+			marshaled, err := json.MarshalIndent(cfg, prefix, " ")
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Failed to marshal default config for check: %v", err))
+				return pkiRetUsage
+			}
+			c.UI.Output(prefix + string(marshaled))
 		}
 
 		return pkiRetOK
@@ -241,7 +250,7 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 	}
 
 	// Display the output.
-	if err := c.outputResults(results); err != nil {
+	if err := c.outputResults(executor, results); err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to render results for display: %v", err))
 	}
 
@@ -249,10 +258,10 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 	return c.selectRetCode(results)
 }
 
-func (c *PKIHealthCheckCommand) outputResults(results map[string][]*healthcheck.Result) error {
+func (c *PKIHealthCheckCommand) outputResults(e *healthcheck.Executor, results map[string][]*healthcheck.Result) error {
 	switch Format(c.UI) {
 	case "", "table":
-		return c.outputResultsTable(results)
+		return c.outputResultsTable(e, results)
 	case "json":
 		return c.outputResultsJSON(results)
 	case "yaml":
@@ -262,8 +271,16 @@ func (c *PKIHealthCheckCommand) outputResults(results map[string][]*healthcheck.
 	}
 }
 
-func (c *PKIHealthCheckCommand) outputResultsTable(results map[string][]*healthcheck.Result) error {
-	for scanner, findings := range results {
+func (c *PKIHealthCheckCommand) outputResultsTable(e *healthcheck.Executor, results map[string][]*healthcheck.Result) error {
+	// Iterate in checker order to ensure stable output.
+	for _, checker := range e.Checkers {
+		if !checker.IsEnabled() {
+			continue
+		}
+
+		scanner := checker.Name()
+		findings := results[scanner]
+
 		c.UI.Output(scanner)
 		c.UI.Output(strings.Repeat("-", len(scanner)))
 		data := []string{"status" + hopeDelim + "endpoint" + hopeDelim + "message"}
