@@ -8,10 +8,7 @@ import (
 )
 
 func TestLogFile_openNew(t *testing.T) {
-	logFile := LogFile{
-		fileName: "vault-agent.log",
-		logPath:  t.TempDir(),
-	}
+	logFile := NewLogFile(t.TempDir(), "vault-agent.log")
 	err := logFile.openNew()
 	require.NoError(t, err)
 
