@@ -77,27 +77,27 @@ func (sc *storageContext) changeDefaultIssuerTimestamps(oldDefault issuerID, new
 		// 1 & 2 above.
 		issuer, err := sc.fetchIssuerById(thisId)
 		if err != nil {
-			return fmt.Errorf("unable to update issuer (%v)'s modification time: error fetching issuer: %v", thisId, err)
+			return fmt.Errorf("unable to update issuer (%v)'s modification time: error fetching issuer: %w", thisId, err)
 		}
 
 		issuer.LastModified = now
 		err = sc.writeIssuer(issuer)
 		if err != nil {
-			return fmt.Errorf("unable to update issuer (%v)'s modification time: error persisting issuer: %v", thisId, err)
+			return fmt.Errorf("unable to update issuer (%v)'s modification time: error persisting issuer: %w", thisId, err)
 		}
 	}
 
 	// Fetch and update the localCRLConfigEntry (3&4).
 	cfg, err := sc.getLocalCRLConfig()
 	if err != nil {
-		return fmt.Errorf("unable to update local CRL config's modification time: error fetching local CRL config: %v", err)
+		return fmt.Errorf("unable to update local CRL config's modification time: error fetching local CRL config: %w", err)
 	}
 
 	cfg.LastModified = now
 	cfg.DeltaLastModified = now
 	err = sc.setLocalCRLConfig(cfg)
 	if err != nil {
-		return fmt.Errorf("unable to update local CRL config's modification time: error persisting local CRL config: %v", err)
+		return fmt.Errorf("unable to update local CRL config's modification time: error persisting local CRL config: %w", err)
 	}
 
 	return nil

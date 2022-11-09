@@ -253,7 +253,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	// RevocationSigAlg unconditionally on roots now.
 	myIssuer.RevocationSigAlg = parsedBundle.Certificate.SignatureAlgorithm
 	if err := sc.writeIssuer(myIssuer); err != nil {
-		return nil, fmt.Errorf("unable to store PSS-updated issuer: %v", err)
+		return nil, fmt.Errorf("unable to store PSS-updated issuer: %w", err)
 	}
 
 	// Also store it as just the certificate identified by serial number, so it

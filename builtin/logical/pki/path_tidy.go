@@ -404,12 +404,12 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		if storeCert {
 			revokedEntry, err = logical.StorageEntryJSON("revoked/"+serial, revInfo)
 			if err != nil {
-				return fmt.Errorf("error building entry to persist changes to serial %v from revoked list: %v", serial, err)
+				return fmt.Errorf("error building entry to persist changes to serial %v from revoked list: %w", serial, err)
 			}
 
 			err = req.Storage.Put(ctx, revokedEntry)
 			if err != nil {
-				return fmt.Errorf("error persisting changes to serial %v from revoked list: %v", serial, err)
+				return fmt.Errorf("error persisting changes to serial %v from revoked list: %w", serial, err)
 			}
 		}
 	}
