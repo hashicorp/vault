@@ -214,3 +214,11 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 	require.NoError(t, err)
 	return certBundle
 }
+
+func writeLegacyBundle(t *testing.T, b *backend, s logical.Storage, bundle *certutil.CertBundle) {
+	entry, err := logical.StorageEntryJSON(legacyCertBundlePath, bundle)
+	require.NoError(t, err)
+
+	err = s.Put(context.Background(), entry)
+	require.NoError(t, err)
+}
