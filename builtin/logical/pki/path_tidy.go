@@ -515,12 +515,9 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 		// informational logs so an admin can recover the removed cert if
 		// necessary or remove the key (and know which cert it belonged to),
 		// if desired.
-		msg := "[Tidy on mount: %v] Issuer %v has expired by %v and is being removed.\n"
-		msg += "Serial Number: %v\n"
-		msg += "Key ID (if any): %v\n"
-		msg += "Certificate:\n%v\n"
+		msg := "[Tidy on mount: %v] Issuer %v has expired by %v and is being removed."
 		idAndName := fmt.Sprintf("[id:%v/name:%v]", entry.ID, entry.Name)
-		msg = fmt.Sprintf(msg, b.backendUUID, idAndName, config.IssuerSafetyBuffer, entry.SerialNumber, entry.KeyID, entry.Certificate)
+		msg = fmt.Sprintf(msg, b.backendUUID, idAndName, config.IssuerSafetyBuffer)
 
 		// Before we log, check if we're the default. While this is late, and
 		// after we read it from storage, we have more info here to tell the
@@ -533,8 +530,8 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 			continue
 		}
 
-		// Log the above message.
-		b.Logger().Info(msg)
+		// Log the above message..
+		b.Logger().Info(msg, "serial_number", entry.SerialNumber, "key_id", entry.KeyID, "certificate", entry.Certificate)
 
 		wasDefault, err := sc.deleteIssuer(issuer)
 		if err != nil {
