@@ -2264,7 +2264,11 @@ func TestAgent_LogFile_EnvVarOverridesConfig(t *testing.T) {
 	// Make sure the env var is configured
 	oldEnvVarLogFile := os.Getenv(EnvVaultLogFile)
 	os.Setenv(EnvVaultLogFile, "/squiggle/logs.txt")
-	defer os.Setenv(EnvVaultLogFile, oldEnvVarLogFile)
+	if oldEnvVarLogFile == "" {
+		defer os.Unsetenv(EnvVaultLogFile)
+	} else {
+		defer os.Setenv(EnvVaultLogFile, oldEnvVarLogFile)
+	}
 
 	// Initialize the command and parse any flags
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
@@ -2295,7 +2299,11 @@ func TestAgent_LogFile_CliOverridesEnvVar(t *testing.T) {
 	// Make sure the env var is configured
 	oldEnvVarLogFile := os.Getenv(EnvVaultLogFile)
 	os.Setenv(EnvVaultLogFile, "/squiggle/logs.txt")
-	defer os.Setenv(EnvVaultLogFile, oldEnvVarLogFile)
+	if oldEnvVarLogFile == "" {
+		defer os.Unsetenv(EnvVaultLogFile)
+	} else {
+		defer os.Setenv(EnvVaultLogFile, oldEnvVarLogFile)
+	}
 
 	// Initialize the command and parse any flags
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
