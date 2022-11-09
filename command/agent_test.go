@@ -2315,6 +2315,9 @@ func TestAgent_LogFile_CliOverridesEnvVar(t *testing.T) {
 }
 
 func TestAgent_LogFile_Config(t *testing.T) {
+	//Sanity check, remove any env var
+	os.Unsetenv(EnvVaultLogFile)
+
 	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
 
 	cfg, err := agentConfig.LoadConfig(configFile.Name())
@@ -2325,6 +2328,7 @@ func TestAgent_LogFile_Config(t *testing.T) {
 	// Sanity check that the config value is the current value
 	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "sanity check on log config failed")
 
+	// Parse the cli flags (but we pass in an empty slice)
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
 	f := cmd.Flags()
 	err = f.Parse([]string{})
@@ -2334,7 +2338,7 @@ func TestAgent_LogFile_Config(t *testing.T) {
 
 	cfg = cmd.aggregateConfig(f, cfg)
 
-	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "actual config check failed")
+	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "actual config check")
 }
 
 // Get a randomly assigned port and then free it again before returning it.
