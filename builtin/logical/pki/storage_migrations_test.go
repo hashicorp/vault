@@ -124,7 +124,7 @@ func Test_migrateStorageOnlyKey(t *testing.T) {
 
 	issuersConfig, err := getIssuersConfig(ctx, s)
 	require.NoError(t, err)
-	require.Equal(t, &issuerConfigEntry{}, issuersConfig)
+	require.Equal(t, issuerID(""), issuersConfig.DefaultIssuerId)
 
 	// Make sure if we attempt to re-run the migration nothing happens...
 	err = migrateStorage(ctx, b, s)
@@ -214,7 +214,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 
 	issuersConfig, err := getIssuersConfig(ctx, s)
 	require.NoError(t, err)
-	require.Equal(t, &issuerConfigEntry{DefaultIssuerId: issuerId}, issuersConfig)
+	require.Equal(t, issuerId, issuersConfig.DefaultIssuerId)
 
 	// Make sure if we attempt to re-run the migration nothing happens...
 	err = migrateStorage(ctx, b, s)

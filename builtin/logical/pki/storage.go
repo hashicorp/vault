@@ -157,7 +157,12 @@ type keyConfigEntry struct {
 }
 
 type issuerConfigEntry struct {
-	DefaultIssuerId issuerID `json:"default" structs:"default" mapstructure:"default"`
+	// This new fetchedDefault field allows us to detect if the default
+	// issuer was modified, in turn dispatching the timestamp updater
+	// if necessary.
+	fetchedDefault             issuerID `json:"-"`
+	DefaultIssuerId            issuerID `json:"default"`
+	DefaultFollowsLatestIssuer bool     `json:"default_follows_latest_issuer"`
 }
 
 func listKeys(ctx context.Context, s logical.Storage) ([]keyID, error) {
@@ -515,6 +520,9 @@ func deleteIssuer(ctx context.Context, s logical.Storage, id issuerID) (bool, er
 	wasDefault := false
 	if config.DefaultIssuerId == id {
 		wasDefault = true
+		// Overwrite the fetched default issuer as we're going to remove this
+		// entry.
+		config.fetchedDefault = issuerID("")
 		config.DefaultIssuerId = issuerID("")
 		if err := setIssuersConfig(ctx, s, config); err != nil {
 			return wasDefault, err
@@ -734,7 +742,16 @@ func setIssuersConfig(ctx context.Context, s logical.Storage, config *issuerConf
 		return err
 	}
 
-	return s.Put(ctx, json)
+	if err := s.Put(ctx, json); err != nil {
+		return err
+	}
+
+	// n.b.: on 1.12+ we have If-Modified-Since support which requires
+	// comparing fetchedDefault and DefaultIssuerId. As this is on 1.11,
+	// we don't have that but for compatibility, we've left the field and
+	// rest of the logic.
+
+	return nil
 }
 
 func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfigEntry, error) {
@@ -749,6 +766,7 @@ func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfigEntr
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode issuer configuration: %v", err)}
 		}
 	}
+	issuerConfig.fetchedDefault = issuerConfig.DefaultIssuerId
 
 	return issuerConfig, nil
 }
