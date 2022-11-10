@@ -3598,10 +3598,10 @@ func TestSystemBackend_OASGenericMount(t *testing.T) {
 		path string
 		tag  string
 	}{
-		{"/auth/{mount_path}/lookup", "auth"},
-		{"/{mount_path}/{path}", "secrets"},
+		{"/auth/{mountPath}/lookup", "auth"},
+		{"/{mountPath}/{path}", "secrets"},
 		{"/identity/group/id", "identity"},
-		{"/{mount_path}/.*", "secrets"},
+		{"/{mountPath}/.*", "secrets"},
 		{"/sys/policy", "system"},
 	}
 
@@ -3683,10 +3683,10 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		path string
 		tag  string
 	}{
-		{"/auth/{mount_path}/lookup", "auth"},
-		{"/{mount_path}/{path}", "secrets"},
+		{"/auth/token/lookup", "auth"},
+		{"/cubbyhole/{path}", "secrets"},
 		{"/identity/group/id", "identity"},
-		{"/{mount_path}/.*", "secrets"}, // TODO update after kv repo update
+		{"/secret/.*", "secrets"}, // TODO update after kv repo update
 		{"/sys/policy", "system"},
 	}
 
