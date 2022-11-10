@@ -182,7 +182,7 @@
     "pkijs": "^2.2.2",
     "pretender": "^3.4.3",
     "prettier": "2.6.2",
-    "prettier-eslint-cli": "^5.0.0",
+    "prettier-eslint-cli": "^7.1.0",
     "pvutils": "^1.0.17",
     "qunit": "^2.19.1",
     "qunit-dom": "^2.0.0",
