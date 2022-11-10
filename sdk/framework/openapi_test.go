@@ -532,10 +532,9 @@ func TestOpenAPI_OperationID(t *testing.T) {
 		op   string
 		opID string
 	}{
-		{"/Foo/{id}", "get", "getFooId"},
-		{"/foo/{id}", "get", "getFooId_2"},
-		{"/foo/{id}", "post", "postFooId"},
-		{"/foo/{id}", "delete", "deleteFooId"},
+		{"/Foo/{id}", "get", "readSecretFooId"},
+		{"/foo/{id}", "post", "updateSecretFooId"},
+		{"/foo/{id}", "delete", "deleteSecretFooId"},
 	}
 
 	for _, test := range tests {
