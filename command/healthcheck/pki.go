@@ -227,3 +227,49 @@ func pkiFetchLeaf(e *Executor, serial string, versionError func()) (bool, *PathF
 
 	return false, leafRet, leafRet.ParsedCache["certificate"].(*x509.Certificate), nil
 }
+
+func pkiFetchRoles(e *Executor, versionError func()) (bool, *PathFetch, []string, error) {
+	rolesRet, err := e.FetchIfNotFetched(logical.ListOperation, "/{{mount}}/roles")
+	if err != nil {
+		return true, nil, nil, err
+	}
+
+	if !rolesRet.IsSecretOK() {
+		if rolesRet.IsUnsupportedPathError() {
+			versionError()
+		}
+
+		return true, nil, nil, nil
+	}
+
+	if len(rolesRet.ParsedCache) == 0 {
+		var roles []string
+		for _, rawSerial := range rolesRet.Secret.Data["keys"].([]interface{}) {
+			roles = append(roles, rawSerial.(string))
+		}
+		rolesRet.ParsedCache["roles"] = roles
+	}
+
+	return false, rolesRet, rolesRet.ParsedCache["roles"].([]string), nil
+}
+
+func pkiFetchRole(e *Executor, name string, versionError func()) (bool, *PathFetch, map[string]interface{}, error) {
+	roleRet, err := e.FetchIfNotFetched(logical.ReadOperation, "/{{mount}}/roles/"+name)
+	if err != nil {
+		return true, nil, nil, err
+	}
+
+	if !roleRet.IsSecretOK() {
+		if roleRet.IsUnsupportedPathError() {
+			versionError()
+		}
+		return true, nil, nil, nil
+	}
+
+	var data map[string]interface{} = nil
+	if roleRet.Secret != nil && len(roleRet.Secret.Data) > 0 {
+		data = roleRet.Secret.Data
+	}
+
+	return false, roleRet, data, nil
+}
