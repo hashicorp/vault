@@ -4,25 +4,15 @@ package ocsp
 
 import (
 	"bytes"
-	"context"
-	"crypto"
-	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
-	"errors"
-	"fmt"
-	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
-	"net/url"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-retryablehttp"
-	lru "github.com/hashicorp/golang-lru"
 	"golang.org/x/crypto/ocsp"
+
+	lru "github.com/hashicorp/golang-lru"
 )
 
 func TestOCSP(t *testing.T) {
@@ -66,7 +56,10 @@ func TestOCSP(t *testing.T) {
 	}
 }
 
+/**
+// Used for development, requires an active Vault with PKI setup
 func TestMultiOCSP(t *testing.T) {
+
 	targetURL := []string{
 		"https://localhost:8200/v1/pki/ocsp",
 		"https://localhost:8200/v1/pki/ocsp",
@@ -109,6 +102,7 @@ func TestMultiOCSP(t *testing.T) {
 		}
 	}
 }
+*/
 
 func TestUnitEncodeCertIDGood(t *testing.T) {
 	targetURLs := []string{
