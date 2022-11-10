@@ -33,19 +33,10 @@
             "type": "string"
           },
           "required": true
-        },
-        {
-          "name": "mount_path",
-          "description": "Path where the backend was mounted; the endpoint path will be offset by the mount path",
-          "in": "path",
-          "schema": {
-            "type": "string",
-            "default": "secret"
-          }
         }
       ],
       "get": {
-        "operationId": "listSecretFooId",
+        "operationId": "getFooId",
         "tags": ["secrets"],
         "summary": "List Summary",
         "description": "List Description",
