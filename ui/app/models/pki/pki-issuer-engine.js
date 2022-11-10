@@ -13,7 +13,7 @@ const validations = {
 };
 
 @withModelValidations(validations)
-export default class PkiIssuerModel extends Model {
+export default class PkiIssuerEngineModel extends Model {
   @attr('string', { readOnly: true }) backend;
   @attr('string', {
     label: 'Issuer name',

@@ -1,6 +1,6 @@
 import Model, { attr } from '@ember-data/model';
 
-export default class PkiCertificateModel extends Model {
+export default class PkiCertificateEngineModel extends Model {
   @attr('string', { readOnly: true }) backend;
   @attr('string') commonName;
   @attr('string') issueDate;

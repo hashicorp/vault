@@ -2,14 +2,14 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
 /**
- * @module KeyParameters
- * KeyParameters components are used to set the default and update the key_bits pki role api param whenever the key_type changes.
+ * @module PkiKeyParameters
+ * PkiKeyParameters components are used to set the default and update the key_bits pki role api param whenever the key_type changes.
  * key_bits is conditional on key_type and should be set as a default value whenever key_type changes.
  * @example
  * ```js
- * <KeyParameters @model={@model} @group={group}/>
+ * <PkiKeyParameters @model={@model} @group={group}/>
  * ```
- * @param {class} model - The pki/role model.
+ * @param {class} model - The pki/pki-role-engine model.
  * @param {string} group - The name of the group created in the model. In this case, it's the "Key parameters" group.
  */
 
@@ -20,7 +20,7 @@ const KEY_BITS_OPTIONS = {
   any: [0],
 };
 
-export default class KeyParameters extends Component {
+export default class PkiKeyParameters extends Component {
   get keyBitOptions() {
     return KEY_BITS_OPTIONS[this.args.model.keyType];
   }

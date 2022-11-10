@@ -7,11 +7,11 @@ export default class PkiRolesCreateRoute extends Route {
   @service pathHelp;
 
   beforeModel() {
-    return this.pathHelp.getNewModel('pki/role', 'pki');
+    return this.pathHelp.getNewModel('pki/pki-role-engine', 'pki');
   }
 
   model() {
-    return this.store.createRecord('pki/role', {
+    return this.store.createRecord('pki/pki-role-engine', {
       backend: this.secretMountPath.currentPath,
     });
   }

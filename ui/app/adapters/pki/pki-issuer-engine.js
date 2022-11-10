@@ -1,7 +1,7 @@
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-export default class PkiIssuerAdapter extends ApplicationAdapter {
+export default class PkiIssuerEngineAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   optionsForQuery(id) {

@@ -2,16 +2,16 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
 /**
- * @module KeyUsage
- * KeyUsage components are used to build out the toggle options for PKI's role create/update key_usage, ext_key_usage and ext_key_usage_oids model params.
+ * @module PkiKeyUsage
+ * PkiKeyUsage components are used to build out the toggle options for PKI's role create/update key_usage, ext_key_usage and ext_key_usage_oids model params.
  * Instead of having the user search on the following goLang pages for these options we present them in checkbox form and manually add them to the params as an array of strings.
  * key_usage options: https://pkg.go.dev/crypto/x509#KeyUsage
  * ext_key_usage options (not all are include on purpose): https://pkg.go.dev/crypto/x509#ExtKeyUsage
  * @example
  * ```js
- * <KeyUsage @model={@model} @group={group}/>
+ * <PkiKeyUsage @model={@model} @group={group}/>
  * ```
- * @param {class} model - The pki/role model.
+ * @param {class} model - The pki/pki-role-engine model.
  * @param {string} group - The name of the group created in the model. In this case, it's the "Key usage" group.
  */
 
@@ -49,7 +49,7 @@ const EXT_KEY_USAGE_FIELDS = {
   CodeSigning: { label: 'Code Signing' },
 };
 
-export default class KeyUsage extends Component {
+export default class PkiKeyUsage extends Component {
   constructor() {
     super(...arguments);
     this.keyUsageFields = {};
