@@ -10,7 +10,7 @@ module('Integration | Component | radio-select-ttl-or-string', function (hooks) 
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/pki-role-engine');
+    this.model = this.store.createRecord('pki/role');
     this.model.backend = 'pki';
     this.attr = {
       helpText: '',
