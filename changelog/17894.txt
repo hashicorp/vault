@@ -1,0 +1,3 @@
+```release-note:bug
+ui: allow selection of "default" for ssh algorithm_signer in web interface
+```
