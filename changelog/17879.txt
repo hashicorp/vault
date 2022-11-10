@@ -1,0 +1,3 @@
+```release-note:bug
+plugins: Handle external plugins with type/name matching a deprecated builtin.
+```
