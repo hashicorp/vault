@@ -7,9 +7,9 @@ import config from './config/environment';
 
 const { modulePrefix } = config;
 
-export default class YourEngine extends Engine {
+export default class KubernetesEngine extends Engine {
   modulePrefix = modulePrefix;
   Resolver = Resolver;
 }
 
-loadInitializers(YourEngine, modulePrefix);
+loadInitializers(KubernetesEngine, modulePrefix);
