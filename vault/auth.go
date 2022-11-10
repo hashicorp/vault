@@ -190,6 +190,9 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		// don't set the running version to a builtin if it is running as an external plugin
 		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+			if err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential); err != nil {
+				return err
+			}
 		}
 	}
 	addPathCheckers(c, entry, backend, viewPath)
@@ -814,6 +817,12 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// don't set the running version to a builtin if it is running as an external plugin
 			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+				if err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential); err != nil {
+					if _, err := c.handleDeprecatedMountErrors(ctx, err); err != nil {
+						c.logger.Error("shutting down core", "error", err)
+						c.Shutdown()
+					}
+				}
 			}
 		}
 

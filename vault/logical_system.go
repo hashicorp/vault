@@ -1174,16 +1174,10 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Version:               pluginVersion,
 	}
 
-	// Detect and handle deprecated secrets engines
-	resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
-	if err != nil {
-		return handleError(err)
-	}
-
 	// Attempt mount
 	if err := b.Core.mount(ctx, me); err != nil {
 		b.Backend.Logger().Error("error occurred during enable mount", "path", me.Path, "error", err)
-		return handleError(err)
+		return handleErrorDeprecatedMount(err)
 	}
 
 	return resp, nil
@@ -1265,6 +1259,33 @@ func handleErrorNoReadOnlyForward(
 		return logical.ErrorResponse(err.Error()), err
 	default:
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+}
+
+// handleErrorDeprecatedMount is used to interpret builtin deprecation errors
+// and add warnings to the logical response. PendingRemoval and Removed errors
+// will result in err being returned. All other deprecation-related errors will
+// provide a warning in the response, but the error will be swallowed.
+// Non-deprecation-related errors are simply passed through.
+func handleErrorDeprecatedMount(
+	err error,
+) (*logical.Response, error) {
+	resp := &logical.Response{}
+	switch {
+	case errors.Is(err, errMountDeprecated):
+		fallthrough
+	case errors.Is(err, errMountAllowedPendingRemoval):
+		// Add a warning to the logical.Response and swallow the error.
+		resp.AddWarning(err.Error())
+		return resp, nil
+	case errors.Is(err, errMountPendingRemoval):
+		// Add a warning to the logical.Response and return the error.
+		resp.AddWarning(err.Error())
+		return resp, err
+	default:
+		// Pass the error through. This is done for deprecation status "Removed"
+		// and all non-builtin errors.
+		return nil, err
 	}
 }
 
@@ -2603,17 +2624,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		Version:               pluginVersion,
 	}
 
-	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
-	if err != nil {
-		return handleError(err)
-	}
-
 	// Attempt enabling
 	if err := b.Core.enableCredential(ctx, me); err != nil {
 		b.Backend.Logger().Error("error occurred during enable credential", "path", me.Path, "error", err)
-		return handleError(err)
+		return handleErrorDeprecatedMount(err)
 	}
-	return resp, nil
+
+	return nil, nil
 }
 
 func (b *SystemBackend) validateVersion(ctx context.Context, version string, pluginName string, pluginType consts.PluginType) (string, *logical.Response, error) {

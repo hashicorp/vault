@@ -197,8 +197,14 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 			if isAuth {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+				if err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential); err != nil {
+					return err
+				}
 			} else {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
+				if err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets); err != nil {
+					return err
+				}
 			}
 		}
 	}
