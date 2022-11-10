@@ -209,6 +209,7 @@
       "lib/core",
       "lib/css",
       "lib/kmip",
+      "lib/kubernetes",
       "lib/open-api-explorer",
       "lib/pki",
       "lib/replication",
