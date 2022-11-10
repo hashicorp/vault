@@ -66,11 +66,11 @@ Additionally, the following options are only supported using Auto Unseal:
   be the same as `secret_shares`.
 
 - `recovery_shares` `(int: 0)` – Specifies the number of shares to
-  split the recovery key into. Only available when using Auto Unseal.
+  split the recovery key into. This is only available when using Auto Unseal.
 
 - `recovery_threshold` `(int: 0)` – Specifies the number of shares
   required to reconstruct the recovery key. This must be less than or equal to
-  `recovery_shares`. Only available when using Auto Unseal.
+  `recovery_shares`. This is only available when using Auto Unseal.
 
 - `recovery_pgp_keys` `(array<string>: nil)` – Specifies an array of PGP public
   keys used to encrypt the output recovery keys. Ordering is preserved. The keys
