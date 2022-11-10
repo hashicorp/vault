@@ -9,57 +9,23 @@
   />
   {{#if (get @model prop)}}
     <div class="box is-tall is-marginless" data-test-surrounding-div={{@group}}>
-      <FormFieldLabel
-        for="keyUsageLabel"
+      <CheckboxList
+        @name="keyUsage"
         @label="Key usage"
         @subText="Specifies the default key usage constraint on the issued certificate. To specify no default key_usage constraints, uncheck every item in this list."
+        @fields={{this.keyUsageFields}}
+        @currentValue={{@model.keyUsage}}
+        @onChange={{this.checkboxChange}}
       />
-      <div class="is-grid is-grid-3-columns is-medium-height">
-        {{! KEY USAGE SECTION }}
-        {{#each-in this.keyUsageFields as |name attr|}}
-          <div class="field">
-            <div class="b-checkbox">
-              <input
-                type="checkbox"
-                id={{name}}
-                class="styled"
-                checked={{attr.value}}
-                onchange={{fn this.checkboxChange "keyUsage"}}
-                data-test-input={{name}}
-              />
-              <label for={{name}} class="is-label">
-                {{attr.label}}
-              </label>
-            </div>
-          </div>
-        {{/each-in}}
-      </div>
       <div class="has-top-margin-s">
-        <FormFieldLabel
-          for="ExtKeyUsageLabel"
+        <CheckboxList
+          @name="extKeyUsage"
           @label="Extended key usage"
           @subText="Specifies the default key usage constraint on the issued certificate. To specify no default ext_key_usage constraints, uncheck every item in this list."
+          @fields={{this.extKeyUsageFields}}
+          @currentValue={{@model.extKeyUsage}}
+          @onChange={{this.checkboxChange}}
         />
-      </div>
-      {{! EXT KEY USAGE SECTION }}
-      <div class="is-grid is-grid-3-columns is-medium-height">
-        {{#each-in this.extKeyUsageFields as |name attr|}}
-          <div class="field">
-            <div class="b-checkbox">
-              <input
-                type="checkbox"
-                id={{name}}
-                class="styled"
-                checked={{attr.value}}
-                onchange={{fn this.checkboxChange "extKeyUsage"}}
-                data-test-input={{name}}
-              />
-              <label for={{name}} class="is-label">
-                {{attr.label}}
-              </label>
-            </div>
-          </div>
-        {{/each-in}}
       </div>
       <div class="has-top-margin-xxl">
         <StringList
