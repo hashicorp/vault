@@ -1,0 +1,3 @@
+```release-note:bug
+COMPONENT: Documentation correction in interoperability-matrix.mdx 
+```
