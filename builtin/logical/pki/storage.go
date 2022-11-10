@@ -1222,6 +1222,10 @@ func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
 		return nil, err
 	}
 
+	if result.IssuerSafetyBuffer == 0 {
+		result.IssuerSafetyBuffer = defaultTidyConfig.IssuerSafetyBuffer
+	}
+
 	return &result, nil
 }
 
