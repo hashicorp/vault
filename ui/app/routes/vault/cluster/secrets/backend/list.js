@@ -83,7 +83,7 @@ export default Route.extend({
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(tab),
       aws: 'role-aws',
-      pki: `pki/${tab || 'pki-role'}`,
+      pki: `pki/${tab || 'pki-role-old'}`,
       // secret or secret-v2
       cubbyhole: 'secret',
       kv: secretEngine.get('modelTypeForKV'),
