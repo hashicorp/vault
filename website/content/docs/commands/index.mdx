@@ -2,10 +2,10 @@
 layout: docs
 page_title: Commands (CLI)
 description: |-
-In addition to a verbose HTTP API, Vault features a command-line interface
-that wraps common functionality and formats output. The Vault CLI is a single
-static binary. It is a thin wrapper around the HTTP API. Every CLI command
-maps directly to the HTTP API internally.
+  In addition to a verbose HTTP API, Vault features a command-line interface
+  that wraps common functionality and formats output. The Vault CLI is a single
+  static binary. It is a thin wrapper around the HTTP API. Every CLI command
+  maps directly to the HTTP API internally.
 ---
 
 # Vault Commands (CLI)
@@ -32,9 +32,9 @@ and arguments if any:
 
 <CodeBlockConfig hideClipboard>
 
-  ```text
-  vault <command> [options] [path] [args]
-  ```
+```text
+vault <command> [options] [path] [args]
+```
 
 </CodeBlockConfig>
 
@@ -62,7 +62,7 @@ If multiple options (`-address` and `-namespace`) and
 
 ```shell-session
 $ vault write -address="http://127.0.0.1:8200" -namespace="my-organization" \
-auth/userpass/users/bob password="long-password" policies="admin"
+        auth/userpass/users/bob password="long-password" policies="admin"
 ```
 
 The options (flags) come after the command (or subcommand) preceding the path,
@@ -151,292 +151,291 @@ List the currently mounted backends.
 
 This path responds to the following HTTP methods.
 
-GET /
-Lists all the mounted secret backends.
+    GET /
+        Lists all the mounted secret backends.
 
-GET /<mount point>
-  Get information about the mount at the specified path.
+    GET /<mount point>
+        Get information about the mount at the specified path.
 
-  POST /<mount point>
-  Mount a new secret backend to the mount point in the URL.
+    POST /<mount point>
+        Mount a new secret backend to the mount point in the URL.
 
-  POST /<mount point>/tune
-  Tune configuration parameters for the given mount point.
+    POST /<mount point>/tune
+        Tune configuration parameters for the given mount point.
 
-  DELETE /<mount point>
-    Unmount the specified mount point.
-    ```
+    DELETE /<mount point>
+        Unmount the specified mount point.
+```
 
-    The help output displays supported child-paths and available parameters if there
-    are any.
+The help output displays supported child-paths and available parameters if there
+are any.
 
-    ## Command Input
+## Command Input
 
-    To write data to Vault, the input can be a part of the command in key-value
-    format.
+To write data to Vault, the input can be a part of the command in key-value
+format.
 
-    ```shell-session
-    $ vault kv put secret/password value=itsasecret
-    ```
+```shell-session
+$ vault kv put secret/password value=itsasecret
+```
 
-    However, some Vault API require more advanced structures such as maps. You can
-    use stdin or file input instead.
+However, some Vault API require more advanced structures such as maps. You can
+use stdin or file input instead.
 
-    ### stdin
+### stdin
 
-    Some commands in Vault can read data from stdin using `-` as the value. If `-`
-    is the entire argument, Vault expects to read a JSON object from stdin:
+Some commands in Vault can read data from stdin using `-` as the value. If `-`
+is the entire argument, Vault expects to read a JSON object from stdin:
 
-    ```shell-session
-    $ echo -n '{"value":"itsasecret"}' | vault kv put secret/password -
-    ```
+```shell-session
+$ echo -n '{"value":"itsasecret"}' | vault kv put secret/password -
+```
 
-    In addition to reading full JSON objects, Vault can read just a value from
-    stdin:
+In addition to reading full JSON objects, Vault can read just a value from
+stdin:
 
-    ```shell-session
-    $ echo -n "itsasecret" | vault kv put secret/password value=-
-    ```
+```shell-session
+$ echo -n "itsasecret" | vault kv put secret/password value=-
+```
 
-    ### Files
+### Files
 
-    Some commands can also read data from a file on disk. The usage is similar to
-    stdin as documented above. If an argument starts with `@`, Vault will read it as
-    a file:
+Some commands can also read data from a file on disk. The usage is similar to
+stdin as documented above. If an argument starts with `@`, Vault will read it as
+a file:
 
-    ```shell-session
-    $ vault kv put secret/password @data.json
-    ```
+```shell-session
+$ vault kv put secret/password @data.json
+```
 
-    Or specify the contents of a file as a value:
+Or specify the contents of a file as a value:
 
-    ```shell-session
-    $ vault kv put secret/password value=@data.txt
-    ```
+```shell-session
+$ vault kv put secret/password value=@data.txt
+```
 
-    Note that if an argument is supplied in a @key=value format, Vault will treat that as a
-    kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
-    does not support filenames with `=` in them.
+Note that if an argument is supplied in a @key=value format, Vault will treat that as a
+kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
+does not support filenames with `=` in them.
 
-    ## Mount flag syntax (KV)
+## Mount flag syntax (KV)
 
-    All `kv` commands can alternatively refer to the path to the KV secrets engine using a flag-based syntax like `$ vault kv get -mount=secret password`
-    instead of `$ vault kv get secret/password`. The mount flag syntax was created to mitigate confusion caused by the fact that for KV v2 secrets,
-    their full path (used in policies and raw API calls) actually contains a nested `/data/` element (e.g. `secret/data/password`) which can be easily overlooked when using
-    the above KV v1-like syntax `secret/password`. To avoid this confusion, all KV-specific docs pages will use the `-mount` flag.
+All `kv` commands can alternatively refer to the path to the KV secrets engine using a flag-based syntax like `$ vault kv get -mount=secret password`
+instead of `$ vault kv get secret/password`. The mount flag syntax was created to mitigate confusion caused by the fact that for KV v2 secrets,
+their full path (used in policies and raw API calls) actually contains a nested `/data/` element (e.g. `secret/data/password`) which can be easily overlooked when using
+the above KV v1-like syntax `secret/password`. To avoid this confusion, all KV-specific docs pages will use the `-mount` flag.
 
-    ## Exit Codes
+## Exit Codes
 
-    The Vault CLI aims to be consistent and well-behaved unless documented
-    otherwise.
+The Vault CLI aims to be consistent and well-behaved unless documented
+otherwise.
 
-    - Local errors such as incorrect flags, failed validations, or wrong numbers
-    of arguments return an exit code of 1.
+- Local errors such as incorrect flags, failed validations, or wrong numbers
+  of arguments return an exit code of 1.
 
-    - Any remote errors such as API failures, bad TLS, or incorrect API parameters
-    return an exit status of 2
+- Any remote errors such as API failures, bad TLS, or incorrect API parameters
+  return an exit status of 2
 
-    Some commands override this default where it makes sense. These commands
-    document this anomaly.
+Some commands override this default where it makes sense. These commands
+document this anomaly.
 
-    ## Autocompletion
+## Autocompletion
 
-    The `vault` command features opt-in autocompletion for flags, subcommands, and
-    arguments (where supported).
+The `vault` command features opt-in autocompletion for flags, subcommands, and
+arguments (where supported).
 
-    Enable autocompletion by running:
+Enable autocompletion by running:
 
-    ```shell-session
-    $ vault -autocomplete-install
-    ```
+```shell-session
+$ vault -autocomplete-install
+```
 
-    ~> Be sure to **restart your shell** after installing autocompletion!
+~> Be sure to **restart your shell** after installing autocompletion!
 
-    When you start typing a Vault command, press the `<tab>` character to show a
-    list of available completions. Type `-<tab>` to show available flag completions.
+When you start typing a Vault command, press the `<tab>` character to show a
+list of available completions. Type `-<tab>` to show available flag completions.
 
-      If the `VAULT_*` environment variables are set, the autocompletion will
-      automatically query the Vault server and return helpful argument suggestions.
+If the `VAULT_*` environment variables are set, the autocompletion will
+automatically query the Vault server and return helpful argument suggestions.
 
-      ## Token Helper
+## Token Helper
 
-      By default, the Vault CLI uses a "token helper" to cache the token after
-      authentication. This is conceptually similar to how a website securely stores
-      your session information as a cookie in the browser. Token helpers are
-      customizable, and you can even build your own.
+By default, the Vault CLI uses a "token helper" to cache the token after
+authentication. This is conceptually similar to how a website securely stores
+your session information as a cookie in the browser. Token helpers are
+customizable, and you can even build your own.
 
-      The default token helper stores the token in `~/.vault-token`. You can delete
-      this file at any time to "logout" of Vault.
+The default token helper stores the token in `~/.vault-token`. You can delete
+this file at any time to "logout" of Vault.
 
-      ## Environment Variables
+## Environment Variables
 
-      The CLI reads the following environment variables to set behavioral defaults.
-      This can alleviate the need to repetitively type a flag. Flags always take
-      precedence over the environment variables.
+The CLI reads the following environment variables to set behavioral defaults.
+This can alleviate the need to repetitively type a flag. Flags always take
+precedence over the environment variables.
 
-      ### `VAULT_TOKEN`
+### `VAULT_TOKEN`
 
-      Vault authentication token. Conceptually similar to a session token on a
-      website, the `VAULT_TOKEN` environment variable holds the contents of the token.
-      For more information, please see the [token
-      concepts](/docs/concepts/tokens) page.
+Vault authentication token. Conceptually similar to a session token on a
+website, the `VAULT_TOKEN` environment variable holds the contents of the token.
+For more information, please see the [token
+concepts](/docs/concepts/tokens) page.
 
-      ### `VAULT_ADDR`
+### `VAULT_ADDR`
 
-      Address of the Vault server expressed as a URL and port, for example:
-      `https://127.0.0.1:8200/`.
+Address of the Vault server expressed as a URL and port, for example:
+`https://127.0.0.1:8200/`.
 
-      ### `VAULT_CACERT`
+### `VAULT_CACERT`
 
-      Path to a PEM-encoded CA certificate _file_ on the local disk. This file is used
-      to verify the Vault server's SSL certificate. This environment variable takes
-      precedence over `VAULT_CAPATH`.
+Path to a PEM-encoded CA certificate _file_ on the local disk. This file is used
+to verify the Vault server's SSL certificate. This environment variable takes
+precedence over `VAULT_CAPATH`.
 
-      ### `VAULT_CAPATH`
+### `VAULT_CAPATH`
 
-      Path to a _directory_ of PEM-encoded CA certificate files on the local disk.
-      These certificates are used to verify the Vault server's SSL certificate.
+Path to a _directory_ of PEM-encoded CA certificate files on the local disk.
+These certificates are used to verify the Vault server's SSL certificate.
 
-      ### `VAULT_CLIENT_CERT`
+### `VAULT_CLIENT_CERT`
 
-      Path to a PEM-encoded client certificate on the local disk. This file is used
-      for TLS communication with the Vault server.
+Path to a PEM-encoded client certificate on the local disk. This file is used
+for TLS communication with the Vault server.
 
-      ### `VAULT_CLIENT_KEY`
+### `VAULT_CLIENT_KEY`
 
-      Path to an unencrypted, PEM-encoded private key on disk which corresponds to the
-      matching client certificate.
+Path to an unencrypted, PEM-encoded private key on disk which corresponds to the
+matching client certificate.
 
-      ### `VAULT_CLIENT_TIMEOUT`
+### `VAULT_CLIENT_TIMEOUT`
 
-      Timeout variable. The default value is 60s.
+Timeout variable. The default value is 60s.
 
-      ### `VAULT_CLUSTER_ADDR`
+### `VAULT_CLUSTER_ADDR`
 
-      Address that should be used for other cluster members to connect to this node
-      when in High Availability mode.
+Address that should be used for other cluster members to connect to this node
+when in High Availability mode.
 
-      ### `VAULT_FORMAT`
+### `VAULT_FORMAT`
 
-      Provide Vault output (read/status/write) in the specified format. Valid formats are "table", "json", or "yaml".
+Provide Vault output (read/status/write) in the specified format. Valid formats are "table", "json", or "yaml".
 
-      ### `VAULT_LICENSE`
+### `VAULT_LICENSE`
 
-      [Enterprise, Server only] Specify a license to use for this node. This takes
-      precedence over [#VAULT_LICENSE_PATH](#vault_license_path) and
-      [license_path in config](/docs/configuration#license_path).
+[Enterprise, Server only] Specify a license to use for this node. This takes
+precedence over [#VAULT_LICENSE_PATH](#vault_license_path) and
+[license_path in config](/docs/configuration#license_path).
 
-      ### `VAULT_LICENSE_PATH`
+### `VAULT_LICENSE_PATH`
 
-      [Enterprise, Server only] Specify a path to a license on disk to use for this node.
-      This takes precedence over [license_path in config](/docs/configuration#license_path).
+[Enterprise, Server only] Specify a path to a license on disk to use for this node.
+This takes precedence over [license_path in config](/docs/configuration#license_path).
 
-      ### `VAULT_LOG_FILE`
+### `VAULT_LOG_FILE`
 
-      (Agent only) If provided, specifies the full path to a log file Vault should use to write its logs.
+(Agent only) If provided, specifies the full path to a log file Vault should use to write its logs.
 
+### `VAULT_MAX_RETRIES`
 
-      ### `VAULT_MAX_RETRIES`
+Maximum number of retries when certain error codes are encountered. The default
+is `2`, for three total attempts. Set this to `0` or less to disable retrying.
 
-      Maximum number of retries when certain error codes are encountered. The default
-      is `2`, for three total attempts. Set this to `0` or less to disable retrying.
+Error codes that are retried are 412 (client consistency requirement not
+satisfied) and all 5xx except for 501 (not implemented).
 
-      Error codes that are retried are 412 (client consistency requirement not
-      satisfied) and all 5xx except for 501 (not implemented).
+### `VAULT_REDIRECT_ADDR`
 
-      ### `VAULT_REDIRECT_ADDR`
+Address that should be used when clients are redirected to this node when in
+High Availability mode.
 
-      Address that should be used when clients are redirected to this node when in
-      High Availability mode.
+### `VAULT_SKIP_VERIFY`
 
-      ### `VAULT_SKIP_VERIFY`
+Do not verify Vault's presented certificate before communicating with it.
+Setting this variable is not recommended and voids Vault's [security
+model](/docs/internals/security).
 
-      Do not verify Vault's presented certificate before communicating with it.
-      Setting this variable is not recommended and voids Vault's [security
-      model](/docs/internals/security).
+### `VAULT_TLS_SERVER_NAME`
 
-      ### `VAULT_TLS_SERVER_NAME`
+Name to use as the SNI host when connecting via TLS.
 
-      Name to use as the SNI host when connecting via TLS.
+### `VAULT_CLI_NO_COLOR`
 
-      ### `VAULT_CLI_NO_COLOR`
+If provided, Vault output will not include ANSI color escape sequence characters.
 
-      If provided, Vault output will not include ANSI color escape sequence characters.
+### `VAULT_RATE_LIMIT`
 
-      ### `VAULT_RATE_LIMIT`
+This environment variable will limit the rate at which the `vault` command
+sends requests to Vault.
 
-      This environment variable will limit the rate at which the `vault` command
-      sends requests to Vault.
+This environment variable has the format `rate[:burst]` (where items in `[]` are
+optional). If not specified, the burst value defaults to rate. Both rate and
+burst are specified in "operations per second". If the environment variable is
+not specified, then the rate and burst will be unlimited _i.e._ rate
+limiting is off by default.
 
-      This environment variable has the format `rate[:burst]` (where items in `[]` are
-      optional). If not specified, the burst value defaults to rate. Both rate and
-      burst are specified in "operations per second". If the environment variable is
-      not specified, then the rate and burst will be unlimited _i.e._ rate
-      limiting is off by default.
+_Note:_ The rate is limited for each invocation of the `vault` CLI. Since
+each invocation of the `vault` CLI typically only makes a few requests,
+this environment variable is most useful when using the Go
+[Vault client API](/api-docs/libraries#go).
 
-      _Note:_ The rate is limited for each invocation of the `vault` CLI. Since
-      each invocation of the `vault` CLI typically only makes a few requests,
-      this environment variable is most useful when using the Go
-      [Vault client API](/api-docs/libraries#go).
+### `VAULT_NAMESPACE`
 
-      ### `VAULT_NAMESPACE`
+The namespace to use for the command. Setting this is not necessary
+but allows using relative paths.
 
-      The namespace to use for the command. Setting this is not necessary
-      but allows using relative paths.
+### `VAULT_SRV_LOOKUP`
 
-      ### `VAULT_SRV_LOOKUP`
+Enables the client to lookup the host through DNS SRV look up as described in this
+[draft](https://tools.ietf.org/html/draft-andrews-http-srv-02).
+This is not designed for high-availability, just discovery.
+The draft specifies that the SRV record lookup is ignored if a port is given.
 
-      Enables the client to lookup the host through DNS SRV look up as described in this
-      [draft](https://tools.ietf.org/html/draft-andrews-http-srv-02).
-      This is not designed for high-availability, just discovery.
-      The draft specifies that the SRV record lookup is ignored if a port is given.
+### `VAULT_MFA`
 
-      ### `VAULT_MFA`
+**ENTERPRISE ONLY**
 
-      **ENTERPRISE ONLY**
+MFA credentials in the format `mfa_method_name[:key[=value]]` (items in `[]` are
+optional). Note that when using the environment variable, only one credential
+can be supplied. If a MFA method expects multiple credential values, or if there
+are multiple MFA methods specified on a path, then the CLI flag `-mfa` should be
+used.
 
-      MFA credentials in the format `mfa_method_name[:key[=value]]` (items in `[]` are
-      optional). Note that when using the environment variable, only one credential
-      can be supplied. If a MFA method expects multiple credential values, or if there
-      are multiple MFA methods specified on a path, then the CLI flag `-mfa` should be
-      used.
+### `VAULT_HTTP_PROXY`
 
-      ### `VAULT_HTTP_PROXY`
+HTTP or HTTPS proxy location which should be used by all requests to access Vault.
+ When present, this overrides the default proxy resolution behavior.
+Format should be `http://server:port` or `https://server:port`.
 
-      HTTP or HTTPS proxy location which should be used by all requests to access Vault.
-      When present, this overrides the default proxy resolution behavior.
-      Format should be `http://server:port` or `https://server:port`.
+(See `VAULT_PROXY_ADDR` below).
 
-      (See `VAULT_PROXY_ADDR` below).
+### `VAULT_PROXY_ADDR`
 
-      ### `VAULT_PROXY_ADDR`
+HTTP or HTTPS proxy location which should be used by all requests to access Vault.
+ When present, this overrides the default proxy resolution behavior.
+Format should be `http://server:port` or `https://server:port`.
 
-      HTTP or HTTPS proxy location which should be used by all requests to access Vault.
-      When present, this overrides the default proxy resolution behavior.
-      Format should be `http://server:port` or `https://server:port`.
+~> Note: When using `VAULT_HTTP_PROXY` or `VAULT_PROXY_ADDR` any of the standard
+ proxy variables found in the environment will be ignored.
+Specifically `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`.
+All requests will resolve the specified proxy; there is no way to exclude
+ domains from consulting the proxy server.
 
-      ~> Note: When using `VAULT_HTTP_PROXY` or `VAULT_PROXY_ADDR` any of the standard
-      proxy variables found in the environment will be ignored.
-      Specifically `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`.
-      All requests will resolve the specified proxy; there is no way to exclude
-      domains from consulting the proxy server.
+~> Note: If both `VAULT_HTTP_PROXY` and `VAULT_PROXY_ADDR` environment
+variables are supplied, `VAULT_PROXY_ADDR` will be prioritized and preferred.
 
-      ~> Note: If both `VAULT_HTTP_PROXY` and `VAULT_PROXY_ADDR` environment
-      variables are supplied, `VAULT_PROXY_ADDR` will be prioritized and preferred.
+### `VAULT_DISABLE_REDIRECTS`
 
-      ### `VAULT_DISABLE_REDIRECTS`
+Prevents the Vault client from following redirects. By default, the Vault client will automatically follow a single redirect.
 
-      Prevents the Vault client from following redirects. By default, the Vault client will automatically follow a single redirect.
+~> **Note:** Disabling redirect following behavior could cause issues with commands such as 'vault operator raft snapshot' as this command redirects the request to the cluster's primary node.
 
-      ~> **Note:** Disabling redirect following behavior could cause issues with commands such as 'vault operator raft snapshot' as this command redirects the request to the cluster's primary node.
+## Flags
 
-      ## Flags
+There are different CLI flags that are available depending on subcommands. Some
+flags, such as those used for setting HTTP and output options, are available
+globally, while others are specific to a particular subcommand. For a complete
+list of available flags, run:
 
-      There are different CLI flags that are available depending on subcommands. Some
-      flags, such as those used for setting HTTP and output options, are available
-      globally, while others are specific to a particular subcommand. For a complete
-      list of available flags, run:
-
-      ```shell-session
-      $ vault <subcommand> -h
-        ```
+```shell-session
+$ vault <subcommand> -h
+```
