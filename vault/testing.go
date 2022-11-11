@@ -2242,30 +2242,40 @@ func toFunc(f logical.Factory) func() (interface{}, error) {
 
 func NewMockBuiltinRegistry() *mockBuiltinRegistry {
 	return &mockBuiltinRegistry{
-		forTesting: map[string]consts.PluginType{
-			"mysql-database-plugin":      consts.PluginTypeDatabase,
-			"postgresql-database-plugin": consts.PluginTypeDatabase,
-			"approle":                    consts.PluginTypeCredential,
-			"aws":                        consts.PluginTypeCredential,
+		forTesting: map[string]mockBackend{
+			"mysql-database-plugin":      {PluginType: consts.PluginTypeDatabase},
+			"postgresql-database-plugin": {PluginType: consts.PluginTypeDatabase},
+			"approle":                    {PluginType: consts.PluginTypeCredential},
+			"app-id": {
+				PluginType:        consts.PluginTypeCredential,
+				DeprecationStatus: consts.PendingRemoval,
+			},
+			"aws": {PluginType: consts.PluginTypeCredential},
 		},
 	}
 }
 
+type mockBackend struct {
+	consts.PluginType
+	consts.DeprecationStatus
+}
+
 type mockBuiltinRegistry struct {
-	forTesting map[string]consts.PluginType
+	forTesting map[string]mockBackend
 }
 
 // Get only supports getting database plugins, and approle
 func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
-	testPluginType, ok := m.forTesting[name]
+	testBackend, ok := m.forTesting[name]
 	if !ok {
 		return nil, false
 	}
+	testPluginType := testBackend.PluginType
 	if pluginType != testPluginType {
 		return nil, false
 	}
 
-	if name == "approle" {
+	if name == "approle" || name == "app-id" {
 		return toFunc(approle.Factory), true
 	}
 
@@ -2319,6 +2329,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		}
 	case consts.PluginTypeCredential:
 		return []string{
+			"app-id",
 			"approle",
 		}
 	}
@@ -2336,7 +2347,7 @@ func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType
 
 func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool) {
 	if m.Contains(name, pluginType) {
-		return consts.Supported, true
+		return m.forTesting[name].DeprecationStatus, true
 	}
 
 	return consts.Unknown, false
