@@ -140,3 +140,34 @@ downloads the artifact built by the `build.yml` workflow, unzips it, and sets th
 This variant is for running the Enos scenario locally. It builds the Vault bundle
 from the current branch, placing the bundle at the `vault_bundle_path` and the
 unzipped Vault binary at the `vault_local_binary_path`.
+
+# CI Bootstrap
+In order to execute any of the scenarios in this repository, it is first necessary to bootstrap the 
+CI AWS account with the required supporting AWS resources. At this time, the only resource that is 
+required is an EC2 ssh key pair. The scenarios [bootstrap_ci](./ci/enos-scenario-bootstrap-ci.hcl) and 
+[bootstrap_workspaces](./ci/enos-scenario-ci-bootstrap-workspaces.hcl) have been created to simplify
+the process of bootstrapping the CI environment.
+
+**Supported Regions** - enos scenarios are supported in the following regions: 
+`"us-east-1", "us-east-2", "us-west-1", "us-west-2"`
+
+## Bootstrap Process
+The following steps should be followed to bootstrap this repo for enos scenario execution
+
+1. **Setup the root Workspace** - In Terraform Cloud manually create a workspace in the `hashicorp-qti` 
+   organization named `vault-ci-bootstrap`. This workspace will be used as the backend for the 
+   `bootstrap_workspaces` scenario. When creating the workspace choose the execution mode `local`.
+
+
+2. **Create the CI Bootstrap Workspaces** - Each region will have its own workspace and state, to 
+   setup these workspaces the scenario `bootstrap_workspaces` should be executed:
+
+```bash
+> enos scenaio launch --no-reconfigure bootstrap_workspaces
+```
+
+3. **Bootstrap Vault CI** - Execute the following to boostrap the Vault CI account for all regions:
+
+```bash
+> enos scneario launch --no-configure bootstrap_ci
+```
