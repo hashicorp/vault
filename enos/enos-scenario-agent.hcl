@@ -36,6 +36,7 @@ scenario "agent" {
       arm64 = "t4g.small"
     }
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
+    vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
   }
 
   step "get_local_metadata" {
@@ -91,7 +92,7 @@ scenario "agent" {
     module    = module.read_license
 
     variables {
-      file_name = abspath(joinpath(path.root, "./support/vault.hclic"))
+      file_name = local.vault_license_path
     }
   }
 
