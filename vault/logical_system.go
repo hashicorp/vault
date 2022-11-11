@@ -1266,7 +1266,7 @@ func handleErrorNoReadOnlyForward(
 // and add warnings to the logical response. PendingRemoval and Removed errors
 // will result in err being returned. All other deprecation-related errors will
 // provide a warning in the response, but the error will be swallowed.
-// Non-deprecation-related errors are simply passed through.
+// Non-deprecation-related errors are simply passed through to handleError.
 func handleErrorDeprecatedMount(
 	err error,
 ) (*logical.Response, error) {
@@ -1279,13 +1279,13 @@ func handleErrorDeprecatedMount(
 		resp.AddWarning(err.Error())
 		return resp, nil
 	case errors.Is(err, errMountPendingRemoval):
-		// Add a warning to the logical.Response and return the error.
-		resp.AddWarning(err.Error())
-		return resp, err
+		// Preserve the deprecation error type
+		fallthrough
+	case errors.Is(err, errMountRemoved):
+		return logical.ErrorResponse(err.Error()), err
 	default:
-		// Pass the error through. This is done for deprecation status "Removed"
-		// and all non-builtin errors.
-		return nil, err
+		// Pass the error through
+		return handleError(err)
 	}
 }
 
