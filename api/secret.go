@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"time"
@@ -315,6 +316,24 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 	if err := jsonutil.DecodeJSONFromReader(&buf, &secret); err != nil {
 		return nil, err
 	}
+
+	return &secret, nil
+}
+
+func ParseSecretFromNoData(r io.Reader) (*Secret, error) {
+	contents, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var secret Secret
+	data := make(map[string]interface{})
+	err = json.Unmarshal(contents, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	secret.Data = data
 
 	return &secret, nil
 }

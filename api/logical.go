@@ -87,7 +87,30 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 		return nil, err
 	}
 
-	return ParseSecret(resp.Body)
+	// vault-9800
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret.Data == nil {
+		// set param as raw and get output
+		data := make(map[string][]string)
+		dataArray := []string{"raw"}
+		data["-format"] = dataArray
+		resp, err := c.readRawWithDataWithContext(ctx, path, data)
+		if resp != nil {
+			defer resp.Body.Close()
+		}
+		if resp == nil || resp.Body == nil {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		return ParseSecretFromNoData(resp.Body)
+	}
+
+	return secret, err
 }
 
 func (c *Logical) ReadRaw(path string) (*Response, error) {
