@@ -67,6 +67,7 @@ module "vault_verify_agent_output" {
 
 module "vault_cluster" {
   source = "app.terraform.io/hashicorp-qti/aws-vault/enos"
+  # source = "../../terraform-enos-aws-vault"
 
   common_tags       = var.tags
   environment       = "ci"

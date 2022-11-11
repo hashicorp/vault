@@ -14,11 +14,6 @@ scenario "smoke" {
       edition       = ["oss"]
       artifact_type = ["package"]
     }
-    # Currently, artifact_source:crt only uses bundles in CI
-    exclude {
-      artifact_source = ["crt"]
-      artifact_type   = ["package"]
-    }
   }
 
   terraform_cli = terraform_cli.default

@@ -14,11 +14,7 @@ scenario "upgrade" {
       edition       = ["oss"]
       artifact_type = ["package"]
     }
-    # Currently, artifact_source:crt only uses bundles in CI
-    exclude {
-      artifact_source = ["crt"]
-      artifact_type   = ["package"]
-    }
+
   }
 
   terraform_cli = terraform_cli.default
@@ -177,7 +173,7 @@ scenario "upgrade" {
       kms_key_arn               = step.create_vpc.kms_key_arn
       storage_backend           = matrix.backend
       unseal_method             = matrix.seal
-      vault_local_artifact_path = local.bundle_path
+      # vault_local_artifact_path = local.bundle_path
       vault_install_dir         = local.vault_install_dir
       vault_release             = var.vault_upgrade_initial_release
       vault_license             = matrix.edition != "oss" ? step.read_license.license : null
@@ -201,7 +197,7 @@ scenario "upgrade" {
       vault_api_addr            = "http://localhost:8200"
       vault_instances           = step.create_vault_cluster.vault_instances
       vault_local_bundle_path   = local.bundle_path
-      vault_local_artifact_path = local.bundle_path
+      # vault_local_artifact_path = local.bundle_path
       vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       vault_install_dir         = local.vault_install_dir
       vault_unseal_keys         = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
