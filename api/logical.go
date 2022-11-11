@@ -65,16 +65,6 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	// In order to support responses with both top-level data
-	// and no top-level data objects, get the raw response
-	// If no top-level data object from api response, we add
-	// any existing raw data from api response in data part of
-	// the secret to be returned
-	// This would return responses for vault read with or without
-	// -format=raw
-	data = make(map[string][]string)
-	data["-format"] = []string{"raw"}
-
 	resp, err := c.readRawWithDataWithContext(ctx, path, data)
 	if resp != nil {
 		defer resp.Body.Close()
