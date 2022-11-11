@@ -21,7 +21,7 @@ interface CheckboxListArgs {
  *
  * @example
  * ```js
- * <CheckboxList @name="modelKey" @label="Model Attribute Label" @fields={{options}} @currentValue={{['Hello', 'Yes']}}/>
+ * <CheckboxList @name="modelKey" @label="Model Attribute Label" @fields={{options}} @value={{['Hello', 'Yes']}}/>
  * ```
  */
 
@@ -47,5 +47,3 @@ export default class CheckboxList extends Component<CheckboxListArgs> {
     this.args.onChange(this.args.name, list);
   }
 }
-
-// export default CheckboxList
