@@ -73,8 +73,7 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	// This would return responses for vault read with or without
 	// -format=raw
 	data = make(map[string][]string)
-	dataArray := []string{"raw"}
-	data["-format"] = dataArray
+	data["-format"] = []string{"raw"}
 
 	resp, err := c.readRawWithDataWithContext(ctx, path, data)
 	if resp != nil {
