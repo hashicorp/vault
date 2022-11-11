@@ -281,9 +281,9 @@ func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
 	pluginDir, cleanup := MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
-	// new kv plugin can be registered but not mounted
+	// create an external plugin to shadow the builtin "approle"
 	plugin := compilePlugin(t, consts.PluginTypeCredential, "v1.2.3", pluginDir)
-	err := os.Link(path.Join(pluginDir, plugin.fileName), path.Join(pluginDir, "app-id"))
+	err := os.Link(path.Join(pluginDir, plugin.fileName), path.Join(pluginDir, "approle"))
 	if err != nil {
 		t.Fatal(err)
 	}
