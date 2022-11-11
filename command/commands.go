@@ -82,11 +82,30 @@ const (
 	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
 	// EnvVaultDetailed is to output detailed information (e.g., ListResponseWithInfo).
 	EnvVaultDetailed = `VAULT_DETAILED`
+	// EnvVaultLogFormat is used to specify the log format. Supported values are "standard" and "json"
+	EnvVaultLogFormat = "VAULT_LOG_FORMAT"
 	// EnvVaultLogFile is used to specify the path to the log file that Vault should use for logging
+	// Can be used in conjunction with EnvVaultLogRotateBytes
 	EnvVaultLogFile = "VAULT_LOG_FILE"
 	// EnvVaultLogLevel is used to specify the log level applied to logging
 	// Supported log levels: Trace, Debug, Error, Warn, Info
 	EnvVaultLogLevel = "VAULT_LOG_LEVEL"
+	// EnvVaultLogRotateBytes is used to specify the number of bytes that should
+	// be written to a log before it needs to be rotated.
+	// Unless specified, there is no limit to the number of bytes that can be written to a log file
+	EnvVaultLogRotateBytes = "VAULT_LOG_ROTATE_BYTES"
+	// EnvVaultLogRotateDuration is used to specify the maximum duration a log
+	// should be written to before it needs to be rotated.
+	// Must be a duration value such as 30s. Defaults to 24h
+	EnvVaultLogRotateDuration = "VAULT_LOG_ROTATE_DURATION"
+	// EnvVaultLogRotateMaxFiles is used to specify the maximum number of older log file archives to keep.
+	// Defaults to 0 (no files are ever deleted).
+	// Set to -1 to discard old log files when a new one is created.
+	EnvVaultLogRotateMaxFiles = "VAULT_LOG_ROTATE_MAX_FILES"
+	// EnvVaultLogSyslog this flag enables logging to syslog.
+	// This is only supported on Linux and macOS.
+	// It will result in an error if provided on Windows.
+	EnvVaultLogSyslog = "VAULT_LOG_SYSLOG"
 
 	// DisableSSCTokens is an env var used to disable index bearing
 	// token functionality
@@ -143,6 +162,16 @@ const (
 	flagNameDisableRedirects = "disable-redirects"
 	// flagNameLogFile is used to specify the path to the log file that Vault should use for logging
 	flagNameLogFile = "log-file"
+	// flagNameLogRotateBytes is the flag used to specify the number of bytes a log file should be before it is rotated.
+	flagNameLogRotateBytes = "log-rotate-bytes"
+	// flagNameLogRotateDuration is the flag used to specify the duration after which a log file should be rotated.
+	flagNameLogRotateDuration = "log-rotate-duration"
+	// flagNameLogRotateMaxFiles is the flag used to specify the maximum number of older/archived log files to keep.
+	flagNameLogRotateMaxFiles = "log-rotate-max-files"
+	// flagNameLogSyslog is the flag used to enable logging to syslog (Linux and macOS only).
+	flagNameLogSyslog = "log-syslog"
+	// flagNameLogFormat is the flag used to specify the log format. Supported values are "standard" and "json"
+	flagNameLogFormat = "log-format"
 	// flagNameLogLevel is used to specify the log level applied to logging
 	// Supported log levels: Trace, Debug, Error, Warn, Info
 	flagNameLogLevel = "log-level"

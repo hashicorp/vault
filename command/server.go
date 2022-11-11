@@ -84,6 +84,7 @@ const (
 
 type ServerCommand struct {
 	*BaseCommand
+	LogFlags *logFlags
 
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
@@ -112,10 +113,7 @@ type ServerCommand struct {
 
 	allLoggers []hclog.Logger
 
-	// new stuff
 	flagConfigs            []string
-	flagLogLevel           string
-	flagLogFormat          string
 	flagRecovery           bool
 	flagDev                bool
 	flagDevTLS             bool
@@ -190,24 +188,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 			".hcl or .json are loaded.",
 	})
 
-	f.StringVar(&StringVar{
-		Name:       "log-level",
-		Target:     &c.flagLogLevel,
-		Default:    notSetValue,
-		EnvVar:     "VAULT_LOG_LEVEL",
-		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
-		Usage: "Log verbosity level. Supported values (in order of detail) are " +
-			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
-	})
-
-	f.StringVar(&StringVar{
-		Name:       "log-format",
-		Target:     &c.flagLogFormat,
-		Default:    notSetValue,
-		EnvVar:     "VAULT_LOG_FORMAT",
-		Completion: complete.PredictSet("standard", "json"),
-		Usage:      `Log format. Supported values are "standard" and "json".`,
-	})
+	f.addLogFlags(c.LogFlags)
 
 	f.BoolVar(&BoolVar{
 		Name:    "exit-on-core-shutdown",
@@ -826,9 +807,9 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (hclog.L
 	var level hclog.Level
 	var logLevelWasNotSet bool
 	logFormat := logging.UnspecifiedFormat
-	logLevelString := c.flagLogLevel
-	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
-	switch c.flagLogLevel {
+	logLevelString := c.LogFlags.flagLogLevel
+	c.LogFlags.flagLogLevel = strings.ToLower(strings.TrimSpace(c.LogFlags.flagLogLevel))
+	switch c.LogFlags.flagLogLevel {
 	case notSetValue, "":
 		logLevelWasNotSet = true
 		logLevelString = "info"
@@ -844,12 +825,12 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (hclog.L
 	case "err", "error":
 		level = hclog.Error
 	default:
-		return level, logLevelString, logLevelWasNotSet, logFormat, fmt.Errorf("unknown log level: %s", c.flagLogLevel)
+		return level, logLevelString, logLevelWasNotSet, logFormat, fmt.Errorf("unknown log level: %s", c.LogFlags.flagLogLevel)
 	}
 
-	if c.flagLogFormat != notSetValue {
+	if c.LogFlags.flagLogFormat != notSetValue {
 		var err error
-		logFormat, err = logging.ParseLogFormat(c.flagLogFormat)
+		logFormat, err = logging.ParseLogFormat(c.LogFlags.flagLogFormat)
 		if err != nil {
 			return level, logLevelString, logLevelWasNotSet, logFormat, err
 		}

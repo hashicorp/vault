@@ -69,6 +69,7 @@ const (
 
 type AgentCommand struct {
 	*BaseCommand
+	LogFlags *logFlags
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -84,11 +85,8 @@ type AgentCommand struct {
 
 	startedCh chan (struct{}) // for tests
 
-	flagConfigs       []string
-	flagLogLevel      string
-	flagLogFile       string
-	flagExitAfterAuth bool
-
+	flagConfigs        []string
+	flagExitAfterAuth  bool
 	flagTestVerifyOnly bool
 	flagCombineLogs    bool
 }
@@ -119,6 +117,8 @@ func (c *AgentCommand) Flags() *FlagSets {
 
 	f := set.NewFlagSet("Command Options")
 
+	// TODO: PW: addLogFlags
+
 	f.StringSliceVar(&StringSliceVar{
 		Name:   "config",
 		Target: &c.flagConfigs,
@@ -128,23 +128,6 @@ func (c *AgentCommand) Flags() *FlagSets {
 		),
 		Usage: "Path to a configuration file. This configuration file should " +
 			"contain only agent directives.",
-	})
-
-	f.StringVar(&StringVar{
-		Name:       flagNameLogLevel,
-		Target:     &c.flagLogLevel,
-		Default:    "info",
-		EnvVar:     EnvVaultLogLevel,
-		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
-		Usage: "Log verbosity level. Supported values (in order of detail) are " +
-			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
-	})
-
-	f.StringVar(&StringVar{
-		Name:   flagNameLogFile,
-		Target: &c.flagLogFile,
-		EnvVar: EnvVaultLogFile,
-		Usage:  "Path to the log file that Vault should use for logging",
 	})
 
 	f.BoolVar(&BoolVar{

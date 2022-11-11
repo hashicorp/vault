@@ -19,7 +19,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// Config is the configuration for the vault server.
+// Config is the configuration for the vault server. // TODO: PW: double check this is 'server' as we have exit after auth - agent?? (so we put log things here too)
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
@@ -38,6 +38,10 @@ type Config struct {
 	DisableKeepAlivesTemplating bool                       `hcl:"-"`
 	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
 	LogFile                     string                     `hcl:"log_file"`
+	LogRotateBytes              string                     `hcl:"log_rotate_bytes"` // TODO: PW: is string OK for num bytes?
+	LogRotateDuration           string                     `hcl:"log_rotate_duration"`
+	LogRotateMaxFiles           string                     `hcl:"log_rotate_max_files"` // TODO: PW: is string OK for max num files?
+	LogSyslog                   bool                       `hcl:"log_syslog"`
 }
 
 const (
