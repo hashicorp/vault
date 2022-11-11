@@ -7,11 +7,11 @@ export default Controller.extend(PolicyEditController, {
   file: null,
   actions: {
     setPolicyFromFile(index, fileInfo) {
-      let { value, fileName } = fileInfo;
-      let model = this.model;
+      const { value, fileName } = fileInfo;
+      const model = this.model;
       model.set('policy', value);
       if (!model.get('name')) {
-        let trimmedFileName = trimRight(fileName, ['.json', '.txt', '.hcl', '.policy']);
+        const trimmedFileName = trimRight(fileName, ['.json', '.txt', '.hcl', '.policy']);
         model.set('name', trimmedFileName);
       }
       this.set('showFileUpload', false);

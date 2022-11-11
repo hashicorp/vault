@@ -23,10 +23,10 @@ export default class Current extends Component {
     }
 
     // get upgrade data for initial upgrade to 1.9 and/or 1.10
-    let relevantUpgrades = [];
+    const relevantUpgrades = [];
     const importantUpgrades = ['1.9', '1.10'];
     importantUpgrades.forEach((version) => {
-      let findUpgrade = versionHistory.find((versionData) => versionData.id.match(version));
+      const findUpgrade = versionHistory.find((versionData) => versionData.id.match(version));
       if (findUpgrade) relevantUpgrades.push(findUpgrade);
     });
     // array of upgrade data objects for noteworthy upgrades
@@ -71,7 +71,7 @@ export default class Current extends Component {
     }
     const upgradesWithinData = this.upgradeVersionHistory.filter((upgrade) => {
       // TODO how do timezones affect this?
-      let upgradeDate = new Date(upgrade.timestampInstalled);
+      const upgradeDate = new Date(upgrade.timestampInstalled);
       return isAfter(upgradeDate, startOfMonth(new Date()));
     });
     // return all upgrades that happened within date range of queried activity
@@ -83,10 +83,10 @@ export default class Current extends Component {
       return null;
     }
     if (this.upgradeDuringCurrentMonth.length === 2) {
-      let versions = this.upgradeDuringCurrentMonth.map((upgrade) => upgrade.id).join(' and ');
+      const versions = this.upgradeDuringCurrentMonth.map((upgrade) => upgrade.id).join(' and ');
       return `Vault was upgraded to ${versions} during this month.`;
     } else {
-      let version = this.upgradeDuringCurrentMonth[0];
+      const version = this.upgradeDuringCurrentMonth[0];
       return `Vault was upgraded to ${version.id} on this month.`;
     }
   }
@@ -96,7 +96,7 @@ export default class Current extends Component {
       return null;
     }
     if (this.upgradeDuringCurrentMonth.length === 1) {
-      let version = this.upgradeDuringCurrentMonth[0].id;
+      const version = this.upgradeDuringCurrentMonth[0].id;
       if (version.match('1.9')) {
         return ' How we count clients changed in 1.9, so keep that in mind when looking at the data below.';
       }

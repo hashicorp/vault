@@ -62,12 +62,12 @@ const SEAL_STATUS_RESPONSE = {
 module('Acceptance | init', function (hooks) {
   setupApplicationTest(hooks);
 
-  let setInitResponse = (server, resp) => {
+  const setInitResponse = (server, resp) => {
     server.put('/v1/sys/init', () => {
       return [200, { 'Content-Type': 'application/json' }, JSON.stringify(resp)];
     });
   };
-  let setStatusResponse = (server, resp) => {
+  const setStatusResponse = (server, resp) => {
     server.get('/v1/sys/seal-status', () => {
       return [200, { 'Content-Type': 'application/json' }, JSON.stringify(resp)];
     });
@@ -97,7 +97,7 @@ module('Acceptance | init', function (hooks) {
     assert.strictEqual(initPage.buttonText, 'Continue to Authenticate', 'links to authenticate');
     let { requestBody } = this.server.handledRequests.findBy('url', '/v1/sys/init');
     requestBody = JSON.parse(requestBody);
-    for (let attr of ['recovery_shares', 'recovery_threshold']) {
+    for (const attr of ['recovery_shares', 'recovery_threshold']) {
       assert.ok(requestBody[attr], `requestBody includes cloud seal specific attribute: ${attr}`);
     }
   });
@@ -113,7 +113,7 @@ module('Acceptance | init', function (hooks) {
 
     let { requestBody } = this.server.handledRequests.findBy('url', '/v1/sys/init');
     requestBody = JSON.parse(requestBody);
-    for (let attr of ['recovery_shares', 'recovery_threshold']) {
+    for (const attr of ['recovery_shares', 'recovery_threshold']) {
       assert.notOk(requestBody[attr], `requestBody does not include cloud seal specific attribute: ${attr}`);
     }
   });

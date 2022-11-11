@@ -168,7 +168,7 @@ func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {
 	// configuration along with their expiration dates.
 	crlConfig, err := sc.getLocalCRLConfig()
 	if err != nil {
-		return fmt.Errorf("error checking for auto-rebuild status: unable to fetch cluster-local CRL configuration: %v", err)
+		return fmt.Errorf("error checking for auto-rebuild status: unable to fetch cluster-local CRL configuration: %w", err)
 	}
 
 	// If there's no config, assume we've gotta rebuild it to get this
@@ -196,7 +196,7 @@ func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {
 		// error.
 		defaultPeriod, defaultErr := time.ParseDuration(defaultCrlConfig.AutoRebuildGracePeriod)
 		if defaultErr != nil {
-			return fmt.Errorf("error checking for auto-rebuild status: unable to parse duration from both config's grace period (%v) and default grace period (%v):\n- config: %v\n- default: %v\n", cfg.AutoRebuildGracePeriod, defaultCrlConfig.AutoRebuildGracePeriod, err, defaultErr)
+			return fmt.Errorf("error checking for auto-rebuild status: unable to parse duration from both config's grace period (%v) and default grace period (%v):\n- config: %v\n- default: %w\n", cfg.AutoRebuildGracePeriod, defaultCrlConfig.AutoRebuildGracePeriod, err, defaultErr)
 		}
 
 		period = defaultPeriod
@@ -225,7 +225,7 @@ func (cb *crlBuilder) flushCRLBuildTimeInvalidation(sc *storageContext) error {
 		cfg, err := sc.getLocalCRLConfig()
 		if err != nil {
 			cb.invalidate.Store(true)
-			return fmt.Errorf("unable to update local CRL config's modification time: error fetching: %v", err)
+			return fmt.Errorf("unable to update local CRL config's modification time: error fetching: %w", err)
 		}
 
 		cfg.LastModified = time.Now().UTC()
@@ -233,7 +233,7 @@ func (cb *crlBuilder) flushCRLBuildTimeInvalidation(sc *storageContext) error {
 		err = sc.setLocalCRLConfig(cfg)
 		if err != nil {
 			cb.invalidate.Store(true)
-			return fmt.Errorf("unable to update local CRL config's modification time: error persisting: %v", err)
+			return fmt.Errorf("unable to update local CRL config's modification time: error persisting: %w", err)
 		}
 	}
 
@@ -434,7 +434,7 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509
 	if !sc.Backend.useLegacyBundleCaStorage() {
 		issuers, err = sc.listIssuers()
 		if err != nil {
-			return nil, fmt.Errorf("could not fetch issuers list: %v", err)
+			return nil, fmt.Errorf("could not fetch issuers list: %w", err)
 		}
 	} else {
 		// Hack: this isn't a real issuerID, but it works for fetchCAInfo
@@ -446,7 +446,7 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509
 	for _, issuer := range issuers {
 		_, bundle, caErr := sc.fetchCertBundleByIssuerId(issuer, false)
 		if caErr != nil {
-			return nil, fmt.Errorf("error fetching CA certificate for issuer id %v: %s", issuer, caErr)
+			return nil, fmt.Errorf("error fetching CA certificate for issuer id %v: %w", issuer, caErr)
 		}
 
 		if bundle == nil {
@@ -590,7 +590,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	// actually rebuild it.
 	config, err := b.crlBuilder.getConfigWithUpdate(sc)
 	if err != nil {
-		return nil, fmt.Errorf("error building CRL: while updating config: %v", err)
+		return nil, fmt.Errorf("error building CRL: while updating config: %w", err)
 	}
 
 	if !config.AutoRebuild {
@@ -696,7 +696,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 	// buildCRL.
 	globalCRLConfig, err := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
 	if err != nil {
-		return fmt.Errorf("error building CRL: while updating config: %v", err)
+		return fmt.Errorf("error building CRL: while updating config: %w", err)
 	}
 
 	if globalCRLConfig.Disable && !forceNew {
@@ -714,7 +714,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 	if !sc.Backend.useLegacyBundleCaStorage() {
 		issuers, err = sc.listIssuers()
 		if err != nil {
-			return fmt.Errorf("error building CRL: while listing issuers: %v", err)
+			return fmt.Errorf("error building CRL: while listing issuers: %w", err)
 		}
 	} else {
 		// Here, we hard-code the legacy issuer entry instead of using the
@@ -734,7 +734,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 
 	config, err := sc.getIssuersConfig()
 	if err != nil {
-		return fmt.Errorf("error building CRLs: while getting the default config: %v", err)
+		return fmt.Errorf("error building CRLs: while getting the default config: %w", err)
 	}
 
 	// We map issuerID->entry for fast lookup and also issuerID->Cert for
@@ -751,7 +751,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 		// legacy path is automatically ignored.
 		thisEntry, _, err := sc.fetchCertBundleByIssuerId(issuer, false)
 		if err != nil {
-			return fmt.Errorf("error building CRLs: unable to fetch specified issuer (%v): %v", issuer, err)
+			return fmt.Errorf("error building CRLs: unable to fetch specified issuer (%v): %w", issuer, err)
 		}
 
 		if len(thisEntry.KeyID) == 0 {
@@ -776,7 +776,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 
 		thisCert, err := thisEntry.GetCertificate()
 		if err != nil {
-			return fmt.Errorf("error building CRLs: unable to parse issuer (%v)'s certificate: %v", issuer, err)
+			return fmt.Errorf("error building CRLs: unable to parse issuer (%v)'s certificate: %w", issuer, err)
 		}
 		issuerIDCertMap[issuer] = thisCert
 
@@ -792,7 +792,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 	// CRLs.
 	crlConfig, err := sc.getLocalCRLConfig()
 	if err != nil {
-		return fmt.Errorf("error building CRLs: unable to fetch cluster-local CRL configuration: %v", err)
+		return fmt.Errorf("error building CRLs: unable to fetch cluster-local CRL configuration: %w", err)
 	}
 
 	// Before we load cert entries, we want to store the last seen delta WAL
@@ -824,7 +824,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 	if !isDelta {
 		currDeltaCerts, err = sc.Backend.crlBuilder.getPresentDeltaWALForClearing(sc)
 		if err != nil {
-			return fmt.Errorf("error building CRLs: unable to get present delta WAL entries for removal: %v", err)
+			return fmt.Errorf("error building CRLs: unable to get present delta WAL entries for removal: %w", err)
 		}
 	}
 
@@ -839,7 +839,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 		// a separate pool for those.
 		unassignedCerts, revokedCertsMap, err = getRevokedCertEntries(sc, issuerIDCertMap, isDelta)
 		if err != nil {
-			return fmt.Errorf("error building CRLs: unable to get revoked certificate entries: %v", err)
+			return fmt.Errorf("error building CRLs: unable to get revoked certificate entries: %w", err)
 		}
 
 		if !isDelta {
@@ -852,7 +852,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 			// duplicate this serial number on the delta, hence the above
 			// guard for isDelta.
 			if err := augmentWithRevokedIssuers(issuerIDEntryMap, issuerIDCertMap, revokedCertsMap); err != nil {
-				return fmt.Errorf("error building CRLs: unable to parse revoked issuers: %v", err)
+				return fmt.Errorf("error building CRLs: unable to parse revoked issuers: %w", err)
 			}
 		}
 	}
@@ -958,7 +958,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 			// Lastly, build the CRL.
 			nextUpdate, err := buildCRL(sc, globalCRLConfig, forceNew, representative, revokedCerts, crlIdentifier, crlNumber, isDelta, lastCompleteNumber)
 			if err != nil {
-				return fmt.Errorf("error building CRLs: unable to build CRL for issuer (%v): %v", representative, err)
+				return fmt.Errorf("error building CRLs: unable to build CRL for issuer (%v): %w", representative, err)
 			}
 
 			crlConfig.CRLExpirationMap[crlIdentifier] = *nextUpdate
@@ -1007,7 +1007,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 
 		if !stillHaveIssuerForID {
 			if err := sc.Storage.Delete(sc.Context, "crls/"+crlId.String()); err != nil {
-				return fmt.Errorf("error building CRLs: unable to clean up deleted issuers' CRL: %v", err)
+				return fmt.Errorf("error building CRLs: unable to clean up deleted issuers' CRL: %w", err)
 			}
 		}
 	}
@@ -1016,7 +1016,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 	// if we didn't have a legacy CRL bundle.
 	if !wasLegacy {
 		if err := sc.setLocalCRLConfig(crlConfig); err != nil {
-			return fmt.Errorf("error building CRLs: unable to persist updated cluster-local CRL config: %v", err)
+			return fmt.Errorf("error building CRLs: unable to persist updated cluster-local CRL config: %w", err)
 		}
 	}
 
@@ -1024,10 +1024,10 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 		// After we've confirmed the primary CRLs have built OK, go ahead and
 		// clear the delta CRL WAL and rebuild it.
 		if err := sc.Backend.crlBuilder.clearDeltaWAL(sc, currDeltaCerts); err != nil {
-			return fmt.Errorf("error building CRLs: unable to clear Delta WAL: %v", err)
+			return fmt.Errorf("error building CRLs: unable to clear Delta WAL: %w", err)
 		}
 		if err := sc.Backend.crlBuilder.rebuildDeltaCRLsHoldingLock(sc, forceNew); err != nil {
-			return fmt.Errorf("error building CRLs: unable to rebuild empty Delta WAL: %v", err)
+			return fmt.Errorf("error building CRLs: unable to rebuild empty Delta WAL: %w", err)
 		}
 	} else {
 		// Update our last build time here so we avoid checking for new certs
@@ -1041,12 +1041,12 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 
 			lastDeltaBuildEntry, err := logical.StorageEntryJSON(deltaWALLastBuildSerial, deltaInfo)
 			if err != nil {
-				return fmt.Errorf("error creating last delta CRL rebuild serial entry: %v", err)
+				return fmt.Errorf("error creating last delta CRL rebuild serial entry: %w", err)
 			}
 
 			err = sc.Storage.Put(sc.Context, lastDeltaBuildEntry)
 			if err != nil {
-				return fmt.Errorf("error persisting last delta CRL rebuild info: %v", err)
+				return fmt.Errorf("error persisting last delta CRL rebuild info: %w", err)
 			}
 		}
 	}
@@ -1289,7 +1289,7 @@ WRITE:
 	if isDelta {
 		ext, err := certutil.CreateDeltaCRLIndicatorExt(lastCompleteNumber)
 		if err != nil {
-			return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+			return nil, fmt.Errorf("could not create crl delta indicator extension: %w", err)
 		}
 		extensions = []pkix.Extension{ext}
 	}

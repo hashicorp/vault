@@ -2,7 +2,7 @@ import ApplicationAdapter from '../application';
 import { assign } from '@ember/polyfills';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-export default class PkiRoleEngineAdapter extends ApplicationAdapter {
+export default class PkiRoleAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   _urlForRole(backend, id) {
@@ -14,7 +14,7 @@ export default class PkiRoleEngineAdapter extends ApplicationAdapter {
   }
 
   _optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }

@@ -604,7 +604,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
 				if err != nil {
-					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+					return fmt.Errorf("returned cert cannot be parsed: %w", err)
 				}
 				if len(certs) != 1 {
 					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
@@ -657,7 +657,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
 				if err != nil {
-					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+					return fmt.Errorf("returned cert cannot be parsed: %w", err)
 				}
 				if len(certs) != 1 {
 					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
@@ -778,7 +778,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
 				if err != nil {
-					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+					return fmt.Errorf("returned cert cannot be parsed: %w", err)
 				}
 				if len(certs) != 1 {
 					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
@@ -3936,9 +3936,11 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		}
 		expectedData := map[string]interface{}{
 			"safety_buffer":                         json.Number("1"),
+			"issuer_safety_buffer":                  json.Number("31536000"),
 			"tidy_cert_store":                       true,
 			"tidy_revoked_certs":                    true,
 			"tidy_revoked_cert_issuer_associations": false,
+			"tidy_expired_issuers":                  false,
 			"pause_duration":                        "0s",
 			"state":                                 "Finished",
 			"error":                                 nil,

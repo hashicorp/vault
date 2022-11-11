@@ -14,10 +14,10 @@ export default Model.extend({
   canEdit: alias('updatePath.canUpdate'),
   canRead: alias('updatePath.canRead'),
   format: computed('policy', function () {
-    let policy = this.policy;
+    const policy = this.policy;
     let isJSON;
     try {
-      let parsed = JSON.parse(policy);
+      const parsed = JSON.parse(policy);
       if (parsed) {
         isJSON = true;
       }

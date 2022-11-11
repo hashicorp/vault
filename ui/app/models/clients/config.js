@@ -20,7 +20,7 @@ const M = Model.extend({
   }),
 
   configAttrs: computed(function () {
-    let keys = ['enabled', 'retentionMonths'];
+    const keys = ['enabled', 'retentionMonths'];
     return expandAttributeMeta(this, keys);
   }),
 });

@@ -377,7 +377,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		// cert itself.
 		cert, err := issuer.GetCertificate()
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse issuer's certificate: %v", err)
+			return nil, fmt.Errorf("unable to parse issuer's certificate: %w", err)
 		}
 		if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(CRLSigningUsage) {
 			return logical.ErrorResponse("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result."), nil
@@ -590,7 +590,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 
 			cert, err := issuer.GetCertificate()
 			if err != nil {
-				return nil, fmt.Errorf("unable to parse issuer's certificate: %v", err)
+				return nil, fmt.Errorf("unable to parse issuer's certificate: %w", err)
 			}
 			if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(CRLSigningUsage) {
 				return logical.ErrorResponse("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result."), nil

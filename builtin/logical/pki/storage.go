@@ -187,7 +187,12 @@ type keyConfigEntry struct {
 }
 
 type issuerConfigEntry struct {
-	DefaultIssuerId issuerID `json:"default"`
+	// This new fetchedDefault field allows us to detect if the default
+	// issuer was modified, in turn dispatching the timestamp updater
+	// if necessary.
+	fetchedDefault             issuerID `json:"-"`
+	DefaultIssuerId            issuerID `json:"default"`
+	DefaultFollowsLatestIssuer bool     `json:"default_follows_latest_issuer"`
 }
 
 type storageContext struct {
@@ -475,7 +480,7 @@ func (i issuerEntry) CanMaybeSignWithAlgo(algo x509.SignatureAlgorithm) error {
 
 	cert, err := i.GetCertificate()
 	if err != nil {
-		return fmt.Errorf("unable to parse issuer's potential signature algorithm types: %v", err)
+		return fmt.Errorf("unable to parse issuer's potential signature algorithm types: %w", err)
 	}
 
 	switch cert.PublicKeyAlgorithm {
@@ -658,6 +663,9 @@ func (sc *storageContext) deleteIssuer(id issuerID) (bool, error) {
 	wasDefault := false
 	if config.DefaultIssuerId == id {
 		wasDefault = true
+		// Overwrite the fetched default issuer as we're going to remove this
+		// entry.
+		config.fetchedDefault = issuerID("")
 		config.DefaultIssuerId = issuerID("")
 		if err := sc.setIssuersConfig(config); err != nil {
 			return wasDefault, err
@@ -912,7 +920,15 @@ func (sc *storageContext) setIssuersConfig(config *issuerConfigEntry) error {
 		return err
 	}
 
-	return sc.Storage.Put(sc.Context, json)
+	if err := sc.Storage.Put(sc.Context, json); err != nil {
+		return err
+	}
+
+	if err := sc.changeDefaultIssuerTimestamps(config.fetchedDefault, config.DefaultIssuerId); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (sc *storageContext) getIssuersConfig() (*issuerConfigEntry, error) {
@@ -927,6 +943,7 @@ func (sc *storageContext) getIssuersConfig() (*issuerConfigEntry, error) {
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode issuer configuration: %v", err)}
 		}
 	}
+	issuerConfig.fetchedDefault = issuerConfig.DefaultIssuerId
 
 	return issuerConfig, nil
 }
@@ -1203,6 +1220,10 @@ func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
 
 	if err = entry.DecodeJSON(&result); err != nil {
 		return nil, err
+	}
+
+	if result.IssuerSafetyBuffer == 0 {
+		result.IssuerSafetyBuffer = defaultTidyConfig.IssuerSafetyBuffer
 	}
 
 	return &result, nil

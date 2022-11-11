@@ -75,8 +75,8 @@ export default class SearchSelectWithModal extends Component {
   @action
   async fetchOptions() {
     try {
-      let queryOptions = {};
-      let options = await this.store.query(this.args.model, queryOptions);
+      const queryOptions = {};
+      const options = await this.store.query(this.args.model, queryOptions);
       this.formatOptions(options);
     } catch (err) {
       if (err.httpStatus === 404) {
@@ -107,7 +107,7 @@ export default class SearchSelectWithModal extends Component {
 
     if (this.selectedOptions.length > 0) {
       this.selectedOptions = this.selectedOptions.map((option) => {
-        let matchingOption = options.findBy('id', option);
+        const matchingOption = options.findBy('id', option);
         options.removeObject(matchingOption);
         return {
           id: option,
@@ -136,7 +136,7 @@ export default class SearchSelectWithModal extends Component {
     if (options && options.length && options.firstObject.groupName) {
       return !options.some((group) => group.options.findBy('id', id));
     }
-    let existingOption =
+    const existingOption =
       this.allOptions && (this.allOptions.findBy('id', id) || this.allOptions.findBy('name', id));
     return !existingOption;
   }
@@ -192,7 +192,7 @@ export default class SearchSelectWithModal extends Component {
     if (selection && selection.__isSuggestion__) {
       const name = selection.__value__;
       this.showModal = true;
-      let createRecord = await this.store.createRecord(this.args.model);
+      const createRecord = await this.store.createRecord(this.args.model);
       createRecord.name = name;
       this.newModelRecord = createRecord;
     } else {
