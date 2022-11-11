@@ -70,7 +70,8 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	// If no top-level data object from api response, we add
 	// any existing raw data from api response in data part of
 	// the secret to be returned
-	// This would return responses for vault read without -format=raw
+	// This would return responses for vault read with or without
+	// -format=raw
 	data = make(map[string][]string)
 	dataArray := []string{"raw"}
 	data["-format"] = dataArray
@@ -93,12 +94,10 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 		}
 		return nil, nil
 	}
-	if resp == nil || resp.Body == nil {
-		return nil, nil
-	}
 	if err != nil {
 		return nil, err
 	}
+
 	return ParseSecret(resp.Body)
 }
 

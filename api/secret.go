@@ -303,6 +303,10 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 	// know if we actually have a body or not.
 	var buf bytes.Buffer
 
+	// io.Reader is treated like a stream and cannot be read
+	// multiple times. Duplicating this stream using TeeReader
+	// to use this data in case there is no top-level data from
+	// api response
 	var teebuf bytes.Buffer
 	tee := io.TeeReader(r, &teebuf)
 
@@ -319,8 +323,9 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 	if err := jsonutil.DecodeJSONFromReader(&buf, &secret); err != nil {
 		return nil, err
 	}
+
+	// If the data is null, add raw data to secret data if present
 	if secret.Data == nil {
-		// return ParseSecretFromNoData(&teebuf)
 		data := make(map[string]interface{})
 		if err := jsonutil.DecodeJSONFromReader(&teebuf, &data); err != nil {
 			return nil, err
