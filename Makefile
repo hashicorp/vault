@@ -257,13 +257,48 @@ ci-verify:
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 
-.PHONY: build
-# This is used for release builds by .github/workflows/build.yml
-build:
-	@echo "--> Building Vault $(VAULT_VERSION)"
-	@go build -v -tags "$(GO_TAGS)" -ldflags " -X github.com/hashicorp/vault/sdk/version.Version=$(VAULT_VERSION) -X github.com/hashicorp/vault/sdk/version.GitCommit=$(VAULT_REVISION)" -o dist/
+# These crt targets are used for release builds by .github/workflows/build.yml
+# and for artifact_source:local Enos scenario variants.
+.PHONY: crt-build
+crt-build:
+	@$(CURDIR)/scripts/crt-builder.sh build
 
-.PHONY: version
-# This is used for release builds by .github/workflows/build.yml
-version:
-	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
+.PHONY: crt-build-ui
+crt-build-ui:
+	@$(CURDIR)/scripts/crt-builder.sh build-ui
+
+.PHONY: crt-bundle
+crt-bundle:
+	@$(CURDIR)/scripts/crt-builder.sh bundle
+
+.PHONY: crt-get-artifact-basename
+crt-get-artifact-basename:
+	@$(CURDIR)/scripts/crt-builder.sh artifact-basename
+
+.PHONY: crt-get-date
+crt-get-date:
+	@$(CURDIR)/scripts/crt-builder.sh date
+
+.PHONY: crt-get-revision
+crt-get-revision:
+	@$(CURDIR)/scripts/crt-builder.sh revision
+
+.PHONY: crt-get-version
+crt-get-version:
+	@$(CURDIR)/scripts/crt-builder.sh version
+
+.PHONY: crt-get-version-base
+crt-get-version-base:
+	@$(CURDIR)/scripts/crt-builder.sh version-base
+
+.PHONY: crt-get-version-pre
+crt-get-version-pre:
+	@$(CURDIR)/scripts/crt-builder.sh version-pre
+
+.PHONY: crt-get-version-meta
+crt-get-version-meta:
+	@$(CURDIR)/scripts/crt-builder.sh version-meta
+
+.PHONY: crt-prepare-legal
+crt-prepare-legal:
+	@$(CURDIR)/scripts/crt-builder.sh prepare-legal
