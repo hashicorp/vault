@@ -146,7 +146,7 @@ type OASParameter struct {
 
 type OASRequestBody struct {
 	Description string     `json:"description,omitempty"`
-	Required	bool		`json:"required,omitempty"`
+	Required    bool       `json:"required,omitempty"`
 	Content     OASContent `json:"content,omitempty"`
 }
 
