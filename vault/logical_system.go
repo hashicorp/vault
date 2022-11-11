@@ -956,7 +956,7 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 	}
 
 	// Add deprecation status only if it exists
-	builtinType := b.Core.builtinTypeFromMountEntry(ctx, entry, entry.RunningVersion)
+	builtinType := b.Core.builtinTypeFromMountEntry(ctx, entry)
 	if status, ok := b.Core.builtinRegistry.DeprecationStatus(entry.Type, builtinType); ok {
 		info["deprecation_status"] = status.String()
 	}

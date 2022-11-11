@@ -712,18 +712,18 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 
 // builtinTypeFromMountEntry attempts to find a builtin PluginType associated
 // with the specified MountEntry. Returns consts.PluginTypeUnknown if not found.
-func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry, version string) consts.PluginType {
+func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry) consts.PluginType {
 	if c.builtinRegistry == nil || entry == nil {
 		return consts.PluginTypeUnknown
 	}
 
 	// Builtin plugins should contain the "builtin" string in their RunningVersion
-	if !strings.Contains(version, "builtin") {
+	if !strings.Contains(entry.RunningVersion, "builtin") {
 		return consts.PluginTypeUnknown
 	}
 
 	builtinPluginType := func(name string, pluginType consts.PluginType) (consts.PluginType, bool) {
-		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, version)
+		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, entry.RunningVersion)
 		if err == nil && plugin != nil && plugin.Builtin {
 			return plugin.Type, true
 		}
@@ -969,7 +969,7 @@ func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry
 
 	// Allow type to be determined from mount entry when not otherwise specified
 	if pluginType == consts.PluginTypeUnknown {
-		pluginType = c.builtinTypeFromMountEntry(ctx, entry, entry.RunningVersion)
+		pluginType = c.builtinTypeFromMountEntry(ctx, entry)
 	}
 
 	// Handle aliases
