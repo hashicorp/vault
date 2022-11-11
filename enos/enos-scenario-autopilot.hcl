@@ -48,24 +48,7 @@ scenario "autopilot" {
     module = "build_${matrix.artifact_source}"
 
     variables {
-<<<<<<< HEAD
-      build_tags            = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
-      bundle_path           = local.bundle_path
-      goarch                = matrix.arch
-      goos                  = "linux"
-      artifactory_host      = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
-      artifactory_repo      = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
-      artifactory_username  = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
-      artifactory_token     = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
-      arch                  = matrix.artifact_source == "artifactory" ? matrix.arch : null
-      product_version = var.vault_product_version
-      artifact_type         = matrix.artifact_source == "artifactory" ? var.vault_artifact_type : null
-      distro                = matrix.artifact_source == "artifactory" ? matrix.distro : null
-      edition               = matrix.artifact_source == "artifactory" ? matrix.edition : null
-      instance_type         = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
-      revision              = var.vault_revision
-=======
-      build_tags           = try(var.vault_local_build_tags, local.build_tags[matrix.edition])
+      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
       bundle_path          = local.bundle_path
       goarch               = matrix.arch
       goos                 = "linux"
@@ -80,7 +63,6 @@ scenario "autopilot" {
       edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
       instance_type        = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
       revision             = var.vault_revision
->>>>>>> 72eabfe30 (Integrate package testing as a matrix variant instead of a standalone scenario)
     }
   }
 

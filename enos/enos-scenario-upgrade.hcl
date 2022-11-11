@@ -59,24 +59,7 @@ scenario "upgrade" {
     module = "build_${matrix.artifact_source}"
 
     variables {
-<<<<<<< HEAD
-      build_tags            = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
-      bundle_path           = local.bundle_path
-      goarch                = matrix.arch
-      goos                  = "linux"
-      artifactory_host      = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
-      artifactory_repo      = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
-      artifactory_username  = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
-      artifactory_token     = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
-      arch                  = matrix.artifact_source == "artifactory" ? matrix.arch : null
-      product_version = var.vault_product_version
-      artifact_type         = matrix.artifact_source == "artifactory" ? var.vault_artifact_type : null
-      distro                = matrix.artifact_source == "artifactory" ? matrix.distro : null
-      edition               = matrix.artifact_source == "artifactory" ? matrix.edition : null
-      instance_type         = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
-      revision              = var.vault_revision
-=======
-      build_tags           = try(var.vault_local_build_tags, local.build_tags[matrix.edition])
+      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
       bundle_path          = local.bundle_path
       goarch               = matrix.arch
       goos                 = "linux"
@@ -91,7 +74,6 @@ scenario "upgrade" {
       edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
       instance_type        = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
       revision             = var.vault_revision
->>>>>>> 72eabfe30 (Integrate package testing as a matrix variant instead of a standalone scenario)
     }
   }
 
@@ -165,18 +147,18 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id                    = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags               = local.tags
-      consul_cluster_tag        = step.create_backend_cluster.consul_cluster_tag
-      dependencies_to_install   = local.dependencies_to_install
-      instance_type             = local.vault_instance_type
-      kms_key_arn               = step.create_vpc.kms_key_arn
-      storage_backend           = matrix.backend
-      unseal_method             = matrix.seal
-      vault_install_dir         = local.vault_install_dir
-      vault_release             = var.vault_upgrade_initial_release
-      vault_license             = matrix.edition != "oss" ? step.read_license.license : null
-      vpc_id                    = step.create_vpc.vpc_id
+      ami_id                  = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      common_tags             = local.tags
+      consul_cluster_tag      = step.create_backend_cluster.consul_cluster_tag
+      dependencies_to_install = local.dependencies_to_install
+      instance_type           = local.vault_instance_type
+      kms_key_arn             = step.create_vpc.kms_key_arn
+      storage_backend         = matrix.backend
+      unseal_method           = matrix.seal
+      vault_install_dir       = local.vault_install_dir
+      vault_release           = var.vault_upgrade_initial_release
+      vault_license           = matrix.edition != "oss" ? step.read_license.license : null
+      vpc_id                  = step.create_vpc.vpc_id
     }
   }
 
@@ -195,7 +177,6 @@ scenario "upgrade" {
     variables {
       vault_api_addr            = "http://localhost:8200"
       vault_instances           = step.create_vault_cluster.vault_instances
-      // vault_local_bundle_path   = local.bundle_path
       vault_local_artifact_path = local.bundle_path
       vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       vault_install_dir         = local.vault_install_dir
