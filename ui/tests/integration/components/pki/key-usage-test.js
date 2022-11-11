@@ -46,7 +46,7 @@ module('Integration | Component | pki/key-usage', function (hooks) {
   });
 
   test('it should set the model properties of key_usage and ext_key_usage based on the checkbox selections', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
     await render(
       hbs`
       <div class="has-top-margin-xxl">
@@ -63,11 +63,6 @@ module('Integration | Component | pki/key-usage', function (hooks) {
       this.model.keyUsage,
       ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'],
       'sets the default values for key_usage on the model.'
-    );
-    assert.strictEqual(
-      this.model.extKeyUsage,
-      undefined,
-      'sets no default value set for ext_key_usage on load.'
     );
 
     await click(SELECTORS.keyUsage);
