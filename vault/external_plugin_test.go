@@ -342,6 +342,41 @@ func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
 	}
 }
 
+func TestCore_EnableExternalPlugin_PendingRemoval(t *testing.T) {
+	pluginDir, cleanup := MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+
+	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
+	pluginName := "pending-removal-test-plugin"
+	plugin := compilePlugin(t, consts.PluginTypeCredential, "v1.2.3", pluginDir)
+	err := os.Link(path.Join(pluginDir, plugin.fileName), path.Join(pluginDir, pluginName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := &CoreConfig{
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		PluginDirectory: pluginDir,
+	}
+
+	c := TestCoreWithSealAndUI(t, conf)
+	c, _, _ = testCoreUnsealed(t, c)
+
+	pendingRemovalString := "pending removal"
+
+	// Create a new auth method with builtin pending-removal-test-plugin
+	resp, err := mountPluginWithResponse(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+	if err == nil {
+		t.Fatalf("expected error when mounting deprecated backend")
+	}
+	if resp == nil || resp.Data == nil || !strings.Contains(resp.Data["error"].(string), pendingRemovalString) {
+		t.Fatalf("expected error response to contain %q but got %+v", pendingRemovalString, resp)
+	}
+
+	// Register a shadow plugin
+	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "v1.2.3", plugin.sha256, plugin.fileName)
+	mountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+}
+
 func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
 	pluginDir, cleanup := MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
@@ -880,7 +915,7 @@ func registerPlugin(t *testing.T, sys *SystemBackend, pluginName, pluginType, ve
 	}
 }
 
-func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType consts.PluginType, version, path string) {
+func mountPluginWithResponse(t *testing.T, sys *SystemBackend, pluginName string, pluginType consts.PluginType, version, path string) (*logical.Response, error) {
 	t.Helper()
 	var mountPath string
 	if path == "" {
@@ -897,7 +932,12 @@ func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType
 			"plugin_version": version,
 		}
 	}
-	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
+	return sys.HandleRequest(namespace.RootContext(nil), req)
+}
+
+func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType consts.PluginType, version, path string) {
+	t.Helper()
+	resp, err := mountPluginWithResponse(t, sys, pluginName, pluginType, version, path)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
