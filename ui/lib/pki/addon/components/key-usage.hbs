@@ -14,7 +14,7 @@
         @label="Key usage"
         @subText="Specifies the default key usage constraint on the issued certificate. To specify no default key_usage constraints, uncheck every item in this list."
         @fields={{this.keyUsageFields}}
-        @currentValue={{@model.keyUsage}}
+        @value={{@model.keyUsage}}
         @onChange={{this.checkboxChange}}
       />
       <div class="has-top-margin-s">
@@ -23,7 +23,7 @@
           @label="Extended key usage"
           @subText="Specifies the default key usage constraint on the issued certificate. To specify no default ext_key_usage constraints, uncheck every item in this list."
           @fields={{this.extKeyUsageFields}}
-          @currentValue={{@model.extKeyUsage}}
+          @value={{@model.extKeyUsage}}
           @onChange={{this.checkboxChange}}
         />
       </div>
