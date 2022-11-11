@@ -1,0 +1,3 @@
+```release-note:bug
+credential/cert: add error message if no tls connection is found
+```
