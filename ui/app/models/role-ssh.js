@@ -120,6 +120,7 @@ export default Model.extend({
   }),
   algorithmSigner: attr('string', {
     helpText: 'When supplied, this value specifies a signing algorithm for the key',
+    possibleValues: ['default', 'ssh-rsa', 'rsa-sha2-256', 'rsa-sha2-512'],
   }),
 
   showFields: computed('keyType', function () {
