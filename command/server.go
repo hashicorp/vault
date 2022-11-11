@@ -78,9 +78,8 @@ const (
 
 	// Even though there are more types than the ones below, the following consts
 	// are declared internally for value comparison and reusability.
-	storageTypeRaft            = "raft"
-	storageTypeConsul          = "consul"
-	disableStorageTypeCheckEnv = "VAULT_DISABLE_SUPPORTED_STORAGE_CHECK"
+	storageTypeRaft   = "raft"
+	storageTypeConsul = "consul"
 )
 
 type ServerCommand struct {
@@ -1411,7 +1410,13 @@ func (c *ServerCommand) Run(args []string) int {
 	// Apply any enterprise configuration onto the coreConfig.
 	adjustCoreConfigForEnt(config, &coreConfig)
 
-	if !c.flagDev && os.Getenv(disableStorageTypeCheckEnv) == "" {
+	if !storageSupportedForEnt(&coreConfig) {
+		c.UI.Warn("")
+		c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING: storage configured to use %q which is not supported for Vault Enterprise, must be \"raft\" or \"consul\"", coreConfig.StorageType)))
+		c.UI.Warn("")
+	}
+
+	if !c.flagDev {
 		inMemStorageTypes := []string{
 			"inmem", "inmem_ha", "inmem_transactional", "inmem_transactional_ha",
 		}
@@ -1420,12 +1425,6 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Warn("")
 			c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING: storage configured to use %q which should NOT be used in production", coreConfig.StorageType)))
 			c.UI.Warn("")
-		} else {
-			err = checkStorageTypeForEnt(&coreConfig)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Invalid storage type: %s", err))
-				return 1
-			}
 		}
 	}
 
