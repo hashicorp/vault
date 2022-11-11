@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"time"
@@ -303,7 +302,11 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 	// First read the data into a buffer. Not super efficient but we want to
 	// know if we actually have a body or not.
 	var buf bytes.Buffer
-	_, err := buf.ReadFrom(r)
+
+	var teebuf bytes.Buffer
+	tee := io.TeeReader(r, &teebuf)
+
+	_, err := buf.ReadFrom(tee)
 	if err != nil {
 		return nil, err
 	}
@@ -316,24 +319,14 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 	if err := jsonutil.DecodeJSONFromReader(&buf, &secret); err != nil {
 		return nil, err
 	}
-
-	return &secret, nil
-}
-
-func ParseSecretFromNoData(r io.Reader) (*Secret, error) {
-	contents, err := io.ReadAll(r)
-	if err != nil {
-		return nil, err
+	if secret.Data == nil {
+		// return ParseSecretFromNoData(&teebuf)
+		data := make(map[string]interface{})
+		if err := jsonutil.DecodeJSONFromReader(&teebuf, &data); err != nil {
+			return nil, err
+		}
+		secret.Data = data
 	}
-
-	var secret Secret
-	data := make(map[string]interface{})
-	err = json.Unmarshal(contents, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	secret.Data = data
 
 	return &secret, nil
 }

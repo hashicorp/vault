@@ -65,6 +65,16 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
+	// In order to support responses with both top-level data
+	// and no top-level data objects, get the raw response
+	// If no top-level data object from api response, we add
+	// any existing raw data from api response in data part of
+	// the secret to be returned
+	// This would return responses for vault read without -format=raw
+	data = make(map[string][]string)
+	dataArray := []string{"raw"}
+	data["-format"] = dataArray
+
 	resp, err := c.readRawWithDataWithContext(ctx, path, data)
 	if resp != nil {
 		defer resp.Body.Close()
@@ -83,34 +93,13 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 		}
 		return nil, nil
 	}
+	if resp == nil || resp.Body == nil {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-
-	// vault-9800
-	secret, err := ParseSecret(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if secret.Data == nil {
-		// set param as raw and get output
-		data := make(map[string][]string)
-		dataArray := []string{"raw"}
-		data["-format"] = dataArray
-		resp, err := c.readRawWithDataWithContext(ctx, path, data)
-		if resp != nil {
-			defer resp.Body.Close()
-		}
-		if resp == nil || resp.Body == nil {
-			return nil, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		return ParseSecretFromNoData(resp.Body)
-	}
-
-	return secret, err
+	return ParseSecret(resp.Body)
 }
 
 func (c *Logical) ReadRaw(path string) (*Response, error) {
