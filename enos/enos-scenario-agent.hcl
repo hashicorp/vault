@@ -1,12 +1,9 @@
-scenario "upgrade" {
+scenario "agent" {
   matrix {
     arch            = ["amd64", "arm64"]
-    backend         = ["consul", "raft"]
     artifact_source = ["local", "crt", "artifactory"]
-    consul_version  = ["1.13.2", "1.12.5", "1.11.10"]
     distro          = ["ubuntu", "rhel"]
     edition         = ["oss", "ent"]
-    seal            = ["awskms", "shamir"]
   }
 
   terraform_cli = terraform_cli.default
@@ -42,11 +39,16 @@ scenario "upgrade" {
     vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
   }
 
+  step "get_local_metadata" {
+    skip_step = matrix.artifact_source != "local"
+    module    = module.get_local_metadata
+  }
+
   step "build_vault" {
     module = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags            = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
+      build_tags            = try(var.vault_local_build_tags, local.build_tags[matrix.edition])
       bundle_path           = local.bundle_path
       goarch                = matrix.arch
       goos                  = "linux"
@@ -70,7 +72,7 @@ scenario "upgrade" {
     variables {
       instance_type = [
         var.backend_instance_type,
-        local.vault_instance_type,
+        local.vault_instance_type
       ]
     }
   }
@@ -94,13 +96,8 @@ scenario "upgrade" {
     }
   }
 
-  step "get_local_metadata" {
-    skip_step = matrix.artifact_source != "local"
-    module    = module.get_local_metadata
-  }
-
   step "create_backend_cluster" {
-    module     = "backend_${matrix.backend}"
+    module     = "backend_raft"
     depends_on = [step.create_vpc]
 
     providers = {
@@ -108,12 +105,8 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id      = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
-      common_tags = local.tags
-      consul_release = {
-        edition = var.backend_edition
-        version = matrix.consul_version
-      }
+      ami_id        = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      common_tags   = local.tags
       instance_type = var.backend_instance_type
       kms_key_arn   = step.create_vpc.kms_key_arn
       vpc_id        = step.create_vpc.vpc_id
@@ -132,46 +125,27 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id                  = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags             = local.tags
-      consul_cluster_tag      = step.create_backend_cluster.consul_cluster_tag
-      dependencies_to_install = local.dependencies_to_install
-      instance_type           = local.vault_instance_type
-      kms_key_arn             = step.create_vpc.kms_key_arn
-      storage_backend         = matrix.backend
-      unseal_method           = matrix.seal
-      vault_release           = var.vault_upgrade_initial_release
-      vault_license           = matrix.edition != "oss" ? step.read_license.license : null
-      vpc_id                  = step.create_vpc.vpc_id
-    }
-  }
-
-  step "upgrade_vault" {
-    module = module.vault_upgrade
-    depends_on = [
-      step.create_vault_cluster,
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      vault_api_addr            = "http://localhost:8200"
-      vault_instances           = step.create_vault_cluster.vault_instances
-      vault_local_bundle_path   = local.bundle_path
+      ami_id                    = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      common_tags               = local.tags
+      consul_cluster_tag        = step.create_backend_cluster.consul_cluster_tag
+      dependencies_to_install   = local.dependencies_to_install
+      instance_type             = local.vault_instance_type
+      kms_key_arn               = step.create_vpc.kms_key_arn
+      storage_backend           = "raft"
+      unseal_method             = "shamir"
       vault_local_artifact_path = local.bundle_path
       vault_artifactory_release = local.install_artifactory_artifact ? step.build_vault.vault_artifactory_release : null
-      vault_unseal_keys         = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
-      vault_seal_type           = matrix.seal
+      vault_license             = matrix.edition != "oss" ? step.read_license.license : null
+      vpc_id                    = step.create_vpc.vpc_id
     }
   }
 
-  step "verify_vault_version" {
-    module = module.vault_verify_version
+  step "start_vault_agent" {
+    module = "vault_agent"
     depends_on = [
       step.create_backend_cluster,
-      step.upgrade_vault,
+      step.build_vault,
+      step.create_vault_cluster,
     ]
 
     providers = {
@@ -179,20 +153,18 @@ scenario "upgrade" {
     }
 
     variables {
-      vault_instances       = step.create_vault_cluster.vault_instances
-      vault_edition         = matrix.edition
-      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
-      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
-      vault_root_token      = step.create_vault_cluster.vault_root_token
+      vault_instances                  = step.create_vault_cluster.vault_instances
+      vault_root_token                 = step.create_vault_cluster.vault_root_token
+      vault_agent_template_destination = "/tmp/agent_output.txt"
+      vault_agent_template_contents    = "{{ with secret \\\"auth/token/lookup-self\\\" }}orphan={{ .Data.orphan }} display_name={{ .Data.display_name }}{{ end }}"
     }
   }
 
-  step "verify_vault_unsealed" {
-    module = module.vault_verify_unsealed
+  step "verify_vault_agent_output" {
+    module = module.vault_verify_agent_output
     depends_on = [
       step.create_vault_cluster,
-      step.upgrade_vault,
+      step.start_vault_agent,
     ]
 
     providers = {
@@ -200,26 +172,9 @@ scenario "upgrade" {
     }
 
     variables {
-      vault_instances  = step.create_vault_cluster.vault_instances
-      vault_root_token = step.create_vault_cluster.vault_root_token
-    }
-  }
-
-  step "verify_raft_auto_join_voter" {
-    skip_step = matrix.backend != "raft"
-    module    = module.vault_verify_raft_auto_join_voter
-    depends_on = [
-      step.create_backend_cluster,
-      step.upgrade_vault,
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      vault_instances  = step.create_vault_cluster.vault_instances
-      vault_root_token = step.create_vault_cluster.vault_root_token
+      vault_instances                  = step.create_vault_cluster.vault_instances
+      vault_agent_template_destination = "/tmp/agent_output.txt"
+      vault_agent_expected_output      = "orphan=true display_name=approle"
     }
   }
 
