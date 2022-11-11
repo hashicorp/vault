@@ -48,6 +48,13 @@ export default class App extends Application {
         },
       },
     },
+    kubernetes: {
+      dependencies: {
+        externalRoutes: {
+          secrets: 'vault.cluster.secrets.backends',
+        },
+      },
+    },
     pki: {
       dependencies: {
         services: [

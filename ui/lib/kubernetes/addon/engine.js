@@ -10,6 +10,9 @@ const { modulePrefix } = config;
 export default class KubernetesEngine extends Engine {
   modulePrefix = modulePrefix;
   Resolver = Resolver;
+  dependencies = {
+    externalRoutes: ['secrets'],
+  };
 }
 
 loadInitializers(KubernetesEngine, modulePrefix);

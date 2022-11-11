@@ -1,5 +1,17 @@
 import buildRoutes from 'ember-engines/routes';
 
 export default buildRoutes(function () {
-  // Define your engine's route map here
+  this.route('overview');
+  this.route('roles', function () {
+    this.route('create');
+    this.route('role', { path: '/:name' }, function () {
+      this.route('details');
+      this.route('edit');
+      this.route('credentials');
+    });
+  });
+  this.route('configure');
+  this.route('configuration', function () {
+    this.route('edit');
+  });
 });
