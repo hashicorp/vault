@@ -198,6 +198,7 @@ func pkiFetchLeaves(e *Executor, versionError func()) (bool, *PathFetch, []strin
 			leaves = append(leaves, rawSerial.(string))
 		}
 		leavesRet.ParsedCache["leaves"] = leaves
+		leavesRet.ParsedCache["count"] = len(leaves)
 	}
 
 	return false, leavesRet, leavesRet.ParsedCache["leaves"].([]string), nil
