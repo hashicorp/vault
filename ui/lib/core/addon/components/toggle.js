@@ -36,8 +36,8 @@ export default class ToggleComponent extends Component {
     return `toggle-${this.name.replace(/\W/g, '')}`;
   }
   get inputClasses() {
-    let size = this.args.size || 'normal';
-    let status = this.args.status || 'normal';
+    const size = this.args.size || 'normal';
+    const status = this.args.status || 'normal';
     const sizeClass = `is-${size}`;
     const statusClass = `is-${status}`;
     return `toggle ${statusClass} ${sizeClass}`;

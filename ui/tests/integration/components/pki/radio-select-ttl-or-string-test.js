@@ -10,7 +10,7 @@ module('Integration | Component | radio-select-ttl-or-string', function (hooks) 
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/pki-role-engine');
+    this.model = this.store.createRecord('pki/role');
     this.model.backend = 'pki';
     this.attr = {
       helpText: '',
@@ -34,7 +34,7 @@ module('Integration | Component | radio-select-ttl-or-string', function (hooks) 
       { owner: this.engine }
     );
     assert.dom('[data-test-input="ttl"]').exists('shows the TTL component');
-    let inputValue = document.querySelector('[data-test-ttl-value="TTL"]').value;
+    const inputValue = document.querySelector('[data-test-ttl-value="TTL"]').value;
     assert.strictEqual(inputValue, '', 'default TTL is empty');
     assert.dom('[data-test-radio-button="ttl"]').isChecked('ttl is selected by default');
   });

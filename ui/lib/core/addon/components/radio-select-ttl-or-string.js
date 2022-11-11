@@ -38,7 +38,7 @@ export default class RadioSelectTtlOrString extends Component {
   }
 
   @action setAndBroadcastTtl(value) {
-    let valueToSet = value.enabled === true ? `${value.seconds}s` : 0;
+    const valueToSet = value.enabled === true ? `${value.seconds}s` : 0;
     if (this.groupValue === 'specificDate') {
       // do not save ttl on the model until the ttl radio button is selected
       return;

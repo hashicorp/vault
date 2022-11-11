@@ -144,10 +144,10 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     `);
 
     const tooltipHoverCircles = findAll('[data-test-line-chart] circle.hover-circle');
-    for (let [i, bar] of tooltipHoverCircles.entries()) {
+    for (const [i, bar] of tooltipHoverCircles.entries()) {
       await triggerEvent(bar, 'mouseover');
-      let tooltip = document.querySelector('.ember-modal-dialog');
-      let { month, clients, new_clients } = tooltipData[i];
+      const tooltip = document.querySelector('.ember-modal-dialog');
+      const { month, clients, new_clients } = tooltipData[i];
       assert
         .dom(tooltip)
         .includesText(

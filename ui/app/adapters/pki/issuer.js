@@ -1,11 +1,11 @@
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-export default class PkiIssuerEngineAdapter extends ApplicationAdapter {
+export default class PkiIssuerAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }

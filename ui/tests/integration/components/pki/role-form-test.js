@@ -13,7 +13,7 @@ module('Integration | Component | pki/role-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/pki-role-engine');
+    this.model = this.store.createRecord('pki/role');
     this.model.backend = 'pki';
   });
 
@@ -21,7 +21,7 @@ module('Integration | Component | pki/role-form', function (hooks) {
     assert.expect(13);
     await render(
       hbs`
-      <PkiRoleForm
+      <RoleForm
          @model={{this.model}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
@@ -72,7 +72,7 @@ module('Integration | Component | pki/role-form', function (hooks) {
 
     await render(
       hbs`
-      <PkiRoleForm
+      <RoleForm
          @model={{this.model}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}

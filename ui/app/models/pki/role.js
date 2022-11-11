@@ -9,7 +9,7 @@ const validations = {
 };
 
 @withModelValidations(validations)
-export default class PkiRoleEngineModel extends Model {
+export default class PkiRoleModel extends Model {
   @attr('string', { readOnly: true }) backend;
 
   /* Overriding OpenApi default options */

@@ -118,7 +118,8 @@ Cluster ID                    cluster id
 HA Enabled                    true
 Raft Committed Index          3
 Raft Applied Index            4
-Last WAL                      2`
+Last WAL                      2
+Warnings                      [warning]`
 
 	if expectedOutputString != output {
 		fmt.Printf("%s\n%+v\n %s\n%+v\n", "output found was: ", output, "versus", expectedOutputString)
@@ -174,6 +175,7 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 			ClusterID:    "cluster id",
 			RecoverySeal: true,
 			StorageType:  "storage type",
+			Warnings:     []string{"warning"},
 		}
 
 		// must initialize this struct without explicit field names due to embedding

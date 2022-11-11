@@ -68,7 +68,7 @@ export default SecretEngineModel.extend({
   }),
 
   modelTypeForKV: computed('engineType', 'version', function () {
-    let type = this.engineType;
+    const type = this.engineType;
     let modelType = 'secret';
     if ((type === 'kv' || type === 'generic') && this.version === 2) {
       modelType = 'secret-v2';
@@ -79,8 +79,8 @@ export default SecretEngineModel.extend({
   isV2KV: equal('modelTypeForKV', 'secret-v2'),
 
   formFields: computed('engineType', 'version', function () {
-    let type = this.engineType;
-    let fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
+    const type = this.engineType;
+    const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
     // no ttl options for keymgmt
     const ttl = type !== 'keymgmt' ? 'defaultLeaseTtl,maxLeaseTtl,' : '';
     fields.push(`config.{${ttl}auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`);
@@ -95,7 +95,7 @@ export default SecretEngineModel.extend({
   }),
 
   formFieldGroups: computed('engineType', function () {
-    let type = this.engineType;
+    const type = this.engineType;
     let defaultGroup;
     // KV has specific config options it adds on the enable engine. https://www.vaultproject.io/api/secret/kv/kv-v2#configure-the-kv-engine
     if (type === 'kv') {
@@ -103,7 +103,7 @@ export default SecretEngineModel.extend({
     } else {
       defaultGroup = { default: ['path'] };
     }
-    let optionsGroup = {
+    const optionsGroup = {
       'Method Options': ['description', 'config.listingVisibility', 'local', 'sealWrap'],
     };
     // no ttl options for keymgmt

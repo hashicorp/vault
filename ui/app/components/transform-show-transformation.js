@@ -7,12 +7,12 @@ export default TransformBase.extend({
       return;
     }
 
-    let { type, allowed_roles, tweak_source, name } = this.model;
-    let wildCardRole = allowed_roles.find((role) => role.includes('*'));
+    const { type, allowed_roles, tweak_source, name } = this.model;
+    const wildCardRole = allowed_roles.find((role) => role.includes('*'));
 
     // values to be returned
     let role = '<choose a role>';
-    let value = 'value=<enter your value here>';
+    const value = 'value=<enter your value here>';
     let tweak = '';
 
     // determine the role

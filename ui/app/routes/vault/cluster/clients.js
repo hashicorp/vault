@@ -9,8 +9,8 @@ export default class ClientsRoute extends Route {
   @service store;
   async getVersionHistory() {
     try {
-      let arrayOfModels = [];
-      let response = await this.store.findAll('clients/version-history'); // returns a class with nested models
+      const arrayOfModels = [];
+      const response = await this.store.findAll('clients/version-history'); // returns a class with nested models
       response.forEach((model) => {
         arrayOfModels.push({
           id: model.id,
@@ -26,7 +26,7 @@ export default class ClientsRoute extends Route {
   }
 
   async model() {
-    let config = await this.store.queryRecord('clients/config', {}).catch((e) => {
+    const config = await this.store.queryRecord('clients/config', {}).catch((e) => {
       console.debug(e); // eslint-disable-line
       // swallowing error so activity can show if no config permissions
       return {};
@@ -41,7 +41,7 @@ export default class ClientsRoute extends Route {
   @action
   async loading(transition) {
     // eslint-disable-next-line ember/no-controller-access-in-routes
-    let controller = this.controllerFor(this.routeName);
+    const controller = this.controllerFor(this.routeName);
     controller.set('currentlyLoading', true);
     transition.promise.finally(function () {
       controller.set('currentlyLoading', false);

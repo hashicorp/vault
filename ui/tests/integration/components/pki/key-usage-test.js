@@ -5,13 +5,13 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki-engine';
 
-module('Integration | Component | pki-key-usage', function (hooks) {
+module('Integration | Component | pki/key-usage', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/pki-role-engine');
+    this.model = this.store.createRecord('pki/role');
     this.model.backend = 'pki';
   });
 
@@ -20,7 +20,7 @@ module('Integration | Component | pki-key-usage', function (hooks) {
     await render(
       hbs`
       <div class="has-top-margin-xxl">
-        <PkiKeyUsage
+        <KeyUsage
           @model={{this.model}}
           @group="Key usage"
         />
@@ -37,7 +37,7 @@ module('Integration | Component | pki-key-usage', function (hooks) {
     assert.dom(SELECTORS.extKeyUsageOids).exists('Extended Key usage oids renders');
 
     // check is flexbox by checking the height of the box
-    let groupBoxHeight = document.querySelector('[data-test-surrounding-div="Key usage"]').clientHeight;
+    const groupBoxHeight = document.querySelector('[data-test-surrounding-div="Key usage"]').clientHeight;
     assert.strictEqual(
       groupBoxHeight,
       518,
@@ -50,7 +50,7 @@ module('Integration | Component | pki-key-usage', function (hooks) {
     await render(
       hbs`
       <div class="has-top-margin-xxl">
-        <PkiKeyUsage
+        <KeyUsage
           @model={{this.model}}
           @group="Key usage"
         />

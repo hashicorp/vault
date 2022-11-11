@@ -4,7 +4,7 @@ import ApplicationAdapter from './application';
 export default ApplicationAdapter.extend({
   namespace: 'v1/sys',
   pathForType(type) {
-    let path = type.replace('policy', 'policies');
+    const path = type.replace('policy', 'policies');
     return path;
   },
 
