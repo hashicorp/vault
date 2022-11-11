@@ -1,4 +1,3 @@
-
 terraform "bootstrap" {
   required_providers {
     tfe = {

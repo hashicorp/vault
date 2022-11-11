@@ -1,4 +1,3 @@
-
 module "create_ci_bootstrap_workspaces" {
   source = abspath("./modules/create_bootstrap_workspaces")
 

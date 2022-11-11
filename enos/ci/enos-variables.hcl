@@ -5,7 +5,7 @@ variable "terraform_plugin_cache_dir" {
 }
 
 variable "tfc_api_token" {
-  description = "The Terraform Cloud QTI Organization API token."
+  description = "The Terraform Cloud QTI Organization API token"
   type        = string
   sensitive   = true
 }

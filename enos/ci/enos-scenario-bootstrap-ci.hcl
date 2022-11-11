@@ -1,4 +1,3 @@
-
 module "create_enos_ci_ssh_key" {
   source = abspath("./modules/create_enos_ci_ssh_key")
 
