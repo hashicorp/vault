@@ -277,6 +277,85 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 	}
 }
 
+func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
+	pluginDir, cleanup := MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+
+	// new kv plugin can be registered but not mounted
+	plugin := compilePlugin(t, consts.PluginTypeCredential, "v1.2.3", pluginDir)
+	err := os.Link(path.Join(pluginDir, plugin.fileName), path.Join(pluginDir, "app-id"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginName := "approle"
+	conf := &CoreConfig{
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		PluginDirectory: pluginDir,
+	}
+	c := TestCoreWithSealAndUI(t, conf)
+	c, _, _ = testCoreUnsealed(t, c)
+
+	verifyAuthListDeprecationStatus := func(authName string, checkExists bool) error {
+		req := logical.TestRequest(t, logical.ReadOperation, mountTable(consts.PluginTypeCredential))
+		req.Data = map[string]interface{}{
+			"type": authName,
+		}
+		resp, err := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			return err
+		}
+		status := resp.Data["deprecation_status"]
+		if checkExists && status == nil {
+			return fmt.Errorf("expected deprecation status but found none")
+		} else if !checkExists && status != nil {
+			return fmt.Errorf("expected nil deprecation status but found %q", status)
+		}
+		return nil
+	}
+
+	// Create a new auth method with builtin approle
+	mountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+
+	// Read the auth table to verify deprecation status
+	if err := verifyAuthListDeprecationStatus(pluginName, true); err != nil {
+		t.Fatal(err)
+	}
+
+	// Register a shadow plugin
+	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "v1.2.3", plugin.sha256, plugin.fileName)
+
+	// Verify auth table hasn't changed
+	if err := verifyAuthListDeprecationStatus(pluginName, true); err != nil {
+		t.Fatal(err)
+	}
+
+	// Remount auth method using registered shadow plugin
+	unmountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+	mountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+
+	// Verify auth table has changed
+	if err := verifyAuthListDeprecationStatus(pluginName, false); err != nil {
+		t.Fatal(err)
+	}
+
+	// Deregister shadow plugin
+	deregisterPlugin(t, c.systemBackend, pluginName, consts.PluginTypeSecrets.String(), "v1.2.3", plugin.sha256, plugin.fileName)
+
+	// Verify auth table hasn't changed
+	if err := verifyAuthListDeprecationStatus(pluginName, false); err != nil {
+		t.Fatal(err)
+	}
+
+	// Remount auth method
+	unmountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+	mountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+
+	// Verify auth table has changed
+	if err := verifyAuthListDeprecationStatus(pluginName, false); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 	pluginDir, cleanup := MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
@@ -752,6 +831,43 @@ func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType
 		req.Data["config"] = map[string]interface{}{
 			"plugin_version": version,
 		}
+	}
+	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+}
+
+func unmountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType consts.PluginType, version, path string) {
+	t.Helper()
+	var mountPath string
+	if path == "" {
+		mountPath = mountTable(pluginType)
+	} else {
+		mountPath = mountTableWithPath(consts.PluginTypeSecrets, path)
+	}
+	req := logical.TestRequest(t, logical.DeleteOperation, mountPath)
+	req.Data = map[string]interface{}{
+		"type": pluginName,
+	}
+	if version != "" {
+		req.Data["config"] = map[string]interface{}{
+			"plugin_version": version,
+		}
+	}
+	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+}
+
+func deregisterPlugin(t *testing.T, sys *SystemBackend, pluginName, pluginType, version, sha, command string) {
+	t.Helper()
+	req := logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("plugins/catalog/%s/%s", pluginType, pluginName))
+	req.Data = map[string]interface{}{
+		"command": command,
+		"sha256":  sha,
+		"version": version,
 	}
 	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
