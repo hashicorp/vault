@@ -128,6 +128,33 @@ func TestReadCommand_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("no_data_object_from_api_response", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testReadCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"sys/health",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		expected := []string{
+			"cluster_id", "cluster_name", "initialized", "performance_standby", "replication_dr_mode", "replication_performance_mode", "sealed",
+			"server_time_utc", "standby", "version",
+		}
+		for _, expectedField := range expected {
+			if !strings.Contains(combined, expectedField) {
+				t.Errorf("expected %q to contain %q", combined, expected)
+			}
+		}
+	})
+
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 

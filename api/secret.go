@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -330,6 +331,14 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 		if err := jsonutil.DecodeJSONFromReader(&teebuf, &data); err != nil {
 			return nil, err
 		}
+		if val, ok := data["errors"]; ok {
+			errString := fmt.Sprintf("%v", val)
+			if strings.Contains(errString, "route entry not found") {
+				return nil, nil
+			}
+			return nil, fmt.Errorf(errString)
+		}
+
 		secret.Data = data
 	}
 
