@@ -1409,7 +1409,7 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 			}
 		}
 
-		err = p.parseKeyToKeyEntry(&entry, parsedKey, isPrivateKey)
+		err = entry.parseFromKey(p.Type, parsedKey, isPrivateKey)
 		if err != nil {
 			return err
 		}
@@ -2001,7 +2001,7 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 		}
 	}
 
-	err = p.parseKeyToKeyEntry(&keyEntry, parsedPrivateKey, isPrivateKey)
+	err = keyEntry.parseFromKey(p.Type, parsedPrivateKey, isPrivateKey)
 	if err != nil {
 		return err
 	}
@@ -2011,18 +2011,17 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 	return p.Persist(ctx, storage)
 }
 
-// NOTE: func name?/not a fan of changing input params
-func (p *Policy) parseKeyToKeyEntry(entry *KeyEntry, parsedKey any, isPrivateKey bool) error {
+func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any, isPrivateKey bool) error {
 	switch parsedKey.(type) {
 	case *ecdsa.PrivateKey, *ecdsa.PublicKey:
-		if p.Type != KeyType_ECDSA_P256 && p.Type != KeyType_ECDSA_P384 && p.Type != KeyType_ECDSA_P521 {
-			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
+		if PolKeyType != KeyType_ECDSA_P256 && PolKeyType != KeyType_ECDSA_P384 && PolKeyType != KeyType_ECDSA_P521 {
+			return fmt.Errorf("invalid key type: expected %s, got %T", PolKeyType, parsedKey)
 		}
 
 		curve := elliptic.P256()
-		if p.Type == KeyType_ECDSA_P384 {
+		if PolKeyType == KeyType_ECDSA_P384 {
 			curve = elliptic.P384()
-		} else if p.Type == KeyType_ECDSA_P521 {
+		} else if PolKeyType == KeyType_ECDSA_P521 {
 			curve = elliptic.P521()
 		}
 
@@ -2035,9 +2034,9 @@ func (p *Policy) parseKeyToKeyEntry(entry *KeyEntry, parsedKey any, isPrivateKey
 				return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
 			}
 
-			entry.EC_D = ecdsaKey.D
-			entry.EC_X = ecdsaKey.X
-			entry.EC_Y = ecdsaKey.Y
+			ke.EC_D = ecdsaKey.D
+			ke.EC_X = ecdsaKey.X
+			ke.EC_Y = ecdsaKey.Y
 
 			derBytes, err = x509.MarshalPKIXPublicKey(ecdsaKey.Public())
 			if err != nil {
@@ -2050,8 +2049,8 @@ func (p *Policy) parseKeyToKeyEntry(entry *KeyEntry, parsedKey any, isPrivateKey
 				return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
 			}
 
-			entry.EC_X = ecdsaKey.X
-			entry.EC_Y = ecdsaKey.Y
+			ke.EC_X = ecdsaKey.X
+			ke.EC_Y = ecdsaKey.Y
 
 			derBytes, err = x509.MarshalPKIXPublicKey(ecdsaKey)
 			if err != nil {
@@ -2067,25 +2066,25 @@ func (p *Policy) parseKeyToKeyEntry(entry *KeyEntry, parsedKey any, isPrivateKey
 		if pemBytes == nil || len(pemBytes) == 0 {
 			return fmt.Errorf("error PEM-encoding public key")
 		}
-		entry.FormattedPublicKey = string(pemBytes)
+		ke.FormattedPublicKey = string(pemBytes)
 	case ed25519.PrivateKey:
-		if p.Type != KeyType_ED25519 {
-			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
+		if PolKeyType != KeyType_ED25519 {
+			return fmt.Errorf("invalid key type: expected %s, got %T", PolKeyType, parsedKey)
 		}
 		privateKey := parsedKey.(ed25519.PrivateKey)
 
-		entry.Key = privateKey
+		ke.Key = privateKey
 		publicKey := privateKey.Public().(ed25519.PublicKey)
-		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
+		ke.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
 	case *rsa.PrivateKey, *rsa.PublicKey:
-		if p.Type != KeyType_RSA2048 && p.Type != KeyType_RSA3072 && p.Type != KeyType_RSA4096 {
-			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
+		if PolKeyType != KeyType_RSA2048 && PolKeyType != KeyType_RSA3072 && PolKeyType != KeyType_RSA4096 {
+			return fmt.Errorf("invalid key type: expected %s, got %T", PolKeyType, parsedKey)
 		}
 
 		keyBytes := 256
-		if p.Type == KeyType_RSA3072 {
+		if PolKeyType == KeyType_RSA3072 {
 			keyBytes = 384
-		} else if p.Type == KeyType_RSA4096 {
+		} else if PolKeyType == KeyType_RSA4096 {
 			keyBytes = 512
 		}
 		// NOTE: If for some reason we don't pass the `isPrivateKey`, we can use the keyTypes
@@ -2094,16 +2093,16 @@ func (p *Policy) parseKeyToKeyEntry(entry *KeyEntry, parsedKey any, isPrivateKey
 			if rsaKey.Size() != keyBytes {
 				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
 			}
-			entry.RSAKey = rsaKey
+			ke.RSAKey = rsaKey
 		} else {
 			rsaKey := parsedKey.(*rsa.PublicKey)
 			if rsaKey.Size() != keyBytes {
 				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
 			}
-			entry.RSAPublicKey = rsaKey
+			ke.RSAPublicKey = rsaKey
 		}
 	default:
-		return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
+		return fmt.Errorf("invalid key type: expected %s, got %T", PolKeyType, parsedKey)
 	}
 
 	return nil
