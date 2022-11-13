@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -21,6 +22,29 @@ type Response struct {
 // still be called.
 func (r *Response) DecodeJSON(out interface{}) error {
 	return jsonutil.DecodeJSONFromReader(r.Body, out)
+}
+
+// ToSecret converts a Response into a secret using the body
+// for secret data, and the headers for control messaging such as
+// cache Age.
+func (r *Response) ToSecret() (*Secret, error) {
+	secret, err := ParseSecret(r.Body)
+
+	if err != nil {
+		return secret, err
+	}
+
+	if ageHeader := r.Header.Get("Age"); ageHeader != "" {
+		duration, err := time.ParseDuration(ageHeader + "s")
+
+		if err != nil {
+			return secret, err
+		}
+
+		secret.Age = duration
+	}
+
+	return secret, nil
 }
 
 // Error returns an error response if there is one. If there is an error,

@@ -38,6 +38,10 @@ type Secret struct {
 	// cubbyhole of the given token (which has a TTL of the given number of
 	// seconds)
 	WrapInfo *SecretWrapInfo `json:"wrap_info,omitempty"`
+
+	// Age, means that a secret was retrieved from a remote cache and that the
+	// secret is "Age" seconds old. Age is retrieved from the HTTP "Age" header.
+	Age time.Duration
 }
 
 // TokenID returns the standardized token ID (token) for the given secret.

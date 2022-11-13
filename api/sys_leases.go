@@ -30,7 +30,7 @@ func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.ToSecret()
 }
 
 func (c *Sys) Lookup(id string) (*Secret, error) {
