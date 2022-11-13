@@ -60,9 +60,8 @@ type PolicyRequest struct {
 	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
 	AllowImportedKeyRotation bool
 
-    // NOTE: Desc
-    // IsCiphertextSet indicates an import is for a private or public key
-    IsCiphertextSet bool
+	// Indicates whether a private or public key is imported/upserted
+	IsPrivateKey bool
 }
 
 type LockManager struct {
@@ -499,7 +498,8 @@ func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key 
 		}
 	}
 
-	err = p.Import(ctx, req.Storage, key, req.IsCiphertextSet, rand)
+	// NOTE: Function signature cannot be changed, so we will need to create a new method
+	err = p.Import(ctx, req.Storage, key, req.IsPrivateKey, rand)
 	if err != nil {
 		return fmt.Errorf("error importing key: %s", err)
 	}

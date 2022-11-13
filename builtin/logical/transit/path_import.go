@@ -151,13 +151,10 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 	name := d.Get("name").(string)
 	derived := d.Get("derived").(bool)
 	keyType := d.Get("type").(string)
-	hashFnStr := d.Get("hash_function").(string)
 	exportable := d.Get("exportable").(bool)
 	allowPlaintextBackup := d.Get("allow_plaintext_backup").(bool)
 	autoRotatePeriod := time.Second * time.Duration(d.Get("auto_rotate_period").(int))
-	ciphertextString := d.Get("ciphertext").(string)
 	allowRotation := d.Get("allow_rotation").(bool)
-	publicKeyString := d.Get("public_key").(string)
 
 	// Ensure the caller didn't supply "convergent_encryption" as a field, since it's not supported on import.
 	if _, ok := d.Raw["convergent_encryption"]; ok {
@@ -182,7 +179,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		AllowPlaintextBackup:     allowPlaintextBackup,
 		AutoRotatePeriod:         autoRotatePeriod,
 		AllowImportedKeyRotation: allowRotation,
-		IsCiphertextSet:          isCiphertextSet,
+		IsPrivateKey:             isCiphertextSet,
 	}
 
 	switch strings.ToLower(keyType) {
@@ -224,27 +221,9 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
 	}
 
-	var key []byte
-	if isCiphertextSet {
-		hashFn, err := parseHashFn(hashFnStr)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-		}
-
-		ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
-		if err != nil {
-			return nil, err
-		}
-
-		key, err = b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		if !polReq.KeyType.ImportPublicKeySupported() {
-			return nil, errors.New("provided type does not support public_key import")
-		}
-		key = []byte(publicKeyString)
+	key, resp, err := b.extractKeyFromFields(ctx, req, d, &polReq)
+	if err != nil {
+		return resp, err
 	}
 
 	err = b.lm.ImportPolicy(ctx, polReq, key, b.GetRandomReader())
@@ -257,9 +236,6 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 
 func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	hashFnStr := d.Get("hash_function").(string)
-	ciphertextString := d.Get("ciphertext").(string)
-	publicKeyString := d.Get("public_key").(string)
 	bumpVersion := d.Get("bump_version").(bool)
 
 	isCiphertextSet, err := checkKeyFieldsSet(d)
@@ -268,10 +244,10 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	}
 
 	polReq := keysutil.PolicyRequest{
-		Storage:         req.Storage,
-		Name:            name,
-		Upsert:          false,
-		IsCiphertextSet: isCiphertextSet,
+		Storage:      req.Storage,
+		Name:         name,
+		Upsert:       false,
+		IsPrivateKey: isCiphertextSet,
 	}
 	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
@@ -298,31 +274,16 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		versionToUpdate = version.(int)
 	}
 
-	var importKey []byte
-	if isCiphertextSet {
-		hashFn, err := parseHashFn(hashFnStr)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-		}
-
-		ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
-		if err != nil {
-			return nil, err
-		}
-		importKey, err = b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// NOTE: If we have a public_key
-		importKey = []byte(publicKeyString)
+	key, resp, err := b.extractKeyFromFields(ctx, req, d, &polReq)
+	if err != nil {
+		return resp, err
 	}
 
 	if !bumpVersion {
-		err = p.UpdateKeyVersion(ctx, req.Storage, importKey, isCiphertextSet, versionToUpdate)
+		err = p.UpdateKeyVersion(ctx, req.Storage, key, isCiphertextSet, versionToUpdate)
 	} else {
 		// NOTE: We will call this if are bumping the version else we use the new method (UpdateKeyVersion)
-		err = p.Import(ctx, req.Storage, importKey, isCiphertextSet, b.GetRandomReader())
+		err = p.Import(ctx, req.Storage, key, isCiphertextSet, b.GetRandomReader())
 	}
 	if err != nil {
 		return nil, err
@@ -379,6 +340,37 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 	}
 
 	return importKey, nil
+}
+
+// NOTE: polReq as a reference or obj?
+func (b *backend) extractKeyFromFields(ctx context.Context, req *logical.Request, d *framework.FieldData, polReq *keysutil.PolicyRequest) ([]byte, *logical.Response, error) {
+	var key []byte
+	hashFnStr := d.Get("hash_function").(string)
+	if polReq.IsPrivateKey {
+		ciphertextString := d.Get("ciphertext").(string)
+		hashFn, err := parseHashFn(hashFnStr)
+		if err != nil {
+			return key, logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+
+		ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
+		if err != nil {
+			return key, nil, err
+		}
+
+		key, err = b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
+		if err != nil {
+			return key, nil, err
+		}
+	} else {
+		publicKeyString := d.Get("public_key").(string)
+		if !polReq.KeyType.ImportPublicKeySupported() {
+			return key, nil, errors.New("provided type does not support public_key import")
+		}
+		key = []byte(publicKeyString)
+	}
+
+	return key, nil, nil
 }
 
 func parseHashFn(hashFn string) (hash.Hash, error) {
