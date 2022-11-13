@@ -3,7 +3,11 @@ package api
 import (
 	"errors"
 	"fmt"
+	"math"
+	"math/rand"
+	"reflect"
 	"testing"
+	"testing/quick"
 	"time"
 
 	"github.com/go-test/deep"
@@ -231,5 +235,53 @@ func TestLifetimeWatcher(t *testing.T) {
 				t.Fatalf("expected at least one renewal, got none.")
 			}
 		})
+	}
+}
+
+// randDuration calculates a random duration for use in property based testing.
+func randDuration(r *rand.Rand, max int64) time.Duration {
+	return time.Duration(max)
+}
+
+func sleepLessThanRemainingLease(leaseDuration, priorDuration, remainingLeaseDuration time.Duration, increment int) bool {
+	lw := LifetimeWatcher{
+		grace:     0,
+		increment: increment,
+	}
+
+	//ensure that we sleep for less than 2/3 of the remaining lease.
+	return lw.calculateSleepDuration(remainingLeaseDuration, priorDuration) < ((remainingLeaseDuration / 3) * 2)
+}
+
+// TestCalcSleepPeriod uses property based testing to evaluate the calculateSleepDuration
+// function of LifeTimeWatchers, but also incidentally tests "calculateGrace".
+// This is on account of "calculateSleepDuration" performing the "calculateGrace"
+// function in particular instances.
+// Both of these functions support the vital functionality of the LifeTimeWatcher
+// and therefore should be tested rigorously.
+func TestCalcSleepPeriod(t *testing.T) {
+	c := quick.Config{
+		MaxCount: 1000,
+		Values: func(values []reflect.Value, r *rand.Rand) {
+			//total lease duration
+			leaseDuration := randDuration(r, math.MaxInt64)
+			priorDuration := randDuration(r, int64(leaseDuration))
+			remainingLeaseDuration := randDuration(r, int64(priorDuration))
+
+			values[0] = reflect.ValueOf(leaseDuration)
+
+			//prior lease duration
+			values[1] = reflect.ValueOf(priorDuration)
+			//remaining lease duration
+			values[2] = reflect.ValueOf(remainingLeaseDuration)
+
+			//increment
+			//integer truncation... could be interesting.
+			values[3] = reflect.ValueOf(r.Intn(int(leaseDuration)))
+		},
+	}
+
+	if err := quick.Check(sleepLessThanRemainingLease, &c); err != nil {
+		t.Error(err)
 	}
 }
