@@ -248,11 +248,14 @@ func randDuration(r *rand.Rand, max int64) time.Duration {
 // Inputs are generated so that:
 // leaseDuration > priorDuration > remainingLeaseDuration
 // and leaseDuration > increment
-func sleepLessThanRemainingLease(leaseDuration, priorDuration, remainingLeaseDuration time.Duration, increment int) bool {
+func sleepLessThanRemainingLease(r *rand.Rand, leaseDuration, priorDuration, remainingLeaseDuration time.Duration, increment int) bool {
 	lw := LifetimeWatcher{
 		grace:     0,
 		increment: increment,
+		random:    r,
 	}
+
+	lw.calculateGrace(leaseDuration, time.Duration(increment))
 
 	//ensure that we sleep for less than the remaining lease.
 	return lw.calculateSleepDuration(remainingLeaseDuration, priorDuration) < remainingLeaseDuration
@@ -273,16 +276,17 @@ func TestCalcSleepPeriod(t *testing.T) {
 			priorDuration := randDuration(r, int64(leaseDuration))
 			remainingLeaseDuration := randDuration(r, int64(priorDuration))
 
-			values[0] = reflect.ValueOf(leaseDuration)
+			values[0] = reflect.ValueOf(r)
+			values[1] = reflect.ValueOf(leaseDuration)
 
 			//prior lease duration
-			values[1] = reflect.ValueOf(priorDuration)
+			values[2] = reflect.ValueOf(priorDuration)
 			//remaining lease duration
-			values[2] = reflect.ValueOf(remainingLeaseDuration)
+			values[3] = reflect.ValueOf(remainingLeaseDuration)
 
 			//increment
 			//integer truncation... could be interesting.
-			values[3] = reflect.ValueOf(r.Intn(int(leaseDuration)))
+			values[4] = reflect.ValueOf(r.Intn(int(leaseDuration)))
 		},
 	}
 
