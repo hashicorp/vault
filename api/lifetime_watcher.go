@@ -335,26 +335,16 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 			remainingLeaseDuration = time.Duration(initLeaseDuration) * time.Second
 		}
 
-		var sleepDuration time.Duration
-
 		if errorBackoff != nil {
-			sleepDuration = errorBackoff.NextBackOff()
-			if sleepDuration == backoff.Stop {
+			if errorBackoff.NextBackOff() == backoff.Stop {
 				return err
 			}
-		} else {
-			// We keep evaluating a new grace period so long as the lease is
-			// extending. Once it stops extending, we've hit the max and need to
-			// rely on the grace duration.
-			if remainingLeaseDuration > priorDuration {
-				r.calculateGrace(remainingLeaseDuration, time.Duration(r.increment)*time.Second)
-			}
-			priorDuration = remainingLeaseDuration
-
-			// The sleep duration is set to 2/3 of the current lease duration plus
-			// 1/3 of the current grace period, which adds jitter.
-			sleepDuration = time.Duration(float64(remainingLeaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3)
 		}
+
+		sleepDuration := r.calculateSleepDuration(remainingLeaseDuration, priorDuration)
+
+		// remainingLeaseDuration becomes the priorDuration for the next loop
+		priorDuration = remainingLeaseDuration
 
 		// If we are within grace, return now; or, if the amount of time we
 		// would sleep would land us in the grace period. This helps with short
@@ -373,6 +363,22 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 			continue
 		}
 	}
+}
+
+// calculateSleepDuration calculates the amount of time the LifeTimeWatcher should sleep
+// before re-entering its loop.
+// The sleep period is 2/3 of the ramining leaseDuration + 1/3 of the grace period.
+func (r *LifetimeWatcher) calculateSleepDuration(remainingLeaseDuration, priorDuration time.Duration) time.Duration {
+	// We keep evaluating a new grace period so long as the lease is
+	// extending. Once it stops extending, we've hit the max and need to
+	// rely on the grace duration.
+	if remainingLeaseDuration > priorDuration {
+		r.calculateGrace(remainingLeaseDuration, time.Duration(r.increment)*time.Second)
+	}
+
+	// The sleep duration is set to 2/3 of the current lease duration plus
+	// 1/3 of the current grace period, which adds jitter.
+	return time.Duration(float64(remainingLeaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3)
 }
 
 // calculateGrace calculates the grace period based on the minimum of the
