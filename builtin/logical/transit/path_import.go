@@ -283,7 +283,7 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		err = p.UpdateKeyVersion(ctx, req.Storage, key, isCiphertextSet, versionToUpdate)
 	} else {
 		// NOTE: We will call this if are bumping the version else we use the new method (UpdateKeyVersion)
-		err = p.Import(ctx, req.Storage, key, isCiphertextSet, b.GetRandomReader())
+		err = p.ImportPublicOrPrivate(ctx, req.Storage, key, isCiphertextSet, b.GetRandomReader())
 	}
 	if err != nil {
 		return nil, err

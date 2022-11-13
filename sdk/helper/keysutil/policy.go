@@ -229,10 +229,17 @@ type KeyEntry struct {
 	// This is deprecated (but still filled) in favor of the value above which
 	// is more precise
 	DeprecatedCreationTime int64 `json:"creation_time"`
+}
 
-	// NOTE: Do we really need this field? If so, having it here or in Policy?
-	// Useful for validation in operations in case we only have public key
-	PublicKeyImported bool `json:"public_key_imported"`
+func (ke *KeyEntry) isPublicKeyImported() bool {
+	var publicKeyImported bool
+	if ke.RSAKey == nil && ke.RSAPublicKey != nil {
+		publicKeyImported = true
+	} else if ke.EC_D == nil && ke.EC_Y != nil && ke.EC_X != nil {
+		publicKeyImported = true
+	}
+
+	return publicKeyImported
 }
 
 // deprecatedKeyEntryMap is used to allow JSON marshal/unmarshal
@@ -974,10 +981,10 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 			return "", err
 		}
 		key := keyEntry.RSAKey
-        if key == nil {
-            // What is the version being used?
-            return "", errutil.InternalError{Err: fmt.Sprintf("cannot decrypt ciphertext, key version %v does not have a private counterpart", p.LatestVersion)}
-        }
+		if key == nil {
+			// What is the version being used?
+			return "", errutil.InternalError{Err: fmt.Sprintf("cannot decrypt ciphertext, key version %v does not have a private counterpart", p.MinDecryptionVersion)}
+		}
 		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA decrypt the ciphertext: %v", err)}
@@ -1358,7 +1365,11 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 	}
 }
 
-func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, isPrivateKey bool, randReader io.Reader) error {
+func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, randReader io.Reader) error {
+	return p.ImportPublicOrPrivate(ctx, storage, key, true, randReader)
+}
+
+func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Storage, key []byte, isPrivateKey bool, randReader io.Reader) error {
 	now := time.Now()
 	entry := KeyEntry{
 		CreationTime:           now,
@@ -1416,8 +1427,6 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 	}
 
 	p.LatestVersion += 1
-
-	entry.PublicKeyImported = !isPrivateKey
 
 	if p.Keys == nil {
 		// This is an initial key rotation when generating a new policy. We
@@ -1963,7 +1972,7 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 		return errors.New("provided type does not support version updates")
 	}
 
-	publicKeyImported := keyEntry.PublicKeyImported
+	publicKeyImported := keyEntry.isPublicKeyImported()
 	if publicKeyImported && !isPrivateKey {
 		// NOTE: Description
 		return errors.New("cannot import a public key to a key version that already as a public key set")
@@ -2087,7 +2096,6 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any, isPrivateKey
 		} else if PolKeyType == KeyType_RSA4096 {
 			keyBytes = 512
 		}
-		// NOTE: If for some reason we don't pass the `isPrivateKey`, we can use the keyTypes
 		if isPrivateKey {
 			rsaKey := parsedKey.(*rsa.PrivateKey)
 			if rsaKey.Size() != keyBytes {
