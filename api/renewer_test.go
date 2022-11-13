@@ -243,6 +243,11 @@ func randDuration(r *rand.Rand, max int64) time.Duration {
 	return time.Duration(max)
 }
 
+// sleepLessThanRemainingLease tests that "calculateSleepDuration" will always return a value less than 2/3
+// of the remaining lease duration given a random leaseDuration, priorDuration, remainingLeaseDuration, and increment.
+// Inputs are generated so that:
+// leaseDuration > priorDuration > remainingLeaseDuration
+// and leaseDuration > increment
 func sleepLessThanRemainingLease(leaseDuration, priorDuration, remainingLeaseDuration time.Duration, increment int) bool {
 	lw := LifetimeWatcher{
 		grace:     0,
