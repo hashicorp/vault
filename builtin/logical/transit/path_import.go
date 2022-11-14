@@ -50,9 +50,8 @@ ephemeral AES key. Can be one of "SHA1", "SHA224", "SHA256" (default), "SHA384",
 with the wrapping key and then concatenated with the import key, wrapped by the AES key.`,
 			},
 			"public_key": {
-				Type: framework.TypeString,
-				// NOTE: Add description
-				Description: ``,
+				Type:        framework.TypeString,
+				Description: `The plaintext public key to be imported. If "ciphertext" is set, this field is ignored.`,
 			},
 			"allow_rotation": {
 				Type:        framework.TypeBool,
@@ -117,9 +116,8 @@ func (b *backend) pathImportVersion() *framework.Path {
 with the wrapping key and then concatenated with the import key, wrapped by the AES key.`,
 			},
 			"public_key": {
-				Type: framework.TypeString,
-				// NOTE: Add description
-				Description: ``,
+				Type:        framework.TypeString,
+				Description: `The plaintext public key to be imported. If "ciphertext" is set, this field is ignored.`,
 			},
 			"hash_function": {
 				Type:    framework.TypeString,
@@ -129,14 +127,14 @@ ephemeral AES key. Can be one of "SHA1", "SHA224", "SHA256" (default), "SHA384",
 			},
 			"bump_version": {
 				Type:    framework.TypeBool,
-				Default: false,
-				// NOTE: Add description
-				Description: ``,
+				Default: true,
+				Description: `By default, each operation will create a new key version.
+If set to 'false', will try to update the 'Latest' version of the key, unless changed in the "version" field.`,
 			},
 			"version": {
 				Type: framework.TypeInt,
 				Description: `Key version to be updated, if left empty 'Latest' version will be updated.
-If field to update has already been set, a new version will be created. If bump_version is set to True, this field is ignored`,
+If "bump_version" is set to 'true', this field is ignored.`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -279,11 +277,10 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		return resp, err
 	}
 
-	if !bumpVersion {
-		err = p.UpdateKeyVersion(ctx, req.Storage, key, isCiphertextSet, versionToUpdate)
-	} else {
-		// NOTE: We will call this if are bumping the version else we use the new method (UpdateKeyVersion)
+	if bumpVersion {
 		err = p.ImportPublicOrPrivate(ctx, req.Storage, key, isCiphertextSet, b.GetRandomReader())
+	} else {
+		err = p.UpdateKeyVersion(ctx, req.Storage, key, isCiphertextSet, versionToUpdate)
 	}
 	if err != nil {
 		return nil, err

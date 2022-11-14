@@ -1968,7 +1968,7 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 
 	// Validations
 	if !p.Type.ImportPublicKeySupported() {
-		return errors.New("provided type does not support version updates")
+		return errors.New("provided type does not support updating key versions")
 	}
 
 	publicKeyImported := keyEntry.isPublicKeyImported()

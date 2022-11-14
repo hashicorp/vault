@@ -401,7 +401,7 @@ func TestTransit_Import(t *testing.T) {
 
 			// Get keys
 			privateKey := getKey(t, keyType)
-			publicKeyBytes, err := publicKeyToBytes(privateKey.(ed25519.PrivateKey).Public())
+			publicKeyBytes, err := getPublicKey(privateKey, keyType)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -433,7 +433,7 @@ func TestTransit_Import(t *testing.T) {
 
 			// Get keys
 			privateKey := getKey(t, keyType)
-			publicKeyBytes, err := publicKeyToBytes(privateKey.(*ecdsa.PrivateKey).Public())
+			publicKeyBytes, err := getPublicKey(privateKey, keyType)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -612,7 +612,7 @@ func TestTransit_ImportVersion(t *testing.T) {
 			// Get keys
 			privateKey := getKey(t, keyType)
 			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, privateKey, keyType, "SHA256")
-			publicKeyBytes, err := publicKeyToBytes(privateKey.(*rsa.PrivateKey).Public())
+			publicKeyBytes, err := getPublicKey(privateKey, keyType)
 			if err != nil {
 				t.Fatal(err)
 			}
