@@ -498,7 +498,6 @@ func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key 
 		}
 	}
 
-	// NOTE: Function signature cannot be changed, so we will need to create a new method
 	err = p.ImportPublicOrPrivate(ctx, req.Storage, key, req.IsPrivateKey, rand)
 	if err != nil {
 		return fmt.Errorf("error importing key: %s", err)

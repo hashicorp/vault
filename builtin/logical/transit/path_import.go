@@ -339,7 +339,6 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 	return importKey, nil
 }
 
-// NOTE: polReq as a reference or obj?
 func (b *backend) extractKeyFromFields(ctx context.Context, req *logical.Request, d *framework.FieldData, polReq *keysutil.PolicyRequest) ([]byte, *logical.Response, error) {
 	var key []byte
 	hashFnStr := d.Get("hash_function").(string)
@@ -387,13 +386,11 @@ func parseHashFn(hashFn string) (hash.Hash, error) {
 	}
 }
 
-// checkKeyFieldsSet: Desc
 func checkKeyFieldsSet(d *framework.FieldData) (bool, error) {
 	isCiphertextSet := true
 	if !isFieldSet("ciphertext", d) {
 		isCiphertextSet = false
 		if !isFieldSet("public_key", d) {
-			// NOTE: Error desc
 			return isCiphertextSet, errors.New("one of the following fields, ciphertext xor public_key, has to be set")
 		}
 	}
@@ -401,7 +398,6 @@ func checkKeyFieldsSet(d *framework.FieldData) (bool, error) {
 	return isCiphertextSet, nil
 }
 
-// isFieldSet: Desc
 func isFieldSet(fieldName string, d *framework.FieldData) bool {
 	_, fieldSet := d.Raw[fieldName]
 	if !fieldSet {

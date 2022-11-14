@@ -441,9 +441,6 @@ type Policy struct {
 	AllowImportedKeyRotation bool
 
 	ManagedKeyName string `json:"managed_key_name,omitempty"`
-
-	// VersionPublicKeyImported indicates if a public key has already been imported for a given version
-	VersionPublicKeyImported map[string]bool `json:"public_key_imported"`
 }
 
 func (p *Policy) Lock(exclusive bool) {
@@ -1973,13 +1970,11 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 
 	publicKeyImported := keyEntry.isPublicKeyImported()
 	if publicKeyImported && !isPrivateKey {
-		// NOTE: Description
-		return errors.New("cannot import a public key to a key version that already as a public key set")
+		return errors.New("cannot add a public key to a key version that already as a public key set")
 	}
 
 	if !publicKeyImported {
-		// NOTE: Description
-		return errors.New("private key imported, cannot be updated or add a public key")
+		return errors.New("private key imported, key version cannot be updated")
 	}
 
 	// Parse key
@@ -1988,24 +1983,20 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 		return fmt.Errorf("error parsing asymmetric key: %s", err)
 	}
 
-	// Check if key pair is valid, this reduces the need for duplicated code but moves the checks to after validating key pair
 	switch parsedPrivateKey.(type) {
 	case *ecdsa.PrivateKey:
 		ecdsaKey := parsedPrivateKey.(*ecdsa.PrivateKey)
-		// Is this going to work?
 		publicKey, err := x509.ParsePKIXPublicKey([]byte(keyEntry.FormattedPublicKey))
 		if err != nil {
 			return fmt.Errorf("failed to parse key entry public key: %v", err)
 		}
 		if !publicKey.(*ecdsa.PublicKey).Equal(ecdsaKey.PublicKey) {
-			// NOTE: Description
-			return fmt.Errorf("keys do not match")
+			return fmt.Errorf("cannot import key, key pair does not match")
 		}
 	case *rsa.PrivateKey:
 		rsaKey := parsedPrivateKey.(*rsa.PrivateKey)
 		if !rsaKey.PublicKey.Equal(keyEntry.RSAPublicKey) {
-			// NOTE: Description
-			return fmt.Errorf("keys do not match")
+			return fmt.Errorf("cannot import key, key pair does not match")
 		}
 	}
 
