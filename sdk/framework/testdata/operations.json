@@ -72,6 +72,7 @@
         "summary": "Update Summary",
         "description": "Update Description",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {

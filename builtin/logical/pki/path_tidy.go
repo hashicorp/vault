@@ -13,29 +13,34 @@ import (
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var tidyCancelledError = errors.New("tidy operation cancelled")
 
 type tidyConfig struct {
-	Enabled       bool          `json:"enabled"`
-	Interval      time.Duration `json:"interval_duration"`
-	CertStore     bool          `json:"tidy_cert_store"`
-	RevokedCerts  bool          `json:"tidy_revoked_certs"`
-	IssuerAssocs  bool          `json:"tidy_revoked_cert_issuer_associations"`
-	SafetyBuffer  time.Duration `json:"safety_buffer"`
-	PauseDuration time.Duration `json:"pause_duration"`
+	Enabled            bool          `json:"enabled"`
+	Interval           time.Duration `json:"interval_duration"`
+	CertStore          bool          `json:"tidy_cert_store"`
+	RevokedCerts       bool          `json:"tidy_revoked_certs"`
+	IssuerAssocs       bool          `json:"tidy_revoked_cert_issuer_associations"`
+	ExpiredIssuers     bool          `json:"tidy_expired_issuers"`
+	SafetyBuffer       time.Duration `json:"safety_buffer"`
+	IssuerSafetyBuffer time.Duration `json:"issuer_safety_buffer"`
+	PauseDuration      time.Duration `json:"pause_duration"`
 }
 
 var defaultTidyConfig = tidyConfig{
-	Enabled:       false,
-	Interval:      12 * time.Hour,
-	CertStore:     false,
-	RevokedCerts:  false,
-	IssuerAssocs:  false,
-	SafetyBuffer:  72 * time.Hour,
-	PauseDuration: 0 * time.Second,
+	Enabled:            false,
+	Interval:           12 * time.Hour,
+	CertStore:          false,
+	RevokedCerts:       false,
+	IssuerAssocs:       false,
+	ExpiredIssuers:     false,
+	SafetyBuffer:       72 * time.Hour,
+	IssuerSafetyBuffer: 365 * 24 * time.Hour,
+	PauseDuration:      0 * time.Second,
 }
 
 func pathTidy(b *backend) *framework.Path {
@@ -116,11 +121,17 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool) || d.Get("tidy_revocation_list").(bool)
 	tidyRevokedAssocs := d.Get("tidy_revoked_cert_issuer_associations").(bool)
+	tidyExpiredIssuers := d.Get("tidy_expired_issuers").(bool)
+	issuerSafetyBuffer := d.Get("issuer_safety_buffer").(int)
 	pauseDurationStr := d.Get("pause_duration").(string)
 	pauseDuration := 0 * time.Second
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
+	}
+
+	if issuerSafetyBuffer < 1 {
+		return logical.ErrorResponse("issuer_safety_buffer must be greater than zero"), nil
 	}
 
 	if pauseDurationStr != "" {
@@ -136,16 +147,19 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
+	issuerBufferDuration := time.Duration(issuerSafetyBuffer) * time.Second
 
 	// Manual run with constructed configuration.
 	config := &tidyConfig{
-		Enabled:       true,
-		Interval:      0 * time.Second,
-		CertStore:     tidyCertStore,
-		RevokedCerts:  tidyRevokedCerts,
-		IssuerAssocs:  tidyRevokedAssocs,
-		SafetyBuffer:  bufferDuration,
-		PauseDuration: pauseDuration,
+		Enabled:            true,
+		Interval:           0 * time.Second,
+		CertStore:          tidyCertStore,
+		RevokedCerts:       tidyRevokedCerts,
+		IssuerAssocs:       tidyRevokedAssocs,
+		ExpiredIssuers:     tidyExpiredIssuers,
+		SafetyBuffer:       bufferDuration,
+		IssuerSafetyBuffer: issuerBufferDuration,
+		PauseDuration:      pauseDuration,
 	}
 
 	if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
@@ -170,8 +184,8 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	b.startTidyOperation(req, config)
 
 	resp := &logical.Response{}
-	if !tidyCertStore && !tidyRevokedCerts && !tidyRevokedAssocs {
-		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true or tidy_revoked_cert_issuer_associations=true to start a tidy operation.")
+	if !tidyCertStore && !tidyRevokedCerts && !tidyRevokedAssocs && !tidyExpiredIssuers {
+		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true or tidy_revoked_cert_issuer_associations=true or tidy_expired_issuers=true to start a tidy operation.")
 	} else {
 		resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
 	}
@@ -205,6 +219,12 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 
 			if config.RevokedCerts || config.IssuerAssocs {
 				if err := b.doTidyRevocationStore(ctx, req, logger, config); err != nil {
+					return err
+				}
+			}
+
+			if config.ExpiredIssuers {
+				if err := b.doTidyExpiredIssuers(ctx, req, logger, config); err != nil {
 					return err
 				}
 			}
@@ -404,12 +424,12 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		if storeCert {
 			revokedEntry, err = logical.StorageEntryJSON("revoked/"+serial, revInfo)
 			if err != nil {
-				return fmt.Errorf("error building entry to persist changes to serial %v from revoked list: %v", serial, err)
+				return fmt.Errorf("error building entry to persist changes to serial %v from revoked list: %w", serial, err)
 			}
 
 			err = req.Storage.Put(ctx, revokedEntry)
 			if err != nil {
-				return fmt.Errorf("error persisting changes to serial %v from revoked list: %v", serial, err)
+				return fmt.Errorf("error persisting changes to serial %v from revoked list: %w", serial, err)
 			}
 		}
 	}
@@ -434,6 +454,111 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 			if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		b.Logger().Debug("skipping expired issuer tidy as we're not on the primary or secondary with a local mount")
+		return nil
+	}
+
+	// Short-circuit to avoid having to deal with the legacy mounts. While we
+	// could handle this case and remove these issuers, its somewhat
+	// unexpected behavior and we'd prefer to finish the migration first.
+	if b.useLegacyBundleCaStorage() {
+		return nil
+	}
+
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
+	// Fetch and parse our issuers so we have their expiration date.
+	sc := b.makeStorageContext(ctx, req.Storage)
+	issuerIDCertMap, err := fetchIssuerMapForRevocationChecking(sc)
+	if err != nil {
+		return err
+	}
+
+	// Fetch the issuer config to find the default; we don't want to remove
+	// the current active issuer automatically.
+	iConfig, err := sc.getIssuersConfig()
+	if err != nil {
+		return err
+	}
+
+	// We want certificates which have expired before this date by a given
+	// safety buffer. So we subtract the buffer from now, and anything which
+	// has expired before our after buffer can be tidied, and anything that
+	// expired after this buffer must be kept.
+	now := time.Now()
+	afterBuffer := now.Add(-1 * config.IssuerSafetyBuffer)
+
+	rebuildChainsAndCRL := false
+
+	for issuer, cert := range issuerIDCertMap {
+		if cert.NotAfter.After(afterBuffer) {
+			continue
+		}
+
+		entry, err := sc.fetchIssuerById(issuer)
+		if err != nil {
+			return nil
+		}
+
+		// This issuer's certificate has expired. We explicitly persist the
+		// key, but log both the certificate and the keyId to the
+		// informational logs so an admin can recover the removed cert if
+		// necessary or remove the key (and know which cert it belonged to),
+		// if desired.
+		msg := "[Tidy on mount: %v] Issuer %v has expired by %v and is being removed."
+		idAndName := fmt.Sprintf("[id:%v/name:%v]", entry.ID, entry.Name)
+		msg = fmt.Sprintf(msg, b.backendUUID, idAndName, config.IssuerSafetyBuffer)
+
+		// Before we log, check if we're the default. While this is late, and
+		// after we read it from storage, we have more info here to tell the
+		// user that their default has expired AND has passed the safety
+		// buffer.
+		if iConfig.DefaultIssuerId == issuer {
+			msg = "[Tidy on mount: %v] Issuer %v has expired and would be removed via tidy, but won't be, as it is currently the default issuer."
+			msg = fmt.Sprintf(msg, b.backendUUID, idAndName)
+			b.Logger().Warn(msg)
+			continue
+		}
+
+		// Log the above message..
+		b.Logger().Info(msg, "serial_number", entry.SerialNumber, "key_id", entry.KeyID, "certificate", entry.Certificate)
+
+		wasDefault, err := sc.deleteIssuer(issuer)
+		if err != nil {
+			b.Logger().Error(fmt.Sprintf("failed to remove %v: %v", idAndName, err))
+			return err
+		}
+		if wasDefault {
+			b.Logger().Warn(fmt.Sprintf("expired issuer %v was default; it is strongly encouraged to choose a new default issuer for backwards compatibility", idAndName))
+		}
+
+		rebuildChainsAndCRL = true
+	}
+
+	if rebuildChainsAndCRL {
+		// When issuers are removed, there's a chance chains change as a
+		// result; remove them.
+		if err := sc.rebuildIssuersChains(nil); err != nil {
+			return err
+		}
+
+		// Removal of issuers is generally a good reason to rebuild the CRL,
+		// even if auto-rebuild is enabled.
+		b.revokeStorageLock.Lock()
+		defer b.revokeStorageLock.Unlock()
+
+		if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
+			return err
 		}
 	}
 
@@ -470,9 +595,11 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"safety_buffer":                         nil,
+			"issuer_safety_buffer":                  nil,
 			"tidy_cert_store":                       nil,
 			"tidy_revoked_certs":                    nil,
 			"tidy_revoked_cert_issuer_associations": nil,
+			"tidy_expired_issuers":                  nil,
 			"pause_duration":                        nil,
 			"state":                                 "Inactive",
 			"error":                                 nil,
@@ -492,9 +619,11 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	}
 
 	resp.Data["safety_buffer"] = b.tidyStatus.safetyBuffer
+	resp.Data["issuer_safety_buffer"] = b.tidyStatus.issuerSafetyBuffer
 	resp.Data["tidy_cert_store"] = b.tidyStatus.tidyCertStore
 	resp.Data["tidy_revoked_certs"] = b.tidyStatus.tidyRevokedCerts
 	resp.Data["tidy_revoked_cert_issuer_associations"] = b.tidyStatus.tidyRevokedAssocs
+	resp.Data["tidy_expired_issuers"] = b.tidyStatus.tidyExpiredIssuers
 	resp.Data["pause_duration"] = b.tidyStatus.pauseDuration
 	resp.Data["time_started"] = b.tidyStatus.timeStarted
 	resp.Data["message"] = b.tidyStatus.message
@@ -547,7 +676,9 @@ func (b *backend) pathConfigAutoTidyRead(ctx context.Context, req *logical.Reque
 			"tidy_cert_store":                       config.CertStore,
 			"tidy_revoked_certs":                    config.RevokedCerts,
 			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
+			"tidy_expired_issuers":                  config.ExpiredIssuers,
 			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
+			"issuer_safety_buffer":                  int(config.IssuerSafetyBuffer / time.Second),
 			"pause_duration":                        config.PauseDuration.String(),
 		},
 	}, nil
@@ -613,11 +744,13 @@ func (b *backend) tidyStatusStart(config *tidyConfig) {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus = &tidyStatus{
-		safetyBuffer:      int(config.SafetyBuffer / time.Second),
-		tidyCertStore:     config.CertStore,
-		tidyRevokedCerts:  config.RevokedCerts,
-		tidyRevokedAssocs: config.IssuerAssocs,
-		pauseDuration:     config.PauseDuration.String(),
+		safetyBuffer:       int(config.SafetyBuffer / time.Second),
+		issuerSafetyBuffer: int(config.IssuerSafetyBuffer / time.Second),
+		tidyCertStore:      config.CertStore,
+		tidyRevokedCerts:   config.RevokedCerts,
+		tidyRevokedAssocs:  config.IssuerAssocs,
+		tidyExpiredIssuers: config.ExpiredIssuers,
+		pauseDuration:      config.PauseDuration.String(),
 
 		state:       tidyStatusStarted,
 		timeStarted: time.Now(),

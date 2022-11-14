@@ -2,7 +2,7 @@ import { module, test } from 'qunit';
 import pathToTree from 'vault/lib/path-to-tree';
 
 module('Unit | Lib | path to tree', function () {
-  let tests = [
+  const tests = [
     [
       'basic',
       ['one', 'one/two', 'one/two/three/four/five'],
@@ -101,7 +101,7 @@ module('Unit | Lib | path to tree', function () {
 
   tests.forEach(function ([name, input, expected]) {
     test(`pathToTree: ${name}`, function (assert) {
-      let output = pathToTree(input);
+      const output = pathToTree(input);
       assert.deepEqual(output, expected, 'has expected data');
     });
   });

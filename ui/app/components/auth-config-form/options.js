@@ -24,7 +24,7 @@ export default AuthConfigComponent.extend({
 
   saveModel: task(
     waitFor(function* () {
-      let data = this.model.config.serialize();
+      const data = this.model.config.serialize();
       data.description = this.model.description;
 
       // token_type should not be tuneable for the token auth method, default is 'default-service'

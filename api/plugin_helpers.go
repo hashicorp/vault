@@ -63,6 +63,7 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/revoke-force/{prefix}":                    regexp.MustCompile(`^/sys/revoke-force/.+$`),
 	"/sys/revoke-prefix/{prefix}":                   regexp.MustCompile(`^/sys/revoke-prefix/.+$`),
 	"/sys/rotate":                                   regexp.MustCompile(`^/sys/rotate$`),
+	"/sys/internal/inspect/router/{tag}":            regexp.MustCompile(`^/sys/internal/inspect/router/.+$`),
 
 	// enterprise-only paths
 	"/sys/replication/dr/primary/secondary-token":          regexp.MustCompile(`^/sys/replication/dr/primary/secondary-token$`),

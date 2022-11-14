@@ -604,7 +604,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
 				if err != nil {
-					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+					return fmt.Errorf("returned cert cannot be parsed: %w", err)
 				}
 				if len(certs) != 1 {
 					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
@@ -657,7 +657,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
 				if err != nil {
-					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+					return fmt.Errorf("returned cert cannot be parsed: %w", err)
 				}
 				if len(certs) != 1 {
 					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
@@ -778,7 +778,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
 				if err != nil {
-					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+					return fmt.Errorf("returned cert cannot be parsed: %w", err)
 				}
 				if len(certs) != 1 {
 					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
@@ -3936,9 +3936,11 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		}
 		expectedData := map[string]interface{}{
 			"safety_buffer":                         json.Number("1"),
+			"issuer_safety_buffer":                  json.Number("31536000"),
 			"tidy_cert_store":                       true,
 			"tidy_revoked_certs":                    true,
 			"tidy_revoked_cert_issuer_associations": false,
+			"tidy_expired_issuers":                  false,
 			"pause_duration":                        "0s",
 			"state":                                 "Finished",
 			"error":                                 nil,
@@ -5887,6 +5889,81 @@ func TestPKI_EmptyCRLConfigUpgraded(t *testing.T) {
 	require.Equal(t, resp.Data["auto_rebuild_grace_period"], defaultCrlConfig.AutoRebuildGracePeriod)
 	require.Equal(t, resp.Data["enable_delta"], defaultCrlConfig.EnableDelta)
 	require.Equal(t, resp.Data["delta_rebuild_interval"], defaultCrlConfig.DeltaRebuildInterval)
+}
+
+func TestPKI_ListRevokedCerts(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Test empty cluster
+	resp, err := CBList(b, s, "certs/revoked")
+	requireSuccessNonNilResponse(t, resp, err, "failed listing empty cluster")
+	require.Empty(t, resp.Data, "response map contained data that we did not expect")
+
+	// Set up a mount that we can revoke under (We will create 3 leaf certs, 2 of which will be revoked)
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "test.com",
+		"key_type":    "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "error generating root CA")
+	requireFieldsSetInResp(t, resp, "serial_number")
+	issuerSerial := resp.Data["serial_number"]
+
+	resp, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+		"allowed_domains":  "test.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "1h",
+	})
+	requireSuccessNilResponse(t, resp, err, "error setting up pki role")
+
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "test1.test.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "error issuing cert 1")
+	requireFieldsSetInResp(t, resp, "serial_number")
+	serial1 := resp.Data["serial_number"]
+
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "test2.test.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "error issuing cert 2")
+	requireFieldsSetInResp(t, resp, "serial_number")
+	serial2 := resp.Data["serial_number"]
+
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "test3.test.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "error issuing cert 2")
+	requireFieldsSetInResp(t, resp, "serial_number")
+	serial3 := resp.Data["serial_number"]
+
+	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{"serial_number": serial1})
+	requireSuccessNonNilResponse(t, resp, err, "error revoking cert 1")
+
+	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{"serial_number": serial2})
+	requireSuccessNonNilResponse(t, resp, err, "error revoking cert 2")
+
+	// Test that we get back the expected revoked serial numbers.
+	resp, err = CBList(b, s, "certs/revoked")
+	requireSuccessNonNilResponse(t, resp, err, "failed listing revoked certs")
+	requireFieldsSetInResp(t, resp, "keys")
+	revokedKeys := resp.Data["keys"].([]string)
+
+	require.Contains(t, revokedKeys, serial1)
+	require.Contains(t, revokedKeys, serial2)
+	require.Equal(t, 2, len(revokedKeys), "Expected 2 revoked entries got %d: %v", len(revokedKeys), revokedKeys)
+
+	// Test that listing our certs returns a different response
+	resp, err = CBList(b, s, "certs")
+	requireSuccessNonNilResponse(t, resp, err, "failed listing written certs")
+	requireFieldsSetInResp(t, resp, "keys")
+	certKeys := resp.Data["keys"].([]string)
+
+	require.Contains(t, certKeys, serial1)
+	require.Contains(t, certKeys, serial2)
+	require.Contains(t, certKeys, serial3)
+	require.Contains(t, certKeys, issuerSerial)
+	require.Equal(t, 4, len(certKeys), "Expected 4 cert entries got %d: %v", len(certKeys), certKeys)
 }
 
 var (

@@ -177,7 +177,7 @@ module('Integration | Component | mfa-form', function (hooks) {
         'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 15 seconds',
     };
     const codes = ['used', 'limit'];
-    for (let code of codes) {
+    for (const code of codes) {
       this.owner.lookup('service:auth').reopen({
         totpValidate() {
           throw { errors: [messages[code]] };

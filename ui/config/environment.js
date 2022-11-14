@@ -2,7 +2,7 @@
 'use strict';
 
 module.exports = function (environment) {
-  let ENV = {
+  const ENV = {
     modulePrefix: 'vault',
     environment,
     rootURL: '/ui/',
