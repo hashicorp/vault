@@ -3,12 +3,14 @@ package transit
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
@@ -935,5 +937,51 @@ func TestShouldWarnAboutNonceUsage(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// NOTE: Is this the right place to have these tests?
+func TestTransit_EncryptWithRSAPublicKey(t *testing.T) {
+	generateKeys(t)
+	b, s := createBackendWithStorage(t)
+	keyType := "rsa-2048"
+	keyID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("failed to generate key ID: %s", err)
+	}
+
+	// Get key
+	privateKey := getKey(t, keyType)
+	publicKeyBytes, err := getPublicKey(privateKey, keyType)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Import key
+	req := &logical.Request{
+		Storage:   s,
+		Operation: logical.UpdateOperation,
+		Path:      fmt.Sprintf("keys/%s/import", keyID),
+		Data: map[string]interface{}{
+			"public_key": publicKeyBytes,
+			"type":       keyType,
+		},
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("failed to import public key: %s", err)
+	}
+
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      fmt.Sprintf("encrypt/%s", keyID),
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": "bXkgc2VjcmV0IGRhdGE=",
+		},
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
 	}
 }

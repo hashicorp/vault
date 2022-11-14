@@ -401,7 +401,7 @@ func TestTransit_Import(t *testing.T) {
 
 			// Get keys
 			privateKey := getKey(t, keyType)
-			publicKeyBytes, err := getPublicKeyBytes(privateKey.(ed25519.PrivateKey).Public())
+			publicKeyBytes, err := publicKeyToBytes(privateKey.(ed25519.PrivateKey).Public())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -433,7 +433,7 @@ func TestTransit_Import(t *testing.T) {
 
 			// Get keys
 			privateKey := getKey(t, keyType)
-			publicKeyBytes, err := getPublicKeyBytes(privateKey.(*ecdsa.PrivateKey).Public())
+			publicKeyBytes, err := publicKeyToBytes(privateKey.(*ecdsa.PrivateKey).Public())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -612,7 +612,7 @@ func TestTransit_ImportVersion(t *testing.T) {
 			// Get keys
 			privateKey := getKey(t, keyType)
 			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, privateKey, keyType, "SHA256")
-			publicKeyBytes, err := getPublicKeyBytes(privateKey.(*rsa.PrivateKey).Public())
+			publicKeyBytes, err := publicKeyToBytes(privateKey.(*rsa.PrivateKey).Public())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -737,7 +737,29 @@ func generateKey(keyType string) (interface{}, error) {
 	}
 }
 
-func getPublicKeyBytes(publicKey crypto.PublicKey) ([]byte, error) {
+func getPublicKey(privateKey crypto.PrivateKey, keyType string) ([]byte, error) {
+	var publicKey crypto.PublicKey
+	var publicKeyBytes []byte
+	switch keyType {
+	case "rsa-2048", "rsa-3072", "rsa-4096":
+		publicKey = privateKey.(*rsa.PrivateKey).Public()
+	case "ecdsa-p256", "ecdsa-p384", "ecdsa-p521":
+		publicKey = privateKey.(*ecdsa.PrivateKey).Public()
+	case "ed25519":
+		publicKey = privateKey.(ed25519.PrivateKey).Public()
+	default:
+		return publicKeyBytes, fmt.Errorf("failed to get public key from %s key", keyType)
+	}
+
+	publicKeyBytes, err := publicKeyToBytes(publicKey)
+	if err != nil {
+		return publicKeyBytes, err
+	}
+
+	return publicKeyBytes, nil
+}
+
+func publicKeyToBytes(publicKey crypto.PublicKey) ([]byte, error) {
 	publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
 		return []byte(""), fmt.Errorf("failed to marshal public key: %s", err)

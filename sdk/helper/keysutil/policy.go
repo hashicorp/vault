@@ -1434,7 +1434,6 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		// get the policy in the first place it will have been run.
 		p.Keys = keyEntryMap{}
 	}
-
 	p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 
 	// This ensures that with new key creations min decryption version is set
