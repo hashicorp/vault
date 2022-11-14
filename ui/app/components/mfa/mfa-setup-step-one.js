@@ -29,7 +29,7 @@ export default class MfaSetupStepOne extends Component {
   @action
   async verifyUUID(evt) {
     evt.preventDefault();
-    const response = await this.postAdminGenerate();
+    const response = await this.postCurrentTokenGenerate();
 
     if (response === 'stop_progress') {
       this.args.isUUIDVerified(false);
@@ -40,15 +40,14 @@ export default class MfaSetupStepOne extends Component {
     }
   }
 
-  async postAdminGenerate() {
+  async postCurrentTokenGenerate() {
     this.error = '';
     this.warning = '';
     const adapter = this.store.adapterFor('mfa-setup');
     let response;
 
     try {
-      response = await adapter.adminGenerate({
-        entity_id: this.args.entityId,
+      response = await adapter.currentTokenGenerate({
         method_id: this.UUID, // comes from value on the input
       });
       this.args.saveUUIDandQrCode(this.UUID, response.data?.url);
