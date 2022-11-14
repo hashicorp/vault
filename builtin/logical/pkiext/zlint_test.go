@@ -1,4 +1,4 @@
-package pki
+package pkiext
 
 import (
 	"context"
@@ -6,9 +6,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
+
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -67,7 +68,7 @@ func RunZLintContainer(t *testing.T, certificate string) []byte {
 	// container so we can run commands in it. We'd ideally like to skip this
 	// step and only build a new image, but the zlint output would be
 	// intermingled with container build stages, so its not that useful.
-	ctr, _, _, err := runner.Start(ctx, true, false)
+	ctr, _, _, err := runner.Start(context.Background(), true, false)
 	if err != nil {
 		t.Fatalf("Could not start golang container for zlint: %s", err)
 	}
@@ -81,7 +82,7 @@ func RunZLintContainer(t *testing.T, certificate string) []byte {
 
 	// Run the zlint command and save the output.
 	cmd := []string{"/go/bin/zlint", "/go/cert.pem"}
-	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, ctr.ID, cmd)
+	stdout, stderr, retcode, err := runner.RunCmdWithOutput(context.Background(), ctr.ID, cmd)
 	if err != nil {
 		t.Fatalf("Could not run command in container: %v", err)
 	}
@@ -104,9 +105,9 @@ func RunZLintContainer(t *testing.T, certificate string) []byte {
 }
 
 func RunZLintRootTest(t *testing.T, keyType string, keyBits int, usePSS bool, ignored []string) {
-	b, s := createBackendWithStorage(t)
+	b, s := pki.CreateBackendWithStorage(t)
 
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := pki.CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name":  "Root X1",
 		"country":      "US",
 		"organization": "Dadgarcorp",
