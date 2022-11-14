@@ -1780,7 +1780,7 @@ func (c *ServerCommand) Run(args []string) int {
 					}
 				}
 
-				f, err := os.Create(fmt.Sprintf("%s/%s", dir, "stacktrace.log"))
+				f, err := os.CreateTemp(dir, "stacktrace")
 				if err != nil {
 					c.logger.Error("Could not create stacktrace file", "error", err)
 					continue
