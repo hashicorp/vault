@@ -46,7 +46,7 @@ module('Integration | Component | pki/key-usage', function (hooks) {
   });
 
   test('it should set the model properties of key_usage and ext_key_usage based on the checkbox selections', async function (assert) {
-    assert.expect(3);
+    assert.expect(2);
     await render(
       hbs`
       <div class="has-top-margin-xxl">
@@ -57,12 +57,6 @@ module('Integration | Component | pki/key-usage', function (hooks) {
        </div>
   `,
       { owner: this.engine }
-    );
-    // See PKI API docs https://developer.hashicorp.com/vault/api-docs/secret/pki#key_usage
-    assert.deepEqual(
-      this.model.keyUsage,
-      ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'],
-      'sets the default values for key_usage on the model.'
     );
 
     await click(SELECTORS.keyUsage);
