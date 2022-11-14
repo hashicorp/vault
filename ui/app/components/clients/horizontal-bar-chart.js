@@ -66,24 +66,24 @@ export default class HorizontalBarChart extends Component {
     // chart legend tells stackFunction how to stack/organize data
     // creates an array of data for each key name
     // each array contains coordinates for each data bar
-    let stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
-    let dataset = chartData;
-    let stackedData = stackFunction(dataset);
-    let labelKey = this.labelKey;
-    let xKey = this.xKey;
-    let xScale = scaleLinear()
+    const stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
+    const dataset = chartData;
+    const stackedData = stackFunction(dataset);
+    const labelKey = this.labelKey;
+    const xKey = this.xKey;
+    const xScale = scaleLinear()
       .domain([0, max(dataset.map((d) => d[xKey]))])
       .range([0, 75]); // 25% reserved for margins
 
-    let yScale = scaleBand()
+    const yScale = scaleBand()
       .domain(dataset.map((d) => d[labelKey]))
       .range([0, dataset.length * LINE_HEIGHT])
       .paddingInner(0.765); // percent of the total width to reserve for padding between bars
 
-    let chartSvg = select(element);
+    const chartSvg = select(element);
     chartSvg.attr('width', '100%').attr('viewBox', `0 0 564 ${(dataset.length + 1) * LINE_HEIGHT}`);
 
-    let dataBarGroup = chartSvg
+    const dataBarGroup = chartSvg
       .selectAll('g')
       .remove()
       .exit()
@@ -95,9 +95,9 @@ export default class HorizontalBarChart extends Component {
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
       .style('fill', (d, i) => LIGHT_AND_DARK_BLUE[i]);
 
-    let yAxis = axisLeft(yScale).tickSize(0);
+    const yAxis = axisLeft(yScale).tickSize(0);
 
-    let yLabelsGroup = chartSvg
+    const yLabelsGroup = chartSvg
       .append('g')
       .attr('data-test-group', 'y-labels')
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`);
@@ -105,7 +105,7 @@ export default class HorizontalBarChart extends Component {
 
     chartSvg.select('.domain').remove();
 
-    let truncate = (selection) =>
+    const truncate = (selection) =>
       selection.text((string) =>
         string.length < CHAR_LIMIT ? string : string.slice(0, CHAR_LIMIT - 3) + '...'
       );
@@ -129,9 +129,9 @@ export default class HorizontalBarChart extends Component {
       .attr('rx', 3)
       .attr('ry', 3);
 
-    let actionBarGroup = chartSvg.append('g').attr('data-test-group', 'action-bars');
+    const actionBarGroup = chartSvg.append('g').attr('data-test-group', 'action-bars');
 
-    let actionBars = actionBarGroup
+    const actionBars = actionBarGroup
       .selectAll('.action-bar')
       .remove()
       .exit()
@@ -148,9 +148,9 @@ export default class HorizontalBarChart extends Component {
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
-    let labelActionBarGroup = chartSvg.append('g').attr('data-test-group', 'label-action-bars');
+    const labelActionBarGroup = chartSvg.append('g').attr('data-test-group', 'label-action-bars');
 
-    let labelActionBar = labelActionBarGroup
+    const labelActionBar = labelActionBarGroup
       .selectAll('.label-action-bar')
       .remove()
       .exit()
@@ -166,16 +166,16 @@ export default class HorizontalBarChart extends Component {
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
-    let dataBars = chartSvg.selectAll('rect.data-bar');
-    let actionBarSelection = chartSvg.selectAll('rect.action-bar');
+    const dataBars = chartSvg.selectAll('rect.data-bar');
+    const actionBarSelection = chartSvg.selectAll('rect.action-bar');
 
-    let compareAttributes = (elementA, elementB, attr) =>
+    const compareAttributes = (elementA, elementB, attr) =>
       select(elementA).attr(`${attr}`) === select(elementB).attr(`${attr}`);
 
     // MOUSE EVENTS FOR DATA BARS
     actionBars
       .on('mouseover', (data) => {
-        let hoveredElement = actionBars.filter((bar) => bar[labelKey] === data[labelKey]).node();
+        const hoveredElement = actionBars.filter((bar) => bar[labelKey] === data[labelKey]).node();
         this.tooltipTarget = hoveredElement;
         this.isLabel = false;
         this.tooltipText = this.total
@@ -206,7 +206,7 @@ export default class HorizontalBarChart extends Component {
     labelActionBar
       .on('mouseover', (data) => {
         if (data[labelKey].length >= CHAR_LIMIT) {
-          let hoveredElement = labelActionBar.filter((bar) => bar[labelKey] === data[labelKey]).node();
+          const hoveredElement = labelActionBar.filter((bar) => bar[labelKey] === data[labelKey]).node();
           this.tooltipTarget = hoveredElement;
           this.isLabel = true;
           this.tooltipText = data[labelKey];
@@ -239,7 +239,7 @@ export default class HorizontalBarChart extends Component {
       });
 
     // client count total values to the right
-    let totalValueGroup = chartSvg
+    const totalValueGroup = chartSvg
       .append('g')
       .attr('data-test-group', 'total-values')
       .attr('transform', `translate(${TRANSLATE.left}, ${TRANSLATE.down})`);

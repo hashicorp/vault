@@ -18,6 +18,14 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
+	// Create an empty key, issuer for testing.
+	key := keyEntry{ID: genKeyId()}
+	err := sc.writeKey(key)
+	require.NoError(t, err)
+	issuer := &issuerEntry{ID: genIssuerId()}
+	err = sc.writeIssuer(issuer)
+	require.NoError(t, err)
+
 	// Verify we handle nothing stored properly
 	keyConfigEmpty, err := sc.getKeysConfig()
 	require.NoError(t, err)
@@ -29,10 +37,10 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 
 	// Now attempt to store and reload properly
 	origKeyConfig := &keyConfigEntry{
-		DefaultKeyId: genKeyId(),
+		DefaultKeyId: key.ID,
 	}
 	origIssuerConfig := &issuerConfigEntry{
-		DefaultIssuerId: genIssuerId(),
+		DefaultIssuerId: issuer.ID,
 	}
 
 	err = sc.setKeysConfig(origKeyConfig)
@@ -46,7 +54,7 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 
 	issuerConfig, err := sc.getIssuersConfig()
 	require.NoError(t, err)
-	require.Equal(t, origIssuerConfig, issuerConfig)
+	require.Equal(t, origIssuerConfig.DefaultIssuerId, issuerConfig.DefaultIssuerId)
 }
 
 func Test_IssuerRoundTrip(t *testing.T) {
@@ -257,4 +265,12 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 	certBundle, err := parsedCertBundle.ToCertBundle()
 	require.NoError(t, err)
 	return certBundle
+}
+
+func writeLegacyBundle(t *testing.T, b *backend, s logical.Storage, bundle *certutil.CertBundle) {
+	entry, err := logical.StorageEntryJSON(legacyCertBundlePath, bundle)
+	require.NoError(t, err)
+
+	err = s.Put(context.Background(), entry)
+	require.NoError(t, err)
 }

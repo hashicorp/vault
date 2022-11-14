@@ -210,7 +210,7 @@ module('Acceptance | clients history tab', function (hooks) {
       3,
       `line chart plots 3 points to match query`
     );
-    let xAxisLabels = findAll('[data-test-line-chart="x-axis-labels"] g.tick text');
+    const xAxisLabels = findAll('[data-test-line-chart="x-axis-labels"] g.tick text');
     assert
       .dom(xAxisLabels[xAxisLabels.length - 1])
       .hasText(`${format(subMonths(LAST_MONTH, 2), 'M/yy')}`, 'x-axis labels end with queried end month');

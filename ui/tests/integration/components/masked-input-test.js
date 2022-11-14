@@ -73,11 +73,11 @@ module('Integration | Component | masked input', function (hooks) {
   test('it shortens all outputs when displayOnly and masked', async function (assert) {
     this.set('value', '123456789-123456789-123456789');
     await render(hbs`{{masked-input value=this.value displayOnly=true}}`);
-    let maskedValue = document.querySelector('.masked-value').innerText;
+    const maskedValue = document.querySelector('.masked-value').innerText;
     assert.strictEqual(maskedValue.length, 11);
 
     await component.toggleMasked();
-    let unMaskedValue = document.querySelector('.masked-value').innerText;
+    const unMaskedValue = document.querySelector('.masked-value').innerText;
     assert.strictEqual(unMaskedValue.length, this.value.length);
   });
 
@@ -94,7 +94,7 @@ module('Integration | Component | masked input', function (hooks) {
     await render(hbs`{{masked-input value=this.value}}`);
     await triggerKeyEvent('[data-test-textarea]', 'keydown', 9);
     await component.toggleMasked();
-    let unMaskedValue = document.querySelector('.masked-value').value;
+    const unMaskedValue = document.querySelector('.masked-value').value;
     assert.strictEqual(unMaskedValue, this.value);
   });
 });

@@ -43,7 +43,7 @@ jobs:
         id: enos-matrix
         run: |
           [[ ${{ env.ARTIFACT_NAME }} == *"ent"* ]] && scenarioFile=$(cat ./.github/enos-run-matrices/${{ env.ARTIFACT_SOURCE }}-ent.json |jq -c .) || scenarioFile=$(cat ./.github/enos-run-matrices/${{ env.ARTIFACT_SOURCE }}-oss.json |jq -c .)
-          echo "::set-output name=matrix::$scenarioFile"
+          echo "matrix=$scenarioFile" >> $GITHUB_OUTPUT
   # Run Integration tests on Enos scenario matrix
   enos:
     name: Integration
@@ -82,15 +82,19 @@ jobs:
           echo "${{ secrets.ENOS_CI_SSH_KEY }}" > ./enos/support/private_key.pem
           chmod 600 ./enos/support/private_key.pem
       - name: Download Linux AMD64 Vault bundle
+        if: ${{ env.ARTIFACT_SOURCE == 'crt' }}
         id: download
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.artifact-name }}
           path: ./enos/support/downloads
-      - name: Prepare for scenario execution
+      - name: unzip Downloaded Vault bundle
+        if: ${{ env.ARTIFACT_SOURCE == 'crt' }}
         run: |
           unzip ${{steps.download.outputs.download-path}}/*.zip -d enos/support
           mv ${{steps.download.outputs.download-path}}/*.zip enos/support/vault.zip
+      - name: Prepare for scenario execution
+        run: |
           mkdir -p enos/support/terraform-plugin-cache
           [[ ${{ env.ARTIFACT_NAME }} == *"ent"* ]] && echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
       - name: Run Enos scenario
@@ -103,6 +107,8 @@ jobs:
           ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-key
           ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
           ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
+          ENOS_VAR_artifactory_username: ${{ secrets.ARTIFACTORY_USER }}
+          ENOS_VAR_artifactory_token: ${{ secrets.ARTIFACTORY_TOKEN }}
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
           ENOS_VAR_vault_build_date: ${{ env.ARTIFACT_BUILD_DATE }}
           ENOS_VAR_vault_product_version: ${{ env.ARTIFACT_VERSION }}
@@ -118,6 +124,8 @@ jobs:
           ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-key
           ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
           ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
+          ENOS_VAR_artifactory_username: ${{ secrets.ARTIFACTORY_USER }}
+          ENOS_VAR_artifactory_token: ${{ secrets.ARTIFACTORY_TOKEN }}
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
           ENOS_VAR_vault_build_date: ${{ env.ARTIFACT_BUILD_DATE }}
           ENOS_VAR_vault_product_version: ${{ env.ARTIFACT_VERSION }}
@@ -135,6 +143,8 @@ jobs:
           ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-key
           ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
           ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
+          ENOS_VAR_artifactory_username: ${{ secrets.ARTIFACTORY_USER }}
+          ENOS_VAR_artifactory_token: ${{ secrets.ARTIFACTORY_TOKEN }}
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
           ENOS_VAR_vault_build_date: ${{ env.ARTIFACT_BUILD_DATE }}
           ENOS_VAR_vault_product_version: ${{ env.ARTIFACT_VERSION }}

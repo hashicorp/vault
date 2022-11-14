@@ -14,8 +14,8 @@ export default Component.extend({
   fileLike: computed('data', 'mime', 'stringify', 'download', function () {
     let file;
     let data = this.data;
-    let filename = this.download;
-    let mime = this.mime;
+    const filename = this.download;
+    const mime = this.mime;
     if (this.stringify) {
       data = JSON.stringify(data, null, 2);
     }
@@ -37,7 +37,7 @@ export default Component.extend({
       return;
     }
     event.preventDefault();
-    let file = this.fileLike;
+    const file = this.fileLike;
     //lol whyyyy
     window.navigator.msSaveOrOpenBlob(file, file.name);
   },

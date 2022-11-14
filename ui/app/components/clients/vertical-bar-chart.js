@@ -147,12 +147,12 @@ export default class VerticalBarChart extends Component {
 
     // MOUSE EVENT FOR TOOLTIP
     tooltipRect.on('mouseover', (data) => {
-      let hoveredMonth = data[this.xKey];
+      const hoveredMonth = data[this.xKey];
       this.tooltipTotal = `${formatNumber([data[this.yKey]])} ${data.new_clients ? 'total' : 'new'} clients`;
       this.entityClients = `${formatNumber([data.entity_clients])} entity clients`;
       this.nonEntityClients = `${formatNumber([data.non_entity_clients])} non-entity clients`;
       // filter for the tether point that matches the hoveredMonth
-      let hoveredElement = tooltipTether.filter((data) => data.month === hoveredMonth).node();
+      const hoveredElement = tooltipTether.filter((data) => data.month === hoveredMonth).node();
       this.tooltipTarget = hoveredElement; // grab the node from the list of rects
     });
   }

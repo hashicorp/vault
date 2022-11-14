@@ -8,7 +8,7 @@ module('Integration | Component | confirm-action', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders and on click shows the correct icon', async function (assert) {
-    let confirmAction = sinon.spy();
+    const confirmAction = sinon.spy();
     this.set('onConfirm', confirmAction);
     await render(hbs`
       <ConfirmAction
@@ -25,7 +25,7 @@ module('Integration | Component | confirm-action', function (hooks) {
   });
 
   test('it closes the confirmation modal on successful delete', async function (assert) {
-    let confirmAction = sinon.spy();
+    const confirmAction = sinon.spy();
     this.set('onConfirm', confirmAction);
     await render(hbs`
       <ConfirmAction

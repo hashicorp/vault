@@ -56,7 +56,7 @@ Vagrantfile
 !.release/linux/package/etc/vault.d/vault.hcl
 !command/agent/config/test-fixtures/*.hcl
 !command/server/test-fixtures/**/*.hcl
-!enos/*.hcl
+!enos/**/*.hcl
 
 # Enos
 enos/.enos
@@ -119,3 +119,4 @@ website/components/node_modules
 
 .buildcache/
 .releaser/
+*.log

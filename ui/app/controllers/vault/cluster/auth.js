@@ -20,8 +20,8 @@ export default Controller.extend({
   oidcProvider: '',
 
   get managedNamespaceChild() {
-    let fullParam = this.namespaceQueryParam;
-    let split = fullParam.split('/');
+    const fullParam = this.namespaceQueryParam;
+    const split = fullParam.split('/');
     if (split.length > 1) {
       split.shift();
       return `/${split.join('/')}`;

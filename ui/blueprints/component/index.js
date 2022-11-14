@@ -20,7 +20,7 @@ module.exports = {
   ],
 
   filesPath: function () {
-    let filesDirectory = 'files';
+    const filesDirectory = 'files';
 
     return path.join(this.path, filesDirectory);
   },

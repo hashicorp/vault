@@ -63,7 +63,7 @@ const appConfig = {
 };
 
 module.exports = function (defaults) {
-  let app = new EmberApp(defaults, appConfig);
+  const app = new EmberApp(defaults, appConfig);
 
   app.import('vendor/string-includes.js');
   app.import('node_modules/string.prototype.endswith/endswith.js');

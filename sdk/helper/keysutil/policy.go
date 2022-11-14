@@ -79,6 +79,10 @@ type AEADFactory interface {
 	GetAEAD(iv []byte) (cipher.AEAD, error)
 }
 
+type AssociatedDataFactory interface {
+	GetAssociatedData() ([]byte, error)
+}
+
 type RestoreInfo struct {
 	Time    time.Time `json:"time"`
 	Version int       `json:"version"`
@@ -142,6 +146,14 @@ func (kt KeyType) HashSignatureInput() bool {
 func (kt KeyType) DerivationSupported() bool {
 	switch kt {
 	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_ED25519:
+		return true
+	}
+	return false
+}
+
+func (kt KeyType) AssociatedDataSupported() bool {
+	switch kt {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 		return true
 	}
 	return false
@@ -844,6 +856,10 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 }
 
 func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
+	return p.DecryptWithFactory(context, nonce, value, nil)
+}
+
+func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factories ...interface{}) (string, error) {
 	if !p.Type.DecryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
@@ -911,11 +927,28 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
 		}
 
-		plain, err = p.SymmetricDecryptRaw(encKey, decoded,
-			SymmetricOpts{
-				Convergent:        p.ConvergentEncryption,
-				ConvergentVersion: p.ConvergentVersion,
-			})
+		symopts := SymmetricOpts{
+			Convergent:        p.ConvergentEncryption,
+			ConvergentVersion: p.ConvergentVersion,
+		}
+		for index, rawFactory := range factories {
+			if rawFactory == nil {
+				continue
+			}
+			switch factory := rawFactory.(type) {
+			case AEADFactory:
+				symopts.AEADFactory = factory
+			case AssociatedDataFactory:
+				symopts.AdditionalData, err = factory.GetAssociatedData()
+				if err != nil {
+					return "", errutil.InternalError{Err: fmt.Sprintf("unable to get associated_data/additional_data from factory[%d]: %v", index, err)}
+				}
+			default:
+				return "", errutil.InternalError{Err: fmt.Sprintf("unknown type of factory[%d]: %T", index, rawFactory)}
+			}
+		}
+
+		plain, err = p.SymmetricDecryptRaw(encKey, decoded, symopts)
 		if err != nil {
 			return "", err
 		}
@@ -1830,7 +1863,7 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 	return plain, nil
 }
 
-func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, factory AEADFactory) (string, error) {
+func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, factories ...interface{}) (string, error) {
 	if !p.Type.EncryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
 	}
@@ -1891,14 +1924,29 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 			}
 		}
 
-		ciphertext, err = p.SymmetricEncryptRaw(ver, encKey, plaintext,
-			SymmetricOpts{
-				Convergent:  p.ConvergentEncryption,
-				HMACKey:     hmacKey,
-				Nonce:       nonce,
-				AEADFactory: factory,
-			})
+		symopts := SymmetricOpts{
+			Convergent: p.ConvergentEncryption,
+			HMACKey:    hmacKey,
+			Nonce:      nonce,
+		}
+		for index, rawFactory := range factories {
+			if rawFactory == nil {
+				continue
+			}
+			switch factory := rawFactory.(type) {
+			case AEADFactory:
+				symopts.AEADFactory = factory
+			case AssociatedDataFactory:
+				symopts.AdditionalData, err = factory.GetAssociatedData()
+				if err != nil {
+					return "", errutil.InternalError{Err: fmt.Sprintf("unable to get associated_data/additional_data from factory[%d]: %v", index, err)}
+				}
+			default:
+				return "", errutil.InternalError{Err: fmt.Sprintf("unknown type of factory[%d]: %T", index, rawFactory)}
+			}
+		}
 
+		ciphertext, err = p.SymmetricEncryptRaw(ver, encKey, plaintext, symopts)
 		if err != nil {
 			return "", err
 		}

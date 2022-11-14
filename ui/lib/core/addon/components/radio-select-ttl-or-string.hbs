@@ -5,6 +5,7 @@
     @value="ttl"
     @onChange={{this.onRadioButtonChange}}
     @groupValue={{this.groupValue}}
+    data-test-radio-button="ttl"
   />
   <label class="has-left-margin-xs">
     <TtlPicker2
@@ -26,6 +27,7 @@
     @value="specificDate"
     @onChange={{this.onRadioButtonChange}}
     @groupValue={{this.groupValue}}
+    data-test-radio-button="not_after"
   />
   <label class="has-left-margin-xs">
     <span class="ttl-picker-label is-large">Specific date</span><br />
@@ -34,14 +36,13 @@
     </p>
     {{#if (eq this.groupValue "specificDate")}}
       <input
-        data-test-input="not_after"
         id="not_after"
         autocomplete="off"
         spellcheck="false"
         value={{this.notAfter}}
         {{on "input" this.setAndBroadcastInput}}
         class="input"
-        maxLength="21"
+        data-test-input="not_after"
       />
     {{/if}}
   </label>
