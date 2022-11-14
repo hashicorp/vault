@@ -2,8 +2,10 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 	"time"
 
@@ -325,21 +327,36 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 		return nil, err
 	}
 
-	// If the data is null, add raw data to secret data if present
-	if secret.Data == nil {
+	// If the secret is null, add raw data to secret data if present
+	if reflect.DeepEqual(secret, Secret{}) {
 		data := make(map[string]interface{})
 		if err := jsonutil.DecodeJSONFromReader(&teebuf, &data); err != nil {
 			return nil, err
 		}
 		if val, ok := data["errors"]; ok {
-			errString := fmt.Sprintf("%v", val)
-			if strings.Contains(errString, "route entry not found") {
+			var errStrArray []string
+			errBytes, err := json.Marshal(val)
+			if err != nil {
+				return nil, err
+			}
+			if err := json.Unmarshal(errBytes, &errStrArray); err != nil {
+				return nil, err
+			}
+			errString := strings.Join(errStrArray, " ")
+
+			// trim spaces and new lines
+			errString = strings.TrimSpace(errString)
+			errString = strings.Trim(errString, "\n")
+
+			if strings.Contains(errString, "route entry not found") || errString == "" {
 				return nil, nil
 			}
 			return nil, fmt.Errorf(errString)
 		}
 
-		secret.Data = data
+		if len(data) > 0 {
+			secret.Data = data
+		}
 	}
 
 	return &secret, nil
