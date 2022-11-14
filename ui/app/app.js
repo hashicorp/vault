@@ -50,6 +50,7 @@ export default class App extends Application {
     },
     kubernetes: {
       dependencies: {
+        services: ['router'],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },
