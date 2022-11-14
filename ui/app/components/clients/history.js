@@ -17,13 +17,13 @@ export default class History extends Component {
   ];
 
   // RESPONSE
-  @tracked startMonthTimestamp = this.args.model.licenseStartTimestamp; // when user queries, updates to first month object of response
-  @tracked endMonthTimestamp = this.args.model.currentDate; // when user queries, updates to last month object of response
+  @tracked startMonthTimestamp; // when user queries, updates to first month object of response
+  @tracked endMonthTimestamp; // when user queries, updates to last month object of response
   @tracked queriedActivityResponse = null;
   // track params sent to /activity request
   @tracked activityQueryParams = {
-    start: { timestamp: this.args.model.licenseStartTimestamp }, // updates when user edits billing start month
-    end: { timestamp: this.args.model.currentDate }, // updates when user queries end dates via calendar widget
+    start: {}, // updates when user edits billing start month
+    end: {}, // updates when user queries end dates via calendar widget
   };
 
   // SEARCH SELECT
@@ -42,6 +42,14 @@ export default class History extends Component {
   @tracked noActivityRange = '';
   @tracked isLoadingQuery = false;
   @tracked errorObject = null;
+
+  constructor() {
+    super(...arguments);
+    this.startMonthTimestamp = this.args.model.licenseStartTimestamp;
+    this.endMonthTimestamp = this.args.model.currentDate;
+    this.activityQueryParams.start.timestamp = this.args.model.licenseStartTimestamp;
+    this.activityQueryParams.end.timestamp = this.args.model.currentDate;
+  }
 
   get versionText() {
     return this.version.isEnterprise

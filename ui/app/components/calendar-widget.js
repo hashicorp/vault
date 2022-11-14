@@ -34,7 +34,7 @@ class CalendarWidget extends Component {
   get endDate() {
     return parseAPITimestamp(this.args.endTimestamp);
   }
-  get getDisplayYear() {
+  get displayYear() {
     return this.calendarDisplayDate.getFullYear();
   }
   get disableFutureYear() {
@@ -50,18 +50,18 @@ class CalendarWidget extends Component {
     return ARRAY_OF_MONTHS.map((month, index) => {
       let readonly = false;
 
-      // if widget is showing billing start year, disable if month is before start month
-      if (startYear === this.getDisplayYear && index < startMonthIdx) {
+      // if widget is showing same year as @startTimestamp year, disable if month is before start month
+      if (startYear === this.displayYear && index < startMonthIdx) {
         readonly = true;
       }
 
       // if widget showing current year, disable if month is later than current month
-      if (this.getDisplayYear === this.currentDate.getFullYear() && index > this.currentDate.getMonth()) {
+      if (this.displayYear === this.currentDate.getFullYear() && index > this.currentDate.getMonth()) {
         readonly = true;
       }
       return {
         index,
-        year: this.getDisplayYear,
+        year: this.displayYear,
         name: month,
         readonly,
       };
@@ -72,8 +72,8 @@ class CalendarWidget extends Component {
   @action
   addTooltip() {
     if (this.disablePastYear) {
-      const previousYear = Number(this.getDisplayYear) - 1;
-      this.tooltipText = `${previousYear} is unavailable because it is before your billing start date. Change your billing start month to a date in ${previousYear} to see data for this year.`;
+      const previousYear = Number(this.displayYear) - 1;
+      this.tooltipText = `${previousYear} is unavailable because it is before your start date. Change your start month to a date in ${previousYear} to see data for this year.`;
       this.tooltipTarget = '#previous-year';
     }
   }

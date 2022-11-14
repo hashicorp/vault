@@ -6,13 +6,8 @@ export default class ActivityAdapter extends ApplicationAdapter {
   formatQueryParams({ start_time, end_time }) {
     // javascript localizes new Date() objects, but we don't want a timezone attached to keep metrics data in UTC
     // hard code 10th and 20th and backend will convert to first or end of month respectively
-    start_time = start_time.timestamp
-      ? start_time.timestamp
-      : formatRFC3339(new Date(start_time.year, start_time.monthIdx, 10));
-
-    end_time = end_time.timestamp
-      ? end_time.timestamp
-      : formatRFC3339(new Date(end_time.year, end_time.monthIdx, 20));
+    start_time = start_time.timestamp || formatRFC3339(new Date(start_time.year, start_time.monthIdx, 10));
+    end_time = end_time.timestamp || formatRFC3339(new Date(end_time.year, end_time.monthIdx, 20));
 
     return { start_time, end_time };
   }
