@@ -104,7 +104,7 @@ OzQeADTSCn5VidOfjDkIst9UXjMlrFfV9/oJEw5Eiqa6lkNPCGDhfA8=
 
 func TestPKI_RequireCN(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
@@ -180,7 +180,7 @@ func TestPKI_RequireCN(t *testing.T) {
 
 func TestPKI_DeviceCert(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name":         "myvault.com",
@@ -249,7 +249,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 
 func TestBackend_InvalidParameter(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
@@ -272,7 +272,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 func TestBackend_CSRValues(t *testing.T) {
 	t.Parallel()
 	initTest.Do(setCerts)
-	b, _ := createBackendWithStorage(t)
+	b, _ := CreateBackendWithStorage(t)
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
@@ -289,7 +289,7 @@ func TestBackend_CSRValues(t *testing.T) {
 func TestBackend_URLsCRUD(t *testing.T) {
 	t.Parallel()
 	initTest.Do(setCerts)
-	b, _ := createBackendWithStorage(t)
+	b, _ := CreateBackendWithStorage(t)
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
@@ -325,7 +325,7 @@ func TestBackend_Roles(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			initTest.Do(setCerts)
-			b, _ := createBackendWithStorage(t)
+			b, _ := CreateBackendWithStorage(t)
 
 			testCase := logicaltest.TestCase{
 				LogicalBackend: b,
@@ -1735,7 +1735,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 func TestRolesAltIssuer(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create two issuers.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -1833,7 +1833,7 @@ func TestRolesAltIssuer(t *testing.T) {
 
 func TestBackend_PathFetchValidRaw(t *testing.T) {
 	t.Parallel()
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1965,7 +1965,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 func TestBackend_PathFetchCertList(t *testing.T) {
 	t.Parallel()
 	// create the backend
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2109,7 +2109,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 
 func runTestSignVerbatim(t *testing.T, keyType string) {
 	// create the backend
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2365,7 +2365,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 
 func TestBackend_Root_Idempotency(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// This is a change within 1.11, we are no longer idempotent across generate/internal calls.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -2470,8 +2470,8 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 
 func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	t.Parallel()
-	b_root, s_root := createBackendWithStorage(t)
-	b_int, s_int := createBackendWithStorage(t)
+	b_root, s_root := CreateBackendWithStorage(t)
+	b_int, s_int := CreateBackendWithStorage(t)
 	var err error
 
 	// Direct issuing from root
@@ -2539,7 +2539,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
 	t.Parallel()
 	// create the backend
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// generate root
 	data, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -2574,7 +2574,7 @@ func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
 func TestBackend_SignSelfIssued(t *testing.T) {
 	t.Parallel()
 	// create the backend
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2715,7 +2715,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 	t.Parallel()
 	// create the backend
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2840,7 +2840,7 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 // easy to validate.
 func TestBackend_OID_SANs(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	var err error
 	var resp *logical.Response
@@ -3063,7 +3063,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 
 func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	var err error
 	var resp *logical.Response
@@ -3170,7 +3170,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 
 func TestBackend_URI_SANs(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	var err error
 
@@ -4052,7 +4052,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 
 func runFullCAChainTest(t *testing.T, keyType string) {
 	// Generate a root CA at /pki-root
-	b_root, s_root := createBackendWithStorage(t)
+	b_root, s_root := CreateBackendWithStorage(t)
 
 	var err error
 
@@ -4098,7 +4098,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	requireCertInCaChainArray(t, fullChainArray, rootCert, "expected root cert within root issuance pki-root/issue/example")
 
 	// Now generate an intermediate at /pki-intermediate, signed by the root.
-	b_int, s_int := createBackendWithStorage(t)
+	b_int, s_int := CreateBackendWithStorage(t)
 
 	resp, err = CBWrite(b_int, s_int, "intermediate/generate/exported", map[string]interface{}{
 		"common_name": "intermediate myvault.com",
@@ -4178,7 +4178,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 
 	// Finally, import this signing cert chain into a new mount to ensure
 	// "external" CAs behave as expected.
-	b_ext, s_ext := createBackendWithStorage(t)
+	b_ext, s_ext := CreateBackendWithStorage(t)
 
 	_, err = CBWrite(b_ext, s_ext, "config/ca", map[string]interface{}{
 		"pem_bundle": intermediateKey + "\n" + intermediateCert + "\n" + rootCert + "\n",
@@ -4517,7 +4517,7 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 		t.Fatalf("misnumbered test case entries will make it hard to find bugs: %v", len(testCases))
 	}
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// We need a RSA key so all signature sizes are valid with it.
 	resp, err := CBWrite(b, s, "root/generate/exported", map[string]interface{}{
@@ -4686,7 +4686,7 @@ func TestBackend_Roles_KeySizeRegression(t *testing.T) {
 		t.Fatalf("misnumbered test case entries will make it hard to find bugs: %v", len(testCases))
 	}
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	tested := 0
 	for index, test := range testCases {
@@ -4698,7 +4698,7 @@ func TestBackend_Roles_KeySizeRegression(t *testing.T) {
 
 func TestRootWithExistingKey(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	var err error
 
 	// Fail requests if type is existing, and we specify the key_type param
@@ -4831,7 +4831,7 @@ func TestRootWithExistingKey(t *testing.T) {
 
 func TestIntermediateWithExistingKey(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	var err error
 
@@ -4896,7 +4896,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 
 func TestIssuanceTTLs(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "root example.com",
@@ -4971,7 +4971,7 @@ func TestIssuanceTTLs(t *testing.T) {
 
 func TestSealWrappedStorageConfigured(t *testing.T) {
 	t.Parallel()
-	b, _ := createBackendWithStorage(t)
+	b, _ := CreateBackendWithStorage(t)
 	wrappedEntries := b.Backend.PathsSpecial.SealWrapStorage
 
 	// Make sure our legacy bundle is within the list
@@ -4983,7 +4983,7 @@ func TestSealWrappedStorageConfigured(t *testing.T) {
 
 func TestBackend_ConfigCA_WithECParams(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Generated key with OpenSSL:
 	// $ openssl ecparam -out p256.key -name prime256v1 -genkey
@@ -5012,7 +5012,7 @@ AwEHoUQDQgAE57NX8bR/nDoW8yRgLswoXBQcjHrdyfuHS0gPwki6BNnfunUzryVb
 
 func TestPerIssuerAIA(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Generating a root without anything should not have AIAs.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -5087,7 +5087,7 @@ func TestPerIssuerAIA(t *testing.T) {
 
 func TestIssuersWithoutCRLBits(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Importing a root without CRL signing bits should work fine.
 	customBundleWithoutCRLBits := `
@@ -5532,7 +5532,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 
 func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	ctx := context.Background()
 
 	// Set up an Issuer and Role
@@ -5638,7 +5638,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 // for fields across the two APIs.
 func TestBackend_VerifyIssuerUpdateDefaultsMatchCreation(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
@@ -5667,7 +5667,7 @@ func TestBackend_VerifyIssuerUpdateDefaultsMatchCreation(t *testing.T) {
 
 func TestBackend_VerifyPSSKeysIssuersFailImport(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// PKCS8 parsing fails on this key due to rsaPSS OID
 	rsaOIDKey := `
@@ -5870,7 +5870,7 @@ EBuOIhCv6WiwVyGeTVynuHYkHyw3rIL/zU7N8+zIFV2G2M1UAv5D/eyh/74cr9Of
 
 func TestPKI_EmptyCRLConfigUpgraded(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Write an empty CRLConfig into storage.
 	crlConfigEntry, err := logical.StorageEntryJSON("config/crl", &crlConfig{})
@@ -5893,7 +5893,7 @@ func TestPKI_EmptyCRLConfigUpgraded(t *testing.T) {
 
 func TestPKI_ListRevokedCerts(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Test empty cluster
 	resp, err := CBList(b, s, "certs/revoked")
