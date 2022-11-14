@@ -71,10 +71,10 @@ module('Integration | Component | date-dropdown', function (hooks) {
     assert.true(submitButton.disabled, 'button is disabled when no month or year selected');
 
     await click(monthDropdown);
-    let dropdownListMonths = findAll('[data-test-month-list] button');
+    const dropdownListMonths = findAll('[data-test-month-list] button');
 
     assert.strictEqual(dropdownListMonths.length, 12, 'dropdown has 12 months');
-    for (let [index, month] of ARRAY_OF_MONTHS.entries()) {
+    for (const [index, month] of ARRAY_OF_MONTHS.entries()) {
       assert.dom(dropdownListMonths[index]).hasText(`${month}`, `dropdown includes ${month}`);
     }
 
@@ -83,11 +83,11 @@ module('Integration | Component | date-dropdown', function (hooks) {
     assert.dom('.ember-basic-dropdown-content').doesNotExist('dropdown closes after selecting month');
 
     await click(yearDropdown);
-    let dropdownListYears = findAll('[data-test-year-list] button');
+    const dropdownListYears = findAll('[data-test-year-list] button');
     assert.strictEqual(dropdownListYears.length, 5, 'dropdown has 5 years');
 
-    for (let [index, year] of dropdownListYears.entries()) {
-      let comparisonYear = CURRENT_YEAR - index;
+    for (const [index, year] of dropdownListYears.entries()) {
+      const comparisonYear = CURRENT_YEAR - index;
       assert.dom(year).hasText(`${comparisonYear}`, `dropdown includes ${comparisonYear}`);
     }
 
@@ -113,17 +113,17 @@ module('Integration | Component | date-dropdown', function (hooks) {
     // select each month and assert year is enabled/disabled correctly
     for (let monthIdx = 0; monthIdx < 12; monthIdx++) {
       await click(monthDropdown);
-      let dropdownListMonths = findAll('[data-test-month-list] button');
+      const dropdownListMonths = findAll('[data-test-month-list] button');
       await click(dropdownListMonths[monthIdx]);
       await click(yearDropdown);
-      let dropdownListYears = findAll('[data-test-year-list] button');
+      const dropdownListYears = findAll('[data-test-year-list] button');
 
       if (monthIdx <= CURRENT_MONTH) {
-        for (let year of dropdownListYears) {
+        for (const year of dropdownListYears) {
           assert.false(year.disabled, `${ARRAY_OF_MONTHS[monthIdx]} ${year.innerText} enabled`);
         }
       } else {
-        for (let [yearIndex, year] of dropdownListYears.entries()) {
+        for (const [yearIndex, year] of dropdownListYears.entries()) {
           if (yearIndex === 0) {
             assert.true(year.disabled, `${ARRAY_OF_MONTHS[monthIdx]} ${year.innerText} disabled`);
           } else {
@@ -149,15 +149,15 @@ module('Integration | Component | date-dropdown', function (hooks) {
     // select each year and assert each month is enabled/disabled correctly
     for (let yearIdx = 0; yearIdx < 5; yearIdx++) {
       await click(yearDropdown);
-      let dropdownListYears = findAll('[data-test-year-list] button');
+      const dropdownListYears = findAll('[data-test-year-list] button');
       await click(dropdownListYears[yearIdx]);
 
       await click(monthDropdown);
-      let dropdownListMonths = findAll('[data-test-month-list] button');
+      const dropdownListMonths = findAll('[data-test-month-list] button');
 
       if (yearIdx === 0) {
         // current year is selected
-        for (let [monthIndex, month] of dropdownListMonths.entries()) {
+        for (const [monthIndex, month] of dropdownListMonths.entries()) {
           if (monthIndex <= CURRENT_MONTH) {
             assert.false(
               month.disabled,
@@ -172,7 +172,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
         }
       } else {
         // past year is selected
-        for (let [monthIndex, month] of dropdownListMonths.entries()) {
+        for (const [monthIndex, month] of dropdownListMonths.entries()) {
           assert.false(
             month.disabled,
             `${ARRAY_OF_MONTHS[monthIndex]} ${dropdownListYears[yearIdx].innerText.trim()} enabled`

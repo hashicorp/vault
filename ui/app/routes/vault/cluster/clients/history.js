@@ -17,7 +17,7 @@ export default class HistoryRoute extends Route {
 
   async getLicenseStartTime() {
     try {
-      let license = await this.store.queryRecord('license', {});
+      const license = await this.store.queryRecord('license', {});
       // if license.startTime is 'undefined' return 'null' for consistency
       return license.startTime || getStorage().getItem('vault:ui-inputted-start-date') || null;
     } catch (e) {

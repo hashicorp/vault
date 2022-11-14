@@ -137,12 +137,12 @@ export default class History extends Component {
       return null;
     }
     if (this.upgradeDuringActivity.length === 2) {
-      let [firstUpgrade, secondUpgrade] = this.upgradeDuringActivity;
-      let firstDate = parseAPITimestamp(firstUpgrade.timestampInstalled, 'MMM d, yyyy');
-      let secondDate = parseAPITimestamp(secondUpgrade.timestampInstalled, 'MMM d, yyyy');
+      const [firstUpgrade, secondUpgrade] = this.upgradeDuringActivity;
+      const firstDate = parseAPITimestamp(firstUpgrade.timestampInstalled, 'MMM d, yyyy');
+      const secondDate = parseAPITimestamp(secondUpgrade.timestampInstalled, 'MMM d, yyyy');
       return `Vault was upgraded to ${firstUpgrade.id} (${firstDate}) and ${secondUpgrade.id} (${secondDate}) during this time range.`;
     } else {
-      let [upgrade] = this.upgradeDuringActivity;
+      const [upgrade] = this.upgradeDuringActivity;
       return `Vault was upgraded to ${upgrade.id} on ${parseAPITimestamp(
         upgrade.timestampInstalled,
         'MMM d, yyyy'
@@ -155,7 +155,7 @@ export default class History extends Component {
       return null;
     }
     if (this.upgradeDuringActivity.length === 1) {
-      let version = this.upgradeDuringActivity[0].id;
+      const version = this.upgradeDuringActivity[0].id;
       if (version.match('1.9')) {
         return ' How we count clients changed in 1.9, so keep that in mind when looking at the data below.';
       }
@@ -296,7 +296,7 @@ export default class History extends Component {
     }
     try {
       this.isLoadingQuery = true;
-      let response = await this.store.queryRecord('clients/activity', {
+      const response = await this.store.queryRecord('clients/activity', {
         start_time: this.activityQueryParams.start,
         end_time: this.activityQueryParams.end,
       });

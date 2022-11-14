@@ -33,7 +33,7 @@ export default class ClientsRoute extends Route {
   @action
   async loading(transition) {
     // eslint-disable-next-line ember/no-controller-access-in-routes
-    let controller = this.controllerFor(this.routeName);
+    const controller = this.controllerFor(this.routeName);
     controller.set('currentlyLoading', true);
     transition.promise.finally(function () {
       controller.set('currentlyLoading', false);

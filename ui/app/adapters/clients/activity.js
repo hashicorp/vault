@@ -14,7 +14,7 @@ export default class ActivityAdapter extends ApplicationAdapter {
 
   queryRecord(store, type, query) {
     const url = `${this.buildURL()}/internal/counters/activity`;
-    let queryParams =
+    const queryParams =
       typeof query.start_time === 'string' && typeof query.end_time === 'string'
         ? query
         : this.formatQueryParams(query);
