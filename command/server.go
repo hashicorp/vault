@@ -1764,19 +1764,26 @@ func (c *ServerCommand) Run(args []string) int {
 			if os.Getenv("VAULT_WRITE_STACKTRACE_TO_FILE") != "" {
 				c.logger.Info("Writing stacktrace to file..")
 
-				tmpFile, err := ioutil.TempFile("", fmt.Sprintf("%s-", filepath.Base(os.Args[0])))
+				dir, err := os.MkdirTemp("", "vault-stacktrace")
 				if err != nil {
-					c.logger.Error("Could not create temporary file", err)
+					c.logger.Error("Could not create temporary directory for stacktrace", err)
 					continue
 				}
 
-				if err := pprof.Lookup("goroutine").WriteTo(tmpFile, 2); err != nil {
-					tmpFile.Close()
+				f, err := os.Create(fmt.Sprintf("%s/%s", dir, "stacktrace.log"))
+				if err != nil {
+					c.logger.Error("Could not create temporary file for stacktrace", err)
+					continue
+				}
+				defer f.Close()
+
+				if err := pprof.Lookup("goroutine").WriteTo(f, 2); err != nil {
+					f.Close()
 					c.logger.Error("Could not write stacktrace to file", err)
 					continue
 				}
 
-				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", tmpFile.Name()))
+				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
 			}
 		}
 	}
