@@ -202,7 +202,7 @@ module('Integration | Component | calendar-widget', function (hooks) {
     await calendarDropdown.openCalendar();
     assert.dom('[data-test-next-year]').isDisabled('Future year is disabled');
 
-    let displayYear = find('[data-test-display-year]').innerText;
+    const displayYear = find('[data-test-display-year]').innerText;
     const isRangeSameYear = isDisplayingSameYear(this.calendarStartDate, displayYear);
 
     // only click previous year if 6 months ago was last year
