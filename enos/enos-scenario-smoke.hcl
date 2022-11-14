@@ -210,7 +210,6 @@ scenario "smoke" {
   }
 
   step "verify_replication" {
-    skip_step  = matrix.artifact_type != "package"
     module     = module.vault_verify_replication
     depends_on = [step.create_vault_cluster]
 
@@ -226,7 +225,6 @@ scenario "smoke" {
   }
 
   step "verify_ui" {
-    skip_step  = matrix.artifact_type != "package"
     module     = module.vault_verify_ui
     depends_on = [step.create_vault_cluster]
 
@@ -241,7 +239,6 @@ scenario "smoke" {
   }
 
   step "verify_write_test_data" {
-    skip_step  = matrix.artifact_type != "package"
     module     = module.vault_verify_write_test_data
     depends_on = [step.create_vault_cluster]
 
