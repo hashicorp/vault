@@ -2,9 +2,7 @@ import Route from '@ember/routing/route';
 import getStorage from 'vault/lib/token-storage';
 import { inject as service } from '@ember/service';
 
-// TODO CMB: change class and file name to dashboard
-
-export default class HistoryRoute extends Route {
+export default class DashboardRoute extends Route {
   @service store;
   currentDate = new Date().toISOString();
 

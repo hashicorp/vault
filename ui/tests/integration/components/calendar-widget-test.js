@@ -166,9 +166,9 @@ module('Integration | Component | calendar-widget', function (hooks) {
       this.handleClientActivityQuery.lastCall.lastArg,
       {
         dateType: 'endDate',
-        monthIdx: 9,
-        monthName: 'October',
-        year: 2022,
+        monthIdx: this.currentDate.getMonth(),
+        monthName: ARRAY_OF_MONTHS[this.currentDate.getMonth()],
+        year: this.currentDate.getFullYear(),
       },
       'it calls parent function with end date (current) month/year'
     );
@@ -180,9 +180,9 @@ module('Integration | Component | calendar-widget', function (hooks) {
       this.handleClientActivityQuery.lastCall.lastArg,
       {
         dateType: 'endDate',
-        monthIdx: 9,
-        monthName: 'October',
-        year: 2021,
+        monthIdx: this.currentDate.getMonth(),
+        monthName: ARRAY_OF_MONTHS[this.currentDate.getMonth()],
+        year: this.currentDate.getFullYear() - 1,
       },
       'it calls parent function with start date month/year'
     );

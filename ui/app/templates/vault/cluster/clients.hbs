@@ -9,8 +9,7 @@
 <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics>
   <nav class="tabs">
     <ul>
-      {{! TODO update route to "vault.cluster.clients.dashboard" }}
-      <LinkTo @route="vault.cluster.clients.history" data-test-history>
+      <LinkTo @route="vault.cluster.clients.dashboard" data-test-dashboard>
         Dashboard
       </LinkTo>
       {{#if (or @model.config.configPath.canRead @model.configPath.canRead)}}

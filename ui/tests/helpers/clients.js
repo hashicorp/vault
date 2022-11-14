@@ -19,7 +19,7 @@ import { Response } from 'miragejs';
 */
 export const SELECTORS = {
   currentMonthActiveTab: '.active[data-test-current-month]',
-  historyActiveTab: '.active[data-test-history]',
+  dashboardActiveTab: '.active[data-test-dashboard]',
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',
   dateDisplay: '[data-test-date-display]',

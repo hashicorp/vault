@@ -77,11 +77,10 @@
         (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary) this.auth.currentToken
       )}}
         <div class="navbar-sections">
-          {{! TODO change route to 'vault.cluster.clients.dashboard' }}
           <div class={{if (is-active-route "vault.cluster.clients") "is-active"}}>
             <LinkTo
-              @route="vault.cluster.clients.history"
-              @current-when="vault.cluster.clients.history"
+              @route="vault.cluster.clients.dashboard"
+              @current-when="vault.cluster.clients.dashboard"
               data-test-navbar-item="metrics"
             >
               Client count

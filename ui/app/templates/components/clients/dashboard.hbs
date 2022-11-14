@@ -1,4 +1,3 @@
-{{! TODO CHANGE FILE NAME TO dashboard.hbs }}
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   <p class="has-bottom-margin-xl">
     This dashboard will surface Vault client usage over time. Clients represent a user or service that has authenticated to
@@ -24,8 +23,8 @@
   {{#if (eq @model.config.queriesAvailable false)}}
     {{#if (eq @model.config.enabled "On")}}
       <EmptyState
-        @title={{concat "No monthly history " (if this.noActivityRange this.noActivityRange)}}
-        @message="There is no data in the monthly history yet. We collect it at the end of each month, so your data will be available on the first of next month."
+        @title={{concat "No data received " (if this.noActivityRange this.noActivityRange)}}
+        @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
       />
     {{else}}
       <EmptyState

@@ -2789,6 +2789,135 @@ const MOCK_MONTHLY_DATA = [
       ],
     },
   },
+  {
+    timestamp: formatISO(addMonths(UPGRADE_DATE, 5)),
+    counts: {
+      distinct_entities: 0,
+      entity_clients: 5,
+      non_entity_tokens: 0,
+      non_entity_clients: 10,
+      clients: 15,
+    },
+    namespaces: [
+      {
+        namespace_id: 'PU6JB',
+        namespace_path: 'test-ns-2/',
+        counts: {
+          distinct_entities: 0,
+          entity_clients: 5,
+          non_entity_tokens: 0,
+          non_entity_clients: 10,
+          clients: 15,
+        },
+        mounts: [
+          {
+            mount_path: 'path-1',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 1,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 1,
+            },
+          },
+          {
+            mount_path: 'path-3-with-over-18-characters',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 1,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 1,
+            },
+          },
+          {
+            mount_path: 'path-4-with-over-18-characters',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 2,
+              non_entity_tokens: 0,
+              non_entity_clients: 2,
+              clients: 4,
+            },
+          },
+          {
+            mount_path: 'path-2',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 1,
+              non_entity_tokens: 0,
+              non_entity_clients: 8,
+              clients: 9,
+            },
+          },
+        ],
+      },
+    ],
+    new_clients: {
+      counts: {
+        distinct_entities: 0,
+        entity_clients: 5,
+        non_entity_tokens: 0,
+        non_entity_clients: 10,
+        clients: 15,
+      },
+      namespaces: [
+        {
+          namespace_id: 'PU6JB',
+          namespace_path: 'test-ns-2/',
+          counts: {
+            distinct_entities: 0,
+            entity_clients: 5,
+            non_entity_tokens: 0,
+            non_entity_clients: 10,
+            clients: 15,
+          },
+          mounts: [
+            {
+              mount_path: 'path-1',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 1,
+                non_entity_tokens: 0,
+                non_entity_clients: 0,
+                clients: 1,
+              },
+            },
+            {
+              mount_path: 'path-3-with-over-18-characters',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 1,
+                non_entity_tokens: 0,
+                non_entity_clients: 0,
+                clients: 1,
+              },
+            },
+            {
+              mount_path: 'path-4-with-over-18-characters',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 2,
+                non_entity_tokens: 0,
+                non_entity_clients: 2,
+                clients: 4,
+              },
+            },
+            {
+              mount_path: 'path-2',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 1,
+                non_entity_tokens: 0,
+                non_entity_clients: 8,
+                clients: 9,
+              },
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 function generateNullMonths(startDate, endDate) {

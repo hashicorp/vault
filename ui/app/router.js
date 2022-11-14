@@ -20,7 +20,7 @@ Router.map(function () {
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
-        this.route('history'); // TODO cmb: change route to 'dashboard'
+        this.route('dashboard');
         this.route('config');
         this.route('edit');
       });

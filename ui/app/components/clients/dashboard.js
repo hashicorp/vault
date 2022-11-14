@@ -6,8 +6,7 @@ import { isAfter, isBefore, isSameMonth, format } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
-// TODO CMB: change class and file name to Dashboard
-export default class History extends Component {
+export default class Dashboard extends Component {
   @service store;
   @service version;
 
