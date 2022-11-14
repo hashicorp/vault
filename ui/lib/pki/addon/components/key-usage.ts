@@ -46,6 +46,7 @@ const EXT_KEY_USAGE_FIELDS: Field[] = [
 ];
 
 interface PkiKeyUsageArgs {
+  group: string;
   model: {
     keyUsage: string[];
     extKeyUsageOids: string[];

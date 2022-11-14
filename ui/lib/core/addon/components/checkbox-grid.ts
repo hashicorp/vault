@@ -2,11 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { HTMLElementEvent } from 'forms';
 
-interface Field {
-  key: string;
-  label: string;
-}
-interface CheckboxListArgs {
+interface CheckboxGridArgs {
   name: string;
   label: string;
   subText?: string;
@@ -14,23 +10,33 @@ interface CheckboxListArgs {
   value: string[] | undefined;
   onChange: (name: string, value: string[]) => void;
 }
+interface Field {
+  key: string;
+  label: string;
+}
 
 /**
- * @module CheckboxList
- * CheckboxList components are used to allow users to select any number of predetermined options.
+ * @module CheckboxGrid
+ * CheckboxGrid components are used to allow users to select any
+ * number of predetermined options, aligned in a 3-column grid.
  *
  * @example
  * ```js
- * <CheckboxList @name="modelKey" @label="Model Attribute Label" @fields={{options}} @value={{['Hello', 'Yes']}}/>
+ * <CheckboxGrid
+ *   @name="modelKey"
+ *   @label="Model Attribute Label"
+ *   @fields={{options}}
+ *   @value={{['Hello', 'Yes']}}
+ * />
  * ```
  */
 
-export default class CheckboxList extends Component<CheckboxListArgs> {
+export default class CheckboxGrid extends Component<CheckboxGridArgs> {
   get checkboxes() {
     const list = this.args.value || [];
     return this.args.fields.map((field) => ({
       ...field,
-      value: list.indexOf(field.key) >= 0 ? true : false,
+      value: list.includes(field.key),
     }));
   }
 

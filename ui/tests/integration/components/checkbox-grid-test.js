@@ -4,7 +4,7 @@ import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Sinon from 'sinon';
 
-module('Integration | Component | checkbox-list', function (hooks) {
+module('Integration | Component | checkbox-grid', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
@@ -22,7 +22,7 @@ module('Integration | Component | checkbox-list', function (hooks) {
     const changeSpy = Sinon.spy();
     this.set('onChange', changeSpy);
     await render(
-      hbs`<CheckboxList @name={{this.name}} @label={{this.label}} @fields={{this.fields}} @onChange={{this.onChange}} />`
+      hbs`<CheckboxGrid @name={{this.name}} @label={{this.label}} @fields={{this.fields}} @onChange={{this.onChange}} />`
     );
 
     assert.dom('[data-test-checkbox]').exists({ count: 2 }, 'One checkbox is rendered for each field');
@@ -36,7 +36,7 @@ module('Integration | Component | checkbox-list', function (hooks) {
     this.set('onChange', changeSpy);
     this.set('currentValue', ['abc']);
     await render(
-      hbs`<CheckboxList @name={{this.name}} @label={{this.label}} @fields={{this.fields}} @onChange={{this.onChange}} @value={{this.currentValue}} />`
+      hbs`<CheckboxGrid @name={{this.name}} @label={{this.label}} @fields={{this.fields}} @onChange={{this.onChange}} @value={{this.currentValue}} />`
     );
 
     assert.dom('[data-test-checkbox]').exists({ count: 2 }, 'One checkbox is rendered for each field');
