@@ -1,29 +1,31 @@
 import { helper as buildHelper } from '@ember/component/helper';
 
-export const KMIP = {
-  displayName: 'KMIP',
-  value: 'kmip',
-  type: 'kmip',
-  category: 'generic',
-  requiredFeature: 'KMIP',
-};
-
-export const TRANSFORM = {
-  displayName: 'Transform',
-  value: 'transform',
-  type: 'transform',
-  category: 'generic',
-  requiredFeature: 'Transform Secrets Engine',
-};
-
-export const KEYMGMT = {
-  displayName: 'Key Management',
-  value: 'keymgmt',
-  type: 'keymgmt',
-  glyph: 'key',
-  category: 'cloud',
-  requiredFeature: 'Key Management Secrets Engine',
-};
+const ENTERPRISE_SECRET_ENGINES = [
+  {
+    displayName: 'KMIP',
+    value: 'kmip',
+    type: 'kmip',
+    engineRoute: 'kmip.scopes',
+    category: 'generic',
+    requiredFeature: 'KMIP',
+  },
+  {
+    displayName: 'Transform',
+    value: 'transform',
+    type: 'transform',
+    category: 'generic',
+    requiredFeature: 'Transform Secrets Engine',
+  },
+  {
+    displayName: 'Key Management',
+    value: 'keymgmt',
+    type: 'keymgmt',
+    glyph: 'key',
+    category: 'cloud',
+    requiredFeature: 'Key Management Secrets Engine',
+    routeQueryParams: { tab: 'provider' },
+  },
+];
 
 const MOUNTABLE_SECRET_ENGINES = [
   {
@@ -120,10 +122,22 @@ const MOUNTABLE_SECRET_ENGINES = [
     type: 'totp',
     category: 'generic',
   },
+  {
+    displayName: 'Kubernetes',
+    value: 'kubernetes',
+    type: 'kubernetes',
+    engineRoute: 'kubernetes.overview',
+    category: 'generic',
+    glyph: 'kubernetes-color',
+  },
 ];
 
-export function engines() {
+export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
 }
 
-export default buildHelper(engines);
+export function allEngines() {
+  return [...MOUNTABLE_SECRET_ENGINES, ...ENTERPRISE_SECRET_ENGINES];
+}
+
+export default buildHelper(mountableEngines);

@@ -1,5 +1,5 @@
 import { currentRouteName, settled } from '@ember/test-helpers';
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
@@ -8,6 +8,7 @@ import authPage from 'vault/tests/pages/auth';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
+import { allEngines } from 'vault/helpers/mountable-secret-engines';
 
 const consoleComponent = create(consoleClass);
 
@@ -139,5 +140,21 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await configPage.visit({ backend: enginePath });
     await settled();
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
+  });
+  // TODO JR: enable once kubernetes routes are defined
+  skip('it should transition to engine route on success if defined in mount config', async function (assert) {
+    await consoleComponent.runCommands([
+      // delete any previous mount with same name
+      `delete sys/mounts/kmip`,
+    ]);
+    await mountSecrets.visit();
+    await mountSecrets.selectType('kubernetes');
+    await mountSecrets.next().path('kubernetes').submit();
+    const { engineRoute } = allEngines().findBy('type', 'kubernetes');
+    assert.strictEqual(
+      currentRouteName(),
+      `vault.cluster.secrets.backend.${engineRoute}`,
+      'Transitions to engine route on mount success'
+    );
   });
 });

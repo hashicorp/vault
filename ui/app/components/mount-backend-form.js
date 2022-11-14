@@ -5,7 +5,7 @@ import { inject as service } from '@ember/service';
 import { action, setProperties } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
-import { engines, KMIP, TRANSFORM, KEYMGMT } from 'vault/helpers/mountable-secret-engines';
+import { mountableEngines, allEngines } from 'vault/helpers/mountable-secret-engines';
 import { waitFor } from '@ember/test-waiters';
 
 /**
@@ -21,7 +21,6 @@ import { waitFor } from '@ember/test-waiters';
  */
 
 const METHODS = methods();
-const ENGINES = engines();
 
 export default class MountBackendForm extends Component {
   @service store;
@@ -59,10 +58,7 @@ export default class MountBackendForm extends Component {
   }
 
   get engines() {
-    if (this.version.isEnterprise) {
-      return ENGINES.concat([KMIP, TRANSFORM, KEYMGMT]);
-    }
-    return ENGINES;
+    return this.version.isEnterprise ? allEngines() : mountableEngines();
   }
 
   willDestroy() {
