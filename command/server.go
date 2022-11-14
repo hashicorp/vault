@@ -1784,6 +1784,7 @@ func (c *ServerCommand) Run(args []string) int {
 				}
 
 				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
+				f.Close()
 			}
 		}
 	}
