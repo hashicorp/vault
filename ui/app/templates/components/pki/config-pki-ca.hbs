@@ -208,9 +208,9 @@
   </p>
   {{#each this.downloadHrefs as |dl|}}
     <div class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
-      <a data-test-ca-download-link href={{dl.url}} download={{dl.name}}>
+      <ExternalLink @href={{dl.url}} @sameTab={{true}} download={{dl.name}} data-test-ca-download-link>
         {{dl.display}}
-      </a>
+      </ExternalLink>
     </div>
   {{/each}}
 

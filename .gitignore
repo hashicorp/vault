@@ -119,3 +119,4 @@ website/components/node_modules
 
 .buildcache/
 .releaser/
+*.log
