@@ -1760,6 +1760,24 @@ func (c *ServerCommand) Run(args []string) int {
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
+
+			if os.Getenv("VAULT_WRITE_STACKTRACE_TO_FILE") != "" {
+				c.logger.Info("Writing stacktrace to file..")
+
+				tmpFile, err := ioutil.TempFile("", fmt.Sprintf("%s-", filepath.Base(os.Args[0])))
+				if err != nil {
+					c.logger.Error("Could not create temporary file", err)
+					continue
+				}
+
+				if err := pprof.Lookup("goroutine").WriteTo(tmpFile, 2); err != nil {
+					tmpFile.Close()
+					c.logger.Error("Could not write stacktrace to file", err)
+					continue
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", tmpFile.Name()))
+			}
 		}
 	}
 	// Notify systemd that the server is shutting down
