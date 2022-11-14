@@ -14,15 +14,12 @@ export default class MountSecretBackendController extends Controller {
   onMountSuccess(type, path) {
     let transition;
     if (SUPPORTED_BACKENDS.includes(type)) {
-      const { engineRoute } = allEngines().findBy('type', type);
+      const { engineRoute, routeQueryParams } = allEngines().findBy('type', type);
       if (engineRoute) {
         transition = this.router.transitionTo(`vault.cluster.secrets.backend.${engineRoute}`, path);
-      } else if (type === 'keymgmt') {
-        transition = this.router.transitionTo('vault.cluster.secrets.backend.index', path, {
-          queryParams: { tab: 'provider' },
-        });
       } else {
-        transition = this.router.transitionTo('vault.cluster.secrets.backend.index', path);
+        const queryParams = routeQueryParams || {};
+        transition = this.router.transitionTo('vault.cluster.secrets.backend.index', path, { queryParams });
       }
     } else {
       transition = this.router.transitionTo('vault.cluster.secrets.backends');

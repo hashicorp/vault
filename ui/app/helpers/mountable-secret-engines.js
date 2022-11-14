@@ -23,6 +23,7 @@ const ENTERPRISE_SECRET_ENGINES = [
     glyph: 'key',
     category: 'cloud',
     requiredFeature: 'Key Management Secrets Engine',
+    routeQueryParams: { tab: 'provider' },
   },
 ];
 
