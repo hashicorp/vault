@@ -102,10 +102,6 @@ const (
 	// Defaults to 0 (no files are ever deleted).
 	// Set to -1 to discard old log files when a new one is created.
 	EnvVaultLogRotateMaxFiles = "VAULT_LOG_ROTATE_MAX_FILES"
-	// EnvVaultLogSyslog this flag enables logging to syslog.
-	// This is only supported on Linux and macOS.
-	// It will result in an error if provided on Windows.
-	EnvVaultLogSyslog = "VAULT_LOG_SYSLOG"
 
 	// DisableSSCTokens is an env var used to disable index bearing
 	// token functionality
@@ -168,8 +164,6 @@ const (
 	flagNameLogRotateDuration = "log-rotate-duration"
 	// flagNameLogRotateMaxFiles is the flag used to specify the maximum number of older/archived log files to keep.
 	flagNameLogRotateMaxFiles = "log-rotate-max-files"
-	// flagNameLogSyslog is the flag used to enable logging to syslog (Linux and macOS only).
-	flagNameLogSyslog = "log-syslog"
 	// flagNameLogFormat is the flag used to specify the log format. Supported values are "standard" and "json"
 	flagNameLogFormat = "log-format"
 	// flagNameLogLevel is used to specify the log level applied to logging

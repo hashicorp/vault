@@ -188,6 +188,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 			".hcl or .json are loaded.",
 	})
 
+	// Augment with the log flags
 	f.addLogFlags(c.LogFlags)
 
 	f.BoolVar(&BoolVar{
@@ -1025,6 +1026,8 @@ func (c *ServerCommand) Run(args []string) int {
 		return c.runRecoveryMode()
 	}
 
+	// TODO: PW: Parse out any log related flags.
+
 	// Automatically enable dev mode if other dev flags are provided.
 	if c.flagDevConsul || c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 || c.flagDevTLS {
 		c.flagDev = true
@@ -1049,6 +1052,7 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Error("Cannot run diagnose on Vault in dev mode.")
 			return 1
 		}
+		// TODO: PW: Check if this cmd needs to be 'log file capable'
 		// TODO: add a file output flag to Diagnose
 		diagnose := &OperatorDiagnoseCommand{
 			BaseCommand: c.BaseCommand,
@@ -1157,6 +1161,7 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// TODO: PW: Remove the old way of setting up logging... What about 'dev' modes?
 	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
 	if err != nil {
 		c.UI.Error(err.Error())

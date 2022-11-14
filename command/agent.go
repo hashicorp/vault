@@ -19,6 +19,7 @@ import (
 	systemd "github.com/coreos/go-systemd/daemon"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/alicloud"
@@ -69,7 +70,7 @@ const (
 
 type AgentCommand struct {
 	*BaseCommand
-	LogFlags *logFlags
+	*logFlags
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -117,7 +118,8 @@ func (c *AgentCommand) Flags() *FlagSets {
 
 	f := set.NewFlagSet("Command Options")
 
-	// TODO: PW: addLogFlags
+	// Augment with the log flags
+	f.addLogFlags(c.logFlags)
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   "config",
@@ -222,7 +224,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	config = c.aggregateConfig(f, config)
 
-	// Build the logger using level, format and path
+	// Parse all the log related config
 	logLevel, err := logging.ParseLogLevel(config.LogLevel)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -235,7 +237,34 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
-	logCfg := logging.NewLogConfig("agent", logLevel, logFormat, config.LogFile)
+	logRotateDuration, err := parseutil.ParseDurationSecond(config.LogRotateDuration)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logRotateBytes, err := parseutil.ParseInt(config.LogRotateBytes)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logRotateMaxFiles, err := parseutil.ParseInt(config.LogRotateMaxFiles)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logCfg := &logging.LogConfig{
+		Name:              "vault-agent",
+		LogLevel:          logLevel,
+		LogFormat:         logFormat,
+		LogFilePath:       config.LogFile,
+		LogRotateDuration: logRotateDuration,
+		LogRotateBytes:    int(logRotateBytes),
+		LogRotateMaxFiles: int(logRotateMaxFiles),
+	}
+
 	l, err := logging.Setup(logCfg, c.logWriter)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -246,7 +275,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = c.flagLogLevel
+	info["log level"] = config.LogLevel
 	infoKeys = append(infoKeys, "log level")
 
 	infoKeys = append(infoKeys, "version")
@@ -912,25 +941,13 @@ func (c *AgentCommand) Run(args []string) int {
 // on the precedence (env var overrides file config, cli overrides env var).
 // It mutates the config object supplied and returns the updated object.
 func (c *AgentCommand) aggregateConfig(f *FlagSets, config *agentConfig.Config) *agentConfig.Config {
+	f.aggregateLogConfig(config.SharedConfig)
+
 	f.Visit(func(fl *flag.Flag) {
 		if fl.Name == flagNameAgentExitAfterAuth {
 			config.ExitAfterAuth = c.flagExitAfterAuth
 		}
 	})
-
-	c.setStringFlag(f, config.LogFile, &StringVar{
-		Name:   flagNameLogFile,
-		EnvVar: EnvVaultLogFile,
-		Target: &c.flagLogFile,
-	})
-	config.LogFile = c.flagLogFile
-
-	c.setStringFlag(f, config.LogLevel, &StringVar{
-		Name:   flagNameLogLevel,
-		EnvVar: EnvVaultLogLevel,
-		Target: &c.flagLogLevel,
-	})
-	config.LogLevel = c.flagLogLevel
 
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
 		Name:    flagNameAddress,

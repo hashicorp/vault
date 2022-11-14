@@ -6,6 +6,7 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 )
@@ -16,27 +17,37 @@ const (
 	JSONFormat
 )
 
+// defaultRotateDuration is the default time taken by the agent to rotate logs
+const defaultRotateDuration = 24 * time.Hour
+
 type LogFormat int
 
 // LogConfig should be used to supply configuration when creating a new Vault logger
 type LogConfig struct {
-	name        string
-	logLevel    log.Level
-	logFormat   LogFormat
-	logFilePath string
-}
+	// Name is the name the returned logger will use to prefix log lines.
+	Name string
 
-func NewLogConfig(name string, logLevel log.Level, logFormat LogFormat, logFilePath string) LogConfig {
-	return LogConfig{
-		name:        name,
-		logLevel:    logLevel,
-		logFormat:   logFormat,
-		logFilePath: strings.TrimSpace(logFilePath),
-	}
+	// LogLevel is the minimum level to be logged.
+	LogLevel log.Level
+
+	// LogFormat is the log format to use, supported formats are 'standard' and 'json'.
+	LogFormat LogFormat
+
+	// LogFilePath is the path to write the logs to the user specified file.
+	LogFilePath string
+
+	// LogRotateDuration is the user specified time to rotate logs
+	LogRotateDuration time.Duration
+
+	// LogRotateBytes is the user specified byte limit to rotate logs
+	LogRotateBytes int
+
+	// LogRotateMaxFiles is the maximum number of past archived log files to keep
+	LogRotateMaxFiles int
 }
 
 func (c LogConfig) IsFormatJson() bool {
-	return c.logFormat == JSONFormat
+	return c.LogFormat == JSONFormat
 }
 
 // Stringer implementation
@@ -66,10 +77,10 @@ func (w noErrorWriter) Write(p []byte) (n int, err error) {
 }
 
 // Setup creates a new logger with the specified configuration and writer
-func Setup(config LogConfig, w io.Writer) (log.InterceptLogger, error) {
+func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 	// Validate the log level
-	if config.logLevel.String() == "unknown" {
-		return nil, fmt.Errorf("invalid log level: %v", config.logLevel)
+	if config.LogLevel.String() == "unknown" {
+		return nil, fmt.Errorf("invalid log level: %v", config.LogLevel)
 	}
 
 	// If out is os.Stdout and Vault is being run as a Windows Service, writes will
@@ -77,21 +88,34 @@ func Setup(config LogConfig, w io.Writer) (log.InterceptLogger, error) {
 	// noErrorWriter is used as a wrapper to suppress any errors when writing to out.
 	writers := []io.Writer{noErrorWriter{w: w}}
 
-	if config.logFilePath != "" {
-		dir, fileName := filepath.Split(config.logFilePath)
+	// Create a file logger if the user has specified the path to the log file
+	if config.LogFilePath != "" {
+		dir, fileName := filepath.Split(config.LogFilePath)
 		if fileName == "" {
-			fileName = "vault-agent.log"
+			fileName = "vault.log"
 		}
-		logFile := NewLogFile(dir, fileName)
+		if config.LogRotateDuration == 0 {
+			config.LogRotateDuration = defaultRotateDuration
+		}
+		logFile := &LogFile{
+			fileName: fileName,
+			logPath:  dir,
+			duration: config.LogRotateDuration,
+			maxBytes: config.LogRotateBytes,
+			maxFiles: config.LogRotateMaxFiles,
+		}
+		if err := logFile.pruneFiles(); err != nil {
+			return nil, fmt.Errorf("failed to prune log files: %w", err)
+		}
 		if err := logFile.openNew(); err != nil {
-			return nil, fmt.Errorf("failed to set up file logging: %w", err)
+			return nil, fmt.Errorf("failed to setup logging: %w", err)
 		}
 		writers = append(writers, logFile)
 	}
 
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
-		Name:       config.name,
-		Level:      config.logLevel,
+		Name:       config.Name,
+		Level:      config.LogLevel,
 		Output:     io.MultiWriter(writers...),
 		JSONFormat: config.IsFormatJson(),
 	})

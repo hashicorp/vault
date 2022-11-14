@@ -1,6 +1,12 @@
 package command
 
-import "github.com/posener/complete"
+import (
+	"flag"
+	"os"
+
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/posener/complete"
+)
 
 type logFlags struct {
 	flagLogLevel          string
@@ -9,10 +15,20 @@ type logFlags struct {
 	flagLogRotateBytes    string
 	flagLogRotateDuration string
 	flagLogRotateMaxFiles string
-	flagLogSyslog         bool
+}
+
+type provider = func(key string) (string, bool)
+
+type valuesProvider struct {
+	flagProvider   provider
+	envVarProvider provider
 }
 
 func (f *FlagSet) addLogFlags(l *logFlags) {
+	if l == nil {
+		l = &logFlags{}
+	}
+
 	f.StringVar(&StringVar{
 		Name:       flagNameLogLevel,
 		Target:     &l.flagLogLevel,
@@ -61,12 +77,57 @@ func (f *FlagSet) addLogFlags(l *logFlags) {
 		EnvVar: EnvVaultLogRotateMaxFiles,
 		Usage:  "The maximum number of older log file archives to keep",
 	})
+}
 
-	f.BoolVar(&BoolVar{
-		Name:   flagNameLogSyslog,
-		Target: &l.flagLogSyslog,
-		EnvVar: EnvVaultLogSyslog,
-		Usage: "Enables logging to syslog. This is only supported on Linux and macOS. " +
-			"It will result in an error if provided on Windows",
+func getFlagValue(fs *FlagSets, key string) (string, bool) {
+	var result string
+	var isFlagSet bool
+
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == key {
+			result = f.Value.String()
+			isFlagSet = true
+		}
 	})
+
+	return result, isFlagSet
+}
+
+func (p *valuesProvider) getAggregatedConfigValue(flagKey, envVarKey, current, fallback string) string {
+	var result string
+
+	flg, flgFound := p.flagProvider(flagKey)
+	env, envFound := p.envVarProvider(envVarKey)
+
+	switch {
+	case flgFound:
+		result = flg
+	case envFound:
+		// Use value from env var
+		result = env
+	case current != "":
+		// Use value from config
+		result = current
+	default:
+		// Use the default value
+		result = fallback
+	}
+
+	return result
+}
+
+func (f *FlagSets) aggregateLogConfig(config *configutil.SharedConfig) *configutil.SharedConfig {
+	p := &valuesProvider{
+		flagProvider:   func(key string) (string, bool) { return getFlagValue(f, key) },
+		envVarProvider: os.LookupEnv,
+	}
+
+	config.LogLevel = p.getAggregatedConfigValue(flagNameLogLevel, EnvVaultLogLevel, config.LogLevel, "")
+	config.LogFormat = p.getAggregatedConfigValue(flagNameLogFormat, EnvVaultLogFormat, config.LogFormat, "")
+	config.LogFile = p.getAggregatedConfigValue(flagNameLogFile, EnvVaultLogFile, config.LogFile, "")
+	config.LogRotateDuration = p.getAggregatedConfigValue(flagNameLogRotateDuration, EnvVaultLogRotateDuration, config.LogRotateDuration, "")
+	config.LogRotateBytes = p.getAggregatedConfigValue(flagNameLogRotateBytes, EnvVaultLogRotateBytes, config.LogRotateBytes, "")
+	config.LogRotateMaxFiles = p.getAggregatedConfigValue(flagNameLogRotateMaxFiles, EnvVaultLogRotateMaxFiles, config.LogRotateMaxFiles, "")
+
+	return config
 }
