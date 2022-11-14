@@ -7,8 +7,9 @@ GO_CMD=${GO_CMD:-go}
 
 # Get the parent directory of where this script is.
 SOURCE="${BASH_SOURCE[0]}"
+SOURCE_DIR=$( dirname "$SOURCE" )
 while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done
-DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
+DIR="$( cd -P "$SOURCE_DIR/.." && pwd )"
 
 # Change into that directory
 cd "$DIR"
@@ -21,6 +22,21 @@ GIT_COMMIT="$("$SOURCE_DIR"/crt-builder.sh revision)"
 GIT_DIRTY="$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)"
 
 BUILD_DATE="$("$SOURCE_DIR"/crt-builder.sh date)"
+
+# If its dev mode, only build for ourself
+if [ "${VAULT_DEV_BUILD}x" != "x" ] && [ "${XC_OSARCH}x" == "x" ]; then
+    XC_OS=$(${GO_CMD} env GOOS)
+    XC_ARCH=$(${GO_CMD} env GOARCH)
+    XC_OSARCH=$(${GO_CMD} env GOOS)/$(${GO_CMD} env GOARCH)
+elif [ "${XC_OSARCH}x" != "x" ]; then
+    IFS='/' read -ra SPLITXC <<< "${XC_OSARCH}"
+	DEV_PLATFORM="./pkg/${SPLITXC[0]}_${SPLITXC[1]}"
+fi
+
+# Determine the arch/os combos we're building for
+XC_ARCH=${XC_ARCH:-"386 amd64"}
+XC_OS=${XC_OS:-linux darwin windows freebsd openbsd netbsd solaris}
+XC_OSARCH=${XC_OSARCH:-"linux/386 linux/amd64 linux/arm linux/arm64 darwin/386 darwin/amd64 darwin/arm64 windows/386 windows/amd64 freebsd/386 freebsd/amd64 freebsd/arm openbsd/386 openbsd/amd64 openbsd/arm netbsd/386 netbsd/amd64 solaris/amd64"}
 
 GOPATH=${GOPATH:-$(${GO_CMD} env GOPATH)}
 case $(uname) in
@@ -41,7 +57,7 @@ echo "==> Building..."
 gox \
     -osarch="${XC_OSARCH}" \
     -gcflags "${GCFLAGS}" \
-    -ldflags "${LD_FLAGS}-X github.com/hashicorp/vault/sdk/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}'" \
+    -ldflags "${LD_FLAGS}-X github.com/hashicorp/vault/sdk/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}' -X github.com/hashicorp/vault/sdk/version.BuildDate=${BUILD_DATE}" \
     -output "pkg/{{.OS}}_{{.Arch}}/vault" \
     ${GOX_PARALLEL_BUILDS+-parallel="${GOX_PARALLEL_BUILDS}"} \
     -tags="${BUILD_TAGS}" \
