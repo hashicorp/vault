@@ -219,6 +219,13 @@ export default class PkiRoleModel extends Model {
   })
   ou;
 
+  @attr('array', {
+    defaultValue() {
+      return ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'];
+    },
+  })
+  keyUsage;
+
   @attr({ hideFormSection: true }) organization;
   @attr({ hideFormSection: true }) country;
   @attr({ hideFormSection: true }) locality;

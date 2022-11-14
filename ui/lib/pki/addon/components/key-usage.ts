@@ -54,18 +54,8 @@ interface PkiKeyUsageArgs {
 }
 
 export default class PkiKeyUsage extends Component<PkiKeyUsageArgs> {
-  keyUsageFields: Field[] = [];
-  extKeyUsageFields: Field[] = [];
-
-  constructor(owner: any, args: PkiKeyUsageArgs) {
-    super(owner, args);
-    this.keyUsageFields = KEY_USAGE_FIELDS;
-    this.extKeyUsageFields = EXT_KEY_USAGE_FIELDS;
-    // TODO: set this in the model by default
-    // set default of key_usage to the three params that are true by default.
-    this.args.model.keyUsage = ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'];
-    this.args.model.extKeyUsage = [];
-  }
+  keyUsageFields = KEY_USAGE_FIELDS;
+  extKeyUsageFields = EXT_KEY_USAGE_FIELDS;
 
   @action onStringListChange(value: string[]) {
     this.args.model.extKeyUsageOids = value;
