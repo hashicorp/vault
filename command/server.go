@@ -1761,25 +1761,34 @@ func (c *ServerCommand) Run(args []string) int {
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
 
-			if os.Getenv("VAULT_WRITE_STACKTRACE_TO_FILE") != "" {
-				c.logger.Info("Writing stacktrace to file..")
+			if os.Getenv("VAULT_STACKTRACE_WRITE_TO_FILE") != "" {
+				c.logger.Info("Writing stacktrace to file")
 
-				dir, err := os.MkdirTemp("", "vault-stacktrace")
-				if err != nil {
-					c.logger.Error("Could not create temporary directory for stacktrace", err)
-					continue
+				dir := ""
+				path := os.Getenv("VAULT_STACKTRACE_FILE_PATH")
+				if path != "" {
+					if _, err := os.Stat(path); err != nil {
+						c.logger.Error("Checking stacktrace path failed", "error", err)
+						continue
+					}
+					dir = path
+				} else {
+					dir, err = os.MkdirTemp("", "vault-stacktrace")
+					if err != nil {
+						c.logger.Error("Could not create temporary directory for stacktrace", "error", err)
+						continue
+					}
 				}
 
 				f, err := os.Create(fmt.Sprintf("%s/%s", dir, "stacktrace.log"))
 				if err != nil {
-					c.logger.Error("Could not create temporary file for stacktrace", err)
+					c.logger.Error("Could not create stacktrace file", "error", err)
 					continue
 				}
-				defer f.Close()
 
 				if err := pprof.Lookup("goroutine").WriteTo(f, 2); err != nil {
 					f.Close()
-					c.logger.Error("Could not write stacktrace to file", err)
+					c.logger.Error("Could not write stacktrace to file", "error", err)
 					continue
 				}
 
