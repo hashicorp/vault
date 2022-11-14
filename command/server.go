@@ -84,7 +84,7 @@ const (
 
 type ServerCommand struct {
 	*BaseCommand
-	LogFlags *logFlags
+	*logFlags
 
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
@@ -189,7 +189,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	// Augment with the log flags
-	f.addLogFlags(c.LogFlags)
+	f.addLogFlags(c.logFlags)
 
 	f.BoolVar(&BoolVar{
 		Name:    "exit-on-core-shutdown",
@@ -808,9 +808,9 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (hclog.L
 	var level hclog.Level
 	var logLevelWasNotSet bool
 	logFormat := logging.UnspecifiedFormat
-	logLevelString := c.LogFlags.flagLogLevel
-	c.LogFlags.flagLogLevel = strings.ToLower(strings.TrimSpace(c.LogFlags.flagLogLevel))
-	switch c.LogFlags.flagLogLevel {
+	logLevelString := c.flagLogLevel
+	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
+	switch c.flagLogLevel {
 	case notSetValue, "":
 		logLevelWasNotSet = true
 		logLevelString = "info"
@@ -826,12 +826,12 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (hclog.L
 	case "err", "error":
 		level = hclog.Error
 	default:
-		return level, logLevelString, logLevelWasNotSet, logFormat, fmt.Errorf("unknown log level: %s", c.LogFlags.flagLogLevel)
+		return level, logLevelString, logLevelWasNotSet, logFormat, fmt.Errorf("unknown log level: %s", c.flagLogLevel)
 	}
 
-	if c.LogFlags.flagLogFormat != notSetValue {
+	if c.flagLogFormat != notSetValue {
 		var err error
-		logFormat, err = logging.ParseLogFormat(c.LogFlags.flagLogFormat)
+		logFormat, err = logging.ParseLogFormat(c.flagLogFormat)
 		if err != nil {
 			return level, logLevelString, logLevelWasNotSet, logFormat, err
 		}
