@@ -818,10 +818,8 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
 				if err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential); err != nil {
-					if _, err := handleErrorDeprecatedMount(err); err != nil {
-						c.logger.Error("shutting down core", "error", err)
-						c.Shutdown()
-					}
+					c.logger.Error("shutting down core", "error", err)
+					c.Shutdown()
 				}
 			}
 		}

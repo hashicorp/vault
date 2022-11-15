@@ -79,6 +79,24 @@ func IndexStateFromContext(ctx context.Context) *WALState {
 	return s
 }
 
+const deprecationResponseCtxKey = "deprecation_status_response"
+
+// DeprecationResponseContext returns a context with an added value holding the
+// deprecation error that should be surfaced to the API from mount internals.
+func DeprecationResponseContext(ctx context.Context, resp *Response) context.Context {
+	return context.WithValue(ctx, deprecationResponseCtxKey, resp)
+}
+
+// DeprecationErrorFromContext is a helper to look up a deprecation error
+// returned within the mount internals.
+func DeprecationResponseFromContext(ctx context.Context) *Response {
+	r, ok := ctx.Value(deprecationResponseCtxKey).(*Response)
+	if !ok {
+		return nil
+	}
+	return r
+}
+
 // Request is a struct that stores the parameters and context of a request
 // being made to Vault. It is used to abstract the details of the higher level
 // request protocol from the handlers.
