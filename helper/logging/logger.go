@@ -46,7 +46,11 @@ type LogConfig struct {
 	LogRotateMaxFiles int
 }
 
-func (c LogConfig) IsFormatJson() bool {
+func (c *LogConfig) isLevelInvalid() bool {
+	return c.LogLevel == log.NoLevel || c.LogLevel == log.Off || c.LogLevel.String() == "unknown"
+}
+
+func (c *LogConfig) isFormatJson() bool {
 	return c.LogFormat == JSONFormat
 }
 
@@ -79,7 +83,7 @@ func (w noErrorWriter) Write(p []byte) (n int, err error) {
 // Setup creates a new logger with the specified configuration and writer
 func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 	// Validate the log level
-	if config.LogLevel.String() == "unknown" {
+	if config.isLevelInvalid() {
 		return nil, fmt.Errorf("invalid log level: %v", config.LogLevel)
 	}
 
@@ -117,8 +121,9 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 		Name:       config.Name,
 		Level:      config.LogLevel,
 		Output:     io.MultiWriter(writers...),
-		JSONFormat: config.IsFormatJson(),
+		JSONFormat: config.isFormatJson(),
 	})
+
 	return logger, nil
 }
 

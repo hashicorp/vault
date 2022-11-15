@@ -13,7 +13,7 @@ import (
 )
 
 func TestLogger_SetupBasic(t *testing.T) {
-	cfg := NewLogConfig("test-system", log.Info, StandardFormat, t.TempDir()+"test.log")
+	cfg := &LogConfig{LogLevel: log.Info}
 
 	logger, err := Setup(cfg, nil)
 	require.NoError(t, err)
@@ -21,34 +21,58 @@ func TestLogger_SetupBasic(t *testing.T) {
 }
 
 func TestLogger_SetupInvalidLogLevel(t *testing.T) {
-	cfg := NewLogConfig("test-system", 999, StandardFormat, t.TempDir()+"test.log")
+	cfg := &LogConfig{}
 
 	_, err := Setup(cfg, nil)
 	assert.Containsf(t, err.Error(), "invalid log level", "expected error %s", err)
 }
 
 func TestLogger_SetupLoggerErrorLevel(t *testing.T) {
-	cfg := NewLogConfig("test-system", log.Error, StandardFormat, t.TempDir()+"test.log")
-	var buf bytes.Buffer
+	cases := []struct {
+		desc   string
+		before func(*LogConfig)
+	}{
+		{
+			desc: "ERR log level",
+			before: func(cfg *LogConfig) {
+				cfg.LogLevel = log.Error
+			},
+		},
+		{
+			desc: "ERROR log level",
+			before: func(cfg *LogConfig) {
+				cfg.LogLevel = log.Error
+			},
+		},
+	}
 
-	logger, err := Setup(cfg, &buf)
-	require.NoError(t, err)
-	require.NotNil(t, logger)
+	for _, c := range cases {
+		t.Run(c.desc, func(t *testing.T) {
+			var cfg LogConfig
 
-	logger.Error("test error msg")
-	logger.Info("test info msg")
+			c.before(&cfg)
+			var buf bytes.Buffer
 
-	output := buf.String()
+			logger, err := Setup(&cfg, &buf)
+			require.NoError(t, err)
+			require.NotNil(t, logger)
 
-	require.Contains(t, output, "[ERROR] test-system: test error msg")
-	require.NotContains(t, output, "[INFO] test-system: test info msg")
+			logger.Error("test error msg")
+			logger.Info("test info msg")
+
+			output := buf.String()
+
+			require.Contains(t, output, "[ERROR] test error msg")
+			require.NotContains(t, output, "[INFO]  test info msg")
+		})
+	}
 }
 
 func TestLogger_SetupLoggerDebugLevel(t *testing.T) {
-	cfg := NewLogConfig("test-system", log.Debug, StandardFormat, t.TempDir()+"test.log")
+	cfg := LogConfig{LogLevel: log.Debug}
 	var buf bytes.Buffer
 
-	logger, err := Setup(cfg, &buf)
+	logger, err := Setup(&cfg, &buf)
 	require.NoError(t, err)
 	require.NotNil(t, logger)
 
@@ -57,12 +81,15 @@ func TestLogger_SetupLoggerDebugLevel(t *testing.T) {
 
 	output := buf.String()
 
-	require.Contains(t, output, "[INFO]  test-system: test info msg")
-	require.Contains(t, output, "[DEBUG] test-system: test debug msg")
+	require.Contains(t, output, "[INFO]  test info msg")
+	require.Contains(t, output, "[DEBUG] test debug msg")
 }
 
 func TestLogger_SetupLoggerWithName(t *testing.T) {
-	cfg := NewLogConfig("test-system", log.Debug, StandardFormat, t.TempDir()+"test.log")
+	cfg := &LogConfig{
+		LogLevel: log.Debug,
+		Name:     "test-system",
+	}
 	var buf bytes.Buffer
 
 	logger, err := Setup(cfg, &buf)
@@ -75,7 +102,11 @@ func TestLogger_SetupLoggerWithName(t *testing.T) {
 }
 
 func TestLogger_SetupLoggerWithJSON(t *testing.T) {
-	cfg := NewLogConfig("test-system", log.Debug, JSONFormat, t.TempDir()+"test.log")
+	cfg := &LogConfig{
+		LogLevel:  log.Debug,
+		LogFormat: JSONFormat,
+		Name:      "test-system",
+	}
 	var buf bytes.Buffer
 
 	logger, err := Setup(cfg, &buf)
@@ -95,7 +126,11 @@ func TestLogger_SetupLoggerWithJSON(t *testing.T) {
 
 func TestLogger_SetupLoggerWithValidLogPath(t *testing.T) {
 	tmpDir := t.TempDir()
-	cfg := NewLogConfig("test-system", log.Info, StandardFormat, tmpDir+"/")
+
+	cfg := &LogConfig{
+		LogLevel:    log.Info,
+		LogFilePath: tmpDir, //+ "/",
+	}
 	var buf bytes.Buffer
 
 	logger, err := Setup(cfg, &buf)
@@ -104,7 +139,10 @@ func TestLogger_SetupLoggerWithValidLogPath(t *testing.T) {
 }
 
 func TestLogger_SetupLoggerWithInValidLogPath(t *testing.T) {
-	cfg := NewLogConfig("test-system", log.Info, StandardFormat, "nonexistentdir/")
+	cfg := &LogConfig{
+		LogLevel:    log.Info,
+		LogFilePath: "nonexistentdir/",
+	}
 	var buf bytes.Buffer
 
 	logger, err := Setup(cfg, &buf)
@@ -116,9 +154,14 @@ func TestLogger_SetupLoggerWithInValidLogPath(t *testing.T) {
 func TestLogger_SetupLoggerWithInValidLogPathPermission(t *testing.T) {
 	tmpDir := "/tmp/" + t.Name()
 
-	os.Mkdir(tmpDir, 0o000)
+	err := os.Mkdir(tmpDir, 0o000)
+	assert.NoError(t, err, "unexpected error testing with invalid log path permission")
 	defer os.RemoveAll(tmpDir)
-	cfg := NewLogConfig("test-system", log.Info, StandardFormat, tmpDir+"/")
+
+	cfg := &LogConfig{
+		LogLevel:    log.Info,
+		LogFilePath: tmpDir + "/",
+	}
 	var buf bytes.Buffer
 
 	logger, err := Setup(cfg, &buf)
@@ -126,3 +169,121 @@ func TestLogger_SetupLoggerWithInValidLogPathPermission(t *testing.T) {
 	require.True(t, errors.Is(err, os.ErrPermission))
 	require.Nil(t, logger)
 }
+
+// *********************************************
+//
+//
+//func TestLogger_SetupBasic(t *testing.T) {
+//	cfg := NewLogConfig("test-system", log.Info, StandardFormat, t.TempDir()+"test.log")
+//
+//	logger, err := Setup(cfg, nil)
+//	require.NoError(t, err)
+//	require.NotNil(t, logger)
+//}
+//
+//func TestLogger_SetupInvalidLogLevel(t *testing.T) {
+//	cfg := NewLogConfig("test-system", 999, StandardFormat, t.TempDir()+"test.log")
+//
+//	_, err := Setup(cfg, nil)
+//	assert.Containsf(t, err.Error(), "invalid log level", "expected error %s", err)
+//}
+//
+//func TestLogger_SetupLoggerErrorLevel(t *testing.T) {
+//	cfg := NewLogConfig("test-system", log.Error, StandardFormat, t.TempDir()+"test.log")
+//	var buf bytes.Buffer
+//
+//	logger, err := Setup(cfg, &buf)
+//	require.NoError(t, err)
+//	require.NotNil(t, logger)
+//
+//	logger.Error("test error msg")
+//	logger.Info("test info msg")
+//
+//	output := buf.String()
+//
+//	require.Contains(t, output, "[ERROR] test-system: test error msg")
+//	require.NotContains(t, output, "[INFO] test-system: test info msg")
+//}
+//
+//func TestLogger_SetupLoggerDebugLevel(t *testing.T) {
+//	cfg := NewLogConfig("test-system", log.Debug, StandardFormat, t.TempDir()+"test.log")
+//	var buf bytes.Buffer
+//
+//	logger, err := Setup(cfg, &buf)
+//	require.NoError(t, err)
+//	require.NotNil(t, logger)
+//
+//	logger.Info("test info msg")
+//	logger.Debug("test debug msg")
+//
+//	output := buf.String()
+//
+//	require.Contains(t, output, "[INFO]  test-system: test info msg")
+//	require.Contains(t, output, "[DEBUG] test-system: test debug msg")
+//}
+//
+//func TestLogger_SetupLoggerWithName(t *testing.T) {
+//	cfg := NewLogConfig("test-system", log.Debug, StandardFormat, t.TempDir()+"test.log")
+//	var buf bytes.Buffer
+//
+//	logger, err := Setup(cfg, &buf)
+//	require.NoError(t, err)
+//	require.NotNil(t, logger)
+//
+//	logger.Warn("test warn msg")
+//
+//	require.Contains(t, buf.String(), "[WARN]  test-system: test warn msg")
+//}
+//
+//func TestLogger_SetupLoggerWithJSON(t *testing.T) {
+//	cfg := NewLogConfig("test-system", log.Debug, JSONFormat, t.TempDir()+"test.log")
+//	var buf bytes.Buffer
+//
+//	logger, err := Setup(cfg, &buf)
+//	require.NoError(t, err)
+//	require.NotNil(t, logger)
+//
+//	logger.Warn("test warn msg")
+//
+//	var jsonOutput map[string]string
+//	err = json.Unmarshal(buf.Bytes(), &jsonOutput)
+//	require.NoError(t, err)
+//	require.Contains(t, jsonOutput, "@level")
+//	require.Equal(t, jsonOutput["@level"], "warn")
+//	require.Contains(t, jsonOutput, "@message")
+//	require.Equal(t, jsonOutput["@message"], "test warn msg")
+//}
+//
+//func TestLogger_SetupLoggerWithValidLogPath(t *testing.T) {
+//	tmpDir := t.TempDir()
+//	cfg := NewLogConfig("test-system", log.Info, StandardFormat, tmpDir+"/")
+//	var buf bytes.Buffer
+//
+//	logger, err := Setup(cfg, &buf)
+//	require.NoError(t, err)
+//	require.NotNil(t, logger)
+//}
+//
+//func TestLogger_SetupLoggerWithInValidLogPath(t *testing.T) {
+//	cfg := NewLogConfig("test-system", log.Info, StandardFormat, "nonexistentdir/")
+//	var buf bytes.Buffer
+//
+//	logger, err := Setup(cfg, &buf)
+//	require.Error(t, err)
+//	require.True(t, errors.Is(err, os.ErrNotExist))
+//	require.Nil(t, logger)
+//}
+//
+//func TestLogger_SetupLoggerWithInValidLogPathPermission(t *testing.T) {
+//	tmpDir := "/tmp/" + t.Name()
+//
+//	os.Mkdir(tmpDir, 0o000)
+//	defer os.RemoveAll(tmpDir)
+//	cfg := NewLogConfig("test-system", log.Info, StandardFormat, tmpDir+"/")
+//	var buf bytes.Buffer
+//
+//	logger, err := Setup(cfg, &buf)
+//	require.Error(t, err)
+//	require.True(t, errors.Is(err, os.ErrPermission))
+//	require.Nil(t, logger)
+//}
