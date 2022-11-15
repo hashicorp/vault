@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -53,8 +53,7 @@ func NewGCPAuth(roleName string, opts ...LoginOption) (*GCPAuth, error) {
 	for _, opt := range opts {
 		// Call the option giving the instantiated
 		// *GCPAuth as the argument
-		err := opt(a)
-		if err != nil {
+		if err := opt(a); err != nil {
 			return nil, fmt.Errorf("error with login option: %w", err)
 		}
 	}
@@ -178,11 +177,11 @@ func (a *GCPAuth) getJWTFromMetadataService(vaultAddress string) (string, error)
 	defer resp.Body.Close()
 
 	// get jwt from response
-	body, err := ioutil.ReadAll(resp.Body)
-	jwt := string(body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("error reading response from metadata service: %w", err)
 	}
+	jwt := string(body)
 
 	return jwt, nil
 }

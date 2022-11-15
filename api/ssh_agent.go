@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 
@@ -138,7 +137,7 @@ func (c *SSHHelperConfig) NewClient() (*Client, error) {
 // Vault address is a required parameter.
 // Mount point defaults to "ssh".
 func LoadSSHHelperConfig(path string) (*SSHHelperConfig, error) {
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, multierror.Prefix(err, "ssh_helper:")
 	}
@@ -239,8 +238,7 @@ func (c *SSHHelper) VerifyWithContext(ctx context.Context, otp string) (*SSHVeri
 	}
 
 	var verifyResp SSHVerifyResponse
-	err = mapstructure.Decode(secret.Data, &verifyResp)
-	if err != nil {
+	if err := mapstructure.Decode(secret.Data, &verifyResp); err != nil {
 		return nil, err
 	}
 	return &verifyResp, nil

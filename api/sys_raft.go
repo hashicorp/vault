@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -197,7 +196,7 @@ func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer)
 	dup := io.TeeReader(resp.Body, wPipe)
 	go func() {
 		defer func() {
-			io.Copy(ioutil.Discard, rPipe)
+			io.Copy(io.Discard, rPipe)
 			rPipe.Close()
 			wg.Done()
 		}()
@@ -218,7 +217,7 @@ func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer)
 				continue
 			}
 			var b []byte
-			b, err = ioutil.ReadAll(t)
+			b, err = io.ReadAll(t)
 			if err != nil || len(b) == 0 {
 				return
 			}
@@ -300,8 +299,7 @@ func (c *Sys) RaftAutopilotStateWithContext(ctx context.Context) (*AutopilotStat
 	}
 
 	var result AutopilotState
-	err = mapstructure.Decode(secret.Data, &result)
-	if err != nil {
+	if err := mapstructure.Decode(secret.Data, &result); err != nil {
 		return nil, err
 	}
 
@@ -340,7 +338,7 @@ func (c *Sys) RaftAutopilotConfigurationWithContext(ctx context.Context) (*Autop
 	}
 
 	var result AutopilotConfig
-	if err = mapstructure.Decode(secret.Data, &result); err != nil {
+	if err := mapstructure.Decode(secret.Data, &result); err != nil {
 		return nil, err
 	}
 	if result.LastContactThreshold, err = parseutil.ParseDurationSecond(secret.Data["last_contact_threshold"]); err != nil {
