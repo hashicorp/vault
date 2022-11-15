@@ -11,12 +11,10 @@ import { task } from 'ember-concurrency';
  * ```js
  * <OidcClientForm @model={{this.model}} />
  * ```
+ * @param {Object} model - oidc client model
  * @callback onCancel - callback triggered when cancel button is clicked
  * @callback onSave - callback triggered on save success
- * @param {Object} model - oidc client model
  * @param {boolean} [isInline=false] - true when form is rendered within a modal
- * * search-select-with-modal.hbs template-specific params:
- * @callback createSearchSelectModel - callback fired when new item is selected to create in SS+Modal
  */
 
 export default class OidcClientForm extends Component {
@@ -25,7 +23,7 @@ export default class OidcClientForm extends Component {
   @tracked modelValidations;
   @tracked errorBanner;
   @tracked invalidFormAlert;
-  @tracked assignmentModel; // model passed to form rendered by ss+modal
+  @tracked assignmentModel; // model for form rendered by ss+modal
   @tracked radioCardGroupValue =
     !this.args.model.assignments || this.args.model.assignments.includes('allow_all')
       ? 'allow_all'
@@ -40,6 +38,7 @@ export default class OidcClientForm extends Component {
     }
   }
 
+  // callback fired by SS+Modal when new item is selected to create
   @action
   createSearchSelectModel({ name }) {
     if (name) {

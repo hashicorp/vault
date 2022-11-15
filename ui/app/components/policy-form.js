@@ -20,9 +20,9 @@ import trimRight from 'vault/utils/trim-right';
  * @callback onSave - callback triggered when save button is clicked
  * @param {object} model - ember data model from createRecord
  * @param {boolean} [isInline=false] - true when form is rendered within a modal
- * * search-select-with-modal.hbs template-specific params:
+ * * params when form renders within search-select-with-modal.hbs:
  * @param {object} [nameInput] - search input from SS passed as name attr when firing createSearchSelectModel callback
- * @callback createSearchSelectModel - callback triggered when policy type is selected
+ * @callback createSearchSelectModel - callback to fire when new item is selected to create in SS+Modal
  */
 
 export default class PolicyFormComponent extends Component {
