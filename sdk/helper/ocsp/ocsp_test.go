@@ -4,11 +4,20 @@ package ocsp
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/tls"
 	"crypto/x509"
+	"fmt"
+	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
 
 	"golang.org/x/crypto/ocsp"
 
