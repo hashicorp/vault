@@ -1817,19 +1817,17 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 
 // GetUserFailedLoginInfo gets the failed login information for a user based on alias name and mountAccessor
 func (c *Core) GetUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser) *FailedLoginInfo {
-	if userFailedLoginValue, ok := c.userFailedLoginInfo[userKey]; ok {
-		return userFailedLoginValue
-	}
-	return nil
+	return c.userFailedLoginInfo[userKey]
 }
 
+// UpdateUserFailedLoginInfo updates the failed login information for a user based on alias name and mountAccessor
 func (c *Core) UpdateUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser, failedLoginInfo FailedLoginInfo) error {
 	c.userFailedLoginInfo[userKey] = &failedLoginInfo
 
 	// check if the update worked
 	failedLoginResp := c.GetUserFailedLoginInfo(ctx, userKey)
 	if failedLoginResp == nil {
-		return fmt.Errorf("failed to update entry in userFailedLoginInfo map for key with alias name %q and mount accessor %q", userKey.aliasName, userKey.mountAccessor)
+		return fmt.Errorf("failed to update entry in userFailedLoginInfo map")
 	}
 	return nil
 }
