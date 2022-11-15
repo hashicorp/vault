@@ -137,7 +137,7 @@ func (h *CRLValidityPeriod) Evaluate(e *Executor) (results []*Result, err error)
 			if e.Client.Token() == "" {
 				ret.Message = "No token available so unable read authenticated CRL configuration for this mount. " + ret.Message
 			} else {
-				ret.Message = "This token lacks so permission to read the CRL configuration for this mount. " + ret.Message
+				ret.Message = "This token lacks permission to read the CRL configuration for this mount. " + ret.Message
 			}
 
 			results = append(results, &ret)
