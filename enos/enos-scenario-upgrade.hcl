@@ -79,7 +79,7 @@ scenario "upgrade" {
     module = module.create_vpc
 
     variables {
-      ami_architectures  = [matrix.arch]
+      ami_architectures  = distinct([matrix.arch, "amd64"])
       availability_zones = step.find_azs.availability_zones
       common_tags        = local.tags
     }
@@ -108,7 +108,7 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id      = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      ami_id      = step.create_vpc.ami_ids["ubuntu"]["amd64"]
       common_tags = local.tags
       consul_release = {
         edition = var.backend_edition
