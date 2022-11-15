@@ -333,27 +333,21 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 		if err := jsonutil.DecodeJSONFromReader(&teebuf, &data); err != nil {
 			return nil, err
 		}
-		if val, ok := data["errors"]; ok {
+		errRaw, errPresent := data["errors"]
+		if len(data) == 1 && errPresent {
+			return nil, nil
+		}
+		if errPresent {
 			var errStrArray []string
-			errBytes, err := json.Marshal(val)
+			errBytes, err := json.Marshal(errRaw)
 			if err != nil {
 				return nil, err
 			}
 			if err := json.Unmarshal(errBytes, &errStrArray); err != nil {
 				return nil, err
 			}
-			errString := strings.Join(errStrArray, " ")
-
-			// trim spaces and new lines
-			errString = strings.TrimSpace(errString)
-			errString = strings.Trim(errString, "\n")
-
-			if strings.Contains(errString, "route entry not found") || errString == "" {
-				return nil, nil
-			}
-			return nil, fmt.Errorf(errString)
+			return nil, fmt.Errorf(strings.Join(errStrArray, " "))
 		}
-
 		if len(data) > 0 {
 			secret.Data = data
 		}
