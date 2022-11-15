@@ -234,6 +234,13 @@ export default class PkiRoleModel extends Model {
   })
   keyUsage;
 
+  @attr('array', {
+    defaultValue() {
+      return [];
+    },
+  })
+  extKeyUsage;
+
   @attr({ hideFormSection: true }) organization;
   @attr({ hideFormSection: true }) country;
   @attr({ hideFormSection: true }) locality;
