@@ -19,7 +19,7 @@ func TestResignCrls_ForbidSigningOtherIssuerCRL(t *testing.T) {
 	// Some random CRL from another issuer
 	pem1 := "-----BEGIN X509 CRL-----\nMIIBvjCBpwIBATANBgkqhkiG9w0BAQsFADAbMRkwFwYDVQQDExByb290LWV4YW1w\nbGUuY29tFw0yMjEwMjYyMTI5MzlaFw0yMjEwMjkyMTI5MzlaMCcwJQIUSnVf8wsd\nHjOt9drCYFhWxS9QqGoXDTIyMTAyNjIxMjkzOVqgLzAtMB8GA1UdIwQYMBaAFHki\nZ0XDUQVSajNRGXrg66OaIFlYMAoGA1UdFAQDAgEDMA0GCSqGSIb3DQEBCwUAA4IB\nAQBGIdtqTwemnLZF5AoP+jzvKZ26S3y7qvRIzd7f4A0EawzYmWXSXfwqo4TQ4DG3\nnvT+AaA1zCCOlH/1U+ufN9gSSN0j9ax58brSYMnMskMCqhLKIp0qnvS4jr/gopmF\nv8grbvLHEqNYTu1T7umMLdNQUsWT3Qc+EIjfoKj8xD2FHsZwJ+EMbytwl8Unipjr\nhz4rmcES/65vavfdFpOI6YXfi+UAaHBdkTqmHgg4BdpuXfYtlf+iotFSOkygD5fl\n0D+RVFW9uJv2WfbQ7kRt1X/VcFk/onw0AQqxZRVUzvjoMw+EMcxSq3UKOlXcWDxm\nEFz9rFQQ66L388EP8RD7Dh3X\n-----END X509 CRL-----"
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "test.com",
 		"key_type":    "ec",
@@ -37,8 +37,8 @@ func TestResignCrls_ForbidSigningOtherIssuerCRL(t *testing.T) {
 
 func TestResignCrls_NormalCrl(t *testing.T) {
 	t.Parallel()
-	b1, s1 := createBackendWithStorage(t)
-	b2, s2 := createBackendWithStorage(t)
+	b1, s1 := CreateBackendWithStorage(t)
+	b2, s2 := CreateBackendWithStorage(t)
 
 	// Setup two backends, with the same key material/certificate with a different leaf in each that is revoked.
 	caCert, serial1, serial2, crl1, crl2 := setupResignCrlMounts(t, b1, s1, b2, s2)
@@ -75,8 +75,8 @@ func TestResignCrls_NormalCrl(t *testing.T) {
 
 func TestResignCrls_EliminateDuplicates(t *testing.T) {
 	t.Parallel()
-	b1, s1 := createBackendWithStorage(t)
-	b2, s2 := createBackendWithStorage(t)
+	b1, s1 := CreateBackendWithStorage(t)
+	b2, s2 := CreateBackendWithStorage(t)
 
 	// Setup two backends, with the same key material/certificate with a different leaf in each that is revoked.
 	_, serial1, _, crl1, _ := setupResignCrlMounts(t, b1, s1, b2, s2)
@@ -106,8 +106,8 @@ func TestResignCrls_EliminateDuplicates(t *testing.T) {
 
 func TestResignCrls_ConflictingExpiry(t *testing.T) {
 	t.Parallel()
-	b1, s1 := createBackendWithStorage(t)
-	b2, s2 := createBackendWithStorage(t)
+	b1, s1 := CreateBackendWithStorage(t)
+	b2, s2 := CreateBackendWithStorage(t)
 
 	// Setup two backends, with the same key material/certificate with a different leaf in each that is revoked.
 	_, serial1, serial2, crl1, _ := setupResignCrlMounts(t, b1, s1, b2, s2)
@@ -180,8 +180,8 @@ func TestResignCrls_ConflictingExpiry(t *testing.T) {
 func TestResignCrls_DeltaCrl(t *testing.T) {
 	t.Parallel()
 
-	b1, s1 := createBackendWithStorage(t)
-	b2, s2 := createBackendWithStorage(t)
+	b1, s1 := CreateBackendWithStorage(t)
+	b2, s2 := CreateBackendWithStorage(t)
 
 	// Setup two backends, with the same key material/certificate with a different leaf in each that is revoked.
 	caCert, serial1, serial2, crl1, crl2 := setupResignCrlMounts(t, b1, s1, b2, s2)
