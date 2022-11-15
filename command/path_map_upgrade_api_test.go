@@ -3,9 +3,10 @@ package command
 import (
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 
@@ -14,14 +15,17 @@ import (
 
 func TestPathMap_Upgrade_API(t *testing.T) {
 	var err error
+	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       log.NewNullLogger(),
+		Logger:       logger,
 		CredentialBackends: map[string]logical.Factory{
 			"app-id": credAppId.Factory,
 		},
 	}
+
+	vault.PendingRemovalMountsAllowed = true
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
