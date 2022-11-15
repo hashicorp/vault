@@ -58,6 +58,8 @@ jobs:
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
           GO_TAGS: ${{ inputs.go-tags }}
+          # We started stripping symbol tables in 1.13.x
+          KEEP_SYMBOLS: true
         run: make crt-build
       - name: Determine artifact basename
         env:
