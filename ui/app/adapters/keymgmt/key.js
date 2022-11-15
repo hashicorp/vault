@@ -47,13 +47,13 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
 
   _updateKey(backend, name, serialized) {
     // Only these two attributes are allowed to be updated
-    let data = pickKeys(serialized, ['deletion_allowed', 'min_enabled_version']);
+    const data = pickKeys(serialized, ['deletion_allowed', 'min_enabled_version']);
     return this.ajax(this.url(backend, name), 'PUT', { data });
   }
 
   _createKey(backend, name, serialized) {
     // Only type is allowed on create
-    let data = pickKeys(serialized, ['type']);
+    const data = pickKeys(serialized, ['type']);
     return this.ajax(this.url(backend, name), 'POST', { data });
   }
 
@@ -159,7 +159,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
   }
 
   async rotateKey(backend, id) {
-    let keyModel = this.store.peekRecord('keymgmt/key', id);
+    const keyModel = this.store.peekRecord('keymgmt/key', id);
     const result = await this.ajax(this.url(backend, id, 'ROTATE'), 'PUT');
     await keyModel.reload();
     return result;

@@ -11,7 +11,7 @@ export default Component.extend({
   strokeWidth: 1,
 
   viewBox: computed('size', function () {
-    let s = this.size;
+    const s = this.size;
     return `0 0 ${s} ${s}`;
   }),
   centerValue: computed('size', function () {

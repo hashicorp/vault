@@ -92,7 +92,7 @@ module('Unit | Service | store', function (hooks) {
   });
 
   test('store.fetchPage', function (assert) {
-    let done = assert.async(4);
+    const done = assert.async(4);
     const keys = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
     const data = {
       data: {
@@ -191,7 +191,7 @@ module('Unit | Service | store', function (hooks) {
   });
 
   test('store.lazyPaginatedQuery', function (assert) {
-    let response = {
+    const response = {
       data: ['foo'],
     };
     let queryArgs;

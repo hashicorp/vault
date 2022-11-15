@@ -16,7 +16,7 @@ module('Integration | Component | secret-list-header', function (hooks) {
 
     this.server.post('/sys/capabilities-self', () => {});
 
-    for (let type of backends) {
+    for (const type of backends) {
       const data = this.server.create('secret-engine', 2, { type });
       this.model = mirageToModels(data);
       await render(hbs`

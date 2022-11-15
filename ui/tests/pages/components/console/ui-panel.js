@@ -13,22 +13,22 @@ export default {
     text: text(),
   }),
   lastLogOutput: getter(function () {
-    let count = this.logOutputItems.length;
-    let outputItemText = this.logOutputItems.objectAt(count - 1).text;
+    const count = this.logOutputItems.length;
+    const outputItemText = this.logOutputItems.objectAt(count - 1).text;
     return outputItemText;
   }),
   logTextItems: collection('[data-test-component="console/log-text"]', {
     text: text(),
   }),
   lastTextOutput: getter(function () {
-    let count = this.logTextItems.length;
+    const count = this.logTextItems.length;
     return this.logTextItems.objectAt(count - 1).text;
   }),
   logJSONItems: collection('[data-test-component="console/log-json"]', {
     text: text(),
   }),
   lastJSONOutput: getter(function () {
-    let count = this.logJSONItems.length;
+    const count = this.logJSONItems.length;
     return this.logJSONItems.objectAt(count - 1).text;
   }),
   up: triggerable('keyup', '[data-test-component="console/command-input"] input', {
@@ -42,8 +42,8 @@ export default {
   }),
   hasInput: isPresent('[data-test-component="console/command-input"] input'),
   runCommands: async function (commands) {
-    let toExecute = Array.isArray(commands) ? commands : [commands];
-    for (let command of toExecute) {
+    const toExecute = Array.isArray(commands) ? commands : [commands];
+    for (const command of toExecute) {
       await this.consoleInput(command);
       await this.enter();
       await settled();

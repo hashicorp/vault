@@ -44,8 +44,7 @@ export default Component.extend({
     this.updateHeight();
   },
   updateHeight: function () {
-    let height;
-    height = this.openTrigger
+    const height = this.openTrigger
       ? this.element.querySelector('.confirm-overlay').clientHeight
       : this.element.querySelector('.confirm').clientHeight;
     this.set('height', height);

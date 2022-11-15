@@ -9,7 +9,7 @@ export default Route.extend(UnloadModelRoute, {
   templateName: 'vault/cluster/secrets/backend/versions',
 
   beforeModel() {
-    let backendModel = this.modelFor('vault.cluster.secrets.backend');
+    const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const { secret } = this.paramsFor(this.routeName);
     const parentKey = utils.parentKeyForKey(secret);
     if (backendModel.get('isV2KV')) {
@@ -23,9 +23,9 @@ export default Route.extend(UnloadModelRoute, {
   },
 
   model(params) {
-    let { secret } = params;
+    const { secret } = params;
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    let id = normalizePath(secret);
+    const id = normalizePath(secret);
     return this.store.queryRecord('secret-v2', { id, backend });
   },
 });

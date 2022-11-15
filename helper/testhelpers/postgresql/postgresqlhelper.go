@@ -17,7 +17,7 @@ func PrepareTestContainer(t *testing.T, version string) (func(), string) {
 		"POSTGRES_DB=database",
 	}
 
-	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "postgres", version, "secret", true, false, false, env)
+	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "docker.mirror.hashicorp.services/postgres", version, "secret", true, false, false, env)
 
 	return cleanup, url
 }
@@ -28,7 +28,7 @@ func PrepareTestContainerWithPassword(t *testing.T, version, password string) (f
 		"POSTGRES_DB=database",
 	}
 
-	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "postgres", version, password, true, false, false, env)
+	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "docker.mirror.hashicorp.services/postgres", version, password, true, false, false, env)
 
 	return cleanup, url
 }
@@ -40,7 +40,7 @@ func PrepareTestContainerRepmgr(t *testing.T, name, version string, envVars []st
 		"REPMGR_PASSWORD=repmgrpass",
 		"POSTGRESQL_PASSWORD=secret")
 
-	return prepareTestContainer(t, name, "bitnami/postgresql-repmgr", version, "secret", false, true, true, env)
+	return prepareTestContainer(t, name, "docker.mirror.hashicorp.services/bitnami/postgresql-repmgr", version, "secret", false, true, true, env)
 }
 
 func prepareTestContainer(t *testing.T, name, repo, version, password string,

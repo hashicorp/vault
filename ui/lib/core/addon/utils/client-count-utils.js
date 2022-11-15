@@ -8,11 +8,11 @@ export const formatByMonths = (monthsArray) => {
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
   return sortedPayload?.map((m) => {
     const month = parseAPITimestamp(m.timestamp, 'M/yy');
-    let totalClientsByNamespace = formatByNamespace(m.namespaces);
-    let newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
+    const totalClientsByNamespace = formatByNamespace(m.namespaces);
+    const newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
     if (Object.keys(m).includes('counts')) {
-      let totalCounts = flattenDataset(m);
-      let newCounts = m.new_clients ? flattenDataset(m.new_clients) : {};
+      const totalCounts = flattenDataset(m);
+      const newCounts = m.new_clients ? flattenDataset(m.new_clients) : {};
       return {
         month,
         ...totalCounts,
@@ -33,8 +33,8 @@ export const formatByNamespace = (namespaceArray) => {
   return namespaceArray?.map((ns) => {
     // 'namespace_path' is an empty string for root
     if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
-    let label = ns['namespace_path'];
-    let flattenedNs = flattenDataset(ns);
+    const label = ns['namespace_path'];
+    const flattenedNs = flattenDataset(ns);
     // if no mounts, mounts will be an empty array
     flattenedNs.mounts = [];
     if (ns?.mounts && ns.mounts.length > 0) {
@@ -57,7 +57,7 @@ export const formatByNamespace = (namespaceArray) => {
 export const homogenizeClientNaming = (object) => {
   // if new key names exist, only return those key/value pairs
   if (Object.keys(object).includes('entity_clients')) {
-    let { clients, entity_clients, non_entity_clients } = object;
+    const { clients, entity_clients, non_entity_clients } = object;
     return {
       clients,
       entity_clients,
@@ -66,7 +66,7 @@ export const homogenizeClientNaming = (object) => {
   }
   // if object only has outdated key names, update naming
   if (Object.keys(object).includes('distinct_entities')) {
-    let { clients, distinct_entities, non_entity_tokens } = object;
+    const { clients, distinct_entities, non_entity_tokens } = object;
     return {
       clients,
       entity_clients: distinct_entities,
@@ -78,7 +78,7 @@ export const homogenizeClientNaming = (object) => {
 
 export const flattenDataset = (object) => {
   if (object?.counts) {
-    let flattenedObject = {};
+    const flattenedObject = {};
     Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
     return homogenizeClientNaming(flattenedObject);
   }
@@ -98,12 +98,12 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
   // FIRST: iterate and nest respective 'new_clients' data within each namespace and mount object
   // note: this is happening within the month object
   const nestNewClientsWithinNamespace = totalClientsByNamespace?.map((ns) => {
-    let newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
+    const newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
     if (newNamespaceCounts) {
-      let { label, clients, entity_clients, non_entity_clients } = newNamespaceCounts;
-      let newClientsByMount = [...newNamespaceCounts?.mounts];
-      let nestNewClientsWithinMounts = ns.mounts?.map((mount) => {
-        let new_clients = newClientsByMount?.find((m) => m.label === mount.label) || {};
+      const { label, clients, entity_clients, non_entity_clients } = newNamespaceCounts;
+      const newClientsByMount = [...newNamespaceCounts?.mounts];
+      const nestNewClientsWithinMounts = ns.mounts?.map((mount) => {
+        const new_clients = newClientsByMount?.find((m) => m.label === mount.label) || {};
         return {
           ...mount,
           new_clients,
@@ -126,10 +126,10 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
     };
   });
   // SECOND: create a new object (namespace_by_key) in which each namespace label is a key
-  let namespaces_by_key = {};
+  const namespaces_by_key = {};
   nestNewClientsWithinNamespace?.forEach((namespaceObject) => {
     // THIRD: make another object within the namespace where each mount label is a key
-    let mounts_by_key = {};
+    const mounts_by_key = {};
     namespaceObject.mounts.forEach((mountObject) => {
       mounts_by_key[mountObject.label] = {
         month,
@@ -138,7 +138,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
       };
     });
 
-    let { label, clients, entity_clients, non_entity_clients, new_clients } = namespaceObject;
+    const { label, clients, entity_clients, non_entity_clients, new_clients } = namespaceObject;
     namespaces_by_key[label] = {
       month,
       clients,

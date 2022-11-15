@@ -118,7 +118,7 @@ export default (test) => {
         'throws assertion when filterFor is not an array'
       );
     } else {
-      let testQuery = ['b123', 'c123'];
+      const testQuery = ['b123', 'c123'];
       await this.store
         .query(this.modelName, { paramKey: 'model_id', filterFor: testQuery })
         .then((resp) => assert.ok(resp.isLoaded, 'does not error when key_info does not exist'));

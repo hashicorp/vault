@@ -94,9 +94,9 @@ export default class SearchSelect extends Component {
     // inputValues are initially an array of strings from @inputValue
     // map over so selectedOptions are objects
     return inputValues.map((option) => {
-      let matchingOption = this.dropdownOptions.findBy(this.idKey, option);
+      const matchingOption = this.dropdownOptions.findBy(this.idKey, option);
       // tooltip text comes from return of parent function
-      let addTooltip = this.args.renderInfoTooltip
+      const addTooltip = this.args.renderInfoTooltip
         ? this.args.renderInfoTooltip(option, this.dropdownOptions)
         : false;
 
@@ -140,7 +140,7 @@ export default class SearchSelect extends Component {
       return;
     }
 
-    for (let modelType of this.args.models) {
+    for (const modelType of this.args.models) {
       try {
         let queryParams = {};
         if (this.args.backend) {
@@ -150,7 +150,7 @@ export default class SearchSelect extends Component {
           queryParams = this.args.queryObject;
         }
         // fetch options from the store
-        let options = yield this.store.query(modelType, queryParams);
+        const options = yield this.store.query(modelType, queryParams);
 
         // store both select + unselected options in tracked property used by wildcard filter
         this.allOptions = [...this.allOptions, ...options.mapBy('id')];
@@ -194,7 +194,7 @@ export default class SearchSelect extends Component {
     if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
       return !searchResults.some((group) => group.options.findBy('id', id));
     }
-    let existingOption =
+    const existingOption =
       this.dropdownOptions &&
       (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
     if (this.args.disallowNewItems && !existingOption) {

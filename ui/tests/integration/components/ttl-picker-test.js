@@ -15,7 +15,7 @@ module('Integration | Component | ttl picker', function (hooks) {
   test('it renders error on non-number input', async function (assert) {
     await render(hbs`<TtlPicker @onChange={{this.onChange}} />`);
 
-    let callCount = this.changeSpy.callCount;
+    const callCount = this.changeSpy.callCount;
     await fillIn('[data-test-ttl-value]', 'foo');
     assert.strictEqual(this.changeSpy.callCount, callCount, "it didn't call onChange again");
     assert.dom('[data-test-ttl-error]').includesText('Error', 'renders the error box');

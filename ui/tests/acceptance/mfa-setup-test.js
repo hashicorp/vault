@@ -30,7 +30,7 @@ const writeUserWithPolicy = async function (path) {
 };
 
 const setupUser = async function () {
-  let path = `userpass-${new Date().getTime()}`;
+  const path = `userpass-${new Date().getTime()}`;
   await writePolicy(path);
   await writeUserWithPolicy(path);
   await click('[data-test-save-config="true"]');

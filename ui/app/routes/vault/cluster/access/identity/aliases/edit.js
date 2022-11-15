@@ -7,8 +7,8 @@ export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
   store: service(),
 
   model(params) {
-    let itemType = this.modelFor('vault.cluster.access.identity');
-    let modelType = `identity/${itemType}-alias`;
+    const itemType = this.modelFor('vault.cluster.access.identity');
+    const modelType = `identity/${itemType}-alias`;
     return this.store.findRecord(modelType, params.item_alias_id);
   },
 });

@@ -471,6 +471,16 @@ func (e *MountEntry) SyncCache() {
 	}
 }
 
+func (entry *MountEntry) Deserialize() map[string]interface{} {
+	return map[string]interface{}{
+		"mount_path":      entry.Path,
+		"mount_namespace": entry.Namespace().Path,
+		"uuid":            entry.UUID,
+		"accessor":        entry.Accessor,
+		"mount_type":      entry.Type,
+	}
+}
+
 func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
 	// Decode into mount table
 	mountTable := new(MountTable)
@@ -717,8 +727,13 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 		return consts.PluginTypeUnknown
 	}
 
+	// Builtin plugins should contain the "builtin" string in their RunningVersion
+	if !strings.Contains(entry.RunningVersion, "builtin") {
+		return consts.PluginTypeUnknown
+	}
+
 	builtinPluginType := func(name string, pluginType consts.PluginType) (consts.PluginType, bool) {
-		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, "")
+		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, entry.RunningVersion)
 		if err == nil && plugin != nil && plugin.Builtin {
 			return plugin.Type, true
 		}

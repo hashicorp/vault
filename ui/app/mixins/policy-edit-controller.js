@@ -6,9 +6,9 @@ export default Mixin.create({
   wizard: service(),
   actions: {
     deletePolicy(model) {
-      let policyType = model.get('policyType');
-      let name = model.get('name');
-      let flash = this.flashMessages;
+      const policyType = model.get('policyType');
+      const name = model.get('name');
+      const flash = this.flashMessages;
       model
         .destroyRecord()
         .then(() => {
@@ -16,7 +16,7 @@ export default Mixin.create({
           return this.transitionToRoute('vault.cluster.policies', policyType);
         })
         .catch((e) => {
-          let errors = e.errors ? e.errors.join('') : e.message;
+          const errors = e.errors ? e.errors.join('') : e.message;
           flash.danger(
             `There was an error deleting the ${policyType.toUpperCase()} policy "${name}": ${errors}.`
           );
@@ -24,9 +24,9 @@ export default Mixin.create({
     },
 
     savePolicy(model) {
-      let flash = this.flashMessages;
-      let policyType = model.get('policyType');
-      let name = model.get('name');
+      const flash = this.flashMessages;
+      const policyType = model.get('policyType');
+      const name = model.get('name');
       model
         .save()
         .then((m) => {

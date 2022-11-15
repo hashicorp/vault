@@ -21,8 +21,8 @@ module('Integration | Component | form field', function (hooks) {
   };
 
   const setup = async function (attr) {
-    let model = EmberObject.create({});
-    let spy = sinon.spy();
+    const model = EmberObject.create({});
+    const spy = sinon.spy();
     this.set('onChange', spy);
     this.set('model', model);
     this.set('attr', attr);
@@ -31,7 +31,7 @@ module('Integration | Component | form field', function (hooks) {
   };
 
   test('it renders', async function (assert) {
-    let model = EmberObject.create({});
+    const model = EmberObject.create({});
     this.attr = { name: 'foo' };
     this.model = model;
     await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
@@ -40,7 +40,7 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: string', async function (assert) {
-    let [model, spy] = await setup.call(this, createAttr('foo', 'string', { defaultValue: 'default' }));
+    const [model, spy] = await setup.call(this, createAttr('foo', 'string', { defaultValue: 'default' }));
     assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
     assert.strictEqual(component.fields.objectAt(0).inputValue, 'default', 'renders default value');
     assert.ok(component.hasInput, 'renders input for string');
@@ -51,7 +51,7 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: boolean', async function (assert) {
-    let [model, spy] = await setup.call(this, createAttr('foo', 'boolean', { defaultValue: false }));
+    const [model, spy] = await setup.call(this, createAttr('foo', 'boolean', { defaultValue: false }));
     assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
     assert.notOk(component.fields.objectAt(0).inputChecked, 'renders default value');
     assert.ok(component.hasCheckbox, 'renders a checkbox for boolean');
@@ -62,7 +62,7 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: number', async function (assert) {
-    let [model, spy] = await setup.call(this, createAttr('foo', 'number', { defaultValue: 5 }));
+    const [model, spy] = await setup.call(this, createAttr('foo', 'number', { defaultValue: 5 }));
     assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
     assert.strictEqual(component.fields.objectAt(0).inputValue, '5', 'renders default value');
     assert.ok(component.hasInput, 'renders input for number');
@@ -86,7 +86,7 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: editType textarea', async function (assert) {
-    let [model, spy] = await setup.call(
+    const [model, spy] = await setup.call(
       this,
       createAttr('foo', 'string', { defaultValue: 'goodbye', editType: 'textarea' })
     );
@@ -110,7 +110,7 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: editType ttl', async function (assert) {
-    let [model, spy] = await setup.call(this, createAttr('foo', null, { editType: 'ttl' }));
+    const [model, spy] = await setup.call(this, createAttr('foo', null, { editType: 'ttl' }));
     assert.ok(component.hasTTLPicker, 'renders the ttl-picker component');
     await component.fields.objectAt(0).toggleTtl();
     await component.fields.objectAt(0).select('h').change();
@@ -121,7 +121,10 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: editType ttl without toggle', async function (assert) {
-    let [model, spy] = await setup.call(this, createAttr('foo', null, { editType: 'ttl', hideToggle: true }));
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', null, { editType: 'ttl', hideToggle: true })
+    );
     await component.fields.objectAt(0).select('h').change();
     await component.fields.objectAt(0).ttlTime('3');
     const expectedSeconds = `${3 * 3600}s`;
@@ -130,7 +133,7 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: radio buttons for possible values', async function (assert) {
-    let [model, spy] = await setup.call(
+    const [model, spy] = await setup.call(
       this,
       createAttr('foo', null, { editType: 'radio', possibleValues: ['SHA1', 'SHA256'] })
     );
@@ -142,7 +145,7 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: editType stringArray', async function (assert) {
-    let [model, spy] = await setup.call(this, createAttr('foo', 'string', { editType: 'stringArray' }));
+    const [model, spy] = await setup.call(this, createAttr('foo', 'string', { editType: 'stringArray' }));
     assert.ok(component.hasStringList, 'renders the string-list component');
 
     await component.fields.objectAt(0).textarea('array').change();
@@ -151,7 +154,7 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: sensitive', async function (assert) {
-    let [model, spy] = await setup.call(this, createAttr('password', 'string', { sensitive: true }));
+    const [model, spy] = await setup.call(this, createAttr('password', 'string', { sensitive: true }));
     assert.ok(component.hasMaskedInput, 'renders the masked-input component');
     await component.fields.objectAt(0).textarea('secret');
     assert.strictEqual(model.get('password'), 'secret');

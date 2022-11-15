@@ -101,7 +101,7 @@ export default class KeymgmtProviderModel extends Model {
     const [creds, fields] = this.credentialProps.reduce(
       ([creds, fields], prop) => {
         creds[prop] = null;
-        let field = { name: `credentials.${prop}`, type: 'string', options: { label: prop } };
+        const field = { name: `credentials.${prop}`, type: 'string', options: { label: prop } };
         if (prop === 'service_account_file') {
           field.options.subText = 'The path to a Google service account key file, not the file itself.';
         }

@@ -82,6 +82,11 @@ const (
 	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
 	// EnvVaultDetailed is to output detailed information (e.g., ListResponseWithInfo).
 	EnvVaultDetailed = `VAULT_DETAILED`
+	// EnvVaultLogFile is used to specify the path to the log file that Vault should use for logging
+	EnvVaultLogFile = "VAULT_LOG_FILE"
+	// EnvVaultLogLevel is used to specify the log level applied to logging
+	// Supported log levels: Trace, Debug, Error, Warn, Info
+	EnvVaultLogLevel = "VAULT_LOG_LEVEL"
 
 	// DisableSSCTokens is an env var used to disable index bearing
 	// token functionality
@@ -136,6 +141,11 @@ const (
 	flagNameUserLockoutDisable = "user-lockout-disable"
 	// flagNameDisableRedirects is used to prevent the client from honoring a single redirect as a response to a request
 	flagNameDisableRedirects = "disable-redirects"
+	// flagNameLogFile is used to specify the path to the log file that Vault should use for logging
+	flagNameLogFile = "log-file"
+	// flagNameLogLevel is used to specify the log level applied to logging
+	// Supported log levels: Trace, Debug, Error, Warn, Info
+	flagNameLogLevel = "log-level"
 )
 
 var (

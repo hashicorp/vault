@@ -2792,8 +2792,8 @@ const MOCK_MONTHLY_DATA = [
 ];
 
 function generateNullMonths(startDate, endDate) {
-  let numberOfMonths = differenceInCalendarMonths(endDate, startDate);
-  let months = [];
+  const numberOfMonths = differenceInCalendarMonths(endDate, startDate);
+  const months = [];
   for (let i = 0; i < numberOfMonths; i++) {
     months.push({
       timestamp: formatRFC3339(startOfMonth(addMonths(startDate, i))),
@@ -2812,13 +2812,13 @@ const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) =>
   // monthlyData is oldest to newest
   const dataEarliestMonth = parseAPITimestamp(monthlyData[0].timestamp);
   const dataLatestMonth = parseAPITimestamp(monthlyData[monthlyData.length - 1].timestamp);
-  let transformedMonthlyArray = [...monthlyData];
+  const transformedMonthlyArray = [...monthlyData];
   // If query end is before last month in array, return only through end query
   if (isBefore(queryEndDate, dataLatestMonth)) {
-    let indexQueryStart = monthlyData.findIndex((e) =>
+    const indexQueryStart = monthlyData.findIndex((e) =>
       isSameMonth(queryStartDate, parseAPITimestamp(e.timestamp))
     );
-    let indexQueryEnd = monthlyData.findIndex((e) =>
+    const indexQueryEnd = monthlyData.findIndex((e) =>
       isSameMonth(queryEndDate, parseAPITimestamp(e.timestamp))
     );
     return transformedMonthlyArray.slice(indexQueryStart, indexQueryEnd + 1);
@@ -2829,7 +2829,7 @@ const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) =>
   }
   // If query is after earliest month in array, return latest to month that matches query
   if (isAfter(queryStartDate, dataEarliestMonth)) {
-    let index = monthlyData.findIndex((e) => isSameMonth(queryStartDate, parseAPITimestamp(e.timestamp)));
+    const index = monthlyData.findIndex((e) => isSameMonth(queryStartDate, parseAPITimestamp(e.timestamp)));
     return transformedMonthlyArray.slice(index);
   }
   return transformedMonthlyArray;

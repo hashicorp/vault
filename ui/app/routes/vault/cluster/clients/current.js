@@ -6,7 +6,7 @@ export default class CurrentRoute extends Route {
   @service store;
 
   async model() {
-    let parentModel = this.modelFor('vault.cluster.clients');
+    const parentModel = this.modelFor('vault.cluster.clients');
 
     return RSVP.hash({
       config: parentModel.config,
