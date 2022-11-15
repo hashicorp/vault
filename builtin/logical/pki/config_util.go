@@ -77,7 +77,21 @@ func (sc *storageContext) changeDefaultIssuerTimestamps(oldDefault issuerID, new
 		// 1 & 2 above.
 		issuer, err := sc.fetchIssuerById(thisId)
 		if err != nil {
-			return fmt.Errorf("unable to update issuer (%v)'s modification time: error fetching issuer: %v", thisId, err)
+			// Due to the lack of transactions, if we deleted the default
+			// issuer (successfully), but the subsequent issuer config write
+			// (to clear the default issuer's old id) failed, we might have
+			// an inconsistent config. If we later hit this loop (and flush
+			// these timestamps again -- perhaps because the operator
+			// selected a new default), we'd have erred out here, because
+			// the since-deleted default issuer doesn't exist. In this case,
+			// skip the issuer instead of bailing.
+			err := fmt.Errorf("unable to update issuer (%v)'s modification time: error fetching issuer: %w", thisId, err)
+			if strings.Contains(err.Error(), "does not exist") {
+				sc.Backend.Logger().Warn(err.Error())
+				continue
+			}
+
+			return err
 		}
 
 		issuer.LastModified = now
