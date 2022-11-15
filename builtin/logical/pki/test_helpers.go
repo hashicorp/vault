@@ -20,7 +20,7 @@ import (
 )
 
 // Setup helpers
-func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
+func CreateBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
