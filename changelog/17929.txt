@@ -1,0 +1,4 @@
+```release-note:improvement
+core/server: Added an environment variable to write goroutine stacktraces to a 
+temporary file for SIGUSR2 signals.
+```
