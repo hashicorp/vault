@@ -19,11 +19,11 @@ import (
 )
 
 const (
-	crlNumberParam      = "crl_number"
-	deltaCrlNumberParam = "delta_crl_number"
-	nextUpdateParam     = "next_update"
-	crlsParam           = "crls"
-	formatParam         = "format"
+	crlNumberParam          = "crl_number"
+	deltaCrlBaseNumberParam = "delta_crl_base_number"
+	nextUpdateParam         = "next_update"
+	crlsParam               = "crls"
+	formatParam             = "format"
 )
 
 func pathResignCrls(b *backend) *framework.Path {
@@ -41,11 +41,11 @@ to the issuer.`,
 				Type:        framework.TypeInt,
 				Description: `The sequence number to be written within the CRL Number extension.`,
 			},
-			deltaCrlNumberParam: {
+			deltaCrlBaseNumberParam: {
 				Type: framework.TypeInt,
-				Description: `Using a non-zero value specifies the base CRL revision number to encode within
+				Description: `Using a zero or greater value specifies the base CRL revision number to encode within
  a Delta CRL indicator extension, otherwise the extension will not be added.`,
-				Default: 0,
+				Default: -1,
 			},
 			nextUpdateParam: {
 				Type: framework.TypeString,
@@ -83,7 +83,7 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 
 	issuerRef := getIssuerRef(data)
 	crlNumber := data.Get(crlNumberParam).(int)
-	deltaCrlNumber := data.Get(deltaCrlNumberParam).(int)
+	deltaCrlBaseNumber := data.Get(deltaCrlBaseNumberParam).(int)
 	nextUpdateStr := data.Get(nextUpdateParam).(string)
 	rawCrls := data.Get(crlsParam).([]string)
 
@@ -104,8 +104,8 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 	if crlNumber < 0 {
 		return logical.ErrorResponse("%s parameter must be 0 or greater", crlNumberParam), nil
 	}
-	if deltaCrlNumber < 0 {
-		return logical.ErrorResponse("%s parameter must be 0 or greater", deltaCrlNumberParam), nil
+	if deltaCrlBaseNumber < -1 {
+		return logical.ErrorResponse("%s parameter must be -1 or greater", deltaCrlBaseNumberParam), nil
 	}
 
 	if issuerRef == "" {
@@ -123,7 +123,7 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	if err := verifyCrlsAreFromIssuer(issuerEntity, providedCrls); err != nil {
+	if err := verifyCrlsAreFromIssuersKey(issuerEntity, providedCrls); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -141,8 +141,8 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 		NextUpdate:          now.Add(nextUpdateOffset),
 	}
 
-	if deltaCrlNumber > 0 {
-		ext, err := certutil.CreateDeltaCRLIndicatorExt(int64(deltaCrlNumber))
+	if deltaCrlBaseNumber > -1 {
+		ext, err := certutil.CreateDeltaCRLIndicatorExt(int64(deltaCrlBaseNumber))
 		if err != nil {
 			return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
 		}
@@ -164,8 +164,10 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 	}, nil
 }
 
-func verifyCrlsAreFromIssuer(entity caEntity, crls []*x509.RevocationList) error {
+func verifyCrlsAreFromIssuersKey(entity caEntity, crls []*x509.RevocationList) error {
 	for i, crl := range crls {
+		// At this point we assume if the issuer's key signed the CRL that is a good enough check
+		// to validate that we owned/generated the provided CRL.
 		if err := crl.CheckSignatureFrom(entity.caBundle.Certificate); err != nil {
 			return fmt.Errorf("CRL index: %d was not signed by requested issuer %s", i, entity.PrettyIssuerId())
 		}

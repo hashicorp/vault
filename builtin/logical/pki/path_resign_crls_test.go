@@ -187,11 +187,11 @@ func TestResignCrls_DeltaCrl(t *testing.T) {
 	caCert, serial1, serial2, crl1, crl2 := setupResignCrlMounts(t, b1, s1, b2, s2)
 
 	resp, err := CBWrite(b1, s1, "issuer/default/resign-crls", map[string]interface{}{
-		"crl_number":       "5",
-		"delta_crl_number": "4",
-		"next_update":      "12h",
-		"format":           "pem",
-		"crls":             []string{crl1, crl2},
+		"crl_number":            "5",
+		"delta_crl_base_number": "4",
+		"next_update":           "12h",
+		"format":                "pem",
+		"crls":                  []string{crl1, crl2},
 	})
 	requireSuccessNonNilResponse(t, resp, err)
 	requireFieldsSetInResp(t, resp, "crl")
