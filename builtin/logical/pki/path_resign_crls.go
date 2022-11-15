@@ -70,9 +70,9 @@ base64 encoded. Defaults to "pem".`,
 			},
 		},
 
-		HelpSynopsis: `Combine and sign with the provided issuer different CRLs `,
-		HelpDescription: `Provide two or more PEM encoded CRLs signed by the issuer, 
-normally from separate Vault clusters to be combined and signed.`,
+		HelpSynopsis: `Combine and sign with the provided issuer different CRLs`,
+		HelpDescription: `Provide two or more PEM encoded CRLs signed by the issuer,
+ normally from separate Vault clusters to be combined and signed.`,
 	}
 }
 
@@ -118,12 +118,12 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 	}
 
 	sc := b.makeStorageContext(ctx, request.Storage)
-	issuerEntity, err := getIssuer(sc, issuerRef)
+	caBundle, err := getCaBundle(sc, issuerRef)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	if err := verifyCrlsAreFromIssuersKey(issuerEntity, providedCrls); err != nil {
+	if err := verifyCrlsAreFromIssuersKey(caBundle.Certificate, providedCrls); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -134,7 +134,7 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 
 	now := time.Now()
 	template := &x509.RevocationList{
-		SignatureAlgorithm:  issuerEntity.caBundle.RevocationSigAlg,
+		SignatureAlgorithm:  caBundle.RevocationSigAlg,
 		RevokedCertificates: revokedCerts,
 		Number:              big.NewInt(int64(crlNumber)),
 		ThisUpdate:          now,
@@ -149,7 +149,7 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 		template.ExtraExtensions = []pkix.Extension{ext}
 	}
 
-	crlBytes, err := x509.CreateRevocationList(rand.Reader, template, issuerEntity.caBundle.Certificate, issuerEntity.caBundle.PrivateKey)
+	crlBytes, err := x509.CreateRevocationList(rand.Reader, template, caBundle.Certificate, caBundle.PrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("error creating new CRL: %w", err)
 	}
@@ -164,12 +164,12 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 	}, nil
 }
 
-func verifyCrlsAreFromIssuersKey(entity caEntity, crls []*x509.RevocationList) error {
+func verifyCrlsAreFromIssuersKey(caCert *x509.Certificate, crls []*x509.RevocationList) error {
 	for i, crl := range crls {
 		// At this point we assume if the issuer's key signed the CRL that is a good enough check
 		// to validate that we owned/generated the provided CRL.
-		if err := crl.CheckSignatureFrom(entity.caBundle.Certificate); err != nil {
-			return fmt.Errorf("CRL index: %d was not signed by requested issuer %s", i, entity.PrettyIssuerId())
+		if err := crl.CheckSignatureFrom(caCert); err != nil {
+			return fmt.Errorf("CRL index: %d was not signed by requested issuer", i)
 		}
 	}
 
@@ -239,18 +239,13 @@ func getAllRevokedCerts(crls []*x509.RevocationList) ([]pkix.RevokedCertificate,
 	return revokedCerts, warnings, nil
 }
 
-func getIssuer(sc *storageContext, issuerRef string) (caEntity, error) {
+func getCaBundle(sc *storageContext, issuerRef string) (*certutil.CAInfoBundle, error) {
 	issuerId, err := sc.resolveIssuerReference(issuerRef)
 	if err != nil {
-		return caEntity{}, fmt.Errorf("failed to resolve issuer %s: %w", issuerRefParam, err)
+		return nil, fmt.Errorf("failed to resolve issuer %s: %w", issuerRefParam, err)
 	}
 
-	entity, err := sc.fetchCAEntityByIssuerId(issuerId, CRLSigningUsage)
-	if err != nil {
-		return entity, fmt.Errorf("failed to fetch issuer with id %s: %w", issuerId, err)
-	}
-
-	return entity, nil
+	return sc.fetchCAInfoByIssuerId(issuerId, CRLSigningUsage)
 }
 
 func decodePemCrls(rawCrls []string) ([]*x509.RevocationList, error) {
