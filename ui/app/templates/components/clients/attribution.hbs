@@ -79,9 +79,9 @@
     </div>
   {{/if}}
   <div class="timestamp" data-test-attribution-timestamp>
-    {{#if @timestamp}}
+    {{#if @responseTimestamp}}
       Updated
-      {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa"}}
+      {{date-format @responseTimestamp "MMM d yyyy, h:mm:ss aaa"}}
     {{/if}}
   </div>
 </div>
@@ -99,11 +99,11 @@
       non-entity clients for the below
       {{if @isCurrentMonth "month" "date range"}}.
     </p>
-    <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if @endTimeDisplay " RANGE"}}</p>
-    <p class="has-bottom-margin-s">{{@startTimeDisplay}} {{if @endTimeDisplay "-"}} {{@endTimeDisplay}}</p>
+    <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
+    <p class="has-bottom-margin-s">{{this.formattedStartDate}} {{if this.formattedEndDate "-"}} {{this.formattedEndDate}}</p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    <button type="button" class="button is-primary" {{on "click" (fn this.exportChartData this.getCsvFileName)}}>
+    <button type="button" class="button is-primary" {{on "click" (fn this.exportChartData this.formattedCsvFileName)}}>
       Export
     </button>
     <button type="button" class="button is-secondary" onclick={{action (mut this.showCSVDownloadModal) false}}>

@@ -162,8 +162,8 @@ module('Integration | Component | clients/attribution', function (hooks) {
         @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.namespaceMountsData}} 
         @timestamp={{this.timestamp}} 
-        @startTimeDisplay={{"January 2022"}}
-        @endTimeDisplay={{"February 2022"}}
+        @formattedStartDate={{"January 2022"}}
+        @formattedEndDate={{"February 2022"}}
         />
     `);
     await click('[data-test-attribution-export-button]');

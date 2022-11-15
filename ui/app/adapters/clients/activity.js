@@ -2,7 +2,7 @@ import ApplicationAdapter from '../application';
 import { formatRFC3339 } from 'date-fns';
 
 export default class ActivityAdapter extends ApplicationAdapter {
-  // format when params are objects { timestamp: null, monthIdx: 0, year: 2022 }
+  // format month index and year from user's date selection into a timestamp string
   formatQueryParams({ start_time, end_time }) {
     // javascript localizes new Date() objects, but we don't want a timezone attached to keep metrics data in UTC
     // hard code 10th and 20th and backend will convert to first or end of month respectively

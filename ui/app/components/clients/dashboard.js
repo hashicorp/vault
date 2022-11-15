@@ -166,7 +166,7 @@ export default class Dashboard extends Component {
     return ' How we count clients changed in 1.9 and we added monthly breakdowns and mount level attribution starting in 1.10. Keep this in mind when looking at the data below.';
   }
 
-  get displayStartDate() {
+  get formattedStartDate() {
     if (!this.startMonthTimestamp) return null;
     return parseAPITimestamp(this.startMonthTimestamp, 'MMMM yyyy');
   }

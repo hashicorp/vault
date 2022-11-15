@@ -2,6 +2,9 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
+import isSameMonth from 'date-fns/isSameMonth';
+import format from 'date-fns/format';
 /**
  * @module Attribution
  * Attribution components display the top 10 total client counts for namespaces or auth methods (mounts) during a billing period.
@@ -16,10 +19,11 @@ import { inject as service } from '@ember/service';
  *    @totalClientAttribution={{this.totalClientAttribution}}
  *    @newClientAttribution={{this.newClientAttribution}}
  *    @selectedNamespace={{this.selectedNamespace}}
- *    @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
+ *    @startTimestamp={{this.responseTimestamp}}
+ *    @endTimestamp={{this.responseTimestamp}}
  *    @isDateRange={{this.isDateRange}}
  *    @isCurrentMonth={{false}}
- *    @timestamp={{this.responseTimestamp}}
+ *    @responseTimestamp={{this.responseTimestamp}}
  *  />
  * ```
  * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
@@ -28,16 +32,26 @@ import { inject as service } from '@ember/service';
  * @param {array} totalClientAttribution - array of objects containing a label and breakdown of client counts for total clients
  * @param {array} newClientAttribution - array of objects containing a label and breakdown of client counts for new clients
  * @param {string} selectedNamespace - namespace selected from filter bar
- * @param {string} startTimeDisplay - string that displays as start date for CSV modal
- * @param {string} endTimeDisplay - string that displays as end date for CSV modal
+ * @param {string} startTimestamp - timestamp string from activity response to render start date for CSV modal
+ * @param {string} endTimestamp - timestamp string from activity response to render end date for CSV modal
+ * @param {string} responseTimestamp -  ISO timestamp created in serializer to timestamp the response, renders in bottom left corner below attribution chart
  * @param {boolean} isDateRange - getter calculated in parent to relay if dataset is a date range or single month and display text accordingly
  * @param {boolean} isCurrentMonth - boolean to determine if rendering data from current month
- * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
  */
 
 export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
   @service downloadCsv;
+
+  get formattedStartDate() {
+    return parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy');
+  }
+  get formattedEndDate() {
+    // displays on CSV export modal, no need to display duplicate months and years
+    const startDateObject = parseAPITimestamp(this.args.startTimestamp);
+    const endDateObject = parseAPITimestamp(this.args.endTimestamp);
+    return isSameMonth(startDateObject, endDateObject) ? null : format(endDateObject, 'MMMM yyyy');
+  }
 
   get hasCsvData() {
     return this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
@@ -169,9 +183,9 @@ export default class Attribution extends Component {
     return csvData.map((d) => d.join()).join('\n');
   }
 
-  get getCsvFileName() {
-    const endRange = this.args.isDateRange ? `-${this.args.endTimeDisplay}` : '';
-    const csvDateRange = this.args.startTimeDisplay + endRange;
+  get formattedCsvFileName() {
+    const endRange = this.formattedEndDate ? `-${this.formattedEndDate}` : '';
+    const csvDateRange = this.formattedStartDate + endRange;
     return this.isSingleNamespace
       ? `clients_by_auth_method_${csvDateRange}`
       : `clients_by_namespace_${csvDateRange}`;

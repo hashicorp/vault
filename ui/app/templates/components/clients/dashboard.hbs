@@ -8,8 +8,8 @@
     {{this.versionText.label}}
   </h2>
   <div data-test-start-date-editor class="is-flex-align-baseline">
-    {{#if this.displayStartDate}}
-      <p class="is-size-6" data-test-date-display>{{this.displayStartDate}}</p>
+    {{#if this.formattedStartDate}}
+      <p class="is-size-6" data-test-date-display>{{this.formattedStartDate}}</p>
       <button type="button" class="button is-link" {{on "click" (fn (mut this.showBillingStartModal) true)}}>
         Edit
       </button>
@@ -137,10 +137,10 @@
               @totalClientAttribution={{this.totalClientAttribution}}
               @newClientAttribution={{this.newClientAttribution}}
               @selectedNamespace={{this.selectedNamespace}}
-              @startTimeDisplay={{this.startTimeDisplay}}
-              @endTimeDisplay={{this.endTimeDisplay}}
+              @startTimestamp={{this.startMonthTimestamp}}
+              @endTimestamp={{this.endMonthTimestamp}}
+              @responseTimestamp={{this.responseTimestamp}}
               @isDateRange={{this.isDateRange}}
-              @timestamp={{this.responseTimestamp}}
               @isCurrentMonth={{this.isCurrentMonth}}
             />
           {{/if}}
