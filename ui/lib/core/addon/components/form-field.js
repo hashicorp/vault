@@ -74,7 +74,7 @@ export default class FormFieldComponent extends Component {
   get hideLabel() {
     const { type, options } = this.args.attr;
     // these take precedent over an attrs default label behavior
-    if (type === 'boolean' || type === 'object' || options.isSectionHeader) {
+    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
       return true;
     }
     // falsey values render a <FormFieldLabel>
