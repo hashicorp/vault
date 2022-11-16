@@ -180,6 +180,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			// CRL Signing
 			pathResignCrls(&b),
+			pathSignRevocationList(&b),
 		},
 
 		Secrets: []*framework.Secret{
