@@ -22,21 +22,19 @@
   </p.levelLeft>
 </PageHeader>
 <Toolbar>
-  {{#unless this.model.updatePath.isPending}}
-    <ToolbarActions>
-      <ToolbarDownloadButton
-        @actionText="Download policy"
-        @extension={{if (eq this.policyType "acl") this.model.format "sentinel"}}
-        @filename={{this.model.name}}
-        @data={{this.model.policy}}
-      />
-      {{#if (and (not-eq this.model.id "root") (or this.model.canUpdate this.model.canDelete))}}
-        <ToolbarLink @route="vault.cluster.policy.edit" @model={{this.model.id}} data-test-policy-edit-toggle>
-          Edit policy
-        </ToolbarLink>
-      {{/if}}
-    </ToolbarActions>
-  {{/unless}}
+  <ToolbarActions>
+    <ToolbarDownloadButton
+      @actionText="Download policy"
+      @extension={{if (eq this.policyType "acl") this.model.format "sentinel"}}
+      @filename={{this.model.name}}
+      @data={{this.model.policy}}
+    />
+    {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
+      <ToolbarLink @route="vault.cluster.policy.edit" @model={{this.model.id}} data-test-policy-edit-toggle>
+        Edit policy
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
 </Toolbar>
 <div class="box is-bottomless is-fullwidth is-marginless">
   <div class="field">
