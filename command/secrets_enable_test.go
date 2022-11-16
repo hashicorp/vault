@@ -251,7 +251,6 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 
 		for _, b := range backends {
 			expectedResult := 0
-			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeSecrets)
 
 			ui, cmd := testSecretsEnableCommand(t)
 			cmd.client = client
@@ -261,6 +260,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			})
 
 			// Need to handle deprecated builtins specially
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeSecrets)
 			if (status == consts.PendingRemoval && !vault.PendingRemovalMountsAllowed) || status == consts.Removed {
 				expectedResult = 2
 			}

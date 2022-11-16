@@ -2,7 +2,6 @@ package command
 
 import (
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 
@@ -227,8 +226,6 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		for _, b := range backends {
 			var expectedResult int = 0
 
-			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeCredential)
-
 			// Not a builtin
 			if b == "token" {
 				continue
@@ -242,6 +239,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			})
 
 			// Need to handle deprecated builtins specially
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeCredential)
 			if (status == consts.PendingRemoval && !vault.PendingRemovalMountsAllowed) || status == consts.Removed {
 				expectedResult = 2
 			}

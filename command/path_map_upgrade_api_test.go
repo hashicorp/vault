@@ -39,6 +39,7 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 	client := cores[0].Client
 
 	// Enable the app-id method
+	prevAllowed := vault.PendingRemovalMountsAllowed
 	vault.PendingRemovalMountsAllowed = true
 	err = client.Sys().EnableAuthWithOptions("app-id", &api.EnableAuthOptions{
 		Type: "app-id",
@@ -46,7 +47,7 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	vault.PendingRemovalMountsAllowed = false
+	vault.PendingRemovalMountsAllowed = prevAllowed
 
 	// Create an app-id
 	_, err = client.Logical().Write("auth/app-id/map/app-id/test-app-id", map[string]interface{}{
