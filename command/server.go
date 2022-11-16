@@ -29,12 +29,14 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/audit"
 	config2 "github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/constants"
+	loghelper "github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -84,6 +86,7 @@ const (
 
 type ServerCommand struct {
 	*BaseCommand
+	*logFlags
 
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
@@ -471,20 +474,15 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
+	// Update the 'log' related aspects of shared config based on config/env var/cli
+	c.Flags().updateLogConfig(config.SharedConfig)
+	l, err := c.configureLogging(config)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
-
-	c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-		Output:            c.gatedWriter,
-		Level:             level,
-		IndependentLevels: true,
-		// Note that if logFormat is either unspecified or standard, then
-		// the resulting logger's format will be standard.
-		JSONFormat: logFormat == logging.JSONFormat,
-	})
+	c.logger = l
+	c.allLoggers = append(c.allLoggers, l)
 
 	// reporting Errors found in the config
 	for _, cErr := range configErrors {
@@ -493,15 +491,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	// Ensure logging is flushed if initialization fails
 	defer c.flushLog()
-
-	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-	if logLevelStr != "" {
-		logLevelString = logLevelStr
-	}
 
 	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
@@ -547,7 +536,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = logLevelString
+	info["log level"] = config.LogLevel
 	infoKeys = append(infoKeys, "log level")
 
 	var barrierSeal vault.Seal
@@ -612,7 +601,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		Physical:     backend,
 		StorageType:  config.Storage.Type,
 		Seal:         barrierSeal,
-		LogLevel:     logLevelString,
+		LogLevel:     config.LogLevel,
 		Logger:       c.logger,
 		DisableMlock: config.DisableMlock,
 		RecoveryMode: c.flagRecovery,
@@ -790,29 +779,6 @@ func logProxyEnvironmentVariables(logger hclog.Logger) {
 	}
 	logger.Info("proxy environment", "http_proxy", cfgMap["http_proxy"],
 		"https_proxy", cfgMap["https_proxy"], "no_proxy", cfgMap["no_proxy"])
-}
-
-func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet bool) (string, error) {
-	var logLevelString string
-	if config.LogLevel != "" && logLevelWasNotSet {
-		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
-		logLevelString = configLogLevel
-		switch configLogLevel {
-		case "trace":
-			c.logger.SetLevel(hclog.Trace)
-		case "debug":
-			c.logger.SetLevel(hclog.Debug)
-		case "notice", "info", "":
-			c.logger.SetLevel(hclog.Info)
-		case "warn", "warning":
-			c.logger.SetLevel(hclog.Warn)
-		case "err", "error":
-			c.logger.SetLevel(hclog.Error)
-		default:
-			return "", fmt.Errorf("unknown log level: %s", config.LogLevel)
-		}
-	}
-	return logLevelString, nil
 }
 
 func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (hclog.Level, string, bool, logging.LogFormat, error) {
@@ -1176,29 +1142,22 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
+	f.updateLogConfig(config.SharedConfig)
+	l, err := c.configureLogging(config)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
-
-	config.LogFormat = logFormat.String()
+	c.logger = l
+	c.allLoggers = append(c.allLoggers, l)
 
 	if c.flagDevThreeNode || c.flagDevFourCluster {
+		// TODO: PW: Should 'dev mode' related stuff have a different logging config???
 		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
 			Mutex:             &sync.Mutex{},
 			Output:            c.gatedWriter,
 			Level:             hclog.Trace,
 			IndependentLevels: true,
-		})
-	} else {
-		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-			Output:            c.gatedWriter,
-			Level:             level,
-			IndependentLevels: true,
-			// Note that if logFormat is either unspecified or standard, then
-			// the resulting logger's format will be standard.
-			JSONFormat: logFormat == logging.JSONFormat,
 		})
 	}
 
@@ -1211,15 +1170,6 @@ func (c *ServerCommand) Run(args []string) int {
 	defer c.flushLog()
 
 	c.allLoggers = []hclog.Logger{c.logger}
-
-	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-	if logLevelStr != "" {
-		logLevelString = logLevelStr
-	}
 
 	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
@@ -1325,7 +1275,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = logLevelString
+	info["log level"] = config.LogLevel
 	infoKeys = append(infoKeys, "log level")
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
 	// Check error here
@@ -1819,6 +1769,48 @@ func (c *ServerCommand) Run(args []string) int {
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
 	return retCode
+}
+
+// configureLogging takes the configuration and attempts to parse config values into 'log' friendly configuration values
+// If all goes to plan, a logger is created and setup.
+func (c *ServerCommand) configureLogging(config *server.Config) (hclog.InterceptLogger, error) {
+	// Parse all the log related config
+	logLevel, err := loghelper.ParseLogLevel(config.LogLevel)
+	if err != nil {
+		return nil, err
+	}
+
+	logFormat, err := loghelper.ParseLogFormat(config.LogFormat)
+	if err != nil {
+		return nil, err
+	}
+
+	logRotateDuration, err := parseutil.ParseDurationSecond(config.LogRotateDuration)
+	if err != nil {
+		return nil, err
+	}
+
+	logRotateBytes, err := parseutil.ParseInt(config.LogRotateBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	logRotateMaxFiles, err := parseutil.ParseInt(config.LogRotateMaxFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	logCfg := &loghelper.LogConfig{
+		Name:              "vault",
+		LogLevel:          logLevel,
+		LogFormat:         logFormat,
+		LogFilePath:       config.LogFile,
+		LogRotateDuration: logRotateDuration,
+		LogRotateBytes:    int(logRotateBytes),
+		LogRotateMaxFiles: int(logRotateMaxFiles),
+	}
+
+	return loghelper.Setup(logCfg, c.logOutput)
 }
 
 func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.WrappedHCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.WrappedHCPLinkVault, error) {

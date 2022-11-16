@@ -3,11 +3,13 @@ package command
 import (
 	"flag"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/posener/complete"
 )
 
+// logFlags are the 'log' related flags that can be shared across commands.
 type logFlags struct {
 	flagLogLevel          string
 	flagLogFormat         string
@@ -24,6 +26,7 @@ type valuesProvider struct {
 	envVarProvider provider
 }
 
+// addLogFlags will add the set of 'log' related flags to a flag set.
 func (f *FlagSet) addLogFlags(l *logFlags) {
 	if l == nil {
 		l = &logFlags{}
@@ -79,6 +82,8 @@ func (f *FlagSet) addLogFlags(l *logFlags) {
 	})
 }
 
+// getFlagValue will attempt to find the flag with the corresponding key and return the value
+// along with a bool representing whether of not the flag had been found/set.
 func getFlagValue(fs *FlagSets, key string) (string, bool) {
 	var result string
 	var isFlagSet bool
@@ -93,8 +98,11 @@ func getFlagValue(fs *FlagSets, key string) (string, bool) {
 	return result, isFlagSet
 }
 
+// getAggregatedConfigValue uses the provided keys to check CLI flags and environment variables for values that may be
+// used to override any specified configuration. If nothing can be found the 'fallback' (default) value will be provided.
 func (p *valuesProvider) getAggregatedConfigValue(flagKey, envVarKey, current, fallback string) string {
 	var result string
+	current = strings.TrimSpace(current)
 
 	flg, flgFound := p.flagProvider(flagKey)
 	env, envFound := p.envVarProvider(envVarKey)
@@ -116,18 +124,19 @@ func (p *valuesProvider) getAggregatedConfigValue(flagKey, envVarKey, current, f
 	return result
 }
 
-func (f *FlagSets) updateLogConfig(config *configutil.SharedConfig) *configutil.SharedConfig {
+// updateLogConfig will accept a shared config and specifically attempt to update the 'log' related config keys.
+// For each 'log' key we aggregate file config/env vars and CLI flags to select the one with the highest precedence.
+// This method mutates the config object passed into it.
+func (f *FlagSets) updateLogConfig(config *configutil.SharedConfig) {
 	p := &valuesProvider{
 		flagProvider:   func(key string) (string, bool) { return getFlagValue(f, key) },
 		envVarProvider: os.LookupEnv,
 	}
 
-	config.LogLevel = p.getAggregatedConfigValue(flagNameLogLevel, EnvVaultLogLevel, config.LogLevel, "")
+	config.LogLevel = p.getAggregatedConfigValue(flagNameLogLevel, EnvVaultLogLevel, config.LogLevel, "info")
 	config.LogFormat = p.getAggregatedConfigValue(flagNameLogFormat, EnvVaultLogFormat, config.LogFormat, "")
 	config.LogFile = p.getAggregatedConfigValue(flagNameLogFile, EnvVaultLogFile, config.LogFile, "")
 	config.LogRotateDuration = p.getAggregatedConfigValue(flagNameLogRotateDuration, EnvVaultLogRotateDuration, config.LogRotateDuration, "")
 	config.LogRotateBytes = p.getAggregatedConfigValue(flagNameLogRotateBytes, EnvVaultLogRotateBytes, config.LogRotateBytes, "")
 	config.LogRotateMaxFiles = p.getAggregatedConfigValue(flagNameLogRotateMaxFiles, EnvVaultLogRotateMaxFiles, config.LogRotateMaxFiles, "")
-
-	return config
 }
