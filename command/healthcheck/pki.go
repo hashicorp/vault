@@ -51,7 +51,7 @@ func parsePEMCert(contents string) (*x509.Certificate, error) {
 
 	cert, err := x509.ParseCertificate(parsed)
 	if err != nil {
-		return nil, fmt.Errorf("invalid certificate: %v", err)
+		return nil, fmt.Errorf("invalid certificate: %w", err)
 	}
 
 	return cert, nil
@@ -65,7 +65,7 @@ func parsePEMCRL(contents string) (*x509.RevocationList, error) {
 
 	crl, err := x509.ParseRevocationList(parsed)
 	if err != nil {
-		return nil, fmt.Errorf("invalid CRL: %v", err)
+		return nil, fmt.Errorf("invalid CRL: %w", err)
 	}
 
 	return crl, nil
@@ -87,7 +87,7 @@ func pkiFetchIssuer(e *Executor, issuer string, versionError func()) (bool, *Pat
 	if len(issuerRet.ParsedCache) == 0 {
 		cert, err := parsePEMCert(issuerRet.Secret.Data["certificate"].(string))
 		if err != nil {
-			return true, nil, nil, fmt.Errorf("unable to parse issuer %v's certificate: %v", issuer, err)
+			return true, nil, nil, fmt.Errorf("unable to parse issuer %v's certificate: %w", issuer, err)
 		}
 
 		issuerRet.ParsedCache["certificate"] = cert
@@ -119,7 +119,7 @@ func pkiFetchIssuerCRL(e *Executor, issuer string, delta bool, versionError func
 	if len(crlRet.ParsedCache) == 0 {
 		crl, err := parsePEMCRL(crlRet.Secret.Data["crl"].(string))
 		if err != nil {
-			return true, nil, nil, fmt.Errorf("unable to parse issuer %v's %v: %v", issuer, name, err)
+			return true, nil, nil, fmt.Errorf("unable to parse issuer %v's %v: %w", issuer, name, err)
 		}
 		crlRet.ParsedCache["crl"] = crl
 	}

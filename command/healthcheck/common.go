@@ -206,7 +206,7 @@ func (p *PathFetch) FetchSurfaceError() error {
 	}
 
 	if strings.Contains(p.FetchError.Error(), "route entry not found") {
-		return fmt.Errorf("Error making API request: was a bad mount given?\n\nOperation: %v\nPath: %v\nOriginal Error:\n%v", p.Operation, p.Path, p.FetchError)
+		return fmt.Errorf("Error making API request: was a bad mount given?\n\nOperation: %v\nPath: %v\nOriginal Error:\n%w", p.Operation, p.Path, p.FetchError)
 	}
 
 	return p.FetchError
