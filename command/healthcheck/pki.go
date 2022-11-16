@@ -112,7 +112,7 @@ func pkiFetchIssuerEntry(e *Executor, issuer string, versionError func()) (bool,
 	if len(issuerRet.ParsedCache) == 0 {
 		cert, err := parsePEMCert(issuerRet.Secret.Data["certificate"].(string))
 		if err != nil {
-			return true, nil, nil, fmt.Errorf("unable to parse issuer %v's certificate: %v", issuer, err)
+			return true, nil, nil, fmt.Errorf("unable to parse issuer %v's certificate: %w", issuer, err)
 		}
 
 		issuerRet.ParsedCache["certificate"] = cert
@@ -219,7 +219,7 @@ func pkiFetchLeaf(e *Executor, serial string, versionError func()) (bool, *PathF
 	if len(leafRet.ParsedCache) == 0 {
 		cert, err := parsePEMCert(leafRet.Secret.Data["certificate"].(string))
 		if err != nil {
-			return true, nil, nil, fmt.Errorf("unable to parse leaf %v's certificate: %v", serial, err)
+			return true, nil, nil, fmt.Errorf("unable to parse leaf %v's certificate: %w", serial, err)
 		}
 
 		leafRet.ParsedCache["certificate"] = cert
