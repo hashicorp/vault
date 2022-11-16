@@ -189,6 +189,7 @@ func (c *AgentCommand) Run(args []string) int {
 	// start logging too early.
 	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
+
 	if c.flagCombineLogs {
 		c.logWriter = os.Stdout
 	}

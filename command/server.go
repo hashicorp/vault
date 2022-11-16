@@ -44,7 +44,6 @@ import (
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -101,9 +100,9 @@ type ServerCommand struct {
 
 	WaitGroup *sync.WaitGroup
 
-	logOutput   io.Writer
-	gatedWriter *gatedwriter.Writer
-	logger      hclog.InterceptLogger
+	logWriter io.Writer
+	logGate   *gatedwriter.Writer
+	logger    hclog.InterceptLogger
 
 	cleanupGuard sync.Once
 
@@ -426,8 +425,8 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 
 func (c *ServerCommand) flushLog() {
 	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-		Output: c.logOutput,
-	}, c.gatedWriter)
+		Output: c.logWriter,
+	}, c.logGate)
 }
 
 func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError, error) {
@@ -633,7 +632,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	// Initialize the listeners
 	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
 	for _, lnConfig := range config.Listeners {
-		ln, _, _, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
+		ln, _, _, err := server.NewListener(lnConfig, c.logGate, c.UI)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
 			return 1
@@ -781,59 +780,6 @@ func logProxyEnvironmentVariables(logger hclog.Logger) {
 		"https_proxy", cfgMap["https_proxy"], "no_proxy", cfgMap["no_proxy"])
 }
 
-func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (hclog.Level, string, bool, logging.LogFormat, error) {
-	// Create a logger. We wrap it in a gated writer so that it doesn't
-	// start logging too early.
-	c.logOutput = os.Stderr
-	if c.flagCombineLogs {
-		c.logOutput = os.Stdout
-	}
-	c.gatedWriter = gatedwriter.NewWriter(c.logOutput)
-	var level hclog.Level
-	var logLevelWasNotSet bool
-	logFormat := logging.UnspecifiedFormat
-	logLevelString := c.flagLogLevel
-	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
-	switch c.flagLogLevel {
-	case notSetValue, "":
-		logLevelWasNotSet = true
-		logLevelString = "info"
-		level = hclog.Info
-	case "trace":
-		level = hclog.Trace
-	case "debug":
-		level = hclog.Debug
-	case "notice", "info":
-		level = hclog.Info
-	case "warn", "warning":
-		level = hclog.Warn
-	case "err", "error":
-		level = hclog.Error
-	default:
-		return level, logLevelString, logLevelWasNotSet, logFormat, fmt.Errorf("unknown log level: %s", c.flagLogLevel)
-	}
-
-	if c.flagLogFormat != notSetValue {
-		var err error
-		logFormat, err = logging.ParseLogFormat(c.flagLogFormat)
-		if err != nil {
-			return level, logLevelString, logLevelWasNotSet, logFormat, err
-		}
-	}
-	if logFormat == logging.UnspecifiedFormat {
-		logFormat = logging.ParseEnvLogFormat()
-	}
-	if logFormat == logging.UnspecifiedFormat {
-		var err error
-		logFormat, err = logging.ParseLogFormat(config.LogFormat)
-		if err != nil {
-			return level, logLevelString, logLevelWasNotSet, logFormat, err
-		}
-	}
-
-	return level, logLevelString, logLevelWasNotSet, logFormat, nil
-}
-
 type quiescenceSink struct {
 	t *time.Timer
 }
@@ -925,7 +871,7 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 
 	var errMsg error
 	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
+		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.logGate, c.UI)
 		if err != nil {
 			errMsg = fmt.Errorf("Error initializing listener of type %s: %s", lnConfig.Type, err)
 			return 1, nil, nil, errMsg
@@ -1004,6 +950,13 @@ func (c *ServerCommand) Run(args []string) int {
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())
 		return 1
+	}
+
+	c.logGate = gatedwriter.NewWriter(os.Stderr)
+	c.logWriter = c.logGate
+
+	if c.flagCombineLogs {
+		c.logWriter = os.Stdout
 	}
 
 	if c.flagRecovery {
@@ -1143,6 +1096,12 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	f.updateLogConfig(config.SharedConfig)
+
+	// Set 'trace' log level for the following 'dev' clusters
+	if c.flagDevThreeNode || c.flagDevFourCluster {
+		config.LogLevel = "trace"
+	}
+
 	l, err := c.configureLogging(config)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -1150,16 +1109,6 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	c.logger = l
 	c.allLoggers = append(c.allLoggers, l)
-
-	if c.flagDevThreeNode || c.flagDevFourCluster {
-		// TODO: PW: Should 'dev mode' related stuff have a different logging config???
-		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-			Mutex:             &sync.Mutex{},
-			Output:            c.gatedWriter,
-			Level:             hclog.Trace,
-			IndependentLevels: true,
-		})
-	}
 
 	// reporting Errors found in the config
 	for _, cErr := range configErrors {
@@ -1810,7 +1759,7 @@ func (c *ServerCommand) configureLogging(config *server.Config) (hclog.Intercept
 		LogRotateMaxFiles: int(logRotateMaxFiles),
 	}
 
-	return loghelper.Setup(logCfg, c.logOutput)
+	return loghelper.Setup(logCfg, c.logWriter)
 }
 
 func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.WrappedHCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.WrappedHCPLinkVault, error) {
