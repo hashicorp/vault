@@ -9,6 +9,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
@@ -53,13 +54,13 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		{
 			"deprecated builtin with standard mount",
 			[]string{"app-id"},
-			"",
+			"mount entry associated with pending removal builtin",
 			2,
 		},
 		{
 			"deprecated builtin with different mount",
 			[]string{"-path=/tmp", "app-id"},
-			"",
+			"mount entry associated with pending removal builtin",
 			2,
 		},
 	}
@@ -78,12 +79,12 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
-				t.Errorf("expected %d to be %d", code, tc.code)
+				t.Errorf("expected command return code to be %d, got %d", tc.code, code)
 			}
 
 			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 			if !strings.Contains(combined, tc.out) {
-				t.Errorf("expected %q to contain %q", combined, tc.out)
+				t.Errorf("expected %q in response\n got: %+v", tc.out, combined)
 			}
 		})
 	}
@@ -225,13 +226,8 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 
 		for _, b := range backends {
 			var expectedResult int = 0
-			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeCredential)
-			allowDeprecated := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv)
 
-			// Need to handle deprecated builtins specially
-			if (status == consts.PendingRemoval && allowDeprecated == "") || status == consts.Removed {
-				expectedResult = 2
-			}
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeCredential)
 
 			// Not a builtin
 			if b == "token" {
@@ -244,6 +240,12 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			actualResult := cmd.Run([]string{
 				b,
 			})
+
+			// Need to handle deprecated builtins specially
+			if (status == consts.PendingRemoval && !vault.PendingRemovalMountsAllowed) || status == consts.Removed {
+				expectedResult = 2
+			}
+
 			if actualResult != expectedResult {
 				t.Errorf("type: %s - got: %d, expected: %d - %s", b, actualResult, expectedResult, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}

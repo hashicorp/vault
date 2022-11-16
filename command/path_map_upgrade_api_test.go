@@ -25,8 +25,6 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 		},
 	}
 
-	vault.PendingRemovalMountsAllowed = true
-
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -41,12 +39,14 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 	client := cores[0].Client
 
 	// Enable the app-id method
+	vault.PendingRemovalMountsAllowed = true
 	err = client.Sys().EnableAuthWithOptions("app-id", &api.EnableAuthOptions{
 		Type: "app-id",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	vault.PendingRemovalMountsAllowed = false
 
 	// Create an app-id
 	_, err = client.Logical().Write("auth/app-id/map/app-id/test-app-id", map[string]interface{}{
