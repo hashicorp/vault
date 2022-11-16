@@ -22,7 +22,7 @@
   </p.levelLeft>
 </PageHeader>
 <Toolbar>
-  {{#unless this.capabilities.isLoaded}}
+  {{#unless this.model.updatePath.isPending}}
     <ToolbarActions>
       <ToolbarDownloadButton
         @actionText="Download policy"
@@ -30,7 +30,7 @@
         @filename={{this.model.name}}
         @data={{this.model.policy}}
       />
-      {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
+      {{#if (and (not-eq this.model.id "root") (or this.model.canUpdate this.model.canDelete))}}
         <ToolbarLink @route="vault.cluster.policy.edit" @model={{this.model.id}} data-test-policy-edit-toggle>
           Edit policy
         </ToolbarLink>
