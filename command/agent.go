@@ -222,7 +222,7 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
 	}
 
-	config = c.aggregateConfig(f, config)
+	c.updateConfig(f, config)
 
 	// Parse all the log related config
 	logLevel, err := logging.ParseLogLevel(config.LogLevel)
@@ -936,12 +936,12 @@ func (c *AgentCommand) Run(args []string) int {
 	return 0
 }
 
-// aggregateConfig ensures that the config object accurately reflects the desired
+// updateConfig ensures that the config object accurately reflects the desired
 // settings as configured by the user. It applies the relevant config setting based
 // on the precedence (env var overrides file config, cli overrides env var).
-// It mutates the config object supplied and returns the updated object.
-func (c *AgentCommand) aggregateConfig(f *FlagSets, config *agentConfig.Config) *agentConfig.Config {
-	f.aggregateLogConfig(config.SharedConfig)
+// It mutates the config object supplied.
+func (c *AgentCommand) updateConfig(f *FlagSets, config *agentConfig.Config) {
+	f.updateLogConfig(config.SharedConfig)
 
 	f.Visit(func(fl *flag.Flag) {
 		if fl.Name == flagNameAgentExitAfterAuth {
@@ -998,8 +998,6 @@ func (c *AgentCommand) aggregateConfig(f *FlagSets, config *agentConfig.Config) 
 		EnvVar:  api.EnvVaultTLSServerName,
 	})
 	config.Vault.TLSServerName = c.flagTLSServerName
-
-	return config
 }
 
 // verifyRequestHeader wraps an http.Handler inside a Handler that checks for

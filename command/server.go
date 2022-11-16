@@ -84,7 +84,6 @@ const (
 
 type ServerCommand struct {
 	*BaseCommand
-	*logFlags
 
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
@@ -113,7 +112,10 @@ type ServerCommand struct {
 
 	allLoggers []hclog.Logger
 
+	// new stuff
 	flagConfigs            []string
+	flagLogLevel           string
+	flagLogFormat          string
 	flagRecovery           bool
 	flagDev                bool
 	flagDevTLS             bool
@@ -188,8 +190,24 @@ func (c *ServerCommand) Flags() *FlagSets {
 			".hcl or .json are loaded.",
 	})
 
-	// Augment with the log flags
-	f.addLogFlags(c.logFlags)
+	f.StringVar(&StringVar{
+		Name:       "log-level",
+		Target:     &c.flagLogLevel,
+		Default:    notSetValue,
+		EnvVar:     "VAULT_LOG_LEVEL",
+		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
+		Usage: "Log verbosity level. Supported values (in order of detail) are " +
+			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "log-format",
+		Target:     &c.flagLogFormat,
+		Default:    notSetValue,
+		EnvVar:     "VAULT_LOG_FORMAT",
+		Completion: complete.PredictSet("standard", "json"),
+		Usage:      `Log format. Supported values are "standard" and "json".`,
+	})
 
 	f.BoolVar(&BoolVar{
 		Name:    "exit-on-core-shutdown",
@@ -1026,8 +1044,6 @@ func (c *ServerCommand) Run(args []string) int {
 		return c.runRecoveryMode()
 	}
 
-	// TODO: PW: Parse out any log related flags.
-
 	// Automatically enable dev mode if other dev flags are provided.
 	if c.flagDevConsul || c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 || c.flagDevTLS {
 		c.flagDev = true
@@ -1052,7 +1068,6 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Error("Cannot run diagnose on Vault in dev mode.")
 			return 1
 		}
-		// TODO: PW: Check if this cmd needs to be 'log file capable'
 		// TODO: add a file output flag to Diagnose
 		diagnose := &OperatorDiagnoseCommand{
 			BaseCommand: c.BaseCommand,
@@ -1161,7 +1176,6 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	// TODO: PW: Remove the old way of setting up logging... What about 'dev' modes?
 	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -1746,6 +1760,41 @@ func (c *ServerCommand) Run(args []string) int {
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
+
+			if os.Getenv("VAULT_STACKTRACE_WRITE_TO_FILE") != "" {
+				c.logger.Info("Writing stacktrace to file")
+
+				dir := ""
+				path := os.Getenv("VAULT_STACKTRACE_FILE_PATH")
+				if path != "" {
+					if _, err := os.Stat(path); err != nil {
+						c.logger.Error("Checking stacktrace path failed", "error", err)
+						continue
+					}
+					dir = path
+				} else {
+					dir, err = os.MkdirTemp("", "vault-stacktrace")
+					if err != nil {
+						c.logger.Error("Could not create temporary directory for stacktrace", "error", err)
+						continue
+					}
+				}
+
+				f, err := os.CreateTemp(dir, "stacktrace")
+				if err != nil {
+					c.logger.Error("Could not create stacktrace file", "error", err)
+					continue
+				}
+
+				if err := pprof.Lookup("goroutine").WriteTo(f, 2); err != nil {
+					f.Close()
+					c.logger.Error("Could not write stacktrace to file", "error", err)
+					continue
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
+				f.Close()
+			}
 		}
 	}
 	// Notify systemd that the server is shutting down

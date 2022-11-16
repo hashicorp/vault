@@ -116,7 +116,7 @@ func (p *valuesProvider) getAggregatedConfigValue(flagKey, envVarKey, current, f
 	return result
 }
 
-func (f *FlagSets) aggregateLogConfig(config *configutil.SharedConfig) *configutil.SharedConfig {
+func (f *FlagSets) updateLogConfig(config *configutil.SharedConfig) *configutil.SharedConfig {
 	p := &valuesProvider{
 		flagProvider:   func(key string) (string, bool) { return getFlagValue(f, key) },
 		envVarProvider: os.LookupEnv,

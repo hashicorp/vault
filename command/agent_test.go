@@ -2279,7 +2279,7 @@ func TestAgent_LogFile_EnvVarOverridesConfig(t *testing.T) {
 	}
 
 	// Update the config based on the inputs.
-	cfg = cmd.aggregateConfig(f, cfg)
+	cfg = cmd.updateConfig(f, cfg)
 
 	assert.NotEqual(t, "/foo/bar/juan.log", cfg.LogFile)
 	assert.Equal(t, "/squiggle/logs.txt", cfg.LogFile)
@@ -2315,7 +2315,7 @@ func TestAgent_LogFile_CliOverridesEnvVar(t *testing.T) {
 	}
 
 	// Update the config based on the inputs.
-	cfg = cmd.aggregateConfig(f, cfg)
+	cfg = cmd.updateConfig(f, cfg)
 
 	assert.NotEqual(t, "/foo/bar/juan.log", cfg.LogFile)
 	assert.NotEqual(t, "/squiggle/logs.txt", cfg.LogFile)
@@ -2344,7 +2344,7 @@ func TestAgent_LogFile_Config(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg = cmd.aggregateConfig(f, cfg)
+	cfg = cmd.updateConfig(f, cfg)
 
 	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "actual config check")
 }
