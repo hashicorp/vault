@@ -191,6 +191,7 @@ func TestLoadConfigFile(t *testing.T) {
 	expected := &Config{
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
+			LogFile: "/var/log/vault/vault-agent.log",
 		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{
@@ -230,7 +231,6 @@ func TestLoadConfigFile(t *testing.T) {
 				NumRetries: 12,
 			},
 		},
-		LogFile: "/var/log/vault/vault-agent.log",
 	}
 
 	config.Prune()
