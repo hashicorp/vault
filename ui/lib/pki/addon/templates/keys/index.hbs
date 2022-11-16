@@ -13,7 +13,7 @@
     <ToolbarLink @route="keys.import" @type="download">
       Import
     </ToolbarLink>
-    <ToolbarLink @route="keys.generate" @type="add">
+    <ToolbarLink @route="keys.create" @type="add">
       Generate
     </ToolbarLink>
   </ToolbarActions>
@@ -63,7 +63,7 @@
   {{/each}}
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create.index" @model={{this.model.keyModel}}>
+    <LinkTo @route="configuration.create" @model={{this.model.keyModel}}>
       ARG TODO waiting for language from design
     </LinkTo>
   </EmptyState>

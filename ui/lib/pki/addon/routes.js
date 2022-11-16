@@ -4,8 +4,6 @@ export default buildRoutes(function () {
   this.route('overview');
   this.route('configuration', function () {
     this.route('tidy');
-    this.route('generate');
-    this.route('import');
     this.route('create');
     this.route('edit');
   });
@@ -21,6 +19,7 @@ export default buildRoutes(function () {
   });
   this.route('issuers', function () {
     this.route('index', { path: '/' });
+    this.route('import');
     this.route('generate-root');
     this.route('generate-intermediate');
     this.route('issuer', { path: '/:issuer_ref' }, function () {

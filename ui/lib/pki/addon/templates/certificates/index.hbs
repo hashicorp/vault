@@ -55,7 +55,7 @@
   {{/each}}
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create.index" @model={{this.model.certificateModel}}>
+    <LinkTo @route="configuration.create" @model={{this.model.certificateModel}}>
       {{! ARG TODO if configuration of engine not setup then direct toward setting that up otherwise replace with new design language }}
     </LinkTo>
   </EmptyState>

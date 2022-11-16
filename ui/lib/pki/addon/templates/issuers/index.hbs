@@ -10,7 +10,7 @@
 />
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @route="configuration.import">
+    <ToolbarLink @route="issuers.import">
       Import
     </ToolbarLink>
     <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
@@ -22,12 +22,12 @@
         <nav class="box menu" aria-label="generate options">
           <ul class="menu-list">
             <li class="action">
-              <LinkTo @route="configuration.generate" {{on "click" (fn this.onLinkClick D)}}>
+              <LinkTo @route="issuers.generate-root" {{on "click" (fn this.onLinkClick D)}}>
                 Root
               </LinkTo>
             </li>
             <li class="action">
-              <LinkTo @route="configuration.generate" {{on "click" (fn this.onLinkClick D)}}>
+              <LinkTo @route="issuers.generate-intermediate" {{on "click" (fn this.onLinkClick D)}}>
                 Intermediate CSR
               </LinkTo>
             </li>
@@ -82,7 +82,7 @@
   {{/each}}
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create.index" @model={{this.model.issuersModel}}>
+    <LinkTo @route="configuration.create" @model={{this.model.issuersModel}}>
       Configure PKI
     </LinkTo>
   </EmptyState>
