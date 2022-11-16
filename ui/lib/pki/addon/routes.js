@@ -3,16 +3,9 @@ import buildRoutes from 'ember-engines/routes';
 export default buildRoutes(function () {
   this.route('overview');
   this.route('configuration', function () {
-    this.route('index', { path: '/' });
     this.route('tidy');
-    this.route('create', function () {
-      this.route('index', { path: '/' });
-      this.route('import-ca');
-      this.route('generate-root');
-      this.route('generate-csr');
-    });
+    this.route('create');
     this.route('edit');
-    this.route('details');
   });
   this.route('roles', function () {
     this.route('index', { path: '/' });
