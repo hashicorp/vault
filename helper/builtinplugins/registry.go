@@ -36,14 +36,9 @@ import (
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
-	logicalCass "github.com/hashicorp/vault/builtin/logical/cassandra"
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
-	logicalMongo "github.com/hashicorp/vault/builtin/logical/mongodb"
-	logicalMssql "github.com/hashicorp/vault/builtin/logical/mssql"
-	logicalMysql "github.com/hashicorp/vault/builtin/logical/mysql"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
 	logicalPki "github.com/hashicorp/vault/builtin/logical/pki"
-	logicalPostgres "github.com/hashicorp/vault/builtin/logical/postgresql"
 	logicalRabbit "github.com/hashicorp/vault/builtin/logical/rabbitmq"
 	logicalSsh "github.com/hashicorp/vault/builtin/logical/ssh"
 	logicalTotp "github.com/hashicorp/vault/builtin/logical/totp"
@@ -144,8 +139,7 @@ func newRegistry() *registry {
 			"aws":      {Factory: logicalAws.Factory},
 			"azure":    {Factory: logicalAzure.Factory},
 			"cassandra": {
-				Factory:           logicalCass.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				DeprecationStatus: consts.Removed,
 			},
 			"consul":     {Factory: logicalConsul.Factory},
 			"gcp":        {Factory: logicalGcp.Factory},
@@ -153,25 +147,21 @@ func newRegistry() *registry {
 			"kubernetes": {Factory: logicalKube.Factory},
 			"kv":         {Factory: logicalKv.Factory},
 			"mongodb": {
-				Factory:           logicalMongo.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				DeprecationStatus: consts.Removed,
 			},
 			"mongodbatlas": {Factory: logicalMongoAtlas.Factory},
 			"mssql": {
-				Factory:           logicalMssql.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				DeprecationStatus: consts.Removed,
 			},
 			"mysql": {
-				Factory:           logicalMysql.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				DeprecationStatus: consts.Removed,
 			},
 			"nomad":    {Factory: logicalNomad.Factory},
 			"openldap": {Factory: logicalLDAP.Factory},
 			"ldap":     {Factory: logicalLDAP.Factory},
 			"pki":      {Factory: logicalPki.Factory},
 			"postgresql": {
-				Factory:           logicalPostgres.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				DeprecationStatus: consts.Removed,
 			},
 			"rabbitmq":  {Factory: logicalRabbit.Factory},
 			"ssh":       {Factory: logicalSsh.Factory},
