@@ -810,6 +810,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
+		"pki health-check": func() (cli.Command, error) {
+			return &PKIHealthCheckCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 	}
 
 	// Disabled by default until functional

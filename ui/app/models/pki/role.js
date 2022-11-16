@@ -10,6 +10,14 @@ const validations = {
 
 @withModelValidations(validations)
 export default class PkiRoleModel extends Model {
+  get useOpenAPI() {
+    // must be a getter so it can be accessed in path-help.js
+    return true;
+  }
+  getHelpUrl(backend) {
+    return `/v1/${backend}/roles/example?help=1`;
+  }
+
   @attr('string', { readOnly: true }) backend;
 
   /* Overriding OpenApi default options */
@@ -219,6 +227,20 @@ export default class PkiRoleModel extends Model {
   })
   ou;
 
+  @attr('array', {
+    defaultValue() {
+      return ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'];
+    },
+  })
+  keyUsage;
+
+  @attr('array', {
+    defaultValue() {
+      return [];
+    },
+  })
+  extKeyUsage;
+
   @attr({ hideFormSection: true }) organization;
   @attr({ hideFormSection: true }) country;
   @attr({ hideFormSection: true }) locality;
@@ -227,14 +249,7 @@ export default class PkiRoleModel extends Model {
   @attr({ hideFormSection: true }) postalCode;
   /* End of overriding Additional subject field options */
 
-  // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
-  get useOpenAPI() {
-    return true;
-  }
-  getHelpUrl(backend) {
-    return `/v1/${backend}/roles/example?help=1`;
-  }
-
+  /* CAPABILITIES */
   @lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id') updatePath;
   get canDelete() {
     return this.updatePath.get('canCreate');
