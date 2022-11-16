@@ -1,20 +1,15 @@
 ---
-name: build-docs
+name: build
 
 on:
-  push:
+  pull_request:
     branches:
       - docs/**
       - backport/docs/**
 
 jobs:
-  # This is a workaround to allow docs PRs to fullfil the required branch
-  # protection rules which require that the 'build' workflow has
-  # succeeded before a PR is allowed to be merged. We validate that via the
-  # 'build-ensure-success' workflow that is triggered either by either the
-  # 'build' or 'build-docs' workflow. Without this trigger the required branch
-  # protection rules would never be met on docs branches.
-  trigger-build-success-workflow:
+  # Trigger the build / success workflow as it is required by branch restrictions
+  success:
     runs-on: ubuntu-latest
     steps:
-      - run: exit 0
+      - run: echo "All build and integration workflows have succeeded!"
