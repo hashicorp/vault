@@ -11,13 +11,11 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-
 func TestIdentityStore_UserLockout(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": userpass.Factory,
 		},
-
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
@@ -34,10 +32,10 @@ func TestIdentityStore_UserLockout(t *testing.T) {
 		t.Fatal(err)
 	}
 	// tune auth mount
-	userlockoutConfig :=&api.UserLockoutConfigInput{
-		LockoutThreshold:"3",
-		LockoutDuration: "600",
-		LockoutCounterResetDuration:"600",
+	userlockoutConfig := &api.UserLockoutConfigInput{
+		LockoutThreshold:            "3",
+		LockoutDuration:             "600",
+		LockoutCounterResetDuration: "600",
 	}
 	err = client.Sys().TuneMount("auth/userpass", api.MountConfigInput{
 		UserLockoutConfig: userlockoutConfig,
@@ -72,7 +70,7 @@ func TestIdentityStore_UserLockout(t *testing.T) {
 	client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "wrongPassword",
 	})
-	// login : permission denied as user locked out 
+	// login : permission denied as user locked out
 	_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "training",
 	})
@@ -89,7 +87,6 @@ func TestIdentityStore_UserFailedLoginMapResetOnSuccess(t *testing.T) {
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": userpass.Factory,
 		},
-
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
@@ -106,10 +103,10 @@ func TestIdentityStore_UserFailedLoginMapResetOnSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 	// tune auth mount
-	userlockoutConfig :=&api.UserLockoutConfigInput{
-		LockoutThreshold:"3",
-		LockoutDuration: "600",
-		LockoutCounterResetDuration:"600",
+	userlockoutConfig := &api.UserLockoutConfigInput{
+		LockoutThreshold:            "3",
+		LockoutDuration:             "600",
+		LockoutCounterResetDuration: "600",
 	}
 	err = client.Sys().TuneMount("auth/userpass", api.MountConfigInput{
 		UserLockoutConfig: userlockoutConfig,
@@ -140,7 +137,7 @@ func TestIdentityStore_UserFailedLoginMapResetOnSuccess(t *testing.T) {
 	client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "wrongPassword",
 	})
-	// login with right credentials - successful login 
+	// login with right credentials - successful login
 	// userFailedLogin map that contains failed user login info reset
 	_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "training",
@@ -148,13 +145,13 @@ func TestIdentityStore_UserFailedLoginMapResetOnSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// login failure 1 
+	// login failure 1
 	client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "wrongPassword",
 	})
 
 	// login failure 2 after successful login
-	// error should not be permission denied as user not locked out 
+	// error should not be permission denied as user not locked out
 	_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "wrongPassword",
 	})
@@ -171,7 +168,6 @@ func TestIdentityStore_LockoutDurationTest(t *testing.T) {
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": userpass.Factory,
 		},
-
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
@@ -188,10 +184,10 @@ func TestIdentityStore_LockoutDurationTest(t *testing.T) {
 		t.Fatal(err)
 	}
 	// tune auth mount
-	userlockoutConfig :=&api.UserLockoutConfigInput{
-		LockoutThreshold:"3",
-		LockoutDuration: "600",
-		LockoutCounterResetDuration:"600",
+	userlockoutConfig := &api.UserLockoutConfigInput{
+		LockoutThreshold:            "3",
+		LockoutDuration:             "600",
+		LockoutCounterResetDuration: "600",
 	}
 	err = client.Sys().TuneMount("auth/userpass", api.MountConfigInput{
 		UserLockoutConfig: userlockoutConfig,
@@ -226,7 +222,7 @@ func TestIdentityStore_LockoutDurationTest(t *testing.T) {
 	client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "wrongPassword",
 	})
-	// login : permission denied as user locked out 
+	// login : permission denied as user locked out
 	_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "training",
 	})
@@ -237,5 +233,3 @@ func TestIdentityStore_LockoutDurationTest(t *testing.T) {
 		t.Fatalf("expected to see permission denied error as user locked out, got %v", err)
 	}
 }
-
-

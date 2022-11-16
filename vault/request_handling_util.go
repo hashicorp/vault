@@ -54,8 +54,8 @@ func getUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUs
 	return c.GetUserFailedLoginInfo(ctx, userInfo)
 }
 
-func (c *Core) updateUserFailedLoginInfo(ctx context.Context, userInfo FailedLoginUser, failedLoginInfo FailedLoginInfo) error {
-	return c.UpdateUserFailedLoginInfo(ctx, userInfo, failedLoginInfo)
+func (c *Core) updateUserFailedLoginInfo(ctx context.Context, userInfo FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
+	return c.UpdateUserFailedLoginInfo(ctx, userInfo, failedLoginInfo, deleteEntry)
 }
 
 func possiblyForwardAliasCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, bool, error) {

@@ -1630,7 +1630,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// if it exists
 	if !isUserLockoutDisabled {
 		loginUserInfoKey := c.getLoginUserInfo(entry, req)
-		err := c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, FailedLoginInfo{})
+		err := c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1783,7 +1783,7 @@ func (c *Core) failedUserLoginProcess(ctx context.Context, mountEntry *MountEntr
 	}
 
 	// update the userFailedLoginInfo map
-	err := c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, failedLoginInfo)
+	err := c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, &failedLoginInfo, false)
 	if err != nil {
 		return err
 	}
@@ -2096,12 +2096,18 @@ func (c *Core) GetUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUs
 }
 
 // UpdateUserFailedLoginInfo updates the failed login information for a user based on alias name and mountAccessor
-func (c *Core) UpdateUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser, failedLoginInfo FailedLoginInfo) error {
-	c.userFailedLoginInfo[userKey] = &failedLoginInfo
-
+func (c *Core) UpdateUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
+	switch deleteEntry {
+	case false:
+		// create or update entry in the map
+		c.userFailedLoginInfo[userKey] = failedLoginInfo
+	default:
+		// delete the entry from the map
+		delete(c.userFailedLoginInfo, userKey)
+	}
 	// check if the update worked
 	failedLoginResp := c.GetUserFailedLoginInfo(ctx, userKey)
-	if failedLoginResp == nil {
+	if (failedLoginResp == nil && !deleteEntry) || (failedLoginResp != nil && deleteEntry) {
 		return fmt.Errorf("failed to update entry in userFailedLoginInfo map")
 	}
 	return nil
