@@ -1,6 +1,13 @@
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
 
+// interface Attribute {
+//   name: string;
+//   options?: {
+//     label?: string;
+//   };
+// }
+
 // TODO: pull this in from route model once it's TS
 interface Args {
   role: {
@@ -16,6 +23,10 @@ export default class DetailsPage extends Component<Args> {
       { label: 'roles', path: 'roles.index' },
       { label: this.args.role.id },
     ];
+  }
+
+  get arrayAttrs() {
+    return ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'];
   }
 
   @action deleteRole() {

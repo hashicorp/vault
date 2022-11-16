@@ -1,7 +1,7 @@
 <PageHeader as |p|>
   <p.top>
     {{! TODO: This should be replaced with HDS::Breadcrumbs }}
-    <nav class="key-value-header breadcrumb" aria-label="breadcrumbs">
+    <nav class="key-value-header breadcrumb" aria-label="breadcrumbs" data-test-breadcrumbs="role-details">
       <ul>
         <li>
           <span class="sep">/</span>
@@ -23,10 +23,10 @@
     </nav>
   </p.top>
   <p.levelLeft>
-    <h1 class="title is-3">
+    <h1 class="title is-3" data-test-role-details-title>
       <Icon @name="file-text" @size="24" class="has-text-grey-light" />
       PKI Role
-      <code>{{@role.id}}</code>
+      <code>{{@role.name}}</code>
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -55,8 +55,26 @@
     {{#each fields as |attr|}}
       {{#let (get @role attr.name) as |val|}}
         {{#if (eq attr.name "issuerRef")}}
-          <InfoTableRow @label="Issuer" @value={{val}} @alwaysRender={{true}}>
+          <InfoTableRow
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{val}}
+            @alwaysRender={{true}}
+          >
             <LinkTo @route="issuers.issuer.details" @model={{val}}>{{val}}</LinkTo>
+          </InfoTableRow>
+        {{else if (includes attr.name this.arrayAttrs)}}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{val}}
+            @alwaysRender={{true}}
+          >
+            {{#if (gt val.length 0)}}
+              {{#each val as |key|}}
+                <span>{{key}},&nbsp;</span>
+              {{/each}}
+            {{else}}
+              None
+            {{/if}}
           </InfoTableRow>
         {{else if (eq attr.name "noStore")}}
           <InfoTableRow
@@ -64,16 +82,6 @@
             @value={{not val}}
             @alwaysRender={{true}}
           />
-        {{else if (and (eq attr.options.editType "stringArray") (gt val.length 0))}}
-          <InfoTableRow
-            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
-            @value={{val}}
-            @alwaysRender={{true}}
-          >
-            {{#each val as |key|}}
-              <span>{{key}},&nbsp;</span>
-            {{/each}}
-          </InfoTableRow>
         {{else}}
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
