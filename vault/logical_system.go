@@ -4837,6 +4837,12 @@ func (b *SystemBackend) handleLoggersRead(ctx context.Context, req *logical.Requ
 
 	for _, logger := range b.Core.allLoggers {
 		loggerName := logger.Name()
+
+		// ignore base logger
+		if loggerName == "" {
+			continue
+		}
+
 		logLevel, err := logging.TranslateLoggerLevel(logger)
 		if err != nil {
 			warnings = append(warnings, fmt.Sprintf("cannot translate level for %q: %s", loggerName, err.Error()))
@@ -4893,6 +4899,9 @@ func (b *SystemBackend) handleLoggersByNameRead(ctx context.Context, req *logica
 	}
 
 	name := nameRaw.(string)
+	if name == "" {
+		return logical.ErrorResponse("name is empty"), nil
+	}
 
 	b.Core.allLoggersLock.RLock()
 	defer b.Core.allLoggersLock.RUnlock()
@@ -4901,13 +4910,20 @@ func (b *SystemBackend) handleLoggersByNameRead(ctx context.Context, req *logica
 	warnings := make([]string, 0)
 
 	for _, logger := range b.Core.allLoggers {
-		if logger.Name() == name {
+		loggerName := logger.Name()
+
+		// ignore base logger
+		if loggerName == "" {
+			continue
+		}
+
+		if loggerName == name {
 			logLevel, err := logging.TranslateLoggerLevel(logger)
 
 			if err != nil {
-				warnings = append(warnings, fmt.Sprintf("cannot translate level for %q: %s", name, err.Error()))
+				warnings = append(warnings, fmt.Sprintf("cannot translate level for %q: %s", loggerName, err.Error()))
 			} else {
-				loggers[name] = logLevel
+				loggers[loggerName] = logLevel
 			}
 
 			break
@@ -4928,6 +4944,11 @@ func (b *SystemBackend) handleLoggersByNameWrite(ctx context.Context, req *logic
 		return logical.ErrorResponse("name is required"), nil
 	}
 
+	name := nameRaw.(string)
+	if name == "" {
+		return logical.ErrorResponse("name is empty"), nil
+	}
+
 	logLevelRaw, logLevelOk := d.GetOk("level")
 
 	if !logLevelOk {
@@ -4944,7 +4965,6 @@ func (b *SystemBackend) handleLoggersByNameWrite(ctx context.Context, req *logic
 		return logical.ErrorResponse(fmt.Sprintf("invalid level provided: %s", err.Error())), nil
 	}
 
-	name := nameRaw.(string)
 	success := b.Core.SetLogLevelByName(name, level)
 	if !success {
 		return logical.ErrorResponse(fmt.Sprintf("logger %q not found", name)), nil
