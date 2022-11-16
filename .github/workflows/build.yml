@@ -31,7 +31,6 @@ jobs:
       vault-base-version: ${{ steps.get-metadata.outputs.vault-base-version }}
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
       - name: Get metadata
         id: get-metadata
         run: |
