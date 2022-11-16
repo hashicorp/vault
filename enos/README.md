@@ -155,7 +155,7 @@ the process of bootstrapping the CI environment.
 These steps should be followed to bootstrap this repo for enos scenario execution:
 
 1. **Setup the root Workspace** - In Terraform Cloud manually create a workspace in the `hashicorp-qti` 
-   organization named `vault-ci-bootstrap`. This workspace will be used as the backend for the 
+   organization named `vault-ci-enos-bootstrap`. This workspace will be used as the backend for the 
    `bootstrap_workspaces` scenario. When creating the workspace choose the execution mode `local`.
 
 
@@ -167,6 +167,7 @@ These steps should be followed to bootstrap this repo for enos scenario executio
 
 ```bash
 > export ENOS_VAR_tfc_api_token=<tfc token>
+> export ENOS_VAR_product_line=<product line [vault|vault_enterprise]> 
 > enos scenaio launch --no-reconfigure bootstrap_workspaces
 ```
 
@@ -175,5 +176,6 @@ These steps should be followed to bootstrap this repo for enos scenario executio
 ```bash
 > export ENOS_VAR_aws_ssh_public_key_path=<path to the enos-ci-ssh-key file from 2>
 > export ENOS_VAR_tfc_api_token=<tfc token>
+> export ENOS_VAR_product_line=<product line [vault|vault_enterprise]> 
 > enos scneario launch --no-configure bootstrap_ci
 ```

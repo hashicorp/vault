@@ -11,7 +11,7 @@ terraform "bootstrap" {
     token        = var.tfc_api_token
 
     workspaces {
-      name = "vault-ci-bootstrap"
+      name = "${var.product_line}-ci-enos-boostrap"
     }
   }
 }
@@ -31,7 +31,7 @@ terraform "us_east_1" {
     token        = var.tfc_api_token
 
     workspaces {
-      name = "enos-ci-bootstrap-us-east-1"
+      name = "${var.product_line}-ci-enos-boostrap-us-east-1"
     }
   }
 }
@@ -51,7 +51,7 @@ terraform "us_east_2" {
     token        = var.tfc_api_token
 
     workspaces {
-      name = "enos-ci-bootstrap-us-east-2"
+      name = "${var.product_line}-ci-enos-boostrap-us-east-2"
     }
   }
 }
@@ -71,7 +71,7 @@ terraform "us_west_1" {
     token        = var.tfc_api_token
 
     workspaces {
-      name = "enos-ci-bootstrap-us-west-1"
+      name = "${var.product_line}-ci-enos-boostrap-us-west-1"
     }
   }
 }
@@ -91,7 +91,7 @@ terraform "us_west_2" {
     token        = var.tfc_api_token
 
     workspaces {
-      name = "enos-ci-bootstrap-us-west-2"
+      name = "${var.product_line}-ci-enos-boostrap-us-west-2"
     }
   }
 }

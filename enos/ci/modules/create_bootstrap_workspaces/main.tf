@@ -22,8 +22,14 @@ variable "organization" {
   type        = string
 }
 
+variable "product_line" {
+  description = "The product line to boostrap enos ci for"
+  type        = string
+  default     = "vault"
+}
+
 locals {
-  workspace_names = toset([for region in var.regions : "enos-ci-bootstrap-${region}"])
+  workspace_names = toset([for region in var.regions : "${var.product_line}-ci-enos-boostrap-${region}"])
 }
 
 resource "tfe_workspace" "ci_bootstrap_workspaces" {

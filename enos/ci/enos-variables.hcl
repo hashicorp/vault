@@ -26,3 +26,9 @@ variable "organization" {
   type        = string
   default     = "hashicorp-qti"
 }
+
+variable "product_line" {
+  description = "The product line to boostrap enos ci for"
+  type        = string
+  default     = "vault"
+}
