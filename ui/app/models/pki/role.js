@@ -29,6 +29,7 @@ export default class PkiRoleModel extends Model {
 
   @attr('string', {
     label: 'Issuer reference',
+    detailsLabel: 'Issuer',
     defaultValue: 'default',
     subText: `Specifies the issuer that will be used to create certificates with this role. To find this, run read -field=default pki_int/config/issuers in the console. By default, we will use the mounts default issuer.`,
   })
@@ -36,6 +37,7 @@ export default class PkiRoleModel extends Model {
 
   @attr({
     label: 'Not valid after',
+    detailsLabel: 'Issued certificates expire after',
     subText:
       'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date. If no TTL is set, the system uses "default" or the value of max_ttl, whichever is shorter. Alternatively, you can set the not_after date below.',
     editType: 'yield',
@@ -44,6 +46,7 @@ export default class PkiRoleModel extends Model {
 
   @attr({
     label: 'Backdate validity',
+    detailsLabel: 'Issued certificate backdating',
     helperTextEnabled:
       'Also called the not_before_duration property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
     editType: 'ttl',
@@ -72,6 +75,7 @@ export default class PkiRoleModel extends Model {
 
   @attr('boolean', {
     label: 'Do not store certificates in storage backend',
+    detailsLabel: 'Store in storage backend', // template reverses value
     subText:
       'This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked.',
     editType: 'boolean',
@@ -81,6 +85,7 @@ export default class PkiRoleModel extends Model {
 
   @attr('boolean', {
     label: 'Basic constraints valid for non-CA',
+    detailsLabel: 'Add basic constraints',
     subText: 'Mark Basic Constraints valid when issuing non-CA certificates.',
     editType: 'boolean',
   })
@@ -232,15 +237,19 @@ export default class PkiRoleModel extends Model {
     defaultValue() {
       return ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'];
     },
+    defaultShown: 'None',
   })
   keyUsage;
 
   @attr('array', {
-    defaultValue() {
-      return [];
-    },
+    defaultShown: 'None',
   })
   extKeyUsage;
+
+  @attr('array', {
+    defaultShown: 'None',
+  })
+  extKeyUsageOids;
 
   @attr({ hideFormSection: true }) organization;
   @attr({ hideFormSection: true }) country;
@@ -333,7 +342,7 @@ export default class PkiRoleModel extends Model {
           'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
         },
         {
-          'Key usage': ['keyUsage', 'extKeyUsage'],
+          'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
         },
         { 'Policy identifiers': ['policyIdentifiers'] },
         {

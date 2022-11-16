@@ -55,16 +55,18 @@
     {{#each fields as |attr|}}
       {{#let (get @role attr.name) as |val|}}
         {{#if (eq attr.name "issuerRef")}}
-          <InfoTableRow
-            @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-            @value={{val}}
-            @alwaysRender={{true}}
-          >
+          <InfoTableRow @label="Issuer" @value={{val}} @alwaysRender={{true}}>
             <LinkTo @route="issuers.issuer.details" @model={{val}}>{{val}}</LinkTo>
           </InfoTableRow>
-        {{else if (or (eq attr.name "keyUsage") (eq attr.name "extKeyUsage"))}}
+        {{else if (eq attr.name "noStore")}}
           <InfoTableRow
-            @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{not val}}
+            @alwaysRender={{true}}
+          />
+        {{else if (and (eq attr.options.editType "stringArray") (gt val.length 0))}}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
             @value={{val}}
             @alwaysRender={{true}}
           >
@@ -74,7 +76,7 @@
           </InfoTableRow>
         {{else}}
           <InfoTableRow
-            @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
             @value={{val}}
             @alwaysRender={{true}}
             @formatDate={{eq attr.name "customTtl"}}
