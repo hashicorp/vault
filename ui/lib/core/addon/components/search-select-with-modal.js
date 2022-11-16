@@ -18,6 +18,8 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  *   @subText="Search for an existing assignment, or type a new name to create it."
  *   @inputValue={{map-by "id" @model.assignments}}
  *   @onChange={{this.handleSearchSelect}}
+ *   @onCreate={{this.createFormModel}}
+ *   @formModel={{this.modelFromParent}}
  *   {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
  *   @excludeOptions={{array "allow_all"}}
  *   @fallbackComponent="string-list"
@@ -197,7 +199,7 @@ export default class SearchSelectWithModal extends Component {
       this.showModal = true;
       this.args.onCreate({ name });
       // if firing onCreate does not generate a formModel, then pass name to form component
-      // where `onCreate` is fired by user interaction (ex: selecting a policy type)
+      // where `onCreate` is fired again after more user interaction (ex: selecting a policy type)
       if (!this.args.formModel) this.nameInput = name;
     } else {
       // user has selected an existing item, handleChange immediately
