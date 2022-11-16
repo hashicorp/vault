@@ -32,8 +32,7 @@ export default buildRoutes(function () {
   });
   this.route('certificates', function () {
     this.route('index', { path: '/' });
-    this.route('create');
-    this.route('certificate', { path: '/:id' }, function () {
+    this.route('certificate', { path: '/:serial' }, function () {
       this.route('details');
       this.route('edit');
     });
@@ -42,7 +41,7 @@ export default buildRoutes(function () {
     this.route('index', { path: '/' });
     this.route('create');
     this.route('import');
-    this.route('key', { path: '/:name' }, function () {
+    this.route('key', { path: '/:key_ref' }, function () {
       this.route('details');
       this.route('edit');
     });
