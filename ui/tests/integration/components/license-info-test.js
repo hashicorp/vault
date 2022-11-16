@@ -29,7 +29,7 @@ module('Integration | Component | license info', function (hooks) {
       'Shows License ID, Valid from, and License State rows'
     );
     assert.strictEqual(component.featureRows.length, FEATURES.length, 'it renders all of the features');
-    let activeFeatures = component.featureRows.filter((f) => f.featureStatus === 'Active');
+    const activeFeatures = component.featureRows.filter((f) => f.featureStatus === 'Active');
     assert.strictEqual(activeFeatures.length, 2, 'Has two features listed as active');
   });
 
@@ -49,7 +49,7 @@ module('Integration | Component | license info', function (hooks) {
         @autoloaded={{true}}
       />`
     );
-    let row = component.detailRows.filterBy('rowName', 'License state')[0];
+    const row = component.detailRows.filterBy('rowName', 'License state')[0];
     assert.strictEqual(row.rowValue, 'Autoloaded', 'Shows autoloaded status');
   });
 
@@ -65,7 +65,7 @@ module('Integration | Component | license info', function (hooks) {
       hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}} @model={{this.model}}/>`
     );
 
-    let row = component.featureRows.filterBy('featureName', 'Performance Standby')[0];
+    const row = component.featureRows.filterBy('featureName', 'Performance Standby')[0];
     assert.strictEqual(
       row.featureStatus,
       'Not Active',
@@ -91,7 +91,7 @@ module('Integration | Component | license info', function (hooks) {
       />`
     );
 
-    let row = component.featureRows.filterBy('featureName', 'Performance Standby')[0];
+    const row = component.featureRows.filterBy('featureName', 'Performance Standby')[0];
     assert.strictEqual(
       row.featureStatus,
       'Active — 4 standby nodes allotted',

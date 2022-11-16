@@ -7,10 +7,10 @@ export default class MonthlySerializer extends ApplicationSerializer {
     if (payload.id === 'no-data') {
       return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
     }
-    let response_timestamp = formatISO(new Date());
+    const response_timestamp = formatISO(new Date());
     // TODO CMB: the following is assumed, need to confirm
     // the months array will always include a single object: a timestamp of the current month and new/total count data, if available
-    let transformedPayload = {
+    const transformedPayload = {
       ...payload,
       response_timestamp,
       by_namespace: formatByNamespace(payload.data.by_namespace),

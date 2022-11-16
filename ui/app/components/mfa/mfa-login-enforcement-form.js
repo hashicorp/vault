@@ -56,7 +56,7 @@ export default class MfaLoginEnforcementForm extends Component {
   }
 
   async flattenTargets() {
-    for (let { label, key } of this.targetTypes) {
+    for (const { label, key } of this.targetTypes) {
       const targetArray = await this.args.model[key];
       const targets = targetArray.map((value) => ({ label, key, value }));
       this.targets.addObjects(targets);

@@ -43,7 +43,7 @@ jobs:
         id: enos-matrix
         run: |
           [[ ${{ env.ARTIFACT_NAME }} == *"ent"* ]] && scenarioFile=$(cat ./.github/enos-run-matrices/${{ env.ARTIFACT_SOURCE }}-ent.json |jq -c .) || scenarioFile=$(cat ./.github/enos-run-matrices/${{ env.ARTIFACT_SOURCE }}-oss.json |jq -c .)
-          echo "::set-output name=matrix::$scenarioFile"
+          echo "matrix=$scenarioFile" >> $GITHUB_OUTPUT
   # Run Integration tests on Enos scenario matrix
   enos:
     name: Integration

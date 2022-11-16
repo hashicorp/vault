@@ -61,7 +61,7 @@ func TestOcsp_UnknownIssuerWithNoDefault(t *testing.T) {
 
 	_, _, testEnv := setupOcspEnv(t, "ec")
 	// Create another completely empty mount so the created issuer/certificate above is unknown
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := sendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
 	require.NoError(t, err)
@@ -510,7 +510,7 @@ func setupOcspEnv(t *testing.T, keyType string) (*backend, logical.Storage, *ocs
 }
 
 func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, caKeySigBits int) (*backend, logical.Storage, *ocspTestEnv) {
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	var issuerCerts []*x509.Certificate
 	var leafCerts []*x509.Certificate
 	var issuerIds []issuerID

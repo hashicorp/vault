@@ -15,9 +15,9 @@ module('Integration | Component | wrap ttl', function (hooks) {
   });
 
   test('it requires `onChange`', async function (assert) {
-    let promise = waitForError();
+    const promise = waitForError();
     render(hbs`{{wrap-ttl}}`);
-    let err = await promise;
+    const err = await promise;
     assert.ok(err.message.includes('`onChange` handler is a required attr in'), 'asserts without onChange');
   });
 

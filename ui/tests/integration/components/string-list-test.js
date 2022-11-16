@@ -136,7 +136,7 @@ module('Integration | Component | string list', function (hooks) {
   test('it replaces helpText if name is tokenBoundCidrs', async function (assert) {
     assert.expect(1);
     await render(hbs`<StringList @label={{'blah'}} @helpText={{'blah'}} @attrName={{'tokenBoundCidrs'}} />`);
-    let tooltipTrigger = document.querySelector('[data-test-tool-tip-trigger]');
+    const tooltipTrigger = document.querySelector('[data-test-tool-tip-trigger]');
     await triggerEvent(tooltipTrigger, 'mouseenter');
     assert
       .dom('[data-test-info-tooltip-content]')

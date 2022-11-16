@@ -4,9 +4,9 @@
     <p data-test-link-status>
       {{#if (eq this.state "connected")}}
         This self-managed Vault is linked to
-        <a href="https://portal.cloud.hashicorp.com/sign-in" target="_blank" rel="noopener noreferrer">
+        <ExternalLink @href="https://portal.cloud.hashicorp.com/sign-in">
           HCP.
-        </a>
+        </ExternalLink>
       {{else}}
         There was an error connecting to HCP. Click
         <button type="button" class="text-button is-underline" {{on "click" (fn (mut this.showModal))}}>

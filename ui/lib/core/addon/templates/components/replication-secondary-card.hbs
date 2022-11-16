@@ -85,10 +85,10 @@
     </div>
     {{#if (and this.primaryUiUrl this.knownPrimaryClusterAddrs)}}
       <div class="grid-item-top-right">
-        <a href={{concat this.primaryUiUrl "/ui/"}} class="toolbar-link" data-test-primary-link>
+        <ExternalLink @href={{concat this.primaryUiUrl "/ui/"}} class="toolbar-link" data-test-primary-link>
           View primary cluster
           <Icon @name="chevron-right" />
-        </a>
+        </ExternalLink>
       </div>
     {{/if}}
     <div class="grid-item-second-row">

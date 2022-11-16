@@ -18,7 +18,7 @@ export const validationHandler = (schema, req) => {
       return new Response(404, {}, { errors: ['MFA Request ID not found'] });
     }
     // validate request body
-    for (let constraintId in mfa_payload) {
+    for (const constraintId in mfa_payload) {
       // ensure ids were passed in map
       const method = mfaRequest.methods.find(({ id }) => id === constraintId);
       if (!method) {

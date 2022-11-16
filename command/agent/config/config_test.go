@@ -230,6 +230,7 @@ func TestLoadConfigFile(t *testing.T) {
 				NumRetries: 12,
 			},
 		},
+		LogFile: "/var/log/vault/vault-agent.log",
 	}
 
 	config.Prune()

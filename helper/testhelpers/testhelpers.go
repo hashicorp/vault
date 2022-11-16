@@ -954,10 +954,10 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 	// Configure a default TOTP method
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  5,
+		"period":                  20,
 		"algorithm":               "SHA256",
 		"digits":                  6,
-		"skew":                    0,
+		"skew":                    1,
 		"key_size":                20,
 		"qr_size":                 200,
 		"max_validation_attempts": 5,

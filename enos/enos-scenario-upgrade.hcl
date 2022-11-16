@@ -39,13 +39,14 @@ scenario "upgrade" {
       arm64 = "t4g.small"
     }
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
+    vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
   }
 
   step "build_vault" {
     module = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags            = try(var.vault_local_build_tags, local.build_tags[matrix.edition])
+      build_tags            = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
       bundle_path           = local.bundle_path
       goarch                = matrix.arch
       goos                  = "linux"
@@ -78,7 +79,7 @@ scenario "upgrade" {
     module = module.create_vpc
 
     variables {
-      ami_architectures  = [matrix.arch]
+      ami_architectures  = distinct([matrix.arch, "amd64"])
       availability_zones = step.find_azs.availability_zones
       common_tags        = local.tags
     }
@@ -89,7 +90,7 @@ scenario "upgrade" {
     module    = module.read_license
 
     variables {
-      file_name = abspath(joinpath(path.root, "./support/vault.hclic"))
+      file_name = local.vault_license_path
     }
   }
 
@@ -107,7 +108,7 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id      = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      ami_id      = step.create_vpc.ami_ids["ubuntu"]["amd64"]
       common_tags = local.tags
       consul_release = {
         edition = var.backend_edition

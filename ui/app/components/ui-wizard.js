@@ -23,8 +23,8 @@ export default Component.extend({
     },
 
     advanceWizard() {
-      let inInit = matchesState('init', this.wizard.currentState);
-      let event = inInit ? this.wizard.initEvent || 'CONTINUE' : 'CONTINUE';
+      const inInit = matchesState('init', this.wizard.currentState);
+      const event = inInit ? this.wizard.initEvent || 'CONTINUE' : 'CONTINUE';
       this.wizard.transitionTutorialMachine(this.currentState, event);
     },
 

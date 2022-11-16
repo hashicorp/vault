@@ -78,7 +78,7 @@ export default Model.extend({
         Advanced: ['generateLease', 'noStore', 'basicConstraintsValidForNonCa', 'policyIdentifiers'],
       },
     ];
-    let excludedFields = ['extKeyUsage'];
+    const excludedFields = ['extKeyUsage'];
     if (this.newFields) {
       groups = combineFieldGroups(groups, this.newFields, excludedFields);
     }

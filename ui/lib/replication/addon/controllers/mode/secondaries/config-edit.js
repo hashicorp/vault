@@ -20,7 +20,7 @@ export default Controller.extend({
 
     saveConfig(config) {
       // if the mode is null, we want no filtering, so we should delete any existing config
-      let isDelete = config.mode === null;
+      const isDelete = config.mode === null;
       const flash = this.flashMessages;
       const id = config.id;
       const redirectArgs = isDelete

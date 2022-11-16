@@ -19,9 +19,9 @@ module('Unit | Adapter | identity/entity-alias', function (hooks) {
   cases.forEach((testCase) => {
     test(`entity-alias#${testCase.adapterMethod}`, function (assert) {
       assert.expect(2);
-      let adapter = this.owner.lookup('adapter:identity/entity-alias');
+      const adapter = this.owner.lookup('adapter:identity/entity-alias');
       adapter[testCase.adapterMethod](...testCase.args);
-      let { url, method } = this.server.handledRequests[0];
+      const { url, method } = this.server.handledRequests[0];
       assert.strictEqual(
         url,
         testCase.url,
