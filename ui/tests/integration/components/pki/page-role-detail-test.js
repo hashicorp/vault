@@ -36,7 +36,7 @@ module('Integration | Component | pki/role detail page', function (hooks) {
     assert.dom(SELECTORS.keyUsageValue).hasText('None', 'Key usage shows none when array is empty');
     assert
       .dom(SELECTORS.extKeyUsageValue)
-      .hasText('bar, baz', 'Key usage shows comma-joined values when array has items');
+      .containsText('bar, baz', 'Key usage shows comma-joined values when array has items');
     assert.dom(SELECTORS.noStoreValue).containsText('Yes', 'noStore shows opposite of what the value is');
   });
 });
