@@ -50,7 +50,7 @@ EKM provider to use it.
 1. Retrieve the AppRole ID and secret ID for use later when configuring SQL Server:
 
     ```bash
-    vault read auth/approle/role/tde-role/role-id
+    vault read auth/approle/role/ekm-encryption-key-role/role-id
     vault write -f auth/approle/role/tde-role/secret-id
     ```
 
