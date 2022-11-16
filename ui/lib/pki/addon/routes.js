@@ -21,6 +21,8 @@ export default buildRoutes(function () {
   });
   this.route('issuers', function () {
     this.route('index', { path: '/' });
+    this.route('generate-root');
+    this.route('generate-intermediate');
     this.route('issuer', { path: '/:issuer_ref' }, function () {
       this.route('details');
       this.route('edit');
