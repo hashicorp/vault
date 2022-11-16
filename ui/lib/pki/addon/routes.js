@@ -40,9 +40,9 @@ export default buildRoutes(function () {
   });
   this.route('keys', function () {
     this.route('index', { path: '/' });
-    this.route('generate');
+    this.route('create');
     this.route('import');
-    this.route('key', { path: '/:id' }, function () {
+    this.route('key', { path: '/:name' }, function () {
       this.route('details');
       this.route('edit');
     });
