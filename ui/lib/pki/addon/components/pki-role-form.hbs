@@ -47,9 +47,9 @@
             </FormField>
           {{/each}}
         {{else if (eq group "Key usage")}}
-          <KeyUsage @model={{@model}} @group={{group}} />
+          <PkiKeyUsage @model={{@model}} @group={{group}} />
         {{else if (eq group "Key parameters")}}
-          <KeyParameters @model={{@model}} @group={{group}} />
+          <PkiKeyParameters @model={{@model}} @group={{group}} />
         {{else}}
           {{! Groups hidden behind Toggles }}
           {{#let (camelize (concat "show" group)) as |prop|}}
