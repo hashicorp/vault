@@ -212,16 +212,22 @@ func (r *registry) Keys(pluginType consts.PluginType) []string {
 	var keys []string
 	switch pluginType {
 	case consts.PluginTypeDatabase:
-		for key := range r.databasePlugins {
-			keys = append(keys, key)
+		for key, backend := range r.databasePlugins {
+			if backend.DeprecationStatus != consts.Removed {
+				keys = append(keys, key)
+			}
 		}
 	case consts.PluginTypeCredential:
-		for key := range r.credentialBackends {
-			keys = append(keys, key)
+		for key, backend := range r.credentialBackends {
+			if backend.DeprecationStatus != consts.Removed {
+				keys = append(keys, key)
+			}
 		}
 	case consts.PluginTypeSecrets:
-		for key := range r.logicalBackends {
-			keys = append(keys, key)
+		for key, backend := range r.logicalBackends {
+			if backend.DeprecationStatus != consts.Removed {
+				keys = append(keys, key)
+			}
 		}
 	}
 	return keys
