@@ -4,6 +4,8 @@ export default buildRoutes(function () {
   this.route('overview');
   this.route('configuration', function () {
     this.route('tidy');
+    this.route('generate');
+    this.route('import');
     this.route('create');
     this.route('edit');
   });
@@ -17,9 +19,11 @@ export default buildRoutes(function () {
   });
   this.route('issuers', function () {
     this.route('index', { path: '/' });
-    this.route('issuer', { path: '/:id' }, function () {
+    this.route('issuer', { path: '/:issuer_ref' }, function () {
       this.route('details');
       this.route('edit');
+      this.route('sign');
+      this.route('cross-sign');
     });
   });
   this.route('certificates', function () {

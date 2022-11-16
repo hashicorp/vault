@@ -10,7 +10,7 @@
 />
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @route="configuration.create.import-ca">
+    <ToolbarLink @route="configuration.import">
       Import
     </ToolbarLink>
     <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
@@ -22,12 +22,12 @@
         <nav class="box menu" aria-label="generate options">
           <ul class="menu-list">
             <li class="action">
-              <LinkTo @route="configuration.create.generate-root" {{on "click" (fn this.onLinkClick D)}}>
+              <LinkTo @route="configuration.generate" {{on "click" (fn this.onLinkClick D)}}>
                 Root
               </LinkTo>
             </li>
             <li class="action">
-              <LinkTo @route="configuration.create.generate-csr" {{on "click" (fn this.onLinkClick D)}}>
+              <LinkTo @route="configuration.generate" {{on "click" (fn this.onLinkClick D)}}>
                 Intermediate CSR
               </LinkTo>
             </li>
