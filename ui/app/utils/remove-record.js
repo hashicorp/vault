@@ -1,7 +1,7 @@
 // Unlinks a record from all its relationships and unloads it from
 // the store.
 export default function removeRecord(store, record) {
-  let id = record.path || record.id;
+  const id = record.path || record.id;
   if (id) {
     // Collect relationship property names and types
     const relationshipMeta = [];

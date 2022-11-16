@@ -16,7 +16,7 @@ export default Route.extend({
 
   setupController(controller) {
     this._super(...arguments);
-    let { scope_name: scope, role_name: role } = this.paramsFor('credentials');
+    const { scope_name: scope, role_name: role } = this.paramsFor('credentials');
     controller.setProperties({ role, scope });
   },
 });

@@ -14,14 +14,14 @@ module('Acceptance | engine/disable', function (hooks) {
 
   test('disable engine', async function (assert) {
     // first mount an engine so we can disable it.
-    let enginePath = `alicloud-${new Date().getTime()}`;
+    const enginePath = `alicloud-${new Date().getTime()}`;
     await mountSecrets.enable('alicloud', enginePath);
     await settled();
     assert.ok(backendsPage.rows.filterBy('path', `${enginePath}/`)[0], 'shows the mounted engine');
 
     await backendsPage.visit();
     await settled();
-    let row = backendsPage.rows.filterBy('path', `${enginePath}/`)[0];
+    const row = backendsPage.rows.filterBy('path', `${enginePath}/`)[0];
     await row.menu();
     await settled();
     await backendsPage.disableButton();

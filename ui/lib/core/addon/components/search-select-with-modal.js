@@ -80,7 +80,7 @@ export default class SearchSelectWithModal extends Component {
     // inputValues are initially an array of strings from @inputValue
     // map over so selectedOptions are objects
     return inputValues.map((option) => {
-      let matchingOption = this.dropdownOptions.findBy('id', option);
+      const matchingOption = this.dropdownOptions.findBy('id', option);
       // remove any matches from dropdown list
       this.dropdownOptions.removeObject(matchingOption);
       return {
@@ -98,9 +98,9 @@ export default class SearchSelectWithModal extends Component {
       return;
     }
 
-    for (let modelType of this.args.models) {
+    for (const modelType of this.args.models) {
       try {
-        let queryParams = {};
+        const queryParams = {};
         // fetch options from the store
         let options = yield this.store.query(modelType, queryParams);
         if (this.args.excludeOptions) {
@@ -142,7 +142,7 @@ export default class SearchSelectWithModal extends Component {
     if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
       return !searchResults.some((group) => group.options.findBy('id', id));
     }
-    let existingOption =
+    const existingOption =
       this.dropdownOptions &&
       (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
     return !existingOption;

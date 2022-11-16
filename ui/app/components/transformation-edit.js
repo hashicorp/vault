@@ -67,7 +67,7 @@ export default TransformBase.extend({
     const promises = updateRoles.map((r) => this.updateOrCreateRole(r, transformationId, backend));
 
     Promise.all(promises).then((results) => {
-      let hasError = results.find((role) => !!role.errorStatus);
+      const hasError = results.find((role) => !!role.errorStatus);
 
       if (hasError) {
         let message =

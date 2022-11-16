@@ -43,7 +43,7 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
     assert.dom('[data-test-managed-namespace-root]').hasText('/admin', 'Shows /admin namespace prefix');
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Default)');
     await fillIn('input#namespace', '/foo');
-    let encodedNamespace = encodeURIComponent('admin/foo');
+    const encodedNamespace = encodeURIComponent('admin/foo');
     assert.strictEqual(
       currentURL(),
       `/vault/auth?namespace=${encodedNamespace}&with=token`,

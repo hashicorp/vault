@@ -107,7 +107,7 @@ export default Component.extend({
       return;
     }
     if (isSummaryDashboard) {
-      let combinedObject = {};
+      const combinedObject = {};
       combinedObject.dr = model['dr'];
       combinedObject.performance = model['performance'];
       return combinedObject;

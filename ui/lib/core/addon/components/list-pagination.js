@@ -25,7 +25,7 @@ export default Component.extend({
     const { spread, page, lastPage } = this;
 
     let lower = Math.max(2, page - spread);
-    let upper = Math.min(lastPage - 1, lower + spread * 2);
+    const upper = Math.min(lastPage - 1, lower + spread * 2);
     // we're closer to lastPage than the spread
     if (upper - lower < 5) {
       lower = upper - 4;

@@ -136,20 +136,20 @@ export default class FormFieldComponent extends Component {
   }
   @action
   setAndBroadcastBool(trueVal, falseVal, event) {
-    let valueToSet = event.target.checked === true ? trueVal : falseVal;
+    const valueToSet = event.target.checked === true ? trueVal : falseVal;
     this.setAndBroadcast(valueToSet);
   }
   @action
   setAndBroadcastTtl(value) {
     const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
-    let valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
+    const valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
     this.setAndBroadcast(`${valueToSet}`);
   }
   @action
   codemirrorUpdated(isString, value, codemirror) {
     codemirror.performLint();
     const hasErrors = codemirror.state.lint.marked.length > 0;
-    let valToSet = isString ? value : JSON.parse(value);
+    const valToSet = isString ? value : JSON.parse(value);
 
     if (!hasErrors) {
       this.args.model.set(this.valuePath, valToSet);

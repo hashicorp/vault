@@ -24,7 +24,7 @@ export default Component.extend({
   needsEncryption: equal('mountSubtype', 'transit'),
   stepComponent: alias('wizard.stepComponent'),
   detailsComponent: computed('currentMachine', 'mountSubtype', function () {
-    let suffix = this.currentMachine === 'secrets' ? 'engine' : 'method';
+    const suffix = this.currentMachine === 'secrets' ? 'engine' : 'method';
     return this.mountSubtype ? `wizard/${this.mountSubtype}-${suffix}` : null;
   }),
   isSupported: computed('currentMachine', 'mountSubtype', function () {

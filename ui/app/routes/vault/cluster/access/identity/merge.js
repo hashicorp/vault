@@ -6,14 +6,14 @@ export default Route.extend(UnloadModelRoute, {
   store: service(),
 
   beforeModel() {
-    let itemType = this.modelFor('vault.cluster.access.identity');
+    const itemType = this.modelFor('vault.cluster.access.identity');
     if (itemType !== 'entity') {
       return this.transitionTo('vault.cluster.access.identity');
     }
   },
 
   model() {
-    let modelType = `identity/entity-merge`;
+    const modelType = `identity/entity-merge`;
     return this.store.createRecord(modelType);
   },
 });

@@ -126,7 +126,7 @@ export function withModelValidations(validations) {
       generateErrorCountMessage(errorCount) {
         if (errorCount < 1) return null;
         // returns count specific message: 'There is an error/are N errors with this form.'
-        let isPlural = errorCount > 1 ? `are ${errorCount} errors` : false;
+        const isPlural = errorCount > 1 ? `are ${errorCount} errors` : false;
         return `There ${isPlural ? isPlural : 'is an error'} with this form.`;
       }
     };

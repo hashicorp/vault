@@ -51,6 +51,20 @@ module "read_license" {
   source = "./modules/read_license"
 }
 
+module "vault_agent" {
+  source = "./modules/vault_agent"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+
+module "vault_verify_agent_output" {
+  source = "./modules/vault_verify_agent_output"
+
+  vault_instance_count = var.vault_instance_count
+}
+
 module "vault_cluster" {
   source = "app.terraform.io/hashicorp-qti/aws-vault/enos"
   # source = "../../terraform-enos-aws-vault"

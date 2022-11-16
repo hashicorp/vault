@@ -6,7 +6,7 @@ import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
 
-let Model = IdentityModel.extend({
+const Model = IdentityModel.extend({
   formFields: computed(function () {
     return ['name', 'disabled', 'policies', 'metadata'];
   }),

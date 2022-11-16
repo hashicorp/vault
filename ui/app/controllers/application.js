@@ -8,7 +8,7 @@ export default Controller.extend({
   auth: service(),
   store: service(),
   activeCluster: computed('auth.activeCluster', function () {
-    let id = this.auth.activeCluster;
+    const id = this.auth.activeCluster;
     return id ? this.store.peekRecord('cluster', id) : null;
   }),
   activeClusterName: computed('activeCluster', function () {

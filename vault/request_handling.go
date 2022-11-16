@@ -1815,6 +1815,23 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 	return nil
 }
 
+// GetUserFailedLoginInfo gets the failed login information for a user based on alias name and mountAccessor
+func (c *Core) GetUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser) *FailedLoginInfo {
+	return c.userFailedLoginInfo[userKey]
+}
+
+// UpdateUserFailedLoginInfo updates the failed login information for a user based on alias name and mountAccessor
+func (c *Core) UpdateUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser, failedLoginInfo FailedLoginInfo) error {
+	c.userFailedLoginInfo[userKey] = &failedLoginInfo
+
+	// check if the update worked
+	failedLoginResp := c.GetUserFailedLoginInfo(ctx, userKey)
+	if failedLoginResp == nil {
+		return fmt.Errorf("failed to update entry in userFailedLoginInfo map")
+	}
+	return nil
+}
+
 // PopulateTokenEntry looks up req.ClientToken in the token store and uses
 // it to set other fields in req.  Does nothing if ClientToken is empty
 // or a JWT token, or for service tokens that don't exist in the token store.

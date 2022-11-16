@@ -253,7 +253,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	// RevocationSigAlg unconditionally on roots now.
 	myIssuer.RevocationSigAlg = parsedBundle.Certificate.SignatureAlgorithm
 	if err := sc.writeIssuer(myIssuer); err != nil {
-		return nil, fmt.Errorf("unable to store PSS-updated issuer: %v", err)
+		return nil, fmt.Errorf("unable to store PSS-updated issuer: %w", err)
 	}
 
 	// Also store it as just the certificate identified by serial number, so it
@@ -277,6 +277,16 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
 		resp.AddWarning("Max path length of the generated certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
+	}
+
+	// Check whether we need to update our default issuer configuration.
+	config, err := sc.getIssuersConfig()
+	if err != nil {
+		resp.AddWarning("Unable to fetch default issuers configuration to update default issuer if necessary: " + err.Error())
+	} else if config.DefaultFollowsLatestIssuer {
+		if err := sc.updateDefaultIssuerId(myIssuer.ID); err != nil {
+			resp.AddWarning("Unable to update this new root as the default issuer: " + err.Error())
+		}
 	}
 
 	resp = addWarnings(resp, warnings)

@@ -289,6 +289,35 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	if !resp.Data["valid"].(bool) {
 		t.Fatalf("failed to verify the RSA signature")
 	}
+
+	// Take a random hash and sign it using PKCSv1_5_NoOID.
+	hash := "P8m2iUWdc4+MiKOkiqnjNUIBa3pAUuABqqU2/KdIE8s="
+	signReq.Data = map[string]interface{}{
+		"input":               hash,
+		"hash_algorithm":      "none",
+		"signature_algorithm": "pkcs1v15",
+		"prehashed":           true,
+	}
+	resp, err = b.HandleRequest(context.Background(), signReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	signature = resp.Data["signature"].(string)
+
+	verifyReq.Data = map[string]interface{}{
+		"input":               hash,
+		"signature":           signature,
+		"hash_algorithm":      "none",
+		"signature_algorithm": "pkcs1v15",
+		"prehashed":           true,
+	}
+	resp, err = b.HandleRequest(context.Background(), verifyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if !resp.Data["valid"].(bool) {
+		t.Fatalf("failed to verify the RSA signature")
+	}
 }
 
 func TestBackend_basic(t *testing.T) {
