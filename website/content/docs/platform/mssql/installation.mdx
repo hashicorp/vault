@@ -51,7 +51,7 @@ EKM provider to use it.
 
     ```bash
     vault read auth/approle/role/ekm-encryption-key-role/role-id
-    vault write -f auth/approle/role/tde-role/secret-id
+    vault write -f auth/approle/role/ekm-encryption-key-role/secret-id
     ```
 
 1. Enable the transit secret engine and create a key:
