@@ -12,9 +12,11 @@ export default buildRoutes(function () {
   this.route('roles', function () {
     this.route('index', { path: '/' });
     this.route('create');
-    this.route('role', { path: '/:id' }, function () {
+    this.route('role', { path: '/:role' }, function () {
       this.route('details');
       this.route('edit');
+      this.route('generate');
+      this.route('sign');
     });
   });
   this.route('issuers', function () {
