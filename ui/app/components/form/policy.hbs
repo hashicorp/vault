@@ -1,4 +1,4 @@
-<form {{on "submit" (perform this.save)}}>
+<form {{on "submit" (perform this.save)}} data-test-policy-form>
   <div class="box is-bottomless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} />
     <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
@@ -31,7 +31,7 @@
                 class="switch is-rounded is-success is-small"
                 @checked={{this.showFileUpload}}
                 {{on "change" (fn (mut this.showFileUpload) (not this.showFileUpload))}}
-                data-test-policy-edit-toggle={{true}}
+                data-test-policy-edit-toggle
               />
               <label for="fileUploadToggle">Upload file</label>
             </div>
@@ -48,6 +48,7 @@
             @valueUpdated={{action (mut @model.policy)}}
             @mode="ruby"
             @extraKeys={{hash Shift-Enter=(perform this.save)}}
+            data-test-policy-editor
           />
         {{/if}}
       {{else}}
@@ -59,6 +60,7 @@
           @valueUpdated={{action (mut @model.policy)}}
           @mode="ruby"
           @extraKeys={{hash Shift-Enter=(perform this.save)}}
+          data-test-policy-editor
         />
       {{/if}}
     </div>
@@ -66,7 +68,23 @@
       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
     {{/each}}
   </div>
-  {{yield}}
+  <div class="has-bottom-margin-m">
+    <p>
+      More information about
+      {{uppercase @model.policyType}}
+      policies can be found
+      <DocLink
+        @host="https://developer.hashicorp.com"
+        @path={{if
+          (eq @model.policyType "acl")
+          "/vault/docs/concepts/policies#capabilities"
+          "/vault/tutorials/policies/sentinel#role-governing-policies-rgps"
+        }}
+      >
+        here.
+      </DocLink>
+    </p>
+  </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
       <button
@@ -77,7 +95,13 @@
       >
         {{if @model.isNew "Create policy" "Save"}}
       </button>
-      <button type="button" class="button has-left-margin-s" disabled={{this.save.isRunning}} {{on "click" this.cancel}}>
+      <button
+        type="button"
+        class="button has-left-margin-s"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.cancel}}
+        data-test-policy-cancel
+      >
         Cancel
       </button>
     </div>
