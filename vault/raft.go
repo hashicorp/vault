@@ -1141,7 +1141,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case raftInfo := <-challengeCh: // channel returns nil on function error
+			case raftInfo := <-challengeCh:
 				if raftInfo != nil {
 					err = answerChallenge(ctx, raftInfo)
 					if err == nil {
