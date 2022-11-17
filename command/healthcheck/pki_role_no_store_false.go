@@ -144,7 +144,7 @@ func (h *RoleNoStoreFalse) Evaluate(e *Executor) (results []*Result, err error) 
 
 		if crlAutoRebuild {
 			ret.Status = ResultInformational
-			ret.Message = "Role currently stores every issued certificate (no_store=false). Too many issued and/or revoked certificates can exceed Vault's storage limits and make operations slow. It is encouraged to enable auto-rebuild of CRLs to prevent every revocation from creating a new CRL, and to limit the number of certificates issued under roles with no_store=false: use shorter lifetimes and/or BYOC revocation instead."
+			ret.Message = "Role currently stores every issued certificate (no_store=false). With auto-rebuild CRL enabled, less performance impact occur on CRL rebuilding, but note that too many issued and/or revoked certificates can exceed Vault's storage limits and make operations slow. It is suggested to limit the number of certificates issued under roles with no_store=false: use shorter lifetimes to avoid revocation and/or BYOC revocation instead."
 		}
 
 		results = append(results, &ret)
