@@ -5,6 +5,13 @@ import { inject as service } from '@ember/service';
 
 export default Route.extend(UnloadModelRoute, {
   store: service(),
+  wizard: service(),
+
+  activate() {
+    if (this.wizard.featureState === 'create') {
+      this.wizard.transitionFeatureMachine('create', 'CONTINUE', this.policyType);
+    }
+  },
 
   beforeModel() {
     const params = this.paramsFor(this.routeName);
