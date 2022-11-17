@@ -5,7 +5,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/page-role-details';
 
-module('Integration | Component | pki/role detail page', function (hooks) {
+module('Integration | Component | pki role details page', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
@@ -24,7 +24,7 @@ module('Integration | Component | pki/role detail page', function (hooks) {
     assert.expect(7);
     await render(
       hbs`
-      <Page::Roles::Role::DetailsPage @role={{this.model}} />
+      <PkiRoleDetailsPage @role={{this.model}} />
   `,
       { owner: this.engine }
     );
