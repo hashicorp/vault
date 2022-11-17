@@ -6,7 +6,8 @@ on:
 
 jobs:
   scan:
-    runs-on: ['custom-linux-xl']
+    runs-on:
+      labels: custom-linux-xl
     if: ${{ github.actor != 'dependabot[bot]' }}
     steps:
     - uses: actions/checkout@v3
