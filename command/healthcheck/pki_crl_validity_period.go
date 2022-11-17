@@ -73,7 +73,7 @@ func (h *CRLValidityPeriod) FetchResources(e *Executor) error {
 	exit, _, issuers, err := pkiFetchIssuers(e, func() {
 		h.UnsupportedVersion = true
 	})
-	if exit {
+	if exit || err != nil {
 		return err
 	}
 
@@ -81,7 +81,7 @@ func (h *CRLValidityPeriod) FetchResources(e *Executor) error {
 		exit, _, crl, err := pkiFetchIssuerCRL(e, issuer, false, func() {
 			h.UnsupportedVersion = true
 		})
-		if exit {
+		if exit || err != nil {
 			if err != nil {
 				return err
 			}
@@ -93,7 +93,7 @@ func (h *CRLValidityPeriod) FetchResources(e *Executor) error {
 		exit, _, delta, err := pkiFetchIssuerCRL(e, issuer, true, func() {
 			h.NoDeltas = true
 		})
-		if exit {
+		if exit || err != nil {
 			if err != nil {
 				return err
 			}
