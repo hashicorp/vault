@@ -334,9 +334,14 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 			return nil, err
 		}
 		errRaw, errPresent := data["errors"]
+
+		// if only errors are present in the resp.Body return nil
+		// to return value not found as it does not have any raw data
 		if len(data) == 1 && errPresent {
 			return nil, nil
 		}
+
+		// if errors are present along with raw data return the error
 		if errPresent {
 			var errStrArray []string
 			errBytes, err := json.Marshal(errRaw)
@@ -348,6 +353,8 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 			}
 			return nil, fmt.Errorf(strings.Join(errStrArray, " "))
 		}
+
+		// if any raw data is present in resp.Body, add it to secret
 		if len(data) > 0 {
 			secret.Data = data
 		}
