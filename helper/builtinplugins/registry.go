@@ -23,7 +23,6 @@ import (
 	logicalGcpKms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
 	logicalKube "github.com/hashicorp/vault-plugin-secrets-kubernetes"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
-	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
 	logicalLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
@@ -149,7 +148,9 @@ func newRegistry() *registry {
 			"mongodb": {
 				DeprecationStatus: consts.Removed,
 			},
-			"mongodbatlas": {Factory: logicalMongoAtlas.Factory},
+			"mongodbatlas": {
+				DeprecationStatus: consts.Removed,
+			},
 			"mssql": {
 				DeprecationStatus: consts.Removed,
 			},
@@ -213,21 +214,15 @@ func (r *registry) Keys(pluginType consts.PluginType) []string {
 	switch pluginType {
 	case consts.PluginTypeDatabase:
 		for key, backend := range r.databasePlugins {
-			if backend.DeprecationStatus != consts.Removed {
-				keys = append(keys, key)
-			}
+			appendIfNotRemoved(&keys, key, backend.DeprecationStatus)
 		}
 	case consts.PluginTypeCredential:
 		for key, backend := range r.credentialBackends {
-			if backend.DeprecationStatus != consts.Removed {
-				keys = append(keys, key)
-			}
+			appendIfNotRemoved(&keys, key, backend.DeprecationStatus)
 		}
 	case consts.PluginTypeSecrets:
 		for key, backend := range r.logicalBackends {
-			if backend.DeprecationStatus != consts.Removed {
-				keys = append(keys, key)
-			}
+			appendIfNotRemoved(&keys, key, backend.DeprecationStatus)
 		}
 	}
 	return keys
@@ -267,5 +262,11 @@ func (r *registry) DeprecationStatus(name string, pluginType consts.PluginType) 
 func toFunc(ifc interface{}) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		return ifc, nil
+	}
+}
+
+func appendIfNotRemoved(keys *[]string, name string, status consts.DeprecationStatus) {
+	if status != consts.Removed {
+		*keys = append(*keys, name)
 	}
 }
