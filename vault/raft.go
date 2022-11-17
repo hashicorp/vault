@@ -1137,18 +1137,20 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			close(challengeCh)
 		}()
 
-		select {
-		case <-ctx.Done():
-			err = ctx.Err()
-		case raftInfo := <-challengeCh:
-			if raftInfo != nil {
-				err = answerChallenge(ctx, raftInfo)
-				if err == nil {
-					return nil
+		for _ = range expandedJoinInfos {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case raftInfo := <-challengeCh: // channel returns nil on function error
+				if raftInfo != nil {
+					err = answerChallenge(ctx, raftInfo)
+					if err == nil {
+						return nil
+					}
+				} else {
+					// Return an error so we can retry_join
+					err = fmt.Errorf("failed to get raft challenge")
 				}
-			} else {
-				// Return an error so we can retry_join
-				err = fmt.Errorf("failed to get raft challenge")
 			}
 		}
 		return err
