@@ -1703,7 +1703,8 @@
       },
       {
         "title": "Upgrade to 1.13.x",
-        "path": "upgrading/upgrade-to-1.13.x"
+        "path": "upgrading/upgrade-to-1.13.x",
+        "hidden": true
       },
       {
         "title": "Upgrade to 1.12.x",
