@@ -45,6 +45,12 @@ func TestPKIHC_Run(t *testing.T) {
 		t.Fatalf("failed to rotate CRLs: %v", err)
 	}
 
+	if _, err := client.Logical().Write("pki/roles/testing", map[string]interface{}{
+		"allow_any_name": true,
+	}); err != nil {
+		t.Fatalf("failed to write role: %v", err)
+	}
+
 	stdout := bytes.NewBuffer(nil)
 	stderr := bytes.NewBuffer(nil)
 	runOpts := &RunOptions{
