@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/internal"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/version"
@@ -215,6 +216,11 @@ var (
 
 	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {}
 )
+
+func init() {
+	// this is a good place to patch SHA-1 support back into x509, since all Vault CLI commands will run this.
+	internal.PatchSha1()
+}
 
 // Commands is the mapping of all the available commands.
 var Commands map[string]cli.CommandFactory
