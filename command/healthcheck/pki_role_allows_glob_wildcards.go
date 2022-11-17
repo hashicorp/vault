@@ -46,7 +46,7 @@ func (h *RoleAllowsGlobWildcards) FetchResources(e *Executor) error {
 	exit, _, roles, err := pkiFetchRoles(e, func() {
 		h.UnsupportedVersion = true
 	})
-	if exit {
+	if exit || err != nil {
 		return err
 	}
 
@@ -54,7 +54,7 @@ func (h *RoleAllowsGlobWildcards) FetchResources(e *Executor) error {
 		skip, _, entry, err := pkiFetchRole(e, role, func() {
 			h.UnsupportedVersion = true
 		})
-		if skip || entry == nil {
+		if skip || err != nil || entry == nil {
 			if err != nil {
 				return err
 			}
