@@ -46,7 +46,6 @@ jobs:
           echo "build-date=$(make crt-get-date)" >> $GITHUB_OUTPUT
           echo "package-name=${{ env.PKG_NAME }}" >> $GITHUB_OUTPUT
           echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
-          echo "vault-base-version=$(make crt-get-version-base)" >> $GITHUB_OUTPUT
           echo "vault-revision=$(make crt-get-revision)" >> $GITHUB_OUTPUT
       - uses: hashicorp/actions-generate-metadata@v1
         id: generate-metadata-file
@@ -148,7 +147,7 @@ jobs:
           version: ${{ env.version }}
           target: default
           arch: ${{ matrix.arch }}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
+          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.set-product-version.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
           tags: |
             docker.io/hashicorp/${{ env.repo }}:${{ env.version }}
             public.ecr.aws/hashicorp/${{ env.repo }}:${{ env.version }}
@@ -173,7 +172,7 @@ jobs:
           version: ${{ env.version }}
           target: ubi
           arch: ${{ matrix.arch }}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
+          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.set-product-version.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
           redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ env.version }}-ubi
 
   enos:
@@ -191,10 +190,10 @@ jobs:
     uses: ./.github/workflows/enos-run.yml
     with:
       artifact-build-date: ${{ needs.product-metadata.outputs.build-date }}
-      artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
+      artifact-name: vault_${{ needs.set-product-version.outputs.vault-version }}_linux_amd64.zip
       artifact-revision: ${{ needs.product-metadata.outputs.vault-revision }}
       artifact-source: crt
-      artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
+      artifact-version: ${{ needs.set-product-version.outputs.vault-version }}
     secrets: inherit
 
   enos-docker-k8s:
@@ -212,7 +211,7 @@ jobs:
     uses: ./.github/workflows/enos-run-k8s.yml
     with:
       artifact-build-date: ${{ needs.product-metadata.outputs.build-date }}
-      artifact-name: ${{ github.event.repository.name }}_default_linux_amd64_${{ needs.product-metadata.outputs.vault-version }}_${{ needs.product-metadata.outputs.vault-revision }}.docker.tar
+      artifact-name: ${{ github.event.repository.name }}_default_linux_amd64_${{ needs.set-product-version.outputs.vault-version }}_${{ needs.product-metadata.outputs.vault-revision }}.docker.tar
       artifact-revision: ${{ needs.product-metadata.outputs.vault-revision }}
-      artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
+      artifact-version: ${{ needs.set-product-version.outputs.vault-version }}
     secrets: inherit
