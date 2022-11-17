@@ -296,7 +296,7 @@ func (m *Manager) SetQuota(ctx context.Context, qType string, quota Quota, loadi
 	m.quotaLock.Lock()
 	m.dbAndCacheLock.RLock()
 	defer m.quotaLock.Unlock()
-	m.dbAndCacheLock.RUnlock()
+	defer m.dbAndCacheLock.RUnlock()
 	return m.setQuotaLocked(ctx, qType, quota, loading)
 }
 
