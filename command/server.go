@@ -114,10 +114,7 @@ type ServerCommand struct {
 
 	allLoggers []hclog.Logger
 
-	// new stuff
 	flagConfigs            []string
-	flagLogLevel           string
-	flagLogFormat          string
 	flagRecovery           bool
 	flagDev                bool
 	flagDevTLS             bool
@@ -176,6 +173,9 @@ func (c *ServerCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
+
+	// Augment with the log flags
+	f.addLogFlags(c.logFlags)
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   "config",
