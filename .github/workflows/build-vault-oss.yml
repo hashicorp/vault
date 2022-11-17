@@ -35,7 +35,12 @@ on:
       web-ui-cache-key:
         type: string
         required: true
-
+      vault-base-version:
+        type: string
+        required: true
+      vault-prerelease-version:
+        type: string
+        required: true
 jobs:
   build:
     runs-on: custom-linux-xl-vault-latest
@@ -54,26 +59,21 @@ jobs:
           path: http/web_ui
           key: ${{ inputs.web-ui-cache-key }}
       - name: Build Vault
+        uses: hashicorp/actions-go-build@v0
         env:
-          CGO_ENABLED: ${{ inputs.cgo-enabled }}
-          GOARCH: ${{ inputs.goarch }}
-          GOOS: ${{ inputs.goos }}
+          BASE_VERSION: ${{ inputs.vault-base-version }}
+          PRERELEASE_VERSION: ${{ inputs.vault-prerelease-version }}
           GO_TAGS: ${{ inputs.go-tags }}
-        run: make ci-build
-      - name: Determine artifact basename
-        env:
-          GOARCH: ${{ inputs.goarch }}
-          GOOS: ${{ inputs.goos }}
-        run: echo "ARTIFACT_BASENAME=$(make ci-get-artifact-basename)" >> "$GITHUB_ENV"
-      - name: Bundle Vault
-        env:
-          BUNDLE_PATH: out/${{ env.ARTIFACT_BASENAME }}.zip
-        run: make ci-bundle
-      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+          CGO_ENABLED: ${{ inputs.cgo-enabled }}
         with:
-          name: ${{ env.ARTIFACT_BASENAME }}.zip
-          path: out/${{ env.ARTIFACT_BASENAME }}.zip
-          if-no-files-found: error
+          product_name: ${{ inputs.package-name }}
+          product_version: ${{ inputs.vault-version }}
+          go_version: ${{ inputs.go-version }}
+          os: ${{ inputs.goos }}
+          arch: ${{ inputs.goarch }}
+          reproducible: nope
+          instructions: |-
+            make ci-build
       - if: ${{ inputs.create-packages }}
         uses: hashicorp/actions-packaging-linux@v1
         with:

@@ -11,86 +11,6 @@ set -euo pipefail
 # We don't want to get stuck in some kind of interactive pager
 export GIT_PAGER=cat
 
-# Get the full version information
-function version() {
-  local version
-  local prerelease
-  local metadata
-
-  version=$(version_base)
-  prerelease=$(version_pre)
-  metadata=$(version_metadata)
-
-  if [ -n "$metadata" ] && [ -n "$prerelease" ]; then
-    echo "$version-$prerelease+$metadata"
-  elif [ -n "$metadata" ]; then
-    echo "$version+$metadata"
-  elif [ -n "$prerelease" ]; then
-    echo "$version-$prerelease"
-  else
-    echo "$version"
-  fi
-}
-
-# Get the base version
-function version_base() {
-  : "${VAULT_VERSION:=""}"
-
-  if [ -n "$VAULT_VERSION" ]; then
-    echo "$VAULT_VERSION"
-    return
-  fi
-
-  : "${VERSION_FILE:=$(repo_root)/version/version_base.go}"
-  awk '$1 == "Version" && $2 == "=" { gsub(/"/, "", $3); print $3 }' < "$VERSION_FILE"
-}
-
-# Get the version major
-function version_major() {
-  version_base | cut -d '.' -f 1
-}
-
-# Get the version minor
-function version_minor() {
-  version_base | cut -d '.' -f 2
-}
-
-# Get the version patch
-function version_patch() {
-  version_base | cut -d '.' -f 3
-}
-
-# Get the version pre-release
-function version_pre() {
-  : "${VAULT_PRERELEASE:=""}"
-
-  if [ -n "$VAULT_PRERELEASE" ]; then
-    echo "$VAULT_PRERELEASE"
-    return
-  fi
-
-  : "${VERSION_FILE:=$(repo_root)/version/version_base.go}"
-  awk '$1 == "VersionPrerelease" && $2 == "=" { gsub(/"/, "", $3); print $3 }' < "$VERSION_FILE"
-}
-
-# Get the version metadata, which is commonly the edition
-function version_metadata() {
-  : "${VAULT_METADATA:=""}"
-
-  if [[ (-n "$VAULT_METADATA") && ("$VAULT_METADATA" != "oss") ]]; then
-    echo "$VAULT_METADATA"
-    return
-  fi
-
-  : "${VERSION_FILE:=$(repo_root)/version/version_base.go}"
-  awk '$1 == "VersionMetadata" && $2 == "=" { gsub(/"/, "", $3); print $3 }' < "$VERSION_FILE"
-}
-
-# Get the version formatted for Debian and RHEL packages
-function version_package() {
-  version | awk '{ gsub("-","~",$1); print $1 }'
-}
-
 # Get the build date from the latest commit since it can be used across all
 # builds
 function build_date() {
@@ -112,15 +32,6 @@ function repo() {
 # Determine the root directory of the repository
 function repo_root() {
   git rev-parse --show-toplevel
-}
-
-# Determine the artifact basename based on metadata
-function artifact_basename() {
-  : "${PKG_NAME:="vault"}"
-  : "${GOOS:=$(go env GOOS)}"
-  : "${GOARCH:=$(go env GOARCH)}"
-
-  echo "${PKG_NAME}_$(version)_${GOOS}_${GOARCH}"
 }
 
 # Build the UI
@@ -148,18 +59,16 @@ function build() {
   local msg
 
   # Get or set our basic build metadata
-  version=$(version_base)
   revision=$(build_revision)
-  metadata=$(version_metadata)
-  prerelease=$(version_pre)
-  build_date=$(build_date)
+  build_date=$(build_date) #
+  : "${BIN_PATH:="dist/"}" #if not run by actions-go-build (enos local) then set this explicitly
   : "${GO_TAGS:=""}"
   : "${REMOVE_SYMBOLS:=""}"
 
   GOOS= GOARCH= go generate ./...
 
   # Build our ldflags
-  msg="--> Building Vault v$version, revision $revision, built $build_date"
+  msg="--> Building Vault revision $revision, built $build_date"
 
   # Keep the symbol and dwarf information by default
   if [ -n "$REMOVE_SYMBOLS" ]; then
@@ -168,48 +77,37 @@ function build() {
     ldflags=""
   fi
 
-  ldflags="${ldflags}-X github.com/hashicorp/vault/version.Version=$version -X github.com/hashicorp/vault/version.GitCommit=$revision -X github.com/hashicorp/vault/version.BuildDate=$build_date"
+  # if building locally with enos - don't need to set version/prerelease/metadata as the default from version_base.go will be used
+  ldflags="${ldflags} -X github.com/hashicorp/vault/version.GitCommit=$revision -X github.com/hashicorp/vault/version.BuildDate=$build_date"
 
-  if [ -n "$prerelease" ]; then
-    msg="${msg}, prerelease ${prerelease}"
-    ldflags="${ldflags} -X github.com/hashicorp/vault/version.VersionPrerelease=$prerelease"
+  if [[ ${BASE_VERSION+x} ]]; then
+    msg="${msg}, base version ${BASE_VERSION}"
+    ldflags="${ldflags} -X github.com/hashicorp/vault/version.Version=$BASE_VERSION"
   fi
 
-  if [ -n "$metadata" ]; then
-    msg="${msg}, metadata ${metadata}"
-    ldflags="${ldflags} -X github.com/hashicorp/vault/version.VersionMetadata=$metadata"
+  if [[ ${PRERELEASE_VERSION+x} ]]; then
+    msg="${msg}, prerelease ${PRERELEASE_VERSION}"
+    ldflags="${ldflags} -X github.com/hashicorp/vault/version.VersionPrerelease=$PRERELEASE_VERSION"
+  fi
+
+  if [[ ${VERSION_METADATA+x} ]]; then
+    msg="${msg}, metadata ${VERSION_METADATA}"
+    ldflags="${ldflags} -X github.com/hashicorp/vault/version.VersionMetadata=$VERSION_METADATA"
   fi
 
   # Build vault
   echo "$msg"
-  pushd "$(repo_root)"
-  mkdir -p dist
-  mkdir -p out
-  set -x
-  go build -v -tags "$GO_TAGS" -ldflags "$ldflags" -o dist/
-  set +x
-  popd
-}
-
-# Bundle the dist directory into a zip
-function bundle() {
-  : "${BUNDLE_PATH:=$(repo_root)/vault.zip}"
-  echo "--> Bundling dist/* to $BUNDLE_PATH"
-  zip -r -j "$BUNDLE_PATH" dist/
+  go build -o "$BIN_PATH" -tags "$GO_TAGS" -ldflags "$ldflags" -trimpath -buildvcs=false
 }
 
 # Prepare legal requirements for packaging
 function prepare_legal() {
   : "${PKG_NAME:="vault"}"
-
-  pushd "$(repo_root)"
-  mkdir -p dist
   curl -o dist/EULA.txt https://eula.hashicorp.com/EULA.txt
   curl -o dist/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt
   mkdir -p ".release/linux/package/usr/share/doc/$PKG_NAME"
   cp dist/EULA.txt ".release/linux/package/usr/share/doc/$PKG_NAME/EULA.txt"
   cp dist/TermsOfEvaluation.txt ".release/linux/package/usr/share/doc/$PKG_NAME/TermsOfEvaluation.txt"
-  popd
 }
 
 # Determine the matrix group number that we'll select for execution. If the
@@ -237,6 +135,12 @@ function matrix_filter_file() {
     exit 1
   fi
 
+  : "${VAULT_MINOR_VERSION:=""}"
+  if [ -z "$VAULT_MINOR_VERSION" ]; then
+    echo "You must specify the VAULT_MINOR_VERSION variable for this command" >&2
+    exit 1
+  fi
+
   : "${MATRIX_TEST_GROUP:=$(matrix_group_id)}"
 
   local path
@@ -245,8 +149,8 @@ function matrix_filter_file() {
   matrix=$(cat "$path" | jq ".include |
     map(. |
       select(
-        ((.min_minor_version == null) or (.min_minor_version <= $(version_minor))) and
-        ((.max_minor_version == null) or (.max_minor_version >= $(version_minor))) and
+        ((.min_minor_version == null) or (.min_minor_version <= $VAULT_MINOR_VERSION)) and
+        ((.max_minor_version == null) or (.max_minor_version >= $VAULT_MINOR_VERSION)) and
         ((.test_group == null) or (.test_group == $MATRIX_TEST_GROUP))
       )
     )"
@@ -258,17 +162,11 @@ function matrix_filter_file() {
 # Run the CI Helper
 function main() {
   case $1 in
-  artifact-basename)
-    artifact_basename
-  ;;
   build)
     build
   ;;
   build-ui)
     build_ui
-  ;;
-  bundle)
-    bundle
   ;;
   date)
     build_date
@@ -285,29 +183,8 @@ function main() {
   revision)
     build_revision
   ;;
-  version)
-    version
-  ;;
-  version-base)
-    version_base
-  ;;
-  version-pre)
-    version_pre
-  ;;
-  version-major)
-    version_major
-  ;;
-  version-meta)
-    version_metadata
-  ;;
-  version-minor)
-    version_minor
-  ;;
   version-package)
     version_package
-  ;;
-  version-patch)
-    version_patch
   ;;
   *)
     echo "unknown sub-command" >&2
