@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: avoid raft joining failures when a node queries itself for a raft bootstrap challenge
+```
