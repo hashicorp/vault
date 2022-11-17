@@ -1212,7 +1212,7 @@ func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPat
 // node.
 func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath string) error {
 	m.quotaLock.Lock()
-	m.dbAndCacheLock.RUnlock()
+	m.dbAndCacheLock.RLock()
 	defer m.quotaLock.Unlock()
 	defer m.dbAndCacheLock.RUnlock()
 
