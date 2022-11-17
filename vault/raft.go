@@ -1137,7 +1137,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			close(challengeCh)
 		}()
 
-		for _ = range expandedJoinInfos {
+		for range expandedJoinInfos {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
