@@ -100,7 +100,7 @@ func (h *CAValidityPeriod) FetchResources(e *Executor) error {
 	exit, _, issuers, err := pkiFetchIssuers(e, func() {
 		h.UnsupportedVersion = true
 	})
-	if exit {
+	if exit || err != nil {
 		return err
 	}
 
@@ -108,7 +108,7 @@ func (h *CAValidityPeriod) FetchResources(e *Executor) error {
 		skip, _, cert, err := pkiFetchIssuer(e, issuer, func() {
 			h.UnsupportedVersion = true
 		})
-		if skip {
+		if skip || err != nil {
 			if err != nil {
 				return err
 			}

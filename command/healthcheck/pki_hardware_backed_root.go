@@ -52,7 +52,7 @@ func (h *HardwareBackedRoot) FetchResources(e *Executor) error {
 	exit, _, issuers, err := pkiFetchIssuers(e, func() {
 		h.UnsupportedVersion = true
 	})
-	if exit {
+	if exit || err != nil {
 		return err
 	}
 
@@ -60,7 +60,7 @@ func (h *HardwareBackedRoot) FetchResources(e *Executor) error {
 		skip, ret, entry, err := pkiFetchIssuerEntry(e, issuer, func() {
 			h.UnsupportedVersion = true
 		})
-		if skip || entry == nil {
+		if skip || err != nil || entry == nil {
 			if err != nil {
 				return err
 			}
@@ -86,7 +86,7 @@ func (h *HardwareBackedRoot) FetchResources(e *Executor) error {
 		skip, _, keyEntry, err := pkiFetchKeyEntry(e, keyId, func() {
 			h.UnsupportedVersion = true
 		})
-		if skip || keyEntry == nil {
+		if skip || err != nil || keyEntry == nil {
 			if err != nil {
 				return err
 			}
