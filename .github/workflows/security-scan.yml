@@ -6,7 +6,7 @@ on:
 
 jobs:
   scan:
-    runs-on: ['self-hosted', 'linux', 'large']
+    runs-on: ['custom-linux-xl']
     if: ${{ github.actor != 'dependabot[bot]' }}
     steps:
     - uses: actions/checkout@v3
