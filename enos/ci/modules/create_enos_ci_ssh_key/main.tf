@@ -6,9 +6,8 @@ terraform {
   }
 }
 
-variable "region" {
-  type        = string
-  description = "The region to create the ssh key pair in"
+locals {
+  key_name = "enos-ci-ssh-key"
 }
 
 variable "public_key" {
@@ -27,4 +26,8 @@ output "key_pair_id" {
 
 output "key_pair_arn" {
   value = aws_key_pair.enos_ci_key.arn
+}
+
+output "key_name" {
+  value = local.key_name
 }
