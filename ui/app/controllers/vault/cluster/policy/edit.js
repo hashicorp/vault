@@ -5,6 +5,7 @@ import { inject as service } from '@ember/service';
 export default class PolicyEditController extends Controller {
   @service router;
   @service flashMessages;
+  @service wizard;
 
   @action
   async deletePolicy() {

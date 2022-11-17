@@ -9,10 +9,7 @@ export default Route.extend(UnloadModelRoute, {
 
   activate() {
     if (this.wizard.featureState === 'create') {
-      this.wizard.transitionFeatureMachine('create', 'CONTINUE', this.policyType);
-    }
-    if (this.wizard.featureState === 'details') {
-      this.wizard.transitionFeatureMachine('details', 'CONTINUE', this.policyType);
+      this.wizard.transitionFeatureMachine('create', 'CONTINUE', this.policyType());
     }
   },
 
