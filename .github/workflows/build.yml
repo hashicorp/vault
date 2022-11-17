@@ -51,7 +51,7 @@ jobs:
       - uses: hashicorp/actions-generate-metadata@v1
         id: generate-metadata-file
         with:
-          version: ${{ needs.set-product-version.outputs.vault-version }}
+          version: ${{ steps.set-product-version.outputs.vault-version }}
           product: ${{ steps.get-metadata.outputs.package-name }}
       - uses: actions/upload-artifact@v3
         with:
@@ -85,126 +85,126 @@ jobs:
       vault-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
 
-  build-linux:
-    name: Build Vault Linux
-    needs: product-metadata
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [arm, arm64, 386, amd64]
-      fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
-    with:
-      goarch: ${{ matrix.goarch }}
-      goos: ${{ matrix.goos }}
-      go-tags: ui
-      go-version: ${{ needs.product-metadata.outputs.go-version }}
-      package-name: ${{ needs.product-metadata.outputs.package-name }}
-      vault-version: ${{ needs.product-metadata.outputs.vault-version }}
-    secrets: inherit
+  # build-linux:
+  #   name: Build Vault Linux
+  #   needs: product-metadata
+  #   strategy:
+  #     matrix:
+  #       goos: [linux]
+  #       goarch: [arm, arm64, 386, amd64]
+  #     fail-fast: true
+  #   uses: ./.github/workflows/build-vault-oss.yml
+  #   with:
+  #     goarch: ${{ matrix.goarch }}
+  #     goos: ${{ matrix.goos }}
+  #     go-tags: ui
+  #     go-version: ${{ needs.product-metadata.outputs.go-version }}
+  #     package-name: ${{ needs.product-metadata.outputs.package-name }}
+  #     vault-version: ${{ needs.product-metadata.outputs.vault-version }}
+  #   secrets: inherit
 
-  build-darwin:
-    name: Build Vault Darwin
-    needs: product-metadata
-    strategy:
-      matrix:
-        goos: [darwin]
-        goarch: [amd64, arm64]
-      fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
-    with:
-      create-packages: false
-      goarch: ${{ matrix.goarch }}
-      goos: ${{ matrix.goos }}
-      go-tags: ui netcgo
-      go-version: ${{ needs.product-metadata.outputs.go-version }}
-      package-name: ${{ needs.product-metadata.outputs.package-name }}
-      vault-version: ${{ needs.product-metadata.outputs.vault-version }}
-    secrets: inherit
+  # build-darwin:
+  #   name: Build Vault Darwin
+  #   needs: product-metadata
+  #   strategy:
+  #     matrix:
+  #       goos: [darwin]
+  #       goarch: [amd64, arm64]
+  #     fail-fast: true
+  #   uses: ./.github/workflows/build-vault-oss.yml
+  #   with:
+  #     create-packages: false
+  #     goarch: ${{ matrix.goarch }}
+  #     goos: ${{ matrix.goos }}
+  #     go-tags: ui netcgo
+  #     go-version: ${{ needs.product-metadata.outputs.go-version }}
+  #     package-name: ${{ needs.product-metadata.outputs.package-name }}
+  #     vault-version: ${{ needs.product-metadata.outputs.vault-version }}
+  #   secrets: inherit
 
-  build-docker:
-    name: Build Vault Docker
-    needs:
-      - product-metadata
-      - build-linux
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [arm, arm64, 386, amd64]
-    env:
-      repo: ${{ github.event.repository.name }}
-      version: ${{ needs.product-metadata.outputs.vault-version }}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: hashicorp/actions-docker-build@v1
-        with:
-          version: ${{ env.version }}
-          target: default
-          arch: ${{ matrix.arch }}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
-          tags: |
-            docker.io/hashicorp/${{ env.repo }}:${{ env.version }}
-            public.ecr.aws/hashicorp/${{ env.repo }}:${{ env.version }}
+  # build-docker:
+  #   name: Build Vault Docker
+  #   needs:
+  #     - product-metadata
+  #     - build-linux
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       arch: [arm, arm64, 386, amd64]
+  #   env:
+  #     repo: ${{ github.event.repository.name }}
+  #     version: ${{ needs.product-metadata.outputs.vault-version }}
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: hashicorp/actions-docker-build@v1
+  #       with:
+  #         version: ${{ env.version }}
+  #         target: default
+  #         arch: ${{ matrix.arch }}
+  #         zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
+  #         tags: |
+  #           docker.io/hashicorp/${{ env.repo }}:${{ env.version }}
+  #           public.ecr.aws/hashicorp/${{ env.repo }}:${{ env.version }}
 
-  build-ubi:
-    name: Build Vault Red Hat UBI
-    needs:
-      - product-metadata
-      - build-linux
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [amd64]
-    env:
-      repo: ${{ github.event.repository.name }}
-      version: ${{ needs.product-metadata.outputs.vault-version }}
-    steps:
-      - uses: actions/checkout@v2
-      - uses: hashicorp/actions-docker-build@v1
-        with:
-          version: ${{ env.version }}
-          target: ubi
-          arch: ${{ matrix.arch }}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
-          redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ env.version }}-ubi
+  # build-ubi:
+  #   name: Build Vault Red Hat UBI
+  #   needs:
+  #     - product-metadata
+  #     - build-linux
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       arch: [amd64]
+  #   env:
+  #     repo: ${{ github.event.repository.name }}
+  #     version: ${{ needs.product-metadata.outputs.vault-version }}
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: hashicorp/actions-docker-build@v1
+  #       with:
+  #         version: ${{ env.version }}
+  #         target: ubi
+  #         arch: ${{ matrix.arch }}
+  #         zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
+  #         redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ env.version }}-ubi
 
-  enos:
-    name: Enos
-    # Only run the Enos workflow against branches that are created from the
-    # hashicorp/vault repository. This has the effect of limiting execution of
-    # Enos scenarios to branches that originate from authors that have write
-    # access to hashicorp/vault repository. This is required as Github Actions
-    # will not populate the required secrets for branches created by outside
-    # contributors in order to protect the secrets integrity.
-    if: "! github.event.pull_request.head.repo.fork"
-    needs:
-      - product-metadata
-      - build-linux
-    uses: ./.github/workflows/enos-run.yml
-    with:
-      artifact-build-date: ${{ needs.product-metadata.outputs.build-date }}
-      artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
-      artifact-revision: ${{ needs.product-metadata.outputs.vault-revision }}
-      artifact-source: crt
-      artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
-    secrets: inherit
+  # enos:
+  #   name: Enos
+  #   # Only run the Enos workflow against branches that are created from the
+  #   # hashicorp/vault repository. This has the effect of limiting execution of
+  #   # Enos scenarios to branches that originate from authors that have write
+  #   # access to hashicorp/vault repository. This is required as Github Actions
+  #   # will not populate the required secrets for branches created by outside
+  #   # contributors in order to protect the secrets integrity.
+  #   if: "! github.event.pull_request.head.repo.fork"
+  #   needs:
+  #     - product-metadata
+  #     - build-linux
+  #   uses: ./.github/workflows/enos-run.yml
+  #   with:
+  #     artifact-build-date: ${{ needs.product-metadata.outputs.build-date }}
+  #     artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
+  #     artifact-revision: ${{ needs.product-metadata.outputs.vault-revision }}
+  #     artifact-source: crt
+  #     artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
+  #   secrets: inherit
 
-  enos-docker-k8s:
-    name: Enos Docker K8s
-    # Only run the Enos workflow against branches that are created from the
-    # hashicorp/vault repository. This has the effect of limiting execution of
-    # Enos scenarios to branches that originate from authors that have write
-    # access to hashicorp/vault repository. This is required as Github Actions
-    # will not populate the required secrets for branches created by outside
-    # contributors in order to protect the secrets integrity.
-    if: "! github.event.pull_request.head.repo.fork"
-    needs:
-      - product-metadata
-      - build-docker
-    uses: ./.github/workflows/enos-run-k8s.yml
-    with:
-      artifact-build-date: ${{ needs.product-metadata.outputs.build-date }}
-      artifact-name: ${{ github.event.repository.name }}_default_linux_amd64_${{ needs.product-metadata.outputs.vault-version }}_${{ needs.product-metadata.outputs.vault-revision }}.docker.tar
-      artifact-revision: ${{ needs.product-metadata.outputs.vault-revision }}
-      artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
-    secrets: inherit
+  # enos-docker-k8s:
+  #   name: Enos Docker K8s
+  #   # Only run the Enos workflow against branches that are created from the
+  #   # hashicorp/vault repository. This has the effect of limiting execution of
+  #   # Enos scenarios to branches that originate from authors that have write
+  #   # access to hashicorp/vault repository. This is required as Github Actions
+  #   # will not populate the required secrets for branches created by outside
+  #   # contributors in order to protect the secrets integrity.
+  #   if: "! github.event.pull_request.head.repo.fork"
+  #   needs:
+  #     - product-metadata
+  #     - build-docker
+  #   uses: ./.github/workflows/enos-run-k8s.yml
+  #   with:
+  #     artifact-build-date: ${{ needs.product-metadata.outputs.build-date }}
+  #     artifact-name: ${{ github.event.repository.name }}_default_linux_amd64_${{ needs.product-metadata.outputs.vault-version }}_${{ needs.product-metadata.outputs.vault-revision }}.docker.tar
+  #     artifact-revision: ${{ needs.product-metadata.outputs.vault-revision }}
+  #     artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
+  #   secrets: inherit
