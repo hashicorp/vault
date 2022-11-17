@@ -23,7 +23,7 @@ jobs:
   set-product-version:
     runs-on: ubuntu-latest
     outputs:
-      product-version: ${{ steps.set-product-version.outputs.vault-version }}
+      vault-version: ${{ steps.set-product-version.outputs.product-version }}
     steps:
       - uses: actions/checkout@v3
       - name: Set Product version
