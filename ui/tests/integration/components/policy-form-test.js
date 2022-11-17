@@ -15,7 +15,7 @@ const SELECTORS = {
   error: '[data-test-error]',
 };
 
-module('Integration | Component | form/policy', function (hooks) {
+module('Integration | Component | policy-form', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
@@ -54,7 +54,7 @@ module('Integration | Component | form/policy', function (hooks) {
     this.set('model', model);
     this.set('onSave', saveSpy);
     await render(hbs`
-    <Form::Policy
+    <PolicyForm
       @model={{this.model}}
       @onCancel={{this.onCancel}}
       @onSave={{this.onSave}}
@@ -84,7 +84,7 @@ module('Integration | Component | form/policy', function (hooks) {
     this.set('model', model);
     this.set('onSave', saveSpy);
     await render(hbs`
-    <Form::Policy
+    <PolicyForm
       @model={{this.model}}
       @onCancel={{this.onCancel}}
       @onSave={{this.onSave}}
@@ -105,7 +105,7 @@ module('Integration | Component | form/policy', function (hooks) {
 
   test('it toggles upload on new policy', async function (assert) {
     await render(hbs`
-    <Form::Policy
+    <PolicyForm
       @model={{this.model}}
       @onCancel={{this.onCancel}}
       @onSave={{this.onSave}}
@@ -130,7 +130,7 @@ module('Integration | Component | form/policy', function (hooks) {
     this.set('model', model);
     this.set('onSave', saveSpy);
     await render(hbs`
-    <Form::Policy
+    <PolicyForm
       @model={{this.model}}
       @onCancel={{this.onCancel}}
       @onSave={{this.onSave}}
@@ -161,7 +161,7 @@ module('Integration | Component | form/policy', function (hooks) {
     this.set('model', model);
     this.set('onSave', saveSpy);
     await render(hbs`
-    <Form::Policy
+    <PolicyForm
       @model={{this.model}}
       @onCancel={{this.onCancel}}
       @onSave={{this.onSave}}
@@ -191,7 +191,7 @@ module('Integration | Component | form/policy', function (hooks) {
     this.set('model', model);
     this.set('onSave', saveSpy);
     await render(hbs`
-    <Form::Policy
+    <PolicyForm
       @model={{this.model}}
       @onCancel={{this.onCancel}}
       @onSave={{this.onSave}}
