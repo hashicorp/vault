@@ -42,6 +42,12 @@ var (
 	keyRedshiftUser     = "REDSHIFT_USER"
 	keyRedshiftPassword = "REDSHIFT_PASSWORD"
 
+	credNames = []string{
+		keyRedshiftURL,
+		keyRedshiftUser,
+		keyRedshiftPassword,
+	}
+
 	vaultACC = "VAULT_ACC"
 )
 
@@ -72,11 +78,6 @@ func TestRedshift_Initialize(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	credNames := []string{
-		keyRedshiftURL,
-		keyRedshiftUser,
-		keyRedshiftPassword,
-	}
 	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, _, _, _, err := redshiftEnv()
@@ -118,11 +119,6 @@ func TestRedshift_NewUser(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	credNames := []string{
-		keyRedshiftURL,
-		keyRedshiftUser,
-		keyRedshiftPassword,
-	}
 	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
@@ -176,11 +172,6 @@ func TestRedshift_NewUser_NoCreationStatement_ShouldError(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	credNames := []string{
-		keyRedshiftURL,
-		keyRedshiftUser,
-		keyRedshiftPassword,
-	}
 	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, _, _, _, err := redshiftEnv()
@@ -227,11 +218,6 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	credNames := []string{
-		keyRedshiftURL,
-		keyRedshiftUser,
-		keyRedshiftPassword,
-	}
 	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
@@ -295,11 +281,6 @@ func TestRedshift_UpdateUser_Password(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	credNames := []string{
-		keyRedshiftURL,
-		keyRedshiftUser,
-		keyRedshiftPassword,
-	}
 	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
@@ -357,11 +338,6 @@ func TestRedshift_DeleteUser(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	credNames := []string{
-		keyRedshiftURL,
-		keyRedshiftUser,
-		keyRedshiftPassword,
-	}
 	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
@@ -430,11 +406,6 @@ func TestRedshift_DefaultUsernameTemplate(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	credNames := []string{
-		keyRedshiftURL,
-		keyRedshiftUser,
-		keyRedshiftPassword,
-	}
 	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
@@ -486,11 +457,6 @@ func TestRedshift_CustomUsernameTemplate(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	credNames := []string{
-		keyRedshiftURL,
-		keyRedshiftUser,
-		keyRedshiftPassword,
-	}
 	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
