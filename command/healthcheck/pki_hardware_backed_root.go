@@ -116,7 +116,7 @@ func (h *HardwareBackedRoot) Evaluate(e *Executor) (results []*Result, err error
 		var ret Result
 		ret.Status = ResultInformational
 		ret.Endpoint = "/{{mount}}/issuer/" + name
-		ret.Message = "Root issuer was created using Vault-backed software keys; for added safety of long-lived, important root CAs, it is suggested to use a HSM or KSM Managed Key to store key material for this issuer."
+		ret.Message = "Root issuer was created using Vault-backed software keys; for added safety of long-lived, important root CAs, you may wish to consider using a HSM or KSM Managed Key to store key material for this issuer."
 
 		uuid, present := h.KeyIsManaged[keyId]
 		if present {
