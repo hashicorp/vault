@@ -165,7 +165,15 @@ type Manager struct {
 
 	logger     log.Logger
 	metricSink *metricsutil.ClusterMetricSink
-	lock       *sync.RWMutex
+
+	// quotaLock is a lock for manipulating quotas
+	quotaLock *sync.RWMutex
+
+	// rateLimitExemptPathsLock is a lock specifically for accessing RateLimitExemptPaths
+	rateLimitExemptPathsLock *sync.RWMutex
+
+	// dbAndCacheLock is a lock for db and path caches that need to be reset during Reset()
+	dbAndCacheLock *sync.RWMutex
 }
 
 // QuotaLeaseInformation contains all of the information lease-count quotas require
@@ -268,12 +276,14 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 	}
 
 	manager := &Manager{
-		db:                   db,
-		logger:               logger,
-		metricSink:           ms,
-		rateLimitPathManager: pathmanager.New(),
-		config:               new(Config),
-		lock:                 new(sync.RWMutex),
+		db:                       db,
+		logger:                   logger,
+		metricSink:               ms,
+		rateLimitPathManager:     pathmanager.New(),
+		config:                   new(Config),
+		quotaLock:                new(sync.RWMutex),
+		rateLimitExemptPathsLock: new(sync.RWMutex),
+		dbAndCacheLock:           new(sync.RWMutex),
 	}
 
 	manager.init(walkFunc)
@@ -283,8 +293,8 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 
 // SetQuota adds or updates a quota rule.
 func (m *Manager) SetQuota(ctx context.Context, qType string, quota Quota, loading bool) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	defer m.quotaLock.Unlock()
 	return m.setQuotaLocked(ctx, qType, quota, loading)
 }
 
@@ -355,8 +365,8 @@ func (m *Manager) setQuotaLockedWithTxn(ctx context.Context, qType string, quota
 
 // QuotaNames returns the names of all the quota rules for a given type
 func (m *Manager) QuotaNames(qType Type) ([]string, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.quotaLock.RLock()
+	defer m.quotaLock.RUnlock()
 
 	return m.quotaNamesLocked(qType)
 }
@@ -377,8 +387,8 @@ func (m *Manager) quotaNamesLocked(qType Type) ([]string, error) {
 
 // QuotaByID queries for a quota rule in the db for a given quota ID
 func (m *Manager) QuotaByID(qType string, id string) (Quota, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.quotaLock.RLock()
+	defer m.quotaLock.RUnlock()
 
 	txn := m.db.Txn(false)
 
@@ -395,8 +405,8 @@ func (m *Manager) QuotaByID(qType string, id string) (Quota, error) {
 
 // QuotaByName queries for a quota rule in the db for a given quota name
 func (m *Manager) QuotaByName(qType string, name string) (Quota, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.quotaLock.RLock()
+	defer m.quotaLock.RUnlock()
 
 	return m.quotaByNameLocked(qType, name)
 }
@@ -418,8 +428,8 @@ func (m *Manager) quotaByNameLocked(qType string, name string) (Quota, error) {
 
 // QuotaByFactors returns the quota rule that matches the provided factors
 func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath, pathSuffix, role string) (Quota, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.quotaLock.RLock()
+	defer m.quotaLock.RUnlock()
 
 	// nsPath would have been made non-empty during insertion. Use non-empty value
 	// during query as well.
@@ -464,8 +474,8 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath, 
 
 // QueryQuota returns the most specific applicable quota for a given request.
 func (m *Manager) QueryQuota(req *Request) (Quota, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.dbAndCacheLock.RLock()
+	defer m.dbAndCacheLock.RUnlock()
 
 	return m.queryQuota(nil, req)
 }
@@ -587,8 +597,8 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 
 // DeleteQuota removes a quota rule from the db for a given name
 func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	defer m.quotaLock.Unlock()
 
 	txn := m.db.Txn(true)
 	defer txn.Abort()
@@ -652,8 +662,8 @@ func (m *Manager) ApplyQuota(ctx context.Context, req *Request) (Response, error
 // SetEnableRateLimitAuditLogging updates the operator preference regarding the
 // audit logging behavior.
 func (m *Manager) SetEnableRateLimitAuditLogging(val bool) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	defer m.quotaLock.Unlock()
 	m.setEnableRateLimitAuditLoggingLocked(val)
 }
 
@@ -664,8 +674,8 @@ func (m *Manager) setEnableRateLimitAuditLoggingLocked(val bool) {
 // SetEnableRateLimitResponseHeaders updates the operator preference regarding
 // the rate limit quota HTTP header behavior.
 func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	defer m.quotaLock.Unlock()
 	m.setEnableRateLimitResponseHeadersLocked(val)
 }
 
@@ -678,8 +688,8 @@ func (m *Manager) setEnableRateLimitResponseHeadersLocked(val bool) {
 // SetRateLimitExemptPaths will wipe out the existing path manager and set the
 // paths based on the provided argument.
 func (m *Manager) SetRateLimitExemptPaths(vals []string) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.rateLimitExemptPathsLock.Lock()
+	defer m.rateLimitExemptPathsLock.Unlock()
 	m.setRateLimitExemptPathsLocked(vals)
 }
 
@@ -695,8 +705,8 @@ func (m *Manager) setRateLimitExemptPathsLocked(vals []string) {
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
 // logging of request rejections due to rate limiting quota rule violations.
 func (m *Manager) RateLimitAuditLoggingEnabled() bool {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.quotaLock.RLock()
+	defer m.quotaLock.RUnlock()
 
 	return m.config.EnableRateLimitAuditLogging
 }
@@ -704,8 +714,8 @@ func (m *Manager) RateLimitAuditLoggingEnabled() bool {
 // RateLimitResponseHeadersEnabled returns if the quota configuration allows for
 // rate limit quota HTTP headers to be added to responses.
 func (m *Manager) RateLimitResponseHeadersEnabled() bool {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.quotaLock.RLock()
+	defer m.quotaLock.RUnlock()
 
 	return m.config.EnableRateLimitResponseHeaders
 }
@@ -713,8 +723,8 @@ func (m *Manager) RateLimitResponseHeadersEnabled() bool {
 // RateLimitExemptPaths returns the list of exempt paths from all rate limit
 // resource quotas from the Manager's configuration.
 func (m *Manager) RateLimitExemptPaths() []string {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.rateLimitExemptPathsLock.RLock()
+	defer m.rateLimitExemptPathsLock.RUnlock()
 
 	return m.config.RateLimitExemptPaths
 }
@@ -723,8 +733,8 @@ func (m *Manager) RateLimitExemptPaths() []string {
 // any rate limit quota. If not rate limit path manager is defined, false is
 // returned.
 func (m *Manager) RateLimitPathExempt(path string) bool {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.quotaLock.RLock()
+	defer m.quotaLock.RUnlock()
 
 	if m.rateLimitPathManager == nil {
 		return false
@@ -740,8 +750,10 @@ func (m *Manager) Config() *Config {
 
 // Reset will clear all the quotas from the db and clear the lease path cache.
 func (m *Manager) Reset() error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	defer m.quotaLock.Unlock()
+	m.dbAndCacheLock.Lock()
+	defer m.dbAndCacheLock.Unlock()
 
 	err := m.resetCache()
 	if err != nil {
@@ -1015,8 +1027,10 @@ func Load(ctx context.Context, storage logical.Storage, qType, name string) (Quo
 // Setup loads the quota configuration and all the quota rules into the
 // quota manager.
 func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStandby, isDRSecondary bool) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	m.rateLimitExemptPathsLock.Lock()
+	defer m.quotaLock.Unlock()
+	defer m.rateLimitExemptPathsLock.Unlock()
 
 	m.storage = storage
 	m.ctx = ctx
@@ -1104,8 +1118,8 @@ func QuotaStoragePath(quotaType, name string) string {
 // took place. Quota manager will trigger the quota specific updates including
 // the mount path update and the namespace update
 func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPathDetails) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	defer m.quotaLock.Unlock()
 
 	// Grab a write transaction, as we want to save the updated quota in memdb
 	txn := m.db.Txn(true)
@@ -1189,8 +1203,8 @@ func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPat
 // or secret engine disabling. This should only be called on the primary cluster
 // node.
 func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath string) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	defer m.quotaLock.Unlock()
 
 	txn := m.db.Txn(true)
 	defer txn.Abort()
