@@ -3422,6 +3422,45 @@ func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]
 	return resp.Data["role"].(string)
 }
 
+// PathAliasLookAheadFromLoginRequest will determine the alias and will also determine if the user is locked  
+// for a given  request
+func (c *Core) PathAliasLookAheadFromLoginRequest(username string, mountEntry *MountEntry, req *logical.Request, ctx context.Context) (*logical.Response, error) {
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+	mountPoint := req.MountPoint
+	data := req.Data
+	
+	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)
+	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
+		// Path alias look ahead do not apply to this request
+		return nil, nil
+	}
+	logicalRequest := &logical.Request{
+		MountPoint: mountPoint,
+		Path:       "login/"+username,
+		Operation:  logical.AliasLookaheadOperation,
+		Data:       data,
+		Storage:    c.router.MatchingStorageByAPIPath(ctx, mountPoint+"login/"+username),
+	}
+
+	if mountEntry.Type == "approle"{
+		logicalRequest = &logical.Request{
+			MountPoint: mountPoint,
+			Path:       "login",
+			Operation:  logical.AliasLookaheadOperation,
+			Data:       data,
+			Storage:    c.router.MatchingStorageByAPIPath(ctx, mountPoint+"login"),
+		}
+	}
+
+	resp, err := matchingBackend.HandleRequest(ctx,logicalRequest)
+	if err!=nil{
+		return nil, err
+	}
+	return resp, nil
+}
+
+
 // ListMounts will provide a slice containing a deep copy each mount entry
 func (c *Core) ListMounts() ([]*MountEntry, error) {
 	c.mountsLock.RLock()

@@ -1335,6 +1335,24 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 
 	if !isUserLockoutDisabled {
+		//try to access pathAliasLookAhead and get response
+
+		aliasName:=c.determineAliasNameFromLoginRequest(entry,req)
+		if aliasName==""{
+			c.logger.Error("failed to determine alias name from ", "path", req.Path, "error", err)
+			return nil, nil, ErrInternalError
+		}
+
+		// determine alias name from login request
+		value,_:= c.PathAliasLookAheadFromLoginRequest(aliasName,entry, req, ctx)
+		if value != nil{
+
+		}
+		
+
+
+
+
 		isloginUserLocked, err := c.isUserLocked(ctx, entry, req)
 		if err != nil {
 			return nil, nil, err
@@ -1816,6 +1834,21 @@ func (c *Core) failedUserLoginProcess(ctx context.Context, mountEntry *MountEntr
 
 	}
 	return nil
+}
+
+// getLoginUserInfo gets login user info to check details in failedUserLoginInfo map
+// supported for userpass, approle and ldap 
+func (c *Core) determineAliasNameFromLoginRequest(mountEntry *MountEntry, req *logical.Request) (aliasName string) {
+	switch mountEntry.Type {
+	case "approle":
+		aliasNameRaw := req.Data["role_id"]
+		aliasName = fmt.Sprintf("%v", aliasNameRaw)
+	default:
+		splitPath := strings.Split(req.Path, "login/")
+		aliasName = splitPath[1]
+
+	}
+	return aliasName
 }
 
 // getLoginUserInfo gets login user info to check details in failedUserLoginInfo map
