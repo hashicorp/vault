@@ -1089,8 +1089,6 @@ func (c *ServerCommand) Run(args []string) int {
 	// Ensure logging is flushed if initialization fails
 	defer c.flushLog()
 
-	c.allLoggers = []hclog.Logger{c.logger}
-
 	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
 	c.allLoggers = append(c.allLoggers, namedGRPCLogFaker)
