@@ -14,14 +14,6 @@ output "build_date" {
   value = trimspace(enos_local_exec.get_build_date.stdout)
 }
 
-resource "enos_local_exec" "get_version" {
-  scripts = ["${path.module}/scripts/version.sh"]
-}
-
-output "version" {
-  value = trimspace(enos_local_exec.get_version.stdout)
-}
-
 resource "enos_local_exec" "get_revision" {
   inline = ["git rev-parse HEAD"]
 }

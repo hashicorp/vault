@@ -63,7 +63,7 @@ jobs:
         env:
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
-        run: echo "ARTIFACT_BASENAME=$(make crt-get-artifact-basename)" >> $GITHUB_ENV
+        run: echo "ARTIFACT_BASENAME= ${{ needs.set-product-version.outputs.vault-version }}" >> $GITHUB_ENV
       - name: Bundle Vault
         env:
           BUNDLE_PATH: out/${{ env.ARTIFACT_BASENAME }}.zip
