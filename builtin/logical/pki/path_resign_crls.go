@@ -185,9 +185,7 @@ func encodeResponse(crlBytes []byte, derFormatRequested bool) string {
 		Type:  "X509 CRL",
 		Bytes: crlBytes,
 	}
-	// This is convoluted on purpose to ensure that we don't have trailing
-	// newlines via various paths
-	return strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+	return string(pem.EncodeToMemory(&block))
 }
 
 func getCrlFormat(requestedValue string) (string, error) {
