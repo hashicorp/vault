@@ -214,15 +214,15 @@ func (r *registry) Keys(pluginType consts.PluginType) []string {
 	switch pluginType {
 	case consts.PluginTypeDatabase:
 		for key, backend := range r.databasePlugins {
-			appendIfNotRemoved(&keys, key, backend.DeprecationStatus)
+			keys = appendIfNotRemoved(keys, key, backend.DeprecationStatus)
 		}
 	case consts.PluginTypeCredential:
 		for key, backend := range r.credentialBackends {
-			appendIfNotRemoved(&keys, key, backend.DeprecationStatus)
+			keys = appendIfNotRemoved(keys, key, backend.DeprecationStatus)
 		}
 	case consts.PluginTypeSecrets:
 		for key, backend := range r.logicalBackends {
-			appendIfNotRemoved(&keys, key, backend.DeprecationStatus)
+			keys = appendIfNotRemoved(keys, key, backend.DeprecationStatus)
 		}
 	}
 	return keys
@@ -265,8 +265,9 @@ func toFunc(ifc interface{}) func() (interface{}, error) {
 	}
 }
 
-func appendIfNotRemoved(keys *[]string, name string, status consts.DeprecationStatus) {
+func appendIfNotRemoved(keys []string, name string, status consts.DeprecationStatus) []string {
 	if status != consts.Removed {
-		*keys = append(*keys, name)
+		return append(keys, name)
 	}
+	return keys
 }
