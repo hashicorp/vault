@@ -79,8 +79,16 @@ func (h *RoleAllowsGlobWildcards) Evaluate(e *Executor) (results []*Result, err 
 	}
 
 	for role, entry := range h.RoleEntryMap {
-		allowsWildcard := entry["allow_wildcard_certificates"].(bool)
-		if !allowsWildcard {
+		allowsWildcards, present := entry["allow_wildcard_certificates"]
+		if !present {
+			ret := Result{
+				Status:   ResultInvalidVersion,
+				Endpoint: "/{{mount}}/roles",
+				Message:  "This health check requires a version of Vault with allow_wildcard_certificates (Vault 1.8.9+, 1.9.4+, or 1.10.0+), but an earlier version of Vault Server was contacted, preventing this health check from running.",
+			}
+			return []*Result{&ret}, nil
+		}
+		if !allowsWildcards.(bool) {
 			continue
 		}
 
