@@ -794,15 +794,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 	}
 
-	// Disabled by default until functional
-	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
-		Commands["operator diagnose"] = func() (cli.Command, error) {
-			return &OperatorDiagnoseCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		}
-	}
-
 	initCommandsEnt(ui, serverCmdUi, runOpts)
 }
 
