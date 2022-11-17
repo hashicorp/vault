@@ -14,6 +14,7 @@ on:
     branches:
       - main
       - release/**
+      - testing-set-product-version
 
 env:
   PKG_NAME: vault
