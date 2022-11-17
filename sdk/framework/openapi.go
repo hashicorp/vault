@@ -214,9 +214,9 @@ var (
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
-func documentPaths(backend *Backend, requestResponsePrefix string, genericMountPaths bool, doc *OASDocument) error {
+func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
 	for _, p := range backend.Paths {
-		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, genericMountPaths, backend.BackendType, doc); err != nil {
+		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, backend.BackendType, doc); err != nil {
 			return err
 		}
 	}
@@ -225,7 +225,7 @@ func documentPaths(backend *Backend, requestResponsePrefix string, genericMountP
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, genericMountPaths bool, backendType logical.BackendType, doc *OASDocument) error {
+func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, backendType logical.BackendType, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
 
@@ -264,16 +264,21 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		// Body fields will be added to individual operations.
 		pathFields, bodyFields := splitFields(p.Fields, path)
 
-		if genericMountPaths && requestResponsePrefix != "system" && requestResponsePrefix != "identity" {
-			// Add mount path as a parameter
+		defaultMountPath := requestResponsePrefix
+		if requestResponsePrefix == "kv" {
+			defaultMountPath = "secret"
+		}
+
+		if defaultMountPath != "system" && defaultMountPath != "identity" {
 			p := OASParameter{
-				Name:        "mountPath",
-				Description: "Path that the backend was mounted at",
+				Name:        fmt.Sprintf("%s_mount_path", defaultMountPath),
+				Description: "Path where the backend was mounted; the endpoint path will be offset by the mount path",
 				In:          "path",
 				Schema: &OASSchema{
-					Type: "string",
+					Type:    "string",
+					Default: defaultMountPath,
 				},
-				Required: true,
+				Required: false,
 			}
 
 			pi.Parameters = append(pi.Parameters, p)
