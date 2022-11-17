@@ -26,13 +26,14 @@ require (
 	github.com/SAP/go-hdb v0.14.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
 	github.com/aerospike/aerospike-client-go/v5 v5.6.0
-	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1499
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1842
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
 	github.com/armon/go-metrics v0.4.0
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 	github.com/aws/aws-sdk-go v1.44.128
+	github.com/aws/aws-sdk-go-v2/config v1.6.0
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
@@ -104,7 +105,7 @@ require (
 	github.com/hashicorp/raft-autopilot v0.2.0
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.13.0
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.4-beta1.0.20221117202053-722c59caa2d0
 	github.com/hashicorp/vault-plugin-auth-azure v0.11.2-0.20221108185759-ac6743d5f0f2
 	github.com/hashicorp/vault-plugin-auth-centrify v0.13.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.13.0
@@ -240,11 +241,15 @@ require (
 	github.com/apache/arrow/go/arrow v0.0.0-20210818145353-234c94e4ce64 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.8.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.3.2 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.4.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.4.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.2.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.2.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.2.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.5.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.12.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.3.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.6.1 // indirect
 	github.com/aws/smithy-go v1.7.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect

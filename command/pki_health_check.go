@@ -199,6 +199,9 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 	executor.AddCheck(healthcheck.NewCRLValidityPeriodCheck())
 	executor.AddCheck(healthcheck.NewHardwareBackedRootCheck())
 	executor.AddCheck(healthcheck.NewRootIssuedLeavesCheck())
+	executor.AddCheck(healthcheck.NewRoleAllowsLocalhostCheck())
+	executor.AddCheck(healthcheck.NewRoleAllowsGlobWildcardsCheck())
+	executor.AddCheck(healthcheck.NewRoleNoStoreFalseCheck())
 	if c.flagDefaultDisabled {
 		executor.DefaultEnabled = false
 	}
