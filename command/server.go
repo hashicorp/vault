@@ -142,7 +142,6 @@ type ServerCommand struct {
 	flagTestServerConfig   bool
 	flagDevConsul          bool
 	flagExitOnCoreShutdown bool
-	flagDiagnose           string
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -224,19 +223,6 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
 			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
-
-	// Disabled by default until functional
-	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
-		f.StringVar(&StringVar{
-			Name:    "diagnose",
-			Target:  &c.flagDiagnose,
-			Default: notSetValue,
-			Usage:   "Run diagnostics before starting Vault. Specify a filename to direct output to that file.",
-		})
-	} else {
-		// Ensure diagnose is *not* run when feature flag is off.
-		c.flagDiagnose = notSetValue
-	}
 
 	f = set.NewFlagSet("Dev Options")
 
@@ -980,21 +966,6 @@ func (c *ServerCommand) Run(args []string) int {
 					"Your request has been ignored."))
 			c.flagDevRootTokenID = ""
 		}
-	}
-
-	if c.flagDiagnose != notSetValue {
-		if c.flagDev {
-			c.UI.Error("Cannot run diagnose on Vault in dev mode.")
-			return 1
-		}
-		// TODO: add a file output flag to Diagnose
-		diagnose := &OperatorDiagnoseCommand{
-			BaseCommand: c.BaseCommand,
-			flagDebug:   false,
-			flagSkips:   []string{},
-			flagConfigs: c.flagConfigs,
-		}
-		diagnose.RunWithParsedFlags()
 	}
 
 	// Load the configuration
