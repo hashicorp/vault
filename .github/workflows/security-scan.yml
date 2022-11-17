@@ -35,14 +35,13 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         mkdir ~/bin
-        
         (
-          cd $GITHUB_WORKSPACE/security-scanner/pkg/sdk/examples/scan-plugin-semgrep &&
+          cd ./security-scanner/pkg/sdk/examples/scan-plugin-semgrep &&
           go build -o scan-plugin-semgrep . &&
           mv scan-plugin-semgrep ~/bin
         ) &
         (
-          cd $GITHUB_WORKSPACE/security-scanner/pkg/sdk/examples/scan-plugin-codeql &&
+          cd ./security-scanner/pkg/sdk/examples/scan-plugin-codeql &&
           go build -o scan-plugin-codeql . &&
           mv scan-plugin-codeql ~/bin
         ) &
@@ -58,7 +57,7 @@ jobs:
 
     - name: Scan
       id: scan
-      uses: ./security-scanner@faf9a6a0a869043cc9c603f720b3c9d639371a11
+      uses: ./security-scanner
       # env:
         # Note: this _should_ work, but causes some issues with Semgrep.
         # Instead, rely on filtering in the SARIF Output step.
