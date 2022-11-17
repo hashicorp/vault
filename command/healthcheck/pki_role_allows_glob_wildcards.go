@@ -79,8 +79,8 @@ func (h *RoleAllowsGlobWildcards) Evaluate(e *Executor) (results []*Result, err 
 	}
 
 	for role, entry := range h.RoleEntryMap {
-		allowsWildcard, present := entry["allow_wildcard_certificates"].(bool)
-		if !present || !allowsWildcard {
+		allowsWildcard := entry["allow_wildcard_certificates"].(bool)
+		if !allowsWildcard {
 			continue
 		}
 

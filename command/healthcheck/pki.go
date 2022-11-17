@@ -244,8 +244,8 @@ func pkiFetchRoles(e *Executor, versionError func()) (bool, *PathFetch, []string
 
 	if len(rolesRet.ParsedCache) == 0 {
 		var roles []string
-		for _, rawSerial := range rolesRet.Secret.Data["keys"].([]interface{}) {
-			roles = append(roles, rawSerial.(string))
+		for _, roleName := range rolesRet.Secret.Data["keys"].([]interface{}) {
+			roles = append(roles, roleName.(string))
 		}
 		rolesRet.ParsedCache["roles"] = roles
 	}
