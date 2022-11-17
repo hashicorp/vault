@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - release/**
+      - test-go-dep-cache-with-action
 
 env:
   PKG_NAME: vault
@@ -52,9 +53,32 @@ jobs:
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
           if-no-files-found: error
 
+  build-ui:
+    runs-on: [custom, linux, xl]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up node and yarn
+      uses: actions/setup-node@v3
+      with:
+        node-version: 14
+        cache: yarn
+        cache-dependency-path: ui/yarn.lock
+    - name: Build Vault UI
+      run: make ci-build-ui
+    - uses: montudor/action-zip@v1
+      with:
+        args: zip -qq -r ui.zip ui
+    - uses: actions/upload-artifact@v3
+      with:
+        name: ui.zip
+        path: ui.zip
+        retention-days: 1
+
   build-other:
     name: Build Vault Other
-    needs: product-metadata
+    needs: 
+      - product-metadata
+      - build-ui
     strategy:
       matrix:
         goos: [freebsd, windows, netbsd, openbsd, solaris]
@@ -80,7 +104,9 @@ jobs:
 
   build-linux:
     name: Build Vault Linux
-    needs: product-metadata
+    needs: 
+      - product-metadata
+      - build-ui
     strategy:
       matrix:
         goos: [linux]
@@ -98,7 +124,9 @@ jobs:
 
   build-darwin:
     name: Build Vault Darwin
-    needs: product-metadata
+    needs:
+      - product-metadata
+      - build-ui
     strategy:
       matrix:
         goos: [darwin]
