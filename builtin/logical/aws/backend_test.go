@@ -197,7 +197,7 @@ func TestBackend_throttled(t *testing.T) {
 
 func testAccPreCheck(t *testing.T) {
 	if !hasAWSCredentials() {
-		t.Skip("The default config for AWS could not be resolved; see https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials for instructions.")
+		t.Skip("Skipping because AWS credentials could not be resolved. See https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials for information on how to set up AWS credentials.")
 	}
 
 	initSetup.Do(func() {
