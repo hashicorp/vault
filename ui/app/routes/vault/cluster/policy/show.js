@@ -11,6 +11,9 @@ export default Route.extend(UnloadModelRoute, {
     if (this.wizard.featureState === 'create') {
       this.wizard.transitionFeatureMachine('create', 'CONTINUE', this.policyType);
     }
+    if (this.wizard.featureState === 'details') {
+      this.wizard.transitionFeatureMachine('details', 'CONTINUE', this.policyType);
+    }
   },
 
   beforeModel() {
