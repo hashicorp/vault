@@ -9,7 +9,7 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
+    "build": "ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json && touch ../http/web_ui/.gitkeep",
     "build:dev": "ember build",
     "lint:fix": "npm-run-all --aggregate-output --continue-on-error --parallel lint:*:fix",
     "lint:hbs": "ember-template-lint '**/*.hbs'",

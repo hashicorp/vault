@@ -1,0 +1,5 @@
+# Generated Web UI goes here
+# git check-ignore -v -- http/web_ui/.gitkeep
+web_ui/**
+!web_ui/**/
+!web_ui/**/.gitkeep
