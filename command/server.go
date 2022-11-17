@@ -191,25 +191,6 @@ func (c *ServerCommand) Flags() *FlagSets {
 			".hcl or .json are loaded.",
 	})
 
-	f.StringVar(&StringVar{
-		Name:       "log-level",
-		Target:     &c.flagLogLevel,
-		Default:    notSetValue,
-		EnvVar:     "VAULT_LOG_LEVEL",
-		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
-		Usage: "Log verbosity level. Supported values (in order of detail) are " +
-			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
-	})
-
-	f.StringVar(&StringVar{
-		Name:       "log-format",
-		Target:     &c.flagLogFormat,
-		Default:    notSetValue,
-		EnvVar:     "VAULT_LOG_FORMAT",
-		Completion: complete.PredictSet("standard", "json"),
-		Usage:      `Log format. Supported values are "standard" and "json".`,
-	})
-
 	f.BoolVar(&BoolVar{
 		Name:    "exit-on-core-shutdown",
 		Target:  &c.flagExitOnCoreShutdown,
