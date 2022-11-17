@@ -69,25 +69,7 @@
     />
   {{/if}}
   {{#if this.policy.policyType}}
-    <Form::Policy @onSave={{this.onSave}} @model={{this.policy}} @onCancel={{@onCancel}}>
-      <div class="has-bottom-margin-m">
-        <p>
-          More information about
-          {{uppercase this.policy.policyType}}
-          policies can be found
-          <DocLink
-            @host="https://developer.hashicorp.com"
-            @path={{if
-              (eq this.policy.policyType "acl")
-              "/vault/docs/concepts/policies#capabilities"
-              "/vault/tutorials/policies/sentinel#role-governing-policies-rgps"
-            }}
-          >
-            here.
-          </DocLink>
-        </p>
-      </div>
-    </Form::Policy>
+    <PolicyForm @onSave={{this.onSave}} @model={{this.policy}} @onCancel={{@onCancel}} />
   {{else}}
     <EmptyState @title="No policy type selected" @message="Select a policy type to continue creating." />
   {{/if}}

@@ -4,11 +4,11 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
 /**
- * @module CreatePolicyModal
- * CreatePolicyModal components are meant to render within a modal for creating a new policy of unknown type.
+ * @module ModalCreate::PolicyTemplate
+ * ModalCreate::PolicyTemplate components are meant to render within a modal for creating a new policy of unknown type.
  *
  * @example
- *  <CreatePolicyModal
+ *  <ModalCreate::PolicyTemplate
  *    @nameInput="new-item-name"
  *    @onSave={{this.closeModal}}
  *    @onCancel={{this.closeModal}}
@@ -19,7 +19,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {string} nameInput - the name of the newly created policy
  */
 
-export default class PolicyFormComponent extends Component {
+export default class PolicyTemplate extends Component {
   @service store;
   @service version;
   @service flashMessages;
@@ -77,10 +77,6 @@ main = rule when precond {
   }
 
   @action onSave(policyModel) {
-    const { name, policyType, isNew } = policyModel;
-    this.flashMessages.success(
-      `${policyType.toUpperCase()} policy "${name}" was successfully ${isNew ? 'created' : 'updated'}.`
-    );
     this.args.onSave(policyModel);
     // Reset component policy for next use
     this.policy = null;
