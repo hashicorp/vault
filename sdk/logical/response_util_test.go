@@ -40,6 +40,14 @@ func TestResponseUtil_RespondErrorCommon_basic(t *testing.T) {
 			expectedStatus: 404,
 		},
 		{
+			title: "Header not found",
+			req: &Request{
+				Operation: HeaderOperation,
+			},
+			respErr:        nil,
+			expectedStatus: 404,
+		},
+		{
 			title: "List with response and no keys",
 			req: &Request{
 				Operation: ListOperation,

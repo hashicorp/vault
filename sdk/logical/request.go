@@ -366,6 +366,7 @@ const (
 	HelpOperation                     = "help"
 	AliasLookaheadOperation           = "alias-lookahead"
 	ResolveRoleOperation              = "resolve-role"
+	HeaderOperation                   = "header"
 
 	// The operations below are called globally, the path is less relevant.
 	RevokeOperation   Operation = "revoke"
