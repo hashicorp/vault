@@ -58,7 +58,7 @@ func (h *RoleNoStoreFalse) LoadConfig(config map[string]interface{}) error {
 }
 
 func (h *RoleNoStoreFalse) FetchResources(e *Executor) error {
-	exit, _, roles, err := pkiFetchRoles(e, func() {
+	exit, _, roles, err := pkiFetchRolesList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit || err != nil {
@@ -79,7 +79,7 @@ func (h *RoleNoStoreFalse) FetchResources(e *Executor) error {
 		h.RoleEntryMap[role] = entry
 	}
 
-	exit, _, leaves, err := pkiFetchLeaves(e, func() {
+	exit, _, leaves, err := pkiFetchLeavesList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit || err != nil {

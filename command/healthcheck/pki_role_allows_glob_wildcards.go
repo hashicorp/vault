@@ -43,7 +43,7 @@ func (h *RoleAllowsGlobWildcards) LoadConfig(config map[string]interface{}) erro
 }
 
 func (h *RoleAllowsGlobWildcards) FetchResources(e *Executor) error {
-	exit, _, roles, err := pkiFetchRoles(e, func() {
+	exit, _, roles, err := pkiFetchRolesList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit || err != nil {

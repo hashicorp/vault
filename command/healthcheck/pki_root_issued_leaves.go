@@ -56,7 +56,7 @@ func (h *RootIssuedLeaves) LoadConfig(config map[string]interface{}) error {
 }
 
 func (h *RootIssuedLeaves) FetchResources(e *Executor) error {
-	exit, _, issuers, err := pkiFetchIssuers(e, func() {
+	exit, _, issuers, err := pkiFetchIssuersList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit || err != nil {
@@ -85,7 +85,7 @@ func (h *RootIssuedLeaves) FetchResources(e *Executor) error {
 		h.RootCertMap[issuer] = cert
 	}
 
-	exit, _, leaves, err := pkiFetchLeaves(e, func() {
+	exit, _, leaves, err := pkiFetchLeavesList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit || err != nil {

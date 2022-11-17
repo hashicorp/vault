@@ -42,7 +42,7 @@ func (h *RoleAllowsLocalhost) LoadConfig(config map[string]interface{}) error {
 }
 
 func (h *RoleAllowsLocalhost) FetchResources(e *Executor) error {
-	exit, _, roles, err := pkiFetchRoles(e, func() {
+	exit, _, roles, err := pkiFetchRolesList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit || err != nil {
