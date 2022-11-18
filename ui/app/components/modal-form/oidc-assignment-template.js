@@ -5,18 +5,18 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module ModalForm::OidcAssignmentTemplate
- * ModalForm::OidcAssignmentTemplate components are meant to render within a modal for creating a new assignment
+ * ModalForm::OidcAssignmentTemplate components render within a modal and create a model using the search select input to pass to the oidc/assignment-form
  *
  * @example
  *  <ModalForm::OidcAssignmentTemplate
  *    @nameInput="new-item-name"
  *    @onSave={{this.closeModal}}
- *    @onCancel={{this.closeModal}}
+ *    @onCancel={{@onCancel}}
  *  />
  * ```
  * @callback onCancel - callback triggered when cancel button is clicked
  * @callback onSave - callback triggered when save button is clicked
- * @param {string} nameInput - the name of the newly created policy
+ * @param {string} nameInput - the name of the newly created assignment
  */
 
 export default class OidcAssignmentTemplate extends Component {
@@ -30,7 +30,7 @@ export default class OidcAssignmentTemplate extends Component {
 
   @action onSave(assignmentModel) {
     this.args.onSave(assignmentModel);
-    // Reset component policy for next use
+    // Reset component assignment for next use
     this.assignment = null;
   }
 
