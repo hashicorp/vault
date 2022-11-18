@@ -1,6 +1,8 @@
 package builtinplugins
 
 import (
+	"context"
+
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
@@ -25,7 +27,6 @@ import (
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
-	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
@@ -50,6 +51,7 @@ import (
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -80,13 +82,23 @@ type logicalBackend struct {
 	consts.DeprecationStatus
 }
 
+type removedBackend struct {
+	*framework.Backend
+}
+
+func removedFactory(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+	removedBackend := &removedBackend{}
+	removedBackend.Backend = &framework.Backend{}
+	return removedBackend, nil
+}
+
 func newRegistry() *registry {
 	reg := &registry{
 		credentialBackends: map[string]credentialBackend{
 			"alicloud": {Factory: credAliCloud.Factory},
 			"app-id": {
-				Factory:           credAppId.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
 			},
 			"approle":    {Factory: credAppRole.Factory},
 			"aws":        {Factory: credAws.Factory},

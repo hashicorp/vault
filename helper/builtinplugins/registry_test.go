@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
@@ -35,9 +35,16 @@ func Test_RegistryGet(t *testing.T) {
 		},
 		{
 			name:       "known builtin lookup",
+			builtin:    "userpass",
+			pluginType: consts.PluginTypeCredential,
+			want:       toFunc(credUserpass.Factory),
+			wantOk:     true,
+		},
+		{
+			name:       "removed builtin lookup",
 			builtin:    "app-id",
 			pluginType: consts.PluginTypeCredential,
-			want:       toFunc(credAppId.Factory),
+			want:       nil,
 			wantOk:     true,
 		},
 		{
