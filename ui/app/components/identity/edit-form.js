@@ -10,6 +10,7 @@ export default Component.extend({
   'data-test-component': 'identity-edit-form',
   attributeBindings: ['data-test-component'],
   model: null,
+
   // 'create', 'edit', 'merge'
   mode: 'create',
   /*
