@@ -85,7 +85,7 @@ const (
 	// EnvVaultLogFormat is used to specify the log format. Supported values are "standard" and "json"
 	EnvVaultLogFormat = "VAULT_LOG_FORMAT"
 	// EnvVaultLogFile is used to specify the path to the log file that Vault should use for logging
-	// Can be used in conjunction with EnvVaultLogRotateBytes
+	// Can be used in conjunction with EnvVaultLogRotateBytes, EnvVaultLogRotateDuration and EnvVaultLogRotateMaxFiles
 	EnvVaultLogFile = "VAULT_LOG_FILE"
 	// EnvVaultLogLevel is used to specify the log level applied to logging
 	// Supported log levels: Trace, Debug, Error, Warn, Info
