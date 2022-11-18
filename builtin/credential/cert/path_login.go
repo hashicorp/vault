@@ -204,7 +204,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	var certName string
 	if req.Auth != nil { // It's a renewal, use the saved certName
 		certName = req.Auth.Metadata["cert_name"]
-	} else {
+	} else if d != nil { // d is nil if handleAuthRenew call the authRenew
 		certName = d.Get("name").(string)
 	}
 

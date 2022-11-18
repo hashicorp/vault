@@ -456,6 +456,21 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	if secret.Auth == nil || secret.Auth.ClientToken == "" {
 		t.Fatalf("expected a successful authentication")
 	}
+
+	// testing pathLoginRenew for cert auth
+	oldAccessor := secret.Auth.Accessor
+	newClient.SetToken(client.Token())
+	secret, err = newClient.Logical().Write("auth/token/renew-accessor", map[string]interface{}{
+		"accessor":  secret.Auth.Accessor,
+		"increment": 3600,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if secret.Auth == nil || secret.Auth.ClientToken != "" || secret.Auth.LeaseDuration != 3600 || secret.Auth.Accessor != oldAccessor {
+		t.Fatalf("unexpected accessor renewal")
+	}
 }
 
 func TestBackend_NonCAExpiry(t *testing.T) {
