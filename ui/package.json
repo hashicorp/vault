@@ -239,6 +239,7 @@
     "paths": [
       "lib/core",
       "lib/css",
+      "lib/keep-gitkeep",
       "lib/kmip",
       "lib/open-api-explorer",
       "lib/pki",
