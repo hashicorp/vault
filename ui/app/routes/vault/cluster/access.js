@@ -1,11 +1,10 @@
 import { computed } from '@ember/object';
-import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
-import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
+import UnloadModelRoute from 'vault/routes/-unload-model-route';
 
-export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
+export default UnloadModelRoute.extend(ClusterRoute, {
   modelTypes: computed(function () {
-    return ['capabilities', 'control-group', 'identity/group', 'identity/group-alias', 'identity/alias'];
+    return ['identity/group', 'identity/group-alias', 'identity/alias', 'generated-user-userpass'];
   }),
   model() {
     return {};

@@ -3,8 +3,10 @@ import RSVP from 'rsvp';
 import { action } from '@ember/object';
 import getStorage from 'vault/lib/token-storage';
 import { inject as service } from '@ember/service';
+import withUnloadModelRoute from 'vault/decorators/unload-model-route';
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 
+@withUnloadModelRoute(['clients/version-history', 'clients/monthly'])
 export default class ClientsRoute extends Route {
   @service store;
   async getVersionHistory() {
