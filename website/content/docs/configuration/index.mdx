@@ -182,7 +182,7 @@ to specify where the configuration is.
   This can also be specified via the `VAULT_LOG_LEVEL` environment variable.
 
   ~> Note: On SIGHUP (`sudo kill -s HUP` _pid of vault_), if a valid value is specified, Vault will update the existing log level,
-  overriding (even if specified) both the CLI flag and envinronment variable.
+  overriding (even if specified) both the CLI flag and environment variable.
 
   ~> Note: Not all parts of Vault's logging can have its log level be changed dynamically this way; in particular,
   secrets/auth plugins are currently not updated dynamically.
