@@ -6,7 +6,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki-engine';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-module('Integration | Component | pki/role-form', function (hooks) {
+module('Integration | Component | pki-role-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
   setupEngine(hooks, 'pki'); // https://github.com/ember-engines/ember-engines/pull/653
@@ -21,7 +21,7 @@ module('Integration | Component | pki/role-form', function (hooks) {
     assert.expect(13);
     await render(
       hbs`
-      <RoleForm
+      <PkiRoleForm
          @model={{this.model}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
@@ -72,7 +72,7 @@ module('Integration | Component | pki/role-form', function (hooks) {
 
     await render(
       hbs`
-      <RoleForm
+      <PkiRoleForm
          @model={{this.model}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
