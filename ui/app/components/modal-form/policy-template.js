@@ -4,11 +4,11 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
 /**
- * @module ModalCreate::PolicyTemplate
- * ModalCreate::PolicyTemplate components are meant to render within a modal for creating a new policy of unknown type.
+ * @module ModalForm::PolicyTemplate
+ * ModalForm::PolicyTemplate components are meant to render within a modal for creating a new policy of unknown type.
  *
  * @example
- *  <ModalCreate::PolicyTemplate
+ *  <ModalForm::PolicyTemplate
  *    @nameInput="new-item-name"
  *    @onSave={{this.closeModal}}
  *    @onCancel={{this.closeModal}}

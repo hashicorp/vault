@@ -1,7 +1,7 @@
 <div
   {{did-insert (perform this.fetchOptions)}}
   id={{@id}}
-  class={{concat "field search-select" (if (eq @displayInherit true) " display-inherit")}}
+  class="field search-select {{if @displayInherit 'display-inherit'}}"
   data-test-search-select-with-modal
   ...attributes
 >

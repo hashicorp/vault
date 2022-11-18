@@ -2,7 +2,7 @@
   {{did-insert (perform this.fetchOptions)}}
   {{did-update (perform this.fetchOptions) (or @options @models)}}
   id={{@id}}
-  class={{concat "field search-select" (if (eq @displayInherit true) " display-inherit")}}
+  class="field search-select {{if @displayInherit 'display-inherit'}}"
   data-test-component="search-select"
   ...attributes
 >

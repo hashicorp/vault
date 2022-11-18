@@ -129,7 +129,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     await typeInSearch('entity-1-new');
     assert.strictEqual(
       component.options[0].text,
-      'No results found for "entity-1-new". Click here to create it. No results found for "entity-1-new". Click here to create it.',
+      'No results found for "entity-1-new". Click here to create it.',
       'dropdown gives option to create new option'
     );
 

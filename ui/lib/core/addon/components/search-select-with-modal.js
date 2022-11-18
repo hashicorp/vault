@@ -37,7 +37,7 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  * @param {object} formModel - model created by parent's onCreate callback, passed to form's @model argument
  
 // * query params for dropdown items
- * @param {array} models - model type to fetch from API (can only be a single model)
+ * @param {array} models - models to fetch from API. models with varying permissions should be ordered from least restricted to anticipated most restricted (ex. if one model is an enterprise only feature, pass it in last)
  * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
  * @param {object} [queryObject] - object passed as query options to this.store.query(). NOTE: will override @backend
  
@@ -102,9 +102,8 @@ export default class SearchSelectWithModal extends Component {
 
     for (const modelType of this.args.models) {
       try {
-        const queryParams = {};
         // fetch options from the store
-        let options = yield this.store.query(modelType, queryParams);
+        let options = yield this.store.query(modelType, {});
         if (this.args.excludeOptions) {
           options = options.filter((o) => !this.args.excludeOptions.includes(o.id));
         }
@@ -117,6 +116,8 @@ export default class SearchSelectWithModal extends Component {
           continue;
         }
         if (err.httpStatus === 403) {
+          // when multiple models are passed in, don't use fallback if the first query is successful
+          // (i.e. policies ['acl', 'rgp'] - rgp policies are ENT only so will always fail on OSS)
           if (this.dropdownOptions && this.args.models.length > 1) continue;
           this.shouldUseFallback = true;
           return;

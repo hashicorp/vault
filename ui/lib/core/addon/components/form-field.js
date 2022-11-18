@@ -21,7 +21,7 @@ import { dasherize } from 'vault/helpers/dasherize';
  *     label: "Foo", // custom label to be shown, otherwise attr.name will be displayed
  *     defaultValue: "", // default value to display if model value is not present
  *     fieldValue: "bar", // used for value lookup on model over attr.name
- *     editType: "ttl", type of field to use.
+ *     editType: "ttl", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
  *     helpText: "This will be in a tooltip",
  *     readOnly: true
  *   },
@@ -42,26 +42,21 @@ import { dasherize } from 'vault/helpers/dasherize';
  */
 
 export default class FormFieldComponent extends Component {
-  // alphabetical list of all editTypes if they hide <FormFieldLabel>
-  shouldHideLabel = {
-    boolean: true,
-    file: true,
-    json: true,
-    kv: true,
-    mountAccessor: true,
-    optionalText: true,
-    password: false,
-    radio: false,
-    regex: true,
-    searchSelect: true,
-    stringArray: true,
-    textarea: false,
-    ttl: true,
-    yield: false, // TODO for flexibility change to false?
-  };
+  emptyData = '{\n}';
+  shouldHideLabel = [
+    'boolean',
+    'file',
+    'json',
+    'kv',
+    'mountAccessor',
+    'optionalText',
+    'regex',
+    'searchSelect',
+    'stringArray',
+    'ttl',
+  ];
   @tracked showInput = false;
   @tracked file = { value: '' }; // used by the pgp-file component when an attr is editType of 'file'
-  emptyData = '{\n}';
 
   constructor() {
     super(...arguments);
@@ -73,12 +68,11 @@ export default class FormFieldComponent extends Component {
 
   get hideLabel() {
     const { type, options } = this.args.attr;
-    // these take precedent over an attrs default label behavior
     if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
       return true;
     }
     // falsey values render a <FormFieldLabel>
-    return this.shouldHideLabel[options?.editType];
+    return this.shouldHideLabel.includes[options?.editType];
   }
 
   get disabled() {
