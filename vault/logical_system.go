@@ -4486,10 +4486,10 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 				}
 
 				var docPath string
-				if mount != "sys/" && mount != "identity/" {
-					docPath = fmt.Sprintf("/%s{%s_mount_path}/%s", mountPrefix, strings.TrimRight(mount, "/"), path)
-				} else if mount == "kv/" {
+				if mount == "kv/" {
 					docPath = fmt.Sprintf("/%s{secret_mount_path}/%s", mountPrefix, path)
+				} else if mount != "sys/" && mount != "identity/" {
+					docPath = fmt.Sprintf("/%s{%s_mount_path}/%s", mountPrefix, strings.TrimRight(mount, "/"), path)
 				} else {
 					docPath = fmt.Sprintf("/%s%s%s", mountPrefix, mount, path)
 				}
