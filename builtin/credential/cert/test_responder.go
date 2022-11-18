@@ -19,7 +19,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"testing"
 	"time"
 
 	"golang.org/x/crypto/ocsp"
@@ -46,7 +45,7 @@ var (
 // ETag to the SHA256 hash of the response, and Content-Type to
 // application/ocsp-response. If you want to override these headers,
 // or set extra headers, your source should return a http.Header
-// with the headers you wish to set. If you don't want to set any
+// with the headers you wish to set. If you don'log want to set any
 // extra headers you may return nil instead.
 type Source interface {
 	Response(*ocsp.Request) ([]byte, http.Header, error)
@@ -72,19 +71,24 @@ type Stats interface {
 	ResponseStatus(ocsp.ResponseStatus)
 }
 
+type logger interface {
+	Log(args ...any)
+}
+
 // A Responder object provides the HTTP logic to expose a
 // Source of OCSP responses.
 type Responder struct {
-	t      *testing.T
+	log    logger
 	Source Source
 	stats  Stats
 }
 
 // NewResponder instantiates a Responder with the give Source.
-func NewResponder(source Source, stats Stats) *Responder {
+func NewResponder(t logger, source Source, stats Stats) *Responder {
 	return &Responder{
 		Source: source,
 		stats:  stats,
+		log:    t,
 	}
 }
 
@@ -133,7 +137,7 @@ func (rs *Responder) ServeHTTP(response http.ResponseWriter, request *http.Reque
 	case "GET":
 		base64Request, err := url.QueryUnescape(request.URL.Path)
 		if err != nil {
-			rs.t.Log("Error decoding URL:", request.URL.Path)
+			rs.log.Log("Error decoding URL:", request.URL.Path)
 			response.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -156,14 +160,14 @@ func (rs *Responder) ServeHTTP(response http.ResponseWriter, request *http.Reque
 		}
 		requestBody, err = base64.StdEncoding.DecodeString(string(base64RequestBytes))
 		if err != nil {
-			rs.t.Log("Error decoding base64 from URL", string(base64RequestBytes))
+			rs.log.Log("Error decoding base64 from URL", string(base64RequestBytes))
 			response.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	case "POST":
 		requestBody, err = ioutil.ReadAll(request.Body)
 		if err != nil {
-			rs.t.Log("Problem reading body of POST", err)
+			rs.log.Log("Problem reading body of POST", err)
 			response.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -172,7 +176,7 @@ func (rs *Responder) ServeHTTP(response http.ResponseWriter, request *http.Reque
 		return
 	}
 	b64Body := base64.StdEncoding.EncodeToString(requestBody)
-	rs.t.Log("Received OCSP request", b64Body)
+	rs.log.Log("Received OCSP request", b64Body)
 
 	// All responses after this point will be OCSP.
 	// We could check for the content type of the request, but that
@@ -181,11 +185,11 @@ func (rs *Responder) ServeHTTP(response http.ResponseWriter, request *http.Reque
 
 	// Parse response as an OCSP request
 	// XXX: This fails if the request contains the nonce extension.
-	//      We don't intend to support nonces anyway, but maybe we
+	//      We don'log intend to support nonces anyway, but maybe we
 	//      should return unauthorizedRequest instead of malformed.
 	ocspRequest, err := ocsp.ParseRequest(requestBody)
 	if err != nil {
-		rs.t.Log("Error decoding request body", b64Body)
+		rs.log.Log("Error decoding request body", b64Body)
 		response.WriteHeader(http.StatusBadRequest)
 		response.Write(malformedRequestErrorResponse)
 		if rs.stats != nil {
@@ -198,7 +202,7 @@ func (rs *Responder) ServeHTTP(response http.ResponseWriter, request *http.Reque
 	ocspResponse, headers, err := rs.Source.Response(ocspRequest)
 	if err != nil {
 		if err == ErrNotFound {
-			rs.t.Log("No response found for request: serial %x, request body %s",
+			rs.log.Log("No response found for request: serial %x, request body %s",
 				ocspRequest.SerialNumber, b64Body)
 			response.Write(unauthorizedErrorResponse)
 			if rs.stats != nil {
@@ -206,7 +210,7 @@ func (rs *Responder) ServeHTTP(response http.ResponseWriter, request *http.Reque
 			}
 			return
 		}
-		rs.t.Log("Error retrieving response for request: serial %x, request body %s, error",
+		rs.log.Log("Error retrieving response for request: serial %x, request body %s, error",
 			ocspRequest.SerialNumber, b64Body, err)
 		response.WriteHeader(http.StatusInternalServerError)
 		response.Write(internalErrorErrorResponse)
@@ -218,7 +222,7 @@ func (rs *Responder) ServeHTTP(response http.ResponseWriter, request *http.Reque
 
 	parsedResponse, err := ocsp.ParseResponse(ocspResponse, nil)
 	if err != nil {
-		rs.t.Log("Error parsing response for serial %x",
+		rs.log.Log("Error parsing response for serial %x",
 			ocspRequest.SerialNumber, err)
 		response.Write(internalErrorErrorResponse)
 		if rs.stats != nil {

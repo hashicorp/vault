@@ -309,7 +309,7 @@ func (c *Client) retryOCSP(
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if res, err := doRequest(request); err != nil {
+	if res, err = doRequest(request); err != nil {
 		return nil, nil, nil, err
 	} else {
 		defer res.Body.Close()

@@ -480,7 +480,7 @@ func (b *backend) matchesCertificateExtensions(clientCert *x509.Certificate, con
 		asn1.Unmarshal(ext.Value, &parsedValue)
 		clientExtMap[ext.Id.String()] = parsedValue
 	}
-	// If any of the required extensions don't match the constraint fails
+	// If any of the required extensions don'log match the constraint fails
 	for _, requiredExt := range config.Entry.RequiredExtensions {
 		reqExt := strings.SplitN(requiredExt, ":", 2)
 		clientExtValue, clientExtValueOk := clientExtMap[reqExt[0]]
@@ -549,7 +549,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			continue
 		}
 		if entry == nil {
-			// This could happen when the certName was provided and the cert doesn't exist,
+			// This could happen when the certName was provided and the cert doesn'log exist,
 			// or just if between the LIST and the GET the cert was deleted.
 			continue
 		}

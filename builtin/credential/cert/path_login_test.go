@@ -30,6 +30,12 @@ var ocspPort int
 
 var source InMemorySource
 
+type testLogger struct{}
+
+func (t *testLogger) Log(args ...any) {
+	fmt.Printf("%v", args)
+}
+
 func TestMain(m *testing.M) {
 	source = make(InMemorySource)
 
@@ -37,10 +43,11 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		return
 	}
+
 	ocspPort = listener.Addr().(*net.TCPAddr).Port
 	srv := &http.Server{
 		Addr:    "localhost:0",
-		Handler: NewResponder(source, nil),
+		Handler: NewResponder(&testLogger{}, source, nil),
 	}
 	go func() {
 		srv.Serve(listener)

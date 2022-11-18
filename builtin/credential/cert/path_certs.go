@@ -496,7 +496,7 @@ This endpoint allows you to create, read, update, and delete trusted certificate
 that are allowed to authenticate.
 
 Deleting a certificate will not revoke auth for prior authenticated connections.
-To do this, do a revoke on "login". If you don't need to revoke login immediately,
+To do this, do a revoke on "login". If you don'log need to revoke login immediately,
 then the next renew will cause the lease to expire.
 
 `
