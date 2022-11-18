@@ -1,28 +1,29 @@
-<nav class="tabs">
-  <ul>
-    <li class={{unless this.showExamplePolicy "active"}}>
-      <button
-        type="button"
-        name="form"
-        class="link link-plain tab has-text-weight-semibold {{unless this.showExamplePolicy ' is-active'}}"
-        {{on "click" (fn (mut this.showExamplePolicy) false)}}
-      >
-        Your Policy
-      </button>
-    </li>
-    <li class={{if this.showExamplePolicy "active"}}>
-      <button
-        type="button"
-        name="form"
-        class="link link-plain tab has-text-weight-semibold {{if this.showExamplePolicy ' is-active'}}"
-        {{on "click" (fn (mut this.showExamplePolicy) true)}}
-      >
-        Example Policy
-      </button>
-    </li>
-  </ul>
-</nav>
-
+{{#if this.policy.policyType}}
+  <nav class="tabs">
+    <ul>
+      <li class={{unless this.showExamplePolicy "active"}}>
+        <button
+          type="button"
+          name="form"
+          class="link link-plain tab has-text-weight-semibold {{unless this.showExamplePolicy ' is-active'}}"
+          {{on "click" (fn (mut this.showExamplePolicy) false)}}
+        >
+          Your Policy
+        </button>
+      </li>
+      <li class={{if this.showExamplePolicy "active"}}>
+        <button
+          type="button"
+          name="form"
+          class="link link-plain tab has-text-weight-semibold {{if this.showExamplePolicy ' is-active'}}"
+          {{on "click" (fn (mut this.showExamplePolicy) true)}}
+        >
+          Example Policy
+        </button>
+      </li>
+    </ul>
+  </nav>
+{{/if}}
 {{#if this.showExamplePolicy}}
   <div class="has-bottom-margin-s">
     {{#if (eq this.policy.policyType "acl")}}
@@ -57,17 +58,14 @@
     @showToolbar={{true}}
   />
 {{else}}
-  {{#if @isInline}}
-    {{this.policy.policyType}}
-    <Select
-      @label="Type"
-      @options={{this.policyOptions}}
-      @isFullwidth={{true}}
-      @selectedValue={{this.policy.policyType}}
-      @onChange={{this.setPolicyType}}
-      @noDefault={{true}}
-    />
-  {{/if}}
+  <Select
+    @label="Type"
+    @options={{this.policyOptions}}
+    @isFullwidth={{true}}
+    @selectedValue={{this.policy.policyType}}
+    @onChange={{this.setPolicyType}}
+    @noDefault={{true}}
+  />
   {{#if this.policy.policyType}}
     <PolicyForm @onSave={{this.onSave}} @model={{this.policy}} @onCancel={{@onCancel}} />
   {{else}}

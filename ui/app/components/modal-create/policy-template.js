@@ -22,7 +22,6 @@ import { tracked } from '@glimmer/tracking';
 export default class PolicyTemplate extends Component {
   @service store;
   @service version;
-  @service flashMessages;
 
   @tracked policy = null;
   @tracked showExamplePolicy = false;

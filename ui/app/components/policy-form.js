@@ -7,7 +7,7 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module PolicyForm
- * PolicyForm components are the forms used to display the create and edit forms for all types of policies. This is only the form, not the outlying layout, and expects that the form model is passed from the parent.
+ * PolicyForm components are the forms to create and edit all types of policies. This is only the form, not the outlying layout, and expects that the form model is passed from the parent.
  *
  * @example
  *  <PolicyForm
@@ -26,12 +26,14 @@ export default class PolicyFormComponent extends Component {
   @service flashMessages;
 
   @tracked errorBanner = '';
+  @tracked file = null;
+  @tracked showFileUpload = false;
 
   @task
   *save(event) {
     event.preventDefault();
-    const { name, policyType, isNew } = this.args.model;
     try {
+      const { name, policyType, isNew } = this.args.model;
       yield this.args.model.save();
       this.flashMessages.success(
         `${policyType.toUpperCase()} policy "${name}" was successfully ${isNew ? 'created' : 'updated'}.`
