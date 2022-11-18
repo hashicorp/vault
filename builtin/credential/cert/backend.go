@@ -40,6 +40,7 @@ func Backend() *backend {
 			pathLogin(&b),
 			pathListCerts(&b),
 			pathCerts(&b),
+			pathListCRLs(&b),
 			pathCRLs(&b),
 		},
 		AuthRenew:    b.pathLoginRenew,

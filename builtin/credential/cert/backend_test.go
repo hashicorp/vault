@@ -925,6 +925,21 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
+	// Ensure the CRL shows up on a list.
+	listReq := &logical.Request{
+		Operation: logical.ListOperation,
+		Storage:   storage,
+		Path:      "crls",
+		Data:      map[string]interface{}{},
+	}
+	resp, err = b.HandleRequest(context.Background(), listReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if len(resp.Data) != 1 || len(resp.Data["keys"].([]string)) != 1 || resp.Data["keys"].([]string)[0] != "issuedcrl" {
+		t.Fatalf("bad listing: resp:%v", resp)
+	}
+
 	// Attempt login with the same connection state but with the CRL registered
 	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil {
