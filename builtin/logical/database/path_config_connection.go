@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/go-version"
 
+	"github.com/hashicorp/vault/helper/versions"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -295,7 +296,10 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			config.PluginVersion = pluginVersionRaw.(string)
 		}
 
-		unversionedPlugin, err := b.System().LookupPlugin(ctx, config.PluginName, consts.PluginTypeDatabase)
+		var builtinShadowed bool
+		if unversionedPlugin, err := b.System().LookupPlugin(ctx, config.PluginName, consts.PluginTypeDatabase); err == nil && !unversionedPlugin.Builtin {
+			builtinShadowed = true
+		}
 		switch {
 		case config.PluginVersion != "":
 			semanticVersion, err := version.NewVersion(config.PluginVersion)
@@ -305,7 +309,16 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 			// Canonicalize the version.
 			config.PluginVersion = "v" + semanticVersion.String()
-		case err == nil && !unversionedPlugin.Builtin:
+
+			if config.PluginVersion == versions.GetBuiltinVersion(consts.PluginTypeDatabase, config.PluginName) {
+				if builtinShadowed {
+					return logical.ErrorResponse("database plugin %q, version %s not found, as it is"+
+						" overridden by an unversioned plugin of the same name", config.PluginName, config.PluginVersion), nil
+				}
+
+				config.PluginVersion = ""
+			}
+		case builtinShadowed:
 			// We'll select the unversioned plugin that's been registered.
 		case req.Operation == logical.CreateOperation:
 			// No version provided and no unversioned plugin of that name available.
@@ -439,6 +452,9 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 }
 
 func storeConfig(ctx context.Context, storage logical.Storage, name string, config *DatabaseConfig) error {
+	if versions.IsBuiltinVersion(config.PluginVersion) {
+		config.PluginVersion = ""
+	}
 	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
 	if err != nil {
 		return fmt.Errorf("unable to marshal object to JSON: %w", err)

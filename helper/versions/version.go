@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/version"
 )
@@ -51,4 +52,20 @@ func GetBuiltinVersion(pluginType consts.PluginType, pluginName string) string {
 	}
 
 	return DefaultBuiltinVersion
+}
+
+func IsBuiltinVersion(v string) bool {
+	semanticVersion, err := semver.NewSemver(v)
+	if err != nil {
+		return false
+	}
+
+	metadataIdentifiers := strings.Split(semanticVersion.Metadata(), ".")
+	for _, identifier := range metadataIdentifiers {
+		if identifier == "builtin" {
+			return true
+		}
+	}
+
+	return false
 }
