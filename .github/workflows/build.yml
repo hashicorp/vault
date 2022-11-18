@@ -185,6 +185,7 @@ jobs:
     # contributors in order to protect the secrets integrity.
     if: "! github.event.pull_request.head.repo.fork"
     needs:
+      - set-product-version
       - product-metadata
       - build-linux
     uses: ./.github/workflows/enos-run.yml
@@ -206,6 +207,7 @@ jobs:
     # contributors in order to protect the secrets integrity.
     if: "! github.event.pull_request.head.repo.fork"
     needs:
+      - set-product-version
       - product-metadata
       - build-docker
     uses: ./.github/workflows/enos-run-k8s.yml
