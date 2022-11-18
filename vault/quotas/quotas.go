@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"path"
 	"strings"
-	"sync"
+
+	"github.com/hashicorp/vault/helper/locking"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
@@ -167,13 +168,13 @@ type Manager struct {
 	metricSink *metricsutil.ClusterMetricSink
 
 	// quotaLock is a lock for manipulating quotas and anything not covered by a more specific lock
-	quotaLock *sync.RWMutex
+	quotaLock *locking.DeadlockRWMutex
 
 	// quotaConfigLock is a lock for accessing config items, such as RateLimitExemptPaths
-	quotaConfigLock *sync.RWMutex
+	quotaConfigLock *locking.DeadlockRWMutex
 
 	// dbAndCacheLock is a lock for db and path caches that need to be reset during Reset()
-	dbAndCacheLock *sync.RWMutex
+	dbAndCacheLock *locking.DeadlockRWMutex
 }
 
 // QuotaLeaseInformation contains all of the information lease-count quotas require
@@ -281,9 +282,9 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 		metricSink:           ms,
 		rateLimitPathManager: pathmanager.New(),
 		config:               new(Config),
-		quotaLock:            new(sync.RWMutex),
-		quotaConfigLock:      new(sync.RWMutex),
-		dbAndCacheLock:       new(sync.RWMutex),
+		quotaLock:            new(locking.DeadlockRWMutex),
+		quotaConfigLock:      new(locking.DeadlockRWMutex),
+		dbAndCacheLock:       new(locking.DeadlockRWMutex),
 	}
 
 	manager.init(walkFunc)

@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/helper/constants"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
@@ -903,6 +905,9 @@ type TestCluster struct {
 }
 
 func (c *TestCluster) Start() {
+}
+
+func (c *TestCluster) start(t testing.T) {
 	for i, core := range c.Cores {
 		if core.Server != nil {
 			for _, ln := range core.Listeners {
@@ -913,6 +918,33 @@ func (c *TestCluster) Start() {
 	}
 	if c.SetupFunc != nil {
 		c.SetupFunc()
+	}
+
+WAITACTIVE:
+	for i := 0; i < 60; i++ {
+		for _, core := range c.Cores {
+			if standby, _ := core.Core.Standby(); !standby {
+				break WAITACTIVE
+			}
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	cli := c.Cores[0].Client
+	_, err := cli.Logical().Write("sys/quotas/rate-limit/rl-NewTestCluster", map[string]interface{}{
+		"rate": 1000000,
+	})
+	if err != nil {
+		t.Fatalf("error setting up global rate limit quota: %v", err)
+	}
+	if constants.IsEnterprise {
+		_, err = cli.Logical().Write("sys/quotas/lease-count/lc-NewTestCluster", map[string]interface{}{
+			"max_leases": 1000000,
+		})
+		if err != nil {
+			t.Fatalf("error setting up global lease count quota: %v", err)
+		}
 	}
 }
 
@@ -1801,6 +1833,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 	}
 
+	testCluster.start(t)
 	return &testCluster
 }
 

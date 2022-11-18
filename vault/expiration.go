@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/helper/locking"
+
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -109,7 +111,7 @@ type ExpirationManager struct {
 	pending     sync.Map
 	nonexpiring sync.Map
 	leaseCount  int
-	pendingLock sync.RWMutex
+	pendingLock locking.DeadlockRWMutex
 
 	// A sync.Lock for every active leaseID
 	lockPerLease sync.Map
@@ -137,7 +139,7 @@ type ExpirationManager struct {
 	quitCh             chan struct{}
 
 	// do not hold coreStateLock in any API handler code - it is already held
-	coreStateLock     *DeadlockRWMutex
+	coreStateLock     *locking.DeadlockRWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
 
