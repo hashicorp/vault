@@ -1,6 +1,6 @@
 //go:build deadlock
 
-package vault
+package locking
 
 import (
 	"github.com/sasha-s/go-deadlock"
