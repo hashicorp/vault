@@ -63,7 +63,7 @@ jobs:
         env:
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
-        run: echo "ARTIFACT_BASENAME= ${{ inputs.package-name }}_${{ inputs.vault-version }}_${{ inputs.goos }}_${{ inputs.goarch }}" >> $GITHUB_ENV
+        run: echo "ARTIFACT_BASENAME=${{ inputs.package-name }}_${{ inputs.vault-version }}_${{ inputs.goos }}_${{ inputs.goarch }}" >> $GITHUB_ENV
       - name: Bundle Vault
         env:
           BUNDLE_PATH: out/${{ env.ARTIFACT_BASENAME }}.zip

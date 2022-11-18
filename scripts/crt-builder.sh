@@ -9,66 +9,6 @@ set -euo pipefail
 # We don't want to get stuck in some kind of interactive pager
 export GIT_PAGER=cat
 
-# Get the full version information
-function version() {
-  local version
-  local prerelease
-  local metadata
-
-  version=$(version_base)
-  prerelease=$(version_pre)
-  metadata=$(version_metadata)
-
-  if [ -n "$metadata" ] && [ -n "$prerelease" ]; then
-    echo "$version-$prerelease+$metadata"
-  elif [ -n "$metadata" ]; then
-    echo "$version+$metadata"
-  elif [ -n "$prerelease" ]; then
-    echo "$version-$prerelease"
-  else
-    echo "$version"
-  fi
-}
-
-# Get the base version
-function version_base() {
-  : "${VAULT_VERSION:=""}"
-
-  if [ -n "$VAULT_VERSION" ]; then
-    echo "$VAULT_VERSION"
-    return
-  fi
-
-  : "${VERSION_FILE:=$(repo_root)/sdk/version/version_base.go}"
-  awk '$1 == "Version" && $2 == "=" { gsub(/"/, "", $3); print $3 }' < "$VERSION_FILE"
-}
-
-# Get the version pre-release
-function version_pre() {
-  : "${VAULT_PRERELEASE:=""}"
-
-  if [ -n "$VAULT_PRERELEASE" ]; then
-    echo "$VAULT_PRERELEASE"
-    return
-  fi
-
-  : "${VERSION_FILE:=$(repo_root)/sdk/version/version_base.go}"
-  awk '$1 == "VersionPrerelease" && $2 == "=" { gsub(/"/, "", $3); print $3 }' < "$VERSION_FILE"
-}
-
-# Get the version metadata, which is commonly the edition
-function version_metadata() {
-  : "${VAULT_METADATA:=""}"
-
-  if [ -n "$VAULT_METADATA" ]; then
-    echo "$VAULT_METADATA"
-    return
-  fi
-
-  : "${VERSION_FILE:=$(repo_root)/sdk/version/version_base.go}"
-  awk '$1 == "VersionMetadata" && $2 == "=" { gsub(/"/, "", $3); print $3 }' < "$VERSION_FILE"
-}
-
 # Get the build date from the latest commit since it can be used across all
 # builds
 function build_date() {
@@ -118,42 +58,25 @@ function build_ui() {
 
 # Build Vault
 function build() {
-  local version
   local revision
-  local prerelease
   local build_date
   local ldflags
   local msg
 
   # Get or set our basic build metadata
-  version=$(version_base)
   revision=$(build_revision)
-  metadata=$(version_metadata)
-  prerelease=$(version_pre)
   build_date=$(build_date)
   : "${GO_TAGS:=""}"
   : "${KEEP_SYMBOLS:=""}"
 
   # Build our ldflags
-  msg="--> Building Vault v$version, revision $revision, built $build_date"
+  msg="--> Building Vault revision $revision, built $build_date"
 
   # Strip the symbol and dwarf information by default
   if [ -n "$KEEP_SYMBOLS" ]; then
     ldflags=""
   else
     ldflags="-s -w "
-  fi
-
-  ldflags="${ldflags}-X github.com/hashicorp/vault/sdk/version.Version=$version -X github.com/hashicorp/vault/sdk/version.GitCommit=$revision -X github.com/hashicorp/vault/sdk/version.BuildDate=$build_date"
-
-  if [ -n "$prerelease" ]; then
-    msg="${msg}, prerelease ${prerelease}"
-    ldflags="${ldflags} -X github.com/hashicorp/vault/sdk/version.VersionPrerelease=$prerelease"
-  fi
-
-  if [ -n "$metadata" ]; then
-    msg="${msg}, metadata ${VAULT_METADATA}"
-    ldflags="${ldflags} -X github.com/hashicorp/vault/sdk/version.VersionMetadata=$metadata"
   fi
 
   # Build vault
@@ -166,6 +89,7 @@ function build() {
   set +x
   popd
 }
+
 
 # Bundle the dist directory
 function bundle() {
@@ -211,18 +135,6 @@ function main() {
   ;;
   revision)
     build_revision
-  ;;
-  version)
-    version
-  ;;
-  version-base)
-    version_base
-  ;;
-  version-pre)
-    version_pre
-  ;;
-  version-meta)
-    version_metadata
   ;;
   *)
     echo "unknown sub-command" >&2
