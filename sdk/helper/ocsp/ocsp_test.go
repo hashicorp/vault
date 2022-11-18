@@ -4,9 +4,11 @@ package ocsp
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,10 +20,8 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
-
-	"golang.org/x/crypto/ocsp"
-
 	lru "github.com/hashicorp/golang-lru"
+	"golang.org/x/crypto/ocsp"
 )
 
 func TestOCSP(t *testing.T) {
