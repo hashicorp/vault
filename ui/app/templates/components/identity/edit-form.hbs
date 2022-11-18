@@ -34,10 +34,8 @@
               @models={{array "policy/acl" "policy/rgp"}}
               @inputValue={{@model.policies}}
               @onChange={{action (mut this.model.policies)}}
-              @onCreate={{action "createSearchSelectModel"}}
-              @formModel={{this.policyModel}}
               @fallbackComponent="string-list"
-              @modalFormComponent="modal-form/policy-template"
+              @modalFormTemplate="modal-form/policy-template"
               @excludeOptions={{array "root"}}
             />
           {{else}}

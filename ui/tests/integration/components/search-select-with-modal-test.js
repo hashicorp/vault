@@ -82,7 +82,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @onChange={{this.onChange}}
       @onCreate={{this.onCreate}}
       @fallbackComponent="string-list"
-      @modalFormComponent="identity/edit-form"
+      @modalFormTemplate="identity/edit-form"
       @modalSubtext="Some modal subtext"
       />
       <div id="modal-wormhole"></div>
@@ -108,7 +108,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @onChange={{this.onChange}}
       @onCreate={{this.onCreate}}
       @fallbackComponent="string-list"
-      @modalFormComponent="identity/edit-form"
+      @modalFormTemplate="identity/edit-form"
       @modalSubtext="Some modal subtext"
       />
       <div id="modal-wormhole"></div>
@@ -164,7 +164,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @onChange={{this.onChange}}
       @onCreate={{this.onCreate}}
       @fallbackComponent="string-list"
-      @modalFormComponent="identity/edit-form"
+      @modalFormTemplate="identity/edit-form"
       @modalSubtext="Some modal subtext"
       />
       <div id="modal-wormhole"></div>

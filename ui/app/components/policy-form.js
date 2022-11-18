@@ -66,12 +66,8 @@ export default class PolicyFormComponent extends Component {
 
   @action
   cancel() {
-    this.cleanup();
-    this.args.onCancel();
-  }
-
-  cleanup() {
     const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
     this.args.model[method]();
+    this.args.onCancel();
   }
 }

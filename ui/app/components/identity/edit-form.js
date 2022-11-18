@@ -7,11 +7,9 @@ import { waitFor } from '@ember/test-waiters';
 
 export default Component.extend({
   flashMessages: service(),
-  store: service(),
   'data-test-component': 'identity-edit-form',
   attributeBindings: ['data-test-component'],
   model: null,
-  policyModel: null,
   // 'create', 'edit', 'merge'
   mode: 'create',
   /*
@@ -78,12 +76,6 @@ export default Component.extend({
   },
 
   actions: {
-    createSearchSelectModel({ type, name }) {
-      if (type && name) {
-        const model = this.store.createRecord(`policy/${type}`, { name });
-        this.set('policyModel', model);
-      }
-    },
     deleteItem(model) {
       const message = this.getMessage(model, true);
       const flash = this.flashMessages;

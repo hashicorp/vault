@@ -23,7 +23,7 @@ export default class PolicyTemplate extends Component {
   @service store;
   @service version;
 
-  @tracked policy = null;
+  @tracked policy = null; // model record passed to policy-form
   @tracked showExamplePolicy = false;
 
   get policyOptions() {
@@ -69,10 +69,8 @@ main = rule when precond {
   @action
   setPolicyType(type) {
     // Create form model once type is chosen
-    // cleanup any model argument before firing parent action to create a new record in identity/edit-form.js
     if (this.policy) this.cleanup();
-    const model = this.store.createRecord(`policy/${type}`, { name: this.args.nameInput });
-    this.policy = model;
+    this.policy = this.store.createRecord(`policy/${type}`, { name: this.args.nameInput });
   }
 
   @action onSave(policyModel) {

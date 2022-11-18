@@ -18,12 +18,10 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  *   @subText="Search for an existing assignment, or type a new name to create it."
  *   @inputValue={{map-by "id" @model.assignments}}
  *   @onChange={{this.handleSearchSelect}}
- *   @onCreate={{this.createFormModel}}
- *   @formModel={{this.modelFromParent}}
  *   {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
  *   @excludeOptions={{array "allow_all"}}
  *   @fallbackComponent="string-list"
- *   @modalFormComponent="oidc/assignment-form"
+ *   @modalFormTemplate="modal-form/some-template"
  *   @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
  * />
  *
@@ -54,7 +52,6 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
 export default class SearchSelectWithModal extends Component {
   @service store;
   @tracked shouldUseFallback = false;
-
   @tracked selectedOptions = []; // list of selected options
   @tracked dropdownOptions = []; // options that will render in dropdown, updates as selections are added/discarded
   @tracked showModal = false;
@@ -196,12 +193,8 @@ export default class SearchSelectWithModal extends Component {
     if (selection && selection.__isSuggestion__) {
       // user has clicked to create a new item
       // wait to handleChange below in resetModal
-      const name = selection.__value__;
+      this.nameInput = selection.__value__; // input is passed to form component
       this.showModal = true;
-      this.args.onCreate({ name });
-      // if firing onCreate does not generate a formModel, then pass name to form component
-      // where `onCreate` is fired again after more user interaction (ex: selecting a policy type)
-      if (!this.args.formModel) this.nameInput = name;
     } else {
       // user has selected an existing item, handleChange immediately
       this.selectedOptions.pushObject(selection);

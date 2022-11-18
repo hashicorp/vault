@@ -79,8 +79,8 @@
 
   {{/if}}
 
-  {{! only render modal if user has selected to create a new item }}
-  {{#if (or @formModel this.nameInput)}}
+  {{! wait until user has selected 'create a new item' before rendering modal}}
+  {{#if this.nameInput}}
     <Modal
       @title="Create new {{singularize @id}}"
       @onClose={{action (mut this.showModal) false}}
@@ -97,12 +97,10 @@
         {{#if (has-block)}}
           {{yield}}
         {{else}}
-          {{! dynamically render passed in form component }}
+          {{! dynamically render template from modal-form/ folder}}
           {{! form must receive an @onSave and @onCancel arg that executes the callback}}
           {{component
-            @modalFormComponent
-            model=@formModel
-            createSearchSelectModel=@onCreate
+            @modalFormTemplate
             nameInput=this.nameInput
             onSave=this.resetModal
             onCancel=this.resetModal
