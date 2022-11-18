@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/base64"
 	"fmt"
 	"math/big"
 	"testing"
@@ -337,7 +338,63 @@ func TestSignRevocationList(t *testing.T) {
 	require.NoError(t, err, "failed signature check of CRL")
 }
 
-func TestSignRevocationListMissingInputs(t *testing.T) {
+func TestSignRevocationList_NoRevokedCerts(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "test.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	resp, err = CBWrite(b, s, "issuer/default/sign-revocation-list", map[string]interface{}{
+		"crl_number":  "10000",
+		"next_update": "12h",
+		"format":      "pem",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	requireFieldsSetInResp(t, resp, "crl")
+	pemCrl := resp.Data["crl"].(string)
+	crl, err := decodePemCrl(pemCrl)
+	require.NoError(t, err, "failed decoding CRL")
+
+	serials := extractSerialsFromCrl(t, crl)
+	require.Equal(t, 0, len(serials), "no serials were expected in CRL")
+
+	require.Equal(t, big.NewInt(int64(10000)), crl.Number)
+	require.Equal(t, crl.ThisUpdate.Add(12*time.Hour), crl.NextUpdate)
+}
+
+func TestSignRevocationList_ReservedExtensions(t *testing.T) {
+	t.Parallel()
+
+	reservedOids := []asn1.ObjectIdentifier{
+		akOid, deltaCrlOid, crlNumOid,
+	}
+
+	for _, reservedOid := range reservedOids {
+		t.Run(reservedOid.String(), func(t *testing.T) {
+			b, s := CreateBackendWithStorage(t)
+			resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+				"common_name": "test.com",
+			})
+			requireSuccessNonNilResponse(t, resp, err)
+
+			resp, err = CBWrite(b, s, "issuer/default/sign-revocation-list", map[string]interface{}{
+				"crl_number":  "1",
+				"next_update": "12h",
+				"format":      "pem",
+				"extensions": []map[string]interface{}{
+					{
+						"id":       reservedOid.String(),
+						"critical": "false",
+						"value":    base64.StdEncoding.EncodeToString([]byte("hello")),
+					},
+				},
+			})
+
+			require.ErrorContains(t, err, "is reserved")
+		})
+	}
 }
 
 func setupResignCrlMounts(t *testing.T, b1 *backend, s1 logical.Storage, b2 *backend, s2 logical.Storage) (*x509.Certificate, string, string, string, string) {

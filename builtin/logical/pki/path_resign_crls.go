@@ -30,6 +30,12 @@ const (
 	formatParam             = "format"
 )
 
+var (
+	akOid       = asn1.ObjectIdentifier{2, 5, 29, 20}
+	crlNumOid   = asn1.ObjectIdentifier{2, 5, 29, 20}
+	deltaCrlOid = asn1.ObjectIdentifier{2, 5, 29, 27}
+)
+
 func pathResignCrls(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/resign-crls",
@@ -389,6 +395,18 @@ func parseExtension(entry map[string]interface{}) (pkix.Extension, error) {
 	asnObjectId, err := parseExtAsn1ObjectId(entry)
 	if err != nil {
 		return pkix.Extension{}, err
+	}
+
+	if asnObjectId.Equal(akOid) {
+		return pkix.Extension{}, fmt.Errorf("authority key object identifier (%s) is reserved", akOid.String())
+	}
+
+	if asnObjectId.Equal(crlNumOid) {
+		return pkix.Extension{}, fmt.Errorf("crl number object identifier (%s) is reserved", crlNumOid.String())
+	}
+
+	if asnObjectId.Equal(deltaCrlOid) {
+		return pkix.Extension{}, fmt.Errorf("delta crl object identifier (%s) is reserved", deltaCrlOid.String())
 	}
 
 	critical, err := parseExtCritical(entry)
