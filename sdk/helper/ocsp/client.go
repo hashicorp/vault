@@ -306,14 +306,20 @@ func (c *Client) retryOCSP(
 	ocspHost.Path = ocspHost.Path + "/" + base64.StdEncoding.EncodeToString(reqBody)
 	var res *http.Response
 	request, err := req("GET", ocspHost.String(), nil)
-	if res, err = doRequest(request); err != nil {
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if res, err := doRequest(request); err != nil {
 		return nil, nil, nil, err
 	} else {
 		defer res.Body.Close()
 	}
 	if res.StatusCode == http.StatusMethodNotAllowed {
-		request, err = req("POST", origHost.String(), bytes.NewBuffer(reqBody))
-		if res, err = doRequest(request); err != nil {
+		request, err := req("POST", origHost.String(), bytes.NewBuffer(reqBody))
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if res, err := doRequest(request); err != nil {
 			return nil, nil, nil, err
 		} else {
 			defer res.Body.Close()

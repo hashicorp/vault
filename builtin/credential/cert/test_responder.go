@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"testing"
 	"time"
 
 	"golang.org/x/crypto/ocsp"
@@ -74,6 +75,7 @@ type Stats interface {
 // A Responder object provides the HTTP logic to expose a
 // Source of OCSP responses.
 type Responder struct {
+	t      *testing.T
 	Source Source
 	stats  Stats
 }
@@ -118,7 +120,7 @@ var hashToString = map[crypto.Hash]string{
 // default handler will try to canonicalize path components by changing any
 // strings of repeated '/' into a single '/', which will break the base64
 // encoding.
-func (rs Responder) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+func (rs *Responder) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	// By default we set a 'max-age=0, no-cache' Cache-Control header, this
 	// is only returned to the client if a valid authorized OCSP response
 	// is not found or an error is returned. If a response if found the header
@@ -131,7 +133,7 @@ func (rs Responder) ServeHTTP(response http.ResponseWriter, request *http.Reques
 	case "GET":
 		base64Request, err := url.QueryUnescape(request.URL.Path)
 		if err != nil {
-			fmt.Printf("Error decoding URL: %s", request.URL.Path)
+			rs.t.Log("Error decoding URL:", request.URL.Path)
 			response.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -154,14 +156,14 @@ func (rs Responder) ServeHTTP(response http.ResponseWriter, request *http.Reques
 		}
 		requestBody, err = base64.StdEncoding.DecodeString(string(base64RequestBytes))
 		if err != nil {
-			fmt.Printf("Error decoding base64 from URL: %s", string(base64RequestBytes))
+			rs.t.Log("Error decoding base64 from URL", string(base64RequestBytes))
 			response.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	case "POST":
 		requestBody, err = ioutil.ReadAll(request.Body)
 		if err != nil {
-			fmt.Printf("Problem reading body of POST: %s", err)
+			rs.t.Log("Problem reading body of POST", err)
 			response.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -170,7 +172,7 @@ func (rs Responder) ServeHTTP(response http.ResponseWriter, request *http.Reques
 		return
 	}
 	b64Body := base64.StdEncoding.EncodeToString(requestBody)
-	fmt.Printf("Received OCSP request: %s", b64Body)
+	rs.t.Log("Received OCSP request", b64Body)
 
 	// All responses after this point will be OCSP.
 	// We could check for the content type of the request, but that
@@ -183,7 +185,7 @@ func (rs Responder) ServeHTTP(response http.ResponseWriter, request *http.Reques
 	//      should return unauthorizedRequest instead of malformed.
 	ocspRequest, err := ocsp.ParseRequest(requestBody)
 	if err != nil {
-		fmt.Printf("Error decoding request body: %s", b64Body)
+		rs.t.Log("Error decoding request body", b64Body)
 		response.WriteHeader(http.StatusBadRequest)
 		response.Write(malformedRequestErrorResponse)
 		if rs.stats != nil {
@@ -196,7 +198,7 @@ func (rs Responder) ServeHTTP(response http.ResponseWriter, request *http.Reques
 	ocspResponse, headers, err := rs.Source.Response(ocspRequest)
 	if err != nil {
 		if err == ErrNotFound {
-			fmt.Printf("No response found for request: serial %x, request body %s",
+			rs.t.Log("No response found for request: serial %x, request body %s",
 				ocspRequest.SerialNumber, b64Body)
 			response.Write(unauthorizedErrorResponse)
 			if rs.stats != nil {
@@ -204,7 +206,7 @@ func (rs Responder) ServeHTTP(response http.ResponseWriter, request *http.Reques
 			}
 			return
 		}
-		fmt.Printf("Error retrieving response for request: serial %x, request body %s, error: %s",
+		rs.t.Log("Error retrieving response for request: serial %x, request body %s, error",
 			ocspRequest.SerialNumber, b64Body, err)
 		response.WriteHeader(http.StatusInternalServerError)
 		response.Write(internalErrorErrorResponse)
@@ -216,7 +218,7 @@ func (rs Responder) ServeHTTP(response http.ResponseWriter, request *http.Reques
 
 	parsedResponse, err := ocsp.ParseResponse(ocspResponse, nil)
 	if err != nil {
-		fmt.Printf("Error parsing response for serial %x: %s",
+		rs.t.Log("Error parsing response for serial %x",
 			ocspRequest.SerialNumber, err)
 		response.Write(internalErrorErrorResponse)
 		if rs.stats != nil {
