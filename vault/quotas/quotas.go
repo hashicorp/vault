@@ -413,7 +413,7 @@ func (m *Manager) quotaByNameLocked(qType string, name string) (Quota, error) {
 }
 
 // QuotaByFactors returns the quota rule that matches the provided factors
-func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath, pathSuffix, role string) (Quota, error) {
+func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath, pathSuffix string) (Quota, error) {
 	m.dbAndCacheLock.RLock()
 	defer m.dbAndCacheLock.RUnlock()
 
