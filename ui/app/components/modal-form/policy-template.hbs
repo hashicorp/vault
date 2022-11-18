@@ -3,6 +3,7 @@
     <ul>
       <li class={{unless this.showExamplePolicy "active"}}>
         <button
+          data-test-tab-your-policy
           type="button"
           name="form"
           class="link link-plain tab has-text-weight-semibold {{unless this.showExamplePolicy ' is-active'}}"
@@ -13,6 +14,7 @@
       </li>
       <li class={{if this.showExamplePolicy "active"}}>
         <button
+          data-test-tab-example-policy
           type="button"
           name="form"
           class="link link-plain tab has-text-weight-semibold {{if this.showExamplePolicy ' is-active'}}"
@@ -59,6 +61,7 @@
   />
 {{else}}
   <Select
+    @name="policyType"
     @label="Type"
     @options={{this.policyOptions}}
     @isFullwidth={{true}}

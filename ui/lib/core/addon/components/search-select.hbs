@@ -56,7 +56,7 @@
         <li class="search-select-list-item" data-test-selected-option={{index}}>
           {{#if this.shouldRenderName}}
             {{selected.name}}
-            <small class="search-select-list-key" data-test-smaller-id="true">
+            <small class="search-select-list-key" data-test-smaller-id={{index}}>
               {{get selected this.idKey}}
             </small>
           {{else}}
