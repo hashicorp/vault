@@ -70,7 +70,7 @@ func (h *CRLValidityPeriod) LoadConfig(config map[string]interface{}) error {
 }
 
 func (h *CRLValidityPeriod) FetchResources(e *Executor) error {
-	exit, _, issuers, err := pkiFetchIssuers(e, func() {
+	exit, _, issuers, err := pkiFetchIssuersList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit || err != nil {

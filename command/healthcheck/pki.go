@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pkiFetchIssuers(e *Executor, versionError func()) (bool, *PathFetch, []string, error) {
+func pkiFetchIssuersList(e *Executor, versionError func()) (bool, *PathFetch, []string, error) {
 	issuersRet, err := e.FetchIfNotFetched(logical.ListOperation, "/{{mount}}/issuers")
 	if err != nil {
 		return true, nil, nil, err
@@ -178,7 +178,7 @@ func pkiFetchKeyEntry(e *Executor, key string, versionError func()) (bool, *Path
 	return false, keyRet, data, nil
 }
 
-func pkiFetchLeaves(e *Executor, versionError func()) (bool, *PathFetch, []string, error) {
+func pkiFetchLeavesList(e *Executor, versionError func()) (bool, *PathFetch, []string, error) {
 	leavesRet, err := e.FetchIfNotFetched(logical.ListOperation, "/{{mount}}/certs")
 	if err != nil {
 		return true, nil, nil, err
@@ -229,7 +229,7 @@ func pkiFetchLeaf(e *Executor, serial string, versionError func()) (bool, *PathF
 	return false, leafRet, leafRet.ParsedCache["certificate"].(*x509.Certificate), nil
 }
 
-func pkiFetchRoles(e *Executor, versionError func()) (bool, *PathFetch, []string, error) {
+func pkiFetchRolesList(e *Executor, versionError func()) (bool, *PathFetch, []string, error) {
 	rolesRet, err := e.FetchIfNotFetched(logical.ListOperation, "/{{mount}}/roles")
 	if err != nil {
 		return true, nil, nil, err

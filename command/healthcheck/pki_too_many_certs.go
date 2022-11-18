@@ -57,7 +57,7 @@ func (h *TooManyCerts) LoadConfig(config map[string]interface{}) error {
 }
 
 func (h *TooManyCerts) FetchResources(e *Executor) error {
-	exit, leavesRet, _, err := pkiFetchLeaves(e, func() {
+	exit, leavesRet, _, err := pkiFetchLeavesList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit {
