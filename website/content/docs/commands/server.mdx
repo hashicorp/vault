@@ -70,7 +70,7 @@ flags](/docs/commands) included on all commands.
   for a fine-grained log rotation experience. 
   This can also be specified via the `VAULT_LOG_FILE` environment variable.
 
- `-log-rotate-bytes` ((#\_log_rotate_bytes)) - to specify the number of
+- `-log-rotate-bytes` ((#\_log_rotate_bytes)) - to specify the number of
   bytes that should be written to a log before it needs to be rotated. Unless specified,
   there is no limit to the number of bytes that can be written to a log file.
   This can also be specified via the `VAULT_LOG_ROTATE_BYTES` environment variable.
@@ -92,6 +92,20 @@ upgrade and disable these engines. Once these engines are marked `Removed` (in
 the next major release of Vault), the environment variable will no longer work
 and a downgrade must be performed in order to remove the offending engines. For
 more information, see the [deprecation faq](/docs/deprecation/faq/#q-what-are-the-phases-of-deprecation).
+
+### Configuration Options
+
+- `log_file` Equivalent to the [`-log-file` command-line flag](#_log_file).
+
+- `log_rotate_duration` Equivalent to the [`-log-rotate-duration` command-line flag](#_log_rotate_duration).
+
+- `log_rotate_bytes` Equivalent to the [`-log-rotate-bytes` command-line flag](#_log_rotate_bytes).
+
+- `log_rotate_max_files` Equivalent to the [`-log-rotate-max-files` command-line flag](#_log_rotate_max_files).
+
+- `log_level` Equivalent to the [`-log-level` command-line flag](#_log_level).
+
+- `log_format` Equivalent to the [`-log-format` command-line flag](#_log_format).
 
 ### Dev Options
 
