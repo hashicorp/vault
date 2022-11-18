@@ -15,6 +15,7 @@ a default health check. When Consul is configured as the storage backend, the st
 `service_registration` is not needed as it will automatically register Vault as a service.
 
 ~> **Version information:** The `service_registration` configuration option was introduced in Vault 1.4.0.
+
 ~> **Compatibility information:** As of Consul 1.14.0, Consul on Kubernetes uses [Consul Dataplane](consul/docs/connect/dataplane) instead of client agents. Vault does not currently support Consul Dataplane. Please follow the Consul 1.14.0 [upgrade guide](consul/docs/k8s/upgrade#upgrading-to-consul-dataplane) to ensure that your Consul on Kubernetes deployment continues to use client agents.
 
 - **HashiCorp Supported** – Consul Service Registration is officially supported
