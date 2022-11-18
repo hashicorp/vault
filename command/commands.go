@@ -787,15 +787,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
-	}
-
-	// Disabled by default until functional
-	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
-		Commands["operator diagnose"] = func() (cli.Command, error) {
-			return &OperatorDiagnoseCommand{
+		"pki health-check": func() (cli.Command, error) {
+			return &PKIHealthCheckCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
-		}
+		},
 	}
 
 	initCommandsEnt(ui, serverCmdUi, runOpts)

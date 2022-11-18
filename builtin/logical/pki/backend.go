@@ -177,6 +177,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// OCSP APIs
 			buildPathOcspGet(&b),
 			buildPathOcspPost(&b),
+
+			// CRL Signing
+			pathResignCrls(&b),
 		},
 
 		Secrets: []*framework.Secret{
