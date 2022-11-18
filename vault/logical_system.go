@@ -4941,9 +4941,7 @@ func sanitizePath(path string) string {
 		path += "/"
 	}
 
-	if strings.HasPrefix(path, "/") {
-		path = path[1:]
-	}
+	path = strings.TrimPrefix(path, "/")
 
 	return path
 }
