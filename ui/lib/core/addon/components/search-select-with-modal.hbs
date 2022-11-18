@@ -99,13 +99,7 @@
         {{else}}
           {{! dynamically render template from modal-form/ folder}}
           {{! form must receive an @onSave and @onCancel arg that executes the callback}}
-          {{component
-            @modalFormTemplate
-            nameInput=this.nameInput
-            onSave=this.resetModal
-            onCancel=this.resetModal
-            isInline=true
-          }}
+          {{component @modalFormTemplate nameInput=this.nameInput onSave=this.resetModal onCancel=this.resetModal}}
         {{/if}}
       </section>
     </Modal>

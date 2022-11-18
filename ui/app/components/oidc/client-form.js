@@ -18,12 +18,10 @@ import { task } from 'ember-concurrency';
  */
 
 export default class OidcClientForm extends Component {
-  @service store;
   @service flashMessages;
   @tracked modelValidations;
   @tracked errorBanner;
   @tracked invalidFormAlert;
-  @tracked assignmentModel; // model for form rendered by ss+modal
   @tracked radioCardGroupValue =
     !this.args.model.assignments || this.args.model.assignments.includes('allow_all')
       ? 'allow_all'
@@ -35,14 +33,6 @@ export default class OidcClientForm extends Component {
       return [];
     } else {
       return assignments;
-    }
-  }
-
-  // callback fired by SS+Modal when new item is selected to create
-  @action
-  createSearchSelectModel({ name }) {
-    if (name) {
-      this.assignmentModel = this.store.createRecord('oidc/assignment', { name });
     }
   }
 

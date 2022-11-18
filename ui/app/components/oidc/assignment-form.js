@@ -17,11 +17,8 @@ import { tracked } from '@glimmer/tracking';
  * ```
 
  * @param {object} model - The parent's model
- * @callback {string} onCancel - callback triggered when cancel button is clicked
- * @callback {string} onSave - callback triggered when save button is clicked
- * * params when form renders within search-select-with-modal.hbs:
- * @callback createSearchSelectModel - callback to fire when new item is selected to create in SS+Modal
- *
+ * @callback onCancel - callback triggered when cancel button is clicked
+ * @callback onSave - callback triggered when save button is clicked*
  */
 
 export default class OidcAssignmentFormComponent extends Component {
