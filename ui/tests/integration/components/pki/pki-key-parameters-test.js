@@ -5,7 +5,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki-engine';
 
-module('Integration | Component | pki/key-parameters', function (hooks) {
+module('Integration | Component | pki-key-parameters', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
@@ -20,7 +20,7 @@ module('Integration | Component | pki/key-parameters', function (hooks) {
     await render(
       hbs`
       <div class="has-top-margin-xxl">
-        <KeyParameters
+        <PkiKeyParameters
           @model={{this.model}}
           @group="Key parameters"
         />
@@ -39,7 +39,7 @@ module('Integration | Component | pki/key-parameters', function (hooks) {
     await render(
       hbs`
       <div class="has-top-margin-xxl">
-        <KeyParameters
+        <PkiKeyParameters
           @model={{this.model}}
           @group="Key parameters"
         />

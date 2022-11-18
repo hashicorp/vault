@@ -5,7 +5,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki-engine';
 
-module('Integration | Component | pki/key-usage', function (hooks) {
+module('Integration | Component | pki-key-usage', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
@@ -20,7 +20,7 @@ module('Integration | Component | pki/key-usage', function (hooks) {
     await render(
       hbs`
       <div class="has-top-margin-xxl">
-        <KeyUsage
+        <PkiKeyUsage
           @model={{this.model}}
           @group="Key usage"
         />
@@ -50,7 +50,7 @@ module('Integration | Component | pki/key-usage', function (hooks) {
     await render(
       hbs`
       <div class="has-top-margin-xxl">
-        <KeyUsage
+        <PkiKeyUsage
           @model={{this.model}}
           @group="Key usage"
         />

@@ -5,12 +5,12 @@ import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 
 /**
- * @module RoleForm
- * RoleForm components are used to create and update PKI roles.
+ * @module PkiRoleForm
+ * PkiRoleForm components are used to create and update PKI roles.
  *
  * @example
  * ```js
- * <RoleForm @model={{this.model}}/>
+ * <PkiRoleForm @model={{this.model}}/>
  * ```
  * @callback onCancel
  * @callback onSave
@@ -19,7 +19,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {onSave} onSave - Callback triggered on save success.
  */
 
-export default class RoleForm extends Component {
+export default class PkiRoleForm extends Component {
   @service store;
   @service flashMessages;
 
