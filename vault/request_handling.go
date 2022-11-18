@@ -1327,7 +1327,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		return nil, nil, ErrInternalError
 	}
 
-	// vault-8307
 	// check if user lockout feature is disabled
 	isUserLockoutDisabled, err := c.isUserLockoutDisabled(entry, req)
 	if err != nil {
@@ -1335,23 +1334,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 
 	if !isUserLockoutDisabled {
-		//try to access pathAliasLookAhead and get response
-
-		aliasName:=c.determineAliasNameFromLoginRequest(entry,req)
-		if aliasName==""{
-			c.logger.Error("failed to determine alias name from ", "path", req.Path, "error", err)
-			return nil, nil, ErrInternalError
-		}
-
-		// determine alias name from login request
-		value,_:= c.PathAliasLookAheadFromLoginRequest(aliasName,entry, req, ctx)
-		if value != nil{
-
-		}
-		
-
-
-
 
 		isloginUserLocked, err := c.isUserLocked(ctx, entry, req)
 		if err != nil {
@@ -1646,9 +1628,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	// vault-8307 successful login, remove any entry from userFailedLoginInfo map
 	// if it exists
-	if !isUserLockoutDisabled {
-		loginUserInfoKey := c.getLoginUserInfo(entry, req)
-		err := c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true)
+	if !isUserLockoutDisabled && auth.TokenType == logical.TokenTypeBatch {
+		loginUserInfoKey, err := c.getLoginUserInfo(entry, req, ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+		err = c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1777,7 +1762,10 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 
 func (c *Core) failedUserLoginProcess(ctx context.Context, mountEntry *MountEntry, req *logical.Request) error {
 	// get the userfailedLoginMap for the entry
-	loginUserInfoKey := c.getLoginUserInfo(mountEntry, req)
+	loginUserInfoKey, err := c.getLoginUserInfo(mountEntry, req, ctx)
+	if err != nil {
+		return err
+	}
 	// get entry from userFailedLoginInfo map for the key
 	userFailedLoginInfo := getUserFailedLoginInfo(ctx, c, loginUserInfoKey)
 	// get the user lockout configuration
@@ -1801,7 +1789,7 @@ func (c *Core) failedUserLoginProcess(ctx context.Context, mountEntry *MountEntr
 	}
 
 	// update the userFailedLoginInfo map
-	err := c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, &failedLoginInfo, false)
+	err = c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, &failedLoginInfo, false)
 	if err != nil {
 		return err
 	}
@@ -1837,35 +1825,15 @@ func (c *Core) failedUserLoginProcess(ctx context.Context, mountEntry *MountEntr
 }
 
 // getLoginUserInfo gets login user info to check details in failedUserLoginInfo map
-// supported for userpass, approle and ldap 
-func (c *Core) determineAliasNameFromLoginRequest(mountEntry *MountEntry, req *logical.Request) (aliasName string) {
-	switch mountEntry.Type {
-	case "approle":
-		aliasNameRaw := req.Data["role_id"]
-		aliasName = fmt.Sprintf("%v", aliasNameRaw)
-	default:
-		splitPath := strings.Split(req.Path, "login/")
-		aliasName = splitPath[1]
-
+func (c *Core) getLoginUserInfo(mountEntry *MountEntry, req *logical.Request, ctx context.Context) (userInfo FailedLoginUser, err error) {
+	aliasName := c.PathLoginAliasLookAheadFromLoginRequest(req, ctx)
+	if aliasName == "" {
+		return userInfo, errors.New("failed to determine alias name from login request")
 	}
-	return aliasName
-}
 
-// getLoginUserInfo gets login user info to check details in failedUserLoginInfo map
-func (c *Core) getLoginUserInfo(mountEntry *MountEntry, req *logical.Request) (userInfo FailedLoginUser) {
-	var aliasName string
-	switch mountEntry.Type {
-	case "approle":
-		aliasNameRaw := req.Data["role_id"]
-		aliasName = fmt.Sprintf("%v", aliasNameRaw)
-	default:
-		splitPath := strings.Split(req.Path, "login/")
-		aliasName = splitPath[1]
-
-	}
 	userInfo.aliasName = aliasName
 	userInfo.mountAccessor = mountEntry.Accessor
-	return userInfo
+	return userInfo, nil
 }
 
 // isUserLockoutDisabled checks if user lockouts feature to prevent brute forcing is disabled
@@ -1904,7 +1872,10 @@ func (c *Core) isUserLockoutDisabled(mountEntry *MountEntry, req *logical.Reques
 }
 
 func (c *Core) isUserLocked(ctx context.Context, mountEntry *MountEntry, req *logical.Request) (locked bool, err error) {
-	loginUserInfoKey := c.getLoginUserInfo(mountEntry, req)
+	loginUserInfoKey, err := c.getLoginUserInfo(mountEntry, req, ctx)
+	if err != nil {
+		return false, err
+	}
 	// get entry from userFailedLoginInfo map for the key
 	userFailedLoginInfo := getUserFailedLoginInfo(ctx, c, loginUserInfoKey)
 	userLockoutConfiguration := c.getUserLockoutConfiguration(mountEntry)

@@ -3422,44 +3422,30 @@ func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]
 	return resp.Data["role"].(string)
 }
 
-// PathAliasLookAheadFromLoginRequest will determine the alias and will also determine if the user is locked  
-// for a given  request
-func (c *Core) PathAliasLookAheadFromLoginRequest(username string, mountEntry *MountEntry, req *logical.Request, ctx context.Context) (*logical.Response, error) {
+// PathAliasLookAheadFromLoginRequest will determine the aliasName from the login Request
+func (c *Core) PathLoginAliasLookAheadFromLoginRequest(req *logical.Request, ctx context.Context) string {
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
-	mountPoint := req.MountPoint
-	data := req.Data
-	
-	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)
+	matchingBackend := c.router.MatchingBackend(ctx, req.MountPoint)
 	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
-		// Path alias look ahead do not apply to this request
-		return nil, nil
+		// pathLoginAliasLookAhead operation does not apply to this request
+		return ""
 	}
-	logicalRequest := &logical.Request{
-		MountPoint: mountPoint,
-		Path:       "login/"+username,
+
+	path := strings.ReplaceAll(req.Path, req.MountPoint, "")
+
+	resp, err := matchingBackend.HandleRequest(ctx, &logical.Request{
+		MountPoint: req.MountPoint,
+		Path:       path,
 		Operation:  logical.AliasLookaheadOperation,
-		Data:       data,
-		Storage:    c.router.MatchingStorageByAPIPath(ctx, mountPoint+"login/"+username),
+		Data:       req.Data,
+		Storage:    c.router.MatchingStorageByAPIPath(ctx, req.Path),
+	})
+	if err != nil || resp.Auth.Alias == nil {
+		return ""
 	}
-
-	if mountEntry.Type == "approle"{
-		logicalRequest = &logical.Request{
-			MountPoint: mountPoint,
-			Path:       "login",
-			Operation:  logical.AliasLookaheadOperation,
-			Data:       data,
-			Storage:    c.router.MatchingStorageByAPIPath(ctx, mountPoint+"login"),
-		}
-	}
-
-	resp, err := matchingBackend.HandleRequest(ctx,logicalRequest)
-	if err!=nil{
-		return nil, err
-	}
-	return resp, nil
+	return resp.Auth.Alias.Name
 }
-
 
 // ListMounts will provide a slice containing a deep copy each mount entry
 func (c *Core) ListMounts() ([]*MountEntry, error) {
