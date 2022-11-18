@@ -103,7 +103,10 @@ func (h *TidyLastRun) Evaluate(e *Executor) (results []*Result, err error) {
 			lastRunCritical := now.Add(-1 * h.LastRunCritical)
 			lastRunWarning := now.Add(-1 * h.LastRunWarning)
 
-			whenT := when.(*time.Time)
+			whenT, err := parseutil.ParseAbsoluteTime(when)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing time value (%v): %w", when, err)
+			}
 
 			if whenT.Before(lastRunCritical) {
 				ret.Status = ResultCritical
