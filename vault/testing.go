@@ -902,6 +902,7 @@ type TestCluster struct {
 	base              *CoreConfig
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
+	opts              *TestClusterOptions
 }
 
 func (c *TestCluster) Start() {
@@ -931,19 +932,21 @@ WAITACTIVE:
 		time.Sleep(time.Second)
 	}
 
-	cli := c.Cores[0].Client
-	_, err := cli.Logical().Write("sys/quotas/rate-limit/rl-NewTestCluster", map[string]interface{}{
-		"rate": 1000000,
-	})
-	if err != nil {
-		t.Fatalf("error setting up global rate limit quota: %v", err)
-	}
-	if constants.IsEnterprise {
-		_, err = cli.Logical().Write("sys/quotas/lease-count/lc-NewTestCluster", map[string]interface{}{
-			"max_leases": 1000000,
+	if !c.opts.SkipInit {
+		cli := c.Cores[0].Client
+		_, err := cli.Logical().Write("sys/quotas/rate-limit/rl-NewTestCluster", map[string]interface{}{
+			"rate": 1000000,
 		})
 		if err != nil {
-			t.Fatalf("error setting up global lease count quota: %v", err)
+			t.Fatalf("error setting up global rate limit quota: %v", err)
+		}
+		if constants.IsEnterprise {
+			_, err = cli.Logical().Write("sys/quotas/lease-count/lc-NewTestCluster", map[string]interface{}{
+				"max_leases": 1000000,
+			})
+			if err != nil {
+				t.Fatalf("error setting up global lease count quota: %v", err)
+			}
 		}
 	}
 }
@@ -1833,6 +1836,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 	}
 
+	testCluster.opts = opts
 	testCluster.start(t)
 	return &testCluster
 }
