@@ -54,7 +54,7 @@ module('Acceptance | secrets/pki/create', function (hooks) {
     await listPage.visitRoot({ backend: path });
     await settled();
     assert.strictEqual(listPage.secrets.length, 1, 'shows role in the list');
-    let secret = listPage.secrets.objectAt(0);
+    const secret = listPage.secrets.objectAt(0);
     await secret.menuToggle();
     await settled();
     assert.ok(listPage.menuItems.length > 0, 'shows links in the menu');

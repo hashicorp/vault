@@ -18,6 +18,8 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  *   @subText="Search for an existing assignment, or type a new name to create it."
  *   @inputValue={{map-by "id" @model.assignments}}
  *   @onChange={{this.handleSearchSelect}}
+ *   @onCreate={{this.createFormModel}}
+ *   @formModel={{this.modelFromParent}}
  *   {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
  *   @excludeOptions={{array "allow_all"}}
  *   @fallbackComponent="string-list"
@@ -80,7 +82,7 @@ export default class SearchSelectWithModal extends Component {
     // inputValues are initially an array of strings from @inputValue
     // map over so selectedOptions are objects
     return inputValues.map((option) => {
-      let matchingOption = this.dropdownOptions.findBy('id', option);
+      const matchingOption = this.dropdownOptions.findBy('id', option);
       // remove any matches from dropdown list
       this.dropdownOptions.removeObject(matchingOption);
       return {
@@ -98,9 +100,9 @@ export default class SearchSelectWithModal extends Component {
       return;
     }
 
-    for (let modelType of this.args.models) {
+    for (const modelType of this.args.models) {
       try {
-        let queryParams = {};
+        const queryParams = {};
         // fetch options from the store
         let options = yield this.store.query(modelType, queryParams);
         if (this.args.excludeOptions) {
@@ -142,7 +144,7 @@ export default class SearchSelectWithModal extends Component {
     if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
       return !searchResults.some((group) => group.options.findBy('id', id));
     }
-    let existingOption =
+    const existingOption =
       this.dropdownOptions &&
       (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
     return !existingOption;
@@ -197,7 +199,7 @@ export default class SearchSelectWithModal extends Component {
       this.showModal = true;
       this.args.onCreate({ name });
       // if firing onCreate does not generate a formModel, then pass name to form component
-      // where `onCreate` is fired by user interaction (ex: selecting a policy type)
+      // where `onCreate` is fired again after more user interaction (ex: selecting a policy type)
       if (!this.args.formModel) this.nameInput = name;
     } else {
       // user has selected an existing item, handleChange immediately

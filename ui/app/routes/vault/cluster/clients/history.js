@@ -20,7 +20,7 @@ export default class HistoryRoute extends Route {
 
   async getLicenseStartTime() {
     try {
-      let license = await this.store.queryRecord('license', {});
+      const license = await this.store.queryRecord('license', {});
       // if license.startTime is 'undefined' return 'null' for consistency
       return license.startTime || getStorage().getItem(INPUTTED_START_DATE) || null;
     } catch (e) {
@@ -31,9 +31,9 @@ export default class HistoryRoute extends Route {
   }
 
   async model() {
-    let parentModel = this.modelFor('vault.cluster.clients');
-    let licenseStart = await this.getLicenseStartTime();
-    let activity = await this.getActivity(licenseStart);
+    const parentModel = this.modelFor('vault.cluster.clients');
+    const licenseStart = await this.getLicenseStartTime();
+    const activity = await this.getActivity(licenseStart);
 
     return RSVP.hash({
       config: parentModel.config,

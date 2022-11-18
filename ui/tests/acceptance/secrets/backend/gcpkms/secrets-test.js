@@ -14,7 +14,7 @@ module('Acceptance | gcpkms/enable', function (hooks) {
 
   test('enable gcpkms', async function (assert) {
     // Error: Cannot call `visit` without having first called `setupApplicationContext`.
-    let enginePath = `gcpkms-${new Date().getTime()}`;
+    const enginePath = `gcpkms-${new Date().getTime()}`;
     await mountSecrets.visit();
     await settled();
     await mountSecrets.selectType('gcpkms');

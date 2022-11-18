@@ -21,7 +21,7 @@ import { dasherize } from 'vault/helpers/dasherize';
  *     label: "Foo", // custom label to be shown, otherwise attr.name will be displayed
  *     defaultValue: "", // default value to display if model value is not present
  *     fieldValue: "bar", // used for value lookup on model over attr.name
- *     editType: "ttl", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
+ *     editType: "ttl", type of field to use.
  *     helpText: "This will be in a tooltip",
  *     readOnly: true
  *   },
@@ -42,6 +42,23 @@ import { dasherize } from 'vault/helpers/dasherize';
  */
 
 export default class FormFieldComponent extends Component {
+  // alphabetical list of all editTypes if they hide <FormFieldLabel>
+  shouldHideLabel = {
+    boolean: true,
+    file: true,
+    json: true,
+    kv: true,
+    mountAccessor: true,
+    optionalText: true,
+    password: false,
+    radio: false,
+    regex: true,
+    searchSelect: true,
+    stringArray: true,
+    textarea: false,
+    ttl: true,
+    yield: false, // TODO for flexibility change to false?
+  };
   @tracked showInput = false;
   @tracked file = { value: '' }; // used by the pgp-file component when an attr is editType of 'file'
   emptyData = '{\n}';
@@ -52,6 +69,16 @@ export default class FormFieldComponent extends Component {
     const valuePath = attr.options?.fieldValue || attr.name;
     const modelValue = model[valuePath];
     this.showInput = !!modelValue;
+  }
+
+  get hideLabel() {
+    const { type, options } = this.args.attr;
+    // these take precedent over an attrs default label behavior
+    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
+      return true;
+    }
+    // falsey values render a <FormFieldLabel>
+    return this.shouldHideLabel[options?.editType];
   }
 
   get disabled() {
@@ -109,20 +136,20 @@ export default class FormFieldComponent extends Component {
   }
   @action
   setAndBroadcastBool(trueVal, falseVal, event) {
-    let valueToSet = event.target.checked === true ? trueVal : falseVal;
+    const valueToSet = event.target.checked === true ? trueVal : falseVal;
     this.setAndBroadcast(valueToSet);
   }
   @action
   setAndBroadcastTtl(value) {
     const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
-    let valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
+    const valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
     this.setAndBroadcast(`${valueToSet}`);
   }
   @action
   codemirrorUpdated(isString, value, codemirror) {
     codemirror.performLint();
     const hasErrors = codemirror.state.lint.marked.length > 0;
-    let valToSet = isString ? value : JSON.parse(value);
+    const valToSet = isString ? value : JSON.parse(value);
 
     if (!hasErrors) {
       this.args.model.set(this.valuePath, valToSet);

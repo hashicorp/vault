@@ -7,8 +7,8 @@ export default class ActivitySerializer extends ApplicationSerializer {
     if (payload.id === 'no-data') {
       return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
     }
-    let response_timestamp = formatISO(new Date());
-    let transformedPayload = {
+    const response_timestamp = formatISO(new Date());
+    const transformedPayload = {
       ...payload,
       response_timestamp,
       by_namespace: formatByNamespace(payload.data.by_namespace),

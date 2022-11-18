@@ -519,6 +519,11 @@ type Core struct {
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *PluginCatalog
 
+	// The userFailedLoginInfo map has user failed login information.
+	// It has user information (alias-name and mount accessor) as a key
+	// and login counter, last failed login time as value
+	userFailedLoginInfo map[FailedLoginUser]*FailedLoginInfo
+
 	enableMlock bool
 
 	// This can be used to trigger operations to stop running when Vault is
@@ -925,6 +930,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		mountMigrationTracker:          &sync.Map{},
 		disableSSCTokens:               conf.DisableSSCTokens,
 		effectiveSDKVersion:            effectiveSDKVersion,
+		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))

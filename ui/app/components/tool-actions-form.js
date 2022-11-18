@@ -78,9 +78,9 @@ export default Component.extend(DEFAULTS, {
 
   handleSuccess(resp, action) {
     let props = {};
-    let secret = (resp && resp.data) || resp.auth;
+    const secret = (resp && resp.data) || resp.auth;
     if (secret && action === 'unwrap') {
-      let details = {
+      const details = {
         'Request ID': resp.request_id,
         'Lease ID': resp.lease_id || 'None',
         Renewable: resp.renewable ? 'Yes' : 'No',

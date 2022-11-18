@@ -54,7 +54,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     await fillIn('[data-test-input="name"]', ' ');
     await click(SELECTORS.keySaveButton);
 
-    let validationErrors = findAll(SELECTORS.inlineAlert);
+    const validationErrors = findAll(SELECTORS.inlineAlert);
     assert
       .dom(validationErrors[0])
       .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');

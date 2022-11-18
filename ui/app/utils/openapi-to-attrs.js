@@ -3,7 +3,7 @@ import { assign } from '@ember/polyfills';
 import { camelize, capitalize } from '@ember/string';
 
 export const expandOpenApiProps = function (props) {
-  let attrs = {};
+  const attrs = {};
   // expand all attributes
   for (const propName in props) {
     const prop = props[propName];
@@ -25,7 +25,7 @@ export const expandOpenApiProps = function (props) {
       editType = items.type + capitalize(type);
     }
 
-    let attrDefn = {
+    const attrDefn = {
       editType,
       helpText: description,
       possibleValues: prop['enum'],
@@ -58,7 +58,7 @@ export const expandOpenApiProps = function (props) {
     }
 
     // loop to remove empty vals
-    for (let attrProp in attrDefn) {
+    for (const attrProp in attrDefn) {
       if (attrDefn[attrProp] == null) {
         delete attrDefn[attrProp];
       }
@@ -69,8 +69,8 @@ export const expandOpenApiProps = function (props) {
 };
 
 export const combineAttributes = function (oldAttrs, newProps) {
-  let newAttrs = {};
-  let newFields = [];
+  const newAttrs = {};
+  const newFields = [];
   if (oldAttrs) {
     oldAttrs.forEach(function (value, name) {
       if (newProps[name]) {
@@ -80,7 +80,7 @@ export const combineAttributes = function (oldAttrs, newProps) {
       }
     });
   }
-  for (let prop in newProps) {
+  for (const prop in newProps) {
     if (newAttrs[prop]) {
       continue;
     } else {
@@ -92,7 +92,7 @@ export const combineAttributes = function (oldAttrs, newProps) {
 };
 
 export const combineFields = function (currentFields, newFields, excludedFields) {
-  let otherFields = newFields.filter((field) => {
+  const otherFields = newFields.filter((field) => {
     return !currentFields.includes(field) && !excludedFields.includes(field);
   });
   if (otherFields.length) {
@@ -103,11 +103,11 @@ export const combineFields = function (currentFields, newFields, excludedFields)
 
 export const combineFieldGroups = function (currentGroups, newFields, excludedFields) {
   let allFields = [];
-  for (let group of currentGroups) {
-    let fieldName = Object.keys(group)[0];
+  for (const group of currentGroups) {
+    const fieldName = Object.keys(group)[0];
     allFields = allFields.concat(group[fieldName]);
   }
-  let otherFields = newFields.filter((field) => {
+  const otherFields = newFields.filter((field) => {
     return !allFields.includes(field) && !excludedFields.includes(field);
   });
   if (otherFields.length) {

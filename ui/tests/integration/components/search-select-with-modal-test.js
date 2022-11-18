@@ -7,6 +7,7 @@ import { clickTrigger, typeInSearch } from 'ember-power-select/test-support/help
 import { render, fillIn, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import ss from 'vault/tests/pages/components/search-select';
+import sinon from 'sinon';
 
 const component = create(ss);
 
@@ -14,6 +15,7 @@ module('Integration | Component | search select with modal', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
   hooks.beforeEach(function () {
+    this.set('onCreate', sinon.spy());
     this.server.get('identity/entity/id', () => {
       return {
         request_id: 'entity-list-id',
@@ -70,7 +72,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     });
   });
 
-  test('it renders passed in model', async function (assert) {
+  test('it renders passed in models', async function (assert) {
     await render(hbs`
     <SearchSelectWithModal
       @id="entity"
@@ -78,6 +80,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @subText="Search for an existing entity, or type a new name to create it."
       @models={{array "identity/entity"}}
       @onChange={{this.onChange}}
+      @onCreate={{this.onCreate}}
       @fallbackComponent="string-list"
       @modalFormComponent="identity/edit-form"
       @modalSubtext="Some modal subtext"
@@ -95,7 +98,7 @@ module('Integration | Component | search select with modal', function (hooks) {
   });
 
   test('it filters options and adds option to create new item', async function (assert) {
-    assert.expect(7);
+    assert.expect(8);
     await render(hbs`
     <SearchSelectWithModal
       @id="entity"
@@ -103,6 +106,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @subText="Search for an existing entity, or type a new name to create it."
       @models={{array "identity/entity"}}
       @onChange={{this.onChange}}
+      @onCreate={{this.onCreate}}
       @fallbackComponent="string-list"
       @modalFormComponent="identity/edit-form"
       @modalSubtext="Some modal subtext"
@@ -130,6 +134,11 @@ module('Integration | Component | search select with modal', function (hooks) {
     );
 
     await component.selectOption();
+    assert.propContains(
+      this.onCreate.lastCall.args[0],
+      { name: 'entity-1-new' },
+      'onCreate callback is called with correct args after clicking to create a new item'
+    );
     assert.dom('[data-test-modal-div]').hasAttribute('class', 'modal is-info is-active', 'modal is active');
     assert.dom('[data-test-modal-subtext]').hasText('Some modal subtext', 'renders modal text');
     assert.dom('[data-test-component="identity-edit-form"]').exists('renders identity form');
@@ -153,6 +162,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @subText="Search for an existing entity, or type a new name to create it."
       @models={{array "identity/entity"}}
       @onChange={{this.onChange}}
+      @onCreate={{this.onCreate}}
       @fallbackComponent="string-list"
       @modalFormComponent="identity/edit-form"
       @modalSubtext="Some modal subtext"
