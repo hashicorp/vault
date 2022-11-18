@@ -210,7 +210,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert.dom('[data-test-modal-div]').hasClass('is-active', 'modal with form opens');
     assert.dom('[data-test-modal-title]').hasText('Create new assignment', 'Create assignment modal renders');
     await click(SELECTORS.assignmentCancelButton);
-    assert.dom('[data-test-modal-div]').doesNotHaveClass('is-active', 'modal disappears onCancel');
+    assert.dom('[data-test-modal-div]').doesNotExist('modal disappears onCancel');
   });
 
   test('it should render fallback for search select', async function (assert) {
