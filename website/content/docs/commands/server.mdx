@@ -93,7 +93,7 @@ flags](/docs/commands) included on all commands.
   and a downgrade must be performed in order to remove the offending engines. For
   more information, see the [deprecation faq](/docs/deprecation/faq/#q-what-are-the-phases-of-deprecation).
 
-#### Dev Options
+### Dev Options
 
 - `-dev` `(bool: false)` - Enable development mode. In this mode, Vault runs
   in-memory and starts unsealed. As the name implies, do not run "dev" mode in
@@ -120,17 +120,3 @@ flags](/docs/commands) included on all commands.
   The token will only be displayed in the command output.
 
 - `-dev-plugin-dir` `(string: "")` - Directory from which plugins are allowed to be loaded. Only applies in "dev" mode, it will automatically register all the plugins in the provided directory.
-
-### Configuration Options
-
-- `log_level` Equivalent to the [`-log-level` command-line flag](#_log_level).
-
-- `log_format` Equivalent to the [`-log-format` command-line flag](#_log_format).
-
-- `log_file` Equivalent to the [`-log-file` command-line flag](#_log_file).
-
-- `log_rotate_duration` Equivalent to the [`-log-rotate-duration` command-line flag](#_log_rotate_duration).
-
-- `log_rotate_bytes` Equivalent to the [`-log-rotate-bytes` command-line flag](#_log_rotate_bytes).
-
-- `log_rotate_max_files` Equivalent to the [`-log-rotate-max-files` command-line flag](#_log_rotate_max_files).

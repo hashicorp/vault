@@ -1518,7 +1518,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 			// Check for new log level
 			var config *server.Config
-			var level hclog.Level
 			var configErrors []configutil.ConfigError
 			for _, path := range c.flagConfigs {
 				current, err := server.LoadConfig(path)
@@ -1564,20 +1563,10 @@ func (c *ServerCommand) Run(args []string) int {
 				c.logger.Error(err.Error())
 			}
 
+			// Reload log level for loggers
 			if config.LogLevel != "" {
-				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
-				switch configLogLevel {
-				case "trace":
-					level = hclog.Trace
-				case "debug":
-					level = hclog.Debug
-				case "notice", "info", "":
-					level = hclog.Info
-				case "warn", "warning":
-					level = hclog.Warn
-				case "err", "error":
-					level = hclog.Error
-				default:
+				level, err := loghelper.ParseLogLevel(config.LogLevel)
+				if err != nil {
 					c.logger.Error("unknown log level found on reload", "level", config.LogLevel)
 					goto RUNRELOADFUNCS
 				}
