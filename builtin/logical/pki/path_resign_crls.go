@@ -31,7 +31,7 @@ const (
 )
 
 var (
-	akOid       = asn1.ObjectIdentifier{2, 5, 29, 20}
+	akOid       = asn1.ObjectIdentifier{2, 5, 29, 35}
 	crlNumOid   = asn1.ObjectIdentifier{2, 5, 29, 20}
 	deltaCrlOid = asn1.ObjectIdentifier{2, 5, 29, 27}
 )

@@ -370,6 +370,10 @@ func TestSignRevocationList_ReservedExtensions(t *testing.T) {
 	reservedOids := []asn1.ObjectIdentifier{
 		akOid, deltaCrlOid, crlNumOid,
 	}
+	// Validate there isn't copy/paste issues with our constants...
+	require.Equal(t, asn1.ObjectIdentifier{2, 5, 29, 27}, deltaCrlOid) // Delta CRL Extension
+	require.Equal(t, asn1.ObjectIdentifier{2, 5, 29, 20}, crlNumOid)   // CRL Number Extension
+	require.Equal(t, asn1.ObjectIdentifier{2, 5, 29, 35}, akOid)       // akidOid
 
 	for _, reservedOid := range reservedOids {
 		t.Run(reservedOid.String(), func(t *testing.T) {
