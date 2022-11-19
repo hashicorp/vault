@@ -5,7 +5,7 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module ModalForm::OidcAssignmentTemplate
- * ModalForm::OidcAssignmentTemplate components render within a modal and create a model using the search select input to pass to the oidc/assignment-form
+ * ModalForm::OidcAssignmentTemplate components render within a modal and create a model using the input from the search select. The model is passed to the oidc/assignment-form.
  *
  * @example
  *  <ModalForm::OidcAssignmentTemplate
