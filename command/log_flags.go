@@ -21,6 +21,10 @@ type logFlags struct {
 
 type provider = func(key string) (string, bool)
 
+// valuesProvider has the intention of providing a way to supply a func with a
+// way to retrieve values for flags and environment variables without having to
+// directly call a specific implementation. The reasoning for its existence is
+// to facilitate testing.
 type valuesProvider struct {
 	flagProvider   provider
 	envVarProvider provider
@@ -82,20 +86,20 @@ func (f *FlagSet) addLogFlags(l *logFlags) {
 	})
 }
 
-// getFlagValue will attempt to find the flag with the corresponding key and return the value
-// along with a bool representing whether of not the flag had been found/set.
-func getFlagValue(fs *FlagSets, key string) (string, bool) {
+// getValue will attempt to find the flag with the corresponding flag name (key)
+// and return the value along with a bool representing whether of not the flag had been found/set.
+func (f *FlagSets) getValue(flagName string) (string, bool) {
 	var result string
-	var isFlagSet bool
+	var isFlagSpecified bool
 
-	fs.Visit(func(f *flag.Flag) {
-		if f.Name == key {
-			result = f.Value.String()
-			isFlagSet = true
+	f.Visit(func(fl *flag.Flag) {
+		if fl.Name == flagName {
+			result = fl.Value.String()
+			isFlagSpecified = true
 		}
 	})
 
-	return result, isFlagSet
+	return result, isFlagSpecified
 }
 
 // getAggregatedConfigValue uses the provided keys to check CLI flags and environment variables for values that may be
@@ -129,7 +133,7 @@ func (p *valuesProvider) getAggregatedConfigValue(flagKey, envVarKey, current, f
 // This method mutates the config object passed into it.
 func (f *FlagSets) updateLogConfig(config *configutil.SharedConfig) {
 	p := &valuesProvider{
-		flagProvider:   func(key string) (string, bool) { return getFlagValue(f, key) },
+		flagProvider:   func(key string) (string, bool) { return f.getValue(key) },
 		envVarProvider: os.LookupEnv,
 	}
 
