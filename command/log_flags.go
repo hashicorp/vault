@@ -92,12 +92,14 @@ func (f *FlagSets) getValue(flagName string) (string, bool) {
 	var result string
 	var isFlagSpecified bool
 
-	f.Visit(func(fl *flag.Flag) {
-		if fl.Name == flagName {
-			result = fl.Value.String()
-			isFlagSpecified = true
-		}
-	})
+	if f != nil {
+		f.Visit(func(fl *flag.Flag) {
+			if fl.Name == flagName {
+				result = fl.Value.String()
+				isFlagSpecified = true
+			}
+		})
+	}
 
 	return result, isFlagSpecified
 }
