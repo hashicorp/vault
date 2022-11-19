@@ -43,7 +43,6 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
-	// vault-8307 return the user lockout status i.e, user locked or not as part of Data
 
 	return &logical.Response{
 		Auth: &logical.Auth{
