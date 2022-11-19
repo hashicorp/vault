@@ -7,9 +7,9 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
 
 /**
  * @module SearchSelectWithModal
- * The `SearchSelectWithModal` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API. It can only accept a single model.
- * It renders a passed in form component so records can be created inline, via a modal that pops up after clicking "Create new <id>" from the dropdown menu.
- * **!! NOTE: any form passed must be able to receive an @onSave and @onCancel arg so that the modal will close properly. See `oidc/client-form.hbs` that renders a modal for the `oidc/assignment-form.hbs` as an example.
+ * The `SearchSelectWithModal` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
+ * It renders a passed template component that parents a form so records can be created inline, via a modal that pops up after clicking 'No results found for "${term}". Click here to create it.' from the dropdown menu.
+ * **!! NOTE: any form passed must be able to receive an @onSave and @onCancel arg so that the modal will close properly. See `oidc/client-form.hbs` that renders a modal for the `oidc-assignment-template.hbs` as an example.
  * @example
  * <SearchSelectWithModal
  *   @id="assignments"

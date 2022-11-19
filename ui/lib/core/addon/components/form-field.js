@@ -72,7 +72,7 @@ export default class FormFieldComponent extends Component {
       return true;
     }
     // falsey values render a <FormFieldLabel>
-    return this.shouldHideLabel.includes[options?.editType];
+    return this.shouldHideLabel.includes(options?.editType);
   }
 
   get disabled() {
