@@ -1879,6 +1879,7 @@ func (c *Core) isUserLocked(ctx context.Context, mountEntry *MountEntry, req *lo
 	// get entry from userFailedLoginInfo map for the key
 	userFailedLoginInfo := getUserFailedLoginInfo(ctx, c, loginUserInfoKey)
 	userLockoutConfiguration := c.getUserLockoutConfiguration(mountEntry)
+
 	switch userFailedLoginInfo {
 	case nil:
 		// entry not found in userFailedLoginInfo map, check storage to re-verify
@@ -1893,16 +1894,17 @@ func (c *Core) isUserLocked(ctx context.Context, mountEntry *MountEntry, req *lo
 		}
 		var lastLoginTime int
 		if existingEntry == nil {
-			// no entry, user is not locked
+			// no storage entry found, user is not locked
 			return false, nil
 		}
-		// storage entry for user found
+
 		err = jsonutil.DecodeJSON(existingEntry.Value, &lastLoginTime)
 		if err != nil {
 			return false, err
 		}
 
-		if time.Now().Unix()-int64(lastLoginTime) < int64(userLockoutConfiguration.LockoutDuration) {
+		// if time passed from last login time is within lockout duration, the user is locked
+		if time.Now().Unix()-int64(lastLoginTime) < int64(userLockoutConfiguration.LockoutDuration.Seconds()) {
 			// user locked
 			return true, nil
 		} else {
@@ -1914,10 +1916,10 @@ func (c *Core) isUserLocked(ctx context.Context, mountEntry *MountEntry, req *lo
 
 	default:
 		// entry found in userFailedLoginInfo map, check if the user is locked
-		isOverLockoutDuration := time.Now().Unix()-int64(userFailedLoginInfo.lastFailedLoginTime) >= int64(userLockoutConfiguration.LockoutDuration)
 		isCountOverLockoutThreshold := userFailedLoginInfo.count >= uint(userLockoutConfiguration.LockoutThreshold)
+		isWithinLockoutDuration := time.Now().Unix()-int64(userFailedLoginInfo.lastFailedLoginTime) < int64(userLockoutConfiguration.LockoutDuration.Seconds())
 
-		if isCountOverLockoutThreshold && !isOverLockoutDuration {
+		if isCountOverLockoutThreshold && isWithinLockoutDuration {
 			// user locked
 			return true, nil
 		}
@@ -2088,6 +2090,16 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		}
 		if te.ExternalID != "" {
 			auth.ClientToken = te.ExternalID
+		}
+		// vault-8307 successful login, remove any entry from userFailedLoginInfo map
+		// if it exists
+		loginUserInfoKey := FailedLoginUser{
+			aliasName:     auth.Alias.Name,
+			mountAccessor: auth.Alias.MountAccessor,
+		}
+		err = c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true)
+		if err != nil {
+			return err
 		}
 	}
 
