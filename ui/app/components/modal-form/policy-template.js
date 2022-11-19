@@ -68,19 +68,15 @@ main = rule when precond {
 
   @action
   setPolicyType(type) {
+    if (this.policy) this.policy.unloadRecord(); // if user selects a different type, clear from store before creating a new record
     // Create form model once type is chosen
-    if (this.policy) this.cleanup();
     this.policy = this.store.createRecord(`policy/${type}`, { name: this.args.nameInput });
   }
 
-  @action onSave(policyModel) {
+  @action
+  onSave(policyModel) {
     this.args.onSave(policyModel);
     // Reset component policy for next use
     this.policy = null;
-  }
-
-  cleanup() {
-    const method = this.policy.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.policy[method]();
   }
 }

@@ -22,7 +22,6 @@ import { tracked } from '@glimmer/tracking';
  */
 
 export default class PolicyFormComponent extends Component {
-  @service wizard;
   @service flashMessages;
 
   @tracked errorBanner = '';
@@ -38,9 +37,6 @@ export default class PolicyFormComponent extends Component {
       this.flashMessages.success(
         `${policyType.toUpperCase()} policy "${name}" was successfully ${isNew ? 'created' : 'updated'}.`
       );
-      if (this.wizard.featureState === 'create') {
-        this.wizard.transitionFeatureMachine('create', 'CONTINUE', policyType);
-      }
       this.args.onSave(this.args.model);
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;

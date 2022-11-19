@@ -33,9 +33,4 @@ export default class OidcAssignmentTemplate extends Component {
     // Reset component assignment for next use
     this.assignment = null;
   }
-
-  cleanup() {
-    const method = this.assignment.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.assignment[method]();
-  }
 }
