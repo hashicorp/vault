@@ -4791,47 +4791,58 @@ func validateLevel(level string, logger hclog.Logger) bool {
 
 func TestSystemBackend_Loggers(t *testing.T) {
 	testCases := []struct {
-		level       string
-		expectError bool
+		level         string
+		expectedLevel string
+		expectError   bool
 	}{
 		{
+			"trace",
 			"trace",
 			false,
 		},
 		{
 			"debug",
+			"debug",
 			false,
 		},
 		{
 			"notice",
+			"info",
 			false,
 		},
 		{
+			"info",
 			"info",
 			false,
 		},
 		{
 			"warn",
+			"warn",
 			false,
 		},
 		{
 			"warning",
+			"warn",
 			false,
 		},
 		{
 			"err",
+			"error",
 			false,
 		},
 		{
+			"error",
 			"error",
 			false,
 		},
 		{
 			"",
+			"info",
 			true,
 		},
 		{
 			"invalid",
+			"",
 			true,
 		},
 	}
@@ -4843,6 +4854,10 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			t.Parallel()
 
 			core, b, _ := testCoreSystemBackend(t)
+
+			// Test core will have core.logLevel set to an empty string
+			// by default which ultimately is Info but let's make it explicit
+			core.logLevel = "info"
 
 			req := &logical.Request{
 				Path:      "loggers",
@@ -4864,15 +4879,32 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			}
 
 			if !tc.expectError {
+				req = &logical.Request{
+					Path:      "loggers",
+					Operation: logical.ReadOperation,
+				}
+
+				resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+				if err != nil || (resp != nil && resp.IsError()) {
+					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+				}
+
 				for _, logger := range core.allLoggers {
-					if !validateLevel(tc.level, logger) {
-						t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+					loggerName := logger.Name()
+					levelRaw, ok := resp.Data[loggerName]
+
+					if !ok {
+						t.Errorf("logger %q not found in response", loggerName)
+					}
+
+					if levelStr := levelRaw.(string); levelStr != tc.expectedLevel {
+						t.Errorf("unexpected level of logger %q, expected: %s, actual: %s", loggerName, tc.expectedLevel, levelStr)
 					}
 				}
 			}
 
 			req = &logical.Request{
-				Path:      fmt.Sprintf("loggers"),
+				Path:      "loggers",
 				Operation: logical.DeleteOperation,
 			}
 
@@ -4881,9 +4913,26 @@ func TestSystemBackend_Loggers(t *testing.T) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 			}
 
+			req = &logical.Request{
+				Path:      "loggers",
+				Operation: logical.ReadOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
 			for _, logger := range core.allLoggers {
-				if !validateLevel(core.logLevel, logger) {
-					t.Errorf("expected level of logger %q to match original config", logger.Name())
+				loggerName := logger.Name()
+				levelRaw, ok := resp.Data[loggerName]
+
+				if !ok {
+					t.Errorf("logger %q not found in response", loggerName)
+				}
+
+				if levelStr := levelRaw.(string); levelStr != core.logLevel {
+					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", loggerName, core.logLevel, levelStr)
 				}
 			}
 		})
