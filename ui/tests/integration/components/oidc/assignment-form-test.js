@@ -79,10 +79,10 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test', 'Name input is populated with model value');
     assert
-      .dom('[data-test-search-select="entities"] [data-test-smaller-id="true"]')
+      .dom('[data-test-search-select="entities"] [data-test-smaller-id]')
       .hasText('1234-12345', 'entity id renders in selected option');
     assert
-      .dom('[data-test-search-select="groups"] [data-test-smaller-id="true"]')
+      .dom('[data-test-search-select="groups"] [data-test-smaller-id]')
       .hasText('abcdef-123', 'group id renders in selected option');
   });
 
