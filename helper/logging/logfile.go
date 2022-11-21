@@ -140,7 +140,7 @@ func (l *LogFile) pruneFiles() error {
 
 func removeFiles(files []string) (err error) {
 	for _, file := range files {
-		if fileError := os.Remove(file); err != nil {
+		if fileError := os.Remove(file); fileError != nil {
 			err = multierror.Append(err, fmt.Errorf("error removing file %s: %v", file, fileError))
 		}
 	}
