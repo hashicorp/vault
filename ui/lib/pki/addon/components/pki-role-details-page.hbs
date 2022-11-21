@@ -42,9 +42,9 @@
       Delete
     </ConfirmAction>
     <div class="toolbar-separator"></div>
-    <LinkTo class="toolbar-link" @route="certificates.create">Generate Certificate <Icon @name="chevron-right" /></LinkTo>
+    <LinkTo class="toolbar-link" @route="overview">Generate Certificate <Icon @name="chevron-right" /></LinkTo>
     <LinkTo class="toolbar-link" @route="overview">Sign Certificate <Icon @name="chevron-right" /></LinkTo>
-    <LinkTo class="toolbar-link" @route="roles.role.edit">Edit <Icon @name="chevron-right" /></LinkTo>
+    <LinkTo class="toolbar-link" @route="roles.role.edit" @model={{@role.id}}>Edit <Icon @name="chevron-right" /></LinkTo>
   </ToolbarActions>
 </Toolbar>
 {{#each @role.fieldGroups as |fg|}}
