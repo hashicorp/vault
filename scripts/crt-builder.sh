@@ -20,7 +20,7 @@ function build_date() {
 # Get the full version information
 function version() {
   local version
-  version=$(<../../../../.release/VERSION)
+  version=$(<../.release/VERSION)
 
 }
 
