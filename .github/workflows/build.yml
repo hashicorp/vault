@@ -15,6 +15,7 @@ on:
       - main
       - release/**
       - testing-set-product-version
+      - test-prod-vers
 
 env:
   PKG_NAME: vault

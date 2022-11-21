@@ -112,6 +112,7 @@ func (c *Core) loadVersionHistory(ctx context.Context) error {
 		return fmt.Errorf("unable to retrieve vault versions from storage: %w", err)
 	}
 
+	c.logger.Warn("vault versions %v", vaultVersions)
 	for _, versionPath := range vaultVersions {
 		version, err := c.barrier.Get(ctx, vaultVersionPath+versionPath)
 		if err != nil {
@@ -126,7 +127,7 @@ func (c *Core) loadVersionHistory(ctx context.Context) error {
 			return fmt.Errorf("unable to unmarshal vault version for path %s: err %w", versionPath, err)
 		}
 		if vaultVersion.Version == "" || vaultVersion.TimestampInstalled.IsZero() {
-			return fmt.Errorf("found empty serialized vault version at path %s", versionPath)
+			return fmt.Errorf("found empty serialized vault version at path %s \nversion:%s \ntimestamp:%v", versionPath, vaultVersion.Version, vaultVersion.TimestampInstalled)
 		}
 
 		// self-heal entries that were not stored in UTC
