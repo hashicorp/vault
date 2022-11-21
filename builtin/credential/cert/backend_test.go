@@ -1092,12 +1092,13 @@ func TestBackend_CRLs(t *testing.T) {
 }
 
 func testFactory(t *testing.T) logical.Backend {
+	storage := &logical.InmemStorage{}
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 1000 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,
 		},
-		StorageView: &logical.InmemStorage{},
+		StorageView: storage,
 	})
 	if err != nil {
 		t.Fatalf("error: %s", err)
@@ -1923,27 +1924,33 @@ type allowed struct {
 	metadata_ext         string // allowed metadata extensions to add to identity alias
 }
 
-func testAccStepCert(
-	t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool,
-) logicaltest.TestStep {
+func testAccStepCert(t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool) logicaltest.TestStep {
+	return testAccStepCertWithExtraParams(t, name, cert, policies, testData, expectError, nil)
+}
+
+func testAccStepCertWithExtraParams(t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool, extraParams map[string]interface{}) logicaltest.TestStep {
+	data := map[string]interface{}{
+		"certificate":                  string(cert),
+		"policies":                     policies,
+		"display_name":                 name,
+		"allowed_names":                testData.names,
+		"allowed_common_names":         testData.common_names,
+		"allowed_dns_sans":             testData.dns,
+		"allowed_email_sans":           testData.emails,
+		"allowed_uri_sans":             testData.uris,
+		"allowed_organizational_units": testData.organizational_units,
+		"required_extensions":          testData.ext,
+		"allowed_metadata_extensions":  testData.metadata_ext,
+		"lease":                        1000,
+	}
+	for k, v := range extraParams {
+		data[k] = v
+	}
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
 		ErrorOk:   expectError,
-		Data: map[string]interface{}{
-			"certificate":                  string(cert),
-			"policies":                     policies,
-			"display_name":                 name,
-			"allowed_names":                testData.names,
-			"allowed_common_names":         testData.common_names,
-			"allowed_dns_sans":             testData.dns,
-			"allowed_email_sans":           testData.emails,
-			"allowed_uri_sans":             testData.uris,
-			"allowed_organizational_units": testData.organizational_units,
-			"required_extensions":          testData.ext,
-			"allowed_metadata_extensions":  testData.metadata_ext,
-			"lease":                        1000,
-		},
+		Data:      data,
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
 				return fmt.Errorf("expected error but received nil")

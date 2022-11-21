@@ -8,10 +8,13 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -19,6 +22,13 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
+	}
+	bConf, err := b.Config(ctx, conf.StorageView)
+	if err != nil {
+		return nil, err
+	}
+	if bConf != nil {
+		b.updatedConfig(bConf)
 	}
 	if err := b.lockThenpopulateCRLs(ctx, conf.StorageView); err != nil {
 		return nil, err
@@ -50,7 +60,6 @@ func Backend() *backend {
 	}
 
 	b.crlUpdateMutex = &sync.RWMutex{}
-
 	return &b
 }
 
@@ -58,8 +67,11 @@ type backend struct {
 	*framework.Backend
 	MapCertId *framework.PathMap
 
-	crls           map[string]CRLInfo
-	crlUpdateMutex *sync.RWMutex
+	crls            map[string]CRLInfo
+	crlUpdateMutex  *sync.RWMutex
+	ocspClientMutex sync.RWMutex
+	ocspClient      *ocsp.Client
+	configUpdated   atomic.Bool
 }
 
 func (b *backend) invalidate(_ context.Context, key string) {
@@ -68,7 +80,23 @@ func (b *backend) invalidate(_ context.Context, key string) {
 		b.crlUpdateMutex.Lock()
 		defer b.crlUpdateMutex.Unlock()
 		b.crls = nil
+	case key == "config":
+		b.configUpdated.Store(true)
 	}
+}
+
+func (b *backend) initOCSPClient(cacheSize int) {
+	b.ocspClient = ocsp.New(func() hclog.Logger {
+		return b.Logger()
+	}, cacheSize)
+}
+
+func (b *backend) updatedConfig(config *config) error {
+	b.ocspClientMutex.Lock()
+	defer b.ocspClientMutex.Unlock()
+	b.initOCSPClient(config.OcspCacheSize)
+	b.configUpdated.Store(false)
+	return nil
 }
 
 func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name string, crl *CRLInfo) error {
@@ -103,6 +131,19 @@ func (b *backend) updateCRLs(ctx context.Context, req *logical.Request) error {
 		}
 	}
 	return errs.ErrorOrNil()
+}
+
+func (b *backend) storeConfig(ctx context.Context, storage logical.Storage, config *config) error {
+	entry, err := logical.StorageEntryJSON("config", config)
+	if err != nil {
+		return err
+	}
+
+	if err := storage.Put(ctx, entry); err != nil {
+		return err
+	}
+	b.updatedConfig(config)
+	return nil
 }
 
 const backendHelp = `
