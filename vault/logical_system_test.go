@@ -4855,11 +4855,33 @@ func TestSystemBackend_Loggers(t *testing.T) {
 
 			core, b, _ := testCoreSystemBackend(t)
 
-			// Test core will have core.logLevel set to an empty string
-			// by default which ultimately is Info but let's make it explicit
-			core.logLevel = "info"
-
+			// Test core overrides logging level outside of config,
+			// an initial delete will ensure that we an initial read
+			// to get expected values is based off of config and not
+			// the test override that is hidden from this test
 			req := &logical.Request{
+				Path:      "loggers",
+				Operation: logical.DeleteOperation,
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			req = &logical.Request{
+				Path:      "loggers",
+				Operation: logical.ReadOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			initialLoggers := resp.Data
+
+			req = &logical.Request{
 				Path:      "loggers",
 				Operation: logical.UpdateOperation,
 				Data: map[string]interface{}{
@@ -4867,7 +4889,7 @@ func TestSystemBackend_Loggers(t *testing.T) {
 				},
 			}
 
-			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 			respIsError := resp != nil && resp.IsError()
 
 			if err != nil || (!tc.expectError && respIsError) {
@@ -4925,14 +4947,17 @@ func TestSystemBackend_Loggers(t *testing.T) {
 
 			for _, logger := range core.allLoggers {
 				loggerName := logger.Name()
-				levelRaw, ok := resp.Data[loggerName]
+				levelRaw, currentOk := resp.Data[loggerName]
+				initialLevelRaw, initialOk := initialLoggers[loggerName]
 
-				if !ok {
-					t.Errorf("logger %q not found in response", loggerName)
+				if !currentOk || !initialOk {
+					t.Errorf("logger %q not found", loggerName)
 				}
 
-				if levelStr := levelRaw.(string); levelStr != core.logLevel {
-					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", loggerName, core.logLevel, levelStr)
+				levelStr := levelRaw.(string)
+				initialLevelStr := initialLevelRaw.(string)
+				if levelStr != initialLevelStr {
+					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", loggerName, initialLevelStr, levelStr)
 				}
 			}
 		})
