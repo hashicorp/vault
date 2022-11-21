@@ -287,6 +287,11 @@ export default class PkiRoleModel extends Model {
           docLink: '/api-docs/secret/pki#allowed_domains',
         },
       },
+      'Key parameters': {
+        header: {
+          text: `These are the parameters for generating or validating the certificate's key material.`,
+        },
+      },
       'Subject Alternative Name (SAN) Options': {
         header: {
           text: `Subject Alternative Names (SANs) are identities (domains, IP addresses, and URIs) Vault attaches to the requested certificates.`,
