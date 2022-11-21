@@ -17,6 +17,13 @@ function build_date() {
   git show --no-show-signature -s --format=%cd --date=format:"$DATE_FORMAT" HEAD
 }
 
+# Get the full version information
+function version() {
+  local version
+  version=$(<../../../../.release/VERSION)
+
+}
+
 # Get the revision, which is the latest commit SHA
 function build_revision() {
   git rev-parse HEAD
