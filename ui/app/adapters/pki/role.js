@@ -51,4 +51,8 @@ export default class PkiRoleAdapter extends ApplicationAdapter {
   query(store, type, query) {
     return this.fetchByQuery(store, query);
   }
+
+  queryRecord(store, type, query) {
+    return this.fetchByQuery(store, query);
+  }
 }
