@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/go-multierror"
 )
 
 var now = time.Now
@@ -56,8 +58,14 @@ func (l *LogFile) Write(b []byte) (n int, err error) {
 	if err := l.rotate(); err != nil {
 		return 0, err
 	}
-	l.bytesWritten += int64(len(b))
-	return l.fileInfo.Write(b)
+
+	bytesWritten, err := l.fileInfo.Write(b)
+
+	if bytesWritten > 0 {
+		l.bytesWritten += int64(bytesWritten)
+	}
+
+	return bytesWritten, err
 }
 
 func (l *LogFile) fileNamePattern() string {
@@ -130,11 +138,11 @@ func (l *LogFile) pruneFiles() error {
 	return removeFiles(matches[:last])
 }
 
-func removeFiles(files []string) error {
+func removeFiles(files []string) (err error) {
 	for _, file := range files {
-		if err := os.Remove(file); err != nil {
-			return err
+		if fileError := os.Remove(file); err != nil {
+			err = multierror.Append(err, fmt.Errorf("error removing file %s: %v", file, fileError))
 		}
 	}
-	return nil
+	return err
 }

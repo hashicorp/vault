@@ -104,8 +104,9 @@ func (f *FlagSets) getValue(flagName string) (string, bool) {
 	return result, isFlagSpecified
 }
 
-// getAggregatedConfigValue uses the provided keys to check CLI flags and environment variables for values that may be
-// used to override any specified configuration. If nothing can be found the 'fallback' (default) value will be provided.
+// getAggregatedConfigValue uses the provided keys to check CLI flags and environment
+// variables for values that may be used to override any specified configuration.
+// If nothing can be found in flags/env vars or config, the 'fallback' (default) value will be provided.
 func (p *valuesProvider) getAggregatedConfigValue(flagKey, envVarKey, current, fallback string) string {
 	var result string
 	current = strings.TrimSpace(current)
