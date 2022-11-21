@@ -16,11 +16,12 @@
     </div>
   {{else}}
     <FormField
-      data-test-field={{true}}
+      data-test-field={{attr}}
       @attr={{attr}}
       @model={{@model}}
       @modelValidations={{@modelValidations}}
       @showHelpText={{false}}
+      @onChange={{this.onSignatureBitsOrKeyTypeChange}}
     />
   {{/if}}
 {{/each}}

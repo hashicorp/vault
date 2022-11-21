@@ -21,6 +21,7 @@ const KEY_BITS_OPTIONS = {
 };
 
 export default class PkiKeyParameters extends Component {
+  // TODO clarify types here
   get keyBitOptions() {
     return KEY_BITS_OPTIONS[this.args.model.keyType];
   }
@@ -35,10 +36,9 @@ export default class PkiKeyParameters extends Component {
 
   @action onSignatureBitsOrKeyTypeChange(name, selection) {
     if (name === 'signatureBits') {
-      this.args.model.set(name, Number(selection.target.value));
+      this.args.model.set(name, Number(selection));
     }
     if (name === 'keyType') {
-      this.args.model.set(name, selection.target.value);
       this.args.model.set('keyBits', this.keyBitsDefault);
     }
   }

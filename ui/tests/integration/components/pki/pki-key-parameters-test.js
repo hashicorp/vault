@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki-engine';
@@ -13,6 +13,7 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('pki/role');
     this.model.backend = 'pki';
+    [this.fields] = Object.values(this.model.fieldGroups.find((g) => g['Key parameters']));
   });
 
   test('it should render the component and display the correct defaults', async function (assert) {
@@ -22,13 +23,12 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
       <div class="has-top-margin-xxl">
         <PkiKeyParameters
           @model={{this.model}}
-          @group="Key parameters"
+          @fields={{this.fields}}
         />
        </div>
   `,
       { owner: this.engine }
     );
-    await click(SELECTORS.keyParams);
     assert.dom(SELECTORS.keyType).hasValue('rsa');
     assert.dom(SELECTORS.keyBits).hasValue('2048');
     assert.dom(SELECTORS.signatureBits).hasValue('0');
@@ -41,7 +41,7 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
       <div class="has-top-margin-xxl">
         <PkiKeyParameters
           @model={{this.model}}
-          @group="Key parameters"
+          @fields={{this.fields}}
         />
        </div>
   `,
@@ -54,7 +54,6 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
       0,
       'sets the default value for signature_bits on the model.'
     );
-    await click(SELECTORS.keyParams);
     await fillIn(SELECTORS.keyType, 'ec');
     assert.strictEqual(this.model.keyType, 'ec', 'sets the new selected value for key_type on the model.');
     assert.strictEqual(

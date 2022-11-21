@@ -37,7 +37,7 @@
         {{#if (eq group "default")}}
           {{#each fields as |attr|}}
             <FormField
-              data-test-field={{true}}
+              data-test-field={{attr}}
               @attr={{attr}}
               @model={{@model}}
               @modelValidations={{this.modelValidations}}
@@ -46,8 +46,6 @@
               <RadioSelectTtlOrString @attr={{attr}} @model={{@model}} />
             </FormField>
           {{/each}}
-        {{else if (eq group "Key usage")}}
-          <PkiKeyUsage @model={{@model}} @group={{group}} />
         {{else}}
           {{#let (camelize (concat "show" group)) as |prop|}}
             <ToggleButton
@@ -59,7 +57,7 @@
               data-test-toggle-group={{group}}
             />
             {{#if (get @model prop)}}
-              <div class="box is-marginless">
+              <div class="box is-tall is-marginless" data-test-toggle-div={{group}}>
                 {{#let (get @model.fieldGroupsInfo group) as |toggleGroup|}}
                   {{! HEADER }}
                   {{#if toggleGroup.header}}
@@ -73,7 +71,9 @@
                     </div>
                   {{/if}}
                   {{! FIELDS }}
-                  {{#if (eq group "Key parameters")}}
+                  {{#if (eq group "Key usage")}}
+                    <PkiKeyUsage @model={{@model}} />
+                  {{else if (eq group "Key parameters")}}
                     <PkiKeyParameters @model={{@model}} @fields={{fields}} />
                   {{else}}
                     {{#each fields as |attr|}}
