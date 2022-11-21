@@ -10,7 +10,6 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
@@ -261,7 +260,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 
 			// Need to handle deprecated builtins specially
 			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeSecrets)
-			if (status == consts.PendingRemoval && !vault.PendingRemovalMountsAllowed) || status == consts.Removed {
+			if status == consts.PendingRemoval || status == consts.Removed {
 				expectedResult = 2
 			}
 

@@ -111,8 +111,6 @@ var (
 	// mountAliases maps old backend names to new backend names, allowing us
 	// to move/rename backends but maintain backwards compatibility
 	mountAliases = map[string]string{"generic": "kv"}
-
-	PendingRemovalMountsAllowed = false
 )
 
 func (c *Core) generateMountAccessor(entryType string) (string, error) {
@@ -1027,8 +1025,8 @@ func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry
 
 		case consts.PendingRemoval:
 			dl.Error(errMountPendingRemoval.Error())
-			if PendingRemovalMountsAllowed {
-				c.Logger().Info("mount allowed by environment variable", "env", consts.VaultAllowPendingRemovalMountsEnv)
+			if c.pendingRemovalMountsAllowed {
+				c.Logger().Info("mount allowed by environment variable", "env", consts.EnvVaultAllowPendingRemovalMounts)
 				resp.AddWarning(errMountPendingRemoval.Error())
 				return resp, nil
 			}

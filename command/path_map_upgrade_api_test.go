@@ -19,6 +19,7 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 		CredentialBackends: map[string]logical.Factory{
 			"app-id": credAppId.Factory,
 		},
+		PendingRemovalMountsAllowed: true,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
