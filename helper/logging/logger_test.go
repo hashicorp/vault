@@ -169,3 +169,31 @@ func TestLogger_SetupLoggerWithInValidLogPathPermission(t *testing.T) {
 	require.True(t, errors.Is(err, os.ErrPermission))
 	require.Nil(t, logger)
 }
+
+func TestLogger_SetupLoggerWithInvalidLogFilePath(t *testing.T) {
+	cases := map[string]struct {
+		path    string
+		message string
+	}{
+		"file name": {
+			path:    "/this/isnt/ok/juan*.log",
+			message: "file name contains globbing character *",
+		},
+		"directory path": {
+			path:    "/this/isnt/ok/*/qwerty.log",
+			message: "directory contains glob character",
+		},
+	}
+
+	for name, tc := range cases {
+		name := name
+		tc := tc
+		cfg := &LogConfig{
+			LogLevel:    log.Info,
+			LogFilePath: tc.path,
+		}
+		_, err := Setup(cfg, &bytes.Buffer{})
+		assert.Error(t, err, "%s: expected error due to *", name)
+		assert.Contains(t, err.Error(), tc.message, "%s: error message does not match: %s", name, err.Error())
+	}
+}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 )
 
 const (
@@ -80,6 +81,24 @@ func (w noErrorWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+// parseFullPath takes a full path intended to be the location for log files and
+// breaks it down into a directory and a file name. It checks both of these for
+// the common globbing character '*' and returns an error if it is present.
+func parseFullPath(fullPath string) (directory, fileName string, err error) {
+	directory, fileName = filepath.Split(fullPath)
+
+	if strings.Contains(directory, "*") {
+		err = multierror.Append(fmt.Errorf("directory contains glob character *"), err)
+	}
+	if fileName == "" {
+		fileName = "vault.log"
+	} else if strings.Contains(fileName, "*") {
+		err = multierror.Append(fmt.Errorf("file name contains globbing character *"), err)
+	}
+
+	return directory, fileName, err
+}
+
 // Setup creates a new logger with the specified configuration and writer
 func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 	// Validate the log level
@@ -94,10 +113,11 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 
 	// Create a file logger if the user has specified the path to the log file
 	if config.LogFilePath != "" {
-		dir, fileName := filepath.Split(config.LogFilePath)
-		if fileName == "" {
-			fileName = "vault.log"
+		dir, fileName, err := parseFullPath(config.LogFilePath)
+		if err != nil {
+			return nil, err
 		}
+
 		if config.LogRotateDuration == 0 {
 			config.LogRotateDuration = defaultRotateDuration
 		}
