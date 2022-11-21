@@ -160,7 +160,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Not enough arguments (expected >1, got %d)", len(args)))
 		return 1
 	case len(c.flagRemoveData) == 0 && len(args) == 1:
-		c.UI.Error(fmt.Sprintf("Must supply data %v", args))
+		c.UI.Error("Must supply data")
 		return 1
 	}
 
@@ -229,6 +229,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 	}
 
 	for _, key := range c.flagRemoveData {
+		// A null in a JSON merge patch payload will remove the associated key
 		newData[key] = nil
 	}
 
