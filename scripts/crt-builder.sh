@@ -56,41 +56,6 @@ function build_ui() {
   popd
 }
 
-# Build Vault
-function build() {
-  local revision
-  local build_date
-  local ldflags
-  local msg
-
-  # Get or set our basic build metadata
-  revision=$(build_revision)
-  build_date=$(build_date)
-  : "${GO_TAGS:=""}"
-  : "${KEEP_SYMBOLS:=""}"
-
-  # Build our ldflags
-  msg="--> Building Vault revision $revision, built $build_date"
-
-  # Strip the symbol and dwarf information by default
-  if [ -n "$KEEP_SYMBOLS" ]; then
-    ldflags=""
-  else
-    ldflags="-s -w "
-  fi
-
-  # Build vault
-  echo "$msg"
-  pushd "$(repo_root)"
-  mkdir -p dist
-  mkdir -p out
-  set -x
-  go build -v -tags "$GO_TAGS" -ldflags "$ldflags" -o dist/
-  set +x
-  popd
-}
-
-
 # Bundle the dist directory
 function bundle() {
   : "${BUNDLE_PATH:=$(repo_root)/vault.zip}"

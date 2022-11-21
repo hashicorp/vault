@@ -256,10 +256,6 @@ ci-verify:
 
 # These crt targets are used for release builds by .github/workflows/build.yml
 # and for artifact_source:local Enos scenario variants.
-.PHONY: crt-build
-crt-build:
-	@$(CURDIR)/scripts/crt-builder.sh build
-
 .PHONY: crt-build-ui
 crt-build-ui:
 	@$(CURDIR)/scripts/crt-builder.sh build-ui

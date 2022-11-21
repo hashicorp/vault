@@ -53,12 +53,19 @@ jobs:
       - name: Build UI
         run: make crt-build-ui
       - name: Build Vault
-        env:
-          CGO_ENABLED: ${{ inputs.cgo-enabled }}
-          GOARCH: ${{ inputs.goarch }}
-          GOOS: ${{ inputs.goos }}
-          GO_TAGS: ${{ inputs.go-tags }}
-        run: make crt-build
+        uses: hashicorp/actions-go-build@v0.1.7
+        with:
+          product_name: ${{ inputs.package-name }}
+          product_version: ${{ inputs.vault-version }}
+          go_version: ${{ inputs.go-version }}
+          os: ${{ inputs.goos }}
+          arch: ${{ inputs.goarch }}
+          reproducible: assert
+          instructions: |-
+            CGO_ENABLED=0 go build -o "$BIN_PATH" -trimpath \
+            -ldflags "
+              -X github.com/hashicorp/vault/sdk/version.Version=$version -X github.com/hashicorp/vault/sdk/version.GitCommit=$revision -X github.com/hashicorp/vault/sdk/version.BuildDate=$build_date
+            "
       - name: Determine artifact basename
         env:
           GOARCH: ${{ inputs.goarch }}
