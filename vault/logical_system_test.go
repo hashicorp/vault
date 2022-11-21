@@ -4772,23 +4772,6 @@ func TestProcessLimit(t *testing.T) {
 	}
 }
 
-func validateLevel(level string, logger hclog.Logger) bool {
-	switch level {
-	case "trace":
-		return logger.IsTrace()
-	case "debug":
-		return logger.IsDebug()
-	case "notice", "info", "":
-		return logger.IsInfo()
-	case "warn", "warning":
-		return logger.IsWarn()
-	case "err", "error":
-		return logger.IsError()
-	}
-
-	return false
-}
-
 func TestSystemBackend_Loggers(t *testing.T) {
 	testCases := []struct {
 		level         string
@@ -4968,11 +4951,13 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 	testCases := []struct {
 		logger            string
 		level             string
+		expectedLevel     string
 		expectWriteError  bool
 		expectDeleteError bool
 	}{
 		{
 			"core",
+			"trace",
 			"trace",
 			false,
 			false,
@@ -4980,17 +4965,20 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 		{
 			"token",
 			"debug",
+			"debug",
 			false,
 			false,
 		},
 		{
 			"audit",
 			"notice",
+			"info",
 			false,
 			false,
 		},
 		{
 			"expiration",
+			"info",
 			"info",
 			false,
 			false,
@@ -4998,23 +4986,27 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 		{
 			"policy",
 			"warn",
+			"warn",
 			false,
 			false,
 		},
 		{
 			"activity",
 			"warning",
+			"warn",
 			false,
 			false,
 		},
 		{
 			"identity",
 			"err",
+			"error",
 			false,
 			false,
 		},
 		{
 			"rollback",
+			"error",
 			"error",
 			false,
 			false,
@@ -5022,24 +5014,28 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 		{
 			"system",
 			"",
+			"does-not-matter",
 			true,
 			false,
 		},
 		{
 			"quotas",
 			"invalid",
+			"does-not-matter",
 			true,
 			false,
 		},
 		{
 			"",
 			"info",
+			"does-not-matter",
 			true,
 			true,
 		},
 		{
 			"does_not_exist",
 			"error",
+			"does-not-matter",
 			true,
 			true,
 		},
@@ -5053,16 +5049,41 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 
 			core, b, _ := testCoreSystemBackend(t)
 
+			// Test core overrides logging level outside of config,
+			// an initial delete will ensure that we an initial read
+			// to get expected values is based off of config and not
+			// the test override that is hidden from this test
 			req := &logical.Request{
+				Path:      "loggers",
+				Operation: logical.DeleteOperation,
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			req = &logical.Request{
+				Path:      "loggers",
+				Operation: logical.ReadOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			initialLoggers := resp.Data
+
+			req = &logical.Request{
 				Path:      fmt.Sprintf("loggers/%s", tc.logger),
 				Operation: logical.UpdateOperation,
 				Data: map[string]interface{}{
-					"name":  tc.logger,
 					"level": tc.level,
 				},
 			}
 
-			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 			respIsError := resp != nil && resp.IsError()
 
 			if err != nil || (!tc.expectWriteError && respIsError) {
@@ -5074,13 +5095,34 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			}
 
 			if !tc.expectWriteError {
+				req = &logical.Request{
+					Path:      "loggers",
+					Operation: logical.ReadOperation,
+				}
+
+				resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+				if err != nil || (resp != nil && resp.IsError()) {
+					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+				}
+
 				for _, logger := range core.allLoggers {
-					if logger.Name() != tc.logger && !validateLevel(core.logLevel, logger) {
-						t.Errorf("expected level of logger %q to be unchanged", logger.Name())
+					loggerName := logger.Name()
+					levelRaw, currentOk := resp.Data[loggerName]
+					initialLevelRaw, initialOk := initialLoggers[loggerName]
+
+					if !currentOk || !initialOk {
+						t.Errorf("logger %q not found", loggerName)
 					}
 
-					if !validateLevel(tc.level, logger) {
-						t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+					levelStr := levelRaw.(string)
+					initialLevelStr := initialLevelRaw.(string)
+
+					if loggerName == tc.logger && levelStr != tc.expectedLevel {
+						t.Fatalf("expected logger %q to be %q, actual: %s", loggerName, tc.expectedLevel, levelStr)
+					}
+
+					if loggerName != tc.logger && levelStr != initialLevelStr {
+						t.Errorf("expected level of logger %q to be unchanged, exepcted: %s, actual: %s", loggerName, initialLevelStr, levelStr)
 					}
 				}
 			}
@@ -5088,9 +5130,6 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			req = &logical.Request{
 				Path:      fmt.Sprintf("loggers/%s", tc.logger),
 				Operation: logical.DeleteOperation,
-				Data: map[string]interface{}{
-					"name": tc.logger,
-				},
 			}
 
 			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -5105,10 +5144,28 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			}
 
 			if !tc.expectDeleteError {
-				for _, logger := range core.allLoggers {
-					if !validateLevel(core.logLevel, logger) {
-						t.Errorf("expected level of logger %q to match original config", logger.Name())
-					}
+				req = &logical.Request{
+					Path:      fmt.Sprintf("loggers/%s", tc.logger),
+					Operation: logical.ReadOperation,
+				}
+
+				resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+				if err != nil || (resp != nil && resp.IsError()) {
+					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+				}
+
+				currentLevel, ok := resp.Data[tc.logger].(string)
+				if !ok {
+					t.Fatalf("expected resp to include %q, resp: %#v", tc.logger, resp)
+				}
+
+				initialLevel, ok := initialLoggers[tc.logger].(string)
+				if !ok {
+					t.Fatalf("expected initial loggers to include %q, resp: %#v", tc.logger, initialLoggers)
+				}
+
+				if currentLevel != initialLevel {
+					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", tc.logger, initialLevel, currentLevel)
 				}
 			}
 		})
