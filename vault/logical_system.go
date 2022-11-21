@@ -4985,6 +4985,10 @@ func (b *SystemBackend) handleLoggersByNameDelete(ctx context.Context, req *logi
 	}
 
 	name := nameRaw.(string)
+	if name == "" {
+		return logical.ErrorResponse("name is empty"), nil
+	}
+
 	success := b.Core.SetLogLevelByName(name, level)
 	if !success {
 		return logical.ErrorResponse(fmt.Sprintf("logger %q not found", name)), nil
