@@ -31,14 +31,6 @@
     {
       "scenario": "upgrade arch:amd64 artifact_source:artifactory backend:raft consul_version:1.13.2 distro:ubuntu edition:ent seal:awskms artifact_type:bundle",
       "aws_region": "us-east-2"
-    },
-    {
-      "scenario": "autopilot arch:amd64 artifact_source:artifactory distro:ubuntu edition:ent seal:awskms artifact_type:bundle",
-      "aws_region": "us-west-1"
-    },
-    {
-      "scenario": "autopilot arch:arm64 artifact_source:artifactory distro:rhel edition:ent seal:shamir artifact_type:bundle",
-      "aws_region": "us-west-2"
     }
   ]
 }
