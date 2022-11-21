@@ -1475,7 +1475,7 @@ func TestBackend_mixed_constraints(t *testing.T) {
 			testAccStepCert(t, "2matching", ca, "foo", allowed{names: "*.example.com,whatever"}, false),
 			testAccStepCert(t, "3invalid", ca, "foo", allowed{names: "invalid"}, false),
 			testAccStepLogin(t, connState),
-			// Assumes CertEntries are processed in alphabetical order (due to store.List), so we only match 2matching if 1unconstrained doesn'log match
+			// Assumes CertEntries are processed in alphabetical order (due to store.List), so we only match 2matching if 1unconstrained doesn't match
 			testAccStepLoginWithName(t, connState, "2matching"),
 			testAccStepLoginWithNameInvalid(t, connState, "3invalid"),
 		},
@@ -1556,7 +1556,7 @@ func TestBackend_validCIDR(t *testing.T) {
 
 	if cidrsResult[0].String() != boundCIDRs[0] ||
 		cidrsResult[1].String() != boundCIDRs[1] {
-		t.Fatalf("bound_cidrs couldn'log be set correctly, EXPECTED: %v, ACTUAL: %v", boundCIDRs, cidrsResult)
+		t.Fatalf("bound_cidrs couldn't be set correctly, EXPECTED: %v, ACTUAL: %v", boundCIDRs, cidrsResult)
 	}
 
 	loginReq := &logical.Request{
@@ -1633,7 +1633,7 @@ func TestBackend_invalidCIDR(t *testing.T) {
 		Connection: &logical.Connection{ConnState: &connState},
 	}
 
-	// override the remote address with an IPV4 that isn'log authorized
+	// override the remote address with an IPV4 that isn't authorized
 	loginReq.Connection.RemoteAddr = "127.0.0.1/8"
 
 	_, err = b.HandleRequest(context.Background(), loginReq)
@@ -1711,7 +1711,7 @@ func testAccStepReadConfig(t *testing.T, conf config, connState tls.ConnectionSt
 			}
 
 			if b != conf.EnableIdentityAliasMetadata {
-				t.Fatalf("bad: expected enable_identity_alias_metadata to be %log, got %log", conf.EnableIdentityAliasMetadata, b)
+				t.Fatalf("bad: expected enable_identity_alias_metadata to be %t, got %t", conf.EnableIdentityAliasMetadata, b)
 			}
 
 			return nil
@@ -2207,7 +2207,7 @@ func Test_Renew(t *testing.T) {
 		t.Fatalf("expected a period value of %s in the response, got: %s", period, resp.Auth.Period)
 	}
 
-	// Delete CA, make sure we can'log renew
+	// Delete CA, make sure we can't renew
 	resp, err = b.pathCertDelete(context.Background(), req, fd)
 	if err != nil {
 		t.Fatal(err)
