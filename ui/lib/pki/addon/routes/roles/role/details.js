@@ -1,3 +1,11 @@
-import Route from '@ember/routing/route';
+import PkiRolesIndexRoute from '../index';
 
-export default class PkiRoleDetailsRoute extends Route {}
+export default class RolesRoleDetailsRoute extends PkiRolesIndexRoute {
+  model() {
+    const { id } = this.paramsFor('roles/role');
+    return this.store.queryRecord('pki/role', {
+      backend: this.secretMountPath.currentPath,
+      id,
+    });
+  }
+}

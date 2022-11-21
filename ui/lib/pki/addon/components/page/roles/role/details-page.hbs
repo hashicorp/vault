@@ -1,0 +1,88 @@
+<PageHeader as |p|>
+  <p.top>
+    {{! TODO: This should be replaced with HDS::Breadcrumbs }}
+    <nav class="key-value-header breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li>
+          <span class="sep">/</span>
+          <LinkToExternal @route="secrets">secrets</LinkToExternal>
+        </li>
+        {{#each this.breadcrumbs as |breadcrumb|}}
+          <li>
+            <span class="sep">/</span>
+            {{#if breadcrumb.path}}
+              <LinkTo @route={{breadcrumb.path}}>
+                {{breadcrumb.label}}
+              </LinkTo>
+            {{else}}
+              {{breadcrumb.label}}
+            {{/if}}
+          </li>
+        {{/each}}
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      <Icon @name="file-text" @size="24" class="has-text-grey-light" />
+      PKI Role
+      <code>{{@role.id}}</code>
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<Toolbar>
+  <ToolbarActions>
+    <ConfirmAction
+      @buttonClasses="toolbar-link"
+      @onConfirmAction={{this.deleteRole}}
+      @confirmTitle="Delete role?"
+      @confirmButtonText="Delete"
+      data-test-pki-role-delete
+    >
+      Delete
+    </ConfirmAction>
+    <div class="toolbar-separator"></div>
+    <LinkTo class="toolbar-link" @route="certificates.create">Generate Certificate <Icon @name="chevron-right" /></LinkTo>
+    <LinkTo class="toolbar-link" @route="overview">Sign Certificate <Icon @name="chevron-right" /></LinkTo>
+    <LinkTo class="toolbar-link" @route="roles.role.edit">Edit <Icon @name="chevron-right" /></LinkTo>
+  </ToolbarActions>
+</Toolbar>
+{{#each @role.fieldGroups as |fg|}}
+  {{#each-in fg as |group fields|}}
+    {{#if (not-eq group "default")}}
+      <h3 class="is-size-4 has-text-semibold has-top-margin-m">{{group}}</h3>
+    {{/if}}
+    {{#each fields as |attr|}}
+      {{#let (get @role attr.name) as |val|}}
+        {{#if (eq attr.name "issuerRef")}}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{val}}
+            @alwaysRender={{true}}
+          >
+            <LinkTo @route="issuers.issuer.details" @model={{val}}>{{val}}</LinkTo>
+          </InfoTableRow>
+        {{else if (or (eq attr.name "keyUsage") (eq attr.name "extKeyUsage"))}}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{val}}
+            @alwaysRender={{true}}
+          >
+            {{#each val as |key|}}
+              <span>{{key}},&nbsp;</span>
+            {{/each}}
+          </InfoTableRow>
+        {{else}}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{val}}
+            @alwaysRender={{true}}
+            @formatDate={{eq attr.name "customTtl"}}
+            @type={{or attr.type attr.options.type}}
+            @defaultShown={{attr.options.defaultShown}}
+          />
+        {{/if}}
+      {{/let}}
+    {{/each}}
+  {{/each-in}}
+{{/each}}
