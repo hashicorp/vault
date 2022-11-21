@@ -125,24 +125,7 @@ export default class PkiRoleModel extends Model {
     label: 'Signature bits',
     subText: `Only applicable for key_type 'RSA'. Ignore for other key types.`,
     defaultValue: 0,
-    possibleValues: [
-      {
-        value: 0,
-        displayName: 'Defaults to 0',
-      },
-      {
-        value: 256,
-        displayName: '256 for SHA-2-256',
-      },
-      {
-        value: 384,
-        displayName: '384 for SHA-2-384',
-      },
-      {
-        value: 512,
-        displayName: '512 for SHA-2-5124',
-      },
-    ],
+    possibleValues: [0, 256, 384, 512],
   })
   signatureBits;
   /* End of overriding Key parameters options */
@@ -295,6 +278,11 @@ export default class PkiRoleModel extends Model {
           text: 'These options can interact intricately with one another. For more information,',
           docText: 'learn more here.',
           docLink: '/api-docs/secret/pki#allowed_domains',
+        },
+      },
+      'Key parameters': {
+        header: {
+          text: `These are the parameters for generating or validating the certificate's key material.`,
         },
       },
       'Subject Alternative Name (SAN) Options': {
