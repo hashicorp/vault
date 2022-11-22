@@ -33,7 +33,7 @@ variable "artifactory_repo" {
 variable "aws_region" {
   description = "The AWS region where we'll create infrastructure"
   type        = string
-  default     = "us-west-1"
+  default     = "us-east-2"
 }
 
 variable "aws_ssh_keypair_name" {

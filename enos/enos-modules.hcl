@@ -57,6 +57,12 @@ module "read_license" {
   source = "./modules/read_license"
 }
 
+module "remove_node" {
+  source = "./modules/remove_node"
+
+  vault_instance_count = var.vault_instance_count
+}
+
 module "vault_agent" {
   source = "./modules/vault_agent"
 
@@ -93,7 +99,8 @@ module "vault_cluster_ips" {
 module "vault_unseal_nodes" {
   source = "./modules/vault_unseal_nodes"
 
-  vault_install_dir = var.vault_install_dir
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_upgrade" {
