@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -126,6 +127,20 @@ func TestPKIHC_AllBad(t *testing.T) {
 	_, _, results := execPKIHC(t, client, true)
 
 	validateExpectedPKIHC(t, expectedAllBad, results)
+}
+
+func TestPKIHC_NoMount(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	code, message, _ := execPKIHC(t, client, false)
+	if code != 1 {
+		t.Fatalf("Expected return code 1 from invocation on non-existent mount, got %v\nOutput: %v", code, message)
+	}
+
+	if !strings.Contains(message, "route entry not found") {
+		t.Fatalf("Expected failure to talk about missing route entry, got exit code %v\nOutput: %v", code, message)
+	}
 }
 
 func testPKIHealthCheckCommand(tb testing.TB) (*cli.MockUi, *PKIHealthCheckCommand) {
