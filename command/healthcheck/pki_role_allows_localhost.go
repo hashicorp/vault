@@ -101,5 +101,15 @@ func (h *RoleAllowsLocalhost) Evaluate(e *Executor) (results []*Result, err erro
 		results = append(results, &ret)
 	}
 
+	if len(results) == 0 && len(h.RoleEntryMap) > 0 {
+		ret := Result{
+			Status:   ResultOK,
+			Endpoint: "/{{mount}}/roles",
+			Message:  "Roles follow best practices regarding allowing issuance for localhost domains.",
+		}
+
+		results = append(results, &ret)
+	}
+
 	return
 }

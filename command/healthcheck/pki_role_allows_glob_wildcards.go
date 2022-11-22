@@ -122,7 +122,17 @@ func (h *RoleAllowsGlobWildcards) Evaluate(e *Executor) (results []*Result, err 
 		ret := Result{
 			Status:   ResultWarning,
 			Endpoint: "/{{mount}}/role/" + role,
-			Message:  fmt.Sprintf("Role currently allows wildcard issuance while allowing globs in allowed_domains (%v). Because globs can expand to one or more wildcard character, including wildcards under additional subdomains, these options are dangerous to enable together. If glob domains are required to be enabled, it is suggested to either disable wildcard issuance if not desired, or create two separate roles -- one with wildcard issuanced for specified domains, and one with glob matching enabled for concrete domain identifiers.", allowedDomains),
+			Message:  fmt.Sprintf("Role currently allows wildcard issuance while allowing globs in allowed_domains (%v). Because globs can expand to one or more wildcard character, including wildcards under additional subdomains, these options are dangerous to enable together. If glob domains are required to be enabled, it is suggested to either disable wildcard issuance if not desired, or create two separate roles -- one with wildcard issuance for specified domains and one with glob matching enabled for concrete domain identifiers.", allowedDomains),
+		}
+
+		results = append(results, &ret)
+	}
+
+	if len(results) == 0 && len(h.RoleEntryMap) > 0 {
+		ret := Result{
+			Status:   ResultOK,
+			Endpoint: "/{{mount}}/roles",
+			Message:  "Roles follow best practices regarding restricting wildcard certificate issuance in roles.",
 		}
 
 		results = append(results, &ret)

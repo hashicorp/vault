@@ -150,5 +150,15 @@ func (h *RoleNoStoreFalse) Evaluate(e *Executor) (results []*Result, err error) 
 		results = append(results, &ret)
 	}
 
+	if len(results) == 0 && len(h.RoleEntryMap) > 0 {
+		ret := Result{
+			Status:   ResultOK,
+			Endpoint: "/{{mount}}/roles",
+			Message:  "Roles follow best practices regarding certificate storage.",
+		}
+
+		results = append(results, &ret)
+	}
+
 	return
 }
