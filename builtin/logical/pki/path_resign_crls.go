@@ -319,24 +319,24 @@ func parseRevokedCertsParam(revokedCerts []interface{}) ([]pkix.RevokedCertifica
 		if revokedCert, ok := entry.(map[string]interface{}); ok {
 			serialNum, err := parseSerialNum(revokedCert)
 			if err != nil {
-				return parsedCerts, fmt.Errorf("failed parsing serial_number from entry %d: %w", i, err)
+				return nil, fmt.Errorf("failed parsing serial_number from entry %d: %w", i, err)
 			}
 
 			if origEntry, exists := seenSerials[serialNum]; exists {
 				serialNumStr := revokedCert["serial_number"]
-				return parsedCerts, fmt.Errorf("duplicate serial number: %s, original entry %d and %d", serialNumStr, origEntry, i)
+				return nil, fmt.Errorf("duplicate serial number: %s, original entry %d and %d", serialNumStr, origEntry, i)
 			}
 
 			seenSerials[serialNum] = i
 
 			revocationTime, err := parseRevocationTime(revokedCert)
 			if err != nil {
-				return parsedCerts, fmt.Errorf("failed parsing revocation_time from entry %d: %w", i, err)
+				return nil, fmt.Errorf("failed parsing revocation_time from entry %d: %w", i, err)
 			}
 
 			extensions, err := parseCertExtensions(revokedCert)
 			if err != nil {
-				return parsedCerts, fmt.Errorf("failed parsing extensions from entry %d: %w", i, err)
+				return nil, fmt.Errorf("failed parsing extensions from entry %d: %w", i, err)
 			}
 
 			parsedCerts = append(parsedCerts, pkix.RevokedCertificate{
@@ -359,7 +359,7 @@ func parseCertExtensions(cert map[string]interface{}) ([]pkix.Extension, error) 
 
 	extListRaw, ok := extRaw.([]interface{})
 	if !ok {
-		return []pkix.Extension{}, errors.New("'extensions' field did not contain a slice")
+		return nil, errors.New("'extensions' field did not contain a slice")
 	}
 
 	return parseExtensionsParam(extListRaw)
@@ -371,16 +371,16 @@ func parseExtensionsParam(extRawList []interface{}) ([]pkix.Extension, error) {
 	for i, entryRaw := range extRawList {
 		entry, ok := entryRaw.(map[string]interface{})
 		if !ok {
-			return []pkix.Extension{}, fmt.Errorf("extension entry %d not a map", i)
+			return nil, fmt.Errorf("extension entry %d not a map", i)
 		}
 		extension, err := parseExtension(entry)
 		if err != nil {
-			return []pkix.Extension{}, fmt.Errorf("failed parsing extension entry %d: %w", i, err)
+			return nil, fmt.Errorf("failed parsing extension entry %d: %w", i, err)
 		}
 
 		parsedIdStr := extension.Id.String()
 		if _, exists := seenOid[parsedIdStr]; exists {
-			return []pkix.Extension{}, fmt.Errorf("duplicate extension id: %s", parsedIdStr)
+			return nil, fmt.Errorf("duplicate extension id: %s", parsedIdStr)
 		}
 
 		seenOid[parsedIdStr] = struct{}{}
