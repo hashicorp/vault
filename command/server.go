@@ -135,7 +135,6 @@ type ServerCommand struct {
 	flagDevTransactional   bool
 	flagDevAutoSeal        bool
 	flagTestVerifyOnly     bool
-	flagCombineLogs        bool
 	flagTestServerConfig   bool
 	flagDevConsul          bool
 	flagExitOnCoreShutdown bool
@@ -356,13 +355,6 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	// TODO: should the below flags be public?
-	f.BoolVar(&BoolVar{
-		Name:    "combine-logs",
-		Target:  &c.flagCombineLogs,
-		Default: false,
-		Hidden:  true,
-	})
-
 	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
 		Target:  &c.flagTestVerifyOnly,

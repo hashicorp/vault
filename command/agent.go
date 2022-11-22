@@ -89,7 +89,6 @@ type AgentCommand struct {
 	flagConfigs        []string
 	flagExitAfterAuth  bool
 	flagTestVerifyOnly bool
-	flagCombineLogs    bool
 }
 
 func (c *AgentCommand) Synopsis() string {

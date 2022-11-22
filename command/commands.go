@@ -156,6 +156,8 @@ const (
 	flagNameUserLockoutDisable = "user-lockout-disable"
 	// flagNameDisableRedirects is used to prevent the client from honoring a single redirect as a response to a request
 	flagNameDisableRedirects = "disable-redirects"
+	// flagNameCombineLogs is used to specify whether log output should be combined and sent to stdout
+	flagNameCombineLogs = "combine-logs"
 	// flagNameLogFile is used to specify the path to the log file that Vault should use for logging
 	flagNameLogFile = "log-file"
 	// flagNameLogRotateBytes is the flag used to specify the number of bytes a log file should be before it is rotated.
