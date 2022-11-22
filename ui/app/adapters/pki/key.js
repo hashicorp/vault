@@ -12,16 +12,30 @@ export default class PkiKeyAdapter extends ApplicationAdapter {
     return { data };
   }
 
-  urlForQuery(backend, id) {
-    let url = `${this.buildURL()}/${encodePath(backend)}/keys`;
+  _urlForKey(backend, id) {
+    let url = `${this.buildURL()}/${encodePath(backend)}/key`;
     if (id) {
       url = url + '/' + encodePath(id);
     }
     return url;
   }
 
+  urlForKeys(backend, method) {
+    let url = `${this.buildURL()}/${encodePath(backend)}/keys`;
+    // methods can be 'generate' or 'import'
+    if (method) {
+      url = url + '/' + method;
+    }
+    return url;
+  }
+
   query(store, type, query) {
+    const { backend } = query;
+    return this.ajax(this.urlForKeys(backend), 'GET', { list: true });
+  }
+
+  queryRecord(store, type, query) {
     const { backend, id } = query;
-    return this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
+    return this.ajax(this._urlForKey(backend, id), 'GET');
   }
 }
