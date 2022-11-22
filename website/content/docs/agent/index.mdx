@@ -141,7 +141,7 @@ These are the currently-available general configuration option:
 
 - `cache` <code>([cache][caching]: <optional\>)</code> - Specifies options used for Caching functionality.
 
-- `listener` <code>([listener][listener]: <optional\>)</code> - Specifies the addresses and ports on which the Agent will respond to requests.
+- `listener` <code>([listener][listener]: <optional\>)</code> - Specifies the addresses and ports on which the Agent will respond to requests. Ignored if a `cache` configuration block is not declared. 
 
 - `pid_file` `(string: "")` - Path to the file in which the agent's Process ID
   (PID) should be stored
