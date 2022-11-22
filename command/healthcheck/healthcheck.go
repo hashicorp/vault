@@ -110,12 +110,12 @@ func (e *Executor) Execute() (map[string][]*Result, error) {
 		}
 
 		if err := checker.FetchResources(e); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to execute %v: %w", checker.Name(), err)
 		}
 
 		results, err := checker.Evaluate(e)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to execute %v: %w", checker.Name(), err)
 		}
 
 		for _, result := range results {
@@ -225,7 +225,7 @@ func (p *PathFetch) IsMissingResource() bool {
 }
 
 func (p *PathFetch) Is404NotFound() bool {
-  return !p.IsOK() && strings.HasSuffix(strings.TrimSpace(p.FetchError.Error()), "Code: 404. Errors:")
+	return !p.IsOK() && strings.HasSuffix(strings.TrimSpace(p.FetchError.Error()), "Code: 404. Errors:")
 }
 
 type Check interface {

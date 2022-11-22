@@ -19,6 +19,10 @@ func pkiFetchIssuersList(e *Executor, versionError func()) (bool, *PathFetch, []
 			versionError()
 		}
 
+		if issuersRet.Is404NotFound() {
+			return true, nil, nil, fmt.Errorf("this mount lacks any configured issuers, limiting health check usefulness")
+		}
+
 		return true, nil, nil, nil
 	}
 
