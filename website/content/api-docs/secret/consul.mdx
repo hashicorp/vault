@@ -8,6 +8,8 @@ description: This is the API documentation for the Vault Consul secrets engine.
 
 @include 'x509-sha1-deprecation.mdx'
 
+@include 'consul-dataplane-compat.mdx'
+
 This is the API documentation for the Vault Consul secrets engine. For general
 information about the usage and operation of the Consul secrets engine, please
 see the [Vault Consul documentation](/docs/secrets/consul).
