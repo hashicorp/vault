@@ -143,6 +143,26 @@ func TestPKIHC_NoMount(t *testing.T) {
 	}
 }
 
+func TestPKIHC_ExpectedEmptyMount(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+	}); err != nil {
+		t.Fatalf("pki mount error: %#v", err)
+	}
+
+	code, message, _ := execPKIHC(t, client, false)
+	if code != 1 {
+		t.Fatalf("Expected return code 1 from invocation on empty mount, got %v\nOutput: %v", code, message)
+	}
+
+	if !strings.Contains(message, "lacks any configured issuers,") {
+		t.Fatalf("Expected failure to talk about no issuers, got exit code %v\nOutput: %v", code, message)
+	}
+}
+
 func testPKIHealthCheckCommand(tb testing.TB) (*cli.MockUi, *PKIHealthCheckCommand) {
 	tb.Helper()
 
