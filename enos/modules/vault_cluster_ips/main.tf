@@ -44,18 +44,18 @@ locals {
       private_ip = values(var.vault_instances)[idx].private_ip
     }
   }
-  follower_public_ips = {
-    follower_public_ips = [
-      for k, v in values((tomap(local.instances))) :
-      tostring(v["public_ip"]) if v["private_ip"] != trimspace(enos_remote_exec.get_leader_private_ip.stdout)
-    ]
-  }
-  follower_private_ips = {
-    follower_private_ips = [
-      for k, v in values((tomap(local.instances))) :
-      tostring(v["private_ip"]) if v["private_ip"] != trimspace(enos_remote_exec.get_leader_private_ip.stdout)
-    ]
-  }
+  # follower_public_ips = {
+  follower_public_ips = [
+    for k, v in values((tomap(local.instances))) :
+    tostring(v["public_ip"]) if v["private_ip"] != trimspace(enos_remote_exec.get_leader_private_ip.stdout)
+  ]
+  # }
+  # follower_private_ips = {
+  follower_private_ips = [
+    for k, v in values((tomap(local.instances))) :
+    tostring(v["private_ip"]) if v["private_ip"] != trimspace(enos_remote_exec.get_leader_private_ip.stdout)
+  ]
+  # }
   vault_bin_path = "${var.vault_install_dir}/vault"
 }
 
@@ -88,25 +88,29 @@ output "leader_public_ip" {
 }
 
 output "follower_public_ips" {
-  value = tomap(local.follower_public_ips)
+  value = local.follower_public_ips
 }
 
 output "follower_public_ip_1" {
-  value = element(flatten(values(tomap(local.follower_public_ips))), 0)
+  # value = element(flatten(values(tomap(local.follower_public_ips))), 0)
+  value = element(local.follower_public_ips, 0)
 }
 
 output "follower_public_ip_2" {
-  value = element(flatten(values(tomap(local.follower_public_ips))), 1)
+  # value = element(flatten(values(tomap(local.follower_public_ips))), 1)
+  value = element(local.follower_public_ips, 1)
 }
 
 output "follower_private_ips" {
-  value = tomap(local.follower_private_ips)
+  value = local.follower_private_ips
 }
 
 output "follower_private_ip_1" {
-  value = element(flatten(values(tomap(local.follower_private_ips))), 0)
+  # value = element(flatten(values(tomap(local.follower_private_ips))), 0)
+  value = element(local.follower_private_ips, 0)
 }
 
 output "follower_private_ip_2" {
-  value = element(flatten(values(tomap(local.follower_private_ips))), 1)
+  # value = element(flatten(values(tomap(local.follower_private_ips))), 1)
+  value = element(local.follower_private_ips, 1)
 }

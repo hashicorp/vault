@@ -37,15 +37,15 @@ variable "secondary_leader_private_ip" {
   description = "Vault secondary cluster leader Private IP address"
 }
 
-variable "primary_vault_root_token" {
-  type        = string
-  description = "The vault root token of primary cluster"
-}
+# variable "primary_vault_root_token" {
+#   type        = string
+#   description = "The vault root token of primary cluster"
+# }
 
-variable "secondary_vault_root_token" {
-  type        = string
-  description = "The vault root token of secondary cluster"
-}
+# variable "secondary_vault_root_token" {
+#   type        = string
+#   description = "The vault root token of secondary cluster"
+# }
 
 variable "wrapping_token" {
   type        = string
@@ -61,7 +61,6 @@ locals {
 resource "enos_remote_exec" "verify_replication_on_primary" {
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
-    VAULT_TOKEN       = var.primary_vault_root_token
     vault_install_dir = var.vault_install_dir
   }
 
@@ -85,8 +84,8 @@ output "primary_replication_status" {
 
 resource "enos_remote_exec" "verify_replication_on_secondary" {
   environment = {
-    VAULT_ADDR        = "http://127.0.0.1:8200"
-    VAULT_TOKEN       = var.secondary_vault_root_token
+    VAULT_ADDR = "http://127.0.0.1:8200"
+    # VAULT_TOKEN       = var.secondary_vault_root_token
     vault_install_dir = var.vault_install_dir
   }
 
@@ -111,8 +110,8 @@ output "known_primary_cluster_addrs" {
 output "secondary_replication_status" {
   value = jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout)
 
-  # precondition {
-  #   condition     = jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout).data.mode == "secondary" && jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout).data.state != "idle"
-  #   error_message = "Vault secondary cluster mode must be \"secondary\" and state must not be \"idle\"."
-  # }
+  precondition {
+    condition     = jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout).data.mode == "secondary" && jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout).data.state != "idle"
+    error_message = "Vault secondary cluster mode must be \"secondary\" and state must not be \"idle\"."
+  }
 }

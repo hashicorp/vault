@@ -21,26 +21,17 @@ variable "secondary_leader_private_ip" {
   description = "Vault secondary cluster leader Private IP address"
 }
 
-variable "secondary_vault_root_token" {
-  type        = string
-  description = "The vault root token of secondary cluster"
-}
-
 resource "enos_remote_exec" "verify_kv_on_secondary" {
   environment = {
-    VAULT_ADDR  = "http://127.0.0.1:8200"
-    VAULT_TOKEN = var.secondary_vault_root_token
+    VAULT_ADDR        = "http://127.0.0.1:8200"
+    vault_install_dir = var.vault_install_dir
   }
 
-  inline = ["${var.vault_install_dir}/vault kv get secret"]
+  scripts = ["${path.module}/scripts/verify-data.sh"]
 
   transport = {
     ssh = {
       host = var.secondary_leader_public_ip
     }
   }
-}
-
-output "list-peers" {
-  value = enos_remote_exec.verify_kv_on_secondary.stdout
 }

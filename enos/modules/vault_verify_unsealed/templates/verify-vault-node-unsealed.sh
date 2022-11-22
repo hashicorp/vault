@@ -12,7 +12,6 @@ fail() {
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_ADDR='http://127.0.0.1:8200'
-export VAULT_TOKEN='${vault_token}'
 
 unseal_status=$($binpath status -format json | jq -Mr --argjson expected "false" '.sealed == $expected')
 if [[ "$unseal_status" != 'true' ]]; then
