@@ -34,7 +34,7 @@ var (
 //
 // Deprecated: use PluginString instead.
 // At one point the user-agent string returned contained the Vault
-// version hardcoded into the vault/sdk/version/ package.  This workes for builtin
+// version hardcoded into the vault/sdk/version/ package.  This works for builtin
 // plugins that are compiled into the `vault` binary, in that it correctly described
 // the version of that Vault binary.  It does not work for external plugins: for them,
 // the version will be based on the version stored in the sdk based on the
