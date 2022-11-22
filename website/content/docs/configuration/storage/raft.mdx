@@ -95,6 +95,16 @@ set [`disable_mlock`](/docs/configuration#disable_mlock) to `true`, and to disab
   See [the section below](#retry_join-stanza) that describes the parameters
   accepted by the [`retry_join`](#retry_join-stanza) stanza.
 
+- `retry_join_as_non_voter` `(boolean: false)` - If set, causes any `retry_join`
+  config to join the Raft cluster as a non-voter. The node will not participate
+  in the Raft quorum but will still receive the data replication stream, adding
+  read scalability to a cluster. This option has the same effect as the
+  [`-non-voter`](/docs/commands/operator/raft#non-voter) flag for the
+  `vault operator raft join` command, but only affects voting status when joining
+  via `retry_join` config. This setting can be overridden to true by setting the
+  `VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER` environment variable to any non-empty value.
+  Only valid if there is at least one `retry_join` stanza.
+
 - `max_entry_size` `(integer: 1048576)` - This configures the maximum number of
   bytes for a Raft entry. It applies to both Put operations and transactions.
   Any put or transaction operation exceeding this configuration value will cause

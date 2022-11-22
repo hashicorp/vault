@@ -192,7 +192,7 @@ func TestTidyCancellation(t *testing.T) {
 
 	numLeaves := 100
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root, a role, and a bunch of leaves.
 	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -268,7 +268,7 @@ func TestTidyCancellation(t *testing.T) {
 func TestTidyIssuers(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root that expires quickly and one valid for longer.
 	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{

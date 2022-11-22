@@ -81,7 +81,7 @@ scenario "agent" {
     module = module.create_vpc
 
     variables {
-      ami_architectures  = [matrix.arch]
+      ami_architectures  = distinct([matrix.arch, "amd64"])
       availability_zones = step.find_azs.availability_zones
       common_tags        = local.tags
     }
@@ -105,7 +105,7 @@ scenario "agent" {
     }
 
     variables {
-      ami_id        = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      ami_id        = step.create_vpc.ami_ids["ubuntu"]["amd64"]
       common_tags   = local.tags
       instance_type = var.backend_instance_type
       kms_key_arn   = step.create_vpc.kms_key_arn

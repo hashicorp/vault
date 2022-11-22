@@ -140,7 +140,6 @@ type ServerCommand struct {
 	flagTestServerConfig   bool
 	flagDevConsul          bool
 	flagExitOnCoreShutdown bool
-	flagDiagnose           string
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -222,19 +221,6 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
 			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
-
-	// Disabled by default until functional
-	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
-		f.StringVar(&StringVar{
-			Name:    "diagnose",
-			Target:  &c.flagDiagnose,
-			Default: notSetValue,
-			Usage:   "Run diagnostics before starting Vault. Specify a filename to direct output to that file.",
-		})
-	} else {
-		// Ensure diagnose is *not* run when feature flag is off.
-		c.flagDiagnose = notSetValue
-	}
 
 	f = set.NewFlagSet("Dev Options")
 
@@ -1063,21 +1049,6 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if c.flagDiagnose != notSetValue {
-		if c.flagDev {
-			c.UI.Error("Cannot run diagnose on Vault in dev mode.")
-			return 1
-		}
-		// TODO: add a file output flag to Diagnose
-		diagnose := &OperatorDiagnoseCommand{
-			BaseCommand: c.BaseCommand,
-			flagDebug:   false,
-			flagSkips:   []string{},
-			flagConfigs: c.flagConfigs,
-		}
-		diagnose.RunWithParsedFlags()
-	}
-
 	// Load the configuration
 	var config *server.Config
 	var err error
@@ -1760,6 +1731,41 @@ func (c *ServerCommand) Run(args []string) int {
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
+
+			if os.Getenv("VAULT_STACKTRACE_WRITE_TO_FILE") != "" {
+				c.logger.Info("Writing stacktrace to file")
+
+				dir := ""
+				path := os.Getenv("VAULT_STACKTRACE_FILE_PATH")
+				if path != "" {
+					if _, err := os.Stat(path); err != nil {
+						c.logger.Error("Checking stacktrace path failed", "error", err)
+						continue
+					}
+					dir = path
+				} else {
+					dir, err = os.MkdirTemp("", "vault-stacktrace")
+					if err != nil {
+						c.logger.Error("Could not create temporary directory for stacktrace", "error", err)
+						continue
+					}
+				}
+
+				f, err := os.CreateTemp(dir, "stacktrace")
+				if err != nil {
+					c.logger.Error("Could not create stacktrace file", "error", err)
+					continue
+				}
+
+				if err := pprof.Lookup("goroutine").WriteTo(f, 2); err != nil {
+					f.Close()
+					c.logger.Error("Could not write stacktrace to file", "error", err)
+					continue
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
+				f.Close()
+			}
 		}
 	}
 	// Notify systemd that the server is shutting down

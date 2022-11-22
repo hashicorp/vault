@@ -192,7 +192,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   });
 
   test('it should show create assignment modal', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
     this.model = this.store.createRecord('oidc/client');
 
     await render(hbs`
@@ -207,9 +207,10 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     await clickTrigger();
     await fillIn('.ember-power-select-search input', 'test-new');
     await searchSelect.options.objectAt(0).click();
+    assert.dom('[data-test-modal-div]').hasClass('is-active', 'modal with form opens');
     assert.dom('[data-test-modal-title]').hasText('Create new assignment', 'Create assignment modal renders');
     await click(SELECTORS.assignmentCancelButton);
-    assert.dom('[data-test-modal-div]').doesNotExist('Modal disappears after clicking cancel');
+    assert.dom('[data-test-modal-div]').doesNotExist('modal disappears onCancel');
   });
 
   test('it should render fallback for search select', async function (assert) {

@@ -17,7 +17,7 @@ import (
 
 func TestIntegration_RotateRootUsesNext(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/rotate/internal",
@@ -84,7 +84,7 @@ func TestIntegration_RotateRootUsesNext(t *testing.T) {
 
 func TestIntegration_ReplaceRootNormal(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// generate roots
 	genTestRootCa(t, b, s)
@@ -122,7 +122,7 @@ func TestIntegration_ReplaceRootNormal(t *testing.T) {
 
 func TestIntegration_ReplaceRootDefaultsToNext(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// generate roots
 	genTestRootCa(t, b, s)
@@ -159,7 +159,7 @@ func TestIntegration_ReplaceRootDefaultsToNext(t *testing.T) {
 
 func TestIntegration_ReplaceRootBadIssuer(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// generate roots
 	genTestRootCa(t, b, s)
@@ -209,8 +209,8 @@ func TestIntegration_ReplaceRootBadIssuer(t *testing.T) {
 
 func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 	t.Parallel()
-	rootBackend, rootStorage := createBackendWithStorage(t)
-	intBackend, intStorage := createBackendWithStorage(t)
+	rootBackend, rootStorage := CreateBackendWithStorage(t)
+	intBackend, intStorage := CreateBackendWithStorage(t)
 
 	// generate root
 	resp, err := rootBackend.HandleRequest(context.Background(), &logical.Request{
@@ -306,7 +306,7 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 
 func TestIntegration_CSRGeneration(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	testCases := []struct {
 		keyType               string
 		usePss                bool
@@ -359,7 +359,7 @@ func TestIntegration_CSRGeneration(t *testing.T) {
 
 func TestIntegration_AutoIssuer(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Generate two roots. The first should become default under the existing
 	// behavior; when we update the config and generate a second, it should
