@@ -229,6 +229,12 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 			}
 		}
 
+		if versions.IsBuiltinVersion(config.PluginVersion) {
+			// This gets treated as though it's empty when mounting, and will get
+			// overwritten to be empty when the config is next written. See #18051.
+			config.PluginVersion = ""
+		}
+
 		delete(config.ConnectionDetails, "password")
 		delete(config.ConnectionDetails, "private_key")
 

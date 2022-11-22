@@ -5113,3 +5113,35 @@ func TestSortVersionedPlugins(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateVersion(t *testing.T) {
+	b := testSystemBackend(t).(*SystemBackend)
+	k8sAuthBuiltin := versions.GetBuiltinVersion(consts.PluginTypeCredential, "kubernetes")
+
+	for name, tc := range map[string]struct {
+		pluginName         string
+		pluginVersion      string
+		pluginType         consts.PluginType
+		expectLogicalError bool
+		expectedVersion    string
+	}{
+		"default, nothing in nothing out": {"kubernetes", "", consts.PluginTypeCredential, false, ""},
+		"builtin specified, empty out":    {"kubernetes", k8sAuthBuiltin, consts.PluginTypeCredential, false, ""},
+		"not canonical is ok":             {"kubernetes", "1.0.0", consts.PluginTypeCredential, false, "v1.0.0"},
+		"not a semantic version, error":   {"kubernetes", "not-a-version", consts.PluginTypeCredential, true, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			version, resp, err := b.validateVersion(context.Background(), tc.pluginVersion, tc.pluginName, tc.pluginType)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.expectLogicalError {
+				if resp == nil || !resp.IsError() || resp.Error() == nil {
+					t.Errorf("expected logical error but got none, resp: %#v", resp)
+				}
+			} else if version != tc.expectedVersion {
+				t.Errorf("expected version %q but got %q", tc.expectedVersion, version)
+			}
+		})
+	}
+}
