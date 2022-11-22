@@ -100,13 +100,13 @@ func GetHexFormatted(buf []byte, sep string) string {
 func ParseHexFormatted(in, sep string) []byte {
 	var ret bytes.Buffer
 	var err error
-	var inBits int64
+	var inBits uint64
 	inBytes := strings.Split(in, sep)
 	for _, inByte := range inBytes {
-		if inBits, err = strconv.ParseInt(inByte, 16, 8); err != nil {
+		if inBits, err = strconv.ParseUint(inByte, 16, 8); err != nil {
 			return nil
 		}
-		ret.WriteByte(byte(inBits))
+		ret.WriteByte(uint8(inBits))
 	}
 	return ret.Bytes()
 }

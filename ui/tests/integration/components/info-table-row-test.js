@@ -66,7 +66,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
     await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
 
-    let tooltip = document.querySelector('div.box').textContent.trim();
+    const tooltip = document.querySelector('div.box').textContent.trim();
     assert.strictEqual(tooltip, 'Tooltip text!', 'renders tooltip text');
   });
 
@@ -147,7 +147,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     this.set('value', '');
     this.set('label', '');
     this.set('default', '');
-    let dashCount = document.querySelectorAll('.flight-icon').length;
+    const dashCount = document.querySelectorAll('.flight-icon').length;
     assert.strictEqual(
       dashCount,
       2,
@@ -163,7 +163,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       Block content is here
       </InfoTableRow>`);
 
-    let block = document.querySelector('[data-test-value-div]').textContent.trim();
+    const block = document.querySelector('[data-test-value-div]').textContent.trim();
     assert.strictEqual(block, 'Block content is here', 'renders block passed through');
   });
 
@@ -254,7 +254,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
 
   test('Formats the value as date when formatDate present', async function (assert) {
-    let yearString = new Date().getFullYear().toString();
+    const yearString = new Date().getFullYear().toString();
     this.set('value', new Date());
     await render(hbs`<InfoTableRow
       @label={{this.label}}

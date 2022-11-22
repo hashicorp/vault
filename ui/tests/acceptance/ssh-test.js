@@ -31,7 +31,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
       },
       assertBeforeGenerate(assert) {
         assert.dom('[data-test-form-field-from-model]').exists('renders the FormFieldFromModel');
-        let value = document.querySelector('[data-test-ttl-value="TTL"]').value;
+        const value = document.querySelector('[data-test-ttl-value="TTL"]').value;
         // confirms that the actions are correctly being passed down to the FormFieldFromModel component
         assert.strictEqual(value, '30', 'renders action updateTtl');
       },
@@ -99,7 +99,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
 
     assert.strictEqual(currentURL(), `/vault/secrets/${sshPath}/list`, `redirects to ssh index`);
 
-    for (let role of ROLES) {
+    for (const role of ROLES) {
       // create a role
       await click('[ data-test-secret-create]');
 

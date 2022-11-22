@@ -18,10 +18,10 @@ cd "$DIR"
 BUILD_TAGS="${BUILD_TAGS:-"vault"}"
 
 # Get the git commit
-GIT_COMMIT="$(git rev-parse HEAD)"
+GIT_COMMIT="$("$SOURCE_DIR"/crt-builder.sh revision)"
 GIT_DIRTY="$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)"
 
-BUILD_DATE=$("$SOURCE_DIR"/build_date.sh)
+BUILD_DATE="$("$SOURCE_DIR"/crt-builder.sh date)"
 
 GOPATH=${GOPATH:-$(${GO_CMD} env GOPATH)}
 case $(uname) in

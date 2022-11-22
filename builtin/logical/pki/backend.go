@@ -134,6 +134,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathRotateDeltaCRL(&b),
 			pathRevoke(&b),
 			pathRevokeWithKey(&b),
+			pathListCertsRevoked(&b),
 			pathTidy(&b),
 			pathTidyCancel(&b),
 			pathTidyStatus(&b),
@@ -176,6 +177,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// OCSP APIs
 			buildPathOcspGet(&b),
 			buildPathOcspPost(&b),
+
+			// CRL Signing
+			pathResignCrls(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -258,11 +262,13 @@ const (
 
 type tidyStatus struct {
 	// Parameters used to initiate the operation
-	safetyBuffer      int
-	tidyCertStore     bool
-	tidyRevokedCerts  bool
-	tidyRevokedAssocs bool
-	pauseDuration     string
+	safetyBuffer       int
+	issuerSafetyBuffer int
+	tidyCertStore      bool
+	tidyRevokedCerts   bool
+	tidyRevokedAssocs  bool
+	tidyExpiredIssuers bool
+	pauseDuration      string
 
 	// Status
 	state                   tidyStatusState
@@ -543,15 +549,15 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 	tidyErr := doAutoTidy()
 
 	if crlErr != nil && tidyErr != nil {
-		return fmt.Errorf("Error building CRLs:\n - %v\n\nError running auto-tidy:\n - %v\n", crlErr, tidyErr)
+		return fmt.Errorf("Error building CRLs:\n - %v\n\nError running auto-tidy:\n - %w\n", crlErr, tidyErr)
 	}
 
 	if crlErr != nil {
-		return fmt.Errorf("Error building CRLs:\n - %v\n", crlErr)
+		return fmt.Errorf("Error building CRLs:\n - %w\n", crlErr)
 	}
 
 	if tidyErr != nil {
-		return fmt.Errorf("Error running auto-tidy:\n - %v\n", tidyErr)
+		return fmt.Errorf("Error running auto-tidy:\n - %w\n", tidyErr)
 	}
 
 	// Check if the CRL was invalidated due to issuer swap and update

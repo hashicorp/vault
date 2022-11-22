@@ -51,7 +51,7 @@ const ModelExport = AuthMethodModel.extend({
   }),
 
   tuneAttrs: computed('path', function () {
-    let { methodType } = this;
+    const { methodType } = this;
     let tuneAttrs;
     // token_type should not be tuneable for the token auth method
     if (methodType === 'token') {

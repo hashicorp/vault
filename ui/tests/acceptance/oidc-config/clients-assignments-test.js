@@ -207,7 +207,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
   });
 
   test('it creates, updates, and deletes an assignment', async function (assert) {
-    assert.expect(12);
+    assert.expect(14);
     await visit(OIDC_BASE_URL + '/assignments');
 
     //* ensure clean test state
@@ -220,6 +220,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'vault.cluster.access.oidc.assignments.create',
       'navigates to create form'
     );
+    assert.dom('[data-test-oidc-assignment-title]').hasText('Create assignment', 'Form title renders');
     await fillIn('[data-test-input="name"]', 'test-assignment');
     await click('[data-test-component="search-select"]#entities .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
@@ -246,6 +247,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'vault.cluster.access.oidc.assignments.assignment.edit',
       'navigates to the assignment edit page from details'
     );
+    assert.dom('[data-test-oidc-assignment-title]').hasText('Edit assignment', 'Form title renders');
     await click('[data-test-component="search-select"]#groups .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
     assert.dom('[data-test-oidc-assignment-save]').hasText('Update');

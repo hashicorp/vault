@@ -853,7 +853,7 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) error {
 
 	c.logger.Info("raft retry join initiated")
 
-	if _, err = c.JoinRaftCluster(ctx, leaderInfos, false); err != nil {
+	if _, err = c.JoinRaftCluster(ctx, leaderInfos, raftBackend.NonVoter()); err != nil {
 		return err
 	}
 

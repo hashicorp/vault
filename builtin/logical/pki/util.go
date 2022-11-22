@@ -250,7 +250,7 @@ func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
 
 	headerTimeValue, err := time.Parse(time.RFC1123, headerValue[0])
 	if err != nil {
-		return headerTimeValue, fmt.Errorf("failed to parse given value for '%s' header: %v", headerIfModifiedSince, err)
+		return headerTimeValue, fmt.Errorf("failed to parse given value for '%s' header: %w", headerIfModifiedSince, err)
 	}
 
 	return headerTimeValue, nil

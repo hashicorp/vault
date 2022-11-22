@@ -51,7 +51,7 @@ module('Integration | Component | control group success', function (hooks) {
   };
   test('render with saved token', async function (assert) {
     assert.expect(3);
-    let response = {
+    const response = {
       uiParams: { url: '/foo' },
       token: 'token',
     };

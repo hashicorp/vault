@@ -249,6 +249,72 @@ func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
 	}
 }
 
+func TestRaft_ParseNonVoter(t *testing.T) {
+	p := func(s string) *string {
+		return &s
+	}
+
+	for _, retryJoinConf := range []string{"", "not-empty"} {
+		t.Run(retryJoinConf, func(t *testing.T) {
+			for name, tc := range map[string]struct {
+				envValue             *string
+				configValue          *string
+				expectNonVoter       bool
+				invalidNonVoterValue bool
+			}{
+				"valid false":                {nil, p("false"), false, false},
+				"valid true":                 {nil, p("true"), true, false},
+				"invalid empty":              {nil, p(""), false, true},
+				"invalid truthy":             {nil, p("no"), false, true},
+				"invalid":                    {nil, p("totallywrong"), false, true},
+				"valid env false":            {p("false"), nil, true, false},
+				"valid env true":             {p("true"), nil, true, false},
+				"valid env not boolean":      {p("anything"), nil, true, false},
+				"valid env empty":            {p(""), nil, false, false},
+				"neither set, default false": {nil, nil, false, false},
+				"both set, env preferred":    {p("true"), p("false"), true, false},
+			} {
+				t.Run(name, func(t *testing.T) {
+					if tc.envValue != nil {
+						t.Setenv(EnvVaultRaftNonVoter, *tc.envValue)
+					}
+					raftDir, err := ioutil.TempDir("", "vault-raft-")
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer os.RemoveAll(raftDir)
+
+					conf := map[string]string{
+						"path":       raftDir,
+						"node_id":    "abc123",
+						"retry_join": retryJoinConf,
+					}
+					if tc.configValue != nil {
+						conf[raftNonVoterConfigKey] = *tc.configValue
+					}
+
+					backend, err := NewRaftBackend(conf, hclog.NewNullLogger())
+					switch {
+					case tc.invalidNonVoterValue || (retryJoinConf == "" && tc.expectNonVoter):
+						if err == nil {
+							t.Fatal("expected an error but got none")
+						}
+					default:
+						if err != nil {
+							t.Fatalf("expected no error but got: %s", err)
+						}
+
+						raftBackend := backend.(*RaftBackend)
+						if tc.expectNonVoter != raftBackend.NonVoter() {
+							t.Fatalf("expected %s %v but got %v", raftNonVoterConfigKey, tc.expectNonVoter, raftBackend.NonVoter())
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestRaft_Backend_LargeKey(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)

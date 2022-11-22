@@ -1,23 +1,13 @@
 {{! template-lint-configure simple-unless "warn" }}
 <div class="field" data-test-field={{or @attr.name true}}>
-  {{#unless
-    (or
-      (eq @attr.type "boolean")
-      (includes
-        @attr.options.editType
-        (array "boolean" "optionalText" "searchSelect" "mountAccessor" "kv" "file" "ttl" "stringArray" "json" "regex")
-      )
-    )
-  }}
-    {{#if (not (eq @attr.type "object"))}}
-      <FormFieldLabel
-        for={{@attr.name}}
-        @label={{this.labelString}}
-        @helpText={{(if this.showHelpText @attr.options.helpText)}}
-        @subText={{@attr.options.subText}}
-        @docLink={{@attr.options.docLink}}
-      />
-    {{/if}}
+  {{#unless this.hideLabel}}
+    <FormFieldLabel
+      for={{@attr.name}}
+      @label={{this.labelString}}
+      @helpText={{(if this.showHelpText @attr.options.helpText)}}
+      @subText={{@attr.options.subText}}
+      @docLink={{@attr.options.docLink}}
+    />
   {{/unless}}
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}

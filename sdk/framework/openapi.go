@@ -145,6 +145,7 @@ type OASParameter struct {
 
 type OASRequestBody struct {
 	Description string     `json:"description,omitempty"`
+	Required    bool       `json:"required,omitempty"`
 	Content     OASContent `json:"content,omitempty"`
 }
 
@@ -390,6 +391,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					requestName := constructRequestName(requestResponsePrefix, path)
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
+						Required: true,
 						Content: OASContent{
 							"application/json": &OASMediaTypeObject{
 								Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", requestName)},

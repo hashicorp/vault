@@ -402,6 +402,9 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 	if status.LastWAL != 0 {
 		out = append(out, fmt.Sprintf("Last WAL | %d", status.LastWAL))
 	}
+	if len(status.Warnings) > 0 {
+		out = append(out, fmt.Sprintf("Warnings | %v", status.Warnings))
+	}
 
 	ui.Output(tableOutput(out, &columnize.Config{
 		Delim: "|",
