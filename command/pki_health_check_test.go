@@ -7,10 +7,126 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/command/healthcheck"
 
+	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/require"
 )
+
+func TestPKIHC_AllGood(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			AuditNonHMACRequestKeys:   healthcheck.VisibleReqParams,
+			AuditNonHMACResponseKeys:  healthcheck.VisibleRespParams,
+			PassthroughRequestHeaders: []string{"If-Modified-Since"},
+			AllowedResponseHeaders:    []string{"Last-Modified"},
+			MaxLeaseTTL:               "36500d",
+		},
+	}); err != nil {
+		t.Fatalf("pki mount error: %#v", err)
+	}
+
+	if resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"key_type":    "ec",
+		"common_name": "Root X1",
+		"ttl":         "3650d",
+	}); err != nil || resp == nil {
+		t.Fatalf("failed to prime CA: %v", err)
+	}
+
+	if _, err := client.Logical().Read("pki/crl/rotate"); err != nil {
+		t.Fatalf("failed to rotate CRLs: %v", err)
+	}
+
+	if _, err := client.Logical().Write("pki/roles/testing", map[string]interface{}{
+		"allow_any_name": true,
+		"no_store":       true,
+	}); err != nil {
+		t.Fatalf("failed to write role: %v", err)
+	}
+
+	if _, err := client.Logical().Write("pki/config/auto-tidy", map[string]interface{}{
+		"enabled":         true,
+		"tidy_cert_store": true,
+	}); err != nil {
+		t.Fatalf("failed to write auto-tidy config: %v", err)
+	}
+
+	if _, err := client.Logical().Write("pki/tidy", map[string]interface{}{
+		"tidy_cert_store": true,
+	}); err != nil {
+		t.Fatalf("failed to run tidy: %v", err)
+	}
+
+	_, _, results := execPKIHC(t, client, true)
+
+	expected := map[string][]map[string]interface{}{
+		"ca_validity_period": {
+			{
+				"status": "ok",
+			},
+		},
+		"crl_validity_period": {
+			{
+				"status": "ok",
+			},
+			{
+				"status": "ok",
+			},
+		},
+		"allow_if_modified_since": {
+			{
+				"status": "ok",
+			},
+		},
+		"audit_visibility": {
+			{
+				"status": "ok",
+			},
+		},
+		"enable_auto_tidy": {
+			{
+				"status": "ok",
+			},
+		},
+		"role_allows_glob_wildcards": {
+			{
+				"status": "ok",
+			},
+		},
+		"role_allows_localhost": {
+			{
+				"status": "ok",
+			},
+		},
+		"role_no_store_false": {
+			{
+				"status": "ok",
+			},
+		},
+		"root_issued_leaves": {
+			{
+				"status": "ok",
+			},
+		},
+		"tidy_last_run": {
+			{
+				"status": "ok",
+			},
+		},
+		"too_many_certs": {
+			{
+				"status": "ok",
+			},
+		},
+	}
+
+	validateExpectedPKIHC(t, expected, results)
+}
 
 func testPKIHealthCheckCommand(tb testing.TB) (*cli.MockUi, *PKIHealthCheckCommand) {
 	tb.Helper()
@@ -23,34 +139,7 @@ func testPKIHealthCheckCommand(tb testing.TB) (*cli.MockUi, *PKIHealthCheckComma
 	}
 }
 
-func TestPKIHC_Run(t *testing.T) {
-	client, closer := testVaultServer(t)
-	defer closer()
-
-	if err := client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-	}); err != nil {
-		t.Fatalf("pki mount error: %#v", err)
-	}
-
-	if resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
-		"key_type":    "ec",
-		"common_name": "Root X1",
-		"ttl":         "876h",
-	}); err != nil || resp == nil {
-		t.Fatalf("failed to prime CA: %v", err)
-	}
-
-	if _, err := client.Logical().Read("pki/crl/rotate"); err != nil {
-		t.Fatalf("failed to rotate CRLs: %v", err)
-	}
-
-	if _, err := client.Logical().Write("pki/roles/testing", map[string]interface{}{
-		"allow_any_name": true,
-	}); err != nil {
-		t.Fatalf("failed to write role: %v", err)
-	}
-
+func execPKIHC(t *testing.T, client *api.Client, ok bool) (int, string, map[string][]map[string]interface{}) {
 	stdout := bytes.NewBuffer(nil)
 	stderr := bytes.NewBuffer(nil)
 	runOpts := &RunOptions{
@@ -64,30 +153,25 @@ func TestPKIHC_Run(t *testing.T) {
 
 	var results map[string][]map[string]interface{}
 	if err := json.Unmarshal([]byte(combined), &results); err != nil {
-		t.Fatalf("failed to decode json (ret %v): %v\njson:\n%v", code, err, combined)
+		if ok {
+			t.Fatalf("failed to decode json (ret %v): %v\njson:\n%v", code, err, combined)
+		}
 	}
 
 	t.Log(combined)
 
-	expected := map[string][]map[string]interface{}{
-		"ca_validity_period": {
-			{
-				"status": "critical",
-			},
-		},
-		"crl_validity_period": {
-			{
-				"status": "ok",
-			},
-			{
-				"status": "ok",
-			},
-		},
-	}
+	return code, combined, results
+}
 
+func validateExpectedPKIHC(t *testing.T, expected, results map[string][]map[string]interface{}) {
 	for test, subtest := range expected {
 		actual, ok := results[test]
 		require.True(t, ok, fmt.Sprintf("expected top-level test %v to be present", test))
+
+		if subtest == nil {
+			continue
+		}
+
 		require.NotNil(t, actual, fmt.Sprintf("expected top-level test %v to be non-empty; wanted wireframe format %v", test, subtest))
 		require.Equal(t, len(subtest), len(actual), fmt.Sprintf("top-level test %v has different number of results %v in wireframe, %v in test output\nwireframe: %v\noutput: %v\n", test, len(subtest), len(actual), subtest, actual))
 
@@ -96,9 +180,15 @@ func TestPKIHC_Run(t *testing.T) {
 				a_value, present := actual[index][key]
 				require.True(t, present)
 				if value != nil {
-					require.Equal(t, value, a_value)
+					require.Equal(t, value, a_value, fmt.Sprintf("in test: %v / result %v - when validating key %v\nWanted: %v\nGot: %v", test, index, key, subset, actual[index]))
 				}
 			}
+		}
+	}
+
+	for name := range results {
+		if _, present := expected[name]; !present {
+			t.Fatalf("got unexpected health check: %v\n%v", name, results[name])
 		}
 	}
 }
