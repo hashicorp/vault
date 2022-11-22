@@ -27,6 +27,18 @@ export default class PkiRoleForm extends Component {
   @tracked invalidFormAlert;
   @tracked modelValidations;
 
+  get breadcrumbs() {
+    const backend = this.args.model.backend || 'pki';
+    const crumbs = [
+      { label: backend, path: 'overview' },
+      { label: 'roles', path: 'roles.index' },
+    ];
+    if (!this.args.model.isNew) {
+      crumbs.push({ label: this.args.model.id, path: 'roles.role.details' }, { label: 'edit' });
+    }
+    return crumbs;
+  }
+
   @task
   *save(event) {
     event.preventDefault();

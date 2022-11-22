@@ -1,26 +1,34 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader
-      @root={{hash label="role" text="role" path="vault.cluster.secrets.backend.pki.roles.index"}}
-      @isEngine={{true}}
-    >
-      <li>
-        <span class="sep">
-          /
-        </span>
-        <LinkTo @route="roles.index">
-          {{@model.backend}}
-        </LinkTo>
-      </li>
-    </KeyValueHeader>
+    {{! TODO: This should be replaced with HDS::Breadcrumbs }}
+    <nav class="key-value-header breadcrumb" aria-label="breadcrumbs" data-test-breadcrumbs="role-details">
+      <ul>
+        <li>
+          <span class="sep">/</span>
+          <LinkToExternal @route="secrets">secrets</LinkToExternal>
+        </li>
+        {{#each this.breadcrumbs as |breadcrumb|}}
+          <li>
+            <span class="sep">/</span>
+            {{#if breadcrumb.path}}
+              <LinkTo @route={{breadcrumb.path}}>
+                {{breadcrumb.label}}
+              </LinkTo>
+            {{else}}
+              {{breadcrumb.label}}
+            {{/if}}
+          </li>
+        {{/each}}
+      </ul>
+    </nav>
   </p.top>
   <p.levelLeft>
-    <h1 class="title is-3">
+    <h1 class="title is-3" data-test-role-details-title>
       {{#if @model.isNew}}
         Create a PKI role
       {{else}}
-        Edit a
-        {{@model.id}}
+        Edit
+        {{@model.name}}
       {{/if}}
     </h1>
   </p.levelLeft>
