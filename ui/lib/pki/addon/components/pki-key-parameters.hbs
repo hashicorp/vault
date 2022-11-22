@@ -4,7 +4,7 @@
       <FormFieldLabel for={{attr.name}} @label={{attr.options.label}} />
       <div class="control is-expanded">
         <div class="select is-fullwidth">
-          <select name={{attr.name}} id={{attr.name}} onchange={{this.onKeyBitsChange}} data-test-input={{attr.name}}>
+          <select name={{attr.namei}} id={{attr.name}} onchange={{this.onKeyBitsChange}} data-test-input={{attr.name}}>
             {{#each this.keyBitOptions as |val|}}
               <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{val}}>
                 {{val}}
