@@ -42,6 +42,7 @@ fi
 cd "$PREVIEW_DIR"
 
 # checkout this test branch
+git pull
 git checkout zs.try-hcp-callout-mdx
 
 # Run the build:deploy-preview start script
