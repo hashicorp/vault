@@ -534,6 +534,37 @@ func testUnknownFieldValidation(t *testing.T) {
 	}
 }
 
+// testUnknownFieldValidationJson tests that this valid json config does not result in
+// errors. Prior to VAULT-8519, it reported errors even with a valid config that was
+// parsed properly.
+func testUnknownFieldValidationJson(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_small.json")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	errors := config.Validate("./test-fixtures/config_small.json")
+	if errors != nil {
+		t.Fatal(errors)
+	}
+}
+
+// testUnknownFieldValidationHcl tests that this valid hcl config does not result in
+// errors. Prior to VAULT-8519, the json version of this config reported errors even
+// with a valid config that was parsed properly.
+// In short, this ensures the same for HCL as we test in testUnknownFieldValidationJson
+func testUnknownFieldValidationHcl(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_small.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	errors := config.Validate("./test-fixtures/config_small.hcl")
+	if errors != nil {
+		t.Fatal(errors)
+	}
+}
+
 func testLoadConfigFile_json(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config.hcl.json")
 	if err != nil {

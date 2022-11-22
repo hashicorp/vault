@@ -71,7 +71,7 @@ This [feature](/docs/concepts/namespace-api-lock) allows namespace administrator
 
 ### Vault Terraform Provider v3
 
-We have upgraded the [Vault Terraform Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs) to the latest version of the [Terraform Plugin SDKv2](https://www.terraform.io/docs/extend/sdkv2-intro.html) to leverage new features.
+We have upgraded the [Vault Terraform Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs) to the latest version of the [Terraform Plugin SDKv2](https://www.terraform.io/plugin/sdkv2) to leverage new features.
 
 ### Azure Secrets Engine
 
@@ -110,7 +110,7 @@ The following section details breaking changes introduced in Vault 1.9.
 ### Removal of HTTP request counters
 
 In Vault 1.9, the [internal HTTP Request count API](https://www.vaultproject.io/api-docs/system/internal-counters#http-requests) was removed from the product. Calls to the endpoint will result in a **404 error** with a message stating that functionality on this path has been removed.
-Please refer to the [upgrade guide](/docs/upgrading/upgrade-to-1.9.0) for more information.
+Please refer to the [upgrade guide](/docs/upgrading/upgrade-to-1.9.x) for more information.
 
 As called out in the documentation, Vault does not make backwards compatible guarantees on internal APIs (those prefaced with `sys/internal`). They are subject to change and may disappear without notice.
 
