@@ -87,13 +87,14 @@ func (w noErrorWriter) Write(p []byte) (n int, err error) {
 func parseFullPath(fullPath string) (directory, fileName string, err error) {
 	directory, fileName = filepath.Split(fullPath)
 
-	if strings.Contains(directory, "*") {
-		err = multierror.Append(err, fmt.Errorf("directory contains glob character *"))
+	globChars := "*?["
+	if strings.ContainsAny(directory, globChars) {
+		err = multierror.Append(err, fmt.Errorf("directory contains glob character"))
 	}
 	if fileName == "" {
 		fileName = "vault.log"
-	} else if strings.Contains(fileName, "*") {
-		err = multierror.Append(err, fmt.Errorf("file name contains globbing character *"))
+	} else if strings.ContainsAny(fileName, globChars) {
+		err = multierror.Append(err, fmt.Errorf("file name contains globbing character"))
 	}
 
 	return directory, fileName, err

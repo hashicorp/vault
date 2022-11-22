@@ -175,12 +175,28 @@ func TestLogger_SetupLoggerWithInvalidLogFilePath(t *testing.T) {
 		path    string
 		message string
 	}{
-		"file name": {
+		"file name *": {
 			path:    "/this/isnt/ok/juan*.log",
-			message: "file name contains globbing character *",
+			message: "file name contains globbing character",
 		},
-		"directory path": {
+		"file name ?": {
+			path:    "/this/isnt/ok/juan?.log",
+			message: "file name contains globbing character",
+		},
+		"file name [": {
+			path:    "/this/isnt/ok/[juan].log",
+			message: "file name contains globbing character",
+		},
+		"directory path *": {
 			path:    "/this/isnt/ok/*/qwerty.log",
+			message: "directory contains glob character",
+		},
+		"directory path ?": {
+			path:    "/this/isnt/ok/?/qwerty.log",
+			message: "directory contains glob character",
+		},
+		"directory path [": {
+			path:    "/this/isnt/ok/[foo]/qwerty.log",
 			message: "directory contains glob character",
 		},
 	}
