@@ -129,6 +129,28 @@ func TestPKIHC_AllBad(t *testing.T) {
 	validateExpectedPKIHC(t, expectedAllBad, results)
 }
 
+func TestPKIHC_OnlyIssuer(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+	}); err != nil {
+		t.Fatalf("pki mount error: %#v", err)
+	}
+
+	if resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"key_type":    "ec",
+		"common_name": "Root X1",
+		"ttl":         "35d",
+	}); err != nil || resp == nil {
+		t.Fatalf("failed to prime CA: %v", err)
+	}
+
+	_, _, results := execPKIHC(t, client, true)
+	validateExpectedPKIHC(t, expectedEmptyWithIssuer, results)
+}
+
 func TestPKIHC_NoMount(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
@@ -423,6 +445,47 @@ var expectedAllBad = map[string][]map[string]interface{}{
 	"root_issued_leaves": {
 		{
 			"status": "warning",
+		},
+	},
+	"tidy_last_run": {
+		{
+			"status": "critical",
+		},
+	},
+	"too_many_certs": {
+		{
+			"status": "ok",
+		},
+	},
+}
+
+var expectedEmptyWithIssuer = map[string][]map[string]interface{}{
+	"ca_validity_period": {
+		{
+			"status": "critical",
+		},
+	},
+	"crl_validity_period": {
+		{
+			"status": "ok",
+		},
+		{
+			"status": "ok",
+		},
+	},
+	"allow_if_modified_since": nil,
+	"audit_visibility":        nil,
+	"enable_auto_tidy": {
+		{
+			"status": "informational",
+		},
+	},
+	"role_allows_glob_wildcards": nil,
+	"role_allows_localhost":      nil,
+	"role_no_store_false":        nil,
+	"root_issued_leaves": {
+		{
+			"status": "ok",
 		},
 	},
 	"tidy_last_run": {
