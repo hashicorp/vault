@@ -4,7 +4,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 
-module('Integration | Component | radio-select-ttl-or-string', function (hooks) {
+module('Integration | Component | pki-not-valid-after-form', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
@@ -25,7 +25,7 @@ module('Integration | Component | radio-select-ttl-or-string', function (hooks) 
     await render(
       hbs`
       <div class="has-top-margin-xxl">
-        <RadioSelectTtlOrString
+        <PkiNotValidAfterForm
           @model={{this.model}}
           @attr={{this.attr}}
         />
@@ -43,7 +43,7 @@ module('Integration | Component | radio-select-ttl-or-string', function (hooks) 
     await render(
       hbs`
       <div class="has-top-margin-xxl">
-        <RadioSelectTtlOrString
+        <PkiNotValidAfterForm
           @model={{this.model}}
           @attr={{this.attr}}
         />
