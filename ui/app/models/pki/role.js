@@ -24,6 +24,7 @@ export default class PkiRoleModel extends Model {
   @attr('string', {
     label: 'Role name',
     fieldValue: 'name',
+    editDisabled: true,
   })
   name;
 

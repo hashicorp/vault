@@ -1,14 +1,11 @@
-import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { withConfirmLeave } from 'pki/decorators/confirm-leave';
+import PkiRolesIndexRoute from '.';
 
-export default class PkiRolesCreateRoute extends Route {
+@withConfirmLeave
+export default class PkiRolesCreateRoute extends PkiRolesIndexRoute {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
-
-  beforeModel() {
-    return this.pathHelp.getNewModel('pki/role', 'pki');
-  }
 
   model() {
     return this.store.createRecord('pki/role', {

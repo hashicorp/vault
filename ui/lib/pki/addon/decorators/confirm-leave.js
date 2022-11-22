@@ -13,7 +13,6 @@ export function withConfirmLeave() {
 
       @action
       willTransition(transition) {
-        super.willTransition(...arguments);
         const model = this.controller.get('model');
         if (model && model.hasDirtyAttributes) {
           if (
