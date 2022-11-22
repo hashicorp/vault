@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/healthcheck"
@@ -64,68 +65,67 @@ func TestPKIHC_AllGood(t *testing.T) {
 
 	_, _, results := execPKIHC(t, client, true)
 
-	expected := map[string][]map[string]interface{}{
-		"ca_validity_period": {
-			{
-				"status": "ok",
-			},
-		},
-		"crl_validity_period": {
-			{
-				"status": "ok",
-			},
-			{
-				"status": "ok",
-			},
-		},
-		"allow_if_modified_since": {
-			{
-				"status": "ok",
-			},
-		},
-		"audit_visibility": {
-			{
-				"status": "ok",
-			},
-		},
-		"enable_auto_tidy": {
-			{
-				"status": "ok",
-			},
-		},
-		"role_allows_glob_wildcards": {
-			{
-				"status": "ok",
-			},
-		},
-		"role_allows_localhost": {
-			{
-				"status": "ok",
-			},
-		},
-		"role_no_store_false": {
-			{
-				"status": "ok",
-			},
-		},
-		"root_issued_leaves": {
-			{
-				"status": "ok",
-			},
-		},
-		"tidy_last_run": {
-			{
-				"status": "ok",
-			},
-		},
-		"too_many_certs": {
-			{
-				"status": "ok",
-			},
-		},
+	validateExpectedPKIHC(t, expectedAllGood, results)
+}
+
+func TestPKIHC_AllBad(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+	}); err != nil {
+		t.Fatalf("pki mount error: %#v", err)
 	}
 
-	validateExpectedPKIHC(t, expected, results)
+	if resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"key_type":    "ec",
+		"common_name": "Root X1",
+		"ttl":         "35d",
+	}); err != nil || resp == nil {
+		t.Fatalf("failed to prime CA: %v", err)
+	}
+
+	if _, err := client.Logical().Write("pki/config/crl", map[string]interface{}{
+		"expiry": "5s",
+	}); err != nil {
+		t.Fatalf("failed to issue leaf cert: %v", err)
+	}
+
+	if _, err := client.Logical().Read("pki/crl/rotate"); err != nil {
+		t.Fatalf("failed to rotate CRLs: %v", err)
+	}
+
+	time.Sleep(5 * time.Second)
+
+	if _, err := client.Logical().Write("pki/roles/testing", map[string]interface{}{
+		"allow_localhost":             true,
+		"allowed_domains":             "*.example.com",
+		"allow_glob_domains":          true,
+		"allow_wildcard_certificates": true,
+		"no_store":                    false,
+		"key_type":                    "ec",
+		"ttl":                         "30d",
+	}); err != nil {
+		t.Fatalf("failed to write role: %v", err)
+	}
+
+	if _, err := client.Logical().Write("pki/issue/testing", map[string]interface{}{
+		"common_name": "something.example.com",
+	}); err != nil {
+		t.Fatalf("failed to issue leaf cert: %v", err)
+	}
+
+	if _, err := client.Logical().Write("pki/config/auto-tidy", map[string]interface{}{
+		"enabled":         false,
+		"tidy_cert_store": false,
+	}); err != nil {
+		t.Fatalf("failed to write auto-tidy config: %v", err)
+	}
+
+	_, _, results := execPKIHC(t, client, true)
+
+	validateExpectedPKIHC(t, expectedAllBad, results)
 }
 
 func testPKIHealthCheckCommand(tb testing.TB) (*cli.MockUi, *PKIHealthCheckCommand) {
@@ -191,4 +191,213 @@ func validateExpectedPKIHC(t *testing.T, expected, results map[string][]map[stri
 			t.Fatalf("got unexpected health check: %v\n%v", name, results[name])
 		}
 	}
+}
+
+var expectedAllGood = map[string][]map[string]interface{}{
+	"ca_validity_period": {
+		{
+			"status": "ok",
+		},
+	},
+	"crl_validity_period": {
+		{
+			"status": "ok",
+		},
+		{
+			"status": "ok",
+		},
+	},
+	"allow_if_modified_since": {
+		{
+			"status": "ok",
+		},
+	},
+	"audit_visibility": {
+		{
+			"status": "ok",
+		},
+	},
+	"enable_auto_tidy": {
+		{
+			"status": "ok",
+		},
+	},
+	"role_allows_glob_wildcards": {
+		{
+			"status": "ok",
+		},
+	},
+	"role_allows_localhost": {
+		{
+			"status": "ok",
+		},
+	},
+	"role_no_store_false": {
+		{
+			"status": "ok",
+		},
+	},
+	"root_issued_leaves": {
+		{
+			"status": "ok",
+		},
+	},
+	"tidy_last_run": {
+		{
+			"status": "ok",
+		},
+	},
+	"too_many_certs": {
+		{
+			"status": "ok",
+		},
+	},
+}
+
+var expectedAllBad = map[string][]map[string]interface{}{
+	"ca_validity_period": {
+		{
+			"status": "critical",
+		},
+	},
+	"crl_validity_period": {
+		{
+			"status": "critical",
+		},
+		{
+			"status": "critical",
+		},
+	},
+	"allow_if_modified_since": {
+		{
+			"status": "informational",
+		},
+	},
+	"audit_visibility": {
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+	},
+	"enable_auto_tidy": {
+		{
+			"status": "informational",
+		},
+	},
+	"role_allows_glob_wildcards": {
+		{
+			"status": "warning",
+		},
+	},
+	"role_allows_localhost": {
+		{
+			"status": "warning",
+		},
+	},
+	"role_no_store_false": {
+		{
+			"status": "warning",
+		},
+	},
+	"root_issued_leaves": {
+		{
+			"status": "warning",
+		},
+	},
+	"tidy_last_run": {
+		{
+			"status": "critical",
+		},
+	},
+	"too_many_certs": {
+		{
+			"status": "ok",
+		},
+	},
 }
