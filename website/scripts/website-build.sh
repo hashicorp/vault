@@ -41,12 +41,15 @@ fi
 # cd into the preview directory project
 cd "$PREVIEW_DIR"
 
+# checkout this test branch
+git checkout zs.try-hcp-callout-mdx
+
 # Run the build:deploy-preview start script
 PREVIEW_FROM_REPO=$PRODUCT \
-IS_CONTENT_PREVIEW=true \
-PREVIEW_MODE=$PREVIEW_MODE \
-REPO=$PRODUCT \
-HASHI_ENV=project-preview \
-LOCAL_CONTENT_DIR=$LOCAL_CONTENT_DIR \
-CURRENT_GIT_BRANCH=$CURRENT_GIT_BRANCH \
-npm run build:deploy-preview
+  IS_CONTENT_PREVIEW=true \
+  PREVIEW_MODE=$PREVIEW_MODE \
+  REPO=$PRODUCT \
+  HASHI_ENV=project-preview \
+  LOCAL_CONTENT_DIR=$LOCAL_CONTENT_DIR \
+  CURRENT_GIT_BRANCH=$CURRENT_GIT_BRANCH \
+  npm run build:deploy-preview
