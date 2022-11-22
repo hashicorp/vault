@@ -201,7 +201,7 @@ func (p *PathFetch) IsSecretOK() bool {
 }
 
 func (p *PathFetch) FetchSurfaceError() error {
-	if p.IsOK() || p.IsSecretPermissionsError() || p.IsUnsupportedPathError() || p.IsMissingResource() {
+	if p.IsOK() || p.IsSecretPermissionsError() || p.IsUnsupportedPathError() || p.IsMissingResource() || p.Is404NotFound() {
 		return nil
 	}
 
@@ -222,6 +222,10 @@ func (p *PathFetch) IsUnsupportedPathError() bool {
 
 func (p *PathFetch) IsMissingResource() bool {
 	return !p.IsOK() && strings.Contains(p.FetchError.Error(), "unable to find")
+}
+
+func (p *PathFetch) Is404NotFound() bool {
+  return !p.IsOK() && strings.HasSuffix(strings.TrimSpace(p.FetchError.Error()), "Code: 404. Errors:")
 }
 
 type Check interface {
