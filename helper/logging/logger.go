@@ -88,12 +88,12 @@ func parseFullPath(fullPath string) (directory, fileName string, err error) {
 	directory, fileName = filepath.Split(fullPath)
 
 	if strings.Contains(directory, "*") {
-		err = multierror.Append(fmt.Errorf("directory contains glob character *"), err)
+		err = multierror.Append(err, fmt.Errorf("directory contains glob character *"))
 	}
 	if fileName == "" {
 		fileName = "vault.log"
 	} else if strings.Contains(fileName, "*") {
-		err = multierror.Append(fmt.Errorf("file name contains globbing character *"), err)
+		err = multierror.Append(err, fmt.Errorf("file name contains globbing character *"))
 	}
 
 	return directory, fileName, err
