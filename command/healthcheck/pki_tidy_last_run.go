@@ -85,15 +85,35 @@ func (h *TidyLastRun) Evaluate(e *Executor) (results []*Result, err error) {
 		return []*Result{&ret}, nil
 	}
 
-	baseMsg := "Tidy hasn't run in the last %v; this can point to problems with the mount's auto-tidy configuration or an external tidy executor; this can impact PKI's and Vault's performance if not run regularly."
-
-	ret := Result{
-		Status:   ResultOK,
-		Endpoint: "/{{mount}}/tidy-status",
-		Message:  "Tidy has run recently on this mount.",
+	if h.TidyStatus == nil {
+		return nil, nil
 	}
 
+	if h.TidyStatus.IsSecretPermissionsError() {
+		ret := Result{
+			Status:   ResultInsufficientPermissions,
+			Endpoint: "/{{mount}}/tidy-status",
+			Message:  "Without this information, this health check is unable tof unction.",
+		}
+
+		if e.Client.Token() == "" {
+			ret.Message = "No token available so unable read tidy status endpoint for this mount. " + ret.Message
+		} else {
+			ret.Message = "This token lacks permission to read the tidy status endpoint for this mount. " + ret.Message
+		}
+
+		results = append(results, &ret)
+	}
+
+	baseMsg := "Tidy hasn't run in the last %v; this can point to problems with the mount's auto-tidy configuration or an external tidy executor; this can impact PKI's and Vault's performance if not run regularly."
+
 	if h.TidyStatus.Secret != nil && h.TidyStatus.Secret.Data != nil {
+		ret := Result{
+			Status:   ResultOK,
+			Endpoint: "/{{mount}}/tidy-status",
+			Message:  "Tidy has run recently on this mount.",
+		}
+
 		when := h.TidyStatus.Secret.Data["time_finished"]
 		if when == nil {
 			ret.Status = ResultCritical
@@ -116,9 +136,9 @@ func (h *TidyLastRun) Evaluate(e *Executor) (results []*Result, err error) {
 				ret.Message = fmt.Sprintf(baseMsg, h.LastRunWarning)
 			}
 		}
-	}
 
-	results = append(results, &ret)
+		results = append(results, &ret)
+	}
 
 	return
 }

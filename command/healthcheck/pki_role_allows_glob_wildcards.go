@@ -10,6 +10,7 @@ import (
 type RoleAllowsGlobWildcards struct {
 	Enabled            bool
 	UnsupportedVersion bool
+	NoPerms            bool
 
 	RoleEntryMap map[string]map[string]interface{}
 }
@@ -43,18 +44,24 @@ func (h *RoleAllowsGlobWildcards) LoadConfig(config map[string]interface{}) erro
 }
 
 func (h *RoleAllowsGlobWildcards) FetchResources(e *Executor) error {
-	exit, _, roles, err := pkiFetchRolesList(e, func() {
+	exit, f, roles, err := pkiFetchRolesList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit || err != nil {
+		if f != nil && f.IsSecretPermissionsError() {
+			h.NoPerms = true
+		}
 		return err
 	}
 
 	for _, role := range roles {
-		skip, _, entry, err := pkiFetchRole(e, role, func() {
+		skip, f, entry, err := pkiFetchRole(e, role, func() {
 			h.UnsupportedVersion = true
 		})
 		if skip || err != nil || entry == nil {
+			if f != nil && f.IsSecretPermissionsError() {
+				h.NoPerms = true
+			}
 			if err != nil {
 				return err
 			}
@@ -76,6 +83,19 @@ func (h *RoleAllowsGlobWildcards) Evaluate(e *Executor) (results []*Result, err 
 			Message:  "This health check requires Vault 1.11+ but an earlier version of Vault Server was contacted, preventing this health check from running.",
 		}
 		return []*Result{&ret}, nil
+	}
+	if h.NoPerms {
+		ret := Result{
+			Status:   ResultInsufficientPermissions,
+			Endpoint: "/{{mount}}/roles",
+			Message:  "lacks permission either to list the roles or to read a specific role. This may restrict the ability to fully execute this health check.",
+		}
+		if e.Client.Token() == "" {
+			ret.Message = "No token available and so this health check " + ret.Message
+		} else {
+			ret.Message = "This token " + ret.Message
+		}
+		results = append(results, &ret)
 	}
 
 	for role, entry := range h.RoleEntryMap {
@@ -122,7 +142,17 @@ func (h *RoleAllowsGlobWildcards) Evaluate(e *Executor) (results []*Result, err 
 		ret := Result{
 			Status:   ResultWarning,
 			Endpoint: "/{{mount}}/role/" + role,
-			Message:  fmt.Sprintf("Role currently allows wildcard issuance while allowing globs in allowed_domains (%v). Because globs can expand to one or more wildcard character, including wildcards under additional subdomains, these options are dangerous to enable together. If glob domains are required to be enabled, it is suggested to either disable wildcard issuance if not desired, or create two separate roles -- one with wildcard issuanced for specified domains, and one with glob matching enabled for concrete domain identifiers.", allowedDomains),
+			Message:  fmt.Sprintf("Role currently allows wildcard issuance while allowing globs in allowed_domains (%v). Because globs can expand to one or more wildcard character, including wildcards under additional subdomains, these options are dangerous to enable together. If glob domains are required to be enabled, it is suggested to either disable wildcard issuance if not desired, or create two separate roles -- one with wildcard issuance for specified domains and one with glob matching enabled for concrete domain identifiers.", allowedDomains),
+		}
+
+		results = append(results, &ret)
+	}
+
+	if len(results) == 0 && len(h.RoleEntryMap) > 0 {
+		ret := Result{
+			Status:   ResultOK,
+			Endpoint: "/{{mount}}/roles",
+			Message:  "Roles follow best practices regarding restricting wildcard certificate issuance in roles.",
 		}
 
 		results = append(results, &ret)

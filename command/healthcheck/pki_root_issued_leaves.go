@@ -161,5 +161,15 @@ func (h *RootIssuedLeaves) Evaluate(e *Executor) (results []*Result, err error) 
 		}
 	}
 
+	if len(results) == 0 && len(h.RootCertMap) > 0 {
+		ret := Result{
+			Status:   ResultOK,
+			Endpoint: "/{{mount}}/certs",
+			Message:  "Root certificate(s) in this mount have not directly issued non-CA leaf certificates.",
+		}
+
+		results = append(results, &ret)
+	}
+
 	return
 }
