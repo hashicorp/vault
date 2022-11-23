@@ -1,8 +1,8 @@
-{{#if this.hideToggle}}
+{{#if @hideToggle}}
   <span class="ttl-picker-label">{{this.label}}</span><br />
   <div class="sub-text">
     <span>{{this.helperText}}</span>
-    {{#if this.description}}
+    {{#if @description}}
       <ToolTip @verticalPosition="below" as |T|>
         <T.Trigger data-test-tooltip-trigger tabindex="-1">
           <Icon @name="info" aria-label="description" />
@@ -27,7 +27,7 @@
     <span class="ttl-picker-label is-large">{{this.label}}</span><br />
     <div class="description has-text-grey">
       <span>{{this.helperText}}</span>
-      {{#if this.description}}
+      {{#if @description}}
         <ToolTip @verticalPosition="below" as |T|>
           <T.Trigger data-test-tooltip-trigger tabindex="-1">
             <Icon @name="info" aria-label="description" />

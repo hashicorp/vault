@@ -23,12 +23,12 @@
  */
 
 import Ember from 'ember';
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+import Component from '@glimmer/component';
 import { typeOf } from '@ember/utils';
 import Duration from '@icholy/duration';
-import layout from '../templates/components/ttl-picker2';
-import { task, timeout } from 'ember-concurrency';
+import { restartableTask, timeout } from 'ember-concurrency';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 
 const secondsMap = {
   s: 1,
@@ -48,24 +48,29 @@ const goSafeConvertFromSeconds = (seconds, unit) => {
   return convertFromSeconds(seconds, u) + u;
 };
 
-export default Component.extend({
-  layout,
-  enableTTL: false,
-  label: 'Time to live (TTL)',
-  helperTextDisabled: 'Allow tokens to be used indefinitely',
-  helperTextEnabled: 'Disable the use of the token after',
-  description: '',
-  time: '', // if defaultValue is NOT set, then do not display a defaultValue.
-  unit: 's',
-  initialValue: null,
-  changeOnInit: false,
-  hideToggle: false,
+export default class TtlPicker2Component extends Component {
+  @tracked enableTTL = false;
+  @tracked time = ''; // if defaultValue is NOT set, then do not display a defaultValue.
+  @tracked unit = 's';
 
-  init() {
-    this._super(...arguments);
-    const value = this.initialValue;
-    const enable = this.initialEnabled;
-    const changeOnInit = this.changeOnInit;
+  get label() {
+    return this.args.label || 'Time to live (TTL)';
+  }
+  get helperTextDisabled() {
+    return this.args.helperTextDisabled || 'Allow tokens to be used indefinitely';
+  }
+  get helperTextEnabled() {
+    return this.args.helperTextEnabled || 'Disable the use of the token after';
+  }
+  // initialValue: null,
+  // changeOnInit: false,
+  // hideToggle: false,
+
+  constructor() {
+    super(...arguments);
+    const value = this.args.initialValue;
+    const enable = this.args.initialEnabled;
+    const changeOnInit = this.args.changeOnInit;
     // if initial value is unset use params passed in as defaults
     // and if no defaultValue is passed in display no time
     if (!value && value !== 0) {
@@ -74,7 +79,7 @@ export default Component.extend({
 
     let time = 30;
     let unit = 's';
-    let setEnable = this.hideToggle || this.enableTTL;
+    let setEnable = this.args.hideToggle || this.args.enableTTL;
     if (!!enable || typeOf(enable) === 'boolean') {
       // This allows non-boolean values passed in to be evaluated for truthiness
       setEnable = !!enable;
@@ -108,29 +113,29 @@ export default Component.extend({
           time = convertFromSeconds(seconds, unit);
         }
       } catch (e) {
-        // if parsing fails leave as default 30s
+        // if parsing fails leave it empty
+        return;
       }
     }
 
-    this.setProperties({
-      time,
-      unit,
-      enableTTL: setEnable,
-    });
+    this.time = time;
+    this.unit = unit;
+    this.enableTTL = setEnable;
 
     if (changeOnInit) {
       this.handleChange();
     }
-  },
+  }
 
-  unitOptions: computed(function () {
+  get unitOptions() {
     return [
       { label: 'seconds', value: 's' },
       { label: 'minutes', value: 'm' },
       { label: 'hours', value: 'h' },
       { label: 'days', value: 'd' },
     ];
-  }),
+  }
+
   handleChange() {
     const { time, unit, enableTTL, seconds } = this;
     const ttl = {
@@ -139,65 +144,57 @@ export default Component.extend({
       timeString: time + unit,
       goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
     };
-    this.onChange(ttl);
-  },
+    this.args.onChange(ttl);
+  }
 
-  helperText: computed(
-    'enableTTL',
-    'helperTextDisabled',
-    'helperTextEnabled',
-    'helperTextSet',
-    'helperTextUnset',
-    'hideToggle',
-    function () {
-      return this.enableTTL || this.hideToggle ? this.helperTextEnabled : this.helperTextDisabled;
-    }
-  ),
+  get helperText() {
+    return this.enableTTL || this.hideToggle ? this.helperTextEnabled : this.helperTextDisabled;
+  }
 
-  recalculateSeconds: false,
+  recalculateSeconds = false;
   keepSecondsRecalculate(newUnit) {
     const newTime = convertFromSeconds(this.seconds, newUnit);
-    this.setProperties({
-      time: newTime,
-      unit: newUnit,
-    });
-  },
-  updateTime: task(function* (newTime) {
-    this.set('errorMessage', '');
+    this.time = newTime;
+    this.unit = newUnit;
+  }
+
+  @restartableTask
+  *updateTime(newTime) {
+    this.errorMessage = '';
     const parsedTime = parseInt(newTime, 10);
     if (!newTime) {
-      this.set('errorMessage', 'This field is required');
+      this.errorMessage = 'This field is required';
       return;
     } else if (Number.isNaN(parsedTime)) {
-      this.set('errorMessage', 'Value must be a number');
+      this.errorMessage = 'Value must be a number';
       return;
     }
-    this.set('time', parsedTime);
+    this.time = parsedTime;
     this.handleChange();
     if (Ember.testing) {
       return;
     }
-    this.set('recalculateSeconds', true);
+    this.recalculateSeconds = true;
     yield timeout(this.recalculationTimeout);
-    this.set('recalculateSeconds', false);
-  }).restartable(),
+    this.recalculateSeconds = false;
+  }
 
-  seconds: computed('time', 'unit', function () {
+  get seconds() {
     return convertToSeconds(this.time, this.unit);
-  }),
+  }
 
-  actions: {
-    updateUnit(newUnit) {
-      if (this.recalculateSeconds) {
-        this.set('unit', newUnit);
-      } else {
-        this.keepSecondsRecalculate(newUnit);
-      }
-      this.handleChange();
-    },
-    toggleEnabled() {
-      this.toggleProperty('enableTTL');
-      this.handleChange();
-    },
-  },
-});
+  @action
+  updateUnit(newUnit) {
+    if (this.recalculateSeconds) {
+      this.unit = newUnit;
+    } else {
+      this.keepSecondsRecalculate(newUnit);
+    }
+    this.handleChange();
+  }
+  @action
+  toggleEnabled() {
+    this.enableTTL = !this.enableTTL;
+    this.handleChange();
+  }
+}
