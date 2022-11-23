@@ -30,6 +30,7 @@ func TestWriteConfig_PluginVersionInStorage(t *testing.T) {
 
 	// Configure a connection
 	writePluginVersion := func() {
+		t.Helper()
 		req := &logical.Request{
 			Operation: logical.UpdateOperation,
 			Path:      "config/plugin-test",
@@ -49,6 +50,7 @@ func TestWriteConfig_PluginVersionInStorage(t *testing.T) {
 	writePluginVersion()
 
 	getPluginVersionFromAPI := func() string {
+		t.Helper()
 		req := &logical.Request{
 			Operation: logical.ReadOperation,
 			Path:      "config/plugin-test",
@@ -85,6 +87,7 @@ func TestWriteConfig_PluginVersionInStorage(t *testing.T) {
 
 	// Check the underlying data, which should still have the version in storage.
 	getPluginVersionFromStorage := func() string {
+		t.Helper()
 		entry, err := config.StorageView.Get(context.Background(), "config/plugin-test")
 		if err != nil {
 			t.Fatal(err)

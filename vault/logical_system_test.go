@@ -5200,6 +5200,7 @@ func TestCanUnseal_WithNonExistentBuiltinPluginVersion_InMountStorage(t *testing
 		{"approle", consts.PluginTypeCredential, "auth"},
 	}
 	readMountConfig := func(pluginName, mountTable string) map[string]interface{} {
+		t.Helper()
 		req := logical.TestRequest(t, logical.ReadOperation, mountTable+"/"+pluginName)
 		resp, err := core.systemBackend.HandleRequest(ctx, req)
 		if err != nil {
@@ -5272,11 +5273,11 @@ func TestCanUnseal_WithNonExistentBuiltinPluginVersion_InMountStorage(t *testing
 
 	for _, tc := range testCases {
 		// Storage should have been upgraded during the unseal, so plugin version
-		//should be empty again.
+		// should be empty again.
 		config := readMountConfig(tc.pluginName, tc.mountTable)
 		pluginVersion, ok := config["plugin_version"]
 		if !ok || pluginVersion != "" {
-			t.Fatalf("expected empty plugin version in config: %#v", config)
+			t.Errorf("expected empty plugin version in config: %#v", config)
 		}
 	}
 }
