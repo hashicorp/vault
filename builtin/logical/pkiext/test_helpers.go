@@ -1,10 +1,15 @@
 package pkiext
 
 import (
+	"crypto"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,6 +44,15 @@ func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, 
 		msg := fmt.Sprintf("expected nil response but got: %v", resp)
 		require.Nilf(t, resp, msg, msgAndArgs...)
 	}
+}
+
+func parseCert(t *testing.T, pemCert string) *x509.Certificate {
+	block, _ := pem.Decode([]byte(pemCert))
+	require.NotNil(t, block, "failed to decode PEM block")
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err)
+	return cert
 }
 
 func parseKey(t *testing.T, pemKey string) crypto.Signer {
