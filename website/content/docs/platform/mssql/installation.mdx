@@ -137,8 +137,8 @@ installation.
     ```sql
     -- Replace <approle-role-id> and <approle-secret-id> with the values from
     -- the earlier vault commands:
-    -- vault read auth/approle/role/tde-role/role-id
-    -- vault write -f auth/approle/role/tde-role/secret-id
+    -- vault read auth/approle/role/ekm-encryption-key/role-id
+    -- vault write -f auth/approle/ekm-encryption-key/secret-id
     CREATE CREDENTIAL TransitVaultCredentials
         WITH IDENTITY = '<approle-role-id>',
         SECRET = '<approle-secret-id>'
