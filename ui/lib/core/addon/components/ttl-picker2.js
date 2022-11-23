@@ -1,8 +1,8 @@
 /**
  * @module TtlPicker2
- * TtlPicker2 components are used to enable and select 'time to live' values. Use this TtlPicker2 instead of TtlPicker if you:
- * - Want the TTL to be enabled or disabled
- * - Want to have the time recalculated by default when the unit changes (eg 60s -> 1m)
+ * TtlPicker2 components are used to enable and select duration values such as TTL. This component renders a toggle by default and:
+ * - allows TTL to be enabled or disabled
+ * - recalculates the time when the unit is changed by the user (eg 60s -> 1m)
  *
  * @example
  * ```js
