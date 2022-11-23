@@ -727,8 +727,7 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 		return consts.PluginTypeUnknown
 	}
 
-	// Builtin plugins should contain the "builtin" string in their RunningVersion
-	if !strings.Contains(entry.RunningVersion, "builtin") {
+	if !versions.IsBuiltinVersion(entry.RunningVersion) {
 		return consts.PluginTypeUnknown
 	}
 

@@ -635,20 +635,12 @@ func getVersion(d *framework.FieldData) (version string, builtin bool, err error
 			return "", false, fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
 		}
 
-		metadataIdentifiers := strings.Split(semanticVersion.Metadata(), ".")
-		for _, identifier := range metadataIdentifiers {
-			if identifier == "builtin" {
-				builtin = true
-				break
-			}
-		}
-
 		// Canonicalize the version string.
 		// Add the 'v' back in, since semantic version strips it out, and we want to be consistent with internal plugins.
 		version = "v" + semanticVersion.String()
 	}
 
-	return version, builtin, nil
+	return version, versions.IsBuiltinVersion(version), nil
 }
 
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

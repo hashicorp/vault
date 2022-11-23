@@ -383,7 +383,7 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 			if !plugin.Builtin {
 				t.Fatalf("expected %v plugin to be builtin", plugin)
 			}
-			if plugin.SemanticVersion.Metadata() != "builtin" && plugin.SemanticVersion.Metadata() != "builtin.vault" {
+			if !versions.IsBuiltinVersion(plugin.Version) {
 				t.Fatalf("expected +builtin metadata but got %s", plugin.Version)
 			}
 		}

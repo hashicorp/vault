@@ -319,7 +319,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			if config.PluginVersion == versions.GetBuiltinVersion(consts.PluginTypeDatabase, config.PluginName) {
 				if builtinShadowed {
 					return logical.ErrorResponse("database plugin %q, version %s not found, as it is"+
-						" overridden by an unversioned plugin of the same name", config.PluginName, config.PluginVersion), nil
+						" overridden by an unversioned plugin of the same name. Omit `plugin_version` to use the unversioned plugin", config.PluginName, config.PluginVersion), nil
 				}
 
 				config.PluginVersion = ""
@@ -458,6 +458,8 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 }
 
 func storeConfig(ctx context.Context, storage logical.Storage, name string, config *DatabaseConfig) error {
+	// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
+	// that, so clean up any pre-existing stored builtin versions on write.
 	if versions.IsBuiltinVersion(config.PluginVersion) {
 		config.PluginVersion = ""
 	}
