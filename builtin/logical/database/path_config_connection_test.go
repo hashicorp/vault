@@ -13,7 +13,7 @@ import (
 
 func TestWriteConfig_PluginVersionInStorage(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
+	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -122,7 +122,7 @@ func TestWriteConfig_PluginVersionInStorage(t *testing.T) {
 
 func TestWriteConfig_HelpfulErrorMessageWhenBuiltinOverridden(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
+	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
