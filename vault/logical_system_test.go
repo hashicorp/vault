@@ -5113,3 +5113,171 @@ func TestSortVersionedPlugins(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateVersion(t *testing.T) {
+	b := testSystemBackend(t).(*SystemBackend)
+	k8sAuthBuiltin := versions.GetBuiltinVersion(consts.PluginTypeCredential, "kubernetes")
+
+	for name, tc := range map[string]struct {
+		pluginName         string
+		pluginVersion      string
+		pluginType         consts.PluginType
+		expectLogicalError string
+		expectedVersion    string
+	}{
+		"default, nothing in nothing out":   {"kubernetes", "", consts.PluginTypeCredential, "", ""},
+		"builtin specified, empty out":      {"kubernetes", k8sAuthBuiltin, consts.PluginTypeCredential, "", ""},
+		"not canonical is ok":               {"kubernetes", "1.0.0", consts.PluginTypeCredential, "", "v1.0.0"},
+		"not a semantic version, error":     {"kubernetes", "not-a-version", consts.PluginTypeCredential, "not a valid semantic version", ""},
+		"can't select non-builtin token":    {"token", "v1.0.0", consts.PluginTypeCredential, "cannot select non-builtin version", ""},
+		"can't select non-builtin identity": {"identity", "v1.0.0", consts.PluginTypeSecrets, "cannot select non-builtin version", ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			version, resp, err := b.validateVersion(context.Background(), tc.pluginVersion, tc.pluginName, tc.pluginType)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.expectLogicalError != "" {
+				if resp == nil || !resp.IsError() || resp.Error() == nil {
+					t.Errorf("expected logical error but got none, resp: %#v", resp)
+				}
+				if !strings.Contains(resp.Error().Error(), tc.expectLogicalError) {
+					t.Errorf("expected logical error to contain %q, but got: %s", tc.expectLogicalError, resp.Error())
+				}
+			} else if version != tc.expectedVersion {
+				t.Errorf("expected version %q but got %q", tc.expectedVersion, version)
+			}
+		})
+	}
+}
+
+func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	tempDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	core.pluginCatalog.directory = tempDir
+	b := core.systemBackend
+
+	// Shadow a builtin and test getting a helpful error back.
+	file, err := ioutil.TempFile(tempDir, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	command := filepath.Base(file.Name())
+	err = core.pluginCatalog.Set(context.Background(), "kubernetes", consts.PluginTypeCredential, "", command, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// When we validate the version now, we should get a special error message
+	// about why the builtin isn't there.
+	k8sAuthBuiltin := versions.GetBuiltinVersion(consts.PluginTypeCredential, "kubernetes")
+	_, resp, err := b.validateVersion(context.Background(), k8sAuthBuiltin, "kubernetes", consts.PluginTypeCredential)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || !resp.IsError() || resp.Error() == nil {
+		t.Errorf("expected logical error but got none, resp: %#v", resp)
+	}
+	if !strings.Contains(resp.Error().Error(), "overridden by an unversioned plugin of the same name") {
+		t.Errorf("expected logical error to contain overridden message, but got: %s", resp.Error())
+	}
+}
+
+func TestCanUnseal_WithNonExistentBuiltinPluginVersion_InMountStorage(t *testing.T) {
+	core, keys, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	testCases := []struct {
+		pluginName string
+		pluginType consts.PluginType
+		mountTable string
+	}{
+		{"consul", consts.PluginTypeSecrets, "mounts"},
+		{"approle", consts.PluginTypeCredential, "auth"},
+	}
+	readMountConfig := func(pluginName, mountTable string) map[string]interface{} {
+		t.Helper()
+		req := logical.TestRequest(t, logical.ReadOperation, mountTable+"/"+pluginName)
+		resp, err := core.systemBackend.HandleRequest(ctx, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		return resp.Data
+	}
+
+	for _, tc := range testCases {
+		req := logical.TestRequest(t, logical.UpdateOperation, tc.mountTable+"/"+tc.pluginName)
+		req.Data["type"] = tc.pluginName
+		req.Data["config"] = map[string]interface{}{
+			"default_lease_ttl": "35m",
+			"max_lease_ttl":     "45m",
+			"plugin_version":    versions.GetBuiltinVersion(tc.pluginType, tc.pluginName),
+		}
+
+		resp, err := core.systemBackend.HandleRequest(ctx, req)
+		if err != nil {
+			t.Fatalf("err: %v, resp: %#v", err, resp)
+		}
+		if resp != nil {
+			t.Fatalf("bad: %v", resp)
+		}
+
+		config := readMountConfig(tc.pluginName, tc.mountTable)
+		pluginVersion, ok := config["plugin_version"]
+		if !ok || pluginVersion != "" {
+			t.Fatalf("expected empty plugin version in config: %#v", config)
+		}
+
+		// Directly store plugin version in mount entry, so we can then simulate
+		// an upgrade from 1.12.1 to 1.12.2 by sealing and unsealing.
+		const nonExistentBuiltinVersion = "v1.0.0+builtin"
+		var mountEntry *MountEntry
+		if tc.mountTable == "mounts" {
+			mountEntry, err = core.mounts.find(ctx, tc.pluginName+"/")
+		} else {
+			mountEntry, err = core.auth.find(ctx, tc.pluginName+"/")
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mountEntry == nil {
+			t.Fatal()
+		}
+		mountEntry.Version = nonExistentBuiltinVersion
+		err = core.persistMounts(ctx, core.mounts, &mountEntry.Local)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		config = readMountConfig(tc.pluginName, tc.mountTable)
+		pluginVersion, ok = config["plugin_version"]
+		if !ok || pluginVersion != nonExistentBuiltinVersion {
+			t.Fatalf("expected plugin version %s but was %s, config: %#v", nonExistentBuiltinVersion, pluginVersion, config)
+		}
+	}
+
+	err := TestCoreSeal(core)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+	}
+
+	for _, tc := range testCases {
+		// Storage should have been upgraded during the unseal, so plugin version
+		// should be empty again.
+		config := readMountConfig(tc.pluginName, tc.mountTable)
+		pluginVersion, ok := config["plugin_version"]
+		if !ok || pluginVersion != "" {
+			t.Errorf("expected empty plugin version in config: %#v", config)
+		}
+	}
+}

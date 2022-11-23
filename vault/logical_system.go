@@ -635,20 +635,12 @@ func getVersion(d *framework.FieldData) (version string, builtin bool, err error
 			return "", false, fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
 		}
 
-		metadataIdentifiers := strings.Split(semanticVersion.Metadata(), ".")
-		for _, identifier := range metadataIdentifiers {
-			if identifier == "builtin" {
-				builtin = true
-				break
-			}
-		}
-
 		// Canonicalize the version string.
 		// Add the 'v' back in, since semantic version strips it out, and we want to be consistent with internal plugins.
 		version = "v" + semanticVersion.String()
 	}
 
-	return version, builtin, nil
+	return version, versions.IsBuiltinVersion(version), nil
 }
 
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -2636,6 +2628,19 @@ func (b *SystemBackend) validateVersion(ctx context.Context, version string, plu
 
 		// Canonicalize the version.
 		version = "v" + semanticVersion.String()
+
+		if version == versions.GetBuiltinVersion(pluginType, pluginName) {
+			unversionedPlugin, err := b.System().LookupPlugin(ctx, pluginName, pluginType)
+			if err == nil && !unversionedPlugin.Builtin {
+				// Builtin is overridden, return "not found" error.
+				return "", logical.ErrorResponse("%s plugin %q, version %s not found, as it is"+
+					" overridden by an unversioned plugin of the same name. Omit `plugin_version` to use the unversioned plugin", pluginType.String(), pluginName, version), nil
+			}
+
+			// Don't put the builtin version in storage. Ensures that builtins
+			// can always be overridden, and upgrades are much simpler to handle.
+			version = ""
+		}
 	}
 
 	// if a non-builtin version is requested for a builtin plugin, return an error
