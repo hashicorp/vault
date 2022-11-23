@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 
 	"github.com/hashicorp/go-uuid"
@@ -249,12 +250,12 @@ func CheckWithClients(t *testing.T, network string, address string, url string, 
 }
 
 func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bool, roleKeyType string, roleKeyBits int, roleUsePSS bool) {
-	b, s := createBackendWithStorage(t)
+	b, s := pki.CreateBackendWithStorage(t)
 
 	testSuffix := fmt.Sprintf(" - %v %v %v - %v %v %v", caKeyType, caKeyType, caUsePSS, roleKeyType, roleKeyBits, roleUsePSS)
 
 	// Create a root and intermediate, setting the intermediate as default.
-	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+	resp, err := pki.CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name":  "Root X1" + testSuffix,
 		"country":      "US",
 		"organization": "Dadgarcorp",
@@ -265,7 +266,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to create root cert")
 	rootCert := resp.Data["certificate"].(string)
-	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+	resp, err = pki.CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
 		"common_name":  "Intermediate I1" + testSuffix,
 		"country":      "US",
 		"organization": "Dadgarcorp",
@@ -275,7 +276,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 		"use_pss":      caUsePSS,
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to create intermediate csr")
-	resp, err = CBWrite(b, s, "issuer/default/sign-intermediate", map[string]interface{}{
+	resp, err = pki.CBWrite(b, s, "issuer/default/sign-intermediate", map[string]interface{}{
 		"common_name":  "Intermediate I1",
 		"country":      "US",
 		"organization": "Dadgarcorp",
@@ -284,16 +285,16 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 		"csr":          resp.Data["csr"],
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to sign intermediate csr")
-	resp, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+	resp, err = pki.CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
 		"pem_bundle": resp.Data["certificate"],
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to sign intermediate csr")
-	_, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
+	_, err = pki.CBWrite(b, s, "config/issuers", map[string]interface{}{
 		"default": resp.Data["imported_issuers"].([]string)[0],
 	})
 
 	// Create a role+certificate valid for localhost only.
-	_, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+	_, err = pki.CBWrite(b, s, "roles/testing", map[string]interface{}{
 		"allow_any_name": true,
 		"key_type":       roleKeyType,
 		"key_bits":       roleKeyBits,
@@ -301,7 +302,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 		"ttl":            "60m",
 	})
 	require.NoError(t, err)
-	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+	resp, err = pki.CBWrite(b, s, "issue/testing", map[string]interface{}{
 		"common_name": uniqueHostname,
 		"ip_sans":     "127.0.0.1,::1",
 		"sans":        uniqueHostname + ",localhost,localhost4,localhost6,localhost.localdomain",
