@@ -25,21 +25,21 @@ jobs:
           IS_ENT: ${{ startsWith(github.event.repository.name, 'vault-enterprise' ) }}
         run: |
           if ${IS_ENT} == true; then
-            echo "aws_role=arn:aws:iam::505811019928:role/vault_enterprise_ci-developer" >> $GITHUB_OUTPUT
-            echo "aws role set to 'arn:aws:iam::040730498200:role/vault_enterprise_ci-developer'"
+            echo "aws_role=arn:aws:iam::505811019928:role/github_actions-vault-enterprise_ci" >> $GITHUB_OUTPUT
+            echo "aws role set to 'arn:aws:iam::505811019928:role/github_actions-vault-enterprise_ci'"
             echo "product_line=vault-enterprise" >> $GITHUB_OUTPUT
             echo "product line set to 'vault-enterprise'"
           else
-            echo "aws_role=arn:aws:iam::040730498200:role/vault_ci-developer" >> $GITHUB_OUTPUT
-            echo "aws role set to 'arn:aws:iam::040730498200:role/vault_ci-developer'"
+            echo "aws_role=arn:aws:iam::040730498200:role/github_actions-vault_ci" >> $GITHUB_OUTPUT
+            echo "aws role set to 'arn:aws:iam::040730498200:role/github_actions-vault_ci'"
             echo "product_line=vault" >> $GITHUB_OUTPUT
             echo "product line set to 'vault'"
           fi
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
           aws-region: us-east-1
           role-to-assume: ${{ steps.prepare_for_terraform.outputs.aws_role }}
           role-skip-session-tagging: true
@@ -47,9 +47,8 @@ jobs:
       - name: Plan Terraform
         id: tf_plan
         run: |
-          export TF_CLOUD_ORGANIZATION=hashicorp-qti
-          export TF_WORKSPACE=${{ steps.prepare_for_terraform.outputs.product_line }}-ci-enos-bootstrap
+          export TF_WORKSPACE="${{ steps.prepare_for_terraform.outputs.product_line }}-ci-enos-bootstrap"
           export TF_VAR_aws_ssh_public_key="ssh-rsa some public key"
-          export TF_TOKEN_app_terraform_io=${{ secrets.TF_API_TOKEN }}
-          terraform init -chdir=enos/ci
-          terraform plan
+          export TF_TOKEN_app_terraform_io="${{ secrets.TF_API_TOKEN }}"
+          terraform -chdir=enos/ci/bootstrap init
+          terraform -chdir=enos/ci/bootstrap plan
