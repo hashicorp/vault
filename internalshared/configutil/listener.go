@@ -22,6 +22,8 @@ type ListenerTelemetry struct {
 	UnusedKeys                      UnusedKeyMap `hcl:",unusedKeyPositions"`
 	UnauthenticatedMetricsAccess    bool         `hcl:"-"`
 	UnauthenticatedMetricsAccessRaw interface{}  `hcl:"unauthenticated_metrics_access,alias:UnauthenticatedMetricsAccess"`
+	MetricsOnlyListener             bool         `hcl:"-"`
+	MetricsOnlyListenerAccessRaw    interface{}  `hcl:"metrics_only_listener,alias:MetricsOnlyListener"`
 }
 
 type ListenerProfiling struct {
@@ -347,6 +349,14 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.Telemetry.UnauthenticatedMetricsAccessRaw = nil
+			}
+
+			if l.Telemetry.MetricsOnlyListenerAccessRaw != nil {
+				if l.Telemetry.MetricsOnlyListener, err = parseutil.ParseBool(l.Telemetry.MetricsOnlyListenerAccessRaw); err != nil {
+					return multierror.Prefix(fmt.Errorf("invalid value for telemetry.metrcs_only_listener: %w", err), fmt.Sprintf("listeners.%d", i))
+				}
+
+				l.Telemetry.MetricsOnlyListenerAccessRaw = nil
 			}
 		}
 
