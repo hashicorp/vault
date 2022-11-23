@@ -7,6 +7,7 @@ on:
       - mbaum/qt-318
     paths:
       - enos/ci/**
+      - .github/workflows/enos-bootstrap-ci.yml
 
 jobs:
   bootstrap-ci-plan:
@@ -44,11 +45,17 @@ jobs:
           role-to-assume: ${{ steps.prepare_for_terraform.outputs.aws_role }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
+      - name: Init Terraform
+        id: tf_init
+        run: |
+          export TF_WORKSPACE="${{ steps.prepare_for_terraform.outputs.product_line }}-ci-enos-bootstrap"
+          export TF_VAR_aws_ssh_public_key="ssh-rsa some public key"
+          export TF_TOKEN_app_terraform_io="${{ secrets.TF_API_TOKEN }}"
+          terraform -chdir=enos/ci/bootstrap init
       - name: Plan Terraform
         id: tf_plan
         run: |
           export TF_WORKSPACE="${{ steps.prepare_for_terraform.outputs.product_line }}-ci-enos-bootstrap"
           export TF_VAR_aws_ssh_public_key="ssh-rsa some public key"
           export TF_TOKEN_app_terraform_io="${{ secrets.TF_API_TOKEN }}"
-          terraform -chdir=enos/ci/bootstrap init
           terraform -chdir=enos/ci/bootstrap plan
