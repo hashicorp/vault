@@ -12,9 +12,6 @@ parameters:
   save_cache:
     type: boolean
     default: false
-  go_image:
-    type: string
-    default: "docker.mirror.hashicorp.services/cimg/go:1.17.13"
   use_docker:
     type: boolean
     default: false
@@ -149,7 +146,7 @@ steps:
             -e NO_PROXY \
             -e VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
             --network vaulttest --name \
-            testcontainer << parameters.go_image >> \
+            testcontainer $GO_IMAGE \
             tail -f /dev/null
 
           # Run tests
