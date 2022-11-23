@@ -1,0 +1,56 @@
+<PageHeader as |p|>
+  <p.top>
+    {{! TODO: This should be replaced with HDS::Breadcrumbs }}
+    <nav class="breadcrumb" aria-label="breadcrumbs" data-test-breadcrumbs="key-details">
+      <ul>
+        <li>
+          <span class="sep">/</span>
+          <LinkToExternal @route="secrets">secrets</LinkToExternal>
+        </li>
+        {{#each this.breadcrumbs as |breadcrumb|}}
+          <li>
+            <span class="sep">/</span>
+            {{#if breadcrumb.path}}
+              <LinkTo @route={{breadcrumb.path}}>
+                {{breadcrumb.label}}
+              </LinkTo>
+            {{else}}
+              {{breadcrumb.label}}
+            {{/if}}
+          </li>
+        {{/each}}
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-key-details-title>
+      <Icon @name="certificate" @size="24" class="has-text-grey-light" />
+      View key
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<Toolbar>
+  <ToolbarActions>
+    <ConfirmAction
+      @buttonClasses="toolbar-link"
+      @onConfirmAction={{this.deleteKey}}
+      @confirmTitle="Delete key?"
+      @confirmButtonText="Delete"
+      data-test-pki-key-delete
+    >
+      Delete
+    </ConfirmAction>
+    <ToolbarLink @route="keys.key.edit" @model={{@key.model.name}}>
+      Edit key
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  {{#each @key.formFields as |attr|}}
+    <InfoTableRow
+      @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+      @value={{get @key attr.name}}
+    />
+  {{/each}}
+</div>

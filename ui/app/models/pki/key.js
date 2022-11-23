@@ -1,10 +1,18 @@
 import Model, { attr } from '@ember-data/model';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export default class PkiKeyModel extends Model {
   @attr('string', { readOnly: true }) backend;
   @attr('boolean') isDefault;
-  @attr('string') keyRef; // reference to an existing key: either, vault generate identifier, literal string 'default', or the name assigned to the key. Part of the request URL.
-  @attr('string') keyId;
+  @attr('string', { possibleValues: ['internal', 'external'] }) type;
+  @attr('string', { detailsLabel: 'Key ID' }) keyId;
   @attr('string') keyName;
   @attr('string') keyType;
+  @attr('string', { detailsLabel: 'Key bit length' }) keyBits; // TODO confirm with crypto team to remove this field from details page
+
+  // TODO refactor when field-to-attrs util is refactored as decorator
+  constructor() {
+    super(...arguments);
+    this.formFields = expandAttributeMeta(this, ['keyId', 'keyName', 'keyType', 'keyBits']);
+  }
 }

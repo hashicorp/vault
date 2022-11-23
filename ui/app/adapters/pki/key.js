@@ -4,24 +4,21 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 export default class PkiKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  optionsForQuery(id) {
-    const data = {};
-    if (!id) {
-      data['list'] = true;
-    }
-    return { data };
-  }
-
-  urlForQuery(backend, id) {
-    let url = `${this.buildURL()}/${encodePath(backend)}/keys`;
+  getUrl(backend, id) {
+    const url = `${this.buildURL()}/${encodePath(backend)}`;
     if (id) {
-      url = url + '/' + encodePath(id);
+      return url + '/key/' + encodePath(id);
     }
-    return url;
+    return url + '/keys';
   }
 
   query(store, type, query) {
+    const { backend } = query;
+    return this.ajax(this.getUrl(backend), 'GET', { data: { list: true } });
+  }
+
+  queryRecord(store, type, query) {
     const { backend, id } = query;
-    return this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
+    return this.ajax(this.getUrl(backend, id), 'GET');
   }
 }
