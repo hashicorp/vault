@@ -3,7 +3,7 @@
 'use strict';
 
 module.exports = {
-  parser: 'babel-eslint',
+  parser: '@typescript-eslint/parser',
   root: true,
   parserOptions: {
     ecmaVersion: 2018,
@@ -12,12 +12,12 @@ module.exports = {
       legacyDecorators: true,
     },
   },
-  plugins: ['ember'],
+  plugins: ['ember', '@typescript-eslint'],
   extends: [
     'eslint:recommended',
     'plugin:ember/recommended',
     'plugin:prettier/recommended',
-    'plugin:compat/recommended',
+    'plugin:@typescript-eslint/recommended',
   ],
   env: {
     browser: true,
