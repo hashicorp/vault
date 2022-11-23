@@ -110,7 +110,7 @@ func (e *Executor) Execute() (map[string][]*Result, error) {
 		}
 
 		if err := checker.FetchResources(e); err != nil {
-			return nil, fmt.Errorf("failed to execute %v: %w", checker.Name(), err)
+			return nil, fmt.Errorf("failed to fetch resources %v: %w", checker.Name(), err)
 		}
 
 		results, err := checker.Evaluate(e)
