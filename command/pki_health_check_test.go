@@ -185,6 +185,68 @@ func TestPKIHC_ExpectedEmptyMount(t *testing.T) {
 	}
 }
 
+func TestPKIHC_NoPerm(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+	}); err != nil {
+		t.Fatalf("pki mount error: %#v", err)
+	}
+
+	if resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"key_type":    "ec",
+		"common_name": "Root X1",
+		"ttl":         "35d",
+	}); err != nil || resp == nil {
+		t.Fatalf("failed to prime CA: %v", err)
+	}
+
+	if _, err := client.Logical().Write("pki/config/crl", map[string]interface{}{
+		"expiry": "5s",
+	}); err != nil {
+		t.Fatalf("failed to issue leaf cert: %v", err)
+	}
+
+	if _, err := client.Logical().Read("pki/crl/rotate"); err != nil {
+		t.Fatalf("failed to rotate CRLs: %v", err)
+	}
+
+	time.Sleep(5 * time.Second)
+
+	if _, err := client.Logical().Write("pki/roles/testing", map[string]interface{}{
+		"allow_localhost":             true,
+		"allowed_domains":             "*.example.com",
+		"allow_glob_domains":          true,
+		"allow_wildcard_certificates": true,
+		"no_store":                    false,
+		"key_type":                    "ec",
+		"ttl":                         "30d",
+	}); err != nil {
+		t.Fatalf("failed to write role: %v", err)
+	}
+
+	if _, err := client.Logical().Write("pki/issue/testing", map[string]interface{}{
+		"common_name": "something.example.com",
+	}); err != nil {
+		t.Fatalf("failed to issue leaf cert: %v", err)
+	}
+
+	if _, err := client.Logical().Write("pki/config/auto-tidy", map[string]interface{}{
+		"enabled":         false,
+		"tidy_cert_store": false,
+	}); err != nil {
+		t.Fatalf("failed to write auto-tidy config: %v", err)
+	}
+
+	// Remove client token.
+	client.ClearToken()
+
+	_, _, results := execPKIHC(t, client, true)
+	validateExpectedPKIHC(t, expectedNoPerm, results)
+}
+
 func testPKIHealthCheckCommand(tb testing.TB) (*cli.MockUi, *PKIHealthCheckCommand) {
 	tb.Helper()
 
@@ -491,6 +553,62 @@ var expectedEmptyWithIssuer = map[string][]map[string]interface{}{
 	"tidy_last_run": {
 		{
 			"status": "critical",
+		},
+	},
+	"too_many_certs": {
+		{
+			"status": "ok",
+		},
+	},
+}
+
+var expectedNoPerm = map[string][]map[string]interface{}{
+	"ca_validity_period": {
+		{
+			"status": "critical",
+		},
+	},
+	"crl_validity_period": {
+		{
+			"status": "insufficient_permissions",
+		},
+		{
+			"status": "critical",
+		},
+		{
+			"status": "critical",
+		},
+	},
+	"allow_if_modified_since": nil,
+	"audit_visibility":        nil,
+	"enable_auto_tidy": {
+		{
+			"status": "insufficient_permissions",
+		},
+	},
+	"role_allows_glob_wildcards": {
+		{
+			"status": "insufficient_permissions",
+		},
+	},
+	"role_allows_localhost": {
+		{
+			"status": "insufficient_permissions",
+		},
+	},
+	"role_no_store_false": {
+		{
+			"status": "insufficient_permissions",
+		},
+	},
+	"root_issued_leaves": {
+		{
+			"status": "ok",
+		},
+	},
+	"tidy_last_run": {
+		{
+			"status": "insufficient_permissions",
 		},
 	},
 	"too_many_certs": {
