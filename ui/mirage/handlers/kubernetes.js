@@ -1,5 +1,9 @@
 import { Response } from 'miragejs';
 
+// yet to be defined endpoint
+// exporting to use in tests in case it changes
+export const configVarUri = '/:path/config/vars';
+
 export default function (server) {
   const getRecord = (schema, req, dbKey) => {
     const { path, name } = req.params;
@@ -35,6 +39,11 @@ export default function (server) {
   });
   server.delete('/:path/config', (schema, req) => {
     return deleteRecord(schema, req, 'kubernetesConfigs');
+  });
+  // to be defined endpoint for checking for environment variables necessary for inferred config
+  server.get(configVarUri, () => {
+    const status = Math.random() > 0.5 ? 204 : 404;
+    return new Response(status, {});
   });
   server.get('/:path/roles', (schema) => {
     return {

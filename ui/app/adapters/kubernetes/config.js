@@ -32,4 +32,7 @@ export default class KubernetesConfigAdapter extends ApplicationAdapter {
     const url = this.getURL(snapshot.attr('backend'));
     return this.ajax(url, 'POST', { data }).then(() => data);
   }
+  checkConfigVars(backend) {
+    return this.ajax(`${this.getURL(backend)}/vars`, 'GET');
+  }
 }

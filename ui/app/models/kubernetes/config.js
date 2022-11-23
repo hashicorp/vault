@@ -20,7 +20,8 @@ export default class KubernetesConfigModel extends Model {
     label: 'Kubernetes CA Certificate',
     subText:
       'PEM-encoded CA certificate to use by the secret engine to verify the Kubernetes API server certificate. Defaults to the local pod’s CA if found.',
+    editType: 'textarea',
   })
   kubernetesCaCert;
-  @attr('boolean') disableLocalCaJwt;
+  @attr('boolean', { defaultValue: false }) disableLocalCaJwt;
 }
