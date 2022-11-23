@@ -29,37 +29,42 @@ func TestWriteConfig_PluginVersionInStorage(t *testing.T) {
 	hdbBuiltin := versions.GetBuiltinVersion(consts.PluginTypeDatabase, hdb)
 
 	// Configure a connection
-	data := map[string]interface{}{
-		"connection_url":    "test",
-		"plugin_name":       hdb,
-		"plugin_version":    hdbBuiltin,
-		"verify_connection": false,
+	writePluginVersion := func() {
+		req := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "config/plugin-test",
+			Storage:   config.StorageView,
+			Data: map[string]interface{}{
+				"connection_url":    "test",
+				"plugin_name":       hdb,
+				"plugin_version":    hdbBuiltin,
+				"verify_connection": false,
+			},
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
 	}
-	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
+	writePluginVersion()
 
-	req = &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "config/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
+	getPluginVersionFromAPI := func() string {
+		req := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "config/plugin-test",
+			Storage:   config.StorageView,
+		}
 
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
 
-	if resp.Data["plugin_version"] != "" {
-		t.Fatalf("expected plugin_version empty but got %s", resp.Data["plugin_version"])
+		return resp.Data["plugin_version"].(string)
+	}
+	pluginVersion := getPluginVersionFromAPI()
+	if pluginVersion != "" {
+		t.Fatalf("expected plugin_version empty but got %s", pluginVersion)
 	}
 
 	// Directly store config to get the builtin plugin version into storage,
@@ -73,12 +78,45 @@ func TestWriteConfig_PluginVersionInStorage(t *testing.T) {
 	}
 
 	// Now replay the read request, and we still shouldn't get the builtin version back.
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	pluginVersion = getPluginVersionFromAPI()
+	if pluginVersion != "" {
+		t.Fatalf("expected plugin_version empty but got %s", pluginVersion)
 	}
 
-	if resp.Data["plugin_version"] != "" {
-		t.Fatalf("expected plugin_version empty but got %s", resp.Data["plugin_version"])
+	// Check the underlying data, which should still have the version in storage.
+	getPluginVersionFromStorage := func() string {
+		entry, err := config.StorageView.Get(context.Background(), "config/plugin-test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if entry == nil {
+			t.Fatal()
+		}
+
+		var config DatabaseConfig
+		if err := entry.DecodeJSON(&config); err != nil {
+			t.Fatal(err)
+		}
+		return config.PluginVersion
+	}
+
+	storagePluginVersion := getPluginVersionFromStorage()
+	if storagePluginVersion != hdbBuiltin {
+		t.Fatalf("Expected %s, got: %s", hdbBuiltin, storagePluginVersion)
+	}
+
+	// Trigger a write to storage, which should clean up plugin version in the storage entry.
+	writePluginVersion()
+
+	storagePluginVersion = getPluginVersionFromStorage()
+	if storagePluginVersion != "" {
+		t.Fatalf("Expected empty, got: %s", storagePluginVersion)
+	}
+
+	// Finally, confirm API requests still return empty plugin version too
+	pluginVersion = getPluginVersionFromAPI()
+	if pluginVersion != "" {
+		t.Fatalf("expected plugin_version empty but got %s", pluginVersion)
 	}
 }
 
