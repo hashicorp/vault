@@ -2634,7 +2634,7 @@ func (b *SystemBackend) validateVersion(ctx context.Context, version string, plu
 			if err == nil && !unversionedPlugin.Builtin {
 				// Builtin is overridden, return "not found" error.
 				return "", logical.ErrorResponse("%s plugin %q, version %s not found, as it is"+
-					" overridden by an unversioned plugin of the same name", pluginType.String(), pluginName, version), nil
+					" overridden by an unversioned plugin of the same name. Omit `plugin_version` to use the unversioned plugin", pluginType.String(), pluginName, version), nil
 			}
 
 			// Don't put the builtin version in storage. Ensures that builtins

@@ -426,6 +426,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			oldConn.Close()
 		}
 
+		// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
+		// that, so clean up any pre-existing stored builtin versions on write.
+		if versions.IsBuiltinVersion(config.PluginVersion) {
+			config.PluginVersion = ""
+		}
 		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
 			return nil, err
@@ -458,11 +463,6 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 }
 
 func storeConfig(ctx context.Context, storage logical.Storage, name string, config *DatabaseConfig) error {
-	// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
-	// that, so clean up any pre-existing stored builtin versions on write.
-	if versions.IsBuiltinVersion(config.PluginVersion) {
-		config.PluginVersion = ""
-	}
 	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
 	if err != nil {
 		return fmt.Errorf("unable to marshal object to JSON: %w", err)

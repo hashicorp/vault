@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-test/deep"
 	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -36,6 +37,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 		LogicalBackends: map[string]logical.Factory{
 			"database": Factory,
 		},
+		BuiltinRegistry: builtinplugins.Registry,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
