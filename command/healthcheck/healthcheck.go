@@ -115,7 +115,7 @@ func (e *Executor) Execute() (map[string][]*Result, error) {
 
 		results, err := checker.Evaluate(e)
 		if err != nil {
-			return nil, fmt.Errorf("failed to execute %v: %w", checker.Name(), err)
+			return nil, fmt.Errorf("failed to evaluate %v: %w", checker.Name(), err)
 		}
 
 		for _, result := range results {
