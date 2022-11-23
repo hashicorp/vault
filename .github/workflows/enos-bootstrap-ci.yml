@@ -1,16 +1,19 @@
 name: bootstrap-ci-plan
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
-#    pull_request:
     branches:
       - mbaum/qt-318
+      - main
     paths:
       - enos/ci/**
       - .github/workflows/enos-bootstrap-ci.yml
 
 jobs:
-  bootstrap-ci-plan:
+  bootstrap-ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -59,3 +62,11 @@ jobs:
           export TF_VAR_aws_ssh_public_key="ssh-rsa some public key"
           export TF_TOKEN_app_terraform_io="${{ secrets.TF_API_TOKEN }}"
           terraform -chdir=enos/ci/bootstrap plan
+      - name: Apply Terraform
+        if: ${{ github.ref == 'refs/heads/main' }}
+        id: tf_apply
+        run: |
+          export TF_WORKSPACE="${{ steps.prepare_for_terraform.outputs.product_line }}-ci-enos-bootstrap"
+          export TF_VAR_aws_ssh_public_key="ssh-rsa some public key"
+          export TF_TOKEN_app_terraform_io="${{ secrets.TF_API_TOKEN }}"
+          terraform -chdir=enos/ci/bootstrap apply -auto-approve
