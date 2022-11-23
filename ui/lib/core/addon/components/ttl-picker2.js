@@ -22,36 +22,17 @@
  * @param hideToggle=false {Boolean} - set this value if you'd like to hide the toggle and just leverage the input field
  */
 
-import Ember from 'ember';
 import Component from '@glimmer/component';
 import { typeOf } from '@ember/utils';
 import Duration from '@icholy/duration';
-import { restartableTask, timeout } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-
-const secondsMap = {
-  s: 1,
-  m: 60,
-  h: 3600,
-  d: 86400,
-};
-const convertToSeconds = (time, unit) => {
-  return time * secondsMap[unit];
-};
-const convertFromSeconds = (seconds, unit) => {
-  return seconds / secondsMap[unit];
-};
-const goSafeConvertFromSeconds = (seconds, unit) => {
-  // Go only accepts s, m, or h units
-  const u = unit === 'd' ? 'h' : unit;
-  return convertFromSeconds(seconds, u) + u;
-};
-
+import { convertFromSeconds, goSafeConvertFromSeconds, secondsMap } from './ttl-form';
 export default class TtlPicker2Component extends Component {
   @tracked enableTTL = false;
   @tracked time = ''; // if defaultValue is NOT set, then do not display a defaultValue.
   @tracked unit = 's';
+  @tracked recalculateSeconds = false;
 
   get label() {
     return this.args.label || 'Time to live (TTL)';
@@ -77,7 +58,8 @@ export default class TtlPicker2Component extends Component {
       return;
     }
 
-    let time = 30;
+    let seconds = 0;
+    let time = 0;
     let unit = 's';
     let setEnable = this.args.hideToggle || this.args.enableTTL;
     if (!!enable || typeOf(enable) === 'boolean') {
@@ -98,7 +80,7 @@ export default class TtlPicker2Component extends Component {
       time = convertFromSeconds(value, unit);
     } else {
       try {
-        const seconds = Duration.parse(value).seconds();
+        seconds = Duration.parse(value).seconds();
         time = seconds;
         // get largest unit with no remainder
         if (seconds % secondsMap.d === 0) {
@@ -118,31 +100,22 @@ export default class TtlPicker2Component extends Component {
       }
     }
 
-    this.time = time;
-    this.unit = unit;
-    this.enableTTL = setEnable;
-
     if (changeOnInit) {
-      this.handleChange();
+      // Mock what TtlForm would return
+      this.handleChange({
+        seconds,
+        timeString: time + unit,
+        goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
+      });
     }
+    this.enableTTL = setEnable;
   }
 
-  get unitOptions() {
-    return [
-      { label: 'seconds', value: 's' },
-      { label: 'minutes', value: 'm' },
-      { label: 'hours', value: 'h' },
-      { label: 'days', value: 'd' },
-    ];
-  }
-
-  handleChange() {
-    const { time, unit, enableTTL, seconds } = this;
+  @action
+  handleChange(ttlObj) {
     const ttl = {
-      enabled: this.hideToggle || enableTTL,
-      seconds,
-      timeString: time + unit,
-      goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
+      ...ttlObj,
+      enabled: this.hideToggle || this.enableTTL,
     };
     this.args.onChange(ttl);
   }
@@ -151,47 +124,6 @@ export default class TtlPicker2Component extends Component {
     return this.enableTTL || this.hideToggle ? this.helperTextEnabled : this.helperTextDisabled;
   }
 
-  recalculateSeconds = false;
-  keepSecondsRecalculate(newUnit) {
-    const newTime = convertFromSeconds(this.seconds, newUnit);
-    this.time = newTime;
-    this.unit = newUnit;
-  }
-
-  @restartableTask
-  *updateTime(newTime) {
-    this.errorMessage = '';
-    const parsedTime = parseInt(newTime, 10);
-    if (!newTime) {
-      this.errorMessage = 'This field is required';
-      return;
-    } else if (Number.isNaN(parsedTime)) {
-      this.errorMessage = 'Value must be a number';
-      return;
-    }
-    this.time = parsedTime;
-    this.handleChange();
-    if (Ember.testing) {
-      return;
-    }
-    this.recalculateSeconds = true;
-    yield timeout(this.recalculationTimeout);
-    this.recalculateSeconds = false;
-  }
-
-  get seconds() {
-    return convertToSeconds(this.time, this.unit);
-  }
-
-  @action
-  updateUnit(newUnit) {
-    if (this.recalculateSeconds) {
-      this.unit = newUnit;
-    } else {
-      this.keepSecondsRecalculate(newUnit);
-    }
-    this.handleChange();
-  }
   @action
   toggleEnabled() {
     this.enableTTL = !this.enableTTL;

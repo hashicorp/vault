@@ -19,6 +19,7 @@ import { restartableTask, timeout } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import Duration from '@icholy/duration';
+import { guidFor } from '@ember/object/internals';
 
 export const secondsMap = {
   s: 1,
@@ -58,6 +59,7 @@ export default class TtlFormComponent extends Component {
 
   /* Used internally */
   recalculationTimeout = 5000;
+  elementId = 'ttl-' + guidFor(this);
 
   constructor() {
     super(...arguments);

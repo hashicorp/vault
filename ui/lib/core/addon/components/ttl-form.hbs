@@ -1,5 +1,6 @@
 <div class="field is-grouped is-marginless">
   <div class="control is-marginless">
+    <label for="time-{{this.elementId}}" class="sr-only">Number of units</label>
     <Input
       id="time-{{this.elementId}}"
       @value={{this.time}}
@@ -12,7 +13,9 @@
     />
   </div>
   <div class="control">
+    <label for="unit-{{this.elementId}}" class="sr-only">Unit for TTL</label>
     <Select
+      id="unit-{{this.elementId}}"
       data-test-ttl-unit={{this.label}}
       @name="ttl-unit"
       @options={{this.unitOptions}}
