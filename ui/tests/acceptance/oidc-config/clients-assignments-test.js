@@ -135,7 +135,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
     await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
 
     // limit access & create new assignment inline
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     await clickTrigger();
     await fillIn('.ember-power-select-search input', 'assignment-inline');
     await searchSelect.options.objectAt(0).click();
@@ -168,7 +168,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
     // edit back to allow_all
     await click(SELECTORS.clientEditButton);
     assert.dom(SELECTORS.clientSaveButton).hasText('Update', 'form button renders correct text');
-    await click('label[for=allow-all]');
+    await click('[data-test-oidc-radio="allow-all"]');
     await click(SELECTORS.clientSaveButton);
     assert
       .dom('[data-test-value-div="Assignment"]')

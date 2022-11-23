@@ -175,6 +175,9 @@
 .has-background-transparent {
   background: transparent !important;
 }
+.has-background-gray-200 {
+  background-color: $ui-gray-200;
+}
 @each $name, $pair in $colors {
   $color: nth($pair, 1);
   .has-background-#{$name} {
@@ -283,6 +286,12 @@ ul.bullet {
 }
 .has-text-grey-400 {
   color: $ui-gray-400;
+}
+.has-text-red {
+  color: $red;
+}
+.has-text-green {
+  color: $green;
 }
 .has-text-align-center {
   text-align: center;

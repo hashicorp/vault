@@ -6,7 +6,9 @@
   ],
   "dependencies": {
     "ember-cli-htmlbars": "*",
-    "ember-cli-babel": "*"
+    "ember-cli-babel": "*",
+    "ember-concurrency": "*",
+    "@ember/test-waiters": "*"
   },
   "ember-addon": {
     "paths": [

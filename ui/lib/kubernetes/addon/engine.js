@@ -11,7 +11,7 @@ export default class KubernetesEngine extends Engine {
   modulePrefix = modulePrefix;
   Resolver = Resolver;
   dependencies = {
-    services: ['router'],
+    services: ['router', 'store', 'secret-mount-path'],
     externalRoutes: ['secrets'],
   };
 }
