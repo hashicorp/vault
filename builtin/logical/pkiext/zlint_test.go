@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	zRunner         *docker.Runner
+	zRunner        *docker.Runner
 	buildZLintOnce sync.Once
 )
 
