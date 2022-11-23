@@ -33,6 +33,7 @@ export default class KubernetesConfigAdapter extends ApplicationAdapter {
     return this.ajax(url, 'POST', { data }).then(() => data);
   }
   checkConfigVars(backend) {
+    // this endpoint has yet to be created so this url is a mock for now and wired up in the mirage handler
     return this.ajax(`${this.getURL(backend)}/vars`, 'GET');
   }
 }

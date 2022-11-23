@@ -1,6 +1,12 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
+/**
+ * the overview, configure, configuration and roles routes all need to be aware of the config for the engine
+ * if the user has not configured they are prompted to do so in each of the routes
+ * this route can be extended so the check happens in the beforeModel hook since that may change what is returned from the model hook
+ */
+
 export default class KubernetesFetchConfigRoute extends Route {
   @service store;
   @service secretMountPath;
