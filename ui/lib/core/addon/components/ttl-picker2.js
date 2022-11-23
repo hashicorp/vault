@@ -22,17 +22,22 @@
  * @param hideToggle=false {Boolean} - set this value if you'd like to hide the toggle and just leverage the input field
  */
 
+import Ember from 'ember';
+import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { typeOf } from '@ember/utils';
 import Duration from '@icholy/duration';
-import TtlForm from './ttl-form';
 import layout from '../templates/components/ttl-picker2';
+import { task, timeout } from 'ember-concurrency';
 
 const secondsMap = {
   s: 1,
   m: 60,
   h: 3600,
   d: 86400,
+};
+const convertToSeconds = (time, unit) => {
+  return time * secondsMap[unit];
 };
 const convertFromSeconds = (seconds, unit) => {
   return seconds / secondsMap[unit];
@@ -43,7 +48,7 @@ const goSafeConvertFromSeconds = (seconds, unit) => {
   return convertFromSeconds(seconds, u) + u;
 };
 
-export default TtlForm.extend({
+export default Component.extend({
   layout,
   enableTTL: false,
   label: 'Time to live (TTL)',
@@ -150,7 +155,46 @@ export default TtlForm.extend({
   ),
 
   recalculateSeconds: false,
+  keepSecondsRecalculate(newUnit) {
+    const newTime = convertFromSeconds(this.seconds, newUnit);
+    this.setProperties({
+      time: newTime,
+      unit: newUnit,
+    });
+  },
+  updateTime: task(function* (newTime) {
+    this.set('errorMessage', '');
+    const parsedTime = parseInt(newTime, 10);
+    if (!newTime) {
+      this.set('errorMessage', 'This field is required');
+      return;
+    } else if (Number.isNaN(parsedTime)) {
+      this.set('errorMessage', 'Value must be a number');
+      return;
+    }
+    this.set('time', parsedTime);
+    this.handleChange();
+    if (Ember.testing) {
+      return;
+    }
+    this.set('recalculateSeconds', true);
+    yield timeout(this.recalculationTimeout);
+    this.set('recalculateSeconds', false);
+  }).restartable(),
+
+  seconds: computed('time', 'unit', function () {
+    return convertToSeconds(this.time, this.unit);
+  }),
+
   actions: {
+    updateUnit(newUnit) {
+      if (this.recalculateSeconds) {
+        this.set('unit', newUnit);
+      } else {
+        this.keepSecondsRecalculate(newUnit);
+      }
+      this.handleChange();
+    },
     toggleEnabled() {
       this.toggleProperty('enableTTL');
       this.handleChange();
