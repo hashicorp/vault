@@ -636,6 +636,12 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 			needPersist = true
 		}
 
+		// Don't store built-in version in the mount table, to make upgrades smoother.
+		if versions.IsBuiltinVersion(entry.Version) {
+			entry.Version = ""
+			needPersist = true
+		}
+
 		if entry.NamespaceID == "" {
 			entry.NamespaceID = namespace.RootNamespaceID
 			needPersist = true
