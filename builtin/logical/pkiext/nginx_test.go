@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -31,6 +32,7 @@ const (
 	protectedFile   = `dadgarcorp-internal-protected`
 	unprotectedFile = `hello-world`
 	uniqueHostname  = `dadgarcorpvaultpkitestingnginxwgetcurlcontainersexample.com`
+	containerName   = `vault_pki_nginx_integration`
 )
 
 func buildNginxContainer(t *testing.T, chain string, private string) (func(), string, int, string, string, int) {
@@ -85,7 +87,7 @@ server {
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo:     imageName,
 		ImageTag:      imageTag,
-		ContainerName: "vault_pki_nginx_integration",
+		ContainerName: containerName,
 		Ports:         []string{"443/tcp"},
 		LogConsumer: func(s string) {
 			if t.Failed() {
@@ -318,8 +320,16 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	cleanup, host, port, networkName, networkAddr, networkPort := buildNginxContainer(t, fullChain, leafPrivateKey)
 	defer cleanup()
 
+	if host != "127.0.0.1" && host != "::1" && strings.HasPrefix(host, containerName) {
+		t.Logf("Assuming %v:%v is a container name rather than localhost reference.", host, port)
+		host = uniqueHostname
+		port = networkPort
+	}
+
 	localURL := "https://" + host + ":" + strconv.Itoa(port) + "/index.html"
 	containerURL := "https://" + uniqueHostname + ":" + strconv.Itoa(networkPort) + "/index.html"
+
+	t.Logf("Spawned nginx container:\nhost: %v\nport: %v\nnetworkName: %v\nnetworkAddr: %v\nnetworkPort: %v\nlocalURL: %v\ncontainerURL: %v\n", host, port, networkName, networkAddr, networkPort, localURL, containerURL)
 
 	// Ensure we can connect with Go.
 	pool := x509.NewCertPool()
@@ -327,7 +337,25 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	tlsConfig := &tls.Config{
 		RootCAs: pool,
 	}
-	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+	transport := &http.Transport{
+		TLSClientConfig: tlsConfig,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			if addr == host+":"+strconv.Itoa(port) {
+				// If we can't resolve our hostname, try
+				// accessing it via the docker protocol
+				// instead of via the returned service
+				// address.
+				if _, err := net.LookupHost(host); err != nil && strings.Contains(err.Error(), "no such host") {
+					addr = networkAddr + ":" + strconv.Itoa(networkPort)
+				}
+			}
+			return dialer.DialContext(ctx, network, addr)
+		},
+	}
 	client := &http.Client{Transport: transport}
 	clientResp, err := client.Get(localURL)
 	if err != nil {
