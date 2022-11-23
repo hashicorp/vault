@@ -42,9 +42,21 @@ import { dasherize } from 'vault/helpers/dasherize';
  */
 
 export default class FormFieldComponent extends Component {
+  emptyData = '{\n}';
+  shouldHideLabel = [
+    'boolean',
+    'file',
+    'json',
+    'kv',
+    'mountAccessor',
+    'optionalText',
+    'regex',
+    'searchSelect',
+    'stringArray',
+    'ttl',
+  ];
   @tracked showInput = false;
   @tracked file = { value: '' }; // used by the pgp-file component when an attr is editType of 'file'
-  emptyData = '{\n}';
 
   constructor() {
     super(...arguments);
@@ -52,6 +64,15 @@ export default class FormFieldComponent extends Component {
     const valuePath = attr.options?.fieldValue || attr.name;
     const modelValue = model[valuePath];
     this.showInput = !!modelValue;
+  }
+
+  get hideLabel() {
+    const { type, options } = this.args.attr;
+    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
+      return true;
+    }
+    // falsey values render a <FormFieldLabel>
+    return this.shouldHideLabel.includes(options?.editType);
   }
 
   get disabled() {

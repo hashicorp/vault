@@ -454,6 +454,13 @@ on revocation entries. This helps increase the performance of CRL building
 and OCSP responses.`,
 	}
 
+	fields["tidy_expired_issuers"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to automatically remove expired issuers
+past the issuer_safety_buffer. No keys will be removed as part of this
+operation.`,
+	}
+
 	fields["safety_buffer"] = &framework.FieldSchema{
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of extra time that must have passed
@@ -461,6 +468,15 @@ beyond certificate expiration before it is removed
 from the backend storage and/or revocation list.
 Defaults to 72 hours.`,
 		Default: int(defaultTidyConfig.SafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
+	fields["issuer_safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of extra time that must have passed
+beyond issuer's expiration before it is removed
+from the backend storage.
+Defaults to 8760 hours (1 year).`,
+		Default: int(defaultTidyConfig.IssuerSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
 	fields["pause_duration"] = &framework.FieldSchema{

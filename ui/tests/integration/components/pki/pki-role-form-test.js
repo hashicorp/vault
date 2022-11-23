@@ -1,19 +1,19 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, fillIn, find } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki-engine';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-module('Integration | Component | pki/role-form', function (hooks) {
+module('Integration | Component | pki-role-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
   setupEngine(hooks, 'pki'); // https://github.com/ember-engines/ember-engines/pull/653
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/pki-role-engine');
+    this.model = this.store.createRecord('pki/role');
     this.model.backend = 'pki';
   });
 
@@ -46,7 +46,7 @@ module('Integration | Component | pki/role-form', function (hooks) {
 
   test('it should save a new pki role with various options selected', async function (assert) {
     // Key usage, Key params and Not valid after options are tested in their respective component tests
-    assert.expect(9);
+    assert.expect(10);
     this.server.post(`/${this.model.backend}/roles/test-role`, (schema, req) => {
       assert.ok(true, 'Request made to save role');
       const request = JSON.parse(req.requestBody);
@@ -101,6 +101,14 @@ module('Integration | Component | pki/role-form', function (hooks) {
     await fillIn(
       '[data-test-input="allowedSerialNumbers"] [data-test-string-list-input="0"]',
       'some-serial-number'
+    );
+    await click(SELECTORS.keyUsage);
+    // check is flexbox by checking the height of the box
+    const groupBoxHeight = find('[data-test-toggle-div="Key usage"]').clientHeight;
+    assert.strictEqual(
+      groupBoxHeight,
+      518,
+      'renders the correct height of the box element if the component is rending as a flexbox'
     );
     await click(SELECTORS.roleCreateButton);
   });

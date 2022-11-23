@@ -8,12 +8,12 @@ export default class PkiKeysIndexRoute extends Route {
 
   beforeModel() {
     // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/pki-key-engine', 'pki');
+    return this.pathHelp.getNewModel('pki/key', 'pki');
   }
 
   model() {
     return this.store
-      .query('pki/pki-key-engine', { backend: this.secretMountPath.currentPath })
+      .query('pki/key', { backend: this.secretMountPath.currentPath })
       .then((keyModel) => {
         return { keyModel, parentModel: this.modelFor('keys') };
       })

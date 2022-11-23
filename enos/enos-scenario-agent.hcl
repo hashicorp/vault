@@ -36,6 +36,7 @@ scenario "agent" {
       arm64 = "t4g.small"
     }
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
+    vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
   }
 
   step "get_local_metadata" {
@@ -80,7 +81,7 @@ scenario "agent" {
     module = module.create_vpc
 
     variables {
-      ami_architectures  = [matrix.arch]
+      ami_architectures  = distinct([matrix.arch, "amd64"])
       availability_zones = step.find_azs.availability_zones
       common_tags        = local.tags
     }
@@ -91,7 +92,7 @@ scenario "agent" {
     module    = module.read_license
 
     variables {
-      file_name = abspath(joinpath(path.root, "./support/vault.hclic"))
+      file_name = local.vault_license_path
     }
   }
 
@@ -104,7 +105,7 @@ scenario "agent" {
     }
 
     variables {
-      ami_id        = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      ami_id        = step.create_vpc.ami_ids["ubuntu"]["amd64"]
       common_tags   = local.tags
       instance_type = var.backend_instance_type
       kms_key_arn   = step.create_vpc.kms_key_arn

@@ -177,6 +177,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// OCSP APIs
 			buildPathOcspGet(&b),
 			buildPathOcspPost(&b),
+
+			// CRL Signing
+			pathResignCrls(&b),
+			pathSignRevocationList(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -259,11 +263,13 @@ const (
 
 type tidyStatus struct {
 	// Parameters used to initiate the operation
-	safetyBuffer      int
-	tidyCertStore     bool
-	tidyRevokedCerts  bool
-	tidyRevokedAssocs bool
-	pauseDuration     string
+	safetyBuffer       int
+	issuerSafetyBuffer int
+	tidyCertStore      bool
+	tidyRevokedCerts   bool
+	tidyRevokedAssocs  bool
+	tidyExpiredIssuers bool
+	pauseDuration      string
 
 	// Status
 	state                   tidyStatusState

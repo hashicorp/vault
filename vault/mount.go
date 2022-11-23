@@ -394,6 +394,16 @@ type APIMountConfig struct {
 	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
+type FailedLoginUser struct {
+	aliasName     string
+	mountAccessor string
+}
+
+type FailedLoginInfo struct {
+	count               uint
+	lastFailedLoginTime int
+}
+
 // Clone returns a deep copy of the mount entry
 func (e *MountEntry) Clone() (*MountEntry, error) {
 	cp, err := copystructure.Copy(e)
@@ -717,8 +727,12 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 		return consts.PluginTypeUnknown
 	}
 
+	if !versions.IsBuiltinVersion(entry.RunningVersion) {
+		return consts.PluginTypeUnknown
+	}
+
 	builtinPluginType := func(name string, pluginType consts.PluginType) (consts.PluginType, bool) {
-		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, "")
+		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, entry.RunningVersion)
 		if err == nil && plugin != nil && plugin.Builtin {
 			return plugin.Type, true
 		}
@@ -1302,6 +1316,11 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 			needPersist = true
 		}
 
+		// Don't store built-in version in the mount table, to make upgrades smoother.
+		if versions.IsBuiltinVersion(entry.Version) {
+			entry.Version = ""
+			needPersist = true
+		}
 	}
 	// Done if we have restored the mount table and we don't need
 	// to persist

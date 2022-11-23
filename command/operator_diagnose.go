@@ -38,8 +38,6 @@ import (
 	"github.com/posener/complete"
 )
 
-const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
-
 const CoreConfigUninitializedErr = "Diagnose cannot attempt this step because core config could not be set."
 
 var (
