@@ -1,8 +1,3 @@
-import Controller from '@ember/controller';
-import { getOwner } from '@ember/application';
+import PkiController from '../pki';
 
-export default class PkiKeysIndexController extends Controller {
-  get mountPoint() {
-    return getOwner(this).mountPoint;
-  }
-}
+export default class PkiKeysIndexController extends PkiController {}

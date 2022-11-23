@@ -1,11 +1,7 @@
-import Controller from '@ember/controller';
-import { getOwner } from '@ember/application';
+import PkiController from '../pki';
 import { action } from '@ember/object';
 
-export default class PkiCertificatesIndexController extends Controller {
-  get mountPoint() {
-    return getOwner(this).mountPoint;
-  }
+export default class PkiCertificatesIndexController extends PkiController {
   @action setFilter(val) {
     this.filter = val;
   }
