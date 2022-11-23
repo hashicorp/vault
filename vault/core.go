@@ -2788,7 +2788,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 
 		err := seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(combinedKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to setup unseal key: %w", err)
+			return nil, &ErrInvalidKey{fmt.Sprintf("failed to setup unseal key: %v", err)}
 		}
 		storedKeys, err := seal.GetStoredKeys(ctx)
 		if storedKeys == nil && err == nil && allowMissing {

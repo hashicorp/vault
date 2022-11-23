@@ -1,11 +1,14 @@
 package http
 
 import (
+	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -13,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 func TestSysSealStatus(t *testing.T) {
@@ -156,15 +160,93 @@ func TestSysUnseal(t *testing.T) {
 }
 
 func TestSysUnseal_badKey(t *testing.T) {
-	core := vault.TestCore(t)
-	vault.TestCoreInit(t, core)
+	seal := vault.NewTestSeal(t,
+		&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedShamirRoot})
+	core := vault.TestCoreWithSeal(t, seal, false)
+	_, err := core.Initialize(context.Background(), &vault.InitParams{
+		BarrierConfig: &vault.SealConfig{
+			SecretShares:    1,
+			SecretThreshold: 1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
-		"key": "0123",
-	})
-	testResponseStatus(t, resp, 400)
+	testCases := []struct {
+		description string
+		key         string
+		expected    http.Response
+	}{
+		// hex key tests
+		// hexadecimal strings have 2 symbols per byte; size(0xAA) == 1 byte
+		{
+			"short hex key",
+			strings.Repeat("AA", 8),
+			http.Response{StatusCode: 400},
+		},
+		{
+			"long hex key",
+			strings.Repeat("AA", 34),
+			http.Response{StatusCode: 400},
+		},
+		{
+			"uneven hex key byte length",
+			strings.Repeat("AA", 33),
+			http.Response{StatusCode: 400},
+		},
+		{
+			"valid hex key but wrong cluster",
+			"4482691dd3a710723c4f77c4920ee21b96c226bf4829fa6eb8e8262c180ae933",
+			http.Response{StatusCode: 400},
+		},
+
+		// base64 key tests
+		// base64 strings have min. 1 character per byte; size("m") == 1 byte
+		{
+			"short b64 key",
+			base64.StdEncoding.EncodeToString([]byte(strings.Repeat("m", 8))),
+			http.Response{StatusCode: 400},
+		},
+		{
+			"long b64 key",
+			base64.StdEncoding.EncodeToString([]byte(strings.Repeat("m", 34))),
+			http.Response{StatusCode: 400},
+		},
+		{
+			"uneven b64 key byte length",
+			base64.StdEncoding.EncodeToString([]byte(strings.Repeat("m", 33))),
+			http.Response{StatusCode: 400},
+		},
+		{
+			"valid b64 key but wrong cluster",
+			"RIJpHdOnEHI8T3fEkg7iG5bCJr9IKfpuuOgmLBgK6TM=",
+			http.Response{StatusCode: 400},
+		},
+
+		// other key tests
+		{
+			"empty key",
+			"",
+			http.Response{StatusCode: 400},
+		},
+		{
+			"key with bad format",
+			"ThisKeyIsNeitherB64NorHex",
+			http.Response{StatusCode: 400},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
+				"key": tc.key,
+			})
+			testResponseStatus(t, resp, tc.expected.StatusCode)
+		})
+	}
 }
 
 func TestSysUnseal_Reset(t *testing.T) {
