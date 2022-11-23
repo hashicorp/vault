@@ -5187,3 +5187,96 @@ func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
 		t.Errorf("expected logical error to contain overridden message, but got: %s", resp.Error())
 	}
 }
+
+func TestCanUnseal_WithNonExistentBuiltinPluginVersion_InMountStorage(t *testing.T) {
+	core, keys, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	testCases := []struct {
+		pluginName string
+		pluginType consts.PluginType
+		mountTable string
+	}{
+		{"consul", consts.PluginTypeSecrets, "mounts"},
+		{"approle", consts.PluginTypeCredential, "auth"},
+	}
+	readMountConfig := func(pluginName, mountTable string) map[string]interface{} {
+		req := logical.TestRequest(t, logical.ReadOperation, mountTable+"/"+pluginName)
+		resp, err := core.systemBackend.HandleRequest(ctx, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		return resp.Data
+	}
+
+	for _, tc := range testCases {
+		req := logical.TestRequest(t, logical.UpdateOperation, tc.mountTable+"/"+tc.pluginName)
+		req.Data["type"] = tc.pluginName
+		req.Data["config"] = map[string]interface{}{
+			"default_lease_ttl": "35m",
+			"max_lease_ttl":     "45m",
+			"plugin_version":    versions.GetBuiltinVersion(tc.pluginType, tc.pluginName),
+		}
+
+		resp, err := core.systemBackend.HandleRequest(ctx, req)
+		if err != nil {
+			t.Fatalf("err: %v, resp: %#v", err, resp)
+		}
+		if resp != nil {
+			t.Fatalf("bad: %v", resp)
+		}
+
+		config := readMountConfig(tc.pluginName, tc.mountTable)
+		pluginVersion, ok := config["plugin_version"]
+		if !ok || pluginVersion != "" {
+			t.Fatalf("expected empty plugin version in config: %#v", config)
+		}
+
+		// Directly store plugin version in mount entry, so we can then simulate
+		// an upgrade from 1.12.1 to 1.12.2 by sealing and unsealing.
+		const nonExistentBuiltinVersion = "v1.0.0+builtin"
+		var mountEntry *MountEntry
+		if tc.mountTable == "mounts" {
+			mountEntry, err = core.mounts.find(ctx, tc.pluginName+"/")
+		} else {
+			mountEntry, err = core.auth.find(ctx, tc.pluginName+"/")
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mountEntry == nil {
+			t.Fatal()
+		}
+		mountEntry.Version = nonExistentBuiltinVersion
+		err = core.persistMounts(ctx, core.mounts, &mountEntry.Local)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		config = readMountConfig(tc.pluginName, tc.mountTable)
+		pluginVersion, ok = config["plugin_version"]
+		if !ok || pluginVersion != nonExistentBuiltinVersion {
+			t.Fatalf("expected plugin version %s but was %s, config: %#v", nonExistentBuiltinVersion, pluginVersion, config)
+		}
+	}
+
+	err := TestCoreSeal(core)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+	}
+
+	for _, tc := range testCases {
+		// Storage should have been upgraded during the unseal, so plugin version
+		//should be empty again.
+		config := readMountConfig(tc.pluginName, tc.mountTable)
+		pluginVersion, ok := config["plugin_version"]
+		if !ok || pluginVersion != "" {
+			t.Fatalf("expected empty plugin version in config: %#v", config)
+		}
+	}
+}
