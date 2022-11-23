@@ -221,7 +221,6 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 	// Shim logical.SystemView
 	sysViewImpl := config.System
 	if b.metadataMode {
-		// TODO PluginEnvironment?
 		sysViewImpl = &logical.StaticSystemView{}
 	}
 	sysView := &gRPCSystemViewServer{

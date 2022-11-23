@@ -324,7 +324,9 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			if err != nil {
 				return nil, err
 			}
-			vaultVersion = env.VaultVersion
+			if env != nil {
+				vaultVersion = env.VaultVersion
+			}
 		}
 		doc := NewOASDocument(vaultVersion)
 		if err := documentPath(p, b.SpecialPaths(), requestResponsePrefix, false, b.BackendType, doc); err != nil {
