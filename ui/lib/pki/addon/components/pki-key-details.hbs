@@ -48,12 +48,9 @@
 
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#each @key.formFields as |attr|}}
-    {{#let (get @key attr.name) as |value|}}
-      <InfoTableRow
-        @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
-        @value={{value}}
-        @alwaysRender={{true}}
-      />
-    {{/let}}
+    <InfoTableRow
+      @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+      @value={{get @key attr.name}}
+    />
   {{/each}}
 </div>
