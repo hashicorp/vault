@@ -3,7 +3,7 @@
 'use strict';
 
 module.exports = {
-  parser: '@typescript-eslint/parser',
+  parser: 'babel-eslint',
   root: true,
   parserOptions: {
     ecmaVersion: 2018,
@@ -17,6 +17,7 @@ module.exports = {
     'eslint:recommended',
     'plugin:ember/recommended',
     'plugin:prettier/recommended',
+    'plugin:compat/recommended',
     'plugin:@typescript-eslint/recommended',
   ],
   env: {
