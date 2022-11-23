@@ -2,102 +2,152 @@
  * @module TtlForm
  * TtlForm components are used to enter a Time To Live (TTL) input.
  * This component does not include a label and is designed to take
- * a time and unit, and pass an object including seconds and
- * timestring when those two values are changed.
+ * a time and unit, and pass an object including seconds,
+ * timestring, and go-safe timestring when either values are changed.
  *
  * @example
  * ```js
- * <TtlForm @onChange={{action handleChange}} @unit="m"/>
+ * <TtlForm @onChange={{this.handleChange}} @initialValue="30m"/>
  * ```
  * @param {function} onChange - This function will be called when the user changes the value. An object will be passed in as a parameter with values seconds{number}, timeString{string}
- * @param {number} [time] - Time is the value that will be passed into the value input. Can be null/undefined to start if input is required.
- * @param {unit} [unit="s"] - This is the unit key which will show by default on the form. Can be one of `s` (seconds), `m` (minutes), `h` (hours), `d` (days)
- * @param {number} [recalculationTimeout=5000] - This is the time, in milliseconds, that `recalculateSeconds` will be be true after time is updated
+ * @param {string} [initialValue] - InitialValue is the duration value which will be shown when the component is loaded. If it can't be parsed, will default to 0.
  */
 
 import Ember from 'ember';
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import { task, timeout } from 'ember-concurrency';
-import layout from '../templates/components/ttl-form';
+import Component from '@glimmer/component';
+import { restartableTask, timeout } from 'ember-concurrency';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+import Duration from '@icholy/duration';
 
-const secondsMap = {
+export const secondsMap = {
   s: 1,
   m: 60,
   h: 3600,
   d: 86400,
 };
-const convertToSeconds = (time, unit) => {
+export const convertToSeconds = (time, unit) => {
   return time * secondsMap[unit];
 };
-const convertFromSeconds = (seconds, unit) => {
+export const convertFromSeconds = (seconds, unit) => {
   return seconds / secondsMap[unit];
 };
+export const goSafeConvertFromSeconds = (seconds, unit) => {
+  // Go only accepts s, m, or h units
+  const u = unit === 'd' ? 'h' : unit;
+  return convertFromSeconds(seconds, u) + u;
+};
+const largestUnitFromSeconds = (seconds) => {
+  let unit = 's';
+  // get largest unit with no remainder
+  if (seconds % secondsMap.d === 0) {
+    unit = 'd';
+  } else if (seconds % secondsMap.h === 0) {
+    unit = 'h';
+  } else if (seconds % secondsMap.m === 0) {
+    unit = 'm';
+  }
+  return unit;
+};
 
-export default Component.extend({
-  layout,
-  time: '',
-  unit: 's',
+export default class TtlFormComponent extends Component {
+  @tracked time = ''; // if defaultValue is NOT set, then do not display a defaultValue.
+  @tracked unit = 's';
+  @tracked recalculateSeconds = false;
+  @tracked errorMessage = '';
 
   /* Used internally */
-  recalculationTimeout: 5000,
-  recalculateSeconds: false,
-  errorMessage: null,
-  unitOptions: computed(function () {
+  recalculationTimeout = 5000;
+
+  constructor() {
+    super(...arguments);
+    const value = this.args.initialValue;
+    const changeOnInit = this.args.changeOnInit;
+    // if initial value is unset use params passed in as defaults
+    // and if no defaultValue is passed in display no time
+    if (!value && value !== 0) {
+      return;
+    }
+
+    // let unit = 's';
+    let seconds = 0;
+    if (typeof value === 'number') {
+      // if the passed value is a number, assume unit is seconds
+      seconds = value;
+    } else {
+      try {
+        seconds = Duration.parse(value).seconds();
+      } catch (e) {
+        // if parsing fails leave it empty
+        return;
+      }
+    }
+    const unit = largestUnitFromSeconds(seconds);
+    const time = convertFromSeconds(seconds, unit);
+    this.time = time;
+    this.unit = unit;
+
+    if (changeOnInit) {
+      this.handleChange();
+    }
+  }
+
+  get seconds() {
+    return convertToSeconds(this.time, this.unit);
+  }
+  get unitOptions() {
     return [
       { label: 'seconds', value: 's' },
       { label: 'minutes', value: 'm' },
       { label: 'hours', value: 'h' },
       { label: 'days', value: 'd' },
     ];
-  }),
+  }
+
   handleChange() {
     const { time, unit, seconds } = this;
     const ttl = {
       seconds,
       timeString: time + unit,
+      goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
     };
-    this.onChange(ttl);
-  },
+    this.args.onChange(ttl);
+  }
+
   keepSecondsRecalculate(newUnit) {
     const newTime = convertFromSeconds(this.seconds, newUnit);
-    this.setProperties({
-      time: newTime,
-      unit: newUnit,
-    });
-  },
-  updateTime: task(function* (newTime) {
-    this.set('errorMessage', '');
+    this.time = newTime;
+    this.unit = newUnit;
+  }
+
+  @restartableTask
+  *updateTime(newTime) {
+    this.errorMessage = '';
     const parsedTime = parseInt(newTime, 10);
     if (!newTime) {
-      this.set('errorMessage', 'This field is required');
+      this.errorMessage = 'This field is required';
       return;
     } else if (Number.isNaN(parsedTime)) {
-      this.set('errorMessage', 'Value must be a number');
+      this.errorMessage = 'Value must be a number';
       return;
     }
-    this.set('time', parsedTime);
+    this.time = parsedTime;
     this.handleChange();
     if (Ember.testing) {
       return;
     }
-    this.set('recalculateSeconds', true);
+    this.recalculateSeconds = true;
     yield timeout(this.recalculationTimeout);
-    this.set('recalculateSeconds', false);
-  }).restartable(),
+    this.recalculateSeconds = false;
+  }
 
-  seconds: computed('time', 'unit', function () {
-    return convertToSeconds(this.time, this.unit);
-  }),
-
-  actions: {
-    updateUnit(newUnit) {
-      if (this.recalculateSeconds) {
-        this.set('unit', newUnit);
-      } else {
-        this.keepSecondsRecalculate(newUnit);
-      }
-      this.handleChange();
-    },
-  },
-});
+  @action
+  updateUnit(newUnit) {
+    if (this.recalculateSeconds) {
+      this.unit = newUnit;
+    } else {
+      this.keepSecondsRecalculate(newUnit);
+    }
+    this.handleChange();
+  }
+}
