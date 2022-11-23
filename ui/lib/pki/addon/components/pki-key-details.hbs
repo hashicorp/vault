@@ -7,7 +7,7 @@
           <span class="sep">/</span>
           <LinkToExternal @route="secrets">secrets</LinkToExternal>
         </li>
-        {{#each this.breadcrumbs as |breadcrumb|}}
+        {{#each @breadcrumbs as |breadcrumb|}}
           <li>
             <span class="sep">/</span>
             {{#if breadcrumb.path}}
