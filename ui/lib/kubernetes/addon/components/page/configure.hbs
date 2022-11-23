@@ -91,3 +91,28 @@
     Back
   </button>
 </div>
+
+{{#if this.showConfirm}}
+  <Modal
+    @title="Edit configuration"
+    @type="warning"
+    @isActive={{this.showConfirm}}
+    @showCloseButton={{true}}
+    @onClose={{fn (mut this.showConfirm) false}}
+  >
+    <section class="modal-card-body">
+      <p>
+        Making changes to your configuration may affect how Vault will reach the Kubernetes API and authenticate with it. Are
+        you sure?
+      </p>
+    </section>
+    <footer class="modal-card-foot modal-card-foot-outlined">
+      <button data-test-config-confirm type="button" class="button is-primary" {{on "click" (perform this.save)}}>
+        Confirm
+      </button>
+      <button type="button" class="button" onclick={{fn (mut this.showConfirm) false}}>
+        Cancel
+      </button>
+    </footer>
+  </Modal>
+{{/if}}

@@ -13,6 +13,7 @@ export default class ConfigurePageComponent extends Component {
   @tracked inferredState;
   @tracked modelValidations;
   @tracked error;
+  @tracked showConfirm;
 
   constructor() {
     super(...arguments);
@@ -52,6 +53,11 @@ export default class ConfigurePageComponent extends Component {
   @task
   @waitFor
   *save() {
+    if (!this.args.model.isNew && !this.showConfirm) {
+      this.showConfirm = true;
+      return;
+    }
+    this.showConfirm = false;
     try {
       yield this.args.model.save();
       this.leave('configuration');

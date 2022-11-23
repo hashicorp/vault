@@ -164,4 +164,29 @@ module('Integration | Component | kubernetes | Page:Configure', function (hooks)
       .dom('[data-test-config] span')
       .hasText('Configuration values were inferred successfully.', 'Success text is displayed');
   });
+
+  test('it should show confirmation modal when saving edits', async function (assert) {
+    assert.expect(2);
+
+    this.server.post('/:path/config', () => {
+      assert.ok(true, 'Save request made after confirmation');
+      return new Response(204, {});
+    });
+
+    await render(
+      hbs`
+      <div id="modal-wormhole"></div>
+      <Page::Configure @model={{this.editModel}} />
+    `,
+      { owner: this.engine }
+    );
+    await click('[data-test-config-save]');
+    assert
+      .dom('.modal-card-body')
+      .hasText(
+        'Making changes to your configuration may affect how Vault will reach the Kubernetes API and authenticate with it. Are you sure?',
+        'Confirm modal renders'
+      );
+    await click('[data-test-config-confirm]');
+  });
 });
