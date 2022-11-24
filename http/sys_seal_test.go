@@ -178,29 +178,24 @@ func TestSysUnseal_badKey(t *testing.T) {
 	testCases := []struct {
 		description string
 		key         string
-		expected    http.Response
 	}{
 		// hex key tests
 		// hexadecimal strings have 2 symbols per byte; size(0xAA) == 1 byte
 		{
 			"short hex key",
 			strings.Repeat("AA", 8),
-			http.Response{StatusCode: 400},
 		},
 		{
 			"long hex key",
 			strings.Repeat("AA", 34),
-			http.Response{StatusCode: 400},
 		},
 		{
 			"uneven hex key byte length",
 			strings.Repeat("AA", 33),
-			http.Response{StatusCode: 400},
 		},
 		{
 			"valid hex key but wrong cluster",
 			"4482691dd3a710723c4f77c4920ee21b96c226bf4829fa6eb8e8262c180ae933",
-			http.Response{StatusCode: 400},
 		},
 
 		// base64 key tests
@@ -208,34 +203,28 @@ func TestSysUnseal_badKey(t *testing.T) {
 		{
 			"short b64 key",
 			base64.StdEncoding.EncodeToString([]byte(strings.Repeat("m", 8))),
-			http.Response{StatusCode: 400},
 		},
 		{
 			"long b64 key",
 			base64.StdEncoding.EncodeToString([]byte(strings.Repeat("m", 34))),
-			http.Response{StatusCode: 400},
 		},
 		{
 			"uneven b64 key byte length",
 			base64.StdEncoding.EncodeToString([]byte(strings.Repeat("m", 33))),
-			http.Response{StatusCode: 400},
 		},
 		{
 			"valid b64 key but wrong cluster",
 			"RIJpHdOnEHI8T3fEkg7iG5bCJr9IKfpuuOgmLBgK6TM=",
-			http.Response{StatusCode: 400},
 		},
 
 		// other key tests
 		{
 			"empty key",
 			"",
-			http.Response{StatusCode: 400},
 		},
 		{
 			"key with bad format",
 			"ThisKeyIsNeitherB64NorHex",
-			http.Response{StatusCode: 400},
 		},
 	}
 
@@ -244,7 +233,7 @@ func TestSysUnseal_badKey(t *testing.T) {
 			resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
 				"key": tc.key,
 			})
-			testResponseStatus(t, resp, tc.expected.StatusCode)
+			testResponseStatus(t, resp, 400)
 		})
 	}
 }
