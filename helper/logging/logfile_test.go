@@ -73,11 +73,11 @@ func TestLogFile_Rotation_MaxBytes(t *testing.T) {
 func TestLogFile_PruneFiles(t *testing.T) {
 	tempDir := t.TempDir()
 	logFile := LogFile{
-		fileName: "vault.log",
-		logPath:  tempDir,
-		maxBytes: 10,
-		duration: defaultRotateDuration,
-		maxFiles: 1,
+		fileName:         "vault.log",
+		logPath:          tempDir,
+		maxBytes:         10,
+		duration:         defaultRotateDuration,
+		maxArchivedFiles: 1,
 	}
 	_, err := logFile.Write([]byte("[INFO] Hello World"))
 	assert.NoError(t, err, "error writing during prune files test part 1")
@@ -104,11 +104,11 @@ func TestLogFile_PruneFiles(t *testing.T) {
 func TestLogFile_PruneFiles_Disabled(t *testing.T) {
 	tempDir := t.TempDir()
 	logFile := LogFile{
-		fileName: "somename.log",
-		logPath:  tempDir,
-		maxBytes: 10,
-		duration: defaultRotateDuration,
-		maxFiles: 0,
+		fileName:         "somename.log",
+		logPath:          tempDir,
+		maxBytes:         10,
+		duration:         defaultRotateDuration,
+		maxArchivedFiles: 0,
 	}
 
 	_, err := logFile.Write([]byte("[INFO] Hello World"))
@@ -126,10 +126,10 @@ func TestLogFile_PruneFiles_Disabled(t *testing.T) {
 func TestLogFile_FileRotation_Disabled(t *testing.T) {
 	tempDir := t.TempDir()
 	logFile := LogFile{
-		fileName: "vault.log",
-		logPath:  tempDir,
-		maxBytes: 10,
-		maxFiles: -1,
+		fileName:         "vault.log",
+		logPath:          tempDir,
+		maxBytes:         10,
+		maxArchivedFiles: -1,
 	}
 
 	_, err := logFile.Write([]byte("[INFO] Hello World"))

@@ -123,11 +123,11 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 			config.LogRotateDuration = defaultRotateDuration
 		}
 		logFile := &LogFile{
-			fileName: fileName,
-			logPath:  dir,
-			duration: config.LogRotateDuration,
-			maxBytes: config.LogRotateBytes,
-			maxFiles: config.LogRotateMaxFiles,
+			fileName:         fileName,
+			logPath:          dir,
+			duration:         config.LogRotateDuration,
+			maxBytes:         config.LogRotateBytes,
+			maxArchivedFiles: config.LogRotateMaxFiles,
 		}
 		if err := logFile.pruneFiles(); err != nil {
 			return nil, fmt.Errorf("failed to prune log files: %w", err)

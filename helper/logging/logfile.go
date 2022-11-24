@@ -38,7 +38,7 @@ type LogFile struct {
 	bytesWritten int64
 
 	// Max rotated files to keep before removing them.
-	maxFiles int
+	maxArchivedFiles int
 
 	// acquire is the mutex utilized to ensure we have no concurrency issues
 	acquire sync.Mutex
@@ -116,7 +116,7 @@ func (l *LogFile) rotate() error {
 }
 
 func (l *LogFile) pruneFiles() error {
-	if l.maxFiles == 0 {
+	if l.maxArchivedFiles == 0 {
 		return nil
 	}
 
@@ -127,14 +127,14 @@ func (l *LogFile) pruneFiles() error {
 	}
 
 	switch {
-	case l.maxFiles < 0:
+	case l.maxArchivedFiles < 0:
 		return removeFiles(matches)
-	case len(matches) < l.maxFiles:
+	case len(matches) < l.maxArchivedFiles:
 		return nil
 	}
 
 	sort.Strings(matches)
-	last := len(matches) - l.maxFiles
+	last := len(matches) - l.maxArchivedFiles
 	return removeFiles(matches[:last])
 }
 
