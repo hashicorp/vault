@@ -11,11 +11,15 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.12.x compared to 1.11. Please read it carefully.
 
-## Supported Storage Backends 
+## Changes
+
+### Supported Storage Backends
 
 Vault Enterprise will now perform a supported storage check at startup. There is no impact on open-source Vault users.
 
 @include 'ent-supported-storage.mdx'
+
+@include 'consul-dataplane-upgrade-note.mdx'
 
 ## Known Issues
 
@@ -30,10 +34,13 @@ longer being available.
 
 To check whether a mount path is affected, read the tune information, or the
 database config. The affected plugins are `snowflake-database-plugin@v0.6.0+builtin`
-and any plugins with `+builtin.vault` metadata in their version. In this example,
-both mounts are affected because `plugin_version` is explicitly set and is one of
-the affected versions. All mounts where the version was omitted, or the plugin is
-external (regardless of whether the version was specified) are unaffected.
+and any plugins with `+builtin.vault` metadata in their version.
+
+In this example, the first two mounts are affected because `plugin_version` is
+explicitly set and is one of the affected versions. The third mount is not
+affected because it only has `+builtin` metadata, and is not the Snowflake
+database plugin. All mounts where the version is omitted, or the plugin is
+external (regardless of whether the version is specified) are unaffected.
 
 -> **NOTE:** Make sure you use Vault CLI 1.12.0 or later to check mounts.
 
@@ -50,6 +57,12 @@ Key                                   Value
 ...
 plugin_name                           snowflake-database-plugin
 plugin_version                        v0.6.0+builtin
+
+$ vault read sys/auth/kubernetes/tune
+Key                  Value
+---                  -----
+...
+plugin_version       v0.14.0+builtin
 ```
 
 As it is not currently possible to unset the plugin version, there are 3 possible
