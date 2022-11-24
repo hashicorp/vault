@@ -15,6 +15,8 @@ key-value store. In addition to providing durable storage, inclusion of this
 backend will also register Vault as a service in Consul with a default health
 check.
 
+@include 'consul-dataplane-compat.mdx'
+
 - **High Availability** – the Consul storage backend supports high availability.
 
 - **HashiCorp Supported** – the Consul storage backend is officially supported
@@ -74,7 +76,7 @@ and [`cluster_addr`][cluster-addr] ([example][listener-example]).
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to Consul. Make sure that your Consul agents are configured to
   support this level of parallelism, see
-  [http_max_conns_per_client](https://www.consul.io/docs/agent/options.html#http_max_conns_per_client).
+  [http_max_conns_per_client](https://developer.hashicorp.com/consul/docs/agent/config/config-files#http_max_conns_per_client).
 
 - `path` `(string: "vault/")` – Specifies the path in Consul's key-value store
   where Vault data will be stored.
@@ -120,17 +122,17 @@ connection. You can read more about encrypting Consul connections on the
 - `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate used
   for Consul communication. This defaults to system bundle if not specified.
   This should be set according to the
-  [`ca_file`](https://www.consul.io/docs/agent/options.html#ca_file) setting in
+  [`ca_file`](https://developer.hashicorp.com/consul/docs/agent/config/config-files#ca_file) setting in
   Consul.
 
 - `tls_cert_file` `(string: "")` (optional) – Specifies the path to the
   certificate for Consul communication. This should be set according to the
-  [`cert_file`](https://www.consul.io/docs/agent/options.html#cert_file) setting
+  [`cert_file`](https://developer.hashicorp.com/consul/docs/agent/config/config-files#cert_file) setting
   in Consul.
 
 - `tls_key_file` `(string: "")` – Specifies the path to the private key for
   Consul communication. This should be set according to the
-  [`key_file`](https://www.consul.io/docs/agent/options.html#key_file) setting
+  [`key_file`](https://developer.hashicorp.com/consul/docs/agent/config/config-files#key_file) setting
   in Consul.
 
 - `tls_min_version` `(string: "tls12")` – Specifies the minimum TLS version to

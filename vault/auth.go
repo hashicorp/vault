@@ -232,7 +232,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("enabled credential backend", "path", entry.Path, "type", entry.Type)
+		c.logger.Info("enabled credential backend", "path", entry.Path, "type", entry.Type, "version", entry.Version)
 	}
 	return nil
 }
@@ -636,6 +636,12 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 			needPersist = true
 		}
 
+		// Don't store built-in version in the mount table, to make upgrades smoother.
+		if versions.IsBuiltinVersion(entry.Version) {
+			entry.Version = ""
+			needPersist = true
+		}
+
 		if entry.NamespaceID == "" {
 			entry.NamespaceID = namespace.RootNamespaceID
 			needPersist = true
@@ -847,7 +853,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		}
 
 		if c.logger.IsInfo() {
-			c.logger.Info("successfully enabled credential backend", "type", entry.Type, "path", entry.Path, "namespace", entry.Namespace())
+			c.logger.Info("successfully enabled credential backend", "type", entry.Type, "version", entry.Version, "path", entry.Path, "namespace", entry.Namespace())
 		}
 
 		// Ensure the path is tainted if set in the mount table

@@ -1,0 +1,87 @@
+---
+layout: docs
+page_title: Upgrading to Vault 1.12.x - Guides
+description: |-
+  This page contains the list of deprecations and important or breaking changes
+  for Vault 1.12.x. Please read it carefully.
+---
+
+# Overview
+
+This page contains the list of deprecations and important or breaking changes
+for Vault 1.12.x compared to 1.11. Please read it carefully.
+
+## Changes
+
+### Supported Storage Backends
+
+Vault Enterprise will now perform a supported storage check at startup. There is no impact on open-source Vault users.
+
+@include 'ent-supported-storage.mdx'
+
+@include 'consul-dataplane-upgrade-note.mdx'
+
+## Known Issues
+
+### Pinning to builtin plugin versions may cause failure on upgrade
+
+1.12.0 introduced plugin versions, and with it, the ability to explicitly specify
+the builtin version of a plugin when mounting an auth, database or secrets plugin.
+For example, `vault auth enable -plugin-version=v1.12.0+builtin.vault approle`. If
+there are any mounts where the _builtin_ version was explicitly specified in this way,
+Vault may fail to start on upgrading to 1.12.1 due to the specified version no
+longer being available.
+
+To check whether a mount path is affected, read the tune information, or the
+database config. The affected plugins are `snowflake-database-plugin@v0.6.0+builtin`
+and any plugins with `+builtin.vault` metadata in their version.
+
+In this example, the first two mounts are affected because `plugin_version` is
+explicitly set and is one of the affected versions. The third mount is not
+affected because it only has `+builtin` metadata, and is not the Snowflake
+database plugin. All mounts where the version is omitted, or the plugin is
+external (regardless of whether the version is specified) are unaffected.
+
+-> **NOTE:** Make sure you use Vault CLI 1.12.0 or later to check mounts.
+
+```shell-session
+$ vault read sys/auth/approle/tune
+Key                  Value
+---                  -----
+...
+plugin_version       v1.12.0+builtin.vault
+
+$ vault read database/config/snowflake
+Key                                   Value
+---                                   -----
+...
+plugin_name                           snowflake-database-plugin
+plugin_version                        v0.6.0+builtin
+
+$ vault read sys/auth/kubernetes/tune
+Key                  Value
+---                  -----
+...
+plugin_version       v0.14.0+builtin
+```
+
+As it is not currently possible to unset the plugin version, there are 3 possible
+remediations if you have any affected mounts:
+
+* Upgrade Vault directly to 1.12.2 once released
+* Upgrade to an external version of the plugin before upgrading to 1.12.1;
+  * Using the [tune API](/api-docs/system/auth#tune-auth-method) for auth methods
+  * Using the [tune API](/api-docs/system/mounts#tune-mount-configuration) for secrets plugins
+  * Or using the [configure connection](/api-docs/secret/databases#configure-connection)
+    API for database plugins
+* Unmount and remount the path without a version specified before upgrading to 1.12.1.
+  **Note:** This will delete all data and leases associated with the mount.
+
+The bug was introduced by commit
+https://github.com/hashicorp/vault/commit/c36330f4c713b886a8a23c08cbbd862a7c530fc8.
+
+#### Impacted Versions
+
+Affects upgrading from 1.12.0 to 1.12.1. All other upgrade paths are unaffected.
+1.12.2 will introduce a fix that enables upgrades from affected deployments of
+1.12.0.

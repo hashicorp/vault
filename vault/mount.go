@@ -679,7 +679,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type)
+		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type, "version", entry.Version)
 	}
 	return nil
 }
@@ -691,8 +691,12 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 		return consts.PluginTypeUnknown
 	}
 
+	if !versions.IsBuiltinVersion(entry.RunningVersion) {
+		return consts.PluginTypeUnknown
+	}
+
 	builtinPluginType := func(name string, pluginType consts.PluginType) (consts.PluginType, bool) {
-		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, "")
+		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, entry.RunningVersion)
 		if err == nil && plugin != nil && plugin.Builtin {
 			return plugin.Type, true
 		}
@@ -1275,6 +1279,12 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 			entry.NamespaceID = namespace.RootNamespaceID
 			needPersist = true
 		}
+
+		// Don't store built-in version in the mount table, to make upgrades smoother.
+		if versions.IsBuiltinVersion(entry.Version) {
+			entry.Version = ""
+			needPersist = true
+		}
 	}
 
 	// Done if we have restored the mount table and we don't need
@@ -1495,7 +1505,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		}
 
 		if c.logger.IsInfo() {
-			c.logger.Info("successfully mounted backend", "type", entry.Type, "path", entry.Path)
+			c.logger.Info("successfully mounted backend", "type", entry.Type, "version", entry.Version, "path", entry.Path)
 		}
 
 		// Ensure the path is tainted if set in the mount table

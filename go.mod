@@ -59,8 +59,8 @@ require (
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.6.1
 	github.com/hashicorp/cap v0.2.1-0.20220727210936-60cd1534e220
-	github.com/hashicorp/consul-template v0.29.2
-	github.com/hashicorp/consul/api v1.14.0
+	github.com/hashicorp/consul-template v0.29.5
+	github.com/hashicorp/consul/api v1.15.2
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
@@ -96,7 +96,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/hashicorp/hcl v1.0.1-vault-3
+	github.com/hashicorp/hcl v1.0.1-vault-5
 	github.com/hashicorp/hcp-sdk-go v0.22.0
 	github.com/hashicorp/nomad/api v0.0.0-20220707195938-75f4c2237b28
 	github.com/hashicorp/raft v1.3.10
@@ -117,12 +117,12 @@ require (
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.8.0
 	github.com/hashicorp/vault-plugin-database-redis v0.1.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.1.0
-	github.com/hashicorp/vault-plugin-database-snowflake v0.6.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.6.1
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.13.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.14.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.14.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.14.1
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.14.1
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.2.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.13.3
@@ -133,7 +133,7 @@ require (
 	github.com/hashicorp/vault/api v1.8.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.6.1-0.20221012172514-e12bdc5ce648
+	github.com/hashicorp/vault/sdk v0.6.1-0.20221102145943-1e9b0a1225c3
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.15.0
 	github.com/jcmturner/gokrb5/v8 v8.4.2
@@ -320,7 +320,7 @@ require (
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
 	github.com/hashicorp/serf v0.9.7 // indirect
-	github.com/hashicorp/vault/api/auth/kubernetes v0.2.0 // indirect
+	github.com/hashicorp/vault/api/auth/kubernetes v0.3.0 // indirect
 	github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 // indirect
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect

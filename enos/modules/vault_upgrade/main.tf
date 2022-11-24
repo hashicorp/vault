@@ -32,9 +32,21 @@ variable "vault_instances" {
   description = "The vault cluster instances that were created"
 }
 
-variable "vault_local_bundle_path" {
+variable "vault_local_artifact_path" {
   type        = string
-  description = "The path to the local Vault (vault.zip) bundle"
+  description = "The path to a locally built vault artifact to install"
+  default     = null
+}
+
+variable "vault_artifactory_release" {
+  type = object({
+    username = string
+    token    = string
+    url      = string
+    sha256   = string
+  })
+  description = "Vault release version and edition to install from artifactory.hashicorp.engineering"
+  default     = null
 }
 
 variable "vault_seal_type" {
@@ -64,7 +76,8 @@ resource "enos_bundle_install" "upgrade_vault_binary" {
   for_each = local.instances
 
   destination = var.vault_install_dir
-  path        = var.vault_local_bundle_path
+  artifactory = var.vault_artifactory_release
+  path        = var.vault_local_artifact_path
 
   transport = {
     ssh = {

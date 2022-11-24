@@ -30,6 +30,10 @@ module "build_local" {
   source = "./modules/build_local"
 }
 
+module "build_artifactory" {
+  source = "./modules/vault_artifactory_artifact"
+}
+
 module "create_vpc" {
   source = "app.terraform.io/hashicorp-qti/aws-infra/enos"
 
@@ -39,12 +43,26 @@ module "create_vpc" {
   ami_architectures = ["amd64", "arm64"]
 }
 
-module "get_local_version_from_make" {
-  source = "./modules/get_local_version_from_make"
+module "get_local_metadata" {
+  source = "./modules/get_local_metadata"
 }
 
 module "read_license" {
   source = "./modules/read_license"
+}
+
+module "vault_agent" {
+  source = "./modules/vault_agent"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+
+module "vault_verify_agent_output" {
+  source = "./modules/vault_verify_agent_output"
+
+  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_cluster" {
@@ -81,6 +99,20 @@ module "vault_verify_raft_auto_join_voter" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_verify_replication" {
+  source = "./modules/vault-verify-replication"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_verify_ui" {
+  source = "./modules/vault-verify-ui"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
 module "vault_verify_unsealed" {
   source = "./modules/vault_verify_unsealed"
 
@@ -90,6 +122,13 @@ module "vault_verify_unsealed" {
 
 module "vault_verify_version" {
   source = "./modules/vault_verify_version"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_verify_write_test_data" {
+  source = "./modules/vault-verify-write-data"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
