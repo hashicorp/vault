@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// Formatter is an interface that is responsible for formating a
+// Formatter is an interface that is responsible for formatting a
 // request/response into some format. Formatters write their output
 // to an io.Writer.
 //
