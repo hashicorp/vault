@@ -30,44 +30,23 @@ func TestLogger_SetupInvalidLogLevel(t *testing.T) {
 }
 
 func TestLogger_SetupLoggerErrorLevel(t *testing.T) {
-	cases := []struct {
-		desc   string
-		before func(*LogConfig)
-	}{
-		{
-			desc: "ERR log level",
-			before: func(cfg *LogConfig) {
-				cfg.LogLevel = log.Error
-			},
-		},
-		{
-			desc: "ERROR log level",
-			before: func(cfg *LogConfig) {
-				cfg.LogLevel = log.Error
-			},
-		},
+	cfg := &LogConfig{
+		LogLevel: log.Error,
 	}
 
-	for _, c := range cases {
-		t.Run(c.desc, func(t *testing.T) {
-			var cfg LogConfig
+	var buf bytes.Buffer
 
-			c.before(&cfg)
-			var buf bytes.Buffer
+	logger, err := Setup(cfg, &buf)
+	require.NoError(t, err)
+	require.NotNil(t, logger)
 
-			logger, err := Setup(&cfg, &buf)
-			require.NoError(t, err)
-			require.NotNil(t, logger)
+	logger.Error("test error msg")
+	logger.Info("test info msg")
 
-			logger.Error("test error msg")
-			logger.Info("test info msg")
+	output := buf.String()
 
-			output := buf.String()
-
-			require.Contains(t, output, "[ERROR] test error msg")
-			require.NotContains(t, output, "[INFO]  test info msg")
-		})
-	}
+	require.Contains(t, output, "[ERROR] test error msg")
+	require.NotContains(t, output, "[INFO]  test info msg")
 }
 
 func TestLogger_SetupLoggerDebugLevel(t *testing.T) {
