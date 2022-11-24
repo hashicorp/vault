@@ -85,7 +85,7 @@ const (
 
 type ServerCommand struct {
 	*BaseCommand
-	*logFlags
+	LogFlags logFlags
 
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
@@ -174,7 +174,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 	f := set.NewFlagSet("Command Options")
 
 	// Augment with the log flags
-	f.addLogFlags(c.logFlags)
+	f.addLogFlags(&c.LogFlags)
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   "config",
@@ -687,7 +687,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		c.UI.Warn("")
 	}
 
-	if !c.flagCombineLogs {
+	if !c.LogFlags.flagCombineLogs {
 		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
 	}
 
@@ -914,7 +914,7 @@ func (c *ServerCommand) Run(args []string) int {
 	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
 
-	if c.flagCombineLogs {
+	if c.LogFlags.flagCombineLogs {
 		c.logWriter = os.Stdout
 	}
 
@@ -1456,7 +1456,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Output the header that the server has started
-	if !c.flagCombineLogs {
+	if !c.LogFlags.flagCombineLogs {
 		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
 	}
 

@@ -33,10 +33,6 @@ type valuesProvider struct {
 
 // addLogFlags will add the set of 'log' related flags to a flag set.
 func (f *FlagSet) addLogFlags(l *logFlags) {
-	if l == nil {
-		l = &logFlags{}
-	}
-
 	f.BoolVar(&BoolVar{
 		Name:    flagNameCombineLogs,
 		Target:  &l.flagCombineLogs,

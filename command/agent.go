@@ -70,7 +70,7 @@ const (
 
 type AgentCommand struct {
 	*BaseCommand
-	*logFlags
+	LogFlags logFlags
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -118,7 +118,7 @@ func (c *AgentCommand) Flags() *FlagSets {
 	f := set.NewFlagSet("Command Options")
 
 	// Augment with the log flags
-	f.addLogFlags(c.logFlags)
+	f.addLogFlags(&c.LogFlags)
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   "config",
@@ -147,15 +147,6 @@ func (c *AgentCommand) Flags() *FlagSets {
 	// no warranty or backwards-compatibility promise. Do not use these flags
 	// in production. Do not build automation using these flags. Unless you are
 	// developing against Vault, you should not need any of these flags.
-
-	// TODO: should the below flags be public?
-	f.BoolVar(&BoolVar{
-		Name:    "combine-logs",
-		Target:  &c.flagCombineLogs,
-		Default: false,
-		Hidden:  true,
-	})
-
 	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
 		Target:  &c.flagTestVerifyOnly,
@@ -189,7 +180,7 @@ func (c *AgentCommand) Run(args []string) int {
 	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
 
-	if c.flagCombineLogs {
+	if c.LogFlags.flagCombineLogs {
 		c.logWriter = os.Stdout
 	}
 
@@ -469,7 +460,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Output the header that the agent has started
-	if !c.flagCombineLogs {
+	if !c.LogFlags.flagCombineLogs {
 		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
 	}
 
