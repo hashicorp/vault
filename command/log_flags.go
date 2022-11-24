@@ -66,14 +66,12 @@ func (f *FlagSet) addLogFlags(l *logFlags) {
 	f.StringVar(&StringVar{
 		Name:   flagNameLogFile,
 		Target: &l.flagLogFile,
-		EnvVar: EnvVaultLogFile,
 		Usage:  "Path to the log file that Vault should use for logging",
 	})
 
 	f.StringVar(&StringVar{
 		Name:   flagNameLogRotateBytes,
 		Target: &l.flagLogRotateBytes,
-		EnvVar: EnvVaultLogRotateBytes,
 		Usage: "Number of bytes that should be written to a log before it needs to be rotated. " +
 			"Unless specified, there is no limit to the number of bytes that can be written to a log file",
 	})
@@ -81,7 +79,6 @@ func (f *FlagSet) addLogFlags(l *logFlags) {
 	f.StringVar(&StringVar{
 		Name:   flagNameLogRotateDuration,
 		Target: &l.flagLogRotateDuration,
-		EnvVar: EnvVaultLogRotateDuration,
 		Usage: "The maximum duration a log should be written to before it needs to be rotated. " +
 			"Must be a duration value such as 30s",
 	})
@@ -89,7 +86,6 @@ func (f *FlagSet) addLogFlags(l *logFlags) {
 	f.StringVar(&StringVar{
 		Name:   flagNameLogRotateMaxFiles,
 		Target: &l.flagLogRotateMaxFiles,
-		EnvVar: EnvVaultLogRotateMaxFiles,
 		Usage:  "The maximum number of older log file archives to keep",
 	})
 }
@@ -144,14 +140,19 @@ func (p *valuesProvider) getAggregatedConfigValue(flagKey, envVarKey, current, f
 // This method mutates the config object passed into it.
 func (f *FlagSets) updateLogConfig(config *configutil.SharedConfig) {
 	p := &valuesProvider{
-		flagProvider:   func(key string) (string, bool) { return f.getValue(key) },
-		envVarProvider: os.LookupEnv,
+		flagProvider: func(key string) (string, bool) { return f.getValue(key) },
+		envVarProvider: func(key string) (string, bool) {
+			if key == "" {
+				return "", false
+			}
+			return os.LookupEnv(key)
+		},
 	}
 
 	config.LogLevel = p.getAggregatedConfigValue(flagNameLogLevel, EnvVaultLogLevel, config.LogLevel, "info")
 	config.LogFormat = p.getAggregatedConfigValue(flagNameLogFormat, EnvVaultLogFormat, config.LogFormat, "")
-	config.LogFile = p.getAggregatedConfigValue(flagNameLogFile, EnvVaultLogFile, config.LogFile, "")
-	config.LogRotateDuration = p.getAggregatedConfigValue(flagNameLogRotateDuration, EnvVaultLogRotateDuration, config.LogRotateDuration, "")
-	config.LogRotateBytes = p.getAggregatedConfigValue(flagNameLogRotateBytes, EnvVaultLogRotateBytes, config.LogRotateBytes, "")
-	config.LogRotateMaxFiles = p.getAggregatedConfigValue(flagNameLogRotateMaxFiles, EnvVaultLogRotateMaxFiles, config.LogRotateMaxFiles, "")
+	config.LogFile = p.getAggregatedConfigValue(flagNameLogFile, "", config.LogFile, "")
+	config.LogRotateDuration = p.getAggregatedConfigValue(flagNameLogRotateDuration, "", config.LogRotateDuration, "")
+	config.LogRotateBytes = p.getAggregatedConfigValue(flagNameLogRotateBytes, "", config.LogRotateBytes, "")
+	config.LogRotateMaxFiles = p.getAggregatedConfigValue(flagNameLogRotateMaxFiles, "", config.LogRotateMaxFiles, "")
 }

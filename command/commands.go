@@ -84,24 +84,9 @@ const (
 	EnvVaultDetailed = `VAULT_DETAILED`
 	// EnvVaultLogFormat is used to specify the log format. Supported values are "standard" and "json"
 	EnvVaultLogFormat = "VAULT_LOG_FORMAT"
-	// EnvVaultLogFile is used to specify the path to the log file that Vault should use for logging
-	// Can be used in conjunction with EnvVaultLogRotateBytes, EnvVaultLogRotateDuration and EnvVaultLogRotateMaxFiles
-	EnvVaultLogFile = "VAULT_LOG_FILE"
 	// EnvVaultLogLevel is used to specify the log level applied to logging
 	// Supported log levels: Trace, Debug, Error, Warn, Info
 	EnvVaultLogLevel = "VAULT_LOG_LEVEL"
-	// EnvVaultLogRotateBytes is used to specify the number of bytes that should
-	// be written to a log before it needs to be rotated.
-	// Unless specified, there is no limit to the number of bytes that can be written to a log file
-	EnvVaultLogRotateBytes = "VAULT_LOG_ROTATE_BYTES"
-	// EnvVaultLogRotateDuration is used to specify the maximum duration a log
-	// should be written to before it needs to be rotated.
-	// Must be a duration value such as 30s. Defaults to 24h
-	EnvVaultLogRotateDuration = "VAULT_LOG_ROTATE_DURATION"
-	// EnvVaultLogRotateMaxFiles is used to specify the maximum number of older log file archives to keep.
-	// Defaults to 0 (no files are ever deleted).
-	// Set to -1 to discard old log files when a new one is created.
-	EnvVaultLogRotateMaxFiles = "VAULT_LOG_ROTATE_MAX_FILES"
 
 	// DisableSSCTokens is an env var used to disable index bearing
 	// token functionality
