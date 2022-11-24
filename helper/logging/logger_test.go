@@ -13,11 +13,13 @@ import (
 )
 
 func TestLogger_SetupBasic(t *testing.T) {
-	cfg := &LogConfig{LogLevel: log.Info}
+	cfg := &LogConfig{Name: "test-system", LogLevel: log.Info}
 
 	logger, err := Setup(cfg, nil)
 	require.NoError(t, err)
 	require.NotNil(t, logger)
+	require.Equal(t, logger.Name(), "test-system")
+	require.True(t, logger.IsInfo())
 }
 
 func TestLogger_SetupInvalidLogLevel(t *testing.T) {
