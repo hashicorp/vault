@@ -20,8 +20,6 @@ type SharedConfig struct {
 
 	Listeners []*Listener `hcl:"-"`
 
-	MetricsListeners []*Listener `hcl:"metric_listener"`
-
 	UserLockouts []*UserLockout `hcl:"-"`
 
 	Seals   []*KMS   `hcl:"-"`
