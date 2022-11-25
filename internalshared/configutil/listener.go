@@ -188,7 +188,7 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 			case "default", "metrics_only", "":
 				result.found(l.Type, l.Type)
 			default:
-				return multierror.Prefix(fmt.Errorf("unsupported listener role %q", l.Type), fmt.Sprintf("listeners.%d:", i))
+				return multierror.Prefix(fmt.Errorf("unsupported listener role %q", l.Role), fmt.Sprintf("listeners.%d:", i))
 			}
 		}
 
