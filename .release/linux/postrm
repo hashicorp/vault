@@ -2,7 +2,9 @@
 
 if [ "$1" = "purge" ]
 then
-  userdel vault
+	if command -v userdel &> /dev/null; then
+		userdel vault
+	fi
 fi
 
 exit 0
