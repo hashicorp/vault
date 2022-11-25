@@ -70,7 +70,7 @@ const (
 
 type AgentCommand struct {
 	*BaseCommand
-	LogFlags logFlags
+	logFlags logFlags
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -118,7 +118,7 @@ func (c *AgentCommand) Flags() *FlagSets {
 	f := set.NewFlagSet("Command Options")
 
 	// Augment with the log flags
-	f.addLogFlags(&c.LogFlags)
+	f.addLogFlags(&c.logFlags)
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   "config",
@@ -180,7 +180,7 @@ func (c *AgentCommand) Run(args []string) int {
 	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
 
-	if c.LogFlags.flagCombineLogs {
+	if c.logFlags.flagCombineLogs {
 		c.logWriter = os.Stdout
 	}
 
@@ -460,7 +460,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Output the header that the agent has started
-	if !c.LogFlags.flagCombineLogs {
+	if !c.logFlags.flagCombineLogs {
 		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
 	}
 
