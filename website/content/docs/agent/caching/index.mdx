@@ -229,7 +229,7 @@ values are common to both `tcp` and `unix` listener blocks. Blocks of type
 `tcp` support the standard `tcp` [listener](/docs/configuration/listener/tcp)
 options. Additionally, the `role` string option is available as part of the top level
 of the `listener` block, which can be configured to `metrics_only` to serve only metrics,
-the default role, `default`, serves everything (including metrics).
+or the default role, `default`, which serves everything (including metrics).
 
 - `type` `(string: required)` - The type of the listener to use. Valid values
   are `tcp` and `unix`.
