@@ -22,8 +22,6 @@ type ListenerTelemetry struct {
 	UnusedKeys                      UnusedKeyMap `hcl:",unusedKeyPositions"`
 	UnauthenticatedMetricsAccess    bool         `hcl:"-"`
 	UnauthenticatedMetricsAccessRaw interface{}  `hcl:"unauthenticated_metrics_access,alias:UnauthenticatedMetricsAccess"`
-	MetricsOnlyListener             bool         `hcl:"-"`
-	MetricsOnlyListenerAccessRaw    interface{}  `hcl:"metrics_only_listener,alias:MetricsOnlyListener"`
 }
 
 type ListenerProfiling struct {
@@ -46,6 +44,7 @@ type Listener struct {
 	Type       string
 	Purpose    []string    `hcl:"-"`
 	PurposeRaw interface{} `hcl:"purpose"`
+	Role       string      `hcl:"role"`
 
 	Address                 string        `hcl:"address"`
 	ClusterAddress          string        `hcl:"cluster_address"`
@@ -183,6 +182,13 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.PurposeRaw = nil
+			}
+
+			switch l.Role {
+			case "default", "metrics_only", "":
+				result.found(l.Type, l.Type)
+			default:
+				return multierror.Prefix(fmt.Errorf("unsupported listener role %q", l.Type), fmt.Sprintf("listeners.%d:", i))
 			}
 		}
 
@@ -349,14 +355,6 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.Telemetry.UnauthenticatedMetricsAccessRaw = nil
-			}
-
-			if l.Telemetry.MetricsOnlyListenerAccessRaw != nil {
-				if l.Telemetry.MetricsOnlyListener, err = parseutil.ParseBool(l.Telemetry.MetricsOnlyListenerAccessRaw); err != nil {
-					return multierror.Prefix(fmt.Errorf("invalid value for telemetry.metrcs_only_listener: %w", err), fmt.Sprintf("listeners.%d", i))
-				}
-
-				l.Telemetry.MetricsOnlyListenerAccessRaw = nil
 			}
 		}
 

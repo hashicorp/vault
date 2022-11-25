@@ -700,7 +700,7 @@ func (c *AgentCommand) Run(args []string) int {
 			// Parse 'require_request_header' listener config option, and wrap
 			// the request handler if necessary
 			muxHandler := cacheHandler
-			if lnConfig.RequireRequestHeader && !lnConfig.Telemetry.MetricsOnlyListener {
+			if lnConfig.RequireRequestHeader && !("metrics_only" == lnConfig.Role) {
 				muxHandler = verifyRequestHeader(muxHandler)
 			}
 
@@ -709,7 +709,7 @@ func (c *AgentCommand) Run(args []string) int {
 			quitEnabled := lnConfig.AgentAPI != nil && lnConfig.AgentAPI.EnableQuit
 
 			mux.Handle(consts.AgentPathMetrics, c.handleMetrics())
-			if !lnConfig.Telemetry.MetricsOnlyListener {
+			if !("metrics_only" == lnConfig.Role) {
 				mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 				mux.Handle(consts.AgentPathQuit, c.handleQuit(quitEnabled))
 				mux.Handle("/", muxHandler)

@@ -37,13 +37,12 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 				{
 					Type:       "tcp",
 					Address:    "127.0.0.1:3000",
+					Role:       "metrics_only",
 					TLSDisable: true,
-					Telemetry: configutil.ListenerTelemetry{
-						MetricsOnlyListener: true,
-					},
 				},
 				{
 					Type:        "tcp",
+					Role:        "default",
 					Address:     "127.0.0.1:8400",
 					TLSKeyFile:  "/path/to/cakey.pem",
 					TLSCertFile: "/path/to/cacert.pem",
