@@ -486,7 +486,7 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *se
 	pt, err := encryptor.Decrypt(ctx, blobInfo, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "message authentication failed") {
-			return nil, &ErrInvalidKey{Reason: "failed to decrypt keys from storage"}
+			return nil, &ErrInvalidKey{Reason: fmt.Sprintf("failed to decrypt keys from storage: %v", err)}
 		}
 		return nil, &ErrDecrypt{Err: fmt.Errorf("failed to decrypt keys from storage: %w", err)}
 	}
