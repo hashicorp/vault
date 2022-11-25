@@ -27,8 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/helper/constants"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
@@ -38,6 +36,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -910,6 +909,7 @@ func (c *TestCluster) Start() {
 }
 
 func (c *TestCluster) start(t testing.T) {
+	t.Helper()
 	for i, core := range c.Cores {
 		if core.Server != nil {
 			for _, ln := range core.Listeners {
@@ -922,15 +922,20 @@ func (c *TestCluster) start(t testing.T) {
 		c.SetupFunc()
 	}
 
+	activeCore := -1
 WAITACTIVE:
 	for i := 0; i < 60; i++ {
-		for _, core := range c.Cores {
+		for i, core := range c.Cores {
 			if standby, _ := core.Core.Standby(); !standby {
+				activeCore = i
 				break WAITACTIVE
 			}
 		}
 
 		time.Sleep(time.Second)
+	}
+	if activeCore == -1 {
+		t.Fatalf("no core became active")
 	}
 
 	switch {
@@ -945,7 +950,7 @@ WAITACTIVE:
 	case reflect.TypeOf(c.opts.HandlerFunc).PkgPath() != "github.com/hashicorp/vault/http":
 	case reflect.TypeOf(c.opts.HandlerFunc).Name() != "Handler":
 	default:
-		cli := c.Cores[0].Client
+		cli := c.Cores[activeCore].Client
 		_, err := cli.Logical().Write("sys/quotas/rate-limit/rl-NewTestCluster", map[string]interface{}{
 			"rate": 1000000,
 		})
