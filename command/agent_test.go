@@ -1302,7 +1302,7 @@ func (h *handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		}
 		h.t.Logf("passing GET request on %s", req.URL.Path)
 	}
-	vaulthttp.Handler(h.props).ServeHTTP(resp, req)
+	vaulthttp.Handler.Handler(h.props).ServeHTTP(resp, req)
 }
 
 // TestAgent_Template_Retry verifies that the template server retries requests
@@ -1325,11 +1325,12 @@ func TestAgent_Template_Retry(t *testing.T) {
 		},
 		&vault.TestClusterOptions{
 			NumCores: 1,
-			HandlerFunc: func(properties *vault.HandlerProperties) http.Handler {
-				h.props = properties
-				h.t = t
-				return &h
-			},
+			HandlerFunc: vaulthttp.HandlerFunc(
+				func(properties *vault.HandlerProperties) http.Handler {
+					h.props = properties
+					h.t = t
+					return &h
+				}),
 		})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -1612,11 +1613,11 @@ func TestAgent_Cache_Retry(t *testing.T) {
 		},
 		&vault.TestClusterOptions{
 			NumCores: 1,
-			HandlerFunc: func(properties *vault.HandlerProperties) http.Handler {
+			HandlerFunc: vaulthttp.HandlerFunc(func(properties *vault.HandlerProperties) http.Handler {
 				h.props = properties
 				h.t = t
 				return &h
-			},
+			}),
 		})
 	cluster.Start()
 	defer cluster.Cleanup()
