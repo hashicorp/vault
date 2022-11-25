@@ -143,10 +143,9 @@ unzipped Vault binary at the `vault_local_binary_path`.
 
 # CI Bootstrap
 In order to execute any of the scenarios in this repository, it is first necessary to bootstrap the 
-CI AWS account with the required supporting AWS resources. At this time, the only resource that is 
-required is an EC2 ssh key pair. The scenarios [bootstrap_ci](./ci/enos-scenario-bootstrap-ci.hcl) and 
-[bootstrap_workspaces](./ci/enos-scenario-ci-bootstrap-workspaces.hcl) have been created to simplify
-the process of bootstrapping the CI environment.
+CI AWS account with the required permissions and supporting AWS resources. There are two Terraform
+modules which are used for this purpose, [service-user-iam](./ci/service-user-iam) for the account
+permissions and [bootstrap](./ci/bootstrap) for the supporting resources.
 
 **Supported Regions** - enos scenarios are supported in the following regions: 
 `"us-east-1", "us-east-2", "us-west-1", "us-west-2"`
@@ -154,28 +153,50 @@ the process of bootstrapping the CI environment.
 ## Bootstrap Process
 These steps should be followed to bootstrap this repo for enos scenario execution:
 
-1. **Setup the root Workspace** - In Terraform Cloud manually create a workspace in the `hashicorp-qti` 
-   organization named `vault-ci-enos-bootstrap`. This workspace will be used as the backend for the 
-   `bootstrap_workspaces` scenario. When creating the workspace choose the execution mode `local`.
+### Set up CI service user IAM role
+The service user that is used when executing enos scenarios from any GitHub Action workflow must have 
+a properly configured IAM role granting the access required to create resources in AWS. The
+[service-user-iam](./ci/service-user-iam) module contains the IAM Policy and Role for that grants
+this access. This module should be updated whenever a new AWS resource type is required for a scenario.
+Since this is persistent and cannot be created and destroyed each time a scenario is run, the Terraform
+state will be managed by Terraform Cloud. Here are the steps to configure the GitHub Actions service user:
+
+#### Pre-requisites
+- Access to the `hashicorp-qti` organization in Terraform Cloud.
+- Full access to the CI AWS account is required.
+
+**Note:** For help with access to Terraform Cloud and the CI Account, contact the QT team on
+the Slack channel mentioned above. Access to the AWS account can be done via Doormat, at: 
+https://doormat.hashicorp.services/.
+
+1. **Create the Terraform Cloud Workspace** - The name of the workspace to be created depends on the 
+   repository for which it is being created, but the pattern is: `<repository>-ci-service-user-iam`,
+   e.g. `vault-ci-service-user-iam`. It is important that the execution mode for the workspace be set 
+   to `local`. For help on setting up the workspace, contact the QT team on Slack (#team-quality)
 
 
-2. Get the enos ci ssh public key from a member of the QT team.
-
-
-3. **Create the CI Bootstrap Workspaces** - Each region will have its own workspace and state, to 
-   setup these workspaces the scenario `bootstrap_workspaces` should be executed:
-
-```bash
-> export ENOS_VAR_tfc_api_token=<tfc token>
-> export ENOS_VAR_product_line=<product line [vault|vault_enterprise]> 
-> enos scenaio launch --no-reconfigure bootstrap_workspaces
+2. **Execute the Terraform module**
+```shell
+> cd ./enos/ci/service-user-iam
+> export TF_WORKSPACE=<repo name>-ci-service-user-iam
+> export TF_TOKEN_app_terraform_io=<Terraform Cloud Token>
+> export TF_VAR_repository=<repository name>
+> terraform init
+> terraform plan
+> terraform apply -auto-approve
 ```
 
-4.**Bootstrap Vault CI** - Execute the following to boostrap the Vault CI account for all regions:
+### Bootstrap the CI resources
+Bootstrapping of the resources in the CI account is accomplished via the GitHub Actions workflow: 
+[enos-bootstrap-ci](../.github/workflows/enos-bootstrap-ci.yml). Before this workflow can be run a 
+workspace must be created as follows:
 
-```bash
-> export ENOS_VAR_aws_ssh_public_key_path=<path to the enos-ci-ssh-key file from 2>
-> export ENOS_VAR_tfc_api_token=<tfc token>
-> export ENOS_VAR_product_line=<product line [vault|vault_enterprise]> 
-> enos scneario launch --no-configure bootstrap_ci
-```
+1. **Create the Terraform Cloud Workspace** - The name workspace to be created depends on the repository
+   for which it is being created, but the pattern is: `<repository>-ci-bootstrap`, e.g.
+   `vault-ci-bootstrap`. It is important that the execution mode for the workspace be set to
+   `local`. For help on setting up the workspace, contact the QT team on Slack (#team-quality).
+
+Once the workspace has been created, changes to the bootstrap module will automatically be applied via
+the GitHub PR workflow. Each time a PR is created for changes to files within that module the module
+will be planned via the workflow described above. If the plan is ok and the PR is merged, the module
+will automically be applied via the same workflow.

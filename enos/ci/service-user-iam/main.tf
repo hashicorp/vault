@@ -17,12 +17,12 @@ provider "aws" {
 }
 
 locals {
-  oss_repositories      = ["vault"]
-  enterprise_repository = ["vault-enterprise"]
-  is_ent                = contains(local.enterprise_repository, var.repository)
-  ci_account_prefix     = local.is_ent ? "vault-enterprise" : "vault"
-  service_user          = "github_actions-${local.ci_account_prefix}_ci"
-  aws_account_id        = local.is_ent ? "505811019928" : "040730498200"
+  oss_repositories        = ["vault"]
+  enterprise_repositories = ["vault-enterprise"]
+  is_ent                  = contains(local.enterprise_repositories, var.repository)
+  ci_account_prefix       = local.is_ent ? "vault-enterprise" : "vault"
+  service_user            = "github_actions-${local.ci_account_prefix}_ci"
+  aws_account_id          = local.is_ent ? "505811019928" : "040730498200"
 }
 
 resource "aws_iam_role" "role" {

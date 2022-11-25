@@ -6,7 +6,6 @@ on:
       - main
   push:
     branches:
-      - mbaum/qt-318
       - main
     paths:
       - enos/ci/**
@@ -52,14 +51,14 @@ jobs:
         id: tf_init
         run: |
           export TF_WORKSPACE="${{ steps.prepare_for_terraform.outputs.product_line }}-ci-enos-bootstrap"
-          export TF_VAR_aws_ssh_public_key="ssh-rsa some public key"
+          export TF_VAR_aws_ssh_public_key="${{ secrets.ENOS_CI_SSH_KEY }}"
           export TF_TOKEN_app_terraform_io="${{ secrets.TF_API_TOKEN }}"
           terraform -chdir=enos/ci/bootstrap init
       - name: Plan Terraform
         id: tf_plan
         run: |
           export TF_WORKSPACE="${{ steps.prepare_for_terraform.outputs.product_line }}-ci-enos-bootstrap"
-          export TF_VAR_aws_ssh_public_key="ssh-rsa some public key"
+          export TF_VAR_aws_ssh_public_key="${{ secrets.ENOS_CI_SSH_KEY }}"
           export TF_TOKEN_app_terraform_io="${{ secrets.TF_API_TOKEN }}"
           terraform -chdir=enos/ci/bootstrap plan
       - name: Apply Terraform
@@ -67,6 +66,6 @@ jobs:
         id: tf_apply
         run: |
           export TF_WORKSPACE="${{ steps.prepare_for_terraform.outputs.product_line }}-ci-enos-bootstrap"
-          export TF_VAR_aws_ssh_public_key="ssh-rsa some public key"
+          export TF_VAR_aws_ssh_public_key="${{ secrets.ENOS_CI_SSH_KEY }}"
           export TF_TOKEN_app_terraform_io="${{ secrets.TF_API_TOKEN }}"
           terraform -chdir=enos/ci/bootstrap apply -auto-approve
