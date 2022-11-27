@@ -333,7 +333,7 @@ func TLSCAFileCheck(CAFilePath string) ([]string, error) {
 	// Check for TLS Warnings
 	warnings, err = TLSFileWarningChecks(leafCerts, interCerts, rootCerts)
 	for i, warning := range warnings {
-		warnings[i] = strings.Replace(warning, "leaf", "root", -1)
+		warnings[i] = strings.ReplaceAll(warning, "leaf", "root")
 	}
 	warningsSlc = append(warningsSlc, warnings...)
 	if err != nil {
@@ -345,7 +345,7 @@ func TLSCAFileCheck(CAFilePath string) ([]string, error) {
 
 	// Check for TLS Errors
 	if err = TLSErrorChecks(leafCerts, interCerts, rootCerts); err != nil {
-		return warningsSlc, fmt.Errorf(strings.Replace(err.Error(), "leaf", "root", -1))
+		return warningsSlc, fmt.Errorf(strings.ReplaceAll(err.Error(), "leaf", "root"))
 	}
 
 	return warningsSlc, err

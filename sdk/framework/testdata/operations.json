@@ -63,42 +63,11 @@
         "summary": "Update Summary",
         "description": "Update Description",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["age"],
-                "properties": {
-                  "flavors": {
-                    "type": "array",
-                    "description": "the flavors",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "age": {
-                    "type": "integer",
-                    "description": "the age",
-                    "enum": [1, 2, 3],
-                    "x-vault-displayAttrs": {
-                      "name": "Age",
-                      "sensitive": true,
-                      "group": "Some Group",
-                      "value": 7
-                    }
-                  },
-                  "name": {
-                    "type": "string",
-                    "description": "the name",
-                    "default": "Larry",
-                    "pattern": "\\w([\\w-.]*\\w)?"
-                  },
-                  "x-abc-token": {
-                    "type": "string",
-                    "description": "a header value",
-                    "enum": ["a", "b", "c"]
-                  }
-                }
+                "$ref": "#/components/schemas/KvFooRequest"
               }
             }
           }
@@ -106,6 +75,50 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "KvFooRequest": {
+        "type": "object",
+        "required": ["age"],
+        "properties": {
+          "flavors": {
+            "type": "array",
+            "description": "the flavors",
+            "items": {
+              "type": "string"
+            }
+          },
+          "age": {
+            "type": "integer",
+            "description": "the age",
+            "enum": [1, 2, 3],
+            "x-vault-displayAttrs": {
+              "name": "Age",
+              "sensitive": true,
+              "group": "Some Group",
+              "value": 7
+            }
+          },
+          "name": {
+            "type": "string",
+            "description": "the name",
+            "default": "Larry",
+            "pattern": "\\w([\\w-.]*\\w)?"
+          },
+          "x-abc-token": {
+            "type": "string",
+            "description": "a header value",
+            "enum": ["a", "b", "c"]
+          },
+          "maximum" : {
+            "type": "integer",
+            "description": "a maximum value",
+            "format": "int64"
           }
         }
       }

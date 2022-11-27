@@ -1,0 +1,3 @@
+```release-note:bug
+agent: Update consul-template for pkiCert bug fixes
+```

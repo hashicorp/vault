@@ -55,7 +55,10 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 		}
 		defer p.Unlock()
 
-		minAvailableVersionRaw, ok := d.GetOk("min_available_version")
+		minAvailableVersionRaw, ok, err := d.GetOkErr("min_available_version")
+		if err != nil {
+			return nil, err
+		}
 		if !ok {
 			return logical.ErrorResponse("missing min_available_version"), nil
 		}

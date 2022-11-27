@@ -11,12 +11,12 @@ export function parsePkiCert([model]) {
   }
   let cert;
   try {
-    let cert_base64 = model.certificate.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
-    let cert_der = fromBase64(cert_base64);
-    let cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
+    const cert_base64 = model.certificate.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
+    const cert_der = fromBase64(cert_base64);
+    const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
     cert = new Certificate({ schema: cert_asn1.result });
   } catch (error) {
-    console.debug('DEBUG: Parsing Certificate', error);
+    console.debug('DEBUG: Parsing Certificate', error); // eslint-disable-line
     return {
       can_parse: false,
     };

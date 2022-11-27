@@ -1,0 +1,3 @@
+```release-note:improvement
+agent/auto-auth: Add `min_backoff` to the method stanza for configuring initial backoff duration.
+```

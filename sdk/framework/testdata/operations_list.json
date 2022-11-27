@@ -59,5 +59,9 @@
         ]
       }
     }
+  },
+  "components": {
+    "schemas": {
+    }
   }
 }

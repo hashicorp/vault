@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 func pathConfigConnection(b *backend) *framework.Path {
@@ -109,7 +109,7 @@ func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request,
 	verifyConnection := data.Get("verify_connection").(bool)
 	if verifyConnection {
 		// Verify the string
-		db, err := sql.Open("postgres", connURL)
+		db, err := sql.Open("pgx", connURL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"Error validating connection info: %s", err)), nil

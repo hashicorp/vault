@@ -1,0 +1,6 @@
+```release-note:improvement
+api: If the parameters supplied over the API payload are ignored due to not
+being what the endpoints were expecting, or if the parameters supplied get
+replaced by the values in the endpoint's path itself, warnings will be added to
+the non-empty responses listing all the ignored and replaced parameters.
+```

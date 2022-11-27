@@ -28,7 +28,7 @@ $ curl \
 
 ### Sample Response
 
-```javascript
+```json
 {
     "data": {
         "auth": [
@@ -43,6 +43,32 @@ $ curl \
             "mssql-database-plugin",
             "mysql-database-plugin",
             "postgresql-database-plugin"
+        ],
+        "detailed": [
+            {
+                "builtin": true,
+                "deprecation_status": "supported",
+                "name": "aws",
+                "type": "auth",
+                "version": "v1.12.0+builtin.vault"
+            },
+            ...
+            {
+                "builtin": true,
+                "deprecation_status": "supported",
+                "name": "cassandra-database-plugin",
+                "type": "database",
+                "version": "v1.12.0+builtin.vault"
+            },
+            ...
+            {
+                "builtin": true,
+                "deprecation_status": "supported",
+                "name": "aws",
+                "type": "secret",
+                "version": "v1.12.0+builtin.vault"
+            },
+            ...
         ],
         "secret": [
             "ad",
@@ -76,7 +102,7 @@ $ curl \
 
 ### Sample Response
 
-```javascript
+```json
 {
     "data": {
         "keys": [
@@ -100,7 +126,7 @@ supplied name.
 
 | Method | Path                               |
 | :----- | :--------------------------------- |
-| `PUT`  | `/sys/plugins/catalog/:type/:name` |
+| `POST` | `/sys/plugins/catalog/:type/:name` |
 
 ### Parameters
 
@@ -110,6 +136,8 @@ supplied name.
 
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
+
+- `version` `(string: "")` - Specifies the semantic version of this plugin.
 
 - `sha256` `(string: <required>)` – This is the SHA256 sum of the plugin's
   binary. Before a plugin is run it's SHA will be checked against this value, if
@@ -140,7 +168,7 @@ supplied name.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
 ```
@@ -152,9 +180,9 @@ This endpoint returns the configuration data for the plugin with the given name.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method | Path                               |
-| :----- | :--------------------------------- |
-| `GET`  | `/sys/plugins/catalog/:type/:name` |
+| Method | Path                                                |
+| :----- | :-------------------------------------------------- |
+| `GET`  | `/sys/plugins/catalog/:type/:name?version=:version` |
 
 ### Parameters
 
@@ -164,26 +192,30 @@ This endpoint returns the configuration data for the plugin with the given name.
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
 
+- `version` `(string: "")` – The semantic version of the plugin to read. Required
+  if the plugin was registered with a version.
+
 ### Sample Request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin?version=v1.0.0
 ```
 
 ### Sample Response
 
-```javascript
+```json
 {
-	"data": {
-		"args": [],
-		"builtin": false,
-		"command": "/tmp/vault-plugins/mysql-database-plugin",
-		"name": "example-plugin",
-		"sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek="
-	}
+  "data": {
+    "args": [],
+    "builtin": false,
+    "command": "/tmp/vault-plugins/mysql-database-plugin",
+    "name": "example-plugin",
+    "sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek=",
+    "version": "v1.0.0"
+  }
 }
 ```
 
@@ -194,9 +226,9 @@ This endpoint removes the plugin with the given name.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                               |
-| :------- | :--------------------------------- |
-| `DELETE` | `/sys/plugins/catalog/:type/:name` |
+| Method   | Path                                                |
+| :------- | :-------------------------------------------------- |
+| `DELETE` | `/sys/plugins/catalog/:type/:name?version=:version` |
 
 ### Parameters
 
@@ -206,11 +238,14 @@ This endpoint removes the plugin with the given name.
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
 
+- `version` `(string: "")` – Specifies the semantic version of the plugin
+  to delete.
+
 ### Sample Request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin?version=v1.0.0
 ```

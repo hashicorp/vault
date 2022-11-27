@@ -1,0 +1,168 @@
+{{#if @backend}}
+  <form {{on "submit" (perform this.createDistribution)}} class="form-section" data-test-keymgmt-distribution-form>
+    {{#unless @key}}
+      <div class="field" data-test-keymgmt-dist-key>
+        <SearchSelect
+          @id="key"
+          @models={{array "keymgmt/key"}}
+          @onChange={{this.handleKeySelect}}
+          @passObject={{true}}
+          @inputValue={{this.formData.key}}
+          @subText="Type to use the name of an existing key that you’d like to add to this provider, or to create one."
+          @wildcardLabel="key"
+          @label="Key name"
+          @fallbackComponent="string-list"
+          @selectLimit="1"
+          @backend={{@backend}}
+          @disallowNewItems={{false}}
+        >
+          {{#if (and this.validMatchError.key (not this.isNewKey))}}
+            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="key">
+              {{this.validMatchError.key}}
+              To check compatibility,
+              <DocLink class="doc-link-subtle" @path="/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
+            </AlertInline>
+          {{/if}}
+        </SearchSelect>
+      </div>
+    {{/unless}}
+
+    {{#if this.isNewKey}}
+      <div class="field">
+        <label class="is-label" for="keyType">Key Type</label>
+        <p class="sub-text">The type of cryptographic key that will be created.</p>
+        <div class="control is-expanded">
+          <div class="select is-fullwidth">
+            <select
+              name="keyType"
+              id="keyType"
+              {{on "change" this.handleKeyType}}
+              class={{if this.validMatchError.key "has-error-border"}}
+              data-test-keymgmt-dist-keytype
+            >
+              <option value="">
+                Select one
+              </option>
+              {{#each this.keyTypes as |val|}}
+                <option selected={{eq this.keyType val}} value={{val}}>
+                  {{val}}
+                </option>
+              {{/each}}
+            </select>
+          </div>
+          {{#if this.validMatchError.key}}
+            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="new-key">
+              {{this.validMatchError.key}}
+              To check compatibility,
+              <DocLink class="doc-link-subtle" @path="/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
+            </AlertInline>
+          {{/if}}
+        </div>
+      </div>
+    {{/if}}
+
+    {{#unless @provider}}
+      <div class="field">
+        <SearchSelect
+          @id="provider"
+          @models={{array "keymgmt/provider"}}
+          @onChange={{this.handleProvider}}
+          @passObject={{false}}
+          @inputValue={{this.formData.provider}}
+          @subText="Select a provider in Vault. If it doesn’t exist yet, you’ll need to add it first."
+          @label="Provider"
+          @fallbackComponent="input-search"
+          @selectLimit="1"
+          @backend={{@backend}}
+          @disallowNewItems={{true}}
+          data-test-keymgmt-dist-provider
+        >
+          {{#if this.validMatchError.provider}}
+            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="provider">
+              {{this.validMatchError.provider}}
+              To check compatibility,
+              <DocLink class="doc-link-subtle" @path="/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
+            </AlertInline>
+          {{/if}}
+        </SearchSelect>
+      </div>
+    {{/unless}}
+
+    <fieldset
+      class="field form-fieldset"
+      id="operations"
+      disabled={{this.disableOperations}}
+      data-test-keymgmt-dist-operations
+    >
+      <legend class="is-label">Operations</legend>
+      <p class="sub-text">The types of operations this key can perform in the provider.</p>
+      {{#each this.operations as |op|}}
+        <div class="b-checkbox">
+          <Input
+            @type="checkbox"
+            id={{op}}
+            class="styled"
+            @checked={{false}}
+            {{on "input" this.handleOperation}}
+            data-test-operation={{op}}
+          />
+          <label for={{op}}>{{capitalize op}}</label>
+        </div>
+      {{/each}}
+    </fieldset>
+
+    <fieldset class="field form-fieldset" id="protection" data-test-keymgmt-dist-protections>
+      <legend class="is-label">Protection</legend>
+      <p class="sub-text">Specifies the protection of the key.</p>
+      <div>
+        <RadioButton
+          id="protection-hsm"
+          name="hsm"
+          class="radio"
+          data-test-protection="hsm"
+          @value="hsm"
+          @groupValue={{this.formData.protection}}
+          @onChange={{fn (mut this.formData.protection)}}
+        />
+        <label for="protection-hsm">HSM</label>
+      </div>
+      <div>
+        <RadioButton
+          id="protection-software"
+          name="software"
+          class="radio"
+          data-test-protection="software"
+          @value="software"
+          @groupValue={{this.formData.protection}}
+          @onChange={{fn (mut this.formData.protection)}}
+        />
+        <label for="protection-software">Software</label>
+      </div>
+    </fieldset>
+
+    {{#if this.formErrors}}
+      <AlertBanner @type="danger" @message={{this.formErrors}} data-test-keymgmt-distribute-error />
+    {{/if}}
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button
+          type="submit"
+          disabled={{or this.validationErrorCount this.createDistribution.isRunning}}
+          class="button is-primary"
+          data-test-secret-save={{true}}
+        >
+          {{#if this.createDistribution.isRunning}}
+            <span class="loader is-inline-block"></span>
+          {{else}}
+            {{if (or (not @key) this.isNewKey) "Add key" "Distribute key"}}
+          {{/if}}
+        </button>
+      </div>
+      <div class="control">
+        <button type="button" class="button" {{on "click" @onClose}}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </form>
+{{/if}}

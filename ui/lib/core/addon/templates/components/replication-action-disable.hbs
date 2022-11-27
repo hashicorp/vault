@@ -33,7 +33,6 @@
     "disable"
     (if (eq this.model.replicationAttrs.modeForUrl "bootstrapping") this.mode this.model.replicationAttrs.modeForUrl)
   }}
-  @testSelector="disable"
 >
   <p class="has-bottom-margin-m">
     {{#if (and this.model.replicationAttrs.isPrimary (eq this.model.replicationMode "dr"))}}

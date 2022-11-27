@@ -111,13 +111,15 @@ Unseal Progress               3/1
 Unseal Nonce                  nonce
 Seal Migration in Progress    true
 Version                       version
+Build Date                    build date
 Storage Type                  storage type
 Cluster Name                  cluster name
 Cluster ID                    cluster id
 HA Enabled                    true
 Raft Committed Index          3
 Raft Applied Index            4
-Last WAL                      2`
+Last WAL                      2
+Warnings                      [warning]`
 
 	if expectedOutputString != output {
 		fmt.Printf("%s\n%+v\n %s\n%+v\n", "output found was: ", output, "versus", expectedOutputString)
@@ -141,6 +143,7 @@ Unseal Progress               3/1
 Unseal Nonce                  nonce
 Seal Migration in Progress    true
 Version                       version
+Build Date                    build date
 Storage Type                  n/a
 HA Enabled                    false`
 
@@ -166,11 +169,13 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 			Progress:     3,
 			Nonce:        "nonce",
 			Version:      "version",
+			BuildDate:    "build date",
 			Migration:    true,
 			ClusterName:  "cluster name",
 			ClusterID:    "cluster id",
 			RecoverySeal: true,
 			StorageType:  "storage type",
+			Warnings:     []string{"warning"},
 		}
 
 		// must initialize this struct without explicit field names due to embedding
@@ -197,6 +202,7 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 			Progress:     3,
 			Nonce:        "nonce",
 			Version:      "version",
+			BuildDate:    "build date",
 			Migration:    true,
 			ClusterName:  "",
 			ClusterID:    "",

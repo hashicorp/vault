@@ -42,7 +42,7 @@ module('Acceptance | tools', function (hooks) {
     var tokenStore = createTokenStore();
     await visit('/vault/tools');
 
-    assert.equal(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
+    assert.strictEqual(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
     TOOLS_ACTIONS.forEach((action) => {
       assert.dom(`[data-test-tools-action-link="${action}"]`).exists(`${action} link renders`);
     });
@@ -107,7 +107,7 @@ module('Acceptance | tools', function (hooks) {
     await click('[data-test-tools-action-link="hash"]');
 
     await fillIn('[data-test-tools-input="hash-input"]', 'foo');
-    await click('[data-test-tools-b64-toggle="input"]');
+    await click('[data-test-transit-b64-toggle="input"]');
 
     await click('[data-test-tools-submit]');
     let sumInput = await waitUntil(() => find('[data-test-tools-input="sum"]'));

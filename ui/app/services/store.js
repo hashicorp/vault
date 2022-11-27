@@ -29,8 +29,14 @@ export function keyForCache(query) {
 
 export default Store.extend({
   // this is a map of map that stores the caches
-  lazyCaches: computed(function () {
-    return new Map();
+  // eslint-disable-next-line
+  lazyCaches: computed({
+    get() {
+      return this._lazyCaches || new Map();
+    },
+    set(key, value) {
+      return (this._lazyCaches = value);
+    },
   }),
 
   setLazyCacheForModel(modelName, key, value) {
@@ -155,7 +161,7 @@ export default Store.extend({
             'query'
           )
         );
-        let model = this.peekAll(modelName).toArray();
+        const model = this.peekAll(modelName).toArray();
         model.set('meta', response.meta);
         resolve(model);
       });
@@ -178,7 +184,7 @@ export default Store.extend({
   },
 
   clearDataset(modelName) {
-    let cacheList = this.lazyCaches;
+    const cacheList = this.lazyCaches;
     if (!cacheList.size) return;
     if (modelName && cacheList.has(modelName)) {
       cacheList.delete(modelName);

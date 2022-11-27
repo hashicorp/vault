@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Always return CRLs, URLs configurations, even if using the default value.
+```

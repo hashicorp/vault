@@ -32,20 +32,69 @@ func prepareRadiusTestContainer(t *testing.T) (func(), string, int) {
 		return func() {}, os.Getenv(envRadiusRadiusHost), port
 	}
 
+	// Now allow any client to connect to this radiusd instance by writing our
+	// own clients.conf file.
+	//
+	// This is necessary because we lack control over the container's network
+	// IPs. We might be running in Circle CI (with variable IPs per new
+	// network) or in Podman (which uses an entirely different set of default
+	// ranges than Docker).
+	//
+	// See also: https://freeradius.org/radiusd/man/clients.conf.html
+	ctx := context.Background()
+	clientsConfig := `
+client 0.0.0.0/1 {
+ ipaddr = 0.0.0.0/1
+ secret = testing123
+ shortname = all-clients-first
+}
+
+client 128.0.0.0/1 {
+ ipaddr = 128.0.0.0/1
+ secret = testing123
+ shortname = all-clients-second
+}
+`
+
+	containerfile := `
+FROM docker.mirror.hashicorp.services/jumanjiman/radiusd:latest
+
+COPY clients.conf /etc/raddb/clients.conf
+`
+
+	bCtx := docker.NewBuildContext()
+	bCtx["clients.conf"] = docker.PathContentsFromBytes([]byte(clientsConfig))
+
+	imageName := "vault_radiusd_any_client"
+	imageTag := "latest"
+
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:     "jumanjiman/radiusd",
-		ImageTag:      "latest",
+		ImageRepo:     imageName,
+		ImageTag:      imageTag,
 		ContainerName: "radiusd",
-		Cmd:           []string{"-f", "-l", "stdout"},
+		Cmd:           []string{"-f", "-l", "stdout", "-X"},
 		Ports:         []string{"1812/udp"},
+		LogConsumer: func(s string) {
+			if t.Failed() {
+				t.Logf("container logs: %s", s)
+			}
+		},
 	})
 	if err != nil {
-		t.Fatalf("Could not start docker radiusd: %s", err)
+		t.Fatalf("Could not provision docker service runner: %s", err)
 	}
 
+	output, err := runner.BuildImage(ctx, containerfile, bCtx,
+		docker.BuildRemove(true), docker.BuildForceRemove(true),
+		docker.BuildPullParent(true),
+		docker.BuildTags([]string{imageName + ":" + imageTag}))
+	if err != nil {
+		t.Fatalf("Could not build new image: %v", err)
+	}
+
+	t.Logf("Image build output: %v", string(output))
+
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
-		// There's no straightfoward way to check the state, but the server starts
-		// up quick so a 2 second sleep should be enough.
 		time.Sleep(2 * time.Second)
 		return docker.NewServiceHostPort(host, port), nil
 	})
@@ -269,7 +318,8 @@ func testStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 }
 
 func testStepUpdateUser(
-	t *testing.T, name string, policies string) logicaltest.TestStep {
+	t *testing.T, name string, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "users/" + name,

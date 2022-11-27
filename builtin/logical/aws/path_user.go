@@ -58,7 +58,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}
 	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Role '%s' not found", roleName)), nil
+			"Role %q not found", roleName)), nil
 	}
 
 	var ttl int64

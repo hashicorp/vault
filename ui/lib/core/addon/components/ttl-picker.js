@@ -32,6 +32,7 @@ const ERROR_MESSAGE = 'TTLs must be specified in whole number increments, please
 export default Component.extend({
   layout,
   'data-test-component': 'ttl-picker',
+  attributeBindings: ['data-test-component'],
   classNames: 'field',
 
   onChange: () => {},
@@ -93,7 +94,7 @@ export default Component.extend({
   },
 
   parseAndSetTime() {
-    let value = this.initialValue;
+    const value = this.initialValue;
     let seconds = typeOf(value) === 'number' ? value : 30;
     try {
       seconds = Duration.parse(value).seconds();

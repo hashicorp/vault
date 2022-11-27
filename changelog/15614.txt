@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/database/elasticsearch: Use the new /_security base API path instead of /_xpack/security when managing elasticsearch.
+```

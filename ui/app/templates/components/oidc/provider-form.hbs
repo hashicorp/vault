@@ -1,0 +1,129 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          {{#if @model.isNew}}
+            <LinkTo @route="vault.cluster.access.oidc.providers">
+              Providers
+            </LinkTo>
+          {{else}}
+            <LinkTo @route="vault.cluster.access.oidc.providers.provider.details" @model={{@model.name}}>
+              Details
+            </LinkTo>
+          {{/if}}
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-oidc-provider-title>
+      {{if @model.isNew "Create" "Edit"}}
+      provider
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<form {{on "submit" (perform this.save)}} {{did-insert this.setIssuer @model}}>
+  <div class="box is-sideless is-fullwidth is-bottomless">
+    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    {{! name field }}
+    <FormField
+      data-test-field={{true}}
+      @attr={{get @model.formFields "0"}}
+      @model={{@model}}
+      @modelValidations={{this.modelValidations}}
+    />
+    {{#let (get @model.formFields "1") as |attr|}}
+      <FormFieldLabel
+        for={{attr.name}}
+        @label="Issuer"
+        @helpText={{attr.options.helpText}}
+        @subText={{attr.options.subText}}
+        @docLink={{attr.options.docLink}}
+      />
+      <Input
+        data-test-field={{true}}
+        data-test-input={{attr.name}}
+        id={{attr.name}}
+        autocomplete="off"
+        spellcheck="false"
+        @value={{@model.issuer}}
+        class="input {{if this.validationError 'has-error-border'}}"
+        placeholder={{attr.options.placeholderText}}
+      />
+    {{/let}}
+    {{! scopesSupported field }}
+    <FormField
+      data-test-field={{true}}
+      @attr={{get @model.formFields "2"}}
+      @model={{@model}}
+      @modelValidations={{this.modelValidations}}
+    />
+  </div>
+  {{! RADIO CARD + SEARCH SELECT }}
+  <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
+    <h4 class="title is-4">Allowed applications</h4>
+    <div class="is-flex-row">
+      <RadioCard
+        data-test-oidc-radio="allow-all"
+        @title="Allow every application to use"
+        @description="All applications can use this provider for authentication requests."
+        @icon="globe"
+        @value="allow_all"
+        @groupValue={{this.radioCardGroupValue}}
+        @onChange={{this.handleClientSelection}}
+      />
+      <RadioCard
+        data-test-oidc-radio="limited"
+        @title="Limit access to selected application"
+        @description="Only selected applications can use this provider for authentication requests."
+        @icon="globe-private"
+        @value="limited"
+        @groupValue={{this.radioCardGroupValue}}
+        @onChange={{this.handleClientSelection}}
+      />
+    </div>
+    {{#if (eq this.radioCardGroupValue "limited")}}
+      <SearchSelect
+        @id="allowedClientIds"
+        @label="Application name"
+        @models={{array "oidc/client"}}
+        @inputValue={{@model.allowedClientIds}}
+        @onChange={{this.handleClientSelection}}
+        @disallowNewItems={{true}}
+        @fallbackComponent="string-list"
+        @passObject={{true}}
+        @objectKeys={{array "clientId"}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
+      />
+    {{/if}}
+  </div>
+  <div class="field box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="submit"
+        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+        disabled={{this.save.isRunning}}
+        data-test-oidc-provider-save
+      >
+        {{if @model.isNew "Create" "Update"}}
+      </button>
+      <button
+        type="button"
+        class="button has-left-margin-s"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.cancel}}
+        data-test-oidc-provider-cancel
+      >
+        Cancel
+      </button>
+    </div>
+    {{#if this.invalidFormAlert}}
+      <div class="control">
+        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+      </div>
+    {{/if}}
+  </div>
+</form>

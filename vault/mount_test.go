@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -187,6 +188,78 @@ func TestCore_Mount(t *testing.T) {
 	}
 }
 
+func TestCore_Mount_secrets_builtin_RunningVersion(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "generic",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount(namespace.RootContext(nil), "foo/bar")
+	if match != "foo/" {
+		t.Fatalf("missing mount")
+	}
+
+	raw, _ := c.router.root.Get(match)
+	// we override the running version of builtins
+	if !versions.IsBuiltinVersion(raw.(*routeEntry).mountEntry.RunningVersion) {
+		t.Errorf("Expected mount to have builtin version but got %s", raw.(*routeEntry).mountEntry.RunningVersion)
+	}
+}
+
+// TestCore_Mount_kv_generic tests that we can successfully mount kv using the
+// kv alias "generic"
+func TestCore_Mount_kv_generic(t *testing.T) {
+	c, keys, _ := TestCoreUnsealed(t)
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "generic",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount(namespace.RootContext(nil), "foo/bar")
+	if match != "foo/" {
+		t.Fatalf("missing mount")
+	}
+
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf := &CoreConfig{
+		Physical:        c.physical,
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
+	}
+	c2, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	defer c2.Shutdown()
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
+	}
+
+	// Verify matching mount tables
+	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
+		t.Fatalf("mismatch: %v", diff)
+	}
+}
+
 // Test that the local table actually gets populated as expected with local
 // entries, and that upon reading the entries from both are recombined
 // correctly
@@ -286,6 +359,77 @@ func TestCore_Mount_Local(t *testing.T) {
 
 	if len(c.mounts.Entries) != 2 {
 		t.Fatalf("expected two mount entries, got %#v", localMountsTable)
+	}
+}
+
+func TestCore_FindOps(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	uuid1 := "80DA741F-3997-4179-B531-EBD7371DFA86"
+	uuid2 := "0178594D-F267-445A-89A3-5B5DFC4A4C0F"
+	path1 := "kv1"
+	path2 := "kv2"
+
+	c.mounts = &MountTable{
+		Type: mountTableType,
+		Entries: []*MountEntry{
+			{
+				Table:            mountTableType,
+				Path:             path1,
+				Type:             "kv",
+				UUID:             "abcd",
+				Accessor:         "kv-abcd",
+				BackendAwareUUID: uuid1,
+				NamespaceID:      namespace.RootNamespaceID,
+				namespace:        namespace.RootNamespace,
+			},
+			{
+				Table:            mountTableType,
+				Path:             path2,
+				Type:             "kv",
+				UUID:             "bcde",
+				Accessor:         "kv-bcde",
+				BackendAwareUUID: uuid2,
+				NamespaceID:      namespace.RootNamespaceID,
+				namespace:        namespace.RootNamespace,
+			},
+		},
+	}
+
+	// Both should set up successfully
+	if err := c.setupMounts(namespace.RootContext(nil)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(c.mounts.Entries) != 2 {
+		t.Fatalf("expected two entries, got %d", len(c.mounts.Entries))
+	}
+
+	// Unknown uuids/paths should return nil, nil
+	entry, err := c.mounts.findByBackendUUID(namespace.RootContext(nil), "unknown")
+	if err != nil || entry != nil {
+		t.Fatalf("expected no errors nor matches got, error: %#v entry: %#v", err, entry)
+	}
+	entry, err = c.mounts.find(namespace.RootContext(nil), "unknown")
+	if err != nil || entry != nil {
+		t.Fatalf("expected no errors nor matches got, error: %#v entry: %#v", err, entry)
+	}
+
+	// Find our entry by its uuid
+	entry, err = c.mounts.findByBackendUUID(namespace.RootContext(nil), uuid1)
+	if err != nil || entry == nil {
+		t.Fatalf("failed finding entry by uuid error: %#v entry: %#v", err, entry)
+	}
+	if entry.Path != path1 {
+		t.Fatalf("found incorrect entry by uuid, entry should had a path of '%s': %#v", path1, entry)
+	}
+
+	// Find another entry by its path
+	entry, err = c.mounts.find(namespace.RootContext(nil), path2)
+	if err != nil || entry == nil {
+		t.Fatalf("failed finding entry by path error: %#v entry: %#v", err, entry)
+	}
+	if entry.BackendAwareUUID != uuid2 {
+		t.Fatalf("found incorrect entry by path, entry should had a uuid of '%s': %#v", uuid2, entry)
 	}
 }
 

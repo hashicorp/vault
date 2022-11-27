@@ -1,0 +1,38 @@
+<div class="auth-form" data-test-okta-number-challenge>
+  <div class="box is-marginless is-shadowless">
+    <div class="field has-top-margin-xs">
+      <p data-test-okta-number-challenge-description>
+        To finish signing in, you will need to complete an additional MFA step.</p>
+      {{#if @hasError}}
+        <div class="has-top-margin-s">
+          <MessageError @errorMessage="There was a problem" />
+          <button
+            type="button"
+            class="button"
+            {{on "click" @onReturnToLogin}}
+            data-test-return-from-okta-number-challenge
+          >Return to login</button>
+        </div>
+      {{else if @correctAnswer}}
+        <div class="has-top-margin-s">
+          <p class="has-text-black has-text-weight-semibold" data-test-okta-number-challenge-verification-type>Okta
+            verification</p>
+          <p data-test-okta-number-challenge-verification-description>Select the following number to complete verification:</p>
+          <h1
+            class="title has-font-weight-normal has-top-margin-m has-bottom-margin-s"
+            data-test-okta-number-challenge-answer
+          >{{@correctAnswer}}</h1>
+        </div>
+      {{else}}
+        <div class="has-top-margin-l has-bottom-margin-m">
+          <div class="is-flex-row">
+            <FlightIcon @name="loading" />
+            <div class="has-left-margin-xs">
+              <p data-test-okta-number-challenge-loading>Please wait...</p>
+            </div>
+          </div>
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</div>

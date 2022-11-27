@@ -1,10 +1,14 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
@@ -13,12 +17,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/axiomhq/hyperloglog"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
-	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/mitchellh/mapstructure"
@@ -228,15 +232,6 @@ func readSegmentFromStorage(t *testing.T, c *Core, path string) *logical.Storage
 	}
 	if logSegment == nil {
 		t.Fatalf("expected non-nil log segment at %q", path)
-	}
-
-	value, notCompressed, err := compressutil.Decompress(logSegment.Value)
-	// If the data wasn't compressed, fallback to old behavior
-	if !notCompressed {
-		logSegment.Value = value
-	}
-	if err != nil {
-		return logSegment
 	}
 
 	return logSegment
@@ -476,6 +471,64 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
 	expectedEntityIDs(t, out, ids)
+}
+
+// Test to check store hyperloglog and fetch hyperloglog from storage
+func TestActivityLog_StoreAndReadHyperloglog(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := context.Background()
+
+	a := core.activityLog
+	a.SetStandbyEnable(ctx, true)
+	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
+	currentMonth := timeutil.StartOfMonth(time.Now())
+	currentMonthHll := hyperloglog.New()
+	currentMonthHll.Insert([]byte("a"))
+	currentMonthHll.Insert([]byte("a"))
+	currentMonthHll.Insert([]byte("b"))
+	currentMonthHll.Insert([]byte("c"))
+	currentMonthHll.Insert([]byte("d"))
+	currentMonthHll.Insert([]byte("d"))
+
+	err := a.StoreHyperlogLog(ctx, currentMonth, currentMonthHll)
+	if err != nil {
+		t.Fatalf("error storing hyperloglog in storage: %v", err)
+	}
+	fetchedHll, err := a.CreateOrFetchHyperlogLog(ctx, currentMonth)
+	// check the distinct count stored from hll
+	if fetchedHll.Estimate() != 4 {
+		t.Fatalf("wrong number of distinct elements: expected: 5 actual: %v", fetchedHll.Estimate())
+	}
+}
+
+func TestModifyResponseMonthsNilAppend(t *testing.T) {
+	end := time.Now().UTC()
+	start := timeutil.StartOfMonth(end).AddDate(0, -5, 0)
+	responseMonthTimestamp := timeutil.StartOfMonth(end).AddDate(0, -3, 0).Format(time.RFC3339)
+	responseMonths := []*ResponseMonth{{Timestamp: responseMonthTimestamp}}
+	months := modifyResponseMonths(responseMonths, start, end)
+	if len(months) != 5 {
+		t.Fatal("wrong number of months padded")
+	}
+	for _, m := range months {
+		ts, err := time.Parse(time.RFC3339, m.Timestamp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ts.Equal(start) {
+			t.Fatalf("incorrect time in month sequence timestamps: expected %+v, got %+v", start, ts)
+		}
+		start = timeutil.StartOfMonth(start).AddDate(0, 1, 0)
+	}
+	// The following is a redundant check, but for posterity and readability I've
+	// made it explicit.
+	lastMonth, err := time.Parse(time.RFC3339, months[4].Timestamp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if timeutil.IsCurrentMonth(lastMonth, time.Now().UTC()) {
+		t.Fatalf("do not include current month timestamp in nil padding for months")
+	}
 }
 
 func TestActivityLog_ReceivedFragment(t *testing.T) {
@@ -1725,6 +1778,197 @@ func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
 	}
 }
 
+func TestActivityLog_Export(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	january := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	august := time.Date(2020, 8, 15, 12, 0, 0, 0, time.UTC)
+	september := timeutil.StartOfMonth(time.Date(2020, 9, 1, 0, 0, 0, 0, time.UTC))
+	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
+	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
+
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		ActivityLogConfig: ActivityLogCoreConfig{
+			DisableTimers: true,
+			ForceEnable:   true,
+		},
+	})
+	a := core.activityLog
+	ctx := namespace.RootContext(nil)
+
+	// Generate overlapping sets of entity IDs from this list.
+	//   january:      40-44                                          RRRRR
+	//   first month:   0-19  RRRRRAAAAABBBBBRRRRR
+	//   second month: 10-29            BBBBBRRRRRRRRRRCCCCC
+	//   third month:  15-39                 RRRRRRRRRRCCCCCRRRRRBBBBB
+
+	entityRecords := make([]*activity.EntityRecord, 45)
+	entityNamespaces := []string{"root", "aaaaa", "bbbbb", "root", "root", "ccccc", "root", "bbbbb", "rrrrr"}
+	authMethods := []string{"auth_1", "auth_2", "auth_3", "auth_4", "auth_5", "auth_6", "auth_7", "auth_8", "auth_9"}
+
+	for i := range entityRecords {
+		entityRecords[i] = &activity.EntityRecord{
+			ClientID:      fmt.Sprintf("111122222-3333-4444-5555-%012v", i),
+			NamespaceID:   entityNamespaces[i/5],
+			MountAccessor: authMethods[i/5],
+		}
+	}
+
+	toInsert := []struct {
+		StartTime int64
+		Segment   uint64
+		Clients   []*activity.EntityRecord
+	}{
+		// January, should not be included
+		{
+			january.Unix(),
+			0,
+			entityRecords[40:45],
+		},
+		// Artifically split August and October
+		{ // 1
+			august.Unix(),
+			0,
+			entityRecords[:13],
+		},
+		{ // 2
+			august.Unix(),
+			1,
+			entityRecords[13:20],
+		},
+		{ // 3
+			september.Unix(),
+			0,
+			entityRecords[10:30],
+		},
+		{ // 4
+			october.Unix(),
+			0,
+			entityRecords[15:40],
+		},
+		{
+			october.Unix(),
+			1,
+			entityRecords[15:40],
+		},
+		{
+			october.Unix(),
+			2,
+			entityRecords[17:23],
+		},
+	}
+
+	for i, segment := range toInsert {
+		eal := &activity.EntityActivityLog{
+			Clients: segment.Clients,
+		}
+
+		// Mimic a lower time stamp for earlier clients
+		for _, c := range eal.Clients {
+			c.Timestamp = int64(i)
+		}
+
+		data, err := proto.Marshal(eal)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := fmt.Sprintf("%ventity/%v/%v", ActivityLogPrefix, segment.StartTime, segment.Segment)
+		WriteToStorage(t, core, path, data)
+	}
+
+	tCases := []struct {
+		format    string
+		startTime time.Time
+		endTime   time.Time
+		expected  string
+	}{
+		{
+			format:    "json",
+			startTime: august,
+			endTime:   timeutil.EndOfMonth(september),
+			expected:  "aug_sep.json",
+		},
+		{
+			format:    "csv",
+			startTime: august,
+			endTime:   timeutil.EndOfMonth(september),
+			expected:  "aug_sep.csv",
+		},
+		{
+			format:    "json",
+			startTime: january,
+			endTime:   timeutil.EndOfMonth(november),
+			expected:  "full_history.json",
+		},
+		{
+			format:    "csv",
+			startTime: january,
+			endTime:   timeutil.EndOfMonth(november),
+			expected:  "full_history.csv",
+		},
+		{
+			format:    "json",
+			startTime: august,
+			endTime:   timeutil.EndOfMonth(october),
+			expected:  "aug_oct.json",
+		},
+		{
+			format:    "csv",
+			startTime: august,
+			endTime:   timeutil.EndOfMonth(october),
+			expected:  "aug_oct.csv",
+		},
+		{
+			format:    "json",
+			startTime: august,
+			endTime:   timeutil.EndOfMonth(august),
+			expected:  "aug.json",
+		},
+		{
+			format:    "csv",
+			startTime: august,
+			endTime:   timeutil.EndOfMonth(august),
+			expected:  "aug.csv",
+		},
+	}
+
+	for _, tCase := range tCases {
+		rw := &fakeResponseWriter{
+			buffer:  &bytes.Buffer{},
+			headers: http.Header{},
+		}
+		if err := a.writeExport(ctx, rw, tCase.format, tCase.startTime, tCase.endTime); err != nil {
+			t.Fatal(err)
+		}
+
+		expected, err := os.ReadFile(filepath.Join("activity", "test_fixtures", tCase.expected))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !bytes.Equal(rw.buffer.Bytes(), expected) {
+			t.Fatal(rw.buffer.String())
+		}
+	}
+}
+
+type fakeResponseWriter struct {
+	buffer  *bytes.Buffer
+	headers http.Header
+}
+
+func (f *fakeResponseWriter) Write(b []byte) (int, error) {
+	return f.buffer.Write(b)
+}
+
+func (f *fakeResponseWriter) Header() http.Header {
+	return f.headers
+}
+
+func (f *fakeResponseWriter) WriteHeader(statusCode int) {
+	panic("unimplmeneted")
+}
+
 func TestActivityLog_IncludeNamespace(t *testing.T) {
 	root := namespace.RootNamespace
 	a := &ActivityLog{}
@@ -2039,8 +2283,16 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
 	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
 
-	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
+	conf := &CoreConfig{
+		ActivityLogConfig: ActivityLogCoreConfig{
+			ForceEnable:   true,
+			DisableTimers: true,
+		},
+	}
+	sink := SetupMetrics(conf)
+	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
 	a := core.activityLog
+	<-a.computationWorkerDone
 	ctx := namespace.RootContext(nil)
 
 	// Generate overlapping sets of entity IDs from this list.
@@ -2367,11 +2619,11 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 			"deleted-ccccc",
 			5.0,
 		},
-		// august-september values
+		// january-september values
 		{
 			"identity.nonentity.active.reporting_period",
 			"root",
-			1220.0,
+			1223.0,
 		},
 		{
 			"identity.nonentity.active.reporting_period",
@@ -2409,7 +2661,7 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("No guage found for %v %v",
+			t.Errorf("No gauge found for %v %v",
 				g.Name, g.NamespaceLabel)
 		}
 	}
@@ -2465,7 +2717,14 @@ func TestActivityLog_Precompute(t *testing.T) {
 	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
 	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
 
-	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
+	conf := &CoreConfig{
+		ActivityLogConfig: ActivityLogCoreConfig{
+			ForceEnable:   true,
+			DisableTimers: true,
+		},
+	}
+	sink := SetupMetrics(conf)
+	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
 	a := core.activityLog
 	ctx := namespace.RootContext(nil)
 
@@ -2786,6 +3045,192 @@ func TestActivityLog_Precompute(t *testing.T) {
 	}
 }
 
+// TestActivityLog_Precompute_SkipMonth will put two non-contiguous chunks of
+// data in the activity log, and then run precomputedQueryWorker. Finally it
+// will perform a query get over the skip month and expect a query for the entire
+// time segment (non-contiguous)
+func TestActivityLog_Precompute_SkipMonth(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	august := time.Date(2020, 8, 15, 12, 0, 0, 0, time.UTC)
+	september := timeutil.StartOfMonth(time.Date(2020, 9, 1, 0, 0, 0, 0, time.UTC))
+	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
+	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
+	december := timeutil.StartOfMonth(time.Date(2020, 12, 1, 0, 0, 0, 0, time.UTC))
+
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		ActivityLogConfig: ActivityLogCoreConfig{
+			ForceEnable:   true,
+			DisableTimers: true,
+		},
+	})
+	a := core.activityLog
+	ctx := namespace.RootContext(nil)
+
+	entityRecords := make([]*activity.EntityRecord, 45)
+
+	for i := range entityRecords {
+		entityRecords[i] = &activity.EntityRecord{
+			ClientID:    fmt.Sprintf("111122222-3333-4444-5555-%012v", i),
+			NamespaceID: "root",
+			Timestamp:   time.Now().Unix(),
+		}
+	}
+
+	toInsert := []struct {
+		StartTime int64
+		Segment   uint64
+		Clients   []*activity.EntityRecord
+	}{
+		{
+			august.Unix(),
+			0,
+			entityRecords[:20],
+		},
+		{
+			september.Unix(),
+			0,
+			entityRecords[20:30],
+		},
+		{
+			november.Unix(),
+			0,
+			entityRecords[30:45],
+		},
+	}
+
+	// Note that precomputedQuery worker doesn't filter
+	// for times <= the one it was asked to do. Is that a problem?
+	// Here, it means that we can't insert everything *first* and do multiple
+	// test cases, we have to write logs incrementally.
+	doInsert := func(i int) {
+		t.Helper()
+		segment := toInsert[i]
+		eal := &activity.EntityActivityLog{
+			Clients: segment.Clients,
+		}
+		data, err := proto.Marshal(eal)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := fmt.Sprintf("%ventity/%v/%v", ActivityLogPrefix, segment.StartTime, segment.Segment)
+		WriteToStorage(t, core, path, data)
+	}
+
+	expectedCounts := []struct {
+		StartTime   time.Time
+		EndTime     time.Time
+		ByNamespace map[string]int
+	}{
+		// First test case
+		{
+			august,
+			timeutil.EndOfMonth(september),
+			map[string]int{
+				"root": 30,
+			},
+		},
+		// Second test case
+		{
+			august,
+			timeutil.EndOfMonth(november),
+			map[string]int{
+				"root": 45,
+			},
+		},
+	}
+
+	checkPrecomputedQuery := func(i int) {
+		t.Helper()
+		pq, err := a.queryStore.Get(ctx, expectedCounts[i].StartTime, expectedCounts[i].EndTime)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if pq == nil {
+			t.Errorf("empty result for %v -- %v", expectedCounts[i].StartTime, expectedCounts[i].EndTime)
+		}
+		if len(pq.Namespaces) != len(expectedCounts[i].ByNamespace) {
+			t.Errorf("mismatched number of namespaces, expected %v got %v",
+				len(expectedCounts[i].ByNamespace), len(pq.Namespaces))
+		}
+		for _, nsRecord := range pq.Namespaces {
+			val, ok := expectedCounts[i].ByNamespace[nsRecord.NamespaceID]
+			if !ok {
+				t.Errorf("unexpected namespace %v", nsRecord.NamespaceID)
+				continue
+			}
+			if uint64(val) != nsRecord.Entities {
+				t.Errorf("wrong number of entities in %v: expected %v, got %v",
+					nsRecord.NamespaceID, val, nsRecord.Entities)
+			}
+		}
+		if !pq.StartTime.Equal(expectedCounts[i].StartTime) {
+			t.Errorf("mismatched start time: expected %v got %v",
+				expectedCounts[i].StartTime, pq.StartTime)
+		}
+		if !pq.EndTime.Equal(expectedCounts[i].EndTime) {
+			t.Errorf("mismatched end time: expected %v got %v",
+				expectedCounts[i].EndTime, pq.EndTime)
+		}
+	}
+
+	testCases := []struct {
+		InsertUpTo   int // index in the toInsert array
+		PrevMonth    int64
+		NextMonth    int64
+		ExpectedUpTo int // index in the expectedCounts array
+	}{
+		{
+			1,
+			september.Unix(),
+			october.Unix(),
+			0,
+		},
+		{
+			2,
+			november.Unix(),
+			december.Unix(),
+			1,
+		},
+	}
+
+	inserted := -1
+	for _, tc := range testCases {
+		t.Logf("tc %+v", tc)
+
+		// Persists across loops
+		for inserted < tc.InsertUpTo {
+			inserted += 1
+			t.Logf("inserting segment %v", inserted)
+			doInsert(inserted)
+		}
+
+		intent := &ActivityIntentLog{
+			PreviousMonth: tc.PrevMonth,
+			NextMonth:     tc.NextMonth,
+		}
+		data, err := json.Marshal(intent)
+		if err != nil {
+			t.Fatal(err)
+		}
+		WriteToStorage(t, core, "sys/counters/activity/endofmonth", data)
+
+		// Pretend we've successfully rolled over to the following month
+		a.SetStartTimestamp(tc.NextMonth)
+
+		err = a.precomputedQueryWorker(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expectMissingSegment(t, core, "sys/counters/activity/endofmonth")
+
+		for i := 0; i <= tc.ExpectedUpTo; i++ {
+			checkPrecomputedQuery(i)
+		}
+	}
+}
+
 // TestActivityLog_PrecomputeNonEntityTokensWithID is the same test as
 // TestActivityLog_Precompute, except all the clients are tokens without
 // entities. This ensures the deduplication logic and separation logic between
@@ -2799,7 +3244,14 @@ func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
 	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
 	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
 
-	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
+	conf := &CoreConfig{
+		ActivityLogConfig: ActivityLogCoreConfig{
+			ForceEnable:   true,
+			DisableTimers: true,
+		},
+	}
+	sink := SetupMetrics(conf)
+	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
 	a := core.activityLog
 	ctx := namespace.RootContext(nil)
 
@@ -3404,5 +3856,131 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 	}
 	if clientCount != len(clients) {
 		t.Errorf("bad client count. expected %d, got %d", len(clients), clientCount)
+	}
+}
+
+func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	ctx := namespace.RootContext(nil)
+	now := time.Now().UTC()
+	a, clients, _ := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+
+	// clients[0] belongs to previous month
+	clients = clients[1:]
+
+	clientCounts := make(map[string]uint64)
+	for _, client := range clients {
+		clientCounts[client.NamespaceID] += 1
+	}
+
+	a.SetEnable(true)
+	var wg sync.WaitGroup
+	err := a.refreshFromStoredLog(ctx, &wg, now)
+	if err != nil {
+		t.Fatalf("error loading clients: %v", err)
+	}
+	wg.Wait()
+
+	results, err := a.handleQuery(ctx, time.Now().UTC(), time.Now().UTC(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results == nil {
+		t.Fatal("no results to test")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results == nil {
+		t.Fatal("no results to test")
+	}
+
+	byNamespace, ok := results["by_namespace"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+
+	clientCountResponse := make([]*ResponseNamespace, 0)
+	err = mapstructure.Decode(byNamespace, &clientCountResponse)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, clientCount := range clientCountResponse {
+		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+		}
+		totalCount := int(clientCounts[clientCount.NamespaceID])
+		if totalCount != clientCount.Counts.Clients {
+			t.Errorf("bad client count for namespace %s . expected %d, got %d", clientCount.NamespaceID, totalCount, clientCount.Counts.Clients)
+		}
+	}
+
+	totals, ok := results["total"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	totalCounts := ResponseCounts{}
+	err = mapstructure.Decode(totals, &totalCounts)
+	distinctEntities := totalCounts.DistinctEntities
+	if distinctEntities != len(clients) {
+		t.Errorf("bad entity count. expected %d, got %d", len(clients), distinctEntities)
+	}
+
+	clientCount := totalCounts.Clients
+	if clientCount != len(clients) {
+		t.Errorf("bad client count. expected %d, got %d", len(clients), clientCount)
+	}
+	// Ensure that the month response is the same as the totals, because all clients
+	// are new clients and there will be no approximation in the single month partial
+	// case
+	monthsRaw, ok := results["months"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	monthsResponse := make([]ResponseMonth, 0)
+	err = mapstructure.Decode(monthsRaw, &monthsResponse)
+	if len(monthsResponse) != 1 {
+		t.Fatalf("wrong number of months returned. got %v", monthsResponse)
+	}
+	if monthsResponse[0].Counts.Clients != totalCounts.Clients {
+		t.Fatalf("wrong client count. got %v, expected %v", monthsResponse[0].Counts.Clients, totalCounts.Clients)
+	}
+	if monthsResponse[0].Counts.EntityClients != totalCounts.EntityClients {
+		t.Fatalf("wrong entity client count. got %v, expected %v", monthsResponse[0].Counts.EntityClients, totalCounts.EntityClients)
+	}
+	if monthsResponse[0].Counts.NonEntityClients != totalCounts.NonEntityClients {
+		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityClients, totalCounts.NonEntityClients)
+	}
+	if monthsResponse[0].Counts.NonEntityTokens != totalCounts.NonEntityTokens {
+		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityTokens, totalCounts.NonEntityTokens)
+	}
+	if monthsResponse[0].Counts.Clients != monthsResponse[0].NewClients.Counts.Clients {
+		t.Fatalf("wrong client count. got %v, expected %v", monthsResponse[0].Counts.Clients, monthsResponse[0].NewClients.Counts.Clients)
+	}
+	if monthsResponse[0].Counts.DistinctEntities != monthsResponse[0].NewClients.Counts.DistinctEntities {
+		t.Fatalf("wrong distinct entities count. got %v, expected %v", monthsResponse[0].Counts.DistinctEntities, monthsResponse[0].NewClients.Counts.DistinctEntities)
+	}
+	if monthsResponse[0].Counts.EntityClients != monthsResponse[0].NewClients.Counts.EntityClients {
+		t.Fatalf("wrong entity client count. got %v, expected %v", monthsResponse[0].Counts.EntityClients, monthsResponse[0].NewClients.Counts.EntityClients)
+	}
+	if monthsResponse[0].Counts.NonEntityClients != monthsResponse[0].NewClients.Counts.NonEntityClients {
+		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityClients, monthsResponse[0].NewClients.Counts.NonEntityClients)
+	}
+	if monthsResponse[0].Counts.NonEntityTokens != monthsResponse[0].NewClients.Counts.NonEntityTokens {
+		t.Fatalf("wrong non-entity token count. got %v, expected %v", monthsResponse[0].Counts.NonEntityTokens, monthsResponse[0].NewClients.Counts.NonEntityTokens)
+	}
+
+	namespaceResponseMonth := monthsResponse[0].Namespaces
+
+	for _, clientCount := range namespaceResponseMonth {
+		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.EntityClients {
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+		}
+		totalCount := int(clientCounts[clientCount.NamespaceID])
+		if totalCount != clientCount.Counts.Clients {
+			t.Errorf("bad client count for namespace %s . expected %d, got %d", clientCount.NamespaceID, totalCount, clientCount.Counts.Clients)
+		}
 	}
 }

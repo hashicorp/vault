@@ -61,6 +61,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathVerify(&b),
 			pathConfigCA(&b),
 			pathSign(&b),
+			pathIssue(&b),
 			pathFetchPublicKey(&b),
 		},
 

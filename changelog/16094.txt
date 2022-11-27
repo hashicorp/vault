@@ -1,0 +1,3 @@
+```release-note:bug
+plugin/multiplexing: Fix panic when id doesn't exist in connection map
+```

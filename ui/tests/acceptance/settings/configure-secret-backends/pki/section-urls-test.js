@@ -1,4 +1,4 @@
-import { currentRouteName, settled } from '@ember/test-helpers';
+import { currentRouteName, settled, find, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section';
@@ -18,17 +18,16 @@ module('Acceptance | settings/configure/secrets/pki/urls', function (hooks) {
     await settled();
     await page.visit({ backend: path, section: 'urls' });
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
 
     await page.form.fields.objectAt(0).textarea('foo').change();
     await page.form.submit();
-    await settled();
-
+    await waitUntil(() => find('[data-test-error]'));
     assert.ok(page.form.hasError, 'shows error on invalid input');
 
     await page.form.fields.objectAt(0).textarea('foo.example.com').change();
     await page.form.submit();
     await settled();
-    assert.equal(page.lastMessage, 'The urls config for this backend has been updated.');
+    assert.strictEqual(page.lastMessage, 'The urls config for this backend has been updated.');
   });
 });

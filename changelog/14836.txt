@@ -1,0 +1,3 @@
+```release-note:bug
+api: Respect increment value in grace period calculations in LifetimeWatcher
+```

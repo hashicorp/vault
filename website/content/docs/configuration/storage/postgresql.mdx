@@ -92,8 +92,8 @@ LANGUAGE plpgsql;
 - `connection_url` `(string: <required>)` – Specifies the connection string to
   use to authenticate and connect to PostgreSQL. The connection URL can also be
   set using the `VAULT_PG_CONNECTION_URL` environment variable. A full list of supported
-  parameters can be found in [the pq library documentation][pglib]. For example
-  connection string URLs, see the examples section below.
+  parameters can be found in the [pgx library][pgxlib] and [PostgreSQL connection string][pg_conn_docs]
+  documentation. For example connection string URLs, see the examples section below.
 
 - `table` `(string: "vault_kv_store")` – Specifies the name of the table in
   which to write Vault data. This table must already exist (Vault will not
@@ -137,4 +137,5 @@ storage "postgresql" {
 
 [golang_setmaxidleconns]: https://golang.org/pkg/database/sql/#DB.SetMaxIdleConns
 [postgresql]: https://www.postgresql.org/
-[pglib]: https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters
+[pgxlib]: https://pkg.go.dev/github.com/jackc/pgx/stdlib
+[pg_conn_docs]: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING

@@ -1,4 +1,4 @@
-<div class="app-content {{if (and this.shouldRender this.featureComponent) "wizard-open"}}">
+<div class="app-content {{if (and this.shouldRender this.featureComponent) 'wizard-open'}}">
   {{yield}}
 </div>
 {{#if this.featureComponent}}
@@ -16,6 +16,7 @@
       onRepeat=(action "repeatStep")
       onReset=(action "resetFeature")
       onAdvance=(action "advanceFeature")
+      currentRouteName=this.currentRouteName
     }}
   {{/component}}
 {{/if}}

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 )
 
 func TestRenewer_Renew(t *testing.T) {
@@ -84,88 +83,6 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Errorf("received renew, but should have been nil: %#v", renew)
 			case <-time.After(500 * time.Millisecond):
 				t.Error("should have been non-renewable")
-			}
-		})
-
-		t.Run("database", func(t *testing.T) {
-			t.Parallel()
-
-			cleanup, pgURL := postgreshelper.PrepareTestContainer(t, "")
-			defer cleanup()
-
-			if err := client.Sys().Mount("database", &api.MountInput{
-				Type: "database",
-			}); err != nil {
-				t.Fatal(err)
-			}
-			if _, err := client.Logical().Write("database/config/postgresql", map[string]interface{}{
-				"plugin_name":    "postgresql-database-plugin",
-				"connection_url": pgURL,
-				"allowed_roles":  "readonly",
-			}); err != nil {
-				t.Fatal(err)
-			}
-			if _, err := client.Logical().Write("database/roles/readonly", map[string]interface{}{
-				"db_name": "postgresql",
-				"creation_statements": `` +
-					`CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';` +
-					`GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
-				"default_ttl": "5s",
-				"max_ttl":     "10s",
-			}); err != nil {
-				t.Fatal(err)
-			}
-
-			secret, err := client.Logical().Read("database/creds/readonly")
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			v, err := client.NewLifetimeWatcher(&api.RenewerInput{
-				Secret: secret,
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			go v.Renew()
-			defer v.Stop()
-
-			done, renewed := false, false
-			timeout := time.After(5 * time.Second)
-			for {
-
-				if done {
-					break
-				}
-				select {
-				case err := <-v.DoneCh():
-					if renewed {
-						// If we renewed but there's an error, we fail
-						if err != nil {
-							t.Fatalf("renewal failed with an error: %v", err)
-						}
-						// We can break out early here
-						done = true
-					} else {
-						t.Errorf("should have renewed once before returning: %s", err)
-					}
-				case renew := <-v.RenewCh():
-					if renew == nil {
-						t.Fatal("renew is nil")
-					}
-					if !renew.Secret.Renewable {
-						t.Errorf("expected lease to be renewable: %#v", renew)
-					}
-					if renew.Secret.LeaseDuration > 5 {
-						t.Errorf("expected lease to <= 5s: %#v", renew)
-					}
-					renewed = true
-				case <-timeout:
-					if !renewed {
-						t.Errorf("no renewal")
-					}
-					done = true
-				}
 			}
 		})
 

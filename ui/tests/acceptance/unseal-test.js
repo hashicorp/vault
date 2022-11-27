@@ -1,4 +1,4 @@
-import { click, fillIn, currentURL, currentRouteName, visit, settled } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, fillIn, settled, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
@@ -6,7 +6,7 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 
-const { unseal } = VAULT_KEYS;
+const { unsealKeys } = VAULT_KEYS;
 
 module('Acceptance | unseal', function (hooks) {
   setupApplicationTest(hooks);
@@ -22,7 +22,7 @@ module('Acceptance | unseal', function (hooks) {
   test('seal then unseal', async function (assert) {
     await visit('/vault/settings/seal');
 
-    assert.equal(currentURL(), '/vault/settings/seal');
+    assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
     await click('[data-test-seal] button');
@@ -31,16 +31,19 @@ module('Acceptance | unseal', function (hooks) {
 
     await pollCluster(this.owner);
     await settled();
-    assert.equal(currentURL(), '/vault/unseal', 'vault is on the unseal page');
+    assert.strictEqual(currentURL(), '/vault/unseal', 'vault is on the unseal page');
 
     // unseal
-    await fillIn('[data-test-shamir-input]', unseal);
+    for (const key of unsealKeys) {
+      await fillIn('[data-test-shamir-input]', key);
 
-    await click('button[type="submit"]');
+      await click('button[type="submit"]');
 
-    await pollCluster(this.owner);
-    await settled();
+      await pollCluster(this.owner);
+      await settled();
+    }
+
     assert.dom('[data-test-cluster-status]').doesNotExist('ui does not show sealed warning');
-    assert.equal(currentRouteName(), 'vault.cluster.auth', 'vault is ready to authenticate');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.auth', 'vault is ready to authenticate');
   });
 });

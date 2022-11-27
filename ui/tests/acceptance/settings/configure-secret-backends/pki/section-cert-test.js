@@ -2,6 +2,7 @@ import { currentRouteName, settled, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
+import { SELECTORS } from 'vault/tests/helpers/pki';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
@@ -70,34 +71,33 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   };
 
   test('cert config: generate', async function (assert) {
+    assert.expect(10);
     await mountAndNav(assert);
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
 
     await page.form.generateCA();
     await settled();
 
-    assert.ok(page.form.commonNameIsPresent, 'the common name displays');
-    assert.ok(page.form.issueDateIsPresent, 'the issue date displays');
-    assert.ok(page.form.expiryDateIsPresent, 'the expiration date displays');
-    assert
-      .dom('[data-test-value-div="Certificate"] [data-test-masked-input]')
-      .exists('certificate is present');
-
+    assert.dom(SELECTORS.certificate).exists('certificate is present and masked');
+    assert.dom(SELECTORS.commonName).exists('displays common name');
+    assert.dom(SELECTORS.issueDate).exists('displays issue date');
+    assert.dom(SELECTORS.expiryDate).exists('displays expiration date');
+    assert.dom(SELECTORS.issuingCa).exists('displays masked issuing CA');
+    assert.dom(SELECTORS.serialNumber).exists('displays serial number');
+    assert.dom(SELECTORS.csr).doesNotExist('does not display empty CSR');
+    assert.dom(SELECTORS.caChain).doesNotExist('does not display empty CA chain');
+    assert.dom(SELECTORS.privateKey).doesNotExist('does not display empty private key');
     await page.form.back();
     await page.form.generateCA();
     await settled();
-
-    assert.ok(
-      page.flash.latestMessage.includes('You tried to generate a new root CA'),
-      'shows warning message'
-    );
   });
 
   test('cert config: upload', async function (assert) {
+    assert.expect(2);
     await mountAndNav(assert);
     await settled();
-    assert.equal(page.form.downloadLinks.length, 0, 'there are no download links');
+    assert.strictEqual(page.form.downloadLinks.length, 0, 'there are no download links');
 
     await page.form.uploadCA(PEM_BUNDLE);
     await settled();
@@ -108,7 +108,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   });
 
   test('cert config: sign intermediate and set signed intermediate', async function (assert) {
-    let csrVal, intermediateCert;
+    assert.expect(3);
     const rootPath = await mountAndNav(assert, 'root-');
     await page.form.generateCA();
     await settled();
@@ -117,7 +117,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     // cache csr
     await click('.masked-input-toggle');
-    csrVal = document.querySelector('.masked-value').innerText;
+    const csrVal = document.querySelector('.masked-value').innerText;
     await page.form.back();
     await settled();
     await page.visit({ backend: rootPath });
@@ -126,8 +126,10 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     await page.form.csrField(csrVal).submit();
     await settled();
+    assert.dom(SELECTORS.caChain).exists('full CA chain is shown');
+    assert.dom(SELECTORS.privateKey).doesNotExist('does not display empty private key');
     await click('.masked-input-toggle');
-    intermediateCert = document.querySelector('[data-test-masked-input]').innerText;
+    const intermediateCert = document.querySelector('[data-test-masked-input]').innerText;
     await page.form.back();
     await settled();
     await page.visit({ backend: intermediatePath });

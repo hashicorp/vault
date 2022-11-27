@@ -91,7 +91,8 @@ func (c *PolicyWriteCommand) Run(args []string) int {
 	}
 
 	// Policies are normalized to lowercase
-	name := strings.TrimSpace(strings.ToLower(args[0]))
+	policyName := args[0]
+	formattedName := strings.TrimSpace(strings.ToLower(policyName))
 	path := strings.TrimSpace(args[1])
 
 	// Get the policy contents, either from stdin of a file
@@ -119,11 +120,15 @@ func (c *PolicyWriteCommand) Run(args []string) int {
 	}
 	rules := buf.String()
 
-	if err := client.Sys().PutPolicy(name, rules); err != nil {
+	if err := client.Sys().PutPolicy(formattedName, rules); err != nil {
 		c.UI.Error(fmt.Sprintf("Error uploading policy: %s", err))
 		return 2
 	}
 
-	c.UI.Output(fmt.Sprintf("Success! Uploaded policy: %s", name))
+	if policyName != formattedName {
+		c.UI.Warn(fmt.Sprintf("Policy name was converted from \"%s\" to \"%s\"", policyName, formattedName))
+	}
+
+	c.UI.Output(fmt.Sprintf("Success! Uploaded policy: %s", formattedName))
 	return 0
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -70,8 +71,8 @@ const (
 	// any namespace information
 	TokenLength = 24
 
-	// MaxNsIdLength is the maximum namespace ID length (4 characters prepended by a ".")
-	MaxNsIdLength = 5
+	// MaxNsIdLength is the maximum namespace ID length (5 characters prepended by a ".")
+	MaxNsIdLength = 6
 
 	// TokenPrefixLength is the length of the new token prefixes ("hvs.", "hvb.",
 	// and "hvr.")
@@ -87,6 +88,10 @@ const (
 	// MaxRetrySSCTokensGenerationCounter is the maximum number of retries the TokenStore
 	// will make when attempting to get the SSCTokensGenerationCounter
 	MaxRetrySSCTokensGenerationCounter = 3
+
+	// IgnoreForBilling used for HCP Link batch tokens and inserted into the InternalMeta
+	// Tokens created for the purpose of HCP Link should bypass counting for billing purposes
+	IgnoreForBilling = "ignore_for_billing"
 )
 
 var (
@@ -156,6 +161,70 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "create-orphan$",
 
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": {
+					Type:        framework.TypeString,
+					Description: "Name of the role",
+				},
+				"display_name": {
+					Type:        framework.TypeString,
+					Description: "Name to associate with this token",
+				},
+				"explicit_max_ttl": {
+					Type:        framework.TypeString,
+					Description: "Explicit Max TTL of this token",
+				},
+				"entity_alias": {
+					Type:        framework.TypeString,
+					Description: "Name of the entity alias to associate with this token",
+				},
+				"num_uses": {
+					Type:        framework.TypeInt,
+					Description: "Max number of uses for this token",
+				},
+				"period": {
+					Type:        framework.TypeString,
+					Description: "Renew period",
+				},
+				"renewable": {
+					Type:        framework.TypeBool,
+					Description: "Allow token to be renewed past its initial TTL up to system/mount maximum TTL",
+				},
+				"ttl": {
+					Type:        framework.TypeString,
+					Description: "Time to live for this token",
+				},
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Token type",
+				},
+				"no_default_policy": {
+					Type:        framework.TypeBool,
+					Description: "Do not include default policy for this token",
+				},
+				"id": {
+					Type:        framework.TypeString,
+					Description: "Value for the token",
+				},
+				"metadata": {
+					Type:        framework.TypeMap,
+					Description: "Arbitrary key=value metadata to associate with the token",
+				},
+				"no_parent": {
+					Type:        framework.TypeBool,
+					Description: "Create the token with no parent",
+				},
+				"policies": {
+					Type:        framework.TypeStringSlice,
+					Description: "List of policies for the token",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Query:       true,
+					Description: "Return json formatted output",
+				},
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleCreateOrphan,
 			},
@@ -172,6 +241,63 @@ func (ts *TokenStore) paths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Name of the role",
 				},
+				"display_name": {
+					Type:        framework.TypeString,
+					Description: "Name to associate with this token",
+				},
+				"explicit_max_ttl": {
+					Type:        framework.TypeString,
+					Description: "Explicit Max TTL of this token",
+				},
+				"entity_alias": {
+					Type:        framework.TypeString,
+					Description: "Name of the entity alias to associate with this token",
+				},
+				"num_uses": {
+					Type:        framework.TypeInt,
+					Description: "Max number of uses for this token",
+				},
+				"period": {
+					Type:        framework.TypeString,
+					Description: "Renew period",
+				},
+				"renewable": {
+					Type:        framework.TypeBool,
+					Description: "Allow token to be renewed past its initial TTL up to system/mount maximum TTL",
+				},
+				"ttl": {
+					Type:        framework.TypeString,
+					Description: "Time to live for this token",
+				},
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Token type",
+				},
+				"no_default_policy": {
+					Type:        framework.TypeBool,
+					Description: "Do not include default policy for this token",
+				},
+				"id": {
+					Type:        framework.TypeString,
+					Description: "Value for the token",
+				},
+				"metadata": {
+					Type:        framework.TypeMap,
+					Description: "Arbitrary key=value metadata to associate with the token",
+				},
+				"no_parent": {
+					Type:        framework.TypeBool,
+					Description: "Create the token with no parent",
+				},
+				"policies": {
+					Type:        framework.TypeStringSlice,
+					Description: "List of policies for the token",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Query:       true,
+					Description: "Return json formatted output",
+				},
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -184,6 +310,66 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "create$",
+
+			Fields: map[string]*framework.FieldSchema{
+				"display_name": {
+					Type:        framework.TypeString,
+					Description: "Name to associate with this token",
+				},
+				"explicit_max_ttl": {
+					Type:        framework.TypeString,
+					Description: "Explicit Max TTL of this token",
+				},
+				"entity_alias": {
+					Type:        framework.TypeString,
+					Description: "Name of the entity alias to associate with this token",
+				},
+				"num_uses": {
+					Type:        framework.TypeInt,
+					Description: "Max number of uses for this token",
+				},
+				"period": {
+					Type:        framework.TypeString,
+					Description: "Renew period",
+				},
+				"renewable": {
+					Type:        framework.TypeBool,
+					Description: "Allow token to be renewed past its initial TTL up to system/mount maximum TTL",
+				},
+				"ttl": {
+					Type:        framework.TypeString,
+					Description: "Time to live for this token",
+				},
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Token type",
+				},
+				"no_default_policy": {
+					Type:        framework.TypeBool,
+					Description: "Do not include default policy for this token",
+				},
+				"id": {
+					Type:        framework.TypeString,
+					Description: "Value for the token",
+				},
+				"metadata": {
+					Type:        framework.TypeMap,
+					Description: "Arbitrary key=value metadata to associate with the token",
+				},
+				"no_parent": {
+					Type:        framework.TypeBool,
+					Description: "Create the token with no parent",
+				},
+				"policies": {
+					Type:        framework.TypeStringSlice,
+					Description: "List of policies for the token",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Query:       true,
+					Description: "Return json formatted output",
+				},
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleCreate,
@@ -898,7 +1084,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			switch {
 			case strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix):
 				return fmt.Errorf("custom token ID cannot have the 'hvs.' prefix")
-			case strings.HasPrefix(entry.ID, "s."):
+			case strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix):
 				return fmt.Errorf("custom token ID cannot have the 's.' prefix")
 			case strings.Contains(entry.ID, "."):
 				return fmt.Errorf("custom token ID cannot have a '.' in the value")
@@ -991,10 +1177,29 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		}
 
 		bEntry := base64.RawURLEncoding.EncodeToString(eEntry)
-		if ts.core.DisableSSCTokens() {
-			entry.ID = fmt.Sprintf("b.%s", bEntry)
+		ver, _, err := ts.core.FindNewestVersionTimestamp()
+		if err != nil {
+			return err
+		}
+
+		var newestVersion *version.Version
+		var oneTen *version.Version
+
+		if ver != "" {
+			newestVersion, err = version.NewVersion(ver)
+			if err != nil {
+				return err
+			}
+			oneTen, err = version.NewVersion("1.10.0")
+			if err != nil {
+				return err
+			}
+		}
+
+		if ts.core.DisableSSCTokens() || (newestVersion != nil && newestVersion.LessThan(oneTen)) {
+			entry.ID = consts.LegacyBatchTokenPrefix + bEntry
 		} else {
-			entry.ID = fmt.Sprintf("hvb.%s", bEntry)
+			entry.ID = consts.BatchTokenPrefix + bEntry
 		}
 
 		if tokenNS.ID != namespace.RootNamespaceID {
@@ -1260,7 +1465,7 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 }
 
 func (ts *TokenStore) stripBatchPrefix(id string) string {
-	if strings.HasPrefix(id, "b.") {
+	if strings.HasPrefix(id, consts.LegacyBatchTokenPrefix) {
 		return id[2:]
 	}
 	if strings.HasPrefix(id, consts.BatchTokenPrefix) {
@@ -2571,7 +2776,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 
 		// Create or fetch entity from entity alias
-		entity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
+		entity, _, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
 		if err != nil {
 			return nil, err
 		}

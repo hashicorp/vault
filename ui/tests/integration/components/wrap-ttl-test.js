@@ -15,30 +15,30 @@ module('Integration | Component | wrap ttl', function (hooks) {
   });
 
   test('it requires `onChange`', async function (assert) {
-    let promise = waitForError();
+    const promise = waitForError();
     render(hbs`{{wrap-ttl}}`);
-    let err = await promise;
+    const err = await promise;
     assert.ok(err.message.includes('`onChange` handler is a required attr in'), 'asserts without onChange');
   });
 
   test('it renders', async function (assert) {
-    await render(hbs`{{wrap-ttl onChange=(action onChange)}}`);
-    assert.equal(this.lastOnChangeCall, '30m', 'calls onChange with 30m default on first render');
+    await render(hbs`{{wrap-ttl onChange=(action this.onChange)}}`);
+    assert.strictEqual(this.lastOnChangeCall, '30m', 'calls onChange with 30m default on first render');
     assert.dom('label[for="toggle-Wrapresponse"] .ttl-picker-label').hasText('Wrap response');
   });
 
   test('it nulls out value when you uncheck wrapResponse', async function (assert) {
-    await render(hbs`{{wrap-ttl onChange=(action onChange)}}`);
+    await render(hbs`{{wrap-ttl onChange=(action this.onChange)}}`);
     await click('[data-test-toggle-label="Wrap response"]');
-    assert.equal(this.lastOnChangeCall, null, 'calls onChange with null');
+    assert.strictEqual(this.lastOnChangeCall, null, 'calls onChange with null');
   });
 
   test('it sends value changes to onChange handler', async function (assert) {
-    await render(hbs`{{wrap-ttl onChange=(action onChange)}}`);
+    await render(hbs`{{wrap-ttl onChange=(action this.onChange)}}`);
     // for testing purposes we need to input unit first because it keeps seconds value
     await fillIn('[data-test-select="ttl-unit"]', 'h');
-    assert.equal(this.lastOnChangeCall, '1800s', 'calls onChange correctly on time input');
+    assert.strictEqual(this.lastOnChangeCall, '1800s', 'calls onChange correctly on time input');
     await fillIn('[data-test-ttl-value="Wrap response"]', '20');
-    assert.equal(this.lastOnChangeCall, '72000s', 'calls onChange correctly on unit change');
+    assert.strictEqual(this.lastOnChangeCall, '72000s', 'calls onChange correctly on unit change');
   });
 });

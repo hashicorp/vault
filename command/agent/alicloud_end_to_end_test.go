@@ -20,6 +20,7 @@ import (
 	agentalicloud "github.com/hashicorp/vault/command/agent/auth/alicloud"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -36,6 +37,14 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	if !runAcceptanceTests {
 		t.SkipNow()
 	}
+
+	// Ensure each cred is populated.
+	credNames := []string{
+		envVarAlicloudAccessKey,
+		envVarAlicloudSecretKey,
+		envVarAlicloudRoleArn,
+	}
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
@@ -190,7 +199,7 @@ func setAliCloudEnvCreds() error {
 	}
 	assumeRoleReq := sts.CreateAssumeRoleRequest()
 	assumeRoleReq.RoleArn = os.Getenv(envVarAlicloudRoleArn)
-	assumeRoleReq.RoleSessionName = strings.Replace(roleSessionName, "-", "", -1)
+	assumeRoleReq.RoleSessionName = strings.ReplaceAll(roleSessionName, "-", "")
 	assumeRoleResp, err := client.AssumeRole(assumeRoleReq)
 	if err != nil {
 		return err

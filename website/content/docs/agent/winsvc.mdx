@@ -35,7 +35,7 @@ of Vault Agent as a service, using "Vault Agent" as the display name, and starti
 The `binPath` argument should include the fully qualified path to the Vault executable, as well as any arguments required.
 
 ```shell-session
-PS C:\Windows\system32> sc.exe create VaultAgent binPath= "C:\vault\vault.exe agent -config=C:\vault\agent-config.hcl" displayName= "Vault Agent" start= auto
+PS C:\Windows\system32> sc.exe create VaultAgent binPath="C:\vault\vault.exe agent -config=C:\vault\agent-config.hcl" displayName="Vault Agent" start=auto
 [SC] CreateService SUCCESS
 ```
 

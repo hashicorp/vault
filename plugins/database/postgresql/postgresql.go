@@ -9,16 +9,17 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/template"
-	"github.com/lib/pq"
+	"github.com/hashicorp/vault/sdk/logical"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 const (
-	postgreSQLTypeName         = "postgres"
+	postgreSQLTypeName         = "pgx"
 	defaultExpirationStatement = `
 ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
 `
@@ -32,7 +33,8 @@ ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 )
 
 var (
-	_ dbplugin.Database = &PostgreSQL{}
+	_ dbplugin.Database       = (*PostgreSQL)(nil)
+	_ logical.PluginVersioner = (*PostgreSQL)(nil)
 
 	// postgresEndStatement is basically the word "END" but
 	// surrounded by a word boundary to differentiate it from
@@ -46,6 +48,9 @@ var (
 	// singleQuotedPhrases finds substrings like 'hello'
 	// and pulls them out with the quotes included.
 	singleQuotedPhrases = regexp.MustCompile(`('.*?')`)
+
+	// ReportedVersion is used to report a specific version to Vault.
+	ReportedVersion = ""
 )
 
 func New() (interface{}, error) {
@@ -180,7 +185,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 				"username": username,
 				"password": password,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
@@ -229,7 +234,7 @@ func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, 
 				"username":   username,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -273,7 +278,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 				"password":   req.Password,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, stmt); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, stmt); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
 			continue
@@ -291,7 +296,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 				"password":   req.Password,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
@@ -343,7 +348,7 @@ func (p *PostgreSQL) customDeleteUser(ctx context.Context, username string, revo
 				"name":     username,
 				"username": username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -396,27 +401,27 @@ func (p *PostgreSQL) defaultDeleteUser(ctx context.Context, username string) err
 		}
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s FROM %s;`,
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(username)))
+			(schema),
+			dbutil.QuoteIdentifier(username)))
 
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE USAGE ON SCHEMA %s FROM %s;`,
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(username)))
+			dbutil.QuoteIdentifier(schema),
+			dbutil.QuoteIdentifier(username)))
 	}
 
 	// for good measure, revoke all privileges and usage on schema public
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;`,
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		"REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM %s;",
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		"REVOKE USAGE ON SCHEMA public FROM %s;",
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	// get the current database name so we can issue a REVOKE CONNECT for
 	// this username
@@ -428,15 +433,15 @@ func (p *PostgreSQL) defaultDeleteUser(ctx context.Context, username string) err
 	if dbname.Valid {
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE CONNECT ON DATABASE %s FROM %s;`,
-			pq.QuoteIdentifier(dbname.String),
-			pq.QuoteIdentifier(username)))
+			dbutil.QuoteIdentifier(dbname.String),
+			dbutil.QuoteIdentifier(username)))
 	}
 
 	// again, here, we do not stop on error, as we want to remove as
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revocationStmts {
-		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
+		if err := dbtxn.ExecuteDBQueryDirect(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 		}
 	}
@@ -451,7 +456,7 @@ func (p *PostgreSQL) defaultDeleteUser(ctx context.Context, username string) err
 
 	// Drop this user
 	stmt, err = db.PrepareContext(ctx, fmt.Sprintf(
-		`DROP ROLE IF EXISTS %s;`, pq.QuoteIdentifier(username)))
+		`DROP ROLE IF EXISTS %s;`, dbutil.QuoteIdentifier(username)))
 	if err != nil {
 		return err
 	}
@@ -469,6 +474,10 @@ func (p *PostgreSQL) secretValues() map[string]string {
 	}
 }
 
+func (p *PostgreSQL) PluginVersion() logical.PluginVersion {
+	return logical.PluginVersion{Version: ReportedVersion}
+}
+
 // containsMultilineStatement is a best effort to determine whether
 // a particular statement is multiline, and therefore should not be
 // split upon semicolons. If it's unsure, it defaults to false.
@@ -482,7 +491,7 @@ func containsMultilineStatement(stmt string) bool {
 	}
 	stmtWithoutLiterals := stmt
 	for _, literal := range literals {
-		stmtWithoutLiterals = strings.Replace(stmt, literal, "", -1)
+		stmtWithoutLiterals = strings.ReplaceAll(stmt, literal, "")
 	}
 	// Now look for the word "END" specifically. This will miss any
 	// representations of END that aren't surrounded by spaces, but

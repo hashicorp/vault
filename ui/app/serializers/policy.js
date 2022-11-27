@@ -10,7 +10,7 @@ export default ApplicationSerializer.extend({
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nullResponses = ['deleteRecord'];
-    let normalizedPayload = nullResponses.includes(requestType)
+    const normalizedPayload = nullResponses.includes(requestType)
       ? { name: id }
       : this.normalizePolicies(payload);
     return this._super(store, primaryModelClass, normalizedPayload, id, requestType);

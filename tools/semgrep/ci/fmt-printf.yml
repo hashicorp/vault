@@ -1,0 +1,16 @@
+rules:
+  - id: fmt.Printf
+    languages: [go]
+    message: fmt.Printf/Println is forbidden outside of cmd and test files
+    patterns:
+      - pattern-either:
+        - pattern: fmt.Printf
+        - pattern: fmt.Println
+    severity: ERROR
+    paths:
+      exclude:
+        - "*_test.go"
+        - "cmd/*.go"
+        - "cmd/**/*.go"
+        - sdk/database/dbplugin/server.go # effectively a cmd
+        - sdk/database/dbplugin/v5/plugin_server.go # effectively a cmd

@@ -1,0 +1,25 @@
+rules:
+  - id: hash-sum-without-write
+    patterns:
+                - pattern-either:
+                        - pattern: |
+                                $HASH.New().Sum($SLICE)
+                        - pattern: |
+                                $H := $HASH.New()
+                                ...
+                                $H.Sum($SLICE)
+                - pattern-not: |
+                        $H := $HASH.New()
+                        ...
+                        $H.Write(...)
+                        ...
+                        $H.Sum($SLICE)
+                - pattern-not: |
+                        $H := $HASH.New()
+                        ...
+                        $FUNC(..., $H, ...)
+                        ...
+                        $H.Sum($SLICE)
+    message: "odd hash.Sum call flow"
+    languages: [go]
+    severity: ERROR

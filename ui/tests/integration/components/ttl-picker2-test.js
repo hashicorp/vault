@@ -14,7 +14,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
   test('it renders time and unit inputs when TTL enabled', async function (assert) {
     await render(hbs`
       <TtlPicker2
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @enableTTL={{true}}
       />
     `);
@@ -25,7 +25,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
   test('it does not show time and unit inputs when TTL disabled', async function (assert) {
     await render(hbs`
       <TtlPicker2
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @enableTTL={{false}}
       />
     `);
@@ -39,7 +39,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
         @label="clicktest"
         @unit="m"
         @time="10"
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @enableTTL={{false}}
       />
     `);
@@ -62,7 +62,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
         @label="clicktest"
         @unit="s"
         @time="360"
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @enableTTL={{false}}
       />
     `);
@@ -97,7 +97,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
         @label="clicktest"
         @unit="s"
         @time="120"
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @enableTTL={{true}}
         @recalculateSeconds={{true}}
       />
@@ -117,7 +117,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
   test('it sets default value to time and unit passed', async function (assert) {
     await render(hbs`
       <TtlPicker2
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @initialValue="2h"
         @enableTTL={{true}}
         @time=4
@@ -133,7 +133,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
     await render(hbs`
       <TtlPicker2
         @label="inittest"
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @initialValue="100m"
         @initialEnabled={{false}}
       />
@@ -149,7 +149,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
     await render(hbs`
       <TtlPicker2
         @label="inittest"
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @initialValue="100m"
         @initialEnabled={{true}}
       />
@@ -165,7 +165,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
     await render(hbs`
       <TtlPicker2
         @label="inittest"
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @initialValue="100m"
         @initialEnabled="true"
       />
@@ -175,13 +175,13 @@ module('Integration | Component | ttl-picker2', function (hooks) {
     assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'Unit matches what is passed in');
   });
 
-  test('it calls onChange on init when rendered if changeOnInit is true', async function (assert) {
+  test('it calls onChange', async function (assert) {
     await render(hbs`
       <TtlPicker2
         @label="clicktest"
         @unit="d"
         @time="2"
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @enableTTL={{false}}
       />
     `);
@@ -202,7 +202,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
     await render(hbs`
       <TtlPicker2
         @label="changeOnInitTest"
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @initialValue="100m"
         @initialEnabled="true"
         @changeOnInit={{true}}
@@ -224,12 +224,25 @@ module('Integration | Component | ttl-picker2', function (hooks) {
     await render(hbs`
       <TtlPicker2
         @label="convertunits"
-        @onChange={{onChange}}
+        @onChange={{this.onChange}}
         @initialValue="60000s"
         @initialEnabled="true"
       />
     `);
     assert.dom('[data-test-ttl-value]').hasValue('1000', 'time value is converted');
     assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'unit value is m (minutes)');
+  });
+
+  test('it converts to the largest round unit on init when no unit provided', async function (assert) {
+    await render(hbs`
+      <TtlPicker2
+        @label="convertunits"
+        @onChange={{this.onChange}}
+        @initialValue={{86400}}
+        @initialEnabled="true"
+      />
+    `);
+    assert.dom('[data-test-ttl-value]').hasValue('1', 'time value is converted');
+    assert.dom('[data-test-select="ttl-unit"]').hasValue('d', 'unit value is d (days)');
   });
 });

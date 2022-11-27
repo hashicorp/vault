@@ -1,6 +1,6 @@
 import { Base } from '../create';
 import { isPresent, clickable, visitable, create, fillable } from 'ember-cli-page-object';
-import { codeFillable } from 'vault/tests/pages/helpers/codemirror';
+
 export default create({
   ...Base,
   path: fillable('[data-test-secret-path="true"]'),
@@ -17,9 +17,6 @@ export default create({
   hasMetadataFields: isPresent('[data-test-metadata-fields]'),
   maxVersion: fillable('[data-test-input="maxVersions"]'),
   startCreateSecret: clickable('[data-test-secret-create]'),
-  editor: {
-    fillIn: codeFillable('[data-test-component="json-editor"]'),
-  },
   deleteSecret() {
     return this.deleteBtn().confirmBtn();
   },

@@ -9,7 +9,7 @@
   </h2>
   <div data-test-start-date-editor class="is-flex-align-baseline">
     {{#if this.startTimeDisplay}}
-      <p class="is-size-6">{{this.startTimeDisplay}}</p>
+      <p class="is-size-6" data-test-date-display>{{this.startTimeDisplay}}</p>
       <button type="button" class="button is-link" {{on "click" (fn (mut this.isEditStartMonthOpen) true)}}>
         Edit
       </button>
@@ -49,6 +49,8 @@
         {{/if}}
       </EmptyState>
     {{/if}}
+  {{else if this.errorObject}}
+    <Clients::Error @error={{this.errorObject}} />
   {{else}}
     {{#if (eq @model.config.enabled "Off")}}
       <AlertBanner data-test-tracking-disabled @type="warning" @title="Tracking is disabled">
@@ -59,11 +61,10 @@
         to enable tracking again.
       </AlertBanner>
     {{/if}}
-    {{! check for startTimeFromLicense or startTimeFromResponse otherwise emptyState}}
-    {{#if (or @model.startTimeFromLicense this.startTimeFromResponse)}}
+    {{#if (or this.totalUsageCounts this.hasAttributionData)}}
       <div class="is-subtitle-gray has-bottom-margin-m">
         FILTERS
-        <Toolbar>
+        <Toolbar data-test-clients-filter-bar>
           <ToolbarFilters>
             <CalendarWidget
               @arrayOfMonths={{this.arrayOfMonths}}
@@ -86,7 +87,7 @@
                 class="is-marginless"
               />
             {{/if}}
-            {{#if this.selectedNamespace}}
+            {{#if (not (is-empty this.authMethodOptions))}}
               <SearchSelect
                 @id="auth-method-search-select"
                 @options={{this.authMethodOptions}}
@@ -101,25 +102,21 @@
           </ToolbarFilters>
         </Toolbar>
       </div>
-      {{#if (or this.countsIncludeOlderData this.responseRangeDiffMessage)}}
+
+      {{#if (or this.upgradeDuringActivity this.responseRangeDiffMessage)}}
         <AlertBanner @type="warning" @title="Warning">
-          <ul class={{if (and this.countsIncludeOlderData this.responseRangeDiffMessage) "bullet"}}>
+          <ul class={{if (and this.versionUpdateText this.responseRangeDiffMessage) "bullet"}}>
             {{#if this.responseRangeDiffMessage}}
               <li>{{this.responseRangeDiffMessage}}</li>
             {{/if}}
-            {{#if this.countsIncludeOlderData}}
+            {{#if this.upgradeDuringActivity}}
               <li>
-                {{concat
-                  "You upgraded to Vault "
-                  this.firstUpgradeVersion
-                  " on "
-                  (date-format this.upgradeDate "MMMM d, yyyy.")
-                }}
-                How we count clients changed in 1.9, so please keep that in mind when looking at the data below, and you can
+                {{this.upgradeVersionAndDate}}
+                {{this.versionSpecificText}}
                 <DocLink
                   @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
                 >
-                  read more here.
+                  Learn more here.
                 </DocLink>
               </li>
             {{/if}}
@@ -130,12 +127,27 @@
         <LayoutLoading />
       {{else}}
         {{#if this.totalUsageCounts}}
-          <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
+          {{#unless this.byMonthActivityData}}
+            <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
+          {{/unless}}
+          {{#if this.byMonthActivityData}}
+            <Clients::RunningTotal
+              @chartLegend={{this.chartLegend}}
+              @selectedAuthMethod={{this.selectedAuthMethod}}
+              @lineChartData={{this.byMonthActivityData}}
+              @barChartData={{this.byMonthNewClients}}
+              @runningTotals={{this.totalUsageCounts}}
+              @upgradeData={{this.upgradeDuringActivity}}
+              @timestamp={{this.responseTimestamp}}
+            />
+          {{/if}}
           {{#if this.hasAttributionData}}
             <Clients::Attribution
               @chartLegend={{this.chartLegend}}
-              @totalClientsData={{this.totalClientsData}}
               @totalUsageCounts={{this.totalUsageCounts}}
+              @newUsageCounts={{this.newClientCounts}}
+              @totalClientAttribution={{this.totalClientAttribution}}
+              @newClientAttribution={{this.newClientAttribution}}
               @selectedNamespace={{this.selectedNamespace}}
               @startTimeDisplay={{this.startTimeDisplay}}
               @endTimeDisplay={{this.endTimeDisplay}}
@@ -143,14 +155,23 @@
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}
-        {{else}}
-          <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
+          {{#if this.hasMultipleMonthsData}}
+            <Clients::MonthlyUsage
+              @chartLegend={{this.chartLegend}}
+              @verticalBarChartData={{this.byMonthActivityData}}
+              @timestamp={{this.responseTimestamp}}
+            />
+          {{/if}}
         {{/if}}
       {{/if}}
-    {{else if (or (not @model.startTimeFromLicense) (not this.startTimeFromResponse))}}
+    {{else if (and (not @model.startTimeFromLicense) (not this.startTimeFromResponse))}}
+      {{! Empty state for no billing/license start date }}
       <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
     {{else}}
-      <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
+      <EmptyState
+        @title={{concat "No data received " (if this.noActivityDate "from ") this.noActivityDate}}
+        @message="No data exists for that query period. Try searching again."
+      />
     {{/if}}
   {{/if}}
 
@@ -169,7 +190,7 @@
       <div class="modal-radio-button">
         <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
           <D.Trigger
-            data-test-popup-menu-trigger="true"
+            data-test-popup-menu-trigger="month"
             class={{concat "toolbar-link" (if D.isOpen " is-active")}}
             @htmlTag="button"
           >
@@ -177,12 +198,13 @@
             <Chevron @direction="down" @isButton={{true}} />
           </D.Trigger>
           <D.Content @defaultClass="popup-menu-content is-wide">
-            <nav class="box menu scroll">
+            <nav class="box menu scroll" aria-label="months">
               <ul class="menu-list">
                 {{#each this.months as |month index|}}
                   <button
                     type="button"
                     class="button link"
+                    data-test-date-modal-month={{month}}
                     disabled={{if (lt index this.allowedMonthMax) false true}}
                     {{on "click" (fn this.selectStartMonth month D.actions)}}
                   >
@@ -195,7 +217,7 @@
         </BasicDropdown>
         <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
           <D.Trigger
-            data-test-popup-menu-trigger="true"
+            data-test-popup-menu-trigger="year"
             class={{concat "toolbar-link" (if D.isOpen " is-active")}}
             @htmlTag="button"
           >
@@ -203,12 +225,13 @@
             <Chevron @direction="down" @isButton={{true}} />
           </D.Trigger>
           <D.Content @defaultClass="popup-menu-content is-wide">
-            <nav class="box menu">
+            <nav class="box menu" aria-label="years">
               <ul class="menu-list">
                 {{#each this.years as |year|}}
                   <button
                     type="button"
                     class="button link"
+                    data-test-date-modal-year={{year}}
                     disabled={{if (eq year this.disabledYear) true false}}
                     {{on "click" (fn this.selectStartYear year D.actions)}}
                   >
@@ -223,6 +246,7 @@
     </section>
     <footer class="modal-card-foot modal-card-foot-outlined">
       <button
+        data-test-modal-save
         type="button"
         class="button is-primary"
         disabled={{or (if (and this.startMonth this.startYear) false true)}}

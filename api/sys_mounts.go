@@ -4,17 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
 )
 
 func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/mounts")
+	return c.ListMountsWithContext(context.Background())
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) ListMountsWithContext(ctx context.Context) (map[string]*MountOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/mounts")
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -38,14 +44,19 @@ func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
 }
 
 func (c *Sys) Mount(path string, mountInfo *MountInput) error {
-	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s", path))
+	return c.MountWithContext(context.Background(), path, mountInfo)
+}
+
+func (c *Sys) MountWithContext(ctx context.Context, path string, mountInfo *MountInput) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/mounts/%s", path))
 	if err := r.SetJSONBody(mountInfo); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -55,27 +66,37 @@ func (c *Sys) Mount(path string, mountInfo *MountInput) error {
 }
 
 func (c *Sys) Unmount(path string) error {
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/mounts/%s", path))
+	return c.UnmountWithContext(context.Background(), path)
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) UnmountWithContext(ctx context.Context, path string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodDelete, fmt.Sprintf("/v1/sys/mounts/%s", path))
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
 	return err
 }
 
-// Remount kicks off a remount operation, polls the status endpoint using
-// the migration ID till either success or failure state is observed
+// Remount wraps RemountWithContext using context.Background.
 func (c *Sys) Remount(from, to string) error {
-	remountResp, err := c.StartRemount(from, to)
+	return c.RemountWithContext(context.Background(), from, to)
+}
+
+// RemountWithContext kicks off a remount operation, polls the status endpoint using
+// the migration ID till either success or failure state is observed
+func (c *Sys) RemountWithContext(ctx context.Context, from, to string) error {
+	remountResp, err := c.StartRemountWithContext(ctx, from, to)
 	if err != nil {
 		return err
 	}
 
 	for {
-		remountStatusResp, err := c.RemountStatus(remountResp.MigrationID)
+		remountStatusResp, err := c.RemountStatusWithContext(ctx, remountResp.MigrationID)
 		if err != nil {
 			return err
 		}
@@ -89,21 +110,27 @@ func (c *Sys) Remount(from, to string) error {
 	}
 }
 
-// StartRemount kicks off a mount migration and returns a response with the migration ID
+// StartRemount wraps StartRemountWithContext using context.Background.
 func (c *Sys) StartRemount(from, to string) (*MountMigrationOutput, error) {
+	return c.StartRemountWithContext(context.Background(), from, to)
+}
+
+// StartRemountWithContext kicks off a mount migration and returns a response with the migration ID
+func (c *Sys) StartRemountWithContext(ctx context.Context, from, to string) (*MountMigrationOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]interface{}{
 		"from": from,
 		"to":   to,
 	}
 
-	r := c.c.NewRequest("POST", "/v1/sys/remount")
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/remount")
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -125,13 +152,19 @@ func (c *Sys) StartRemount(from, to string) (*MountMigrationOutput, error) {
 	return &result, err
 }
 
-// RemountStatus checks the status of a mount migration operation with the provided ID
+// RemountStatus wraps RemountStatusWithContext using context.Background.
 func (c *Sys) RemountStatus(migrationID string) (*MountMigrationStatusOutput, error) {
-	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/remount/status/%s", migrationID))
+	return c.RemountStatusWithContext(context.Background(), migrationID)
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+// RemountStatusWithContext checks the status of a mount migration operation with the provided ID
+func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) (*MountMigrationStatusOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/remount/status/%s", migrationID))
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -154,14 +187,19 @@ func (c *Sys) RemountStatus(migrationID string) (*MountMigrationStatusOutput, er
 }
 
 func (c *Sys) TuneMount(path string, config MountConfigInput) error {
-	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
+	return c.TuneMountWithContext(context.Background(), path, config)
+}
+
+func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config MountConfigInput) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 	if err := r.SetJSONBody(config); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -169,11 +207,16 @@ func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 }
 
 func (c *Sys) MountConfig(path string) (*MountConfigOutput, error) {
-	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
+	return c.MountConfigWithContext(context.Background(), path)
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) MountConfigWithContext(ctx context.Context, path string) (*MountConfigOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -211,19 +254,20 @@ type MountInput struct {
 }
 
 type MountConfigInput struct {
-	Options                   map[string]string `json:"options" mapstructure:"options"`
-	DefaultLeaseTTL           string            `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	Description               *string           `json:"description,omitempty" mapstructure:"description"`
-	MaxLeaseTTL               string            `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache              bool              `json:"force_no_cache" mapstructure:"force_no_cache"`
-	AuditNonHMACRequestKeys   []string          `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys  []string          `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
-	ListingVisibility         string            `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
-	PassthroughRequestHeaders []string          `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
-	AllowedResponseHeaders    []string          `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
-	TokenType                 string            `json:"token_type,omitempty" mapstructure:"token_type"`
-	AllowedManagedKeys        []string          `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
-
+	Options                   map[string]string       `json:"options" mapstructure:"options"`
+	DefaultLeaseTTL           string                  `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	Description               *string                 `json:"description,omitempty" mapstructure:"description"`
+	MaxLeaseTTL               string                  `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache              bool                    `json:"force_no_cache" mapstructure:"force_no_cache"`
+	AuditNonHMACRequestKeys   []string                `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string                `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         string                  `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string                `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string                `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
+	TokenType                 string                  `json:"token_type,omitempty" mapstructure:"token_type"`
+	AllowedManagedKeys        []string                `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
+	PluginVersion             string                  `json:"plugin_version,omitempty"`
+	UserLockoutConfig         *UserLockoutConfigInput `json:"user_lockout_config,omitempty"`
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
@@ -238,22 +282,40 @@ type MountOutput struct {
 	Local                 bool              `json:"local"`
 	SealWrap              bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
 	ExternalEntropyAccess bool              `json:"external_entropy_access" mapstructure:"external_entropy_access"`
+	PluginVersion         string            `json:"plugin_version" mapstructure:"plugin_version"`
+	RunningVersion        string            `json:"running_plugin_version" mapstructure:"running_plugin_version"`
+	RunningSha256         string            `json:"running_sha256" mapstructure:"running_sha256"`
+	DeprecationStatus     string            `json:"deprecation_status" mapstructure:"deprecation_status"`
 }
 
 type MountConfigOutput struct {
-	DefaultLeaseTTL           int      `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL               int      `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache              bool     `json:"force_no_cache" mapstructure:"force_no_cache"`
-	AuditNonHMACRequestKeys   []string `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys  []string `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
-	ListingVisibility         string   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
-	PassthroughRequestHeaders []string `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
-	AllowedResponseHeaders    []string `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
-	TokenType                 string   `json:"token_type,omitempty" mapstructure:"token_type"`
-	AllowedManagedKeys        []string `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
-
+	DefaultLeaseTTL           int                      `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL               int                      `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache              bool                     `json:"force_no_cache" mapstructure:"force_no_cache"`
+	AuditNonHMACRequestKeys   []string                 `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string                 `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         string                   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string                 `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string                 `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
+	TokenType                 string                   `json:"token_type,omitempty" mapstructure:"token_type"`
+	AllowedManagedKeys        []string                 `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
+	UserLockoutConfig         *UserLockoutConfigOutput `json:"user_lockout_config,omitempty"`
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
+}
+
+type UserLockoutConfigInput struct {
+	LockoutThreshold            string `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`
+	LockoutDuration             string `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`
+	LockoutCounterResetDuration string `json:"lockout_counter_reset_duration,omitempty" structs:"lockout_counter_reset_duration" mapstructure:"lockout_counter_reset_duration"`
+	DisableLockout              *bool  `json:"lockout_disable,omitempty" structs:"lockout_disable" mapstructure:"lockout_disable"`
+}
+
+type UserLockoutConfigOutput struct {
+	LockoutThreshold    uint  `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`
+	LockoutDuration     int   `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`
+	LockoutCounterReset int   `json:"lockout_counter_reset,omitempty" structs:"lockout_counter_reset" mapstructure:"lockout_counter_reset"`
+	DisableLockout      *bool `json:"disable_lockout,omitempty" structs:"disable_lockout" mapstructure:"disable_lockout"`
 }
 
 type MountMigrationOutput struct {

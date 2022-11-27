@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Include build date in `sys/seal-status` and `sys/version-history` endpoints.
+```

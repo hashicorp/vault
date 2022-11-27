@@ -16,12 +16,12 @@ import (
 	"sync"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
-	cachememdb "github.com/hashicorp/vault/command/agent/cache/cachememdb"
+	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -42,6 +42,8 @@ const (
 	vaultPathTokenRevokeOrphan   = "/v1/auth/token/revoke-orphan"
 	vaultPathTokenLookup         = "/v1/auth/token/lookup"
 	vaultPathTokenLookupSelf     = "/v1/auth/token/lookup-self"
+	vaultPathTokenRenew          = "/v1/auth/token/renew"
+	vaultPathTokenRenewSelf      = "/v1/auth/token/renew-self"
 	vaultPathLeaseRevoke         = "/v1/sys/leases/revoke"
 	vaultPathLeaseRevokeForce    = "/v1/sys/leases/revoke-force"
 	vaultPathLeaseRevokePrefix   = "/v1/sys/leases/revoke-prefix"
@@ -272,7 +274,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return cachedResp, nil
 	}
 
-	c.logger.Debug("forwarding request", "method", req.Request.Method, "path", req.Request.URL.Path)
+	c.logger.Debug("forwarding request from cache", "method", req.Request.Method, "path", req.Request.URL.Path)
 
 	// Pass the request down and get a response
 	resp, err := c.proxier.Send(ctx, req)

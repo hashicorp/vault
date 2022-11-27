@@ -40,6 +40,10 @@ const generateHealthResponse = (state) => {
 module('Acceptance | Enterprise | License banner warnings', function (hooks) {
   setupApplicationTest(hooks);
 
+  hooks.afterEach(function () {
+    this.server.shutdown();
+  });
+
   test('it shows no license banner if license expires in > 30 days', async function (assert) {
     const healthResp = generateHealthResponse();
     this.server = new Pretender(function () {
@@ -47,7 +51,7 @@ module('Acceptance | Enterprise | License banner warnings', function (hooks) {
         return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];
       });
       this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
-      // this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.get('/v1/sys/license/features', this.passthrough);
     });
@@ -62,6 +66,7 @@ module('Acceptance | Enterprise | License banner warnings', function (hooks) {
         return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];
       });
       this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.get('/v1/sys/license/features', this.passthrough);
     });
@@ -77,6 +82,7 @@ module('Acceptance | Enterprise | License banner warnings', function (hooks) {
         return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];
       });
       this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.get('/v1/sys/license/features', this.passthrough);
     });

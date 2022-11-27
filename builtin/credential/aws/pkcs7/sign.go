@@ -24,7 +24,7 @@ type SignedData struct {
 }
 
 // NewSignedData takes data and initializes a PKCS7 SignedData struct that is
-// ready to be signed via AddSigner. The digest algorithm is set to SHA1 by default
+// ready to be signed via AddSigner. The digest algorithm is set to SHA-256 by default
 // and can be changed by calling SetDigestAlgorithm.
 func NewSignedData(data []byte) (*SignedData, error) {
 	content, err := asn1.Marshal(data)
@@ -39,7 +39,7 @@ func NewSignedData(data []byte) (*SignedData, error) {
 		ContentInfo: ci,
 		Version:     1,
 	}
-	return &SignedData{sd: sd, data: data, digestOid: OIDDigestAlgorithmSHA1}, nil
+	return &SignedData{sd: sd, data: data, digestOid: OIDDigestAlgorithmSHA256}, nil
 }
 
 // SignerInfoConfig are optional values to include when adding a signer

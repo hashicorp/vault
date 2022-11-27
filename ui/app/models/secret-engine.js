@@ -1,33 +1,24 @@
-import Model, { attr } from '@ember-data/model';
-import { computed } from '@ember/object';
-import { fragment } from 'ember-data-model-fragments/attributes';
+import Model, { attr, belongsTo } from '@ember-data/model';
+import { computed } from '@ember/object'; // eslint-disable-line
+import { equal } from '@ember/object/computed'; // eslint-disable-line
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import { validator, buildValidations } from 'ember-cp-validations';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
 // identity will be managed separately and the inclusion
 // of the system backend is an implementation detail
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
-const Validations = buildValidations({
-  path: validator('presence', {
-    presence: true,
-    message: "Path can't be blank.",
-  }),
+const validations = {
+  path: [{ type: 'presence', message: "Path can't be blank." }],
   maxVersions: [
-    validator('number', {
-      allowString: true,
-      integer: true,
-      message: 'Maximum versions must be a number.',
-    }),
-    validator('length', {
-      min: 1,
-      max: 16,
-      message: 'You cannot go over 16 characters.',
-    }),
+    { type: 'number', message: 'Maximum versions must be a number.' },
+    { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
   ],
-});
+};
 
-export default Model.extend(Validations, {
+@withModelValidations(validations)
+class SecretEngineModel extends Model {}
+export default SecretEngineModel.extend({
   path: attr('string'),
   accessor: attr('string'),
   name: attr('string'),
@@ -37,8 +28,16 @@ export default Model.extend(Validations, {
   description: attr('string', {
     editType: 'textarea',
   }),
-  config: fragment('mount-config', { defaultValue: {} }),
-  options: fragment('mount-options', { defaultValue: {} }),
+  // will only have value for kv type
+  version: attr('number', {
+    label: 'Version',
+    helpText:
+      'The KV Secrets Engine can operate in different modes. Version 1 is the original generic Secrets Engine the allows for storing of static key/value pairs. Version 2 added more features including data versioning, TTLs, and check and set.',
+    possibleValues: [2, 1],
+    // This shouldn't be defaultValue because if no version comes back from API we should assume it's v1
+    defaultFormValue: 2, // Set the form to 2 by default
+  }),
+  config: belongsTo('mount-config', { async: false, inverse: null }),
   local: attr('boolean', {
     helpText:
       'When Replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
@@ -68,42 +67,35 @@ export default Model.extend(Validations, {
     helperTextEnabled: 'Delete all new versions of this secret after',
   }),
 
-  modelTypeForKV: computed('engineType', 'options.version', function () {
-    let type = this.engineType;
-    let version = this.options?.version;
+  modelTypeForKV: computed('engineType', 'version', function () {
+    const type = this.engineType;
     let modelType = 'secret';
-    if ((type === 'kv' || type === 'generic') && version === 2) {
+    if ((type === 'kv' || type === 'generic') && this.version === 2) {
       modelType = 'secret-v2';
     }
     return modelType;
   }),
 
-  isV2KV: computed.equal('modelTypeForKV', 'secret-v2'),
+  isV2KV: equal('modelTypeForKV', 'secret-v2'),
 
-  formFields: computed('engineType', 'options.version', function () {
-    let type = this.engineType;
-    let version = this.options?.version;
-    let fields = [
-      'type',
-      'path',
-      'description',
-      'accessor',
-      'local',
-      'sealWrap',
-      'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-    ];
+  formFields: computed('engineType', 'version', function () {
+    const type = this.engineType;
+    const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
+    // no ttl options for keymgmt
+    const ttl = type !== 'keymgmt' ? 'defaultLeaseTtl,maxLeaseTtl,' : '';
+    fields.push(`config.{${ttl}auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`);
     if (type === 'kv' || type === 'generic') {
-      fields.push('options.{version}');
+      fields.push('version');
     }
     // version comes in as number not string
-    if (type === 'kv' && version === 2) {
+    if (type === 'kv' && this.version === 2) {
       fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
     }
     return fields;
   }),
 
   formFieldGroups: computed('engineType', function () {
-    let type = this.engineType;
+    const type = this.engineType;
     let defaultGroup;
     // KV has specific config options it adds on the enable engine. https://www.vaultproject.io/api/secret/kv/kv-v2#configure-the-kv-engine
     if (type === 'kv') {
@@ -111,17 +103,17 @@ export default Model.extend(Validations, {
     } else {
       defaultGroup = { default: ['path'] };
     }
-    let optionsGroup = {
-      'Method Options': [
-        'description',
-        'config.listingVisibility',
-        'local',
-        'sealWrap',
-        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-      ],
+    const optionsGroup = {
+      'Method Options': ['description', 'config.listingVisibility', 'local', 'sealWrap'],
     };
+    // no ttl options for keymgmt
+    const ttl = type !== 'keymgmt' ? 'defaultLeaseTtl,maxLeaseTtl,' : '';
+    optionsGroup['Method Options'].push(
+      `config.{${ttl}auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`
+    );
+
     if (type === 'kv' || type === 'generic') {
-      optionsGroup['Method Options'].unshift('options.{version}');
+      optionsGroup['Method Options'].unshift('version');
     }
     if (type === 'database') {
       // For the Database Secret Engine we want to highlight the defaultLeaseTtl and maxLeaseTtl, removing them from the options object
@@ -148,6 +140,16 @@ export default Model.extend(Validations, {
 
   fieldGroups: computed('formFieldGroups', function () {
     return fieldToAttrs(this, this.formFieldGroups);
+  }),
+
+  icon: computed('engineType', function () {
+    if (!this.engineType || this.engineType === 'kmip') {
+      return 'secrets';
+    }
+    if (this.engineType === 'keymgmt') {
+      return 'key';
+    }
+    return this.engineType;
   }),
 
   // namespaces introduced types with a `ns_` prefix for built-in engines

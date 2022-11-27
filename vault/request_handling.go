@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -34,7 +35,8 @@ import (
 )
 
 const (
-	replTimeout = 1 * time.Second
+	replTimeout                           = 1 * time.Second
+	EnvVaultDisableLocalAuthMountEntities = "VAULT_DISABLE_LOCAL_AUTH_MOUNT_ENTITIES"
 )
 
 var (
@@ -202,7 +204,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 	for nsID, nsPolicies := range identityPolicies {
-		policyNames[nsID] = append(policyNames[nsID], nsPolicies...)
+		policyNames[nsID] = policyutil.SanitizePolicies(append(policyNames[nsID], nsPolicies...), false)
 	}
 
 	// Attach token's namespace information to the context. Wrapping tokens by
@@ -318,6 +320,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		case logical.ErrUnsupportedPath:
 			// fail later via bad path to avoid confusing items in the log
 			checkExists = false
+		case logical.ErrRelativePath:
+			return nil, te, errutil.UserError{Err: err.Error()}
 		case nil:
 			if existsResp != nil && existsResp.IsError() {
 				return nil, te, existsResp.Error()
@@ -357,7 +361,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
 		auth.TokenPolicies = te.Policies
-		auth.Policies = append(te.Policies, identityPolicies[te.NamespaceID]...)
+		auth.Policies = policyutil.SanitizePolicies(append(te.Policies, identityPolicies[te.NamespaceID]...), false)
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
@@ -380,6 +384,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		Unauth:            unauth,
 		RootPrivsRequired: rootPath,
 	})
+
+	auth.PolicyResults = &logical.PolicyResults{
+		Allowed: authResults.Allowed,
+	}
 
 	if !authResults.Allowed {
 		retErr := authResults.Error
@@ -404,6 +412,13 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		}
 		return auth, te, retErr
+	}
+
+	if authResults.ACLResults != nil && len(authResults.ACLResults.GrantingPolicies) > 0 {
+		auth.PolicyResults.GrantingPolicies = authResults.ACLResults.GrantingPolicies
+	}
+	if authResults.SentinelResults != nil && len(authResults.SentinelResults.GrantingPolicies) > 0 {
+		auth.PolicyResults.GrantingPolicies = append(auth.PolicyResults.GrantingPolicies, authResults.SentinelResults.GrantingPolicies...)
 	}
 
 	// If it is an authenticated ( i.e with vault token ) request, increment client count
@@ -473,11 +488,14 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			req.Operation == logical.PatchOperation) {
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
-
 	waitGroup, err := waitForReplicationState(ctx, c, req)
 	if err != nil {
 		return nil, err
 	}
+
+	// MountPoint will not always be set at this point, so we ensure the req contains it
+	// as it is depended on by some functionality (e.g. quotas)
+	req.MountPoint = c.router.MatchingMount(ctx, req.Path)
 
 	// Decrement the wait group when our request is done
 	if waitGroup != nil {
@@ -564,13 +582,20 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			if token == nil {
 				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
 			}
-			// We don't care if the token is an server side consistent token or not. Either way, we're going
+			// We don't care if the token is a server side consistent token or not. Either way, we're going
 			// to be returning it for these paths instead of the short token stored in vault.
 			requestBodyToken = token.(string)
 			if IsSSCToken(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
+
+				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
+				// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
+				// specifies that we should forward the request or retry the request.
 				if err != nil {
-					return nil, fmt.Errorf("server side consistent token check failed: %w", err)
+					if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
+						return nil, err
+					}
+					return logical.ErrorResponse("bad token"), logical.ErrPermissionDenied
 				}
 				req.Data["token"] = token
 			}
@@ -823,6 +848,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Validate the token
 	auth, te, ctErr := c.checkToken(ctx, req, false)
+	if ctErr == logical.ErrRelativePath {
+		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
+	}
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
@@ -945,9 +973,11 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 
 	leaseGenerated := false
+	loginRole := c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          req.Path,
 		MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
+		Role:          loginRole,
 		NamespacePath: ns.Path,
 	})
 	if quotaErr != nil {
@@ -1087,7 +1117,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				return nil, auth, retErr
 			}
 
-			leaseID, err := registerFunc(ctx, req, resp)
+			leaseID, err := registerFunc(ctx, req, resp, loginRole)
 			if err != nil {
 				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
@@ -1167,7 +1197,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 					Path:        resp.Auth.CreationPath,
 					NamespaceID: ns.ID,
 				}
-				if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth); err != nil {
+				if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
 					// Best-effort clean up on error, so we log the cleanup error as
 					// a warning but still return as internal error.
 					if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
@@ -1366,6 +1396,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 			Path:          req.Path,
 			MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
+			Role:          c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx),
 			NamespacePath: ns.Path,
 		})
 
@@ -1401,6 +1432,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		if auth.Alias != nil &&
 			mEntry != nil &&
 			c.identityStore != nil {
+
+			if mEntry.Local && os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
+				goto CREATE_TOKEN
+			}
+
 			// Overwrite the mount type and mount path in the alias
 			// information
 			auth.Alias.MountType = req.MountType
@@ -1414,17 +1450,26 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			var err error
 			// Fetch the entity for the alias, or create an entity if one
 			// doesn't exist.
-			entity, err = c.identityStore.CreateOrFetchEntity(ctx, auth.Alias)
+			entity, entityCreated, err := c.identityStore.CreateOrFetchEntity(ctx, auth.Alias)
 			if err != nil {
 				switch auth.Alias.Local {
 				case true:
-					entity, err = possiblyForwardEntityCreation(ctx, c, err, auth, entity)
-					if err != nil && strings.Contains(err.Error(), errCreateEntityUnimplemented) {
-						resp.AddWarning("primary cluster doesn't yet issue entities for local auth mounts; falling back to not issuing entities for local auth mounts")
-						goto CREATE_TOKEN
+					// Only create a new entity if the error was a readonly error and the creation flag is true
+					// i.e the entity was in the middle of being created
+					if entityCreated && errors.Is(err, logical.ErrReadOnly) {
+						entity, err = possiblyForwardEntityCreation(ctx, c, err, auth, nil)
+						if err != nil {
+							if strings.Contains(err.Error(), errCreateEntityUnimplemented) {
+								resp.AddWarning("primary cluster doesn't yet issue entities for local auth mounts; falling back to not issuing entities for local auth mounts")
+								goto CREATE_TOKEN
+							} else {
+								return nil, nil, err
+							}
+						}
 					}
+					err = updateLocalAlias(ctx, c, auth, entity)
 				default:
-					entity, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
+					entity, entityCreated, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
 				}
 			}
 			if err != nil {
@@ -1439,6 +1484,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 
 			auth.EntityID = entity.ID
+			auth.EntityCreated = entityCreated
 			validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, auth.EntityID, auth.GroupAliases, req.MountAccessor)
 			if err != nil {
 				return nil, nil, err
@@ -1523,7 +1569,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					TimeOfStorage:         time.Now(),
 					RequestID:             mfaRequestID,
 				}
-				err = c.SaveMFAResponseAuth(respAuth)
+				err = possiblyForwardSaveCachedAuthResponse(ctx, c, respAuth)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -1542,7 +1588,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp)
+		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp, req.Data)
 		leaseGenerated = leaseGen
 		if errCreateToken != nil {
 			return respTokenCreate, nil, errCreateToken
@@ -1573,11 +1619,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 // LoginCreateToken creates a token as a result of a login request.
 // If MFA is enforced, mfa/validate endpoint calls this functions
 // after successful MFA validation to generate the token.
-func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint string, resp *logical.Response) (bool, *logical.Response, error) {
+func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint string, resp *logical.Response, loginRequestData map[string]interface{}) (bool, *logical.Response, error) {
 	auth := resp.Auth
 
 	source := strings.TrimPrefix(mountPoint, credentialRoutePrefix)
-	source = strings.Replace(source, "/", "-", -1)
+	source = strings.ReplaceAll(source, "/", "-")
 
 	// Prepend the source to the display name
 	auth.DisplayName = strings.TrimSuffix(source+auth.DisplayName, "-")
@@ -1635,7 +1681,7 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	}
 
 	leaseGenerated := false
-	err = registerFunc(ctx, tokenTTL, reqPath, auth)
+	err = registerFunc(ctx, tokenTTL, reqPath, auth, c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx))
 	switch {
 	case err == nil:
 		if auth.TokenType != logical.TokenTypeBatch {
@@ -1702,7 +1748,9 @@ func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
 
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
-func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path string, auth *logical.Auth) error {
+// role is the login role used as part of the creation of the token entry. If not
+// relevant, can be omitted (by being provided as "").
+func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path string, auth *logical.Auth, role string) error {
 	// We first assign token policies to what was returned from the backend
 	// via auth.Policies. Then, we get the full set of policies into
 	// auth.Policies from the backend + entity information -- this is not
@@ -1752,7 +1800,7 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		auth.Renewable = false
 	case logical.TokenTypeService:
 		// Register with the expiration manager
-		if err := c.expiration.RegisterAuth(ctx, &te, auth); err != nil {
+		if err := c.expiration.RegisterAuth(ctx, &te, auth, role); err != nil {
 			if err := c.tokenStore.revokeOrphan(ctx, te.ID); err != nil {
 				c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", err)
 			}
@@ -1764,6 +1812,23 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		}
 	}
 
+	return nil
+}
+
+// GetUserFailedLoginInfo gets the failed login information for a user based on alias name and mountAccessor
+func (c *Core) GetUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser) *FailedLoginInfo {
+	return c.userFailedLoginInfo[userKey]
+}
+
+// UpdateUserFailedLoginInfo updates the failed login information for a user based on alias name and mountAccessor
+func (c *Core) UpdateUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser, failedLoginInfo FailedLoginInfo) error {
+	c.userFailedLoginInfo[userKey] = &failedLoginInfo
+
+	// check if the update worked
+	failedLoginResp := c.GetUserFailedLoginInfo(ctx, userKey)
+	if failedLoginResp == nil {
+		return fmt.Errorf("failed to update entry in userFailedLoginInfo map")
+	}
 	return nil
 }
 
@@ -1786,8 +1851,14 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	req.InboundSSCToken = token
 	if IsSSCToken(token) {
 		token, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
+		// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
+		// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
+		// specifies that we should forward the request or retry the request.
 		if err != nil {
-			return err
+			if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
+				return err
+			}
+			return logical.ErrPermissionDenied
 		}
 	}
 	req.ClientToken = token
@@ -1914,6 +1985,12 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	if err != nil {
 		return "", err
 	}
+
+	// Disregard SSCT on perf-standbys for non-raft storage
+	if c.perfStandby && c.getRaftBackend() == nil {
+		return plainToken.Random, nil
+	}
+
 	ep := int(plainToken.IndexEpoch)
 	if ep < c.tokenStore.GetSSCTokensGenerationCounter() {
 		return plainToken.Random, nil

@@ -1,0 +1,3 @@
+```release-note:improvement
+secret/nomad: allow reading CA and client auth certificate from /nomad/config/access
+```

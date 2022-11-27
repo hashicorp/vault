@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
+	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -26,7 +28,24 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	BasicHclConfig = `
+log_file = "/foo/bar/juan.log"
+vault {
+	address = "http://127.0.0.1:8200"
+	retry {
+		num_retries = 5
+	}
+}
+
+listener "tcp" {
+	address = "127.0.0.1:8100"
+	tls_disable = true
+}`
 )
 
 func testAgentCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *AgentCommand) {
@@ -510,21 +529,31 @@ cache {
 }
 
 listener "tcp" {
-    address = "127.0.0.1:8101"
+    address = "%s"
     tls_disable = true
 }
 listener "tcp" {
-    address = "127.0.0.1:8102"
+    address = "%s"
     tls_disable = true
     require_request_header = false
 }
 listener "tcp" {
-    address = "127.0.0.1:8103"
+    address = "%s"
     tls_disable = true
     require_request_header = true
 }
 `
-	config = fmt.Sprintf(config, roleIDPath, secretIDPath)
+	listenAddr1 := generateListenerAddress(t)
+	listenAddr2 := generateListenerAddress(t)
+	listenAddr3 := generateListenerAddress(t)
+	config = fmt.Sprintf(
+		config,
+		roleIDPath,
+		secretIDPath,
+		listenAddr1,
+		listenAddr2,
+		listenAddr3,
+	)
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
@@ -563,19 +592,19 @@ listener "tcp" {
 
 	// Test against a listener configuration that omits
 	// 'require_request_header', with the header missing from the request.
-	agentClient := newApiClient("http://127.0.0.1:8101", false)
+	agentClient := newApiClient("http://"+listenAddr1, false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(t, agentClient, req, 200)
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'false', with the header missing from the request.
-	agentClient = newApiClient("http://127.0.0.1:8102", false)
+	agentClient = newApiClient("http://"+listenAddr2, false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(t, agentClient, req, 200)
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'true', with the header missing from the request.
-	agentClient = newApiClient("http://127.0.0.1:8103", false)
+	agentClient = newApiClient("http://"+listenAddr3, false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	resp, err := agentClient.RawRequest(req)
 	if err == nil {
@@ -587,7 +616,7 @@ listener "tcp" {
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'true', with an invalid header present in the request.
-	agentClient = newApiClient("http://127.0.0.1:8103", false)
+	agentClient = newApiClient("http://"+listenAddr3, false)
 	h := agentClient.Headers()
 	h[consts.RequestHeaderName] = []string{"bogus"}
 	agentClient.SetHeaders(h)
@@ -602,7 +631,7 @@ listener "tcp" {
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'true', with the proper header present in the request.
-	agentClient = newApiClient("http://127.0.0.1:8103", true)
+	agentClient = newApiClient("http://"+listenAddr3, true)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(t, agentClient, req, 200)
 }
@@ -613,16 +642,17 @@ listener "tcp" {
 func TestAgent_RequireAutoAuthWithForce(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	// Create a config file
-	config := `
+	config := fmt.Sprintf(`
 cache {
     use_auto_auth_token = "force"
 }
 
 listener "tcp" {
-    address = "127.0.0.1:8101"
+    address = "%s"
     tls_disable = true
 }
-`
+`, generateListenerAddress(t))
+
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
@@ -897,7 +927,7 @@ auto_auth {
 							continue
 						}
 						if string(c) != templateRendered(i)+suffix {
-							err = fmt.Errorf("expected='%s', got='%s'", templateRendered(i)+suffix, string(c))
+							err = fmt.Errorf("expected=%q, got=%q", templateRendered(i)+suffix, string(c))
 							continue
 						}
 					}
@@ -1233,6 +1263,27 @@ func makeTempFile(t *testing.T, name, contents string) string {
 	return path
 }
 
+func populateTempFile(t *testing.T, name, contents string) *os.File {
+	t.Helper()
+
+	file, err := os.CreateTemp(t.TempDir(), name)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = file.WriteString(contents)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return file
+}
+
 // handler makes 500 errors happen for reads on /v1/secret.
 // Definitely not thread-safe, do not use t.Parallel with this.
 type handler struct {
@@ -1450,7 +1501,7 @@ template_config {
 						continue
 					}
 					if string(c) != templateRendered(0) {
-						err = fmt.Errorf("expected='%s', got='%s'", templateRendered(0), string(c))
+						err = fmt.Errorf("expected=%q, got=%q", templateRendered(0), string(c))
 						continue
 					}
 					return nil
@@ -1623,7 +1674,7 @@ func TestAgent_Cache_Retry(t *testing.T) {
 cache {
 }
 `
-			listenAddr := "127.0.0.1:18123"
+			listenAddr := generateListenerAddress(t)
 			listenConfig := fmt.Sprintf(`
 listener "tcp" {
   address = "%s"
@@ -1861,7 +1912,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			listenAddr := "127.0.0.1:18123"
+			listenAddr := generateListenerAddress(t)
 			listenConfig := fmt.Sprintf(`
 listener "tcp" {
   address = "%s"
@@ -1970,7 +2021,7 @@ vault {
 						continue
 					}
 					if strings.TrimSpace(string(c)) != tc.expectTemplateRender {
-						err = fmt.Errorf("expected='%s', got='%s'", tc.expectTemplateRender, strings.TrimSpace(string(c)))
+						err = fmt.Errorf("expected=%q, got=%q", tc.expectTemplateRender, strings.TrimSpace(string(c)))
 						continue
 					}
 					return nil
@@ -2021,14 +2072,15 @@ func TestAgent_Metrics(t *testing.T) {
 	serverClient := cluster.Cores[0].Client
 
 	// Create a config file
-	config := `
+	listenAddr := generateListenerAddress(t)
+	config := fmt.Sprintf(`
 cache {}
 
 listener "tcp" {
-    address = "127.0.0.1:8101"
+    address = "%s"
     tls_disable = true
 }
-`
+`, listenAddr)
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
@@ -2062,7 +2114,7 @@ listener "tcp" {
 	}()
 
 	conf := api.DefaultConfig()
-	conf.Address = "http://127.0.0.1:8101"
+	conf.Address = "http://" + listenAddr
 	agentClient, err := api.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -2081,4 +2133,233 @@ listener "tcp" {
 		"Gauges",
 		"Points",
 	})
+}
+
+func TestAgent_Quit(t *testing.T) {
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+	logger := logging.NewVaultLogger(hclog.Error)
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+			LogicalBackends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
+		},
+		&vault.TestClusterOptions{
+			NumCores: 1,
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	err := os.Unsetenv(api.EnvVaultAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	listenAddr := generateListenerAddress(t)
+	listenAddr2 := generateListenerAddress(t)
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+
+listener "tcp" {
+	address = "%s"
+	tls_disable = true
+}
+
+listener "tcp" {
+	address = "%s"
+	tls_disable = true
+	agent_api {
+		enable_quit = true
+	}
+}
+
+cache {}
+`, serverClient.Address(), listenAddr, listenAddr2)
+
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	_, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+	client, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(serverClient.Token())
+	client.SetMaxRetries(0)
+	err = client.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// First try on listener 1 where the API should be disabled.
+	resp, err := client.RawRequest(client.NewRequest(http.MethodPost, "/agent/v1/quit"))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if resp != nil && resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected %d but got: %d", http.StatusNotFound, resp.StatusCode)
+	}
+
+	// Now try on listener 2 where the quit API should be enabled.
+	err = client.SetAddress("http://" + listenAddr2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.RawRequest(client.NewRequest(http.MethodPost, "/agent/v1/quit"))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	select {
+	case <-cmd.ShutdownCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	wg.Wait()
+}
+
+func TestAgent_LogFile_EnvVarOverridesConfig(t *testing.T) {
+	// Create basic config
+	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
+	cfg, err := agentConfig.LoadConfig(configFile.Name())
+	if err != nil {
+		t.Fatal("Cannot load config to test update/merge", err)
+	}
+
+	// Sanity check that the config value is the current value
+	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile)
+
+	// Make sure the env var is configured
+	oldEnvVarLogFile := os.Getenv(EnvVaultLogFile)
+	os.Setenv(EnvVaultLogFile, "/squiggle/logs.txt")
+	if oldEnvVarLogFile == "" {
+		defer os.Unsetenv(EnvVaultLogFile)
+	} else {
+		defer os.Setenv(EnvVaultLogFile, oldEnvVarLogFile)
+	}
+
+	// Initialize the command and parse any flags
+	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+	f := cmd.Flags()
+	err = f.Parse([]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Update the config based on the inputs.
+	cfg = cmd.aggregateConfig(f, cfg)
+
+	assert.NotEqual(t, "/foo/bar/juan.log", cfg.LogFile)
+	assert.Equal(t, "/squiggle/logs.txt", cfg.LogFile)
+}
+
+func TestAgent_LogFile_CliOverridesEnvVar(t *testing.T) {
+	// Create basic config
+	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
+	cfg, err := agentConfig.LoadConfig(configFile.Name())
+	if err != nil {
+		t.Fatal("Cannot load config to test update/merge", err)
+	}
+
+	// Sanity check that the config value is the current value
+	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile)
+
+	// Make sure the env var is configured
+	oldEnvVarLogFile := os.Getenv(EnvVaultLogFile)
+	os.Setenv(EnvVaultLogFile, "/squiggle/logs.txt")
+	if oldEnvVarLogFile == "" {
+		defer os.Unsetenv(EnvVaultLogFile)
+	} else {
+		defer os.Setenv(EnvVaultLogFile, oldEnvVarLogFile)
+	}
+
+	// Initialize the command and parse any flags
+	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+	f := cmd.Flags()
+	// Simulate the flag being specified
+	err = f.Parse([]string{"-log-file=/foo/bar/test.log"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Update the config based on the inputs.
+	cfg = cmd.aggregateConfig(f, cfg)
+
+	assert.NotEqual(t, "/foo/bar/juan.log", cfg.LogFile)
+	assert.NotEqual(t, "/squiggle/logs.txt", cfg.LogFile)
+	assert.Equal(t, "/foo/bar/test.log", cfg.LogFile)
+}
+
+func TestAgent_LogFile_Config(t *testing.T) {
+	// Sanity check, remove any env var
+	os.Unsetenv(EnvVaultLogFile)
+
+	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
+
+	cfg, err := agentConfig.LoadConfig(configFile.Name())
+	if err != nil {
+		t.Fatal("Cannot load config to test update/merge", err)
+	}
+
+	// Sanity check that the config value is the current value
+	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "sanity check on log config failed")
+
+	// Parse the cli flags (but we pass in an empty slice)
+	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+	f := cmd.Flags()
+	err = f.Parse([]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg = cmd.aggregateConfig(f, cfg)
+
+	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "actual config check")
+}
+
+// Get a randomly assigned port and then free it again before returning it.
+// There is still a race when trying to use it, but should work better
+// than a static port.
+func generateListenerAddress(t *testing.T) string {
+	t.Helper()
+
+	ln1, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	listenAddr := ln1.Addr().String()
+	ln1.Close()
+	return listenAddr
 }

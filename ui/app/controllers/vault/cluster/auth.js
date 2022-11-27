@@ -4,26 +4,24 @@ import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
 
 export default Controller.extend({
+  flashMessages: service(),
   vaultController: controller('vault'),
   clusterController: controller('vault.cluster'),
   namespaceService: service('namespace'),
   featureFlagService: service('featureFlag'),
   auth: service(),
   router: service(),
-
   queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
-
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
   managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
-
   authMethod: '',
   oidcProvider: '',
 
   get managedNamespaceChild() {
-    let fullParam = this.namespaceQueryParam;
-    let split = fullParam.split('/');
+    const fullParam = this.namespaceQueryParam;
+    const split = fullParam.split('/');
     if (split.length > 1) {
       split.shift();
       return `/${split.join('/')}`;
@@ -69,8 +67,7 @@ export default Controller.extend({
   actions: {
     onAuthResponse(authResponse, backend, data) {
       const { mfa_requirement } = authResponse;
-      // mfa methods handled by the backend are validated immediately in the auth service
-      // if the user must choose between methods or enter passcodes further action is required
+      // if an mfa requirement exists further action is required
       if (mfa_requirement) {
         this.set('mfaAuthData', { mfa_requirement, backend, data });
       } else {
@@ -81,8 +78,14 @@ export default Controller.extend({
       this.authSuccess(authResponse);
     },
     onMfaErrorDismiss() {
-      this.set('mfaAuthData', null);
-      this.auth.set('mfaErrors', null);
+      this.setProperties({
+        mfaAuthData: null,
+        mfaErrors: null,
+      });
+    },
+    cancelAuthentication() {
+      this.set('cancelAuth', true);
+      this.set('waitingForOktaNumberChallenge', false);
     },
   },
 });

@@ -478,7 +478,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				t.Parallel()
 				client, closer := testVaultServer(t)
 				defer closer()
-
 				cmd := testOperatorDiagnoseCommand(t)
 				cmd.client = client
 

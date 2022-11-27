@@ -13,18 +13,7 @@
       to
       {{date-format @expirationTime "MMM dd, yyyy hh:mm:ss a"}}
     </InfoTableRow>
-    <InfoTableRow @label="License state" @value={{if @autoloaded "Autoloaded" "Stored"}} data-test-detail-row>
-      {{#if @autoloaded}}
-        Autoloaded
-      {{else}}
-        Stored
-        <Icon @name="alert-triangle-fill" class="has-text-highlight" />
-        <span class="is-size-8">
-          Stored licenses will be deprecated in a future version of Vault. We recommend autoloading your license. Read more
-          <a href="https://www.vaultproject.io/docs/enterprise/license" rel="noreferrer noopener" target="_blank">here</a>.
-        </span>
-      {{/if}}
-    </InfoTableRow>
+    <InfoTableRow @label="License state" @value={{"Autoloaded"}} data-test-detail-row />
   </div>
 </section>
 

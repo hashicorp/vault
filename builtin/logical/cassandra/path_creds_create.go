@@ -50,7 +50,7 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 		return nil, err
 	}
 	username := fmt.Sprintf("vault_%s_%s_%s_%d", name, displayName, userUUID, time.Now().Unix())
-	username = strings.Replace(username, "-", "_", -1)
+	username = strings.ReplaceAll(username, "-", "_")
 	password, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, err

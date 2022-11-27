@@ -1,26 +1,26 @@
 import Route from '@ember/routing/route';
+import { isSameMonth } from 'date-fns';
 import RSVP from 'rsvp';
 import getStorage from 'vault/lib/token-storage';
-
+import { parseRFC3339 } from 'core/utils/date-formatters';
+import { inject as service } from '@ember/service';
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
+
 export default class HistoryRoute extends Route {
+  @service store;
+
   async getActivity(start_time) {
-    try {
-      // on init ONLY make network request if we have a start time from the license
-      // otherwise user needs to manually input
-      return start_time ? await this.store.queryRecord('clients/activity', { start_time }) : {};
-    } catch (e) {
-      // returns 400 when license start date is in the current month
-      if (e.httpStatus === 400) {
-        return { isLicenseDateError: true };
-      }
-      throw e;
+    if (isSameMonth(new Date(start_time), new Date())) {
+      // triggers empty state to manually enter date if license begins in current month
+      return { isLicenseDateError: true };
     }
+    // on init ONLY make network request if we have a start_time
+    return start_time ? await this.store.queryRecord('clients/activity', { start_time }) : {};
   }
 
   async getLicenseStartTime() {
     try {
-      let license = await this.store.queryRecord('license', {});
+      const license = await this.store.queryRecord('license', {});
       // if license.startTime is 'undefined' return 'null' for consistency
       return license.startTime || getStorage().getItem(INPUTTED_START_DATE) || null;
     } catch (e) {
@@ -30,27 +30,16 @@ export default class HistoryRoute extends Route {
     }
   }
 
-  parseRFC3339(timestamp) {
-    // convert '2021-03-21T00:00:00Z' --> ['2021', 2] (e.g. 2021 March, month is zero indexed)
-    if (Array.isArray(timestamp)) {
-      // return if already formatted correctly
-      return timestamp;
-    }
-    return timestamp
-      ? [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1]
-      : null;
-  }
-
   async model() {
-    let parentModel = this.modelFor('vault.cluster.clients');
-    let licenseStart = await this.getLicenseStartTime();
-    let activity = await this.getActivity(licenseStart);
+    const parentModel = this.modelFor('vault.cluster.clients');
+    const licenseStart = await this.getLicenseStartTime();
+    const activity = await this.getActivity(licenseStart);
 
     return RSVP.hash({
       config: parentModel.config,
       activity,
-      startTimeFromLicense: this.parseRFC3339(licenseStart),
-      endTimeFromResponse: this.parseRFC3339(activity?.endTime),
+      startTimeFromLicense: parseRFC3339(licenseStart),
+      endTimeFromResponse: parseRFC3339(activity?.endTime),
       versionHistory: parentModel.versionHistory,
     });
   }

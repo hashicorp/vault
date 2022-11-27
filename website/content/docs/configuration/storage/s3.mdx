@@ -67,9 +67,9 @@ cause Vault to attempt to retrieve credentials from the AWS metadata service.
   endpoint connection (highly recommended not to disable for production).
 
 - `kms_key_id` `(string: "")` - Specifies the ID or Alias of the KMS key used to
-  encrypt data in the S3 backend. Vault must have `kms:Encrypt` and `kms:Decrypt`
-  permissions for this key. You can use `alias/aws/s3` to specify the default
-  key for the account.
+  encrypt data in the S3 backend. Vault must have `kms:Encrypt`, `kms:Decrypt`
+  and `kms:GenerateDataKey` permissions for this KMS key. You can use 
+  `alias/aws/s3` to specify the default key for the account.
 
 - `path` `(string: "")` - Specifies the path in the S3 Bucket where Vault
   data will be stored.

@@ -2,7 +2,7 @@ import { module, test } from 'qunit';
 import KVObject from 'vault/lib/kv-object';
 
 module('Unit | Lib | kv object', function () {
-  let fromJSONTests = [
+  const fromJSONTests = [
     [
       'types',
       { string: 'string', false: false, zero: 0, number: 1, null: null, true: true, object: { one: 'two' } },
@@ -31,13 +31,13 @@ module('Unit | Lib | kv object', function () {
 
   fromJSONTests.forEach(function ([name, input, content]) {
     test(`fromJSON: ${name}`, function (assert) {
-      let data = KVObject.create({ content: [] }).fromJSON(input);
+      const data = KVObject.create({ content: [] }).fromJSON(input);
       assert.deepEqual(data.get('content'), content, 'has expected content');
     });
   });
 
   test(`fromJSON: non-object input`, function (assert) {
-    let input = [{ foo: 'bar' }];
+    const input = [{ foo: 'bar' }];
     assert.throws(
       () => {
         KVObject.create({ content: [] }).fromJSON(input);
@@ -49,13 +49,13 @@ module('Unit | Lib | kv object', function () {
 
   fromJSONTests.forEach(function ([name, input, content]) {
     test(`fromJSONString: ${name}`, function (assert) {
-      let inputString = JSON.stringify(input, null, 2);
-      let data = KVObject.create({ content: [] }).fromJSONString(inputString);
+      const inputString = JSON.stringify(input, null, 2);
+      const data = KVObject.create({ content: [] }).fromJSONString(inputString);
       assert.deepEqual(data.get('content'), content, 'has expected content');
     });
   });
 
-  let toJSONTests = [
+  const toJSONTests = [
     [
       'types',
       false,
@@ -68,22 +68,22 @@ module('Unit | Lib | kv object', function () {
 
   toJSONTests.forEach(function ([name, includeBlanks, input, output]) {
     test(`toJSON: ${name}`, function (assert) {
-      let data = KVObject.create({ content: [] }).fromJSON(input);
-      let result = data.toJSON(includeBlanks);
+      const data = KVObject.create({ content: [] }).fromJSON(input);
+      const result = data.toJSON(includeBlanks);
       assert.deepEqual(result, output, 'has expected output');
     });
   });
 
   toJSONTests.forEach(function ([name, includeBlanks, input, output]) {
     test(`toJSONString: ${name}`, function (assert) {
-      let expected = JSON.stringify(output, null, 2);
-      let data = KVObject.create({ content: [] }).fromJSON(input);
-      let result = data.toJSONString(includeBlanks);
-      assert.equal(result, expected, 'has expected output string');
+      const expected = JSON.stringify(output, null, 2);
+      const data = KVObject.create({ content: [] }).fromJSON(input);
+      const result = data.toJSONString(includeBlanks);
+      assert.strictEqual(result, expected, 'has expected output string');
     });
   });
 
-  let isAdvancedTests = [
+  const isAdvancedTests = [
     [
       'advanced',
       { string: 'string', false: false, zero: 0, number: 1, null: null, true: true, object: { one: 'two' } },
@@ -94,9 +94,9 @@ module('Unit | Lib | kv object', function () {
 
   isAdvancedTests.forEach(function ([name, input, expected]) {
     test(`isAdvanced: ${name}`, function (assert) {
-      let data = KVObject.create({ content: [] }).fromJSON(input);
+      const data = KVObject.create({ content: [] }).fromJSON(input);
 
-      assert.equal(data.isAdvanced(), expected, 'calculates isAdvanced correctly');
+      assert.strictEqual(data.isAdvanced(), expected, 'calculates isAdvanced correctly');
     });
   });
 });

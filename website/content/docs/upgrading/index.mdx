@@ -10,9 +10,9 @@ description: |-
 
 These are general upgrade instructions for Vault for both non-HA and HA setups.
 _Please ensure that you also read any version-specific upgrade notes which can be
-found in the sidebar._ 
+found in the sidebar._
 
-!> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
+!> **Important:** Always back up your data before upgrading! Vault does not
 make backward-compatibility guarantees for its data store. Simply replacing the
 newly-installed Vault binary with the previous version will not cleanly
 downgrade Vault, as upgrades may perform changes to the underlying data
@@ -25,10 +25,17 @@ supported. The upgrade notes for each intervening version must be reviewed. The
 upgrade notes may describe additional steps or configuration to update before,
 during, or after the upgrade.
 
-## Learn
+## Integrated Storage Autopilot
 
-Refer to the [Vault Upgrade Standard Procedure](https://learn.hashicorp.com/tutorials/vault/sop-upgrade)
-guide for step-by-step examples of upgrading Vault Enterprise.
+Vault 1.11 introduced [automated
+upgrades](/docs/concepts/integrated-storage/autopilot#automated-upgrades) as
+part of the Integrated Storage Autopilot feature. If your Vault environment is
+configured to use Integrated Storage, consider leveraging this new feature to
+upgrade your Vault environment.
+
+-> **Tutorial:** Refer to the [Automate Upgrades with Vault
+ Enterprise](https://learn.hashicorp.com/tutorials/vault/raft-upgrade-automation)
+ tutorial for more details.
 
 ## Agent
 
@@ -66,11 +73,21 @@ upgrade notes.
 
 ## HA Installations
 
-This is our recommended upgrade procedure, and the procedure we use internally
-at HashiCorp. However, you should consider how to apply these steps to your
-particular setup since HA setups can differ on whether a load balancer is in
-use, what addresses clients are being given to connect to Vault (standby +
-leader, leader-only, or discovered via service discovery), etc.
+!> **Important:** Note that these instructions are not relevant if you're on a
+version of Vault greater than or equal to 1.11 and you have Autopilot enabled.
+If so, you should let Autopilot do the upgrade for you, as that's easier and
+less prone to human error. Please refer to our [automated
+upgrades](/docs/concepts/integrated-storage/autopilot#automated-upgrades)
+documentation for information on this feature and our
+[Automate Upgrades with Vault
+Enterprise](https://learn.hashicorp.com/tutorials/vault/raft-upgrade-automation)
+tutorial for more details.
+
+This is our recommended upgrade procedure if you're on a version of Vault before
+1.11, or you've chosen not to use Autopilot. However, you should consider how to
+apply these steps to your particular setup since HA setups can differ on whether
+a load balancer is in use, what addresses clients are being given to connect to
+Vault (standby + leader, leader-only, or discovered via service discovery), etc.
 
 Whatever method you use, you should ensure that you never fail over from a
 newer version of Vault to an older version. Our suggested procedure is designed
@@ -94,20 +111,20 @@ At this point all standby nodes will be upgraded and ready to take over. The
 upgrade will not be complete until one of the upgraded standby nodes takes over
 active duty. To do this:
 
-1. Properly shut down the remaining (active) node 
+1. Properly shut down the remaining (active) node
 
-   ~> **Note:** It is important that you shut the node down properly. 
+   ~> **Note:** It is important that you shut the node down properly.
    This will perform a step-down and release the HA lock, allowing a standby
    node to take over with a very short delay.
    If you kill Vault without letting it release the lock, a standby node will
    not be able to take over until the lock's timeout period has expired. This
    is backend-specific but could be ten seconds or more.
-   
+
 2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration#disable_mlock)
-4. Start the node
-5. Unseal the node
+3. Start the node
+4. Unseal the node
 5. Verify `vault status` shows correct Version and HA Mode is `standby`
-7. Review the node's logs to ensure successful startup and unseal
+6. Review the node's logs to ensure successful startup and unseal
 
 Internal upgrade tasks will happen after one of the upgraded standby nodes
 takes over active duty.

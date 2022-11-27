@@ -19,11 +19,12 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
-	"github.com/lib/pq"
-	mongodbatlasapi "github.com/mongodb/go-client-mongodb-atlas/mongodbatlas"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/stretchr/testify/mock"
+	mongodbatlasapi "go.mongodb.org/atlas/mongodbatlas"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -31,8 +32,6 @@ import (
 const (
 	dbUser                = "vaultstatictest"
 	dbUserDefaultPassword = "password"
-
-	testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 )
 
 func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
@@ -420,12 +419,8 @@ func TestBackend_StaticRole_Revoke_user(t *testing.T) {
 func createTestPGUser(t *testing.T, connURL string, username, password, query string) {
 	t.Helper()
 	log.Printf("[TRACE] Creating test user")
-	conn, err := pq.ParseURL(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	db, err := sql.Open("postgres", conn)
+	db, err := sql.Open("pgx", connURL)
 	defer db.Close()
 	if err != nil {
 		t.Fatal(err)
@@ -445,7 +440,7 @@ func createTestPGUser(t *testing.T, connURL string, username, password, query st
 		"name":     username,
 		"password": password,
 	}
-	if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+	if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 		t.Fatal(err)
 	}
 	// Commit the transaction
@@ -457,7 +452,7 @@ func createTestPGUser(t *testing.T, connURL string, username, password, query st
 func verifyPgConn(t *testing.T, username, password, connURL string) {
 	t.Helper()
 	cURL := strings.Replace(connURL, "postgres:secret", username+":"+password, 1)
-	db, err := sql.Open("postgres", cURL)
+	db, err := sql.Open("pgx", cURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -511,8 +506,6 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 // Second scenario, WAL contains a role name that does exist, but the role's
 // LastVaultRotation is greater than the WAL has
 func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) {
-	t.Skip("temporarily disabled due to intermittent failures")
-
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -713,7 +706,7 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
-	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "latest", "vaulttestdb")
+	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "5.0.10", "vaulttestdb")
 	defer cleanup()
 
 	uc := userCreator(func(t *testing.T, username, password string) {
@@ -753,7 +746,7 @@ func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
 	uc := userCreator(func(t *testing.T, username, password string) {
 		// Delete the user in case it's still there from an earlier run, ignore
 		// errors in case it's not.
-		_, _ = api.DatabaseUsers.Delete(context.Background(), projID, username)
+		_, _ = api.DatabaseUsers.Delete(context.Background(), "admin", projID, username)
 
 		req := &mongodbatlasapi.DatabaseUser{
 			Username:     username,
@@ -775,6 +768,17 @@ func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
 }
 
 func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
+	// We need to set this value for the plugin to run, but it doesn't matter what we set it to.
+	oldToken := os.Getenv(pluginutil.PluginUnwrapTokenEnv)
+	os.Setenv(pluginutil.PluginUnwrapTokenEnv, "...")
+	defer func() {
+		if oldToken != "" {
+			os.Setenv(pluginutil.PluginUnwrapTokenEnv, oldToken)
+		} else {
+			os.Unsetenv(pluginutil.PluginUnwrapTokenEnv)
+		}
+	}()
+
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1373,6 +1377,7 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 	mockDB := &mockNewDatabase{}
 	mockDB.On("Initialize", mock.Anything, mock.Anything).Return(v5.InitializeResponse{}, nil)
 	mockDB.On("Close").Return(nil)
+	mockDB.On("Type").Return("mock", nil)
 	dbw := databaseVersionWrapper{
 		v5: mockDB,
 	}

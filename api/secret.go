@@ -2,8 +2,11 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -94,12 +97,7 @@ func (s *Secret) TokenRemainingUses() (int, error) {
 		return -1, nil
 	}
 
-	uses, err := parseutil.ParseInt(s.Data["num_uses"])
-	if err != nil {
-		return 0, err
-	}
-
-	return int(uses), nil
+	return parseutil.SafeParseInt(s.Data["num_uses"])
 }
 
 // TokenPolicies returns the standardized list of policies for the given secret.
@@ -307,7 +305,15 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 	// First read the data into a buffer. Not super efficient but we want to
 	// know if we actually have a body or not.
 	var buf bytes.Buffer
-	_, err := buf.ReadFrom(r)
+
+	// io.Reader is treated like a stream and cannot be read
+	// multiple times. Duplicating this stream using TeeReader
+	// to use this data in case there is no top-level data from
+	// api response
+	var teebuf bytes.Buffer
+	tee := io.TeeReader(r, &teebuf)
+
+	_, err := buf.ReadFrom(tee)
 	if err != nil {
 		return nil, err
 	}
@@ -319,6 +325,39 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 	var secret Secret
 	if err := jsonutil.DecodeJSONFromReader(&buf, &secret); err != nil {
 		return nil, err
+	}
+
+	// If the secret is null, add raw data to secret data if present
+	if reflect.DeepEqual(secret, Secret{}) {
+		data := make(map[string]interface{})
+		if err := jsonutil.DecodeJSONFromReader(&teebuf, &data); err != nil {
+			return nil, err
+		}
+		errRaw, errPresent := data["errors"]
+
+		// if only errors are present in the resp.Body return nil
+		// to return value not found as it does not have any raw data
+		if len(data) == 1 && errPresent {
+			return nil, nil
+		}
+
+		// if errors are present along with raw data return the error
+		if errPresent {
+			var errStrArray []string
+			errBytes, err := json.Marshal(errRaw)
+			if err != nil {
+				return nil, err
+			}
+			if err := json.Unmarshal(errBytes, &errStrArray); err != nil {
+				return nil, err
+			}
+			return nil, fmt.Errorf(strings.Join(errStrArray, " "))
+		}
+
+		// if any raw data is present in resp.Body, add it to secret
+		if len(data) > 0 {
+			secret.Data = data
+		}
 	}
 
 	return &secret, nil

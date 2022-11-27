@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,12 +16,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/base62"
-
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
-	hclog "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -226,6 +226,95 @@ func TestRaft_Backend(t *testing.T) {
 	physical.ExerciseBackend(t, b)
 }
 
+func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
+	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(raftDir)
+
+	conf := map[string]string{
+		"path":                      raftDir,
+		"node_id":                   "abc123",
+		"autopilot_upgrade_version": "hahano",
+	}
+
+	_, err = NewRaftBackend(conf, hclog.NewNullLogger())
+	if err == nil {
+		t.Fatal("expected an error but got none")
+	}
+
+	if !strings.Contains(err.Error(), "does not parse") {
+		t.Fatal("expected an error about unparseable versions but got none")
+	}
+}
+
+func TestRaft_ParseNonVoter(t *testing.T) {
+	p := func(s string) *string {
+		return &s
+	}
+
+	for _, retryJoinConf := range []string{"", "not-empty"} {
+		t.Run(retryJoinConf, func(t *testing.T) {
+			for name, tc := range map[string]struct {
+				envValue             *string
+				configValue          *string
+				expectNonVoter       bool
+				invalidNonVoterValue bool
+			}{
+				"valid false":                {nil, p("false"), false, false},
+				"valid true":                 {nil, p("true"), true, false},
+				"invalid empty":              {nil, p(""), false, true},
+				"invalid truthy":             {nil, p("no"), false, true},
+				"invalid":                    {nil, p("totallywrong"), false, true},
+				"valid env false":            {p("false"), nil, true, false},
+				"valid env true":             {p("true"), nil, true, false},
+				"valid env not boolean":      {p("anything"), nil, true, false},
+				"valid env empty":            {p(""), nil, false, false},
+				"neither set, default false": {nil, nil, false, false},
+				"both set, env preferred":    {p("true"), p("false"), true, false},
+			} {
+				t.Run(name, func(t *testing.T) {
+					if tc.envValue != nil {
+						t.Setenv(EnvVaultRaftNonVoter, *tc.envValue)
+					}
+					raftDir, err := ioutil.TempDir("", "vault-raft-")
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer os.RemoveAll(raftDir)
+
+					conf := map[string]string{
+						"path":       raftDir,
+						"node_id":    "abc123",
+						"retry_join": retryJoinConf,
+					}
+					if tc.configValue != nil {
+						conf[raftNonVoterConfigKey] = *tc.configValue
+					}
+
+					backend, err := NewRaftBackend(conf, hclog.NewNullLogger())
+					switch {
+					case tc.invalidNonVoterValue || (retryJoinConf == "" && tc.expectNonVoter):
+						if err == nil {
+							t.Fatal("expected an error but got none")
+						}
+					default:
+						if err != nil {
+							t.Fatalf("expected no error but got: %s", err)
+						}
+
+						raftBackend := backend.(*RaftBackend)
+						if tc.expectNonVoter != raftBackend.NonVoter() {
+							t.Fatalf("expected %s %v but got %v", raftNonVoterConfigKey, tc.expectNonVoter, raftBackend.NonVoter())
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestRaft_Backend_LargeKey(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
@@ -277,6 +366,65 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	}
 	if out != nil {
 		t.Fatal("expected response entry to be nil after a failed put")
+	}
+}
+
+// TestRaft_TransactionalBackend_GetTransactions tests that passing a slice of transactions to the
+// raft backend will populate values for any transactions that are Get operations.
+func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	ctx := context.Background()
+	txns := make([]*physical.TxnEntry, 0)
+
+	// Add some seed values to our FSM, and prepare our slice of transactions at the same time
+	for i := 0; i < 5; i++ {
+		key := fmt.Sprintf("foo/%d", i)
+		err := b.fsm.Put(ctx, &physical.Entry{Key: key, Value: []byte(fmt.Sprintf("value-%d", i))})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		txns = append(txns, &physical.TxnEntry{
+			Operation: physical.GetOperation,
+			Entry: &physical.Entry{
+				Key: key,
+			},
+		})
+	}
+
+	// Add some additional transactions, so we have a mix of operations
+	for i := 0; i < 10; i++ {
+		txnEntry := &physical.TxnEntry{
+			Entry: &physical.Entry{
+				Key: fmt.Sprintf("lol-%d", i),
+			},
+		}
+
+		if i%2 == 0 {
+			txnEntry.Operation = physical.PutOperation
+			txnEntry.Entry.Value = []byte("lol")
+		} else {
+			txnEntry.Operation = physical.DeleteOperation
+		}
+
+		txns = append(txns, txnEntry)
+	}
+
+	err := b.Transaction(ctx, txns)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that our Get operations were populated with their values
+	for i, txn := range txns {
+		if txn.Operation == physical.GetOperation {
+			val := []byte(fmt.Sprintf("value-%d", i))
+			if !bytes.Equal(val, txn.Entry.Value) {
+				t.Fatalf("expected %s to equal %s but it didn't", hex.EncodeToString(val), hex.EncodeToString(txn.Entry.Value))
+			}
+		}
 	}
 }
 

@@ -2,6 +2,7 @@ package keymanager
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,9 +31,10 @@ func TestKeyManager_PassthrougKeyManager(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			m, err := NewPassthroughKeyManager(tc.key)
+			m, err := NewPassthroughKeyManager(ctx, tc.key)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -43,7 +45,7 @@ func TestKeyManager_PassthrougKeyManager(t *testing.T) {
 				t.Fatalf("expected non-nil wrapper from the key manager")
 			}
 
-			token, err := m.RetrievalToken()
+			token, err := m.RetrievalToken(ctx)
 			if err != nil {
 				t.Fatalf("unable to retrieve token: %s", err)
 			}

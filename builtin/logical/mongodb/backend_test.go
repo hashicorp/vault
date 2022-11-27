@@ -57,7 +57,7 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURI := mongodb.PrepareTestContainer(t, "latest")
+	cleanup, connURI := mongodb.PrepareTestContainer(t, "5.0.10")
 	defer cleanup()
 	connData := map[string]interface{}{
 		"uri": connURI,
@@ -81,7 +81,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURI := mongodb.PrepareTestContainer(t, "latest")
+	cleanup, connURI := mongodb.PrepareTestContainer(t, "5.0.10")
 	defer cleanup()
 	connData := map[string]interface{}{
 		"uri": connURI,
@@ -107,7 +107,7 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURI := mongodb.PrepareTestContainer(t, "latest")
+	cleanup, connURI := mongodb.PrepareTestContainer(t, "5.0.10")
 	defer cleanup()
 	connData := map[string]interface{}{
 		"uri": connURI,

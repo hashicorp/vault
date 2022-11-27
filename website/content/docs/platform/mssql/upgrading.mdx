@@ -1,0 +1,42 @@
+---
+layout: docs
+page_title: Upgrade the Vault EKM Provider
+description: Upgrade steps for the Vault EKM Provider for Microsoft SQL Server.
+---
+
+# Upgrading the Vault EKM Provider
+
+~> **Note:** The upgrade process will put the database into maintenance mode and
+    require a restart. It is highly recommended to test this procedure in a
+    staging environment prior to running it on a production database.
+
+1. Disable the Vault EKM Provider, and verify it is marked disabled:
+
+    ```sql
+    ALTER CRYPTOGRAPHIC PROVIDER TransitVaultProvider DISABLE;
+    SELECT * FROM sys.cryptographic_providers;
+    ```
+
+1. Install the latest version from [releases.hashicorp.com][releases], following
+  the instructions in the installer.
+    1. If you get a "Files in Use" prompt while running the installer, select
+      "Do not close applications. A reboot will be required", and restart
+      after the installation has completed.
+1. Reload the provider DLL:
+
+    ```sql
+    ALTER CRYPTOGRAPHIC PROVIDER TransitVaultProvider
+        FROM FILE = 'C:\Program Files\HashiCorp\Transit Vault EKM Provider\TransitVaultEKM.dll';
+    ```
+
+1. Now re-enable the Vault EKM Provider and verify it is both marked enabled
+  and the version reported matches the version of the installer:
+
+    ```sql
+    ALTER CRYPTOGRAPHIC PROVIDER TransitVaultProvider ENABLE;
+    SELECT * FROM sys.cryptographic_providers;
+    ```
+
+1. Finally, restart Microsoft SQL Server.
+
+[releases]: https://releases.hashicorp.com/vault-mssql-ekm-provider/

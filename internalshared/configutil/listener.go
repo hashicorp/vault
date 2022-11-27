@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/textproto"
+	"regexp"
 	"strings"
 	"time"
 
@@ -43,6 +44,7 @@ type Listener struct {
 	Type       string
 	Purpose    []string    `hcl:"-"`
 	PurposeRaw interface{} `hcl:"purpose"`
+	Role       string      `hcl:"role"`
 
 	Address                 string        `hcl:"address"`
 	ClusterAddress          string        `hcl:"cluster_address"`
@@ -93,6 +95,8 @@ type Listener struct {
 	SocketUser  string `hcl:"socket_user"`
 	SocketGroup string `hcl:"socket_group"`
 
+	AgentAPI *AgentAPI `hcl:"agent_api"`
+
 	Telemetry              ListenerTelemetry              `hcl:"telemetry"`
 	Profiling              ListenerProfiling              `hcl:"profiling"`
 	InFlightRequestLogging ListenerInFlightRequestLogging `hcl:"inflight_requests_logging"`
@@ -109,6 +113,11 @@ type Listener struct {
 	// Custom Http response headers
 	CustomResponseHeaders    map[string]map[string]string `hcl:"-"`
 	CustomResponseHeadersRaw interface{}                  `hcl:"custom_response_headers"`
+}
+
+// AgentAPI allows users to select which parts of the Agent API they want enabled.
+type AgentAPI struct {
+	EnableQuit bool `hcl:"enable_quit"`
 }
 
 func (l *Listener) GoString() string {
@@ -159,6 +168,7 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 			l.Type = strings.ToLower(l.Type)
 			switch l.Type {
 			case "tcp", "unix":
+				result.found(l.Type, l.Type)
 			default:
 				return multierror.Prefix(fmt.Errorf("unsupported listener type %q", l.Type), fmt.Sprintf("listeners.%d:", i))
 			}
@@ -172,6 +182,13 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.PurposeRaw = nil
+			}
+
+			switch l.Role {
+			case "default", "metrics_only", "":
+				result.found(l.Type, l.Type)
+			default:
+				return multierror.Prefix(fmt.Errorf("unsupported listener role %q", l.Role), fmt.Sprintf("listeners.%d:", i))
 			}
 		}
 
@@ -403,7 +420,14 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 
 // ParseSingleIPTemplate is used as a helper function to parse out a single IP
 // address from a config parameter.
+// If the input doesn't appear to contain the 'template' format,
+// it will return the specified input unchanged.
 func ParseSingleIPTemplate(ipTmpl string) (string, error) {
+	r := regexp.MustCompile("{{.*?}}")
+	if !r.MatchString(ipTmpl) {
+		return ipTmpl, nil
+	}
+
 	out, err := template.Parse(ipTmpl)
 	if err != nil {
 		return "", fmt.Errorf("unable to parse address template %q: %v", ipTmpl, err)

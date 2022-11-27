@@ -6,12 +6,12 @@ module('Unit | Model | transit key', function (hooks) {
   setupTest(hooks);
 
   test('it exists', function (assert) {
-    let model = run(() => this.owner.lookup('service:store').createRecord('transit-key'));
+    const model = run(() => this.owner.lookup('service:store').createRecord('transit-key'));
     assert.ok(!!model);
   });
 
   test('supported actions', function (assert) {
-    let model = run(() =>
+    const model = run(() =>
       this.owner.lookup('service:store').createRecord('transit-key', {
         supportsEncryption: true,
         supportsDecryption: true,
@@ -19,15 +19,16 @@ module('Unit | Model | transit key', function (hooks) {
       })
     );
 
-    let supportedActions = model.get('supportedActions').map((k) => k.name);
+    const supportedActions = model.get('supportedActions').map((k) => k.name);
     assert.deepEqual(['encrypt', 'decrypt', 'datakey', 'rewrap', 'hmac', 'verify'], supportedActions);
   });
 
   test('encryption key versions', function (assert) {
-    let done = assert.async();
-    let model = run(() =>
+    assert.expect(2);
+    const done = assert.async();
+    const model = run(() =>
       this.owner.lookup('service:store').createRecord('transit-key', {
-        keyVersions: [1, 2, 3, 4, 5],
+        keys: { 1: 123, 2: 456, 3: 789, 4: 101112, 5: 131415 },
         minDecryptionVersion: 1,
         latestVersion: 5,
       })
@@ -45,10 +46,11 @@ module('Unit | Model | transit key', function (hooks) {
   });
 
   test('keys for encryption', function (assert) {
-    let done = assert.async();
-    let model = run(() =>
+    assert.expect(2);
+    const done = assert.async();
+    const model = run(() =>
       this.owner.lookup('service:store').createRecord('transit-key', {
-        keyVersions: [1, 2, 3, 4, 5],
+        keys: { 1: 123, 2: 456, 3: 789, 4: 101112, 5: 131415 },
         minDecryptionVersion: 1,
         latestVersion: 5,
       })

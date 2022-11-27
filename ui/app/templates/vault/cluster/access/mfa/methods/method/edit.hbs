@@ -1,0 +1,16 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Configure
+      {{this.model.method.name}}
+      MFA
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<Mfa::MethodForm
+  @model={{this.model.method}}
+  @hasActions={{true}}
+  @onSave={{transition-to "vault.cluster.access.mfa.methods.method" this.model.method.id}}
+  @onClose={{transition-to "vault.cluster.access.mfa.methods.method" this.model.method.id}}
+/>

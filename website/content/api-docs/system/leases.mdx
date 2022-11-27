@@ -14,7 +14,7 @@ This endpoint retrieve lease metadata.
 
 | Method | Path                 |
 | :----- | :------------------- |
-| `PUT`  | `/sys/leases/lookup` |
+| `POST` | `/sys/leases/lookup` |
 
 ### Parameters
 
@@ -33,7 +33,7 @@ This endpoint retrieve lease metadata.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/leases/lookup
 ```
@@ -87,7 +87,7 @@ cannot be renewed using this endpoint, use instead the auth/token/renew endpoint
 
 | Method | Path                |
 | :----- | :------------------ |
-| `PUT`  | `/sys/leases/renew` |
+| `POST` | `/sys/leases/renew` |
 
 ### Parameters
 
@@ -113,7 +113,7 @@ cannot be renewed using this endpoint, use instead the auth/token/renew endpoint
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/leases/renew
 ```
@@ -134,7 +134,7 @@ This endpoint revokes a lease immediately.
 
 | Method | Path                 |
 | :----- | :------------------- |
-| `PUT`  | `/sys/leases/revoke` |
+| `POST` | `/sys/leases/revoke` |
 
 ### Parameters
 
@@ -159,7 +159,7 @@ This endpoint revokes a lease immediately.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/leases/revoke
 ```
@@ -180,7 +180,7 @@ this endpoint should be tightly controlled.
 
 | Method | Path                               |
 | :----- | :--------------------------------- |
-| `PUT`  | `/sys/leases/revoke-force/:prefix` |
+| `POST` | `/sys/leases/revoke-force/:prefix` |
 
 ### Parameters
 
@@ -192,7 +192,7 @@ this endpoint should be tightly controlled.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/leases/revoke-force/aws/creds
 ```
 
@@ -207,7 +207,7 @@ used to revoke very large numbers of secrets/tokens at once.
 
 | Method | Path                                |
 | :----- | :---------------------------------- |
-| `PUT`  | `/sys/leases/revoke-prefix/:prefix` |
+| `POST` | `/sys/leases/revoke-prefix/:prefix` |
 
 ### Parameters
 
@@ -222,7 +222,7 @@ used to revoke very large numbers of secrets/tokens at once.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/leases/revoke-prefix/aws/creds
 ```
 

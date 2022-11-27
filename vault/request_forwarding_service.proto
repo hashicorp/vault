@@ -20,6 +20,9 @@ message EchoRequest {
 	NodeInformation node_info = 6;
 	uint64 raft_term = 7;
 	string raft_desired_suffrage = 8;
+	string raft_upgrade_version = 9;
+	string raft_redundancy_zone = 10;
+	string sdk_version = 11;
 }
 
 message EchoReply {

@@ -1,0 +1,9 @@
+```release-note:improvement
+identity/oidc: Adds a default OIDC provider
+```
+```release-note:improvement
+identity/oidc: Adds a default key for OIDC clients
+```
+```release-note:improvement
+identity/oidc: Adds an `allow_all` assignment that permits all entities to authenticate via an OIDC client
+```

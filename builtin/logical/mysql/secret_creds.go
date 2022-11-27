@@ -18,7 +18,7 @@ const SecretCredsType = "creds"
 // grants, at least we ensure that the open connection is useless. Dropping the
 // user will only affect the next connection.
 const defaultRevocationSQL = `
-REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%';
 DROP USER '{{name}}'@'%'
 `
 
@@ -119,7 +119,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 		// This is not a prepared statement because not all commands are supported
 		// 1295: This command is not supported in the prepared statement protocol yet
 		// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
-		query = strings.Replace(query, "{{name}}", username, -1)
+		query = strings.ReplaceAll(query, "{{name}}", username)
 		_, err = tx.Exec(query)
 		if err != nil {
 			return nil, err

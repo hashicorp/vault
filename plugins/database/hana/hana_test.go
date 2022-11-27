@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHANA_Initialize(t *testing.T) {
@@ -178,7 +179,7 @@ func TestHANA_UpdateUser(t *testing.T) {
 				if err == nil {
 					t.Fatalf("Able to login with new creds when expecting an issue")
 				} else if test.expectedErrMsg != "" && !strings.Contains(err.Error(), test.expectedErrMsg) {
-					t.Fatalf("Expected error message to contain \"%s\", received: %s", test.expectedErrMsg, err)
+					t.Fatalf("Expected error message to contain %q, received: %s", test.expectedErrMsg, err)
 				}
 			}
 			if !test.expectErrOnLogin && err != nil {
@@ -286,6 +287,97 @@ func copyConfig(config map[string]interface{}) map[string]interface{} {
 		newConfig[k] = v
 	}
 	return newConfig
+}
+
+func TestHANA_DefaultUsernameTemplate(t *testing.T) {
+	if os.Getenv("HANA_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
+		t.SkipNow()
+	}
+	connURL := os.Getenv("HANA_URL")
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	initReq := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, initReq)
+
+	usernameConfig := dbplugin.UsernameMetadata{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	const password = "SuperSecurePa55w0rd!"
+	resp := dbtesting.AssertNewUser(t, db, dbplugin.NewUserRequest{
+		UsernameConfig: usernameConfig,
+		Password:       password,
+		Statements: dbplugin.Statements{
+			Commands: []string{testHANARole},
+		},
+		Expiration: time.Now().Add(5 * time.Minute),
+	})
+	username := resp.Username
+
+	if resp.Username == "" {
+		t.Fatalf("Missing username")
+	}
+
+	testCredsExist(t, connURL, username, password)
+
+	require.Regexp(t, `^V_TEST_TEST_[A-Z0-9]{20}_[0-9]{10}$`, resp.Username)
+
+	defer dbtesting.AssertClose(t, db)
+}
+
+func TestHANA_CustomUsernameTemplate(t *testing.T) {
+	if os.Getenv("HANA_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
+		t.SkipNow()
+	}
+	connURL := os.Getenv("HANA_URL")
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":    connURL,
+		"username_template": "{{.DisplayName}}_{{random 10}}",
+	}
+
+	initReq := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, initReq)
+
+	usernameConfig := dbplugin.UsernameMetadata{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	const password = "SuperSecurePa55w0rd!"
+	resp := dbtesting.AssertNewUser(t, db, dbplugin.NewUserRequest{
+		UsernameConfig: usernameConfig,
+		Password:       password,
+		Statements: dbplugin.Statements{
+			Commands: []string{testHANARole},
+		},
+		Expiration: time.Now().Add(5 * time.Minute),
+	})
+	username := resp.Username
+
+	if resp.Username == "" {
+		t.Fatalf("Missing username")
+	}
+
+	testCredsExist(t, connURL, username, password)
+
+	require.Regexp(t, `^TEST_[A-Z0-9]{10}$`, resp.Username)
+
+	defer dbtesting.AssertClose(t, db)
 }
 
 const testHANARole = `

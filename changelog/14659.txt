@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Replaces the IvyCodemirror wrapper with a custom ember modifier.
+```

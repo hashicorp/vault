@@ -28,6 +28,7 @@ import (
 const (
 	testIP              = "127.0.0.1"
 	testUserName        = "vaultssh"
+	testMultiUserName   = "vaultssh,otherssh"
 	testAdminUser       = "vaultssh"
 	testCaKeyType       = "ca"
 	testOTPKeyType      = "otp"
@@ -136,7 +137,7 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 	}
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ContainerName: "openssh",
-		ImageRepo:     "linuxserver/openssh-server",
+		ImageRepo:     "docker.mirror.hashicorp.services/linuxserver/openssh-server",
 		ImageTag:      tag,
 		Env: []string{
 			"DOCKER_MODS=linuxserver/mods:openssh-server-openssh-client",
@@ -322,11 +323,45 @@ func TestBackend_AllowedUsers(t *testing.T) {
 	}
 }
 
+func TestBackend_AllowedDomainsTemplate(t *testing.T) {
+	testAllowedDomainsTemplate := "{{ identity.entity.metadata.ssh_username }}.example.com"
+	expectedValidPrincipal := "foo." + testUserName + ".example.com"
+	testAllowedPrincipalsTemplate(
+		t, testAllowedDomainsTemplate,
+		expectedValidPrincipal,
+		map[string]string{
+			"ssh_username": testUserName,
+		},
+		map[string]interface{}{
+			"key_type":                 testCaKeyType,
+			"algorithm_signer":         "rsa-sha2-256",
+			"allow_host_certificates":  true,
+			"allow_subdomains":         true,
+			"allowed_domains":          testAllowedDomainsTemplate,
+			"allowed_domains_template": true,
+		},
+		map[string]interface{}{
+			"cert_type":        "host",
+			"public_key":       testCAPublicKey,
+			"valid_principals": expectedValidPrincipal,
+		},
+	)
+}
+
 func TestBackend_AllowedUsersTemplate(t *testing.T) {
 	testAllowedUsersTemplate(t,
 		"{{ identity.entity.metadata.ssh_username }}",
 		testUserName, map[string]string{
 			"ssh_username": testUserName,
+		},
+	)
+}
+
+func TestBackend_MultipleAllowedUsersTemplate(t *testing.T) {
+	testAllowedUsersTemplate(t,
+		"{{ identity.entity.metadata.ssh_username }}",
+		testUserName, map[string]string{
+			"ssh_username": testMultiUserName,
 		},
 	)
 }
@@ -338,6 +373,147 @@ func TestBackend_AllowedUsersTemplate_WithStaticPrefix(t *testing.T) {
 			"ssh_username": testUserName,
 		},
 	)
+}
+
+func TestBackend_DefaultUserTemplate(t *testing.T) {
+	testDefaultUserTemplate(t,
+		"{{ identity.entity.metadata.ssh_username }}",
+		testUserName,
+		map[string]string{
+			"ssh_username": testUserName,
+		},
+	)
+}
+
+func TestBackend_DefaultUserTemplate_WithStaticPrefix(t *testing.T) {
+	testDefaultUserTemplate(t,
+		"user-{{ identity.entity.metadata.ssh_username }}",
+		"user-"+testUserName,
+		map[string]string{
+			"ssh_username": testUserName,
+		},
+	)
+}
+
+func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateTrue(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// set metadata "ssh_username" to userpass username
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+		"token": userpassToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entityID := tokenLookupResponse.Data["entity_id"].(string)
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+		"metadata": map[string]string{
+			"ssh_username": testUserName,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+		"key_type":                testCaKeyType,
+		"allow_user_certificates": true,
+		"default_user":            "{{identity.entity.metadata.ssh_username}}",
+		// disable user templating but not allowed_user_template and the request should fail
+		"default_user_template":  false,
+		"allowed_users":          "{{identity.entity.metadata.ssh_username}}",
+		"allowed_users_template": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign SSH key as userpass user
+	client.SetToken(userpassToken)
+	_, err = client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+		"public_key": testCAPublicKey,
+	})
+	if err == nil {
+		t.Errorf("signing request should fail when default_user is not in the allowed_users list, because allowed_users_template is true and default_user_template is not")
+	}
+
+	expectedErrStr := "{{identity.entity.metadata.ssh_username}} is not a valid value for valid_principals"
+	if !strings.Contains(err.Error(), expectedErrStr) {
+		t.Errorf("expected error to include %q but it was: %q", expectedErrStr, err.Error())
+	}
+}
+
+func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateFalse(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// set metadata "ssh_username" to userpass username
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+		"token": userpassToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entityID := tokenLookupResponse.Data["entity_id"].(string)
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+		"metadata": map[string]string{
+			"ssh_username": testUserName,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+		"key_type":                testCaKeyType,
+		"allow_user_certificates": true,
+		"default_user":            "{{identity.entity.metadata.ssh_username}}",
+		"default_user_template":   false,
+		"allowed_users":           "{{identity.entity.metadata.ssh_username}}",
+		"allowed_users_template":  false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign SSH key as userpass user
+	client.SetToken(userpassToken)
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+		"public_key": testCAPublicKey,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check for the expected valid principals of certificate
+	signedKey := signResponse.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actualPrincipals := parsedKey.(*ssh.Certificate).ValidPrincipals
+	if len(actualPrincipals) < 1 {
+		t.Fatal(
+			fmt.Sprintf("No ValidPrincipals returned: should have been %v",
+				[]string{"{{identity.entity.metadata.ssh_username}}"}),
+		)
+	}
+	if len(actualPrincipals) > 1 {
+		t.Error(
+			fmt.Sprintf("incorrect number ValidPrincipals, expected only 1: %v should be %v",
+				actualPrincipals, []string{"{{identity.entity.metadata.ssh_username}}"}),
+		)
+	}
+	if actualPrincipals[0] != "{{identity.entity.metadata.ssh_username}}" {
+		t.Fatal(
+			fmt.Sprintf("incorrect ValidPrincipals: %v should be %v",
+				actualPrincipals, []string{"{{identity.entity.metadata.ssh_username}}"}),
+		)
+	}
 }
 
 func newTestingFactory(t *testing.T) func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -1480,6 +1656,8 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 		"default_extensions_template": true,
 		"default_extensions": map[string]interface{}{
 			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+			"login@foobar2.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}, " +
+				"{{identity.entity.aliases." + userpassAccessor + ".name}}_foobar",
 		},
 	})
 	if err != nil {
@@ -1505,7 +1683,8 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	}
 
 	defaultExtensionPermissions := map[string]string{
-		"login@foobar.com": testUserName,
+		"login@foobar.com":  testUserName,
+		"login@foobar2.com": fmt.Sprintf("%s, %s_foobar", testUserName, testUserName),
 	}
 
 	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, defaultExtensionPermissions, 16*time.Hour)
@@ -1682,6 +1861,144 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 	}
 }
 
+func TestSSHBackend_ValidateNotBeforeDuration(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "300s",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				2*time.Hour+5*time.Minute-30*time.Second, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "2h",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				4*time.Hour-30*time.Second, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "30s",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				2*time.Hour, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
+func TestSSHBackend_IssueSign(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":     "otp",
+				"default_user": "user",
+			}),
+			// Key pair not issued with invalid role key type
+			issueSSHKeyPairStep("testing", "rsa", 0, true, "role key type 'otp' not allowed to issue key pairs"),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_key_ids":      false,
+				"allow_user_certificates": true,
+				"allowed_user_key_lengths": map[string]interface{}{
+					"ssh-rsa":             []int{2048, 3072, 4096},
+					"ecdsa-sha2-nistp521": 0,
+					"ed25519":             0,
+				},
+			}),
+			// Key_type not in allowed_user_key_types_lengths
+			issueSSHKeyPairStep("testing", "ec", 256, true, "provided key_type value not in allowed_user_key_types"),
+			// Key_bits not in allowed_user_key_types_lengths for provided key_type
+			issueSSHKeyPairStep("testing", "rsa", 2560, true, "provided key_bits value not in list of role's allowed_user_key_types"),
+			// key_type `rsa` and key_bits `2048` successfully created
+			issueSSHKeyPairStep("testing", "rsa", 2048, false, ""),
+			// key_type `ed22519` and key_bits `0` successfully created
+			issueSSHKeyPairStep("testing", "ed25519", 0, false, ""),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
 func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster, string) {
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -1752,8 +2069,9 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	return cluster, userpassToken
 }
 
-func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
-	expectedValidPrincipal string, testEntityMetadata map[string]string) {
+func testDefaultUserTemplate(t *testing.T, testDefaultUserTemplate string,
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
@@ -1776,7 +2094,9 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
 		"key_type":                testCaKeyType,
 		"allow_user_certificates": true,
-		"allowed_users":           testAllowedUsersTemplate,
+		"default_user":            testDefaultUserTemplate,
+		"default_user_template":   true,
+		"allowed_users":           testDefaultUserTemplate,
 		"allowed_users_template":  true,
 	})
 	if err != nil {
@@ -1786,8 +2106,7 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 	// sign SSH key as userpass user
 	client.SetToken(userpassToken)
 	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
-		"public_key":       testCAPublicKey,
-		"valid_principals": expectedValidPrincipal,
+		"public_key": testCAPublicKey,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1807,6 +2126,76 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 				actualPrincipals, []string{expectedValidPrincipal}),
 		)
 	}
+}
+
+func testAllowedPrincipalsTemplate(t *testing.T, testAllowedDomainsTemplate string,
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+	roleConfigPayload map[string]interface{}, signingPayload map[string]interface{},
+) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// set metadata "ssh_username" to userpass username
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+		"token": userpassToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entityID := tokenLookupResponse.Data["entity_id"].(string)
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+		"metadata": testEntityMetadata,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("ssh/roles/my-role", roleConfigPayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign SSH key as userpass user
+	client.SetToken(userpassToken)
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", signingPayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check for the expected valid principals of certificate
+	signedKey := signResponse.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actualPrincipals := parsedKey.(*ssh.Certificate).ValidPrincipals
+	if actualPrincipals[0] != expectedValidPrincipal {
+		t.Fatal(
+			fmt.Sprintf("incorrect ValidPrincipals: %v should be %v",
+				actualPrincipals, []string{expectedValidPrincipal}),
+		)
+	}
+}
+
+func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+) {
+	testAllowedPrincipalsTemplate(
+		t, testAllowedUsersTemplate,
+		expectedValidPrincipal, testEntityMetadata,
+		map[string]interface{}{
+			"key_type":                testCaKeyType,
+			"allow_user_certificates": true,
+			"allowed_users":           testAllowedUsersTemplate,
+			"allowed_users_template":  true,
+		},
+		map[string]interface{}{
+			"public_key":       testCAPublicKey,
+			"valid_principals": expectedValidPrincipal,
+		},
+	)
 }
 
 func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {
@@ -1832,7 +2221,8 @@ func signCertificateStep(
 	role, keyID string, certType int, validPrincipals []string,
 	criticalOptionPermissions, extensionPermissions map[string]string,
 	ttl time.Duration,
-	requestParameters map[string]interface{}) logicaltest.TestStep {
+	requestParameters map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "sign/" + role,
@@ -1857,6 +2247,42 @@ func signCertificateStep(
 			}
 
 			return validateSSHCertificate(parsedKey.(*ssh.Certificate), keyID, certType, validPrincipals, criticalOptionPermissions, extensionPermissions, ttl)
+		},
+	}
+}
+
+func issueSSHKeyPairStep(role, keyType string, keyBits int, expectError bool, errorMsg string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/" + role,
+		Data: map[string]interface{}{
+			"key_type": keyType,
+			"key_bits": keyBits,
+		},
+		ErrorOk: true,
+		Check: func(resp *logical.Response) error {
+			if expectError {
+				var err error
+				if resp.Data["error"] != errorMsg {
+					err = fmt.Errorf("actual error message \"%s\" different from expected error message \"%s\"", resp.Data["error"], errorMsg)
+				}
+
+				return err
+			}
+
+			if resp.IsError() {
+				return fmt.Errorf("unexpected error response returned: %v", resp.Error())
+			}
+
+			if resp.Data["private_key_type"] != keyType {
+				return fmt.Errorf("response private_key_type (%s) does not match the provided key_type (%s)", resp.Data["private_key_type"], keyType)
+			}
+
+			if resp.Data["signed_key"] == "" {
+				return errors.New("certificate/signed_key should not be empty")
+			}
+
+			return nil
 		},
 	}
 }

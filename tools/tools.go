@@ -11,7 +11,6 @@
 package tools
 
 //go:generate go install golang.org/x/tools/cmd/goimports
-//go:generate go install github.com/mitchellh/gox
 //go:generate go install github.com/client9/misspell/cmd/misspell
 //go:generate go install mvdan.cc/gofumpt
 //go:generate go install google.golang.org/protobuf/cmd/protoc-gen-go
@@ -19,8 +18,6 @@ package tools
 //go:generate go install github.com/favadi/protoc-go-inject-tag
 import (
 	_ "golang.org/x/tools/cmd/goimports"
-
-	_ "github.com/mitchellh/gox"
 
 	_ "github.com/client9/misspell/cmd/misspell"
 

@@ -182,7 +182,7 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 	}
 
 	// Create an entity with GitHub alias
-	entity, err := is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err := is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +258,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		},
 	}
 
-	entity, err := is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err := is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +274,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, entity.Aliases[0].Name)
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,7 +309,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -335,7 +335,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		"foo": "zzzz",
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -537,7 +537,6 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
 	c, _, _ := TestCoreUnsealed(t)
 
 	meGH := &MountEntry{
@@ -599,7 +598,7 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	newEntity, err := c.identityStore.CreateOrFetchEntity(namespace.RootContext(nil), &logical.Alias{
+	newEntity, _, err := c.identityStore.CreateOrFetchEntity(namespace.RootContext(nil), &logical.Alias{
 		MountAccessor: meGH.Accessor,
 		MountType:     "github",
 		Name:          "githubuser",
@@ -792,17 +791,66 @@ func TestIdentityStore_NewEntityCounter(t *testing.T) {
 		},
 	}
 
-	_, err = is.CreateOrFetchEntity(ctx, alias)
+	_, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	expectSingleCount(t, sink, "identity.entity.creation")
 
-	_, err = is.CreateOrFetchEntity(ctx, alias)
+	_, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	expectSingleCount(t, sink, "identity.entity.creation")
+}
+
+func TestIdentityStore_UpdateAliasMetadataPerAccessor(t *testing.T) {
+	entity := &identity.Entity{
+		ID:       "testEntityID",
+		Name:     "testEntityName",
+		Policies: []string{"foo", "bar"},
+		Aliases: []*identity.Alias{
+			{
+				ID:            "testAliasID1",
+				CanonicalID:   "testEntityID",
+				MountType:     "testMountType",
+				MountAccessor: "testMountAccessor",
+				Name:          "sameAliasName",
+			},
+			{
+				ID:            "testAliasID2",
+				CanonicalID:   "testEntityID",
+				MountType:     "testMountType",
+				MountAccessor: "testMountAccessor2",
+				Name:          "sameAliasName",
+			},
+		},
+		NamespaceID: namespace.RootNamespaceID,
+	}
+
+	login := &logical.Alias{
+		MountType:     "testMountType",
+		MountAccessor: "testMountAccessor",
+		Name:          "sameAliasName",
+		ID:            "testAliasID",
+		Metadata:      map[string]string{"foo": "bar"},
+	}
+
+	if i := changedAliasIndex(entity, login); i != 0 {
+		t.Fatalf("wrong alias index changed. Expected 0, got %d", i)
+	}
+
+	login2 := &logical.Alias{
+		MountType:     "testMountType",
+		MountAccessor: "testMountAccessor2",
+		Name:          "sameAliasName",
+		ID:            "testAliasID2",
+		Metadata:      map[string]string{"bar": "foo"},
+	}
+
+	if i := changedAliasIndex(entity, login2); i != 1 {
+		t.Fatalf("wrong alias index changed. Expected 1, got %d", i)
+	}
 }

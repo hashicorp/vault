@@ -1,0 +1,3 @@
+```release-note:improvement
+core/activity: Order month data in ascending order of timestamps
+```

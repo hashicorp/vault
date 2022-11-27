@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -35,12 +36,37 @@ func TestSysMonitorUnknownLogLevel(t *testing.T) {
 	}
 }
 
+func TestSysMonitorUnknownLogFormat(t *testing.T) {
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{HandlerFunc: Handler})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	request := client.NewRequest("GET", "/v1/sys/monitor")
+	request.Params.Add("log_format", "haha")
+	_, err := client.RawRequest(request)
+
+	if err == nil {
+		t.Fatal("expected to get an error, but didn't")
+	} else {
+		if !strings.Contains(err.Error(), "Code: 400") {
+			t.Fatalf("expected to receive a 400 error, but got %s instead", err)
+		}
+
+		if !strings.Contains(err.Error(), "unknown log format") {
+			t.Fatalf("expected to receive a message indicating an unknown log format, but got %s instead", err)
+		}
+	}
+}
+
 func TestSysMonitorStreamingLogs(t *testing.T) {
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
 		Output:     log.DefaultOutput,
 		Level:      log.Debug,
 		JSONFormat: logging.ParseEnvLogFormat() == logging.JSONFormat,
 	})
+
+	lf := logging.ParseEnvLogFormat().String()
 
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{HandlerFunc: Handler, Logger: logger})
 	cluster.Start()
@@ -52,16 +78,32 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 	debugCount := 0
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
-	logCh, err := client.Sys().Monitor(ctx, "DEBUG")
+	logCh, err := client.Sys().Monitor(ctx, "DEBUG", lf)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	type jsonlog struct {
+		Level     string `json:"@level"`
+		Message   string `json:"@message"`
+		TimeStamp string `json:"@timestamp"`
+	}
+	jsonLog := &jsonlog{}
 
 	timeCh := time.After(5 * time.Second)
 
 	for {
 		select {
 		case log := <-logCh:
+			if lf == "json" {
+				err := json.Unmarshal([]byte(log), jsonLog)
+				if err != nil {
+					t.Fatal("Expected JSON log from channel")
+				}
+				if strings.Contains(jsonLog.Level, "debug") {
+					debugCount++
+				}
+			}
 			if strings.Contains(log, "[DEBUG]") {
 				debugCount++
 			}

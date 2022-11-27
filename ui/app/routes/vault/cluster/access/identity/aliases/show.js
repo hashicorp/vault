@@ -3,13 +3,16 @@ import { hash } from 'rsvp';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
+import { inject as service } from '@ember/service';
 
 export default Route.extend({
+  store: service(),
+
   model(params) {
-    let { section } = params;
-    let itemType = this.modelFor('vault.cluster.access.identity') + '-alias';
-    let tabs = TABS[itemType];
-    let modelType = `identity/${itemType}`;
+    const { section } = params;
+    const itemType = this.modelFor('vault.cluster.access.identity') + '-alias';
+    const tabs = TABS[itemType];
+    const modelType = `identity/${itemType}`;
     if (!tabs.includes(section)) {
       const error = new AdapterError();
       set(error, 'httpStatus', 404);
@@ -23,7 +26,7 @@ export default Route.extend({
   },
 
   setupController(controller, resolvedModel) {
-    let { model, section } = resolvedModel;
+    const { model, section } = resolvedModel;
     controller.setProperties({
       model,
       section,

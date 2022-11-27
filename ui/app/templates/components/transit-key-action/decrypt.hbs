@@ -8,7 +8,7 @@
         <JsonEditor
           @title="Ciphertext"
           @valueUpdated={{action (mut @ciphertext)}}
-          @options={{hash mode="ruby"}}
+          @mode="ruby"
           @data-test-transit-input="ciphertext"
         />
       </div>

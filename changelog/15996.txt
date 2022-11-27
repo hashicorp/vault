@@ -1,0 +1,3 @@
+```release-note:improvement
+secret/pki: Allow issuing certificates with non-domain, non-email Common Names from roles, sign-verbatim, and as issuers (`cn_validations`).
+```

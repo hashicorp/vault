@@ -40,11 +40,11 @@ The key features of Vault are:
   having to design their own encryption methods.
 
 * **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
-  with it. At the end of the lease, Vault will automatically revoke that
+  with them. At the end of the lease, Vault will automatically revoke that
   secret. Clients are able to renew leases via built-in renew APIs.
 
 * **Revocation**: Vault has built-in support for secret revocation. Vault
-  can revoke not only single secrets, but a tree of secrets, for example
+  can revoke not only single secrets, but a tree of secrets, for example,
   all secrets read by a specific user, or all secrets of a particular type.
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
@@ -70,12 +70,11 @@ Developing Vault
 --------------------
 
 If you wish to work on Vault itself or any of its built-in systems, you'll
-first need [Go](https://www.golang.org) installed on your machine. Go version
-1.17.5+ is *required*.
+first need [Go](https://www.golang.org) installed on your machine.
 
 For local dev first make sure Go is properly installed, including setting up a
 [GOPATH](https://golang.org/doc/code.html#GOPATH). Ensure that `$GOPATH/bin` is in
-your path as some distributions bundle old version of build tools. Next, clone this
+your path as some distributions bundle the old version of build tools. Next, clone this
 repository. Vault uses [Go Modules](https://github.com/golang/go/wiki/Modules),
 so it is recommended that you clone the repository ***outside*** of the GOPATH.
 You can then download any required build tools by bootstrapping your environment:
@@ -121,6 +120,21 @@ package by specifying the `TEST` variable. For example below, only
 $ make test TEST=./vault
 ...
 ```
+
+### Importing Vault
+
+This repository publishes two libraries that may be imported by other projects:
+`github.com/hashicorp/vault/api` and `github.com/hashicorp/vault/sdk`.
+
+Note that this repository also contains Vault (the product), and as with most Go
+projects, Vault uses Go modules to manage its dependencies. The mechanism to do
+that is the [go.mod](./go.mod) file. As it happens, the presence of that file
+also makes it theoretically possible to import Vault as a dependency into other
+projects. Some other projects have made a practice of doing so in order to take
+advantage of testing tooling that was developed for testing Vault itself. This
+is not, and has never been, a supported way to use the Vault project. We aren't 
+likely to fix bugs relating to failure to import `github.com/hashicorp/vault` 
+into your project.
 
 ### Acceptance Tests
 

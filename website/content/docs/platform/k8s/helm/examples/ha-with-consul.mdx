@@ -8,7 +8,9 @@ description: |-
 
 # Highly Available Vault Cluster with Consul
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
+@include 'helm/version.mdx'
+
+@include 'consul-dataplane-compat.mdx'
 
 The below `values.yaml` can be used to set up a five server Vault cluster using
 Consul as a highly available storage backend, Google Cloud KMS for Auto Unseal.
@@ -20,9 +22,16 @@ server:
     GOOGLE_PROJECT: myproject
     GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/my-gcp-iam/myproject-creds.json
 
-  extraVolumes:
-    - type: secret
-      name: my-gcp-iam
+  volumes:
+    - name: userconfig-my-gcp-iam
+      secret:
+        defaultMode: 420
+        secretName: my-gcp-iam
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/my-gcp-iam
+      name: userconfig-my-gcp-iam
+      readOnly: true
 
   affinity: |
     podAntiAffinity:

@@ -9,7 +9,7 @@
 
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink @type="add" @params={{array "vault.cluster.access.namespaces.create"}}>
+      <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add">
         Create namespace
       </ToolbarLink>
     </ToolbarActions>
@@ -32,15 +32,15 @@
           {{list.item.id}}
         </Item.content>
         <Item.menu as |m|>
-          {{#with (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
-            {{#if (contains targetNamespace this.accessibleNamespaces)}}
+          {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
+            {{#if (includes targetNamespace this.accessibleNamespaces)}}
               <li class="action">
                 <NamespaceLink @targetNamespace={{targetNamespace}} @class="is-block">
                   Switch to Namespace
                 </NamespaceLink>
               </li>
             {{/if}}
-          {{/with}}
+          {{/let}}
           <li class="action">
             <m.Message
               @id={{list.item.id}}

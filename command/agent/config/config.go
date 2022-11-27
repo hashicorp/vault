@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -24,13 +23,27 @@ import (
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth       *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth  bool                       `hcl:"exit_after_auth"`
-	Cache          *Cache                     `hcl:"cache"`
-	Vault          *Vault                     `hcl:"vault"`
-	TemplateConfig *TemplateConfig            `hcl:"template_config"`
-	Templates      []*ctconfig.TemplateConfig `hcl:"templates"`
+	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
+	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
+	Cache                       *Cache                     `hcl:"cache"`
+	Vault                       *Vault                     `hcl:"vault"`
+	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
+	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
+	DisableIdleConns            []string                   `hcl:"disable_idle_connections"`
+	DisableIdleConnsCaching     bool                       `hcl:"-"`
+	DisableIdleConnsTemplating  bool                       `hcl:"-"`
+	DisableIdleConnsAutoAuth    bool                       `hcl:"-"`
+	DisableKeepAlives           []string                   `hcl:"disable_keep_alives"`
+	DisableKeepAlivesCaching    bool                       `hcl:"-"`
+	DisableKeepAlivesTemplating bool                       `hcl:"-"`
+	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
+	LogFile                     string                     `hcl:"log_file"`
 }
+
+const (
+	DisableIdleConnsEnv  = "VAULT_AGENT_DISABLE_IDLE_CONNECTIONS"
+	DisableKeepAlivesEnv = "VAULT_AGENT_DISABLE_KEEP_ALIVES"
+)
 
 func (c *Config) Prune() {
 	for _, l := range c.Listeners {
@@ -112,9 +125,12 @@ type Method struct {
 	MountPath     string        `hcl:"mount_path"`
 	WrapTTLRaw    interface{}   `hcl:"wrap_ttl"`
 	WrapTTL       time.Duration `hcl:"-"`
+	MinBackoffRaw interface{}   `hcl:"min_backoff"`
+	MinBackoff    time.Duration `hcl:"-"`
 	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
 	MaxBackoff    time.Duration `hcl:"-"`
 	Namespace     string        `hcl:"namespace"`
+	ExitOnError   bool          `hcl:"exit_on_err"`
 	Config        map[string]interface{}
 }
 
@@ -157,7 +173,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -256,6 +272,50 @@ func LoadConfig(path string) (*Config, error) {
 		result.Vault.Retry.NumRetries = ctconfig.DefaultRetryAttempts
 	case -1:
 		result.Vault.Retry.NumRetries = 0
+	}
+
+	if disableIdleConnsEnv := os.Getenv(DisableIdleConnsEnv); disableIdleConnsEnv != "" {
+		result.DisableIdleConns, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableIdleConnsEnv))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableIdleConnsEnv, err)
+		}
+	}
+
+	for _, subsystem := range result.DisableIdleConns {
+		switch subsystem {
+		case "auto-auth":
+			result.DisableIdleConnsAutoAuth = true
+		case "caching":
+			result.DisableIdleConnsCaching = true
+		case "templating":
+			result.DisableIdleConnsTemplating = true
+		case "":
+			continue
+		default:
+			return nil, fmt.Errorf("unknown disable_idle_connections value: %s", subsystem)
+		}
+	}
+
+	if disableKeepAlivesEnv := os.Getenv(DisableKeepAlivesEnv); disableKeepAlivesEnv != "" {
+		result.DisableKeepAlives, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableKeepAlivesEnv))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableKeepAlivesEnv, err)
+		}
+	}
+
+	for _, subsystem := range result.DisableKeepAlives {
+		switch subsystem {
+		case "auto-auth":
+			result.DisableKeepAlivesAutoAuth = true
+		case "caching":
+			result.DisableKeepAlivesCaching = true
+		case "templating":
+			result.DisableKeepAlivesTemplating = true
+		case "":
+			continue
+		default:
+			return nil, fmt.Errorf("unknown disable_keep_alives value: %s", subsystem)
+		}
 	}
 
 	return result, nil
@@ -470,6 +530,14 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 		result.AutoAuth.Method.MaxBackoffRaw = nil
 	}
 
+	if result.AutoAuth.Method.MinBackoffRaw != nil {
+		var err error
+		if result.AutoAuth.Method.MinBackoff, err = parseutil.ParseDurationSecond(result.AutoAuth.Method.MinBackoffRaw); err != nil {
+			return err
+		}
+		result.AutoAuth.Method.MinBackoffRaw = nil
+	}
+
 	return nil
 }
 
@@ -640,17 +708,22 @@ func parseTemplates(result *Config, list *ast.ObjectList) error {
 			return errors.New("error converting config")
 		}
 
-		// flatten the wait field. The initial "wait" value, if given, is a
+		// flatten the wait or exec fields. The initial "wait" or "exec" value, if given, is a
 		// []map[string]interface{}, but we need it to be map[string]interface{}.
 		// Consul Template has a method flattenKeys that walks all of parsed and
 		// flattens every key. For Vault Agent, we only care about the wait input.
-		// Only one wait stanza is supported, however Consul Template does not error
+		// Only one wait/exec stanza is supported, however Consul Template does not error
 		// with multiple instead it flattens them down, with last value winning.
-		// Here we take the last element of the parsed["wait"] slice to keep
+		// Here we take the last element of the parsed["wait"] or parsed["exec"] slice to keep
 		// consistency with Consul Template behavior.
 		wait, ok := parsed["wait"].([]map[string]interface{})
 		if ok {
 			parsed["wait"] = wait[len(wait)-1]
+		}
+
+		exec, ok := parsed["exec"].([]map[string]interface{})
+		if ok {
+			parsed["exec"] = exec[len(exec)-1]
 		}
 
 		var tc ctconfig.TemplateConfig

@@ -1,0 +1,4 @@
+```release-note:bug
+ui: Fix Generated Token's Policies helpText to clarify that comma separated values are not accepted in this field. 
+```
+

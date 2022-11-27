@@ -22,7 +22,7 @@ import (
 func getTestKeyManager(t *testing.T) keymanager.KeyManager {
 	t.Helper()
 
-	km, err := keymanager.NewPassthroughKeyManager(nil)
+	km, err := keymanager.NewPassthroughKeyManager(context.Background(), nil)
 	require.NoError(t, err)
 
 	return km
@@ -286,7 +286,7 @@ func TestBolt_MigrateFromV1ToV2Schema(t *testing.T) {
 
 	// Manually insert some items into the v1 schema.
 	err = db.Update(func(tx *bolt.Tx) error {
-		blob, err := b.wrapper.Encrypt(ctx, []byte("ignored-contents"), []byte(""))
+		blob, err := b.wrapper.Encrypt(ctx, []byte("ignored-contents"))
 		if err != nil {
 			return fmt.Errorf("error encrypting contents: %w", err)
 		}

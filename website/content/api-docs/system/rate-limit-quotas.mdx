@@ -12,7 +12,8 @@ The `/sys/quotas/rate-limit` endpoint is used to create, edit and delete rate li
 
 This endpoint is used to create a rate limit quota with an identifier, `name`.
 A rate limit quota must include a `rate` value with an optional `path` that can
-either be a namespace or mount.
+either be a namespace or mount, and can optionally include a path suffix following
+the mount to restrict more specific API paths.
 
 | Method | Path                           |
 | :----- | :----------------------------- |
@@ -24,16 +25,25 @@ either be a namespace or mount.
 - `path` `(string: "")` - Path of the mount or namespace to apply the quota.
   A blank path configures a global rate limit quota. For example `namespace1/`
   adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to
-  `userpass` in `namespace1`. Updating this field on an existing quota can have
-  "moving" effects. For example, updating `auth/userpass` to
-  `namespace1/auth/userpass` moves this quota from being a global mount quota to a
-  namespace specific mount quota. **Note, namespaces are supported in Enterprise only**.
+  `userpass` in `namespace1`, and `namespace1/kv-v2/data/foo/bar` adds a quota to
+  a specific secret on a K/V v2 mount in `namespace1`. A trailing glob (`*`) can also
+  be added as part of the path after the mount to match paths that share the same prefix
+  prior to the glob. `namespace1/kv-v2/data/foo/*` would match both
+  `namespace1/kv-v2/data/foo/bar` and `namespace1/kv-v2/data/foo/baz`. Updating this field on
+  an existing quota can have "moving" effects. For example, updating `namespace1` to
+  `namespace1/auth/userpass` moves this quota from being a namespace quota to a
+  namespace specific mount quota. Non-global quotas are not inherited by child
+  namespaces. **Note, namespaces are supported in Enterprise only**.
 - `rate` `(float: 0.0)` - The maximum number of requests in a given interval to
   be allowed by the quota rule. The `rate` must be positive.
 - `interval` `(string: "")` - The duration to enforce rate limiting for (default `"1s"`).
 - `block_interval` `(string: "")` - If set, when a client reaches a rate limit
   threshold, the client will be prohibited from any further requests until after
   the 'block_interval' has elapsed.
+- `role` `(string: "")` - If set on a quota where `path` is set to an auth mount with a
+  concept of roles (such as `/auth/approle/`), this will make the quota restrict login
+  requests to that mount that are made with the specified role. The request will fail if
+  the auth mount does not have a concept of roles, or `path` is not an auth mount.
 
 ### Sample Payload
 
@@ -104,6 +114,7 @@ $ curl \
     "name": "global-rate-limiter",
     "path": "",
     "rate": 897.3,
+    "role": "",
     "type": "rate-limit"
   },
   "warnings": null

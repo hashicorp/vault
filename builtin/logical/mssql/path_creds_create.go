@@ -95,7 +95,7 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 			"name":     username,
 			"password": password,
 		}
-		if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+		if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 			return nil, err
 		}
 	}

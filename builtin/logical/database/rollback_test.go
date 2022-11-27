@@ -20,9 +20,9 @@ const (
 
 // Tests that the WAL rollback function rolls back the database password.
 // The database password should be rolled back when:
-//  - A WAL entry exists
-//  - Password has been altered on the database
-//  - Password has not been updated in storage
+//   - A WAL entry exists
+//   - Password has been altered on the database
+//   - Password has not been updated in storage
 func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
@@ -44,7 +44,7 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 
 	// Configure a connection to the database
 	data := map[string]interface{}{
@@ -163,9 +163,9 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 
 // Tests that the WAL rollback function does not roll back the database password.
 // The database password should not be rolled back when:
-//  - A WAL entry exists
-//  - Password has not been altered on the database
-//  - Password has not been updated in storage
+//   - A WAL entry exists
+//   - Password has not been altered on the database
+//   - Password has not been updated in storage
 func TestBackend_RotateRootCredentials_WAL_no_rollback_1(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
@@ -183,7 +183,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_1(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 
 	// Configure a connection to the database
 	data := map[string]interface{}{
@@ -267,9 +267,9 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_1(t *testing.T) {
 
 // Tests that the WAL rollback function does not roll back the database password.
 // The database password should not be rolled back when:
-//  - A WAL entry exists
-//  - Password has been altered on the database
-//  - Password has been updated in storage
+//   - A WAL entry exists
+//   - Password has been altered on the database
+//   - Password has been updated in storage
 func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
@@ -291,7 +291,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 
 	// Configure a connection to the database
 	data := map[string]interface{}{

@@ -1,0 +1,3 @@
+```release-note:improvement
+command: Support optional '-log-level' flag to be passed to 'operator migrate' command (defaults to info). Also support VAULT_LOG_LEVEL env var.
+```

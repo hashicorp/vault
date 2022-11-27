@@ -1,0 +1,3 @@
+```release-note:bug
+identity/token: Fixes a bug where duplicate public keys could appear in the .well-known JWKS
+```

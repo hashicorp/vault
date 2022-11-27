@@ -15,12 +15,11 @@ import (
 	"testing"
 	"time"
 
-	vaultseal "github.com/hashicorp/vault/vault/seal"
-
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -30,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
@@ -43,6 +43,9 @@ type RaftClusterOpts struct {
 	EnableResponseHeaderRaftNodeID bool
 	NumCores                       int
 	Seal                           vault.Seal
+	VersionMap                     map[int]string
+	RedundancyZoneMap              map[int]string
+	EffectiveSDKVersionMap         map[int]string
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
@@ -66,6 +69,9 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	opts.PhysicalFactoryConfig = ropts.PhysicalFactoryConfig
 	conf.DisablePerformanceStandby = ropts.DisablePerfStandby
 	opts.NumCores = ropts.NumCores
+	opts.VersionMap = ropts.VersionMap
+	opts.RedundancyZoneMap = ropts.RedundancyZoneMap
+	opts.EffectiveSDKVersionMap = ropts.EffectiveSDKVersionMap
 
 	teststorage.RaftBackendSetup(conf, &opts)
 
@@ -73,9 +79,9 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 		opts.SetupFunc = nil
 	}
 
-	cluster := vault.NewTestCluster(t, conf, &opts)
+	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), conf, &opts)
 	cluster.Start()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	vault.TestWaitActive(benchhelpers.TBtoT(t), cluster.Cores[0].Core)
 	return cluster
 }
 
@@ -180,9 +186,12 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
+	err := testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
 		"core-0": true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestRaft_Retry_Join(t *testing.T) {
@@ -204,8 +213,6 @@ func TestRaft_Retry_Join(t *testing.T) {
 	{
 		testhelpers.EnsureCoreSealed(t, leaderCore)
 		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
 	}
 
 	leaderInfos := []*raft.LeaderJoinInfo{
@@ -216,36 +223,37 @@ func TestRaft_Retry_Join(t *testing.T) {
 		},
 	}
 
-	{
-		core := cluster.Cores[1]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
-		if err != nil {
-			t.Fatal(err)
-		}
+	var wg sync.WaitGroup
+	for _, clusterCore := range cluster.Cores[1:] {
+		wg.Add(1)
+		go func(t *testing.T, core *vault.TestClusterCore) {
+			t.Helper()
+			defer wg.Done()
+			core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+			_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+			if err != nil {
+				t.Error(err)
+			}
 
-		time.Sleep(2 * time.Second)
-
-		cluster.UnsealCore(t, core)
+			// Handle potential racy behavior with unseals. Retry the unseal until it succeeds.
+			vault.RetryUntil(t, 10*time.Second, func() error {
+				return cluster.AttemptUnsealCore(core)
+			})
+		}(t, clusterCore)
 	}
 
-	{
-		core := cluster.Cores[2]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
-		if err != nil {
-			t.Fatal(err)
-		}
+	// Unseal the leader and wait for the other cores to unseal
+	cluster.UnsealCore(t, leaderCore)
+	wg.Wait()
 
-		time.Sleep(2 * time.Second)
+	vault.TestWaitActive(t, leaderCore.Core)
 
-		cluster.UnsealCore(t, core)
-	}
-
-	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
-		"core-0": true,
-		"core-1": true,
-		"core-2": true,
+	vault.RetryUntil(t, 10*time.Second, func() error {
+		return testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
+			"core-0": true,
+			"core-1": true,
+			"core-2": true,
+		})
 	})
 }
 
@@ -325,23 +333,29 @@ func TestRaft_RemovePeer(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 
-	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
+	err := testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	_, err := client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+	_, err = client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
 		"server_id": "core-2",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
+	err = testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
 		"server_id": "core-1",
@@ -350,9 +364,12 @@ func TestRaft_RemovePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
+	err = testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestRaft_NodeIDHeader(t *testing.T) {
@@ -489,28 +506,13 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 		}
 	}
 
-	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
-	if err := http2.ConfigureTransport(transport); err != nil {
-		t.Fatal(err)
-	}
-	client := &http.Client{
-		Transport: transport,
-	}
-
 	// Take a snapshot
-	req := leaderClient.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
-	httpReq, err := req.ToHTTP()
+	buf := new(bytes.Buffer)
+	err := leaderClient.Sys().RaftSnapshot(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := client.Do(httpReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	snap, err := ioutil.ReadAll(resp.Body)
+	snap, err := io.ReadAll(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -527,15 +529,8 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-
 	// Restore snapshot
-	req = leaderClient.NewRequest("POST", "/v1/sys/storage/raft/snapshot")
-	req.Body = bytes.NewBuffer(snap)
-	httpReq, err = req.ToHTTP()
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp, err = client.Do(httpReq)
+	err = leaderClient.Sys().RaftSnapshotRestore(bytes.NewReader(snap), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -556,9 +551,13 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 	t.Parallel()
 
 	seal, setErr := vaultseal.NewToggleableTestSeal(nil)
+	autoSeal, err := vault.NewAutoSeal(seal)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cluster := raftCluster(t, &RaftClusterOpts{
 		NumCores: 1,
-		Seal:     vault.NewAutoSeal(seal),
+		Seal:     autoSeal,
 	})
 	defer cluster.Cleanup()
 
@@ -589,7 +588,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 
 	setErr(errors.New("seal failure"))
 	// Take a snapshot
-	err := leaderClient.Sys().RaftSnapshot(w)
+	err = leaderClient.Sys().RaftSnapshot(w)
 	w.Close()
 	if err == nil || err != api.ErrIncompleteSnapshot {
 		t.Fatalf("expected err=%v, got: %v", api.ErrIncompleteSnapshot, err)

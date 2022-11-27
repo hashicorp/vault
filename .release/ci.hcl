@@ -3,17 +3,14 @@ schema = "1"
 project "vault" {
   team = "vault"
   slack {
-    notification_channel = "CRF6FFKEW" // #vault-releases
+    notification_channel = "C03RXFX5M4L" // #feed-vault-releases
   }
   github {
     organization = "hashicorp"
     repository = "vault"
     release_branches = [
       "main",
-      "release/1.6.x",
-      "release/1.7.x",
-      "release/1.8.x",
-      "release/1.9.x",
+      "release/**",
     ]
   }
 }
@@ -178,25 +175,60 @@ event "verify" {
   }
 }
 
-event "promote-staging" {
-
-  action "promote-staging" {
+event "enos-verify-stable" {
+  depends = ["verify"]
+  action "enos-verify-stable" {
     organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "promote-staging"
+    repository = "vault"
+    workflow = "enos-verify-stable"
   }
 
   notification {
     on = "fail"
   }
+}
+## These events are publish and post-publish events and should be added to the end of the file
+## after the verify event stanza.
+
+event "trigger-staging" {
+// This event is dispatched by the bob trigger-promotion command
+// and is required - do not delete.
+}
+
+event "promote-staging" {
+  depends = ["trigger-staging"]
+  action "promote-staging" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "promote-staging"
+    config = "release-metadata.hcl"
+  }
 
   notification {
-    on = "success"
+    on = "always"
   }
 }
 
-event "promote-production" {
+event "promote-staging-docker" {
+  depends = ["promote-staging"]
+  action "promote-staging-docker" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "promote-staging-docker"
+  }
 
+  notification {
+    on = "always"
+  }
+}
+
+event "trigger-production" {
+// This event is dispatched by the bob trigger-promotion command
+// and is required - do not delete.
+}
+
+event "promote-production" {
+  depends = ["trigger-production"]
   action "promote-production" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
@@ -204,28 +236,60 @@ event "promote-production" {
   }
 
   notification {
-    on = "fail"
-  }
-
-  notification {
-    on = "success"
+    on = "always"
   }
 }
 
-event "post-publish" {
+event "promote-production-docker" {
   depends = ["promote-production"]
-
-  action "post-publish" {
+  action "promote-production-docker" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
-    workflow = "post-publish"
+    workflow = "promote-production-docker"
+  }
+
+  notification {
+    on = "always"
+  }
+}
+
+event "promote-production-packaging" {
+  depends = ["promote-production-docker"]
+  action "promote-production-packaging" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "promote-production-packaging"
+  }
+
+  notification {
+    on = "always"
+  }
+}
+
+# The post-publish-website event should not be merged into the enterprise repo.
+# It is for OSS use only. 
+event "post-publish-website" {
+  depends = ["promote-production-packaging"]
+  action "post-publish-website" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "post-publish-website"
+  }
+
+  notification {
+    on = "always"
+  }
+}
+
+event "update-ironbank" {
+  depends = ["post-publish-website"]
+  action "update-ironbank" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "update-ironbank"
   }
 
   notification {
     on = "fail"
-  }
-
-  notification {
-    on = "success"
   }
 }

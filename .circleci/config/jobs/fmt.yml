@@ -1,13 +1,14 @@
 description: Ensure go formatting is correct.
 executor: go-machine
 steps:
+  - checkout
   # Setup Go enabling the proxy for downloading modules.
   - setup-go:
       GOPROXY: https://proxy.golang.org,direct
-  - checkout
   - run:
       name: make fmt
       command: |
+        echo "Using gofumpt version ${GOFUMPT_VERSION}"
         go install "mvdan.cc/gofumpt@v${GOFUMPT_VERSION}"
         make fmt
         if ! git diff --exit-code; then

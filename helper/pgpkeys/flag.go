@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/keybase/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp"
 )
 
 // PubKeyFileFlag implements flag.Value and command.Example to receive exactly

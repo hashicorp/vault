@@ -2,7 +2,6 @@ import { typeOf } from '@ember/utils';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-// import layout from '../templates/components/info-table-row';
 
 /**
  * @module InfoTableRow
@@ -42,7 +41,7 @@ export default class InfoTableRowComponent extends Component {
   }
 
   get valueIsEmpty() {
-    let { value } = this.args;
+    const { value } = this.args;
     if (typeOf(value) === 'array' && value.length === 0) {
       return true;
     }

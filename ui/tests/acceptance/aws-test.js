@@ -37,7 +37,7 @@ module('Acceptance | aws secret backend', function (hooks) {
 
     await click('[data-test-secret-backend-configure]');
 
-    assert.equal(currentURL(), `/vault/settings/secrets/configure/${path}`);
+    assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${path}`);
     assert.ok(findAll('[data-test-aws-root-creds-form]').length, 'renders the empty root creds form');
     assert.ok(findAll('[data-test-aws-link="root-creds"]').length, 'renders the root creds link');
     assert.ok(findAll('[data-test-aws-link="leases"]').length, 'renders the leases config link');
@@ -63,7 +63,7 @@ module('Acceptance | aws secret backend', function (hooks) {
 
     await click('[data-test-backend-view-link]');
 
-    assert.equal(currentURL(), `/vault/secrets/${path}/list`, `navigates to the roles list`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`, `navigates to the roles list`);
 
     await click('[data-test-secret-create]');
 
@@ -79,7 +79,7 @@ module('Acceptance | aws secret backend', function (hooks) {
     // save the role
     await click('[data-test-role-aws-create]');
     await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/show/${roleName}`,
       `$aws: navigates to the show page on creation`
@@ -87,7 +87,7 @@ module('Acceptance | aws secret backend', function (hooks) {
 
     await click('[data-test-secret-root-link]');
 
-    assert.equal(currentURL(), `/vault/secrets/${path}/list`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`);
     assert.ok(findAll(`[data-test-secret-link="${roleName}"]`).length, `aws: role shows in the list`);
 
     //and delete

@@ -23,7 +23,11 @@ If you wish to add an additional key-value (`ttl=48h`) to the existing data at
 the key "creds":
 
 ```shell-session
-$ vault kv patch secret/creds ttl=48h
+$ vault kv patch -mount=secret creds ttl=48h
+== Secret Path ==
+secret/data/creds
+
+======= Metadata =======
 Key              Value
 ---              -----
 created_time     2019-06-06T16:46:22.090654Z
@@ -36,20 +40,20 @@ version          6
 the data you wish to add in order to accomplish the same result.
 
 ```shell-session
-$ vault kv put secret/creds ttl=48h passcode=my-long-passcode
+$ vault kv put -mount=secret creds ttl=48h passcode=my-long-passcode
 ```
 
 The data can also be consumed from a file on disk by prefixing with the "@"
 symbol. For example:
 
 ```shell-session
-$ vault kv patch secret/creds @data.json
+$ vault kv patch -mount=secret creds @data.json
 ```
 
 Or it can be read from stdin using the "-" symbol:
 
 ```shell-session
-$ echo "abcd1234" | vault kv patch secret/foo bar=-
+$ echo "abcd1234" | vault kv patch -mount=secret foo bar=-
 ```
 
 ## Usage
@@ -79,3 +83,9 @@ $ echo "abcd1234" | vault kv patch secret/foo bar=-
   version of the secret. This flag will be ignored for the `rw` method.
   Instead, its value will be derived from fetching the current version of the
   secret.
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
+  If specified, the next argument will be interpreted as the secret path. If 
+  this flag is not specified, the next argument will be interpreted as the 
+  combined mount path and secret path, with /data/ automatically inserted for 
+  KV v2 secrets.

@@ -16,13 +16,16 @@ Get the key status:
 
 ```shell-session
 $ vault operator members
-Host Name  API Address             Cluster Address          ActiveNode    Last Echo
----------  -----------             ---------------          ----------    ---------
-node1      http://10.0.0.2:8200    https://10.0.0.2:8201    true          <nil>
-node2      http://10.0.0.3:8200    https://10.0.0.3:8201    false         2021-11-29 10:19:39.236409 -0500 EST
-node3      http://10.0.0.4:8200    https://10.0.0.4:8201    false         2021-11-29 10:19:37.436283 -0500 EST
-
+Host Name            API Address              Cluster Address           Active Node    Version    Upgrade Version    Redundancy Zone    Last Echo
+---------            -----------              ---------------           -----------    -------    ---------------    ---------------    ---------
+josh-C02ZT9DYMD6R    http://127.0.0.1:8200    https://127.0.0.1:8201    true           1.11.0     1.11.0             a                  n/a
+josh-C02ZT9DYMD6R    http://127.0.0.2:8200    https://127.0.0.2:8201    false          1.11.0     1.11.0             a                  2022-05-23T15:51:19-07:00
+josh-C02ZT9DYMD6R    http://127.0.0.3:8200    https://127.0.0.3:8201    false          1.11.0     1.11.0             b                  2022-05-23T15:51:19-07:00
+josh-C02ZT9DYMD6R    http://127.0.0.4:8200    https://127.0.0.4:8201    false          1.11.0     1.11.0             b                  2022-05-23T15:51:22-07:00
+josh-C02ZT9DYMD6R    http://127.0.0.5:8200    https://127.0.0.5:8201    false          1.11.0     1.12.0             a                  2022-05-23T15:51:20-07:00
+~
 ```
+Note that in the above output, `Upgrade Version` and `Redundancy Zone` are Enterprise-only fields.
 
 ## Usage
 

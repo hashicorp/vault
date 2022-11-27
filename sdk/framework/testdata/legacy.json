@@ -38,16 +38,11 @@
         "summary": "Synopsis",
         "tags": ["secrets"],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "token": {
-                    "type": "string",
-                    "description": "My token"
-                  }
-                }
+                "$ref": "#/components/schemas/KvLookupRequest"
               }
             }
           }
@@ -55,6 +50,19 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "KvLookupRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "My token"
           }
         }
       }

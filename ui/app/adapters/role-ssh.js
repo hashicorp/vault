@@ -6,13 +6,11 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
 
-  defaultSerializer: 'role',
-
   createOrUpdate(store, type, snapshot, requestType) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
     const { id } = snapshot;
-    let url = this.urlForRole(snapshot.record.get('backend'), id);
+    const url = this.urlForRole(snapshot.record.get('backend'), id);
 
     return this.ajax(url, 'POST', { data });
   },
@@ -43,7 +41,7 @@ export default ApplicationAdapter.extend({
   },
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }
@@ -63,7 +61,7 @@ export default ApplicationAdapter.extend({
       if (!results[0].value) {
         throw results[0].reason;
       }
-      let resp = {
+      const resp = {
         id,
         name: id,
         backend,

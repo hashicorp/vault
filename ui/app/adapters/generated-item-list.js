@@ -1,21 +1,24 @@
 import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 import { task } from 'ember-concurrency';
+import { inject as service } from '@ember/service';
 
 export default ApplicationAdapter.extend({
+  store: service(),
   namespace: 'v1',
   urlForItem() {},
   dynamicApiPath: '',
+
   getDynamicApiPath: task(function* (id) {
     // TODO: remove yield at some point.
-    let result = yield this.store.peekRecord('auth-method', id);
+    const result = yield this.store.peekRecord('auth-method', id);
     this.dynamicApiPath = result.apiPath;
     return;
   }),
 
   fetchByQuery: task(function* (store, query, isList) {
     const { id } = query;
-    let data = {};
+    const data = {};
     if (isList) {
       data.list = true;
       yield this.getDynamicApiPath.perform(id);

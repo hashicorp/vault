@@ -1,0 +1,3 @@
+```release-note:bug
+auth: load login MFA configuration upon restart
+```

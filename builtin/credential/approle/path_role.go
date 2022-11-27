@@ -113,7 +113,7 @@ func rolePaths(b *backend) []*framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"role_name": {
 				Type:        framework.TypeString,
-				Description: "Name of the role.",
+				Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 			},
 			"bind_secret_id": {
 				Type:        framework.TypeBool,
@@ -196,7 +196,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -210,7 +210,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
@@ -235,7 +235,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"bound_cidr_list": {
 					Type: framework.TypeCommaStringSlice,
@@ -256,7 +256,7 @@ of CIDR blocks. If set, specifies the blocks of IP addresses which can perform t
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id_bound_cidrs": {
 					Type: framework.TypeCommaStringSlice,
@@ -277,7 +277,7 @@ IP addresses which can perform the login operation.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"token_bound_cidrs": {
 					Type:        framework.TypeCommaStringSlice,
@@ -297,7 +297,7 @@ IP addresses which can perform the login operation.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"bind_secret_id": {
 					Type:        framework.TypeBool,
@@ -318,7 +318,7 @@ IP addresses which can perform the login operation.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id_num_uses": {
 					Type:        framework.TypeInt,
@@ -338,7 +338,7 @@ IP addresses which can perform the login operation.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id_ttl": {
 					Type: framework.TypeDurationSecond,
@@ -359,7 +359,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"period": {
 					Type:        framework.TypeDurationSecond,
@@ -384,7 +384,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"token_num_uses": {
 					Type:        framework.TypeInt,
@@ -404,7 +404,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"token_ttl": {
 					Type:        framework.TypeDurationSecond,
@@ -424,7 +424,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"token_max_ttl": {
 					Type:        framework.TypeDurationSecond,
@@ -444,7 +444,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"role_id": {
 					Type:        framework.TypeString,
@@ -463,7 +463,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"metadata": {
 					Type: framework.TypeString,
@@ -481,6 +481,16 @@ the role.`,
 					Type:        framework.TypeCommaStringSlice,
 					Description: defTokenFields["token_bound_cidrs"].Description,
 				},
+				"num_uses": {
+					Type: framework.TypeInt,
+					Description: `Number of times this SecretID can be used, after which the SecretID expires.
+Overrides secret_id_num_uses role option when supplied. May not be higher than role's secret_id_num_uses.`,
+				},
+				"ttl": {
+					Type: framework.TypeDurationSecond,
+					Description: `Duration in seconds after which this SecretID expires.
+Overrides secret_id_ttl role option when supplied. May not be longer than role's secret_id_ttl.`,
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: b.pathRoleSecretIDUpdate,
@@ -494,7 +504,7 @@ the role.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id": {
 					Type:        framework.TypeString,
@@ -512,7 +522,7 @@ the role.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id": {
 					Type:        framework.TypeString,
@@ -531,7 +541,7 @@ the role.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id_accessor": {
 					Type:        framework.TypeString,
@@ -549,7 +559,7 @@ the role.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id_accessor": {
 					Type:        framework.TypeString,
@@ -568,7 +578,7 @@ the role.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id": {
 					Type:        framework.TypeString,
@@ -590,6 +600,16 @@ the role.`,
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,
+				},
+				"num_uses": {
+					Type: framework.TypeInt,
+					Description: `Number of times this SecretID can be used, after which the SecretID expires.
+Overrides secret_id_num_uses role option when supplied. May not be higher than role's secret_id_num_uses.`,
+				},
+				"ttl": {
+					Type: framework.TypeDurationSecond,
+					Description: `Duration in seconds after which this SecretID expires.
+Overrides secret_id_ttl role option when supplied. May not be longer than role's secret_id_ttl.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -858,6 +878,10 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	if len(roleName) > maxHmacInputLength {
+		return logical.ErrorResponse(fmt.Sprintf("role_name is longer than maximum of %d bytes", maxHmacInputLength)), nil
 	}
 
 	lock := b.roleLock(roleName)
@@ -1497,7 +1521,7 @@ func (b *backend) pathRoleFieldRead(ctx context.Context, req *logical.Request, d
 					"bound_cidr_list": role.BoundCIDRList,
 				},
 			}
-			resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
+			resp.AddWarning(`The "bound_cidr_list" field is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
 			return resp, nil
 		default:
 			// shouldn't occur IRL
@@ -2355,9 +2379,38 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 
+	var numUses int
+	// Check whether or not specified num_uses is defined, otherwise fallback to role's secret_id_num_uses
+	if numUsesRaw, ok := data.GetOk("num_uses"); ok {
+		numUses = numUsesRaw.(int)
+		if numUses < 0 {
+			return logical.ErrorResponse("num_uses cannot be negative"), nil
+		}
+
+		// If the specified num_uses is higher than the role's secret_id_num_uses, throw an error rather than implicitly overriding
+		if (numUses == 0 && role.SecretIDNumUses > 0) || (role.SecretIDNumUses > 0 && numUses > role.SecretIDNumUses) {
+			return logical.ErrorResponse("num_uses cannot be higher than the role's secret_id_num_uses"), nil
+		}
+	} else {
+		numUses = role.SecretIDNumUses
+	}
+
+	var ttl time.Duration
+	// Check whether or not specified ttl is defined, otherwise fallback to role's secret_id_ttl
+	if ttlRaw, ok := data.GetOk("ttl"); ok {
+		ttl = time.Second * time.Duration(ttlRaw.(int))
+
+		// If the specified ttl is longer than the role's secret_id_ttl, throw an error rather than implicitly overriding
+		if (ttl == 0 && role.SecretIDTTL > 0) || (role.SecretIDTTL > 0 && ttl > role.SecretIDTTL) {
+			return logical.ErrorResponse("ttl cannot be longer than the role's secret_id_ttl"), nil
+		}
+	} else {
+		ttl = role.SecretIDTTL
+	}
+
 	secretIDStorage := &secretIDStorageEntry{
-		SecretIDNumUses: role.SecretIDNumUses,
-		SecretIDTTL:     role.SecretIDTTL,
+		SecretIDNumUses: numUses,
+		SecretIDTTL:     ttl,
 		Metadata:        make(map[string]string),
 		CIDRList:        secretIDCIDRs,
 		TokenBoundCIDRs: secretIDTokenCIDRs,
@@ -2376,6 +2429,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 			"secret_id":          secretID,
 			"secret_id_accessor": secretIDStorage.SecretIDAccessor,
 			"secret_id_ttl":      int64(b.deriveSecretIDTTL(secretIDStorage.SecretIDTTL).Seconds()),
+			"secret_id_num_uses": secretIDStorage.SecretIDNumUses,
 		},
 	}
 
@@ -2476,11 +2530,11 @@ to be generated against only this specific role, it can be done via
 'role/<role_name>/secret-id' and 'role/<role_name>/custom-secret-id' endpoints.
 The properties of the SecretID created against the role and the properties
 of the token issued with the SecretID generated against the role, can be
-configured using the parameters of this endpoint.`,
+configured using the fields of this endpoint.`,
 	},
 	"role-bind-secret-id": {
 		"Impose secret_id to be presented during login using this role.",
-		`By setting this to 'true', during login the parameter 'secret_id' becomes a mandatory argument.
+		`By setting this to 'true', during login the field 'secret_id' becomes a mandatory argument.
 The value of 'secret_id' can be retrieved using 'role/<role_name>/secret-id' endpoint.`,
 	},
 	"role-bound-cidr-list": {
@@ -2512,16 +2566,17 @@ defined on the role, can access the role.`,
 	},
 	"role-secret-id-num-uses": {
 		"Use limit of the SecretID generated against the role.",
-		`If the SecretIDs are generated/assigned against the role using the
-'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoints,
-then the number of times that SecretID can access the role is defined by
-this option.`,
+		`If a SecretID is generated/assigned against a role using the
+'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoint,
+then the number of times this SecretID can be used is defined by this option.
+However, this option may be overriden by the request's 'num_uses' field.`,
 	},
 	"role-secret-id-ttl": {
-		`Duration in seconds, representing the lifetime of the SecretIDs
-that are generated against the role using 'role/<role_name>/secret-id' or
-'role/<role_name>/custom-secret-id' endpoints.`,
-		``,
+		"Duration in seconds of the SecretID generated against the role.",
+		`If a SecretID is generated/assigned against a role using the
+'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoint,
+then the lifetime of this SecretID is defined by this option.
+However, this option may be overridden by the request's 'ttl' field.`,
 	},
 	"role-secret-id-lookup": {
 		"Read the properties of an issued secret_id",
@@ -2584,8 +2639,8 @@ this endpoint.`,
 		`The SecretID generated using this endpoint will be scoped to access
 just this role and none else. The properties of this SecretID will be
 based on the options set on the role. It will expire after a period
-defined by the 'secret_id_ttl' option on the role and/or the backend
-mount's maximum TTL value.`,
+defined by the 'ttl' field or 'secret_id_ttl' option on the role,
+and/or the backend mount's maximum TTL value.`,
 	},
 	"role-custom-secret-id": {
 		"Assign a SecretID of choice against the role.",
@@ -2593,8 +2648,8 @@ mount's maximum TTL value.`,
 to do so. This will assign a client supplied SecretID to be used to access
 the role. This SecretID will behave similarly to the SecretIDs generated by
 the backend. The properties of this SecretID will be based on the options
-set on the role. It will expire after a period defined by the 'secret_id_ttl'
-option on the role and/or the backend mount's maximum TTL value.`,
+set on the role. It will expire after a period defined by the 'ttl' field
+or 'secret_id_ttl' option on the role, and/or the backend mount's maximum TTL value.`,
 	},
 	"role-period": {
 		"Updates the value of 'period' on the role",

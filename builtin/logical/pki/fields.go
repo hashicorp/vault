@@ -1,6 +1,19 @@
 package pki
 
-import "github.com/hashicorp/vault/sdk/framework"
+import (
+	"time"
+
+	"github.com/hashicorp/vault/sdk/framework"
+)
+
+const (
+	issuerRefParam = "issuer_ref"
+	keyNameParam   = "key_name"
+	keyRefParam    = "key_ref"
+	keyIdParam     = "key_id"
+	keyTypeParam   = "key_type"
+	keyBitsParam   = "key_bits"
+)
 
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
 // and signing
@@ -20,9 +33,10 @@ Defaults to false (CN is included).`,
 		Type:    framework.TypeString,
 		Default: "pem",
 		Description: `Format for returned data. Can be "pem", "der",
-or "pem_bundle". If "pem_bundle" any private
+or "pem_bundle". If "pem_bundle", any private
 key and issuing cert will be appended to the
-certificate pem. Defaults to "pem".`,
+certificate pem. If "der", the value will be
+base64 encoded. Defaults to "pem".`,
 		AllowedValues: []interface{}{"pem", "der", "pem_bundle"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "pem",
@@ -106,9 +120,11 @@ email addresses.`,
 
 	fields["serial_number"] = &framework.FieldSchema{
 		Type: framework.TypeString,
-		Description: `The requested serial number, if any. If you want
-more than one, specify alternative names in
-the alt_names map using OID 2.5.4.5.`,
+		Description: `The Subject's requested serial number, if any.
+See RFC 4519 Section 2.31 'serialNumber' for a description of this field.
+If you want more than one, specify alternative names in the alt_names
+map using OID 2.5.4.5. This has no impact on the final certificate's
+Serial Number field.`,
 	}
 
 	fields["ttl"] = &framework.FieldSchema{
@@ -126,8 +142,17 @@ be larger than the role max TTL.`,
 	fields["not_after"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
-                      The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	}
+
+	fields["remove_roots_from_chain"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `Whether or not to remove self-signed CA certificates in the output
+of the ca_chain field.`,
+	}
+
+	fields = addIssuerRefField(fields)
 
 	return fields
 }
@@ -230,14 +255,26 @@ this value.`,
 
 	fields["serial_number"] = &framework.FieldSchema{
 		Type: framework.TypeString,
-		Description: `The requested serial number, if any. If you want
-more than one, specify alternative names in
-the alt_names map using OID 2.5.4.5.`,
+		Description: `The Subject's requested serial number, if any.
+See RFC 4519 Section 2.31 'serialNumber' for a description of this field.
+If you want more than one, specify alternative names in the alt_names
+map using OID 2.5.4.5. This has no impact on the final certificate's
+Serial Number field.`,
 	}
+
 	fields["not_after"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
-                      The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+	}
+
+	fields["not_before_duration"] = &framework.FieldSchema{
+		Type:        framework.TypeDurationSecond,
+		Default:     30,
+		Description: `The duration before now which the certificate needs to be backdated by.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: 30,
+		},
 	}
 
 	return fields
@@ -293,6 +330,13 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 		},
 	}
 
+	fields["use_pss"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `Whether or not to use PSS signatures when using a
+RSA key-type issuer. Defaults to false.`,
+	}
+
 	fields["key_type"] = &framework.FieldSchema{
 		Type:    framework.TypeString,
 		Default: "rsa",
@@ -303,6 +347,9 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 			Value: "rsa",
 		},
 	}
+
+	fields = addKeyRefNameFields(fields)
+
 	return fields
 }
 
@@ -321,6 +368,127 @@ func addCAIssueFields(fields map[string]*framework.FieldSchema) map[string]*fram
 		DisplayAttrs: &framework.DisplayAttributes{
 			Name: "Permitted DNS Domains",
 		},
+	}
+
+	fields = addIssuerNameField(fields)
+
+	return fields
+}
+
+func addIssuerRefNameFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields = addIssuerNameField(fields)
+	fields = addIssuerRefField(fields)
+	return fields
+}
+
+func addIssuerNameField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["issuer_name"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Provide a name to the generated or existing issuer, the name
+must be unique across all issuers and not be the reserved value 'default'`,
+	}
+	return fields
+}
+
+func addIssuerRefField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields[issuerRefParam] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Reference to a existing issuer; either "default"
+for the configured default issuer, an identifier or the name assigned
+to the issuer.`,
+		Default: defaultRef,
+	}
+	return fields
+}
+
+func addKeyRefNameFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields = addKeyNameField(fields)
+	fields = addKeyRefField(fields)
+	return fields
+}
+
+func addKeyNameField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields[keyNameParam] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Provide a name to the generated or existing key, the name
+must be unique across all keys and not be the reserved value 'default'`,
+	}
+
+	return fields
+}
+
+func addKeyRefField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields[keyRefParam] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Reference to a existing key; either "default"
+for the configured default key, an identifier or the name assigned
+to the key.`,
+		Default: defaultRef,
+	}
+	return fields
+}
+
+func addTidyFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["tidy_cert_store"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to enable tidying up
+the certificate store`,
+	}
+
+	fields["tidy_revocation_list"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Deprecated; synonym for 'tidy_revoked_certs`,
+	}
+
+	fields["tidy_revoked_certs"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to expire all revoked
+and expired certificates, removing them both from the CRL and from storage. The
+CRL will be rotated if this causes any values to be removed.`,
+	}
+
+	fields["tidy_revoked_cert_issuer_associations"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to validate issuer associations
+on revocation entries. This helps increase the performance of CRL building
+and OCSP responses.`,
+	}
+
+	fields["tidy_expired_issuers"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to automatically remove expired issuers
+past the issuer_safety_buffer. No keys will be removed as part of this
+operation.`,
+	}
+
+	fields["safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of extra time that must have passed
+beyond certificate expiration before it is removed
+from the backend storage and/or revocation list.
+Defaults to 72 hours.`,
+		Default: int(defaultTidyConfig.SafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
+	fields["issuer_safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of extra time that must have passed
+beyond issuer's expiration before it is removed
+from the backend storage.
+Defaults to 8760 hours (1 year).`,
+		Default: int(defaultTidyConfig.IssuerSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
+	fields["pause_duration"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The amount of time to wait between processing
+certificates. This allows operators to change the execution profile
+of tidy to take consume less resources by slowing down how long it
+takes to run. Note that the entire list of certificates will be
+stored in memory during the entire tidy operation, but resources to
+read/process/update existing entries will be spread out over a
+greater period of time. By default this is zero seconds.`,
+		Default: "0s",
 	}
 
 	return fields
