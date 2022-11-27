@@ -169,11 +169,61 @@ can only be set during role creation and once set, it can't be reset later.`,
 			},
 		},
 		ExistenceCheck: b.pathRoleExistenceCheck,
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathRoleCreateUpdate,
-			logical.UpdateOperation: b.pathRoleCreateUpdate,
-			logical.ReadOperation:   b.pathRoleRead,
-			logical.DeleteOperation: b.pathRoleDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathRoleCreateUpdate,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoleCreateUpdate,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRoleRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"bind_secret_id": {
+								Type:        framework.TypeBool,
+								Description: "Impose secret ID to be presented when logging in using this role.",
+							},
+							"secret_id_bound_cidrs": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Comma separated string or list of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.",
+							},
+							"secret_id_num_uses": {
+								Type:        framework.TypeInt,
+								Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
+							},
+							"secret_id_ttl": {
+								Type:        framework.TypeDurationSecond,
+								Description: "Duration in seconds after which the issued secret ID expires.",
+							},
+							"local_secret_ids": {
+								Type:        framework.TypeBool,
+								Description: "If true, the secret identifiers generated using this role will be cluster local. This can only be set during role creation and once set, it can't be reset later",
+							},
+						},
+					}},
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathRoleDelete,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
+			},
 		},
 		HelpSynopsis:    strings.TrimSpace(roleHelp["role"][0]),
 		HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
