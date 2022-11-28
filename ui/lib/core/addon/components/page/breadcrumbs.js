@@ -10,8 +10,6 @@ import { assert } from '@ember/debug';
  * <Breadcrumbs @breadcrumbs={{this.breadcrumbs}}  />
  * ```
  * @param {array} breadcrumbs - array of objects with a label and path to display as breadcrumbs
- * @param {string} [pageTitle] - optional title to display in the header
- * @param {string} [icon] - icon name that displays to the left of the page title
  */
 
 export default class Breadcrumbs extends Component {
