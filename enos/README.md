@@ -165,9 +165,8 @@ state will be managed by Terraform Cloud. Here are the steps to configure the Gi
 - Access to the `hashicorp-qti` organization in Terraform Cloud.
 - Full access to the CI AWS account is required.
 
-**Note:** For help with access to Terraform Cloud and the CI Account, contact the QT team on
-the Slack channel mentioned above. Access to the AWS account can be done via Doormat, at: 
-https://doormat.hashicorp.services/.
+**Note:** For help with access to Terraform Cloud and the CI Account, contact the QT team on Slack 
+(#team-quality). Access to the AWS account can be done via Doormat, at: https://doormat.hashicorp.services/.
 
 1. **Create the Terraform Cloud Workspace** - The name of the workspace to be created depends on the 
    repository for which it is being created, but the pattern is: `<repository>-ci-service-user-iam`,
@@ -199,4 +198,4 @@ workspace must be created as follows:
 Once the workspace has been created, changes to the bootstrap module will automatically be applied via
 the GitHub PR workflow. Each time a PR is created for changes to files within that module the module
 will be planned via the workflow described above. If the plan is ok and the PR is merged, the module
-will automically be applied via the same workflow.
+will automatically be applied via the same workflow.

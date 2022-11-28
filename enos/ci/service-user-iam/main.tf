@@ -17,7 +17,6 @@ provider "aws" {
 }
 
 locals {
-  oss_repositories        = ["vault"]
   enterprise_repositories = ["vault-enterprise"]
   is_ent                  = contains(local.enterprise_repositories, var.repository)
   ci_account_prefix       = local.is_ent ? "vault-enterprise" : "vault"
