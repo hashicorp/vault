@@ -922,7 +922,7 @@ func (c *TestCluster) start(t testing.T) {
 		c.SetupFunc()
 	}
 
-	if c.opts.SkipInit {
+	if c.opts != nil && c.opts.SkipInit {
 		// SkipInit implies that vault may not be ready to service requests, or that
 		// we're restarting a cluster from an existing storage.
 		return
