@@ -159,12 +159,14 @@ func TestSysUnseal(t *testing.T) {
 	}
 }
 
-func TestSysUnseal_badKey(t *testing.T) {
-	seal := vault.NewTestSeal(t,
-		&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedShamirRoot})
+func subtestBadSingleKey(t *testing.T, seal vault.Seal) {
 	core := vault.TestCoreWithSeal(t, seal, false)
 	_, err := core.Initialize(context.Background(), &vault.InitParams{
 		BarrierConfig: &vault.SealConfig{
+			SecretShares:    1,
+			SecretThreshold: 1,
+		},
+		RecoveryConfig: &vault.SealConfig{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		},
@@ -172,6 +174,7 @@ func TestSysUnseal_badKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
@@ -233,9 +236,96 @@ func TestSysUnseal_badKey(t *testing.T) {
 			resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
 				"key": tc.key,
 			})
+
 			testResponseStatus(t, resp, 400)
 		})
 	}
+}
+
+func subtestBadMultiKey(t *testing.T, seal vault.Seal) {
+	numKeys := 3
+
+	core := vault.TestCoreWithSeal(t, seal, false)
+	_, err := core.Initialize(context.Background(), &vault.InitParams{
+		BarrierConfig: &vault.SealConfig{
+			SecretShares:    numKeys,
+			SecretThreshold: numKeys,
+		},
+		RecoveryConfig: &vault.SealConfig{
+			SecretShares:    numKeys,
+			SecretThreshold: numKeys,
+		},
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	testCases := []struct {
+		description string
+		keys        []string
+	}{
+		{
+			"all unseal keys from another cluster",
+			[]string{
+				"b189d98fdec3a15bed9b1cce5088f82b92896696b788c07bdf03c73da08279a5e8",
+				"0fa98232f034177d8d9c2824899a2ac1e55dc6799348533e10510b856aef99f61a",
+				"5344f5caa852f9ba1967d9623ed286a45ea7c4a529522d25f05d29ff44f17930ac",
+			},
+		},
+		{
+			"mixing unseal keys from different cluster, different key share config",
+			[]string{
+				"b189d98fdec3a15bed9b1cce5088f82b92896696b788c07bdf03c73da08279a5e8",
+				"0fa98232f034177d8d9c2824899a2ac1e55dc6799348533e10510b856aef99f61a",
+				"e04ea3020838c2050c4a169d7ba4d30e034eec8e83e8bed9461bf2646ee412c0",
+			},
+		},
+		{
+			"mixing unseal keys from different clusters, same key share config",
+			[]string{
+				"b189d98fdec3a15bed9b1cce5088f82b92896696b788c07bdf03c73da08279a5e8",
+				"0fa98232f034177d8d9c2824899a2ac1e55dc6799348533e10510b856aef99f61a",
+				"413f80521b393aa6c4e42e9a3a3ab7f00c2002b2c3bf1e273fc6f363f35f2a378b",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			for i, key := range tc.keys {
+				resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
+					"key": key,
+				})
+
+				if i == numKeys-1 {
+					// last key
+					testResponseStatus(t, resp, 400)
+				} else {
+					// unseal in progress
+					testResponseStatus(t, resp, 200)
+				}
+
+			}
+		})
+	}
+}
+
+func TestSysUnseal_BadKeyNewShamir(t *testing.T) {
+	seal := vault.NewTestSeal(t,
+		&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedShamirRoot})
+
+	subtestBadSingleKey(t, seal)
+	subtestBadMultiKey(t, seal)
+}
+
+func TestSysUnseal_BadKeyAutoUnseal(t *testing.T) {
+	seal := vault.NewTestSeal(t,
+		&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedGeneric})
+
+	subtestBadSingleKey(t, seal)
+	subtestBadMultiKey(t, seal)
 }
 
 func TestSysUnseal_Reset(t *testing.T) {
