@@ -275,7 +275,7 @@ func subtestBadMultiKey(t *testing.T, seal vault.Seal) {
 			},
 		},
 		{
-			"mixing unseal keys from different cluster, different key share config",
+			"mixing unseal keys from different cluster, different share config",
 			[]string{
 				"b189d98fdec3a15bed9b1cce5088f82b92896696b788c07bdf03c73da08279a5e8",
 				"0fa98232f034177d8d9c2824899a2ac1e55dc6799348533e10510b856aef99f61a",
@@ -283,7 +283,7 @@ func subtestBadMultiKey(t *testing.T, seal vault.Seal) {
 			},
 		},
 		{
-			"mixing unseal keys from different clusters, same key share config",
+			"mixing unseal keys from different clusters, similar share config",
 			[]string{
 				"b189d98fdec3a15bed9b1cce5088f82b92896696b788c07bdf03c73da08279a5e8",
 				"0fa98232f034177d8d9c2824899a2ac1e55dc6799348533e10510b856aef99f61a",
