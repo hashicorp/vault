@@ -16,9 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/internalshared/listenerutil"
-	"google.golang.org/grpc/test/bufconn"
-
 	systemd "github.com/coreos/go-systemd/daemon"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
@@ -47,6 +44,7 @@ import (
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -55,6 +53,7 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
