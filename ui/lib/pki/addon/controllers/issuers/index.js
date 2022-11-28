@@ -1,7 +1,7 @@
 import Controller from '@ember/controller';
-import { getOwner } from '@ember/application';
 import { action } from '@ember/object';
 import { next } from '@ember/runloop';
+import { getOwner } from '@ember/application';
 
 export default class PkiIssuerIndexController extends Controller {
   get mountPoint() {
