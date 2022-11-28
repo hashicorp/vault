@@ -51,7 +51,7 @@ with the wrapping key and then concatenated with the import key, wrapped by the 
 			},
 			"public_key": {
 				Type:        framework.TypeString,
-				Description: `The plaintext public key to be imported. If "ciphertext" is set, this field is ignored.`,
+				Description: `The plaintext PEM public key to be imported. If "ciphertext" is set, this field is ignored.`,
 			},
 			"allow_rotation": {
 				Type:        framework.TypeBool,
