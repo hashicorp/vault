@@ -559,6 +559,8 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 
 	t.Logf("Spawned nginx container:\nhost: %v\nport: %v\nnetworkName: %v\nnetworkAddr: %v\nnetworkPort: %v\nlocalURL: %v\ncontainerURL: %v\n", host, port, networkName, networkAddr, networkPort, localBase, containerBase)
 
+	verifyCertInCRL(t, revokedCert, intCRL)
+
 	// Ensure we can connect with Go. We do our checks for revocation here,
 	// as this behavior is server-controlled and shouldn't matter based on
 	// client type.
@@ -585,6 +587,8 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	require.NoError(t, err)
 	deltaCRL = resp.Data["crl"].(string) + "\n"
 	crls = rootCRL + intCRL + deltaCRL
+
+	verifyCertInCRL(t, leafCert, deltaCRL)
 
 	CheckDeltaCRL(t, networkName, networkAddr, containerURL, rootCert, crls)
 }
@@ -632,4 +636,10 @@ func Test_NginxRSAHybrid(t *testing.T) {
 func Test_NginxRSAPSSHybrid(t *testing.T) {
 	t.Parallel()
 	RunNginxRootTest(t, "rsa", 2048, true, "ec", 256, false)
+}
+
+func verifyCertInCRL(t *testing.T, cert string, crl string) {
+	_cert := parseCert(t, cert)
+	_crl := parseCRL(t, crl)
+	requireSerialNumberInCRL(t, _crl, _cert)
 }

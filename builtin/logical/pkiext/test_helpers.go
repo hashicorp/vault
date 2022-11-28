@@ -3,6 +3,7 @@ package pkiext
 import (
 	"crypto"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"testing"
@@ -62,4 +63,24 @@ func parseKey(t *testing.T, pemKey string) crypto.Signer {
 	key, _, err := certutil.ParseDERKey(block.Bytes)
 	require.NoError(t, err)
 	return key
+}
+
+func requireSerialNumberInCRL(t *testing.T, revokeList pkix.TBSCertificateList, cert *x509.Certificate) bool {
+	for _, revokeEntry := range revokeList.RevokedCertificates {
+		if revokeEntry.SerialNumber.Cmp(cert.SerialNumber) == 0 {
+			return true
+		}
+	}
+
+	if t != nil {
+		t.Fatalf("the serial number for cert %v, was not found in the CRL list containing: %v", cert, revokeList)
+	}
+
+	return false
+}
+
+func parseCRL(t *testing.T, crlPem string) pkix.TBSCertificateList {
+	certList, err := x509.ParseCRL([]byte(crlPem))
+	require.NoError(t, err)
+	return certList.TBSCertList
 }
