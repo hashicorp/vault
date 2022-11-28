@@ -227,7 +227,9 @@ These are common configuration values that live within the `persist` block:
 There can be one or more `listener` blocks at the top level. These configuration
 values are common to both `tcp` and `unix` listener blocks. Blocks of type
 `tcp` support the standard `tcp` [listener](/docs/configuration/listener/tcp)
-options.
+options. Additionally, the `role` string option is available as part of the top level
+of the `listener` block, which can be configured to `metrics_only` to serve only metrics,
+or the default role, `default`, which serves everything (including metrics).
 
 - `type` `(string: required)` - The type of the listener to use. Valid values
   are `tcp` and `unix`.
@@ -249,7 +251,7 @@ options.
 
 ### Example Configuration
 
-Here is an example of a cache configuration.
+Here is an example of a cache configuration alongside a listener that only serves metrics.
 
 ```hcl
 # Other Vault Agent configuration blocks
@@ -257,6 +259,12 @@ Here is an example of a cache configuration.
 
 cache {
   use_auto_auth_token = true
+}
+
+listener "tcp" {
+    address = "127.0.0.1:3000"
+    tls_disable = true
+    role = "metrics_only"
 }
 ```
 

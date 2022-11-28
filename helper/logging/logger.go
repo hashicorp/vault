@@ -162,6 +162,8 @@ func ParseLogFormat(format string) (LogFormat, error) {
 	}
 }
 
+// ParseLogLevel returns the hclog.Level that corresponds with the provided level string.
+// This differs hclog.LevelFromString in that it supports additional level strings.
 func ParseLogLevel(logLevel string) (log.Level, error) {
 	var result log.Level
 	logLevel = strings.ToLower(strings.TrimSpace(logLevel))
@@ -179,6 +181,27 @@ func ParseLogLevel(logLevel string) (log.Level, error) {
 		result = log.Error
 	default:
 		return -1, errors.New(fmt.Sprintf("unknown log level: %s", logLevel))
+	}
+
+	return result, nil
+}
+
+// TranslateLoggerLevel returns the string that corresponds with logging level of the hclog.Logger.
+func TranslateLoggerLevel(logger log.Logger) (string, error) {
+	var result string
+
+	if logger.IsTrace() {
+		result = "trace"
+	} else if logger.IsDebug() {
+		result = "debug"
+	} else if logger.IsInfo() {
+		result = "info"
+	} else if logger.IsWarn() {
+		result = "warn"
+	} else if logger.IsError() {
+		result = "error"
+	} else {
+		return "", fmt.Errorf("unknown log level")
 	}
 
 	return result, nil

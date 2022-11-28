@@ -2866,6 +2866,7 @@ func (c *Core) AddLogger(logger log.Logger) {
 	c.allLoggers = append(c.allLoggers, logger)
 }
 
+// SetLogLevel sets logging level for all tracked loggers to the level provided
 func (c *Core) SetLogLevel(level log.Level) {
 	c.allLoggersLock.RLock()
 	defer c.allLoggersLock.RUnlock()
@@ -2874,17 +2875,22 @@ func (c *Core) SetLogLevel(level log.Level) {
 	}
 }
 
-func (c *Core) SetLogLevelByName(name string, level log.Level) error {
+// SetLogLevelByName sets the logging level of named logger to level provided
+// if it exists. Core.allLoggers is a slice and as such it is entirely possible
+// that multiple entries exist for the same name. Each instance will be modified.
+func (c *Core) SetLogLevelByName(name string, level log.Level) bool {
 	c.allLoggersLock.RLock()
 	defer c.allLoggersLock.RUnlock()
+
+	found := false
 	for _, logger := range c.allLoggers {
 		if logger.Name() == name {
 			logger.SetLevel(level)
-			return nil
+			found = true
 		}
 	}
 
-	return fmt.Errorf("logger %q does not exist", name)
+	return found
 }
 
 // SetConfig sets core's config object to the newly provided config.
