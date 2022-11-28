@@ -3,14 +3,10 @@
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </p.top>
   <p.levelLeft>
-    {{#if @pageTitle}}
-      <h1 class="title is-3" data-test-header-title="key-details">
-        {{#if @icon}}
-          <Icon @name="certificate" @size="24" class="has-text-grey-light" />
-        {{/if}}
-        View key
-      </h1>
-    {{/if}}
+    <h1 class="title is-3" data-test-header-title="key-details">
+      <Icon @name="certificate" @size="24" class="has-text-grey-light" />
+      View key
+    </h1>
   </p.levelLeft>
 </PageHeader>
 

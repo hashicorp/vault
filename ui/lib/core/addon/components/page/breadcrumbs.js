@@ -2,12 +2,12 @@ import Component from '@glimmer/component';
 import { assert } from '@ember/debug';
 
 /**
- * @module Breadcrumbs
- * Breadcrumbs components are used to display a header with breadcrumb links and an optional title below
+ * @module Page::Breadcrumbs
+ * Page::Breadcrumbs components are used to display breadcrumb links. This is component will be replaced when HDS system is incorporated
  *
  * @example
  * ```js
- * <Breadcrumbs @breadcrumbs={{this.breadcrumbs}}  />
+ * <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}}  />
  * ```
  * @param {array} breadcrumbs - array of objects with a label and path to display as breadcrumbs
  */
