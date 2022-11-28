@@ -1,0 +1,38 @@
+<PageHeader as |p|>
+  <p.top>
+    {{#if @breadcrumbs}}
+      <nav class="breadcrumb" aria-label="{{this.localName}}-breadcrumbs" data-test-breadcrumbs={{this.localName}}>
+        <ul>
+          <li>
+            <span class="sep">/</span>
+
+          </li>
+          {{#each @breadcrumbs as |breadcrumb|}}
+            <li>
+              <span class="sep">/</span>
+              {{#if breadcrumb.linkExternal}}
+                <LinkToExternal @route={{breadcrumb.path}}>{{breadcrumb.label}}</LinkToExternal>
+              {{else if breadcrumb.path}}
+                <LinkTo @route={{breadcrumb.path}}>
+                  {{breadcrumb.label}}
+                </LinkTo>
+              {{else}}
+                {{breadcrumb.label}}
+              {{/if}}
+            </li>
+          {{/each}}
+        </ul>
+      </nav>
+    {{/if}}
+  </p.top>
+  <p.levelLeft>
+    {{#if @pageTitle}}
+      <h1 class="title is-3" data-test-breadcrumb-page-title={{@pageTitle}}>
+        {{#if @icon}}
+          <Icon @name={{@icon}} @size="24" class="has-text-grey-light" />
+        {{/if}}
+        {{@pageTitle}}
+      </h1>
+    {{/if}}
+  </p.levelLeft>
+</PageHeader>
