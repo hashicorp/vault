@@ -1301,6 +1301,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// add environment variables to info
 	if logLevelString == "debug" || logLevelString == "trace" {
+		// returns a slice of env vars formatted as "key=value"
 		envVars := os.Environ()
 		var envVarKeys []string
 		for _, v := range envVars {
@@ -1310,7 +1311,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 		sort.Strings(envVarKeys)
 
-		key := "env vars"
+		key := "environment variables"
 		info[key] = strings.Join(envVarKeys, ", ")
 		infoKeys = append(infoKeys, key)
 	}
