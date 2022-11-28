@@ -1298,7 +1298,25 @@ func (c *ServerCommand) Run(args []string) int {
 	info := make(map[string]string)
 	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
+
+	// add environment variables to info
+	if logLevelString == "debug" || logLevelString == "trace" {
+		envVars := os.Environ()
+		var envVarKeys []string
+		for _, v := range envVars {
+			splitEnvVars := strings.Split(v, "=")
+			envVarKeys = append(envVarKeys, splitEnvVars[0])
+		}
+
+		sort.Strings(envVarKeys)
+
+		key := "env vars"
+		info[key] = strings.Join(envVarKeys, ", ")
+		infoKeys = append(infoKeys, key)
+	}
+
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
+
 	// Check error here
 	if err != nil {
 		c.UI.Error(err.Error())
