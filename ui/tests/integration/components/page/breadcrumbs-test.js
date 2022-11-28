@@ -9,8 +9,8 @@ module('Integration | Component | page/breadcrumbs', function (hooks) {
 
   test('it renders', async function (assert) {
     this.breadcrumbs = [
-      { label: 'Home', path: 'secrets', linkExternal: true },
-      { label: 'Details', path: 'overview' },
+      { label: 'Home', route: 'home', linkExternal: true },
+      { label: 'Details', route: 'home.details' },
       { label: 'Edit item' },
     ];
 

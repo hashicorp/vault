@@ -14,9 +14,9 @@ export default class PkiKeyDetails extends Component<Args> {
 
   get breadcrumbs() {
     return [
-      { label: 'secrets', path: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath || 'pki', path: 'overview' },
-      { label: 'keys', path: 'keys.index' },
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath || 'pki', route: 'overview' },
+      { label: 'keys', route: 'keys.index' },
       { label: this.args.key.keyId },
     ];
   }
