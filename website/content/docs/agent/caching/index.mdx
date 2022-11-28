@@ -134,7 +134,8 @@ belonging to the cached response, the `request_path` that resulted in the
 cached response, the `lease` that is attached to the cached response, the
 `namespace` to which the cached response belongs to, and a few more. This API
 exposes some factors through which associated cache entries are fetched and
-evicted.
+evicted. For listeners without caching enabled, this API will still be available,
+but will do nothing (there is no cache to clear) and will return a `200` response.
 
 | Method | Path                    | Produces               |
 | :----- | :---------------------- | :--------------------- |
@@ -251,7 +252,7 @@ or the default role, `default`, which serves everything (including metrics).
 
 ### Example Configuration
 
-Here is an example of a cache configuration alongside a listener that only serves metrics.
+Here is an example of a cache configuration alongside a regular listener, and a listener that only serves metrics.
 
 ```hcl
 # Other Vault Agent configuration blocks
@@ -259,6 +260,11 @@ Here is an example of a cache configuration alongside a listener that only serve
 
 cache {
   use_auto_auth_token = true
+}
+
+listener "tcp" {
+    address = "127.0.0.1:8100"
+    tls_disable = true
 }
 
 listener "tcp" {

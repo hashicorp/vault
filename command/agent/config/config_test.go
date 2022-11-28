@@ -1102,8 +1102,8 @@ func TestLoadConfigFile_Disable_Idle_Conns_All(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableIdleConns:           []string{"auto-auth", "caching", "templating"},
-		DisableIdleConnsCaching:    true,
+		DisableIdleConns:           []string{"auto-auth", "caching", "templating", "proxying"},
+		DisableIdleConnsAPIProxy:   true,
 		DisableIdleConnsAutoAuth:   true,
 		DisableIdleConnsTemplating: true,
 		AutoAuth: &AutoAuth{
@@ -1152,7 +1152,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Auto_Auth(t *testing.T) {
 			PidFile: "./pidfile",
 		},
 		DisableIdleConns:           []string{"auto-auth"},
-		DisableIdleConnsCaching:    false,
+		DisableIdleConnsAPIProxy:   false,
 		DisableIdleConnsAutoAuth:   true,
 		DisableIdleConnsTemplating: false,
 		AutoAuth: &AutoAuth{
@@ -1201,7 +1201,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Templating(t *testing.T) {
 			PidFile: "./pidfile",
 		},
 		DisableIdleConns:           []string{"templating"},
-		DisableIdleConnsCaching:    false,
+		DisableIdleConnsAPIProxy:   false,
 		DisableIdleConnsAutoAuth:   false,
 		DisableIdleConnsTemplating: true,
 		AutoAuth: &AutoAuth{
@@ -1250,7 +1250,56 @@ func TestLoadConfigFile_Disable_Idle_Conns_Caching(t *testing.T) {
 			PidFile: "./pidfile",
 		},
 		DisableIdleConns:           []string{"caching"},
-		DisableIdleConnsCaching:    true,
+		DisableIdleConnsAPIProxy:   true,
+		DisableIdleConnsAutoAuth:   false,
+		DisableIdleConnsTemplating: false,
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+			Retry: &Retry{
+				ctconfig.DefaultRetryAttempts,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_Disable_Idle_Conns_Proxying(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-disable-idle-connections-proxying.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		DisableIdleConns:           []string{"proxying"},
+		DisableIdleConnsAPIProxy:   true,
 		DisableIdleConnsAutoAuth:   false,
 		DisableIdleConnsTemplating: false,
 		AutoAuth: &AutoAuth{
@@ -1299,7 +1348,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
 			PidFile: "./pidfile",
 		},
 		DisableIdleConns:           []string{},
-		DisableIdleConnsCaching:    false,
+		DisableIdleConnsAPIProxy:   false,
 		DisableIdleConnsAutoAuth:   false,
 		DisableIdleConnsTemplating: false,
 		AutoAuth: &AutoAuth{
@@ -1354,7 +1403,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Env(t *testing.T) {
 			PidFile: "./pidfile",
 		},
 		DisableIdleConns:           []string{"auto-auth", "caching", "templating"},
-		DisableIdleConnsCaching:    true,
+		DisableIdleConnsAPIProxy:   true,
 		DisableIdleConnsAutoAuth:   true,
 		DisableIdleConnsTemplating: true,
 		AutoAuth: &AutoAuth{
@@ -1409,8 +1458,8 @@ func TestLoadConfigFile_Disable_Keep_Alives_All(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableKeepAlives:           []string{"auto-auth", "caching", "templating"},
-		DisableKeepAlivesCaching:    true,
+		DisableKeepAlives:           []string{"auto-auth", "caching", "templating", "proxying"},
+		DisableKeepAlivesAPIProxy:   true,
 		DisableKeepAlivesAutoAuth:   true,
 		DisableKeepAlivesTemplating: true,
 		AutoAuth: &AutoAuth{
@@ -1459,7 +1508,7 @@ func TestLoadConfigFile_Disable_Keep_Alives_Auto_Auth(t *testing.T) {
 			PidFile: "./pidfile",
 		},
 		DisableKeepAlives:           []string{"auto-auth"},
-		DisableKeepAlivesCaching:    false,
+		DisableKeepAlivesAPIProxy:   false,
 		DisableKeepAlivesAutoAuth:   true,
 		DisableKeepAlivesTemplating: false,
 		AutoAuth: &AutoAuth{
@@ -1508,7 +1557,7 @@ func TestLoadConfigFile_Disable_Keep_Alives_Templating(t *testing.T) {
 			PidFile: "./pidfile",
 		},
 		DisableKeepAlives:           []string{"templating"},
-		DisableKeepAlivesCaching:    false,
+		DisableKeepAlivesAPIProxy:   false,
 		DisableKeepAlivesAutoAuth:   false,
 		DisableKeepAlivesTemplating: true,
 		AutoAuth: &AutoAuth{
@@ -1557,7 +1606,56 @@ func TestLoadConfigFile_Disable_Keep_Alives_Caching(t *testing.T) {
 			PidFile: "./pidfile",
 		},
 		DisableKeepAlives:           []string{"caching"},
-		DisableKeepAlivesCaching:    true,
+		DisableKeepAlivesAPIProxy:   true,
+		DisableKeepAlivesAutoAuth:   false,
+		DisableKeepAlivesTemplating: false,
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+			Retry: &Retry{
+				ctconfig.DefaultRetryAttempts,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_Disable_Keep_Alives_Proxying(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-proxying.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		DisableKeepAlives:           []string{"proxying"},
+		DisableKeepAlivesAPIProxy:   true,
 		DisableKeepAlivesAutoAuth:   false,
 		DisableKeepAlivesTemplating: false,
 		AutoAuth: &AutoAuth{
@@ -1606,7 +1704,7 @@ func TestLoadConfigFile_Disable_Keep_Alives_Empty(t *testing.T) {
 			PidFile: "./pidfile",
 		},
 		DisableKeepAlives:           []string{},
-		DisableKeepAlivesCaching:    false,
+		DisableKeepAlivesAPIProxy:   false,
 		DisableKeepAlivesAutoAuth:   false,
 		DisableKeepAlivesTemplating: false,
 		AutoAuth: &AutoAuth{
@@ -1661,7 +1759,7 @@ func TestLoadConfigFile_Disable_Keep_Alives_Env(t *testing.T) {
 			PidFile: "./pidfile",
 		},
 		DisableKeepAlives:           []string{"auto-auth", "caching", "templating"},
-		DisableKeepAlivesCaching:    true,
+		DisableKeepAlivesAPIProxy:   true,
 		DisableKeepAlivesAutoAuth:   true,
 		DisableKeepAlivesTemplating: true,
 		AutoAuth: &AutoAuth{

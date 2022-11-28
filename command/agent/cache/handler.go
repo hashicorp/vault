@@ -20,7 +20,61 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool) http.Handler {
+func CachelessHandler(ctx context.Context, logger hclog.Logger, proxier Proxier) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
+
+		token := r.Header.Get(consts.AuthHeaderName)
+
+		// Parse and reset body.
+		reqBody, err := io.ReadAll(r.Body)
+		if err != nil {
+			logger.Error("failed to read request body")
+			logical.RespondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
+			return
+		}
+		if r.Body != nil {
+			r.Body.Close()
+		}
+		r.Body = io.NopCloser(bytes.NewReader(reqBody))
+		req := &SendRequest{
+			Token:       token,
+			Request:     r,
+			RequestBody: reqBody,
+		}
+
+		resp, err := proxier.Send(ctx, req)
+		if err != nil {
+			// If this is an api.Response error, don't wrap the response.
+			if resp != nil && resp.Response.Error() != nil {
+				copyHeader(w.Header(), resp.Response.Header)
+				w.WriteHeader(resp.Response.StatusCode)
+				io.Copy(w, resp.Response.Body)
+				metrics.IncrCounter([]string{"agent", "proxy", "client_error"}, 1)
+			} else {
+				metrics.IncrCounter([]string{"agent", "proxy", "error"}, 1)
+				logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
+			}
+			return
+		}
+
+		if err != nil {
+			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to process token lookup response: %w", err))
+			return
+		}
+
+		defer resp.Response.Body.Close()
+
+		// Set headers
+		setHeaders(w, resp)
+
+		// Set response body
+		io.Copy(w, resp.Response.Body)
+		return
+	})
+}
+
+func CachingHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
@@ -36,7 +90,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		}
 
 		// Parse and reset body.
-		reqBody, err := ioutil.ReadAll(r.Body)
+		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			logger.Error("failed to read request body")
 			logical.RespondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
@@ -45,7 +99,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		if r.Body != nil {
 			r.Body.Close()
 		}
-		r.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
+		r.Body = io.NopCloser(bytes.NewReader(reqBody))
 		req := &SendRequest{
 			Token:       token,
 			Request:     r,

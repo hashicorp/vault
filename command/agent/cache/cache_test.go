@@ -39,7 +39,15 @@ path "*" {
 // be deferred immediately along with two clients, one for direct cluster
 // communication and another to talk to the caching agent.
 func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
-	return setupClusterAndAgentCommon(ctx, t, coreConfig, false)
+	return setupClusterAndAgentCommon(ctx, t, coreConfig, false, true)
+}
+
+// setupClusterAndAgentNoCache is a helper func used to set up a test cluster and
+// proxyi agent against the active node. It returns a cleanup func that should
+// be deferred immediately along with two clients, one for direct cluster
+// communication and another to talk to the caching agent.
+func setupClusterAndAgentNoCache(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
+	return setupClusterAndAgentCommon(ctx, t, coreConfig, false, false)
 }
 
 // setupClusterAndAgentOnStandby is a helper func used to set up a test cluster
@@ -47,10 +55,10 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 // should be deferred immediately along with two clients, one for direct cluster
 // communication and another to talk to the caching agent.
 func setupClusterAndAgentOnStandby(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
-	return setupClusterAndAgentCommon(ctx, t, coreConfig, true)
+	return setupClusterAndAgentCommon(ctx, t, coreConfig, true, true)
 }
 
-func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig, onStandby bool) (func(), *api.Client, *api.Client, *LeaseCache) {
+func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig, onStandby bool, useCache bool) (func(), *api.Client, *api.Client, *LeaseCache) {
 	t.Helper()
 
 	if ctx == nil {
@@ -121,45 +129,54 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	origEnvVaultCACert := os.Getenv(api.EnvVaultCACert)
 	os.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
 
-	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
-
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	apiProxyLogger := logging.NewVaultLogger(hclog.Trace).Named("apiproxy")
+
 	// Create the API proxier
 	apiProxy, err := NewAPIProxy(&APIProxyConfig{
 		Client: clienToUse,
-		Logger: cacheLogger.Named("apiproxy"),
+		Logger: apiProxyLogger,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Create the lease cache proxier and set its underlying proxier to
-	// the API proxier.
-	leaseCache, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:      clienToUse,
-		BaseContext: ctx,
-		Proxier:     apiProxy,
-		Logger:      cacheLogger.Named("leasecache"),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create a muxer and add paths relevant for the lease cache layer
+	// Create a muxer and add paths relevant for the lease cache layer and API proxy layer
 	mux := http.NewServeMux()
-	mux.Handle("/agent/v1/cache-clear", leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, nil, true))
+	var leaseCache *LeaseCache
+	if useCache {
+		cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
+
+		// Create the lease cache proxier and set its underlying proxier to
+		// the API proxier.
+		leaseCache, err = NewLeaseCache(&LeaseCacheConfig{
+			Client:      clienToUse,
+			BaseContext: ctx,
+			Proxier:     apiProxy,
+			Logger:      cacheLogger.Named("leasecache"),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		mux.Handle("/agent/v1/cache-clear", leaseCache.HandleCacheClear(ctx))
+
+		mux.Handle("/", CachingHandler(ctx, cacheLogger, leaseCache, nil, true))
+	} else {
+		mux.Handle("/", CachelessHandler(ctx, apiProxyLogger, apiProxy))
+	}
+
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		IdleTimeout:       5 * time.Minute,
-		ErrorLog:          cacheLogger.StandardLogger(nil),
+		ErrorLog:          apiProxyLogger.StandardLogger(nil),
 	}
 	go server.Serve(listener)
 
@@ -248,7 +265,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), true))
+	mux.Handle("/", CachingHandler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), true))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -337,7 +354,7 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 	mux := http.NewServeMux()
 	// mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), false))
+	mux.Handle("/", CachingHandler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), false))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,

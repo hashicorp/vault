@@ -30,11 +30,11 @@ type Config struct {
 	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
 	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
 	DisableIdleConns            []string                   `hcl:"disable_idle_connections"`
-	DisableIdleConnsCaching     bool                       `hcl:"-"`
+	DisableIdleConnsAPIProxy    bool                       `hcl:"-"`
 	DisableIdleConnsTemplating  bool                       `hcl:"-"`
 	DisableIdleConnsAutoAuth    bool                       `hcl:"-"`
 	DisableKeepAlives           []string                   `hcl:"disable_keep_alives"`
-	DisableKeepAlivesCaching    bool                       `hcl:"-"`
+	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
 	DisableKeepAlivesTemplating bool                       `hcl:"-"`
 	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
 	LogFile                     string                     `hcl:"log_file"`
@@ -286,7 +286,9 @@ func LoadConfig(path string) (*Config, error) {
 		case "auto-auth":
 			result.DisableIdleConnsAutoAuth = true
 		case "caching":
-			result.DisableIdleConnsCaching = true
+			result.DisableIdleConnsAPIProxy = true
+		case "proxying":
+			result.DisableIdleConnsAPIProxy = true
 		case "templating":
 			result.DisableIdleConnsTemplating = true
 		case "":
@@ -308,7 +310,9 @@ func LoadConfig(path string) (*Config, error) {
 		case "auto-auth":
 			result.DisableKeepAlivesAutoAuth = true
 		case "caching":
-			result.DisableKeepAlivesCaching = true
+			result.DisableKeepAlivesAPIProxy = true
+		case "proxying":
+			result.DisableKeepAlivesAPIProxy = true
 		case "templating":
 			result.DisableKeepAlivesTemplating = true
 		case "":

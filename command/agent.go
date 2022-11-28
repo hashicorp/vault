@@ -16,6 +16,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"google.golang.org/grpc/test/bufconn"
+
 	systemd "github.com/coreos/go-systemd/daemon"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
@@ -44,7 +47,6 @@ import (
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -53,7 +55,6 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
-	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
@@ -463,23 +464,25 @@ func (c *AgentCommand) Run(args []string) int {
 
 	var leaseCache *cache.LeaseCache
 	var previousToken string
-	// Parse agent listener configurations
+	var cacheHandler http.Handler
+
+	proxyClient, err := client.CloneWithHeaders()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error cloning client for proxying: %v", err))
+		return 1
+	}
+
+	if config.DisableIdleConnsAPIProxy {
+		proxyClient.SetMaxIdleConnections(-1)
+	}
+
+	if config.DisableKeepAlivesAPIProxy {
+		proxyClient.SetDisableKeepAlives(true)
+	}
+
+	// Parse agent cache configurations
 	if config.Cache != nil {
 		cacheLogger := c.logger.Named("cache")
-
-		proxyClient, err := client.CloneWithHeaders()
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error cloning client for caching: %v", err))
-			return 1
-		}
-
-		if config.DisableIdleConnsCaching {
-			proxyClient.SetMaxIdleConnections(-1)
-		}
-
-		if config.DisableKeepAlivesCaching {
-			proxyClient.SetDisableKeepAlives(true)
-		}
 
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
@@ -671,83 +674,102 @@ func (c *AgentCommand) Run(args []string) int {
 		proxyVaultToken := !config.Cache.ForceAutoAuthToken
 
 		// Create the request handler
-		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
-
-		var listeners []net.Listener
-
-		// If there are templates, add an in-process listener
-		if len(config.Templates) > 0 {
-			config.Listeners = append(config.Listeners, &configutil.Listener{Type: listenerutil.BufConnType})
-		}
-		for i, lnConfig := range config.Listeners {
-			var ln net.Listener
-			var tlsConf *tls.Config
-
-			if lnConfig.Type == listenerutil.BufConnType {
-				inProcListener := bufconn.Listen(1024 * 1024)
-				config.Cache.InProcDialer = listenerutil.NewBufConnWrapper(inProcListener)
-				ln = inProcListener
-			} else {
-				ln, tlsConf, err = cache.StartListener(lnConfig)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
-					return 1
-				}
-			}
-
-			listeners = append(listeners, ln)
-
-			// Parse 'require_request_header' listener config option, and wrap
-			// the request handler if necessary
-			muxHandler := cacheHandler
-			if lnConfig.RequireRequestHeader && ("metrics_only" != lnConfig.Role) {
-				muxHandler = verifyRequestHeader(muxHandler)
-			}
-
-			// Create a muxer and add paths relevant for the lease cache layer
-			mux := http.NewServeMux()
-			quitEnabled := lnConfig.AgentAPI != nil && lnConfig.AgentAPI.EnableQuit
-
-			mux.Handle(consts.AgentPathMetrics, c.handleMetrics())
-			if "metrics_only" != lnConfig.Role {
-				mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
-				mux.Handle(consts.AgentPathQuit, c.handleQuit(quitEnabled))
-				mux.Handle("/", muxHandler)
-			}
-
-			scheme := "https://"
-			if tlsConf == nil {
-				scheme = "http://"
-			}
-			if ln.Addr().Network() == "unix" {
-				scheme = "unix://"
-			}
-
-			infoKey := fmt.Sprintf("api address %d", i+1)
-			info[infoKey] = scheme + ln.Addr().String()
-			infoKeys = append(infoKeys, infoKey)
-
-			server := &http.Server{
-				Addr:              ln.Addr().String(),
-				TLSConfig:         tlsConf,
-				Handler:           mux,
-				ReadHeaderTimeout: 10 * time.Second,
-				ReadTimeout:       30 * time.Second,
-				IdleTimeout:       5 * time.Minute,
-				ErrorLog:          cacheLogger.StandardLogger(nil),
-			}
-
-			go server.Serve(ln)
-		}
-
-		// Ensure that listeners are closed at all the exits
-		listenerCloseFunc := func() {
-			for _, ln := range listeners {
-				ln.Close()
-			}
-		}
-		defer c.cleanupGuard.Do(listenerCloseFunc)
+		cacheHandler = cache.CachingHandler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
 	}
+
+	var listeners []net.Listener
+
+	// If there are templates, add an in-process listener
+	if len(config.Templates) > 0 {
+		config.Listeners = append(config.Listeners, &configutil.Listener{Type: listenerutil.BufConnType})
+	}
+	for i, lnConfig := range config.Listeners {
+		var ln net.Listener
+		var tlsConf *tls.Config
+
+		if lnConfig.Type == listenerutil.BufConnType {
+			inProcListener := bufconn.Listen(1024 * 1024)
+			if config.Cache != nil {
+				config.Cache.InProcDialer = listenerutil.NewBufConnWrapper(inProcListener)
+			}
+			ln = inProcListener
+		} else {
+			ln, tlsConf, err = cache.StartListener(lnConfig)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
+				return 1
+			}
+		}
+
+		listeners = append(listeners, ln)
+
+		listenerLogger := c.logger.Named("listener")
+
+		var muxHandler http.Handler
+
+		if cacheHandler != nil {
+			muxHandler = cacheHandler
+		} else {
+			apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
+				Client: proxyClient,
+				Logger: listenerLogger.Named("apiproxy"),
+			})
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
+				return 1
+			}
+			muxHandler = cache.CachelessHandler(ctx, listenerLogger, apiProxy)
+		}
+
+		// Parse 'require_request_header' listener config option, and wrap
+		// the request handler if necessary
+		if lnConfig.RequireRequestHeader && ("metrics_only" != lnConfig.Role) {
+			muxHandler = verifyRequestHeader(muxHandler)
+		}
+
+		// Create a muxer and add paths relevant for the lease cache layer
+		mux := http.NewServeMux()
+		quitEnabled := lnConfig.AgentAPI != nil && lnConfig.AgentAPI.EnableQuit
+
+		mux.Handle(consts.AgentPathMetrics, c.handleMetrics())
+		if "metrics_only" != lnConfig.Role {
+			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+			mux.Handle(consts.AgentPathQuit, c.handleQuit(quitEnabled))
+			mux.Handle("/", muxHandler)
+		}
+
+		scheme := "https://"
+		if tlsConf == nil {
+			scheme = "http://"
+		}
+		if ln.Addr().Network() == "unix" {
+			scheme = "unix://"
+		}
+
+		infoKey := fmt.Sprintf("api address %d", i+1)
+		info[infoKey] = scheme + ln.Addr().String()
+		infoKeys = append(infoKeys, infoKey)
+
+		server := &http.Server{
+			Addr:              ln.Addr().String(),
+			TLSConfig:         tlsConf,
+			Handler:           mux,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			IdleTimeout:       5 * time.Minute,
+			ErrorLog:          listenerLogger.StandardLogger(nil),
+		}
+
+		go server.Serve(ln)
+	}
+
+	// Ensure that listeners are closed at all the exits
+	listenerCloseFunc := func() {
+		for _, ln := range listeners {
+			ln.Close()
+		}
+	}
+	defer c.cleanupGuard.Do(listenerCloseFunc)
 
 	// Inform any tests that the server is ready
 	if c.startedCh != nil {
