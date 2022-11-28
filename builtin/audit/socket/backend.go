@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -73,12 +73,22 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		logRaw = b
 	}
 
+	elideListResponses := false
+	if elideListResponsesRaw, ok := conf.Config["elide_list_responses"]; ok {
+		value, err := strconv.ParseBool(elideListResponsesRaw)
+		if err != nil {
+			return nil, err
+		}
+		elideListResponses = value
+	}
+
 	b := &Backend{
 		saltConfig: conf.SaltConfig,
 		saltView:   conf.SaltView,
 		formatConfig: audit.FormatterConfig{
-			Raw:          logRaw,
-			HMACAccessor: hmacAccessor,
+			Raw:                logRaw,
+			HMACAccessor:       hmacAccessor,
+			ElideListResponses: elideListResponses,
 		},
 
 		writeDuration: writeDuration,
