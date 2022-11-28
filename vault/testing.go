@@ -922,6 +922,12 @@ func (c *TestCluster) start(t testing.T) {
 		c.SetupFunc()
 	}
 
+	if c.opts.SkipInit {
+		// SkipInit implies that vault may not be ready to service requests, or that
+		// we're restarting a cluster from an existing storage.
+		return
+	}
+
 	activeCore := -1
 WAITACTIVE:
 	for i := 0; i < 60; i++ {
@@ -940,9 +946,6 @@ WAITACTIVE:
 
 	switch {
 	case c.opts == nil:
-	case c.opts.SkipInit:
-		// SkipInit implies that vault may not be ready to service requests, or that
-		// we're restarting a cluster from an existing storage
 	case c.opts.NoDefaultQuotas:
 	case c.opts.HandlerFunc == nil:
 	// If no HandlerFunc is provided that means that we can't actually do
