@@ -1,0 +1,3 @@
+```release-note:improvement
+openapi: Generate openapi.json response structures for approle request
+```
