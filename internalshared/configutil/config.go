@@ -2,7 +2,6 @@ package configutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -45,25 +44,6 @@ type SharedConfig struct {
 	PidFile string `hcl:"pid_file"`
 
 	ClusterName string `hcl:"cluster_name"`
-}
-
-// LoadConfigFile loads the configuration from the given file.
-func LoadConfigFile(path string) (*SharedConfig, error) {
-	// Read the file
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseConfig(string(d))
-}
-
-func LoadConfigKMSes(path string) ([]*KMS, error) {
-	// Read the file
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseKMSes(string(d))
 }
 
 func ParseConfig(d string) (*SharedConfig, error) {

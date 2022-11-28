@@ -700,7 +700,7 @@ func (c *AgentCommand) Run(args []string) int {
 			// Parse 'require_request_header' listener config option, and wrap
 			// the request handler if necessary
 			muxHandler := cacheHandler
-			if lnConfig.RequireRequestHeader {
+			if lnConfig.RequireRequestHeader && ("metrics_only" != lnConfig.Role) {
 				muxHandler = verifyRequestHeader(muxHandler)
 			}
 
@@ -708,10 +708,12 @@ func (c *AgentCommand) Run(args []string) int {
 			mux := http.NewServeMux()
 			quitEnabled := lnConfig.AgentAPI != nil && lnConfig.AgentAPI.EnableQuit
 
-			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
-			mux.Handle(consts.AgentPathQuit, c.handleQuit(quitEnabled))
 			mux.Handle(consts.AgentPathMetrics, c.handleMetrics())
-			mux.Handle("/", muxHandler)
+			if "metrics_only" != lnConfig.Role {
+				mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+				mux.Handle(consts.AgentPathQuit, c.handleQuit(quitEnabled))
+				mux.Handle("/", muxHandler)
+			}
 
 			scheme := "https://"
 			if tlsConf == nil {
