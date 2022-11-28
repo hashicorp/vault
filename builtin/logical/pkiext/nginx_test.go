@@ -486,7 +486,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	requireSuccessNonNilResponse(t, resp, err, "failed to create client leaf cert")
 	clientCert := resp.Data["certificate"].(string)
 	clientKey := resp.Data["private_key"].(string) + "\n"
-	clientFullChain := clientCert + "\n" + resp.Data["issuing_ca"].(string) + "\n"
+	clientWireChain := clientCert + "\n" + resp.Data["issuing_ca"].(string) + "\n"
 	clientTrustChain := resp.Data["issuing_ca"].(string) + "\n" + rootCert + "\n"
 	clientCAChain := resp.Data["ca_chain"].([]string)
 
@@ -570,7 +570,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 
 	// Ensure we can connect with wget/curl.
 	CheckWithClients(t, networkName, networkAddr, containerURL, rootCert, "", "")
-	CheckWithClients(t, networkName, networkAddr, containerProtectedURL, clientTrustChain, clientFullChain, clientKey)
+	CheckWithClients(t, networkName, networkAddr, containerProtectedURL, clientTrustChain, clientWireChain, clientKey)
 
 	// Ensure OpenSSL will validate the delta CRL by revoking our server leaf
 	// and then using it with wget2. This will land on the intermediate's
