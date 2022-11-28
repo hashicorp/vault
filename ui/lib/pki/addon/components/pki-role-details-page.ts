@@ -19,6 +19,7 @@ interface Args {
 export default class DetailsPage extends Component<Args> {
   get breadcrumbs() {
     return [
+      { label: 'secrets', path: 'secrets', linkExternal: true },
       { label: this.args.role.backend || 'pki', path: 'overview' },
       { label: 'roles', path: 'roles.index' },
       { label: this.args.role.id },
