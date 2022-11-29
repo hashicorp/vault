@@ -210,16 +210,6 @@ can only be set during role creation and once set, it can't be reset later.`,
 								Type:        framework.TypeBool,
 								Description: "If true, the secret identifiers generated using this role will be cluster local. This can only be set during role creation and once set, it can't be reset later",
 							},
-							"period": {
-								Type:        framework.TypeDurationSecond,
-								Description: tokenutil.DeprecationText("token_period"),
-								Deprecated:  true,
-							},
-							"policies": {
-								Type:        framework.TypeCommaStringSlice,
-								Description: tokenutil.DeprecationText("token_policies"),
-								Deprecated:  true,
-							},
 						},
 					}},
 				},
@@ -312,11 +302,6 @@ can only be set during role creation and once set, it can't be reset later.`,
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"policies": {
-									Type:        framework.TypeCommaStringSlice,
-									Description: tokenutil.DeprecationText("token_policies"),
-									Deprecated:  true,
-								},
 								"token_policies": {
 									Type:        framework.TypeCommaStringSlice,
 									Description: defTokenFields["token_policies"].Description,
@@ -600,11 +585,6 @@ to 0, meaning no expiration.`,
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"period": {
-									Type:        framework.TypeDurationSecond,
-									Description: tokenutil.DeprecationText("token_period"),
-									Deprecated:  true,
-								},
 								"token_period": {
 									Type:        framework.TypeDurationSecond,
 									Description: defTokenFields["token_period"].Description,
