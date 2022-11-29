@@ -37,7 +37,6 @@ type Config struct {
 	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
 	DisableKeepAlivesTemplating bool                       `hcl:"-"`
 	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
-	LogFile                     string                     `hcl:"log_file"`
 }
 
 const (
