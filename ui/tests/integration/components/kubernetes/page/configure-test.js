@@ -8,7 +8,7 @@ import { configVarUri } from '../../../../../mirage/handlers/kubernetes';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
 
-module('Integration | Component | kubernetes | Page:Configure', function (hooks) {
+module('Integration | Component | kubernetes | Page::Configure', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kubernetes');
   setupMirage(hooks);
