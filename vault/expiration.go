@@ -21,6 +21,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/helper/fairshare"
+	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -110,7 +111,7 @@ type ExpirationManager struct {
 	pending     sync.Map
 	nonexpiring sync.Map
 	leaseCount  int
-	pendingLock sync.RWMutex
+	pendingLock locking.DeadlockRWMutex
 
 	// A sync.Lock for every active leaseID
 	lockPerLease sync.Map
@@ -138,7 +139,7 @@ type ExpirationManager struct {
 	quitCh             chan struct{}
 
 	// do not hold coreStateLock in any API handler code - it is already held
-	coreStateLock     *DeadlockRWMutex
+	coreStateLock     *locking.DeadlockRWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
 

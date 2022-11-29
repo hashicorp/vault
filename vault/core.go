@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity/mfa"
+	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
@@ -298,7 +299,7 @@ type Core struct {
 	auditBackends map[string]audit.Factory
 
 	// stateLock protects mutable state
-	stateLock DeadlockRWMutex
+	stateLock locking.DeadlockRWMutex
 	sealed    *uint32
 
 	standby              bool

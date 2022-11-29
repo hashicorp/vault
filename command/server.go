@@ -649,7 +649,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	c.UI.Output("")
 
 	for _, ln := range lns {
-		handler := vaulthttp.Handler(&vault.HandlerProperties{
+		handler := vaulthttp.Handler.Handler(&vault.HandlerProperties{
 			Core:                  core,
 			ListenerConfig:        ln.Config,
 			DisablePrintableCheck: config.DisablePrintableCheck,
@@ -1383,7 +1383,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterHandler(vaulthttp.Handler(&vault.HandlerProperties{
+	core.SetClusterHandler(vaulthttp.Handler.Handler(&vault.HandlerProperties{
 		Core: core,
 	}))
 
@@ -1934,7 +1934,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	c.UI.Output("")
 
 	for _, core := range testCluster.Cores {
-		core.Server.Handler = vaulthttp.Handler(&vault.HandlerProperties{
+		core.Server.Handler = vaulthttp.Handler.Handler(&vault.HandlerProperties{
 			Core: core.Core,
 		})
 		core.SetClusterHandler(core.Server.Handler)
@@ -2791,7 +2791,7 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 			return err
 		}
 
-		handler := vaulthttp.Handler(&vault.HandlerProperties{
+		handler := vaulthttp.Handler.Handler(&vault.HandlerProperties{
 			Core:                  core,
 			ListenerConfig:        ln.Config,
 			DisablePrintableCheck: config.DisablePrintableCheck,
