@@ -676,7 +676,6 @@ func TestAppRole_TokenBoundCIDRSubset32Mask(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-
 }
 
 func TestAppRole_RoleConstraints(t *testing.T) {
