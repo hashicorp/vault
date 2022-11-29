@@ -1,18 +1,18 @@
 import Model, { attr } from '@ember-data/model';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { inject as service } from '@ember/service';
+import { withFormFields } from 'vault/decorators/model-form-fields';
 
+@withFormFields(['keyId', 'keyName', 'keyType', 'keyBits'])
 export default class PkiKeyModel extends Model {
-  @attr('string', { readOnly: true }) backend;
+  @service secretMountPath;
   @attr('boolean') isDefault;
   @attr('string', { possibleValues: ['internal', 'external'] }) type;
   @attr('string', { detailsLabel: 'Key ID' }) keyId;
   @attr('string') keyName;
   @attr('string') keyType;
-  @attr('string', { detailsLabel: 'Key bit length' }) keyBits; // TODO confirm with crypto team to remove this field from details page
+  @attr('string') keyBits;
 
-  // TODO refactor when field-to-attrs util is refactored as decorator
-  constructor() {
-    super(...arguments);
-    this.formFields = expandAttributeMeta(this, ['keyId', 'keyName', 'keyType', 'keyBits']);
+  get backend() {
+    return this.secretMountPath.currentPath;
   }
 }

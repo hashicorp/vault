@@ -1,9 +1,7 @@
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-
 export default class PkiKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
-
   getUrl(backend, id) {
     const url = `${this.buildURL()}/${encodePath(backend)}`;
     if (id) {
@@ -20,5 +18,10 @@ export default class PkiKeyAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { backend, id } = query;
     return this.ajax(this.getUrl(backend, id), 'GET');
+  }
+
+  deleteRecord(store, type, snapshot) {
+    const { id, record } = snapshot;
+    return this.ajax(this.getUrl(record.backend, id), 'DELETE');
   }
 }
