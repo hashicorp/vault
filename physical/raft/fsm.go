@@ -582,6 +582,7 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 // library.
 func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	numLogs := len(logs)
+	unknownOpTypes := make(map[uint32]struct{})
 
 	if numLogs == 0 {
 		return []interface{}{}
@@ -672,7 +673,10 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 							go f.restoreCb(context.Background())
 						}
 					default:
-						f.logger.Error("unsupported transaction operation", "op", op.OpType)
+						if _, ok := unknownOpTypes[op.OpType]; !ok {
+							f.logger.Error("unsupported transaction operation", "op", op.OpType)
+							unknownOpTypes[op.OpType] = struct{}{}
+						}
 					}
 					if err != nil {
 						return err
