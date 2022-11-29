@@ -4,8 +4,8 @@ import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message'
 interface Args {
   key: {
-    rollbackAttributes(): unknown;
-    destroyRecord(): unknown;
+    rollbackAttributes: () => void;
+    destroyRecord: () => void;
     backend: string;
     keyName: string;
     keyId: string;
@@ -13,8 +13,8 @@ interface Args {
 }
 
 export default class PkiKeyDetails extends Component<Args> {
-  @service declare router: { transitionTo: (arg0: string) => void; };
-  @service declare flashMessages: { success: (arg0: string) => void; danger: (arg0: any) => void; } 
+  @service declare router: { transitionTo: (route: string) => void; };
+  @service declare flashMessages: { success: (successMessage: string) => void; danger: (errorMessage: string) => void; } 
 
   get breadcrumbs() {
     return [
