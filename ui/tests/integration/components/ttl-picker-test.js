@@ -4,7 +4,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | ttl-picker2', function (hooks) {
+module('Integration | Component | ttl-picker', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
@@ -13,7 +13,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it renders time and unit inputs when TTL enabled', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @onChange={{this.onChange}}
         @enableTTL={{true}}
       />
@@ -24,7 +24,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it does not show time and unit inputs when TTL disabled', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @onChange={{this.onChange}}
         @enableTTL={{false}}
       />
@@ -35,7 +35,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it passes the appropriate data to onChange when toggled on', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @label="clicktest"
         @unit="m"
         @time="10"
@@ -58,7 +58,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it keeps seconds value when unit is changed', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @label="clicktest"
         @unit="s"
         @time="360"
@@ -93,7 +93,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it recalculates seconds when unit is changed and recalculateSeconds is on', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @label="clicktest"
         @unit="s"
         @time="120"
@@ -116,7 +116,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it sets default value to time and unit passed', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @onChange={{this.onChange}}
         @initialValue="2h"
         @enableTTL={{true}}
@@ -131,7 +131,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it is disabled on init if initialEnabled is false', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @label="inittest"
         @onChange={{this.onChange}}
         @initialValue="100m"
@@ -147,7 +147,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it is enabled on init if initialEnabled is true', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @label="inittest"
         @onChange={{this.onChange}}
         @initialValue="100m"
@@ -163,7 +163,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it is enabled on init if initialEnabled evals to truthy', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @label="inittest"
         @onChange={{this.onChange}}
         @initialValue="100m"
@@ -177,7 +177,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it calls onChange', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @label="clicktest"
         @unit="d"
         @time="2"
@@ -200,7 +200,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it calls onChange on init when rendered if changeOnInit is true', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @label="changeOnInitTest"
         @onChange={{this.onChange}}
         @initialValue="100m"
@@ -222,7 +222,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it converts to the largest round unit on init', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @label="convertunits"
         @onChange={{this.onChange}}
         @initialValue="60000s"
@@ -235,7 +235,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
 
   test('it converts to the largest round unit on init when no unit provided', async function (assert) {
     await render(hbs`
-      <TtlPicker2
+      <TtlPicker
         @label="convertunits"
         @onChange={{this.onChange}}
         @initialValue={{86400}}

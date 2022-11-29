@@ -1,12 +1,12 @@
 /**
- * @module TtlPicker2
- * TtlPicker2 components are used to enable and select duration values such as TTL. This component renders a toggle by default and:
+ * @module TtlPicker
+ * TtlPicker components are used to enable and select duration values such as TTL. This component renders a toggle by default and:
  * - allows TTL to be enabled or disabled
  * - recalculates the time when the unit is changed by the user (eg 60s -> 1m)
  *
  * @example
  * ```js
- * <TtlPicker2 @onChange={{handleChange}} @time={{defaultTime}} @unit={{defaultUnit}}/>
+ * <TtlPicker @onChange={{handleChange}} @time={{defaultTime}} @unit={{defaultUnit}}/>
  * ```
  * @param onChange {Function} - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}, goSafeTimeString{string}.
  * @param label="Time to live (TTL)" {String} - Label is the main label that lives next to the toggle.
@@ -28,7 +28,7 @@ import Duration from '@icholy/duration';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { convertFromSeconds, goSafeConvertFromSeconds, secondsMap } from './ttl-form';
-export default class TtlPicker2Component extends Component {
+export default class TtlPickerComponent extends Component {
   @tracked enableTTL = false;
   @tracked time = ''; // if defaultValue is NOT set, then do not display a defaultValue.
   @tracked unit = 's';
