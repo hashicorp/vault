@@ -391,7 +391,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					requestName := constructRequestResponseName(path, requestResponsePrefix, "Request")
+					requestName := constructRequestResponseName(opType, path, requestResponsePrefix, "Request")
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
 						Required: true,
@@ -536,11 +536,12 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 // CamelCaseRequest string.
 //
 // For example, prefix="kv" & path=/config/lease/{name} => KvConfigLeaseRequest
-func constructRequestResponseName(path, prefix, suffix string) string {
+func constructRequestResponseName(operation logical.Operation, path, prefix, suffix string) string {
 	var b strings.Builder
 
 	title := cases.Title(language.English)
 
+	b.WriteString(title.String(string(operation)))
 	b.WriteString(title.String(prefix))
 
 	// split the path by / _ - separators

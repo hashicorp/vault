@@ -210,6 +210,43 @@ can only be set during role creation and once set, it can't be reset later.`,
 								Type:        framework.TypeBool,
 								Description: "If true, the secret identifiers generated using this role will be cluster local. This can only be set during role creation and once set, it can't be reset later",
 							},
+							"token_bound_cidrs": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
+							},
+							"token_explicit_max_ttl": {
+								Type:        framework.TypeDurationSecond,
+								Description: "If set, tokens created via this role carry an explicit maximum TTL. During renewal, the current maximum TTL values of the role and the mount are not checked for changes, and any updates to these values will have no effect on the token being renewed.",
+							},
+							"token_max_ttl": {
+								Type:        framework.TypeDurationSecond,
+								Description: "The maximum lifetime of the generated token",
+							},
+							"token_no_default_policy": {
+								Type:        framework.TypeBool,
+								Description: "If true, the 'default' policy will not automatically be added to generated tokens",
+							},
+							"token_period": {
+								Type:        framework.TypeDurationSecond,
+								Description: "If set, tokens created via this role will have no max lifetime; instead, their renewal period will be fixed to this value.",
+							},
+							"token_policies": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Comma-separated list of policies",
+							},
+							"token_type": {
+								Type:        framework.TypeString,
+								Default:     "default-service",
+								Description: "The type of token to generate, service or batch",
+							},
+							"token_ttl": {
+								Type:        framework.TypeDurationSecond,
+								Description: "The initial ttl of the token to generate",
+							},
+							"token_num_uses": {
+								Type:        framework.TypeInt,
+								Description: "The maximum number of times a token may be used, a value of zero means unlimited",
+							},
 						},
 					}},
 				},
