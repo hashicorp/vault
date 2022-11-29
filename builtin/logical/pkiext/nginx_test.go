@@ -30,7 +30,6 @@ var (
 
 const (
 	protectedFile        = `dadgarcorp-internal-protected`
-	unprotectedFile      = `hello-world`
 	failureIndicator     = `THIS-TEST-SHOULD-FAIL`
 	uniqueHostnameSuffix = `pkiextnginx.com`
 	containerName        = `vault_pki_nginx_integration`
@@ -69,20 +68,9 @@ server {
 
 	ssl_client_certificate /etc/nginx/ssl/root.pem;
 	ssl_crl /etc/nginx/ssl/crl.pem;
-	ssl_verify_client optional;
-
-	# Magic per: https://serverfault.com/questions/891603/nginx-reverse-proxy-with-optional-ssl-client-authentication
-	# Only necessary since we're too lazy to setup two different subdomains.
-	set $ssl_status 'open';
-	if ($request_uri ~ protected) {
-		set $ssl_status 'closed';
-	}
+	ssl_verify_client on;
 
 	if ($ssl_client_verify != SUCCESS) {
-		set $ssl_status "$ssl_status-fail";
-	}
-
-	if ($ssl_status = "closed-fail") {
 		return 403;
 	}
 
@@ -98,8 +86,7 @@ server {
 	bCtx["fullchain.pem"] = docker.PathContentsFromString(chain)
 	bCtx["privkey.pem"] = docker.PathContentsFromString(private)
 	bCtx["crl.pem"] = docker.PathContentsFromString(crl)
-	bCtx["/data/index.html"] = docker.PathContentsFromString(unprotectedFile)
-	bCtx["/data/protected.html"] = docker.PathContentsFromString(protectedFile)
+	bCtx["/data/index.html"] = docker.PathContentsFromString(protectedFile)
 
 	imageName := "vault_pki_nginx_integration"
 	suffix, err := uuid.GenerateUUID()
@@ -563,10 +550,8 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 
 	localBase := "https://" + host + ":" + strconv.Itoa(port)
 	localURL := localBase + "/index.html"
-	localProtectedURL := localBase + "/protected.html"
 	containerBase := "https://" + uniqueHostname + ":" + strconv.Itoa(networkPort)
 	containerURL := containerBase + "/index.html"
-	containerProtectedURL := containerBase + "/protected.html"
 
 	t.Logf("Spawned nginx container:\nhost: %v\nport: %v\nnetworkName: %v\nnetworkAddr: %v\nnetworkPort: %v\nlocalURL: %v\ncontainerURL: %v\n", host, port, networkName, networkAddr, networkPort, localBase, containerBase)
 
@@ -575,15 +560,13 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	// Ensure we can connect with Go. We do our checks for revocation here,
 	// as this behavior is server-controlled and shouldn't matter based on
 	// client type.
-	CheckWithGo(t, rootCert, "", nil, "", host, port, networkAddr, networkPort, localURL, unprotectedFile, false)
-	CheckWithGo(t, rootCert, "", nil, "", host, port, networkAddr, networkPort, localProtectedURL, failureIndicator, true)
-	CheckWithGo(t, rootCert, clientCert, clientCAChain, clientKey, host, port, networkAddr, networkPort, localProtectedURL, protectedFile, false)
-	CheckWithGo(t, rootCert, revokedCert, revokedCAChain, revokedKey, host, port, networkAddr, networkPort, localProtectedURL, protectedFile, true)
-	// CheckWithGo(t, rootCert, deltaCert, deltaCAChain, deltaKey, host, port, networkAddr, networkPort, localProtectedURL, protectedFile, true)
+	CheckWithGo(t, rootCert, "", nil, "", host, port, networkAddr, networkPort, localURL, failureIndicator, true)
+	CheckWithGo(t, rootCert, clientCert, clientCAChain, clientKey, host, port, networkAddr, networkPort, localURL, protectedFile, false)
+	CheckWithGo(t, rootCert, revokedCert, revokedCAChain, revokedKey, host, port, networkAddr, networkPort, localURL, protectedFile, true)
+	// CheckWithGo(t, rootCert, deltaCert, deltaCAChain, deltaKey, host, port, networkAddr, networkPort, localURL, protectedFile, true)
 
 	// Ensure we can connect with wget/curl.
-	CheckWithClients(t, uniqueHostname, networkName, networkAddr, containerURL, rootCert, "", "")
-	CheckWithClients(t, uniqueHostname, networkName, networkAddr, containerProtectedURL, clientTrustChain, clientWireChain, clientKey)
+	CheckWithClients(t, uniqueHostname, networkName, networkAddr, containerURL, clientTrustChain, clientWireChain, clientKey)
 
 	// Ensure OpenSSL will validate the delta CRL by revoking our server leaf
 	// and then using it with wget2. This will land on the intermediate's
