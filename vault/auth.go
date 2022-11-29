@@ -819,7 +819,10 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
 				if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential); err != nil {
 					c.logger.Error("shutting down core", "error", err)
-					c.Shutdown()
+					if shutdownErr := c.Shutdown(); shutdownErr != nil {
+						c.Logger().Error("failed to shutdown core", "error", shutdownErr)
+					}
+					return err
 				}
 			}
 		}

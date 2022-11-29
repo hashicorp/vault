@@ -1510,7 +1510,10 @@ func (c *Core) setupMounts(ctx context.Context) error {
 				_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets)
 				if err != nil {
 					c.logger.Error("shutting down core", "error", err)
-					c.Shutdown()
+					if shutdownErr := c.Shutdown(); shutdownErr != nil {
+						c.Logger().Error("failed to shutdown core", "error", shutdownErr)
+					}
+					return err
 				}
 			}
 		}
