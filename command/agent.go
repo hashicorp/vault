@@ -19,6 +19,7 @@ import (
 	systemd "github.com/coreos/go-systemd/daemon"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/alicloud"
@@ -69,6 +70,7 @@ const (
 
 type AgentCommand struct {
 	*BaseCommand
+	logFlags logFlags
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -84,13 +86,9 @@ type AgentCommand struct {
 
 	startedCh chan (struct{}) // for tests
 
-	flagConfigs       []string
-	flagLogLevel      string
-	flagLogFile       string
-	flagExitAfterAuth bool
-
+	flagConfigs        []string
+	flagExitAfterAuth  bool
 	flagTestVerifyOnly bool
-	flagCombineLogs    bool
 }
 
 func (c *AgentCommand) Synopsis() string {
@@ -119,6 +117,9 @@ func (c *AgentCommand) Flags() *FlagSets {
 
 	f := set.NewFlagSet("Command Options")
 
+	// Augment with the log flags
+	f.addLogFlags(&c.logFlags)
+
 	f.StringSliceVar(&StringSliceVar{
 		Name:   "config",
 		Target: &c.flagConfigs,
@@ -128,23 +129,6 @@ func (c *AgentCommand) Flags() *FlagSets {
 		),
 		Usage: "Path to a configuration file. This configuration file should " +
 			"contain only agent directives.",
-	})
-
-	f.StringVar(&StringVar{
-		Name:       flagNameLogLevel,
-		Target:     &c.flagLogLevel,
-		Default:    "info",
-		EnvVar:     EnvVaultLogLevel,
-		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
-		Usage: "Log verbosity level. Supported values (in order of detail) are " +
-			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
-	})
-
-	f.StringVar(&StringVar{
-		Name:   flagNameLogFile,
-		Target: &c.flagLogFile,
-		EnvVar: EnvVaultLogFile,
-		Usage:  "Path to the log file that Vault should use for logging",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -163,15 +147,6 @@ func (c *AgentCommand) Flags() *FlagSets {
 	// no warranty or backwards-compatibility promise. Do not use these flags
 	// in production. Do not build automation using these flags. Unless you are
 	// developing against Vault, you should not need any of these flags.
-
-	// TODO: should the below flags be public?
-	f.BoolVar(&BoolVar{
-		Name:    "combine-logs",
-		Target:  &c.flagCombineLogs,
-		Default: false,
-		Hidden:  true,
-	})
-
 	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
 		Target:  &c.flagTestVerifyOnly,
@@ -204,7 +179,8 @@ func (c *AgentCommand) Run(args []string) int {
 	// start logging too early.
 	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
-	if c.flagCombineLogs {
+
+	if c.logFlags.flagCombineLogs {
 		c.logWriter = os.Stdout
 	}
 
@@ -237,9 +213,9 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
 	}
 
-	config = c.aggregateConfig(f, config)
+	c.updateConfig(f, config)
 
-	// Build the logger using level, format and path
+	// Parse all the log related config
 	logLevel, err := logging.ParseLogLevel(config.LogLevel)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -252,7 +228,34 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
-	logCfg := logging.NewLogConfig("agent", logLevel, logFormat, config.LogFile)
+	logRotateDuration, err := parseutil.ParseDurationSecond(config.LogRotateDuration)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logRotateBytes, err := parseutil.ParseInt(config.LogRotateBytes)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logRotateMaxFiles, err := parseutil.ParseInt(config.LogRotateMaxFiles)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logCfg := &logging.LogConfig{
+		Name:              "vault-agent",
+		LogLevel:          logLevel,
+		LogFormat:         logFormat,
+		LogFilePath:       config.LogFile,
+		LogRotateDuration: logRotateDuration,
+		LogRotateBytes:    int(logRotateBytes),
+		LogRotateMaxFiles: int(logRotateMaxFiles),
+	}
+
 	l, err := logging.Setup(logCfg, c.logWriter)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -263,7 +266,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = c.flagLogLevel
+	info["log level"] = config.LogLevel
 	infoKeys = append(infoKeys, "log level")
 
 	infoKeys = append(infoKeys, "version")
@@ -457,7 +460,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Output the header that the agent has started
-	if !c.flagCombineLogs {
+	if !c.logFlags.flagCombineLogs {
 		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
 	}
 
@@ -926,30 +929,18 @@ func (c *AgentCommand) Run(args []string) int {
 	return 0
 }
 
-// aggregateConfig ensures that the config object accurately reflects the desired
+// updateConfig ensures that the config object accurately reflects the desired
 // settings as configured by the user. It applies the relevant config setting based
 // on the precedence (env var overrides file config, cli overrides env var).
-// It mutates the config object supplied and returns the updated object.
-func (c *AgentCommand) aggregateConfig(f *FlagSets, config *agentConfig.Config) *agentConfig.Config {
+// It mutates the config object supplied.
+func (c *AgentCommand) updateConfig(f *FlagSets, config *agentConfig.Config) {
+	f.updateLogConfig(config.SharedConfig)
+
 	f.Visit(func(fl *flag.Flag) {
 		if fl.Name == flagNameAgentExitAfterAuth {
 			config.ExitAfterAuth = c.flagExitAfterAuth
 		}
 	})
-
-	c.setStringFlag(f, config.LogFile, &StringVar{
-		Name:   flagNameLogFile,
-		EnvVar: EnvVaultLogFile,
-		Target: &c.flagLogFile,
-	})
-	config.LogFile = c.flagLogFile
-
-	c.setStringFlag(f, config.LogLevel, &StringVar{
-		Name:   flagNameLogLevel,
-		EnvVar: EnvVaultLogLevel,
-		Target: &c.flagLogLevel,
-	})
-	config.LogLevel = c.flagLogLevel
 
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
 		Name:    flagNameAddress,
@@ -1000,8 +991,6 @@ func (c *AgentCommand) aggregateConfig(f *FlagSets, config *agentConfig.Config) 
 		EnvVar:  api.EnvVaultTLSServerName,
 	})
 	config.Vault.TLSServerName = c.flagTLSServerName
-
-	return config
 }
 
 // verifyRequestHeader wraps an http.Handler inside a Handler that checks for

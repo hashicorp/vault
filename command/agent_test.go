@@ -2250,7 +2250,7 @@ cache {}
 	wg.Wait()
 }
 
-func TestAgent_LogFile_EnvVarOverridesConfig(t *testing.T) {
+func TestAgent_LogFile_CliOverridesConfig(t *testing.T) {
 	// Create basic config
 	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
 	cfg, err := agentConfig.LoadConfig(configFile.Name())
@@ -2260,50 +2260,6 @@ func TestAgent_LogFile_EnvVarOverridesConfig(t *testing.T) {
 
 	// Sanity check that the config value is the current value
 	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile)
-
-	// Make sure the env var is configured
-	oldEnvVarLogFile := os.Getenv(EnvVaultLogFile)
-	os.Setenv(EnvVaultLogFile, "/squiggle/logs.txt")
-	if oldEnvVarLogFile == "" {
-		defer os.Unsetenv(EnvVaultLogFile)
-	} else {
-		defer os.Setenv(EnvVaultLogFile, oldEnvVarLogFile)
-	}
-
-	// Initialize the command and parse any flags
-	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
-	f := cmd.Flags()
-	err = f.Parse([]string{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Update the config based on the inputs.
-	cfg = cmd.aggregateConfig(f, cfg)
-
-	assert.NotEqual(t, "/foo/bar/juan.log", cfg.LogFile)
-	assert.Equal(t, "/squiggle/logs.txt", cfg.LogFile)
-}
-
-func TestAgent_LogFile_CliOverridesEnvVar(t *testing.T) {
-	// Create basic config
-	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
-	cfg, err := agentConfig.LoadConfig(configFile.Name())
-	if err != nil {
-		t.Fatal("Cannot load config to test update/merge", err)
-	}
-
-	// Sanity check that the config value is the current value
-	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile)
-
-	// Make sure the env var is configured
-	oldEnvVarLogFile := os.Getenv(EnvVaultLogFile)
-	os.Setenv(EnvVaultLogFile, "/squiggle/logs.txt")
-	if oldEnvVarLogFile == "" {
-		defer os.Unsetenv(EnvVaultLogFile)
-	} else {
-		defer os.Setenv(EnvVaultLogFile, oldEnvVarLogFile)
-	}
 
 	// Initialize the command and parse any flags
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
@@ -2315,7 +2271,7 @@ func TestAgent_LogFile_CliOverridesEnvVar(t *testing.T) {
 	}
 
 	// Update the config based on the inputs.
-	cfg = cmd.aggregateConfig(f, cfg)
+	cmd.updateConfig(f, cfg)
 
 	assert.NotEqual(t, "/foo/bar/juan.log", cfg.LogFile)
 	assert.NotEqual(t, "/squiggle/logs.txt", cfg.LogFile)
@@ -2323,9 +2279,6 @@ func TestAgent_LogFile_CliOverridesEnvVar(t *testing.T) {
 }
 
 func TestAgent_LogFile_Config(t *testing.T) {
-	// Sanity check, remove any env var
-	os.Unsetenv(EnvVaultLogFile)
-
 	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
 
 	cfg, err := agentConfig.LoadConfig(configFile.Name())
@@ -2344,7 +2297,7 @@ func TestAgent_LogFile_Config(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg = cmd.aggregateConfig(f, cfg)
+	cmd.updateConfig(f, cfg)
 
 	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "actual config check")
 }
