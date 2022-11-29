@@ -29,11 +29,11 @@ var (
 )
 
 const (
-	protectedFile    = `dadgarcorp-internal-protected`
-	unprotectedFile  = `hello-world`
-	failureIndicator = `THIS-TEST-SHOULD-FAIL`
-	uniqueHostname   = `dadgarcorpvaultpkitestingnginxwgetcurlcontainersexample.com`
-	containerName    = `vault_pki_nginx_integration`
+	protectedFile        = `dadgarcorp-internal-protected`
+	unprotectedFile      = `hello-world`
+	failureIndicator     = `THIS-TEST-SHOULD-FAIL`
+	uniqueHostnameSuffix = `pkiextnginx.com`
+	containerName        = `vault_pki_nginx_integration`
 )
 
 func buildNginxContainer(t *testing.T, root string, crl string, chain string, private string) (func(), string, int, string, string, int) {
@@ -215,7 +215,7 @@ RUN apt update && DEBIAN_FRONTEND="noninteractive" apt install -y curl wget wget
 	t.Logf("Image build output: %v", string(output))
 }
 
-func CheckWithClients(t *testing.T, network string, address string, url string, rootCert string, certificate string, privatekey string) {
+func CheckWithClients(t *testing.T, uniqueHostname string, network string, address string, url string, rootCert string, certificate string, privatekey string) {
 	// We assume the network doesn't change once assigned.
 	buildClientContainerOnce.Do(func() {
 		buildWgetCurlContainer(t, network)
@@ -278,7 +278,7 @@ func CheckWithClients(t *testing.T, network string, address string, url string, 
 	}
 }
 
-func CheckDeltaCRL(t *testing.T, network string, address string, url string, rootCert string, crls string) {
+func CheckDeltaCRL(t *testing.T, uniqueHostname string, network string, address string, url string, rootCert string, crls string) {
 	// We assume the network doesn't change once assigned.
 	buildClientContainerOnce.Do(func() {
 		buildWgetCurlContainer(t, network)
@@ -386,11 +386,7 @@ func CheckWithGo(t *testing.T, rootCert string, clientCert string, clientChain [
 		}
 
 		t.Fatalf("failed to fetch url (%v): %v", url, err)
-	} else if shouldFail {
-		if clientResp.StatusCode == 200 {
-			t.Fatalf("expected failure to fetch url (%v): got response: %v", url, clientResp)
-		}
-
+	} else if shouldFail && clientResp.StatusCode != 200 {
 		return
 	}
 
@@ -399,6 +395,12 @@ func CheckWithGo(t *testing.T, rootCert string, clientCert string, clientChain [
 	if err != nil {
 		t.Fatalf("failed to get read response body: %v", err)
 	}
+
+	// Check delayed to output body content.
+	if shouldFail && clientResp.StatusCode == 200 {
+		t.Fatalf("expected failure to fetch url over container network (%v): got response: %v\nBody: %v", url, clientResp, body)
+	}
+
 	if !strings.Contains(string(body), expected) {
 		t.Fatalf("expected body to contain (%v) but was:\n%v", expected, string(body))
 	}
@@ -407,11 +409,20 @@ func CheckWithGo(t *testing.T, rootCert string, clientCert string, clientChain [
 func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bool, roleKeyType string, roleKeyBits int, roleUsePSS bool) {
 	b, s := pki.CreateBackendWithStorage(t)
 
+	// Generate a random/unique hostname, but note it can't have dashes.
+	uniqueHostname, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("unable to generate hostname prefix: %v", err)
+	}
+	uniqueHostname = "vaultests-" + uniqueHostname + "-" + uniqueHostnameSuffix
+
+	t.Logf("Using test domain: %v", uniqueHostname)
+
 	testSuffix := fmt.Sprintf(" - %v %v %v - %v %v %v", caKeyType, caKeyType, caUsePSS, roleKeyType, roleKeyBits, roleUsePSS)
 
 	// Configure our mount to use auto-rotate, even though we don't have
 	// a periodic func.
-	_, err := pki.CBWrite(b, s, "config/crl", map[string]interface{}{
+	_, err = pki.CBWrite(b, s, "config/crl", map[string]interface{}{
 		"auto_rebuild": true,
 		"enable_delta": true,
 	})
@@ -571,8 +582,8 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	// CheckWithGo(t, rootCert, deltaCert, deltaCAChain, deltaKey, host, port, networkAddr, networkPort, localProtectedURL, protectedFile, true)
 
 	// Ensure we can connect with wget/curl.
-	CheckWithClients(t, networkName, networkAddr, containerURL, rootCert, "", "")
-	CheckWithClients(t, networkName, networkAddr, containerProtectedURL, clientTrustChain, clientWireChain, clientKey)
+	CheckWithClients(t, uniqueHostname, networkName, networkAddr, containerURL, rootCert, "", "")
+	CheckWithClients(t, uniqueHostname, networkName, networkAddr, containerProtectedURL, clientTrustChain, clientWireChain, clientKey)
 
 	// Ensure OpenSSL will validate the delta CRL by revoking our server leaf
 	// and then using it with wget2. This will land on the intermediate's
@@ -590,7 +601,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 
 	verifyCertInCRL(t, leafCert, deltaCRL)
 
-	CheckDeltaCRL(t, networkName, networkAddr, containerURL, rootCert, crls)
+	CheckDeltaCRL(t, uniqueHostname, networkName, networkAddr, containerURL, rootCert, crls)
 }
 
 func Test_NginxRSAPure(t *testing.T) {
