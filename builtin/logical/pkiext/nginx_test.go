@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
@@ -69,6 +70,8 @@ server {
 	ssl_client_certificate /etc/nginx/ssl/root.pem;
 	ssl_crl /etc/nginx/ssl/crl.pem;
 	ssl_verify_client on;
+	ssl_session_cache off;
+	ssl_session_tickets off;
 
 	if ($ssl_client_verify != SUCCESS) {
 		return 403;
@@ -100,6 +103,7 @@ server {
 		ImageTag:      imageTag,
 		ContainerName: containerName,
 		Ports:         []string{"443/tcp"},
+		Entrypoint:    []string{"nginx-debug", "-g", "daemon off;"},
 		LogConsumer: func(s string) {
 			if t.Failed() {
 				t.Logf("container logs: %s", s)
@@ -636,4 +640,6 @@ func verifyCertInCRL(t *testing.T, cert string, crl string) {
 	_cert := parseCert(t, cert)
 	_crl := parseCRL(t, crl)
 	requireSerialNumberInCRL(t, _crl, _cert)
+
+	t.Logf("Verified %v was in CRL\n", hex.EncodeToString(_cert.SerialNumber.Bytes()))
 }

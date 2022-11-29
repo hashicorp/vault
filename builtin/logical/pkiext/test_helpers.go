@@ -65,18 +65,14 @@ func parseKey(t *testing.T, pemKey string) crypto.Signer {
 	return key
 }
 
-func requireSerialNumberInCRL(t *testing.T, revokeList pkix.TBSCertificateList, cert *x509.Certificate) bool {
+func requireSerialNumberInCRL(t *testing.T, revokeList pkix.TBSCertificateList, cert *x509.Certificate) {
 	for _, revokeEntry := range revokeList.RevokedCertificates {
 		if revokeEntry.SerialNumber.Cmp(cert.SerialNumber) == 0 {
-			return true
+			return
 		}
 	}
 
-	if t != nil {
-		t.Fatalf("the serial number for cert %v, was not found in the CRL list containing: %v", cert, revokeList)
-	}
-
-	return false
+	t.Fatalf("the serial number for cert %v, was not found in the CRL list containing: %v", cert, revokeList)
 }
 
 func parseCRL(t *testing.T, crlPem string) pkix.TBSCertificateList {
