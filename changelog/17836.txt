@@ -1,0 +1,3 @@
+```release-note:bug
+core: trying to unseal with the wrong key now returns HTTP 400
+```
