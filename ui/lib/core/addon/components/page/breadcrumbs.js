@@ -9,7 +9,7 @@ import { assert } from '@ember/debug';
  * ```js
  * <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}}  />
  * ```
- * @param {array} breadcrumbs - array of objects with a label and path to display as breadcrumbs
+ * @param {array} breadcrumbs - array of objects with a label and route to display as breadcrumbs
  */
 
 export default class Breadcrumbs extends Component {
