@@ -654,7 +654,7 @@ and consider if they're appropriate for your deployment.
 
     - `standby` - Values that apply only to the vault-standby service.
 
-      `enabled` (`boolean: true`) - When set to `true`, the vault-standby Kubernetes service will be created for Vault, selecting pods which label themselves as a cluster follower with `vault-active: "false"`.
+      - `enabled` (`boolean: true`) - When set to `true`, the vault-standby Kubernetes service will be created for Vault, selecting pods which label themselves as a cluster follower with `vault-active: "false"`.
 
     - `clusterIP` (`string`) - ClusterIP controls whether an IP address (cluster IP) is attached to the Vault service within Kubernetes. By default the Vault service will be given a Cluster IP address, set to `None` to disable. When disabled Kubernetes will create a "headless" service. Headless services can be used to communicate with pods directly through DNS instead of a round robin load balancer.
 
