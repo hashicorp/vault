@@ -86,6 +86,7 @@ type pendingInfo struct {
 	cachedLeaseInfo  *leaseEntry
 	timer            *time.Timer
 	revokesAttempted uint8
+	loginRole        string
 }
 
 // ExpirationManager is used by the Core to manage leases. Secrets
@@ -1839,6 +1840,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			leaseCreated = true
 		}
 
+		pending.loginRole = le.LoginRole
 		pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
 		m.pending.Store(le.LeaseID, pending)
 	}
