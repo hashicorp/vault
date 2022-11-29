@@ -6,6 +6,7 @@ export default class PkiCertificatesIndexController extends Controller {
   get mountPoint() {
     return getOwner(this).mountPoint;
   }
+
   @action setFilter(val) {
     this.filter = val;
   }
