@@ -104,6 +104,7 @@ type FSM struct {
 
 	localID         string
 	desiredSuffrage string
+	unknownOpTypes  sync.Map
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -582,7 +583,6 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 // library.
 func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	numLogs := len(logs)
-	unknownOpTypes := make(map[uint32]struct{})
 
 	if numLogs == 0 {
 		return []interface{}{}
@@ -673,9 +673,9 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 							go f.restoreCb(context.Background())
 						}
 					default:
-						if _, ok := unknownOpTypes[op.OpType]; !ok {
+						if _, ok := f.unknownOpTypes.Load(op.OpType); !ok {
 							f.logger.Error("unsupported transaction operation", "op", op.OpType)
-							unknownOpTypes[op.OpType] = struct{}{}
+							f.unknownOpTypes.Store(op.OpType, struct{}{})
 						}
 					}
 					if err != nil {
