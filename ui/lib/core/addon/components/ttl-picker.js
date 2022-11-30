@@ -29,7 +29,7 @@ const DEFAULT_TTL = { seconds: 0, timeString: '0s', goSafeTimeString: '0s' };
 export default class TtlPickerComponent extends Component {
   @tracked enableTTL = false;
   @tracked recalculateSeconds = false;
-  @tracked ttl = DEFAULT_TTL; // internal tracking
+  @tracked ttl; // internal tracking
 
   get label() {
     return this.args.label || 'Time to live (TTL)';
@@ -56,6 +56,7 @@ export default class TtlPickerComponent extends Component {
   }
 
   initializeTtl() {
+    let ttl = DEFAULT_TTL;
     const initialValue = this.args.initialValue;
     let seconds = 0;
     if (typeof initialValue === 'number') {
@@ -66,18 +67,21 @@ export default class TtlPickerComponent extends Component {
         seconds = Duration.parse(initialValue).seconds();
       } catch (e) {
         // if parsing fails leave it empty
+        this.ttl = ttl;
         return;
       }
     }
     const unit = largestUnitFromSeconds(seconds);
     const time = convertFromSeconds(seconds, unit);
-    this.ttl = {
+    ttl = {
       seconds,
       timeString: time + unit,
       goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
     };
-    if (this.args.changeOnInit) {
-      this.handleChange();
+    if (this.args.changeOnInit && !this.enableTTL) {
+      this.handleChange(ttl);
+    } else {
+      this.ttl = ttl;
     }
   }
 
