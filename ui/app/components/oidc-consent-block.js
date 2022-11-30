@@ -26,7 +26,7 @@ export default class OidcConsentBlockComponent extends Component {
 
   buildUrl(urlString, params) {
     try {
-      let url = new URL(urlString);
+      const url = new URL(urlString);
       Object.keys(params).forEach((key) => {
         if (params[key] && validParameters.includes(key)) {
           url.searchParams.append(key, params[key]);
@@ -42,8 +42,8 @@ export default class OidcConsentBlockComponent extends Component {
   @action
   handleSubmit(evt) {
     evt.preventDefault();
-    let { redirect, ...params } = this.args;
-    let redirectUrl = this.buildUrl(redirect, params);
+    const { redirect, ...params } = this.args;
+    const redirectUrl = this.buildUrl(redirect, params);
     if (Ember.testing) {
       this.args.testRedirect(redirectUrl.toString());
     } else {

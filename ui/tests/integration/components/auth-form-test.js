@@ -53,7 +53,7 @@ module('Integration | Component | auth form', function (hooks) {
 
   test('it renders with vault style errors', async function (assert) {
     assert.expect(1);
-    let server = new Pretender(function () {
+    const server = new Pretender(function () {
       this.get('/v1/auth/**', () => {
         return [
           400,
@@ -77,7 +77,7 @@ module('Integration | Component | auth form', function (hooks) {
 
   test('it renders AdapterError style errors', async function (assert) {
     assert.expect(1);
-    let server = new Pretender(function () {
+    const server = new Pretender(function () {
       this.get('/v1/auth/**', () => {
         return [400, { 'Content-Type': 'application/json' }];
       });
@@ -95,12 +95,12 @@ module('Integration | Component | auth form', function (hooks) {
   });
 
   test('it renders no tabs when no methods are passed', async function (assert) {
-    let methods = {
+    const methods = {
       'approle/': {
         type: 'approle',
       },
     };
-    let server = new Pretender(function () {
+    const server = new Pretender(function () {
       this.get('/v1/sys/internal/ui/mounts', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
@@ -112,7 +112,7 @@ module('Integration | Component | auth form', function (hooks) {
   });
 
   test('it renders all the supported methods and Other tab when methods are present', async function (assert) {
-    let methods = {
+    const methods = {
       'foo/': {
         type: 'userpass',
       },
@@ -120,7 +120,7 @@ module('Integration | Component | auth form', function (hooks) {
         type: 'approle',
       },
     };
-    let server = new Pretender(function () {
+    const server = new Pretender(function () {
       this.get('/v1/sys/internal/ui/mounts', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
@@ -136,13 +136,13 @@ module('Integration | Component | auth form', function (hooks) {
   });
 
   test('it renders the description', async function (assert) {
-    let methods = {
+    const methods = {
       'approle/': {
         type: 'userpass',
         description: 'app description',
       },
     };
-    let server = new Pretender(function () {
+    const server = new Pretender(function () {
       this.get('/v1/sys/internal/ui/mounts', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
@@ -162,13 +162,13 @@ module('Integration | Component | auth form', function (hooks) {
     this.owner.unregister('service:auth');
     this.owner.register('service:auth', workingAuthService);
     this.auth = this.owner.lookup('service:auth');
-    let authSpy = sinon.spy(this.auth, 'authenticate');
-    let methods = {
+    const authSpy = sinon.spy(this.auth, 'authenticate');
+    const methods = {
       'foo/': {
         type: 'userpass',
       },
     };
-    let server = new Pretender(function () {
+    const server = new Pretender(function () {
       this.get('/v1/sys/internal/ui/mounts', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
@@ -181,19 +181,19 @@ module('Integration | Component | auth form', function (hooks) {
 
     await settled();
     assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
-    let { data } = authSpy.getCall(0).args[0];
+    const { data } = authSpy.getCall(0).args[0];
     assert.strictEqual(data.path, 'foo', 'uses the id for the path');
     authSpy.restore();
     server.shutdown();
   });
 
   test('it renders no tabs when no supported methods are present in passed methods', async function (assert) {
-    let methods = {
+    const methods = {
       'approle/': {
         type: 'approle',
       },
     };
-    let server = new Pretender(function () {
+    const server = new Pretender(function () {
       this.get('/v1/sys/internal/ui/mounts', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
@@ -208,8 +208,8 @@ module('Integration | Component | auth form', function (hooks) {
   test('it makes a request to unwrap if passed a wrappedToken and logs in', async function (assert) {
     this.owner.register('service:auth', workingAuthService);
     this.auth = this.owner.lookup('service:auth');
-    let authSpy = sinon.spy(this.auth, 'authenticate');
-    let server = new Pretender(function () {
+    const authSpy = sinon.spy(this.auth, 'authenticate');
+    const server = new Pretender(function () {
       this.post('/v1/sys/wrapping/unwrap', () => {
         return [
           200,
@@ -223,7 +223,7 @@ module('Integration | Component | auth form', function (hooks) {
       });
     });
 
-    let wrappedToken = '54321';
+    const wrappedToken = '54321';
     this.set('wrappedToken', wrappedToken);
     this.set('cluster', EmberObject.create({}));
     await render(hbs`<AuthForm @cluster={{this.cluster}} @wrappedToken={{this.wrappedToken}} />`);
@@ -245,7 +245,7 @@ module('Integration | Component | auth form', function (hooks) {
   });
 
   test('it shows an error if unwrap errors', async function (assert) {
-    let server = new Pretender(function () {
+    const server = new Pretender(function () {
       this.post('/v1/sys/wrapping/unwrap', () => {
         return [
           400,

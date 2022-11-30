@@ -69,7 +69,6 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
   const ADMIN_USER = 'authorizer';
   const ADMIN_PASSWORD = 'test';
   const setupControlGroup = async (context) => {
-    let userpassAccessor;
     await visit('/vault/secrets');
     await consoleComponent.toggle();
     await settled();
@@ -89,14 +88,14 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
       'read -field=accessor sys/internal/ui/mounts/auth/userpass',
     ]);
     await settled();
-    userpassAccessor = consoleComponent.lastTextOutput;
+    const userpassAccessor = consoleComponent.lastTextOutput;
 
     await consoleComponent.runCommands([
       // lookup entity id for our authorizer
       `write -field=id identity/lookup/entity name=${ADMIN_USER}`,
     ]);
     await settled();
-    let authorizerEntityId = consoleComponent.lastTextOutput;
+    const authorizerEntityId = consoleComponent.lastTextOutput;
     await consoleComponent.runCommands([
       // create alias for authorizor and add them to the managers group
       `write identity/alias mount_accessor=${userpassAccessor} entity_id=${authorizerEntityId} name=${ADMIN_USER}`,
@@ -136,17 +135,15 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
   });
 
   const workflow = async (assert, context, shouldStoreToken) => {
-    let controlGroupToken;
-    let accessor;
-    let url = '/vault/secrets/kv/show/foo';
+    const url = '/vault/secrets/kv/show/foo';
     await setupControlGroup(context);
     await settled();
     // as the requestor, go to the URL that's blocked by the control group
     // and store the values
     await visit(url);
 
-    accessor = controlGroupComponent.accessor;
-    controlGroupToken = controlGroupComponent.token;
+    const accessor = controlGroupComponent.accessor;
+    const controlGroupToken = controlGroupComponent.token;
     await authPage.logout();
     await settled();
     // log in as the admin, navigate to the accessor page,
@@ -217,7 +214,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     await settled();
     await consoleComponent.runCommands('read kv/foo');
     await settled();
-    let output = consoleComponent.lastLogOutput;
+    const output = consoleComponent.lastLogOutput;
     assert.ok(output.includes('A Control Group was encountered at kv/foo'));
     assert.ok(output.includes('The Control Group Token is'));
     assert.ok(output.includes('The Accessor is'));

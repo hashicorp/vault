@@ -43,7 +43,7 @@ module('Acceptance | settings', function (hooks) {
     );
     await settled();
     assert.strictEqual(currentURL(), `/vault/secrets`, 'redirects to secrets page');
-    let row = backendListPage.rows.filterBy('path', path + '/')[0];
+    const row = backendListPage.rows.filterBy('path', path + '/')[0];
     await row.menu();
     await backendListPage.configLink();
     assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration`, 'navigates to the config page');

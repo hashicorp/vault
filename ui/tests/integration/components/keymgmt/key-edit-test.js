@@ -9,7 +9,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
 
   hooks.beforeEach(function () {
     const now = new Date().toString();
-    let model = EmberObject.create({
+    const model = EmberObject.create({
       name: 'Unicorns',
       id: 'Unicorns',
       minEnabledVersion: 1,
@@ -51,7 +51,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
 
   test('it renders the correct elements on edit view', async function (assert) {
     assert.expect(4);
-    let model = EmberObject.create({
+    const model = EmberObject.create({
       name: 'Unicorns',
       id: 'Unicorns',
     });
@@ -69,7 +69,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
 
   test('it renders the correct elements on create view', async function (assert) {
     assert.expect(4);
-    let model = EmberObject.create({});
+    const model = EmberObject.create({});
     this.set('mode', 'create');
     this.set('model', model);
 

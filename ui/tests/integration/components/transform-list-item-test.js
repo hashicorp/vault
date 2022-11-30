@@ -8,7 +8,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders un-clickable item if no read capability', async function (assert) {
-    let item = EmberObject.create({
+    const item = EmberObject.create({
       id: 'foo',
       updatePath: {
         canRead: false,
@@ -30,7 +30,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
   });
 
   test('it is clickable with details menu item if read capability', async function (assert) {
-    let item = EmberObject.create({
+    const item = EmberObject.create({
       id: 'foo',
       updatePath: {
         canRead: true,
@@ -53,7 +53,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
   });
 
   test('it has details and edit menu item if read & edit capabilities', async function (assert) {
-    let item = EmberObject.create({
+    const item = EmberObject.create({
       id: 'foo',
       updatePath: {
         canRead: true,
@@ -76,7 +76,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
   });
 
   test('it is not clickable if built-in template with all capabilities', async function (assert) {
-    let item = EmberObject.create({
+    const item = EmberObject.create({
       id: 'builtin/foo',
       updatePath: {
         canRead: true,
@@ -98,7 +98,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
   });
 
   test('it is not clickable if built-in alphabet', async function (assert) {
-    let item = EmberObject.create({
+    const item = EmberObject.create({
       id: 'builtin/foo',
       updatePath: {
         canRead: true,

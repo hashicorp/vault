@@ -18,7 +18,7 @@ export const validationHandler = (schema, req) => {
       return new Response(404, {}, { errors: ['MFA Request ID not found'] });
     }
     // validate request body
-    for (let constraintId in mfa_payload) {
+    for (const constraintId in mfa_payload) {
       // ensure ids were passed in map
       const method = mfaRequest.methods.find(({ id }) => id === constraintId);
       if (!method) {
@@ -93,11 +93,7 @@ export default function (server) {
     } else if (user === 'mfa-j') {
       [mfa_constraints, methods] = generator([m('pingid')]); // use to test push failures
     }
-    const numbers = (length) =>
-      Math.random()
-        .toString()
-        .substring(2, length + 2);
-    const mfa_request_id = `${numbers(8)}-${numbers(4)}-${numbers(4)}-${numbers(4)}-${numbers(12)}`;
+    const mfa_request_id = crypto.randomUUID();
     const mfa_requirement = {
       mfa_request_id,
       mfa_constraints,

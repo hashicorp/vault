@@ -35,7 +35,14 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 					TLSDisable: true,
 				},
 				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:3000",
+					Role:       "metrics_only",
+					TLSDisable: true,
+				},
+				{
 					Type:        "tcp",
+					Role:        "default",
 					Address:     "127.0.0.1:8400",
 					TLSKeyFile:  "/path/to/cakey.pem",
 					TLSCertFile: "/path/to/cacert.pem",
@@ -191,6 +198,7 @@ func TestLoadConfigFile(t *testing.T) {
 	expected := &Config{
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
+			LogFile: "/var/log/vault/vault-agent.log",
 		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{

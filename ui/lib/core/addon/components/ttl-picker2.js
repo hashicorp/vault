@@ -39,7 +39,7 @@ const convertFromSeconds = (seconds, unit) => {
 };
 const goSafeConvertFromSeconds = (seconds, unit) => {
   // Go only accepts s, m, or h units
-  let u = unit === 'd' ? 'h' : unit;
+  const u = unit === 'd' ? 'h' : unit;
   return convertFromSeconds(seconds, u) + u;
 };
 
@@ -127,7 +127,7 @@ export default TtlForm.extend({
     ];
   }),
   handleChange() {
-    let { time, unit, enableTTL, seconds } = this;
+    const { time, unit, enableTTL, seconds } = this;
     const ttl = {
       enabled: this.hideToggle || enableTTL,
       seconds,

@@ -276,7 +276,7 @@ func (b *backend) pathRevokeWriteHandleKey(ctx context.Context, req *logical.Req
 	// Parse the inner DER key.
 	signer, _, err := certutil.ParseDERKey(pemBlock.Bytes)
 	if err != nil {
-		return fmt.Errorf("failed to parse provided private key: %v", err)
+		return fmt.Errorf("failed to parse provided private key: %w", err)
 	}
 
 	// Finally, verify if the cert and key match. This code has been
@@ -453,7 +453,7 @@ func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Reque
 
 	cfg, err := b.crlBuilder.getConfigWithUpdate(sc)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching CRL configuration: %v", err)
+		return nil, fmt.Errorf("error fetching CRL configuration: %w", err)
 	}
 
 	isEnabled := cfg.EnableDelta

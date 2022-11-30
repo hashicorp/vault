@@ -18,7 +18,7 @@ module('Unit | Mixin | cluster route', function () {
     clusterModel = {},
     methods = { router: {}, hasKeyData: () => false, authToken: () => null, transitionTo: () => {} }
   ) {
-    let ClusterRouteObject = EmberObject.extend(
+    const ClusterRouteObject = EmberObject.extend(
       ClusterRouteMixin,
       assign(methods, { clusterModel: () => clusterModel })
     );
@@ -73,7 +73,7 @@ module('Unit | Mixin | cluster route', function () {
   });
 
   test('#targetRouteName happy path forwards to CLUSTER route', function (assert) {
-    let subject = createClusterRoute(
+    const subject = createClusterRoute(
       { needsInit: false, sealed: false, dr: { isSecondary: false } },
       { hasKeyData: () => false, authToken: () => 'a token' }
     );
@@ -99,7 +99,7 @@ module('Unit | Mixin | cluster route', function () {
   });
 
   test('#targetRouteName happy path when not authed forwards to AUTH', function (assert) {
-    let subject = createClusterRoute(
+    const subject = createClusterRoute(
       { needsInit: false, sealed: false, dr: { isSecondary: false } },
       { hasKeyData: () => false, authToken: () => null }
     );
@@ -125,10 +125,10 @@ module('Unit | Mixin | cluster route', function () {
   });
 
   test('#transitionToTargetRoute', function (assert) {
-    let redirectRouteURL = '/vault/secrets/secret/create';
-    let subject = createClusterRoute({ needsInit: false, sealed: false });
+    const redirectRouteURL = '/vault/secrets/secret/create';
+    const subject = createClusterRoute({ needsInit: false, sealed: false });
     subject.router.currentURL = redirectRouteURL;
-    let spy = sinon.spy(subject, 'transitionTo');
+    const spy = sinon.spy(subject, 'transitionTo');
     subject.transitionToTargetRoute();
     assert.ok(
       spy.calledWithExactly(AUTH, { queryParams: { redirect_to: redirectRouteURL } }),
@@ -139,8 +139,8 @@ module('Unit | Mixin | cluster route', function () {
   });
 
   test('#transitionToTargetRoute with auth as a target', function (assert) {
-    let subject = createClusterRoute({ needsInit: false, sealed: false });
-    let spy = sinon.spy(subject, 'transitionTo');
+    const subject = createClusterRoute({ needsInit: false, sealed: false });
+    const spy = sinon.spy(subject, 'transitionTo');
     // in this case it's already transitioning to the AUTH route so we don't need to call transitionTo again
     subject.transitionToTargetRoute({ targetName: AUTH });
     assert.ok(spy.notCalled, 'transitionTo is not called');
@@ -148,8 +148,8 @@ module('Unit | Mixin | cluster route', function () {
   });
 
   test('#transitionToTargetRoute with auth target, coming from cluster route', function (assert) {
-    let subject = createClusterRoute({ needsInit: false, sealed: false });
-    let spy = sinon.spy(subject, 'transitionTo');
+    const subject = createClusterRoute({ needsInit: false, sealed: false });
+    const spy = sinon.spy(subject, 'transitionTo');
     subject.transitionToTargetRoute({ targetName: CLUSTER_INDEX });
     assert.ok(spy.calledWithExactly(AUTH), 'calls transitionTo without redirect_to');
     spy.restore();

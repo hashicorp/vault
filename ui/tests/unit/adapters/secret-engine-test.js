@@ -51,9 +51,9 @@ module('Unit | Adapter | secret engine', function (hooks) {
   cases.forEach((testCase) => {
     test(`secret-engine: ${testCase.description}`, function (assert) {
       assert.expect(2);
-      let adapter = this.owner.lookup('adapter:secret-engine');
+      const adapter = this.owner.lookup('adapter:secret-engine');
       adapter[testCase.adapterMethod](...testCase.args);
-      let { url, method } = this.server.handledRequests[0];
+      const { url, method } = this.server.handledRequests[0];
       assert.strictEqual(
         url,
         testCase.url,

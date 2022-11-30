@@ -15,7 +15,7 @@ func Test_migrateStorageEmptyStorage(t *testing.T) {
 	t.Parallel()
 	startTime := time.Now()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Reset the version the helper above set to 1.
@@ -64,7 +64,7 @@ func Test_migrateStorageOnlyKey(t *testing.T) {
 	t.Parallel()
 	startTime := time.Now()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Reset the version the helper above set to 1.
@@ -127,7 +127,7 @@ func Test_migrateStorageOnlyKey(t *testing.T) {
 
 	issuersConfig, err := sc.getIssuersConfig()
 	require.NoError(t, err)
-	require.Equal(t, &issuerConfigEntry{}, issuersConfig)
+	require.Equal(t, issuerID(""), issuersConfig.DefaultIssuerId)
 
 	// Make sure if we attempt to re-run the migration nothing happens...
 	err = migrateStorage(ctx, b, s)
@@ -146,7 +146,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	t.Parallel()
 	startTime := time.Now()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Reset the version the helper above set to 1.
@@ -220,7 +220,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 
 	issuersConfig, err := sc.getIssuersConfig()
 	require.NoError(t, err)
-	require.Equal(t, &issuerConfigEntry{DefaultIssuerId: issuerId}, issuersConfig)
+	require.Equal(t, issuerId, issuersConfig.DefaultIssuerId)
 
 	// Make sure if we attempt to re-run the migration nothing happens...
 	err = migrateStorage(ctx, b, s)
@@ -252,7 +252,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 func TestMigration_OnceChainRebuild(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Create a legacy CA bundle that we'll migrate to the new layout. We call
@@ -362,7 +362,7 @@ func TestMigration_OnceChainRebuild(t *testing.T) {
 func TestExpectedOpsWork_PreMigration(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	// Reset the version the helper above set to 1.
 	b.pkiStorageVersion.Store(0)
 	require.True(t, b.useLegacyBundleCaStorage(), "pre migration we should have been told to use legacy storage.")

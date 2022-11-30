@@ -18,12 +18,12 @@ module('Acceptance | console', function (hooks) {
   test("refresh reloads the current route's data", async function (assert) {
     await enginesPage.visit();
     await settled();
-    let numEngines = enginesPage.rows.length;
+    const numEngines = enginesPage.rows.length;
     await consoleComponent.toggle();
     await settled();
-    let now = Date.now();
-    for (let num of [1, 2, 3]) {
-      let inputString = `write sys/mounts/${now + num} type=kv`;
+    const now = Date.now();
+    for (const num of [1, 2, 3]) {
+      const inputString = `write sys/mounts/${now + num} type=kv`;
       await consoleComponent.runCommands(inputString);
       await settled();
     }
@@ -76,7 +76,7 @@ module('Acceptance | console', function (hooks) {
     await settled();
     await consoleComponent.runCommands('read -field=orphan /auth/token/lookup-self');
     await settled();
-    let consoleOut = document.querySelector('.console-ui-output>pre');
+    const consoleOut = document.querySelector('.console-ui-output>pre');
     // have to wrap in a later so that we can wait for the CSS transition to finish
     await waitUntil(() => consoleOut.innerText);
     assert.strictEqual(consoleOut.innerText.match(/^(true|false)$/g).length, 1);

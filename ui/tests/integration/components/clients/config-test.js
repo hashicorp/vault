@@ -41,7 +41,7 @@ module('Integration | Component | client count config', function (hooks) {
         };
       },
     });
-    let model = generateModel();
+    const model = generateModel();
     this.model = model;
   });
 

@@ -9,9 +9,9 @@ import Service from '@ember/service';
 export default class DownloadCsvService extends Service {
   download(filename, content) {
     // even though Blob type 'text/csv' is specified below, some browsers (ex. Firefox) require the filename has an explicit extension
-    let formattedFilename = `${filename?.replace(/\s+/g, '-')}.csv` || 'vault-data.csv';
-    let { document, URL } = window;
-    let downloadElement = document.createElement('a');
+    const formattedFilename = `${filename?.replace(/\s+/g, '-')}.csv` || 'vault-data.csv';
+    const { document, URL } = window;
+    const downloadElement = document.createElement('a');
     downloadElement.download = formattedFilename;
     downloadElement.href = URL.createObjectURL(
       new Blob([content], {

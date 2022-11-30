@@ -25,8 +25,8 @@ export default Controller.extend(ListController, {
   }),
 
   emptyTitle: computed('baseKey.id', 'filter', 'filterIsFolder', function () {
-    let id = this.baseKey.id;
-    let filter = this.filter;
+    const id = this.baseKey.id;
+    const filter = this.filter;
     if (id === '') {
       return 'There are currently no leases.';
     }

@@ -32,7 +32,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
 
   test('it submits data correctly', async function (assert) {
     assert.expect(1);
-    let model = EmberObject.create({
+    const model = EmberObject.create({
       tune() {
         return resolve();
       },

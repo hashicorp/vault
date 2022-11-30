@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/url"
+	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -973,4 +975,14 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 
 	SetupMFALoginEnforcement(t, client, enforcementConfig)
 	return entityClient, entityID, methodID
+}
+
+func SkipUnlessEnvVarsSet(t testing.T, envVars []string) {
+	t.Helper()
+
+	for _, i := range envVars {
+		if os.Getenv(i) == "" {
+			t.Skipf("%s must be set for this test to run", strings.Join(envVars, " "))
+		}
+	}
 }

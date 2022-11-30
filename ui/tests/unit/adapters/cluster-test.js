@@ -7,7 +7,7 @@ module('Unit | Adapter | cluster', function (hooks) {
 
   test('cluster api urls', function (assert) {
     let url, method, options;
-    let adapter = this.owner.factoryFor('adapter:cluster').create({
+    const adapter = this.owner.factoryFor('adapter:cluster').create({
       ajax: (...args) => {
         [url, method, options] = args;
         return resolve();
@@ -140,7 +140,7 @@ module('Unit | Adapter | cluster', function (hooks) {
 
   test('cluster replication api urls', function (assert) {
     let url, method, options;
-    let adapter = this.owner.factoryFor('adapter:cluster').create({
+    const adapter = this.owner.factoryFor('adapter:cluster').create({
       ajax: (...args) => {
         [url, method, options] = args;
         return resolve();

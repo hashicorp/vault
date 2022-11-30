@@ -24,9 +24,9 @@ module('Integration | Component | icon', function (hooks) {
     await render(hbs`<Icon @name="vault-logo" @size="24"/>`);
     assert.dom('.hs-icon').hasClass('hs-icon-xl', 'adds the larger size class');
 
-    let promise = waitForError();
+    const promise = waitForError();
     render(hbs`<Icon @name="vault-logo" @size="12"/>`);
-    let err = await promise;
+    const err = await promise;
     assert.strictEqual(
       err.message,
       'Assertion Failed: Icon component size argument must be either "16" or "24"',
