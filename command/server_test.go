@@ -262,18 +262,11 @@ func TestServer(t *testing.T) {
 			[]string{"-test-server-config"},
 		},
 		{
-			"environment_variables_logged_debug",
+			"environment_variables_logged",
 			testBaseHCL(t, "") + inmemHCL,
 			"Environment Variables",
 			0,
-			[]string{"-test-verify-only", "-log-level", "debug"},
-		},
-		{
-			"environment_variables_logged_trace",
-			testBaseHCL(t, "") + inmemHCL,
-			"Environment Variables",
-			0,
-			[]string{"-test-verify-only", "-log-level", "trace"},
+			[]string{"-test-verify-only"},
 		},
 	}
 
