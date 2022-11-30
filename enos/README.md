@@ -165,8 +165,14 @@ state will be managed by Terraform Cloud. Here are the steps to configure the Gi
 - Access to the `hashicorp-qti` organization in Terraform Cloud.
 - Full access to the CI AWS account is required.
 
-**Note:** For help with access to Terraform Cloud and the CI Account, contact the QT team on Slack 
-(#team-quality). Access to the AWS account can be done via Doormat, at: https://doormat.hashicorp.services/.
+**Notes:**
+- For help with access to Terraform Cloud and the CI Account, contact the QT team on Slack (#team-quality) 
+  for an invite. After receiving an invite to Terraform Cloud, a personal access token can be created
+  by clicking `User Settings` --> `Tokens` --> `Create an API token`.
+- Access to the AWS account can be done via Doormat, at: https://doormat.hashicorp.services/.
+  - For the vault repo the account is: `vault_ci` and for the vault-enterprise repo, the account is:
+    `vault-enterprise_ci`.
+  - Access can be requested by clicking: `Cloud Access` --> `AWS` --> `Request Account Access`.
 
 1. **Create the Terraform Cloud Workspace** - The name of the workspace to be created depends on the 
    repository for which it is being created, but the pattern is: `<repository>-ci-service-user-iam`,
