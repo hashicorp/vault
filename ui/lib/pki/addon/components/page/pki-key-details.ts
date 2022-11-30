@@ -1,7 +1,7 @@
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import errorMessage from 'vault/utils/error-message'
+import errorMessage from 'vault/utils/error-message';
 interface Args {
   key: {
     rollbackAttributes: () => void;
@@ -13,8 +13,11 @@ interface Args {
 }
 
 export default class PkiKeyDetails extends Component<Args> {
-  @service declare router: { transitionTo: (route: string) => void; };
-  @service declare flashMessages: { success: (successMessage: string) => void; danger: (errorMessage: string) => void; } 
+  @service declare router: { transitionTo: (route: string) => void };
+  @service declare flashMessages: {
+    success: (successMessage: string) => void;
+    danger: (errorMessage: string) => void;
+  };
 
   get breadcrumbs() {
     return [
@@ -25,7 +28,7 @@ export default class PkiKeyDetails extends Component<Args> {
     ];
   }
 
-  @action 
+  @action
   async deleteKey() {
     try {
       await this.args.key.destroyRecord();
@@ -33,7 +36,7 @@ export default class PkiKeyDetails extends Component<Args> {
       this.router.transitionTo('vault.cluster.secrets.backend.pki.keys.index');
     } catch (error) {
       this.args.key.rollbackAttributes();
-      this.flashMessages.danger( errorMessage(error));
+      this.flashMessages.danger(errorMessage(error));
     }
   }
 }
