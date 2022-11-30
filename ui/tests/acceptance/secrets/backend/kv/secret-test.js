@@ -208,7 +208,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       '1s',
       'displays the delete version after set when configuring the secret-engine'
     );
-    await this.pauseTest();
   });
 
   test('it can create a secret and metadata can be created and edited', async function (assert) {
