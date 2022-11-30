@@ -498,7 +498,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					}
 
 					if len(resp.Fields) != 0 {
-						responseName := constructRequestResponseName(path, requestResponsePrefix, "Response")
+						responseName := constructRequestResponseName(opType, path, requestResponsePrefix, "Response")
 						doc.Components.Schemas[responseName] = responseSchema
 						content = OASContent{
 							"application/json": &OASMediaTypeObject{
