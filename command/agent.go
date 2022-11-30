@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/command/agent/sink/inmem"
+
 	systemd "github.com/coreos/go-systemd/daemon"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
@@ -39,7 +41,6 @@ import (
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
-	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agent/winsvc"
 	"github.com/hashicorp/vault/helper/logging"
@@ -421,10 +422,37 @@ func (c *AgentCommand) Run(args []string) int {
 
 	enforceConsistency := cache.EnforceConsistencyNever
 	whenInconsistent := cache.WhenInconsistentFail
+	if config.APIProxy != nil {
+		switch config.APIProxy.EnforceConsistency {
+		case "always":
+			enforceConsistency = cache.EnforceConsistencyAlways
+		case "never", "":
+		default:
+			c.UI.Error(fmt.Sprintf("Unknown api_proxy setting for enforce_consistency: %q", config.APIProxy.EnforceConsistency))
+			return 1
+		}
+
+		switch config.APIProxy.WhenInconsistent {
+		case "retry":
+			whenInconsistent = cache.WhenInconsistentRetry
+		case "forward":
+			whenInconsistent = cache.WhenInconsistentForward
+		case "fail", "":
+		default:
+			c.UI.Error(fmt.Sprintf("Unknown api_proxy setting for when_inconsistent: %q", config.APIProxy.WhenInconsistent))
+			return 1
+		}
+	}
+	// Keep Cache configuration for legacy reasons, but error if defined alongside API Proxy
 	if config.Cache != nil {
 		switch config.Cache.EnforceConsistency {
 		case "always":
-			enforceConsistency = cache.EnforceConsistencyAlways
+			if enforceConsistency != cache.EnforceConsistencyNever {
+				c.UI.Error("enforce_consistency configured in both api_proxy and cache blocks. Please remove this configuration from the cache block.")
+				return 1
+			} else {
+				enforceConsistency = cache.EnforceConsistencyAlways
+			}
 		case "never", "":
 		default:
 			c.UI.Error(fmt.Sprintf("Unknown cache setting for enforce_consistency: %q", config.Cache.EnforceConsistency))
@@ -433,9 +461,19 @@ func (c *AgentCommand) Run(args []string) int {
 
 		switch config.Cache.WhenInconsistent {
 		case "retry":
-			whenInconsistent = cache.WhenInconsistentRetry
+			if whenInconsistent != cache.WhenInconsistentFail {
+				c.UI.Error("enforce_consistency configured in both api_proxy and cache blocks. Please remove this configuration from the cache block.")
+				return 1
+			} else {
+				whenInconsistent = cache.WhenInconsistentRetry
+			}
 		case "forward":
-			whenInconsistent = cache.WhenInconsistentForward
+			if whenInconsistent != cache.WhenInconsistentFail {
+				c.UI.Error("enforce_consistency configured in both api_proxy and cache blocks. Please remove this configuration from the cache block.")
+				return 1
+			} else {
+				whenInconsistent = cache.WhenInconsistentForward
+			}
 		case "fail", "":
 		default:
 			c.UI.Error(fmt.Sprintf("Unknown cache setting for when_inconsistent: %q", config.Cache.WhenInconsistent))
@@ -466,7 +504,6 @@ func (c *AgentCommand) Run(args []string) int {
 
 	var leaseCache *cache.LeaseCache
 	var previousToken string
-	var cacheHandler http.Handler
 
 	proxyClient, err := client.CloneWithHeaders()
 	if err != nil {
@@ -482,21 +519,23 @@ func (c *AgentCommand) Run(args []string) int {
 		proxyClient.SetDisableKeepAlives(true)
 	}
 
+	apiProxyLogger := c.logger.Named("apiproxy")
+
+	// The API proxy to be used, if listeners are configured
+	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
+		Client:                 proxyClient,
+		Logger:                 apiProxyLogger,
+		EnforceConsistency:     enforceConsistency,
+		WhenInconsistentAction: whenInconsistent,
+	})
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
+		return 1
+	}
+
 	// Parse agent cache configurations
 	if config.Cache != nil {
 		cacheLogger := c.logger.Named("cache")
-
-		// Create the API proxier
-		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-			Client:                 proxyClient,
-			Logger:                 cacheLogger.Named("apiproxy"),
-			EnforceConsistency:     enforceConsistency,
-			WhenInconsistentAction: whenInconsistent,
-		})
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
-			return 1
-		}
 
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
@@ -656,27 +695,6 @@ func (c *AgentCommand) Run(args []string) int {
 				leaseCache.SetPersistentStorage(ps)
 			}
 		}
-
-		var inmemSink sink.Sink
-		if config.Cache.UseAutoAuthToken {
-			cacheLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
-			inmemSink, err = inmem.New(&sink.SinkConfig{
-				Logger: cacheLogger,
-			}, leaseCache)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
-				return 1
-			}
-			sinks = append(sinks, &sink.SinkConfig{
-				Logger: cacheLogger,
-				Sink:   inmemSink,
-			})
-		}
-
-		proxyVaultToken := !config.Cache.ForceAutoAuthToken
-
-		// Create the request handler
-		cacheHandler = cache.CachingProxyHandler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
 	}
 
 	var listeners []net.Listener
@@ -705,23 +723,27 @@ func (c *AgentCommand) Run(args []string) int {
 
 		listeners = append(listeners, ln)
 
-		listenerLogger := c.logger.Named("listener")
-
-		var muxHandler http.Handler
-
-		if cacheHandler != nil {
-			muxHandler = cacheHandler
-		} else {
-			apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-				Client: proxyClient,
-				Logger: listenerLogger.Named("apiproxy"),
-			})
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
-				return 1
+		proxyVaultToken := true
+		var inmemSink sink.Sink
+		if config.APIProxy != nil {
+			if config.APIProxy.UseAutoAuthToken {
+				apiProxyLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
+				inmemSink, err = inmem.New(&sink.SinkConfig{
+					Logger: apiProxyLogger,
+				}, leaseCache)
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+					return 1
+				}
+				sinks = append(sinks, &sink.SinkConfig{
+					Logger: apiProxyLogger,
+					Sink:   inmemSink,
+				})
 			}
-			muxHandler = cache.ProxyHandler(ctx, listenerLogger, apiProxy)
+			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
 		}
+
+		muxHandler := cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
 
 		// Parse 'require_request_header' listener config option, and wrap
 		// the request handler if necessary
@@ -759,7 +781,7 @@ func (c *AgentCommand) Run(args []string) int {
 			ReadHeaderTimeout: 10 * time.Second,
 			ReadTimeout:       30 * time.Second,
 			IdleTimeout:       5 * time.Minute,
-			ErrorLog:          listenerLogger.StandardLogger(nil),
+			ErrorLog:          apiProxyLogger.StandardLogger(nil),
 		}
 
 		go server.Serve(ln)

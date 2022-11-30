@@ -10,8 +10,11 @@ auto_auth {
 }
 
 cache {
-	use_auto_auth_token = "true"
-	force_auto_auth_token = false
+    use_auto_auth_token = true
+}
+
+api_proxy {
+	use_auto_auth_token = "force"
 }
 
 listener "tcp" {

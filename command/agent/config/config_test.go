@@ -69,6 +69,10 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 				},
 			},
 		},
+		APIProxy: &APIProxy{
+			UseAutoAuthToken:   true,
+			ForceAutoAuthToken: false,
+		},
 		Cache: &Cache{
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
@@ -394,7 +398,8 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 	}
 
 	expected := &Config{
-		Cache: &Cache{},
+		APIProxy: &APIProxy{},
+		Cache:    &Cache{},
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 			Listeners: []*configutil.Listener{
@@ -467,6 +472,13 @@ func TestLoadConfigFile_Bad_AgentCache_AutoAuth_Method_wrapping(t *testing.T) {
 	}
 }
 
+func TestLoadConfigFile_Bad_APIProxy_And_Cache_Same_Config(t *testing.T) {
+	_, err := LoadConfig("./test-fixtures/bad-config-api_proxy-cache.hcl")
+	if err == nil {
+		t.Fatal("LoadConfig should return an error when cache and api_proxy try and configure the same value")
+	}
+}
+
 func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 	config, err := LoadConfig("./test-fixtures/config-cache-auto_auth-no-sink.hcl")
 	if err != nil {
@@ -492,6 +504,10 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 					"role": "foobar",
 				},
 			},
+		},
+		APIProxy: &APIProxy{
+			UseAutoAuthToken:   true,
+			ForceAutoAuthToken: false,
 		},
 		Cache: &Cache{
 			UseAutoAuthToken:    true,
@@ -537,6 +553,10 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 				},
 			},
 		},
+		APIProxy: &APIProxy{
+			UseAutoAuthToken:   true,
+			ForceAutoAuthToken: true,
+		},
 		Cache: &Cache{
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: "force",
@@ -581,10 +601,60 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 				},
 			},
 		},
+		APIProxy: &APIProxy{
+			UseAutoAuthToken:   true,
+			ForceAutoAuthToken: false,
+		},
 		Cache: &Cache{
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: "true",
 			ForceAutoAuthToken:  false,
+		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_Agent_AutoAuth_APIProxyAllConfig(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-api_proxy-auto_auth-all-api_proxy-config.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+			},
+			PidFile: "./pidfile",
+		},
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+		},
+		APIProxy: &APIProxy{
+			UseAutoAuthToken:    true,
+			UseAutoAuthTokenRaw: "force",
+			ForceAutoAuthToken:  true,
+			EnforceConsistency:  "always",
+			WhenInconsistent:    "forward",
 		},
 		Vault: &Vault{
 			Retry: &Retry{
@@ -636,6 +706,10 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 				},
 			},
 		},
+		APIProxy: &APIProxy{
+			UseAutoAuthToken:   false,
+			ForceAutoAuthToken: false,
+		},
 		Cache: &Cache{
 			UseAutoAuthToken:    false,
 			UseAutoAuthTokenRaw: "false",
@@ -661,6 +735,7 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 	}
 
 	expected := &Config{
+		APIProxy: &APIProxy{},
 		Cache: &Cache{
 			Persist: &Persist{
 				Type:                    "kubernetes",
@@ -1075,7 +1150,42 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 			},
 			PidFile: "",
 		},
+		APIProxy: &APIProxy{},
 		Cache: &Cache{
+			EnforceConsistency: "always",
+			WhenInconsistent:   "retry",
+		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_EnforceConsistency_APIProxy(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-consistency-apiproxy.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+			},
+			PidFile: "",
+		},
+		APIProxy: &APIProxy{
 			EnforceConsistency: "always",
 			WhenInconsistent:   "retry",
 		},
