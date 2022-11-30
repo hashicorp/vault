@@ -432,7 +432,29 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 	}
 
 	if len(versionedPlugins) != 0 {
-		data["detailed"] = versionedPlugins
+		// Audit logging uses reflection to HMAC the values of all fields in the
+		// response recursively, which panics if it comes across any unexported
+		// fields. Therefore, we have to rebuild the VersionedPlugin struct as
+		// a map of primitive types to avoid the panic that would happen when
+		// audit logging tries to HMAC the contents of the SemanticVersion field.
+		var detailed []map[string]any
+		for _, p := range versionedPlugins {
+			entry := map[string]any{
+				"type":               p.Type,
+				"name":               p.Name,
+				"version":            p.Version,
+				"builtin":            p.Builtin,
+				"deprecation_status": p.DeprecationStatus,
+			}
+			if p.SHA256 != "" {
+				entry["sha256"] = p.SHA256
+			}
+			if p.DeprecationStatus != "" {
+				entry["deprecation_status"] = p.DeprecationStatus
+			}
+			detailed = append(detailed, entry)
+		}
+		data["detailed"] = detailed
 	}
 
 	return &logical.Response{
