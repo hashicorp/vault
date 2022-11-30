@@ -43,7 +43,7 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 }
 
 // setupClusterAndAgentNoCache is a helper func used to set up a test cluster and
-// proxyi agent against the active node. It returns a cleanup func that should
+// proxying agent against the active node. It returns a cleanup func that should
 // be deferred immediately along with two clients, one for direct cluster
 // communication and another to talk to the caching agent.
 func setupClusterAndAgentNoCache(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {

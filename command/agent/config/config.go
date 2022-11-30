@@ -284,9 +284,7 @@ func LoadConfig(path string) (*Config, error) {
 		switch subsystem {
 		case "auto-auth":
 			result.DisableIdleConnsAutoAuth = true
-		case "caching":
-			result.DisableIdleConnsAPIProxy = true
-		case "proxying":
+		case "caching", "proxying":
 			result.DisableIdleConnsAPIProxy = true
 		case "templating":
 			result.DisableIdleConnsTemplating = true
@@ -308,9 +306,7 @@ func LoadConfig(path string) (*Config, error) {
 		switch subsystem {
 		case "auto-auth":
 			result.DisableKeepAlivesAutoAuth = true
-		case "caching":
-			result.DisableKeepAlivesAPIProxy = true
-		case "proxying":
+		case "caching", "proxying":
 			result.DisableKeepAlivesAPIProxy = true
 		case "templating":
 			result.DisableKeepAlivesTemplating = true
