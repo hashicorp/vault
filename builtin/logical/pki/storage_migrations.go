@@ -15,7 +15,7 @@ import (
 // in case we find out in the future that something was horribly wrong with the migration,
 // and we need to perform it again...
 const (
-	latestMigrationVersion = 1
+	latestMigrationVersion = 2
 	legacyBundleShimID     = issuerID("legacy-entry-shim-id")
 	legacyBundleShimKeyID  = keyID("legacy-entry-shim-key-id")
 )
@@ -83,13 +83,13 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 
 	var issuerIdentifier issuerID
 	var keyIdentifier keyID
+	sc := b.makeStorageContext(ctx, s)
 	if migrationInfo.legacyBundle != nil {
 		// Generate a unique name for the migrated items in case things were to be re-migrated again
 		// for some weird reason in the future...
 		migrationName := fmt.Sprintf("current-%d", time.Now().Unix())
 
 		b.Logger().Info("performing PKI migration to new keys/issuers layout")
-		sc := b.makeStorageContext(ctx, s)
 		anIssuer, aKey, err := sc.writeCaBundle(migrationInfo.legacyBundle, migrationName, migrationName)
 		if err != nil {
 			return err
@@ -104,6 +104,19 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 		b.crlBuilder.requestRebuildIfActiveNode(b)
 	}
 
+	if migrationInfo.migrationLog != nil && migrationInfo.migrationLog.MigrationVersion == 1 {
+		// We've seen a bundle with migration version 1; this means an
+		// earlier version of the code ran which didn't have the fix for
+		// correct write order in rebuildIssuersChains(...). Rather than
+		// having every user read the migrated active issuer and see if
+		// their chains need rebuilding, we'll schedule a one-off chain
+		// migration here.
+		b.Logger().Info(fmt.Sprintf("%v: performing maintenance rebuild of ca_chains", b.backendUUID))
+		if err := sc.rebuildIssuersChains(nil); err != nil {
+			return err
+		}
+	}
+
 	// We always want to write out this log entry as the secondary clusters leverage this path to wake up
 	// if they were upgraded prior to the primary cluster's migration occurred.
 	err = setLegacyBundleMigrationLog(ctx, s, &legacyBundleMigrationLog{
@@ -116,6 +129,8 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 	if err != nil {
 		return err
 	}
+
+	b.Logger().Info(fmt.Sprintf("%v: succeeded in migrating to issuer storage version %v", b.backendUUID, latestMigrationVersion))
 
 	return nil
 }

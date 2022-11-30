@@ -691,8 +691,12 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 		return consts.PluginTypeUnknown
 	}
 
+	if !versions.IsBuiltinVersion(entry.RunningVersion) {
+		return consts.PluginTypeUnknown
+	}
+
 	builtinPluginType := func(name string, pluginType consts.PluginType) (consts.PluginType, bool) {
-		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, "")
+		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, entry.RunningVersion)
 		if err == nil && plugin != nil && plugin.Builtin {
 			return plugin.Type, true
 		}
@@ -1273,6 +1277,12 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 
 		if entry.NamespaceID == "" {
 			entry.NamespaceID = namespace.RootNamespaceID
+			needPersist = true
+		}
+
+		// Don't store built-in version in the mount table, to make upgrades smoother.
+		if versions.IsBuiltinVersion(entry.Version) {
+			entry.Version = ""
 			needPersist = true
 		}
 	}
