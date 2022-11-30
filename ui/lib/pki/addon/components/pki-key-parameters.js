@@ -3,14 +3,14 @@ import { action } from '@ember/object';
 
 /**
  * @module PkiKeyParameters
- * PkiKeyParameters components are used to set the default and update the key_bits pki role api param whenever the key_type changes.
- * key_bits is conditional on key_type and should be set as a default value whenever key_type changes.
+ * PkiKeyParameters components are used to display a list of key bit options depending on the selected key type.
+ * If the component renders in a group, other attrs may be passed in and will be rendered using the <FormField> component
  * @example
  * ```js
- * <PkiKeyParameters @model={@model} @group={group}/>
+ * <PkiKeyParameters @model={{@model}} @fields={{fields}}/>
  * ```
- * @param {class} model - The pki/pki-role-engine model.
- * @param {string} group - The name of the group created in the model. In this case, it's the "Key parameters" group.
+ * @param {class} model - The pki/role model.
+ * @param {string} fields - The name of the fields created in the model. In this case, it's the "Key parameters" fields.
  */
 
 const KEY_BITS_OPTIONS = {
@@ -21,6 +21,7 @@ const KEY_BITS_OPTIONS = {
 };
 
 export default class PkiKeyParameters extends Component {
+  // TODO clarify types here
   get keyBitOptions() {
     return KEY_BITS_OPTIONS[this.args.model.keyType];
   }
@@ -35,10 +36,9 @@ export default class PkiKeyParameters extends Component {
 
   @action onSignatureBitsOrKeyTypeChange(name, selection) {
     if (name === 'signatureBits') {
-      this.args.model.set(name, Number(selection.target.value));
+      this.args.model.set(name, Number(selection));
     }
     if (name === 'keyType') {
-      this.args.model.set(name, selection.target.value);
       this.args.model.set('keyBits', this.keyBitsDefault);
     }
   }

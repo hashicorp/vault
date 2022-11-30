@@ -135,8 +135,8 @@ note that this can affect the login response on any auth mount protected by MFA 
 }
 ```
 
-Note that the `uses_passcode` boolean value is always set to true for TOTP, and must always be set to false for Okta and PingID.
-For Duo method, the value can be configured as part of the method configuration.
+Note that the `uses_passcode` boolean value will always show true for TOTP, and false for Okta and PingID.
+For Duo method, the value can be configured as part of the method configuration, using the `use_passcode` parameter.
 Please see [Duo API](/api-docs/secret/identity/mfa/duo) for details
 on how to configure the boolean value for Duo.
 

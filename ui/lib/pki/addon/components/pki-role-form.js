@@ -14,7 +14,7 @@ import { tracked } from '@glimmer/tracking';
  * ```
  * @callback onCancel
  * @callback onSave
- * @param {Object} model - Pki-role-engine model.
+ * @param {Object} model - pki/role model.
  * @param {onCancel} onCancel - Callback triggered when cancel button is clicked.
  * @param {onSave} onSave - Callback triggered on save success.
  */

@@ -19,6 +19,7 @@ import (
 	systemd "github.com/coreos/go-systemd/daemon"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/alicloud"
@@ -41,11 +42,11 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agent/winsvc"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -61,8 +62,15 @@ var (
 	_ cli.CommandAutocomplete = (*AgentCommand)(nil)
 )
 
+const (
+	// flagNameAgentExitAfterAuth is used as an Agent specific flag to indicate
+	// that agent should exit after a single successful auth
+	flagNameAgentExitAfterAuth = "exit-after-auth"
+)
+
 type AgentCommand struct {
 	*BaseCommand
+	logFlags logFlags
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -78,12 +86,9 @@ type AgentCommand struct {
 
 	startedCh chan (struct{}) // for tests
 
-	flagConfigs       []string
-	flagLogLevel      string
-	flagExitAfterAuth bool
-
+	flagConfigs        []string
+	flagExitAfterAuth  bool
 	flagTestVerifyOnly bool
-	flagCombineLogs    bool
 }
 
 func (c *AgentCommand) Synopsis() string {
@@ -112,6 +117,9 @@ func (c *AgentCommand) Flags() *FlagSets {
 
 	f := set.NewFlagSet("Command Options")
 
+	// Augment with the log flags
+	f.addLogFlags(&c.logFlags)
+
 	f.StringSliceVar(&StringSliceVar{
 		Name:   "config",
 		Target: &c.flagConfigs,
@@ -123,18 +131,8 @@ func (c *AgentCommand) Flags() *FlagSets {
 			"contain only agent directives.",
 	})
 
-	f.StringVar(&StringVar{
-		Name:       "log-level",
-		Target:     &c.flagLogLevel,
-		Default:    "info",
-		EnvVar:     "VAULT_LOG_LEVEL",
-		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
-		Usage: "Log verbosity level. Supported values (in order of detail) are " +
-			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
-	})
-
 	f.BoolVar(&BoolVar{
-		Name:    "exit-after-auth",
+		Name:    flagNameAgentExitAfterAuth,
 		Target:  &c.flagExitAfterAuth,
 		Default: false,
 		Usage: "If set to true, the agent will exit with code 0 after a single " +
@@ -149,15 +147,6 @@ func (c *AgentCommand) Flags() *FlagSets {
 	// no warranty or backwards-compatibility promise. Do not use these flags
 	// in production. Do not build automation using these flags. Unless you are
 	// developing against Vault, you should not need any of these flags.
-
-	// TODO: should the below flags be public?
-	f.BoolVar(&BoolVar{
-		Name:    "combine-logs",
-		Target:  &c.flagCombineLogs,
-		Default: false,
-		Hidden:  true,
-	})
-
 	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
 		Target:  &c.flagTestVerifyOnly,
@@ -190,29 +179,9 @@ func (c *AgentCommand) Run(args []string) int {
 	// start logging too early.
 	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
-	if c.flagCombineLogs {
-		c.logWriter = os.Stdout
-	}
-	var level log.Level
-	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
-	switch c.flagLogLevel {
-	case "trace":
-		level = log.Trace
-	case "debug":
-		level = log.Debug
-	case "notice", "info", "":
-		level = log.Info
-	case "warn", "warning":
-		level = log.Warn
-	case "err", "error":
-		level = log.Error
-	default:
-		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
-		return 1
-	}
 
-	if c.logger == nil {
-		c.logger = logging.NewVaultLoggerWithWriter(c.logWriter, level)
+	if c.logFlags.flagCombineLogs {
+		c.logWriter = os.Stdout
 	}
 
 	// Validation
@@ -221,7 +190,7 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Load the configuration
+	// Load the configuration file
 	config, err := agentConfig.LoadConfig(c.flagConfigs[0])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", c.flagConfigs[0], err))
@@ -235,6 +204,7 @@ func (c *AgentCommand) Run(args []string) int {
 				"-config flag."))
 		return 1
 	}
+
 	if config.AutoAuth == nil && config.Cache == nil {
 		c.UI.Error("No auto_auth or cache block found in config file")
 		return 1
@@ -243,66 +213,60 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
 	}
 
-	exitAfterAuth := config.ExitAfterAuth
-	f.Visit(func(fl *flag.Flag) {
-		if fl.Name == "exit-after-auth" {
-			exitAfterAuth = c.flagExitAfterAuth
-		}
-	})
+	c.updateConfig(f, config)
 
-	c.setStringFlag(f, config.Vault.Address, &StringVar{
-		Name:    flagNameAddress,
-		Target:  &c.flagAddress,
-		Default: "https://127.0.0.1:8200",
-		EnvVar:  api.EnvVaultAddress,
-	})
-	config.Vault.Address = c.flagAddress
-	c.setStringFlag(f, config.Vault.CACert, &StringVar{
-		Name:    flagNameCACert,
-		Target:  &c.flagCACert,
-		Default: "",
-		EnvVar:  api.EnvVaultCACert,
-	})
-	config.Vault.CACert = c.flagCACert
-	c.setStringFlag(f, config.Vault.CAPath, &StringVar{
-		Name:    flagNameCAPath,
-		Target:  &c.flagCAPath,
-		Default: "",
-		EnvVar:  api.EnvVaultCAPath,
-	})
-	config.Vault.CAPath = c.flagCAPath
-	c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
-		Name:    flagNameClientCert,
-		Target:  &c.flagClientCert,
-		Default: "",
-		EnvVar:  api.EnvVaultClientCert,
-	})
-	config.Vault.ClientCert = c.flagClientCert
-	c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
-		Name:    flagNameClientKey,
-		Target:  &c.flagClientKey,
-		Default: "",
-		EnvVar:  api.EnvVaultClientKey,
-	})
-	config.Vault.ClientKey = c.flagClientKey
-	c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
-		Name:    flagNameTLSSkipVerify,
-		Target:  &c.flagTLSSkipVerify,
-		Default: false,
-		EnvVar:  api.EnvVaultSkipVerify,
-	})
-	config.Vault.TLSSkipVerify = c.flagTLSSkipVerify
-	c.setStringFlag(f, config.Vault.TLSServerName, &StringVar{
-		Name:    flagTLSServerName,
-		Target:  &c.flagTLSServerName,
-		Default: "",
-		EnvVar:  api.EnvVaultTLSServerName,
-	})
-	config.Vault.TLSServerName = c.flagTLSServerName
+	// Parse all the log related config
+	logLevel, err := logging.ParseLogLevel(config.LogLevel)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logFormat, err := logging.ParseLogFormat(config.LogFormat)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logRotateDuration, err := parseutil.ParseDurationSecond(config.LogRotateDuration)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logRotateBytes, err := parseutil.ParseInt(config.LogRotateBytes)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logRotateMaxFiles, err := parseutil.ParseInt(config.LogRotateMaxFiles)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	logCfg := &logging.LogConfig{
+		Name:              "vault-agent",
+		LogLevel:          logLevel,
+		LogFormat:         logFormat,
+		LogFilePath:       config.LogFile,
+		LogRotateDuration: logRotateDuration,
+		LogRotateBytes:    int(logRotateBytes),
+		LogRotateMaxFiles: int(logRotateMaxFiles),
+	}
+
+	l, err := logging.Setup(logCfg, c.logWriter)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	c.logger = l
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = c.flagLogLevel
+	info["log level"] = config.LogLevel
 	infoKeys = append(infoKeys, "log level")
 
 	infoKeys = append(infoKeys, "version")
@@ -496,7 +460,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Output the header that the agent has started
-	if !c.flagCombineLogs {
+	if !c.logFlags.flagCombineLogs {
 		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
 	}
 
@@ -739,7 +703,7 @@ func (c *AgentCommand) Run(args []string) int {
 			// Parse 'require_request_header' listener config option, and wrap
 			// the request handler if necessary
 			muxHandler := cacheHandler
-			if lnConfig.RequireRequestHeader {
+			if lnConfig.RequireRequestHeader && ("metrics_only" != lnConfig.Role) {
 				muxHandler = verifyRequestHeader(muxHandler)
 			}
 
@@ -747,10 +711,12 @@ func (c *AgentCommand) Run(args []string) int {
 			mux := http.NewServeMux()
 			quitEnabled := lnConfig.AgentAPI != nil && lnConfig.AgentAPI.EnableQuit
 
-			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
-			mux.Handle(consts.AgentPathQuit, c.handleQuit(quitEnabled))
 			mux.Handle(consts.AgentPathMetrics, c.handleMetrics())
-			mux.Handle("/", muxHandler)
+			if "metrics_only" != lnConfig.Role {
+				mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+				mux.Handle(consts.AgentPathQuit, c.handleQuit(quitEnabled))
+				mux.Handle("/", muxHandler)
+			}
 
 			scheme := "https://"
 			if tlsConf == nil {
@@ -855,16 +821,16 @@ func (c *AgentCommand) Run(args []string) int {
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
 			Client:        ahClient,
-			ExitAfterAuth: exitAfterAuth,
+			ExitAfterAuth: config.ExitAfterAuth,
 		})
 
 		ts := template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
-			LogLevel:      level,
+			LogLevel:      logLevel,
 			LogWriter:     c.logWriter,
 			AgentConfig:   config,
 			Namespace:     templateNamespace,
-			ExitAfterAuth: exitAfterAuth,
+			ExitAfterAuth: config.ExitAfterAuth,
 		})
 
 		g.Add(func() error {
@@ -961,6 +927,70 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	return 0
+}
+
+// updateConfig ensures that the config object accurately reflects the desired
+// settings as configured by the user. It applies the relevant config setting based
+// on the precedence (env var overrides file config, cli overrides env var).
+// It mutates the config object supplied.
+func (c *AgentCommand) updateConfig(f *FlagSets, config *agentConfig.Config) {
+	f.updateLogConfig(config.SharedConfig)
+
+	f.Visit(func(fl *flag.Flag) {
+		if fl.Name == flagNameAgentExitAfterAuth {
+			config.ExitAfterAuth = c.flagExitAfterAuth
+		}
+	})
+
+	c.setStringFlag(f, config.Vault.Address, &StringVar{
+		Name:    flagNameAddress,
+		Target:  &c.flagAddress,
+		Default: "https://127.0.0.1:8200",
+		EnvVar:  api.EnvVaultAddress,
+	})
+	config.Vault.Address = c.flagAddress
+	c.setStringFlag(f, config.Vault.CACert, &StringVar{
+		Name:    flagNameCACert,
+		Target:  &c.flagCACert,
+		Default: "",
+		EnvVar:  api.EnvVaultCACert,
+	})
+	config.Vault.CACert = c.flagCACert
+	c.setStringFlag(f, config.Vault.CAPath, &StringVar{
+		Name:    flagNameCAPath,
+		Target:  &c.flagCAPath,
+		Default: "",
+		EnvVar:  api.EnvVaultCAPath,
+	})
+	config.Vault.CAPath = c.flagCAPath
+	c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
+		Name:    flagNameClientCert,
+		Target:  &c.flagClientCert,
+		Default: "",
+		EnvVar:  api.EnvVaultClientCert,
+	})
+	config.Vault.ClientCert = c.flagClientCert
+	c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
+		Name:    flagNameClientKey,
+		Target:  &c.flagClientKey,
+		Default: "",
+		EnvVar:  api.EnvVaultClientKey,
+	})
+	config.Vault.ClientKey = c.flagClientKey
+	c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
+		Name:    flagNameTLSSkipVerify,
+		Target:  &c.flagTLSSkipVerify,
+		Default: false,
+		EnvVar:  api.EnvVaultSkipVerify,
+	})
+	config.Vault.TLSSkipVerify = c.flagTLSSkipVerify
+	c.setStringFlag(f, config.Vault.TLSServerName, &StringVar{
+		Name:    flagTLSServerName,
+		Target:  &c.flagTLSServerName,
+		Default: "",
+		EnvVar:  api.EnvVaultTLSServerName,
+	})
+	config.Vault.TLSServerName = c.flagTLSServerName
 }
 
 // verifyRequestHeader wraps an http.Handler inside a Handler that checks for

@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity/mfa"
+	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
@@ -298,7 +299,7 @@ type Core struct {
 	auditBackends map[string]audit.Factory
 
 	// stateLock protects mutable state
-	stateLock DeadlockRWMutex
+	stateLock locking.DeadlockRWMutex
 	sealed    *uint32
 
 	standby              bool
@@ -518,6 +519,11 @@ type Core struct {
 
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *PluginCatalog
+
+	// The userFailedLoginInfo map has user failed login information.
+	// It has user information (alias-name and mount accessor) as a key
+	// and login counter, last failed login time as value
+	userFailedLoginInfo map[FailedLoginUser]*FailedLoginInfo
 
 	enableMlock bool
 
@@ -925,6 +931,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		mountMigrationTracker:          &sync.Map{},
 		disableSSCTokens:               conf.DisableSSCTokens,
 		effectiveSDKVersion:            effectiveSDKVersion,
+		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1299,13 +1306,13 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 }
 
 // unseal takes a key fragment and attempts to use it to unseal Vault.
-// Vault may remain unsealed afterwards even when no error is returned,
+// Vault may remain sealed afterwards even when no error is returned,
 // depending on whether enough key fragments were provided to meet the
 // target threshold.
 //
 // The provided key should be a recovery key fragment if the seal
 // is an autoseal, or a regular seal key fragment for shamir.  In
-// migration scenarios "seal" in the preceding sentance refers to
+// migration scenarios "seal" in the preceding sentence refers to
 // the migration seal in c.migrationInfo.seal.
 //
 // We use getUnsealKey to work out if we have enough fragments,
@@ -1549,13 +1556,13 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	} else {
 		unsealKey, err = shamir.Combine(c.unlockInfo.Parts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to compute combined key: %w", err)
+			return nil, &ErrInvalidKey{fmt.Sprintf("failed to compute combined key: %v", err)}
 		}
 	}
 
 	if seal.RecoveryKeySupported() {
 		if err := seal.VerifyRecoveryKey(ctx, unsealKey); err != nil {
-			return nil, err
+			return nil, &ErrInvalidKey{fmt.Sprintf("failed to verify recovery key: %v", err)}
 		}
 	}
 
@@ -2788,7 +2795,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 
 		err := seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(combinedKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to setup unseal key: %w", err)
+			return nil, &ErrInvalidKey{fmt.Sprintf("failed to setup unseal key: %v", err)}
 		}
 		storedKeys, err := seal.GetStoredKeys(ctx)
 		if storedKeys == nil && err == nil && allowMissing {
@@ -2860,6 +2867,7 @@ func (c *Core) AddLogger(logger log.Logger) {
 	c.allLoggers = append(c.allLoggers, logger)
 }
 
+// SetLogLevel sets logging level for all tracked loggers to the level provided
 func (c *Core) SetLogLevel(level log.Level) {
 	c.allLoggersLock.RLock()
 	defer c.allLoggersLock.RUnlock()
@@ -2868,17 +2876,22 @@ func (c *Core) SetLogLevel(level log.Level) {
 	}
 }
 
-func (c *Core) SetLogLevelByName(name string, level log.Level) error {
+// SetLogLevelByName sets the logging level of named logger to level provided
+// if it exists. Core.allLoggers is a slice and as such it is entirely possible
+// that multiple entries exist for the same name. Each instance will be modified.
+func (c *Core) SetLogLevelByName(name string, level log.Level) bool {
 	c.allLoggersLock.RLock()
 	defer c.allLoggersLock.RUnlock()
+
+	found := false
 	for _, logger := range c.allLoggers {
 		if logger.Name() == name {
 			logger.SetLevel(level)
-			return nil
+			found = true
 		}
 	}
 
-	return fmt.Errorf("logger %q does not exist", name)
+	return found
 }
 
 // SetConfig sets core's config object to the newly provided config.

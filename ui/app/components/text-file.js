@@ -68,7 +68,7 @@ export default class TextFile extends Component {
   @action
   updateData(e) {
     e.preventDefault();
-    let file = this.args.file;
+    const file = this.args.file;
     set(file, 'value', e.target.value);
     this.args.onChange(this.index, file);
   }

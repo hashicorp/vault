@@ -13,12 +13,12 @@ import { task } from 'ember-concurrency';
 // the ancestors array and transitions to the root
 export default Mixin.create({
   navToNearestAncestor: task(function* (key) {
-    let ancestors = utils.ancestorKeysForKey(key);
+    const ancestors = utils.ancestorKeysForKey(key);
     let errored = false;
     let nearest = ancestors.pop();
     while (nearest) {
       try {
-        let transition = this.transitionToRoute('vault.cluster.secrets.backend.list', nearest);
+        const transition = this.transitionToRoute('vault.cluster.secrets.backend.list', nearest);
         transition.data.isDeletion = true;
         yield transition.promise;
       } catch (e) {

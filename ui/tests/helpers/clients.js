@@ -90,7 +90,7 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
   };
   if (!skipMounts) {
     mountCount = Math.floor((Math.random() + idx) * 20);
-    let mounts = [];
+    const mounts = [];
     Array.from(Array(mountCount)).forEach((v, index) => {
       mounts.push({
         mount_path: `auth/authid${index}`,
@@ -123,8 +123,8 @@ function generateCounts(max, arrayLength) {
 }
 
 function generateMonths(startDate, endDate, hasNoData = false) {
-  let numberOfMonths = differenceInCalendarMonths(endDate, startDate) + 1;
-  let months = [];
+  const numberOfMonths = differenceInCalendarMonths(endDate, startDate) + 1;
+  const months = [];
 
   for (let i = 0; i < numberOfMonths; i++) {
     if (hasNoData) {
@@ -196,7 +196,7 @@ export function generateActivityResponse(nsCount = 1, startDate, endDate) {
       },
     };
   }
-  let namespaces = Array.from(Array(nsCount)).map((v, idx) => {
+  const namespaces = Array.from(Array(nsCount)).map((v, idx) => {
     return generateNamespaceBlock(idx);
   });
   return {

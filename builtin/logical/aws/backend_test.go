@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -195,12 +196,33 @@ func TestBackend_throttled(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
+	if !hasAWSCredentials() {
+		t.Skip("Skipping because AWS credentials could not be resolved. See https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials for information on how to set up AWS credentials.")
+	}
+
 	initSetup.Do(func() {
 		if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
 			log.Println("[INFO] Test: Using us-west-2 as test region")
 			os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 		}
 	})
+}
+
+func hasAWSCredentials() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return false
+	}
+
+	creds, err := cfg.Credentials.Retrieve(ctx)
+	if err != nil {
+		return false
+	}
+
+	return creds.HasKeys()
 }
 
 func getAccountID() (string, error) {
@@ -235,8 +257,11 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
               "Principal": {
                   "AWS": "arn:aws:iam::%s:root"
               },
-              "Action": "sts:AssumeRole"
-           }
+              "Action": [
+                  "sts:AssumeRole",
+                  "sts:SetSourceIdentity"
+              ]
+          }
       ]
 }
 `
@@ -655,19 +680,26 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 	}
 }
 
-func testAccStepReadTTL(name string, maximumTTL time.Duration) logicaltest.TestStep {
+func testAccStepReadSTSResponse(name string, maximumTTL uint64) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
 		Check: func(resp *logical.Response) error {
-			if resp.Secret == nil {
-				return fmt.Errorf("bad: nil Secret returned")
+			if resp.Secret != nil {
+				return fmt.Errorf("bad: STS tokens should return a nil secret, received: %+v", resp.Secret)
 			}
-			ttl := resp.Secret.TTL
-			if ttl > maximumTTL {
-				return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl/time.Second, maximumTTL/time.Second)
+
+			if ttl, exists := resp.Data["ttl"]; exists {
+				ttlVal := ttl.(uint64)
+
+				if ttlVal > maximumTTL {
+					return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl, maximumTTL)
+				}
+
+				return nil
 			}
-			return nil
+
+			return fmt.Errorf("response data missing ttl, received: %+v", resp.Data)
 		},
 	}
 }
@@ -1316,7 +1348,7 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
-			testAccStepReadTTL("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
+			testAccStepReadSTSResponse("test", uint64(minAwsAssumeRoleDuration)), // allow a little slack
 		},
 		Teardown: func() error {
 			return deleteTestRole(roleName)

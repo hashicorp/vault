@@ -129,6 +129,7 @@ func waitForRemovalOrTimeout(c *api.Client, path string, tick, to time.Duration)
 
 func TestQuotas_RateLimit_DupName(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -163,6 +164,7 @@ func TestQuotas_RateLimit_DupName(t *testing.T) {
 
 func TestQuotas_RateLimit_DupPath(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -201,6 +203,7 @@ func TestQuotas_RateLimit_DupPath(t *testing.T) {
 
 func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
 
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
@@ -340,6 +343,7 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 
 func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -426,6 +430,7 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 
 func TestQuotas_RateLimitQuota(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()

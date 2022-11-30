@@ -132,7 +132,7 @@ type RawFormatter struct{}
 func (r RawFormatter) Format(data interface{}) ([]byte, error) {
 	byte_data, ok := data.([]byte)
 	if !ok {
-		return nil, fmt.Errorf("unable to type assert to []byte: %T; please share the command run", data)
+		return nil, fmt.Errorf("This command does not support the -format=raw option; only `vault read` does.")
 	}
 
 	return byte_data, nil
@@ -401,6 +401,9 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 	}
 	if status.LastWAL != 0 {
 		out = append(out, fmt.Sprintf("Last WAL | %d", status.LastWAL))
+	}
+	if len(status.Warnings) > 0 {
+		out = append(out, fmt.Sprintf("Warnings | %v", status.Warnings))
 	}
 
 	ui.Output(tableOutput(out, &columnize.Config{

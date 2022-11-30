@@ -69,7 +69,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     later(() => cancelTimers(), 50);
     await settled();
-    let enableRequest = this.server.handledRequests.findBy('url', '/v1/sys/auth/foo');
+    const enableRequest = this.server.handledRequests.findBy('url', '/v1/sys/auth/foo');
     assert.ok(enableRequest, 'it calls enable on an auth method');
     assert.ok(spy.calledOnce, 'calls the passed success method');
   });
