@@ -101,6 +101,7 @@ result in a core shutdown.
 $ vault plugin register -sha256=c805cf3b69f704dfcd5176ef1c7599f88adbfd7374e9c76da7f24a32a97abfe1 auth app-id
 Success! Registered plugin: app-id
 $ vault auth enable -plugin-name=app-id plugin
+Success! Enabled app-id auth method at: app-id/
 $ vault auth list -detailed
 app-id/    app-id    auth_app-id_3a8f2e24    system         system     default-service    replicated     false        false                      map[]      n/a                        0018263c-0d64-7a70-fd5c-50e05c5f5dc3    n/a        n/a                      c805cf3b69f704dfcd5176ef1c7599f88adbfd7374e9c76da7f24a32a97abfe1    n/a
 $ vault plugin deregister auth app-id
