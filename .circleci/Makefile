@@ -56,7 +56,7 @@ $(SOURCE_DIR):
 $(shell [ -d .tmp ] || mkdir .tmp)
 
 .PHONY: $(CONFIG)
-$(CONFIG): $(OUT) $(GO_VERSION_FILE )
+$(CONFIG): $(OUT) $(GO_VERSION_FILE)
 
 .PHONY: $(VERIFY)
 $(VERIFY): config-up-to-date
