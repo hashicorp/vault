@@ -1,7 +1,7 @@
 import { Factory } from 'ember-cli-mirage';
 
 export default Factory.extend({
-  name: 'default-role',
+  name: (i) => `role-${i}`,
   allowed_kubernetes_namespaces: () => ['*'],
   allowed_kubernetes_namespace_selector: '',
   token_max_ttl: 86400,

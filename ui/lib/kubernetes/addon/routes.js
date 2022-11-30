@@ -11,7 +11,5 @@ export default buildRoutes(function () {
     });
   });
   this.route('configure');
-  this.route('configuration', function () {
-    this.route('edit');
-  });
+  this.route('configuration');
 });
