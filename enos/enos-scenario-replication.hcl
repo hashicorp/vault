@@ -223,7 +223,6 @@ scenario "replication" {
     }
 
     variables {
-      vault_api_addr   = "http://localhost:8200"
       vault_instances  = step.create_vault_primary_cluster.vault_instances
       vault_root_token = step.create_vault_primary_cluster.vault_root_token
     }
@@ -238,7 +237,6 @@ scenario "replication" {
     }
 
     variables {
-      vault_api_addr   = "http://localhost:8200"
       vault_instances  = step.create_vault_secondary_cluster.vault_instances
       vault_root_token = step.create_vault_secondary_cluster.vault_root_token
     }
@@ -309,7 +307,10 @@ scenario "replication" {
   step "unseal_secondary_followers" {
     // skip_step  = matrix.primary_seal != "shamir"
     module     = module.vault_unseal_nodes
-    depends_on = [step.configure_performance_replication_secondary]
+    depends_on = [
+      step.get_secondary_cluster_ips,
+      step.configure_performance_replication_secondary
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -385,7 +386,12 @@ scenario "replication" {
 
   step "add_primary_cluster_nodes" {
     module     = module.vault_cluster
-    depends_on = [step.verify_replicated_data]
+    depends_on = [
+      step.create_vpc,
+      step.create_primary_backend_cluster,
+      step.create_vault_primary_cluster,
+      step.verify_replicated_data
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -432,7 +438,11 @@ scenario "replication" {
   step "verify_raft_auto_join_voter" {
     skip_step  = matrix.primary_backend != "raft"
     module     = module.vault_verify_raft_auto_join_voter
-    depends_on = [step.verify_add_node_unsealed]
+    depends_on = [
+      step.add_primary_cluster_nodes,
+      step.create_vault_primary_cluster,
+      step.verify_add_node_unsealed
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -444,43 +454,66 @@ scenario "replication" {
     }
   }
 
-  step "remove_primary_followers" {
+  step "remove_primary_follower_1" {
     module     = module.remove_node
-    depends_on = [step.verify_raft_auto_join_voter]
+    depends_on = [
+      step.get_primary_cluster_ips,
+      step.verify_raft_auto_join_voter
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      node_public_ips = step.get_primary_cluster_ips.follower_public_ips
+      node_public_ip = step.get_primary_cluster_ips.follower_public_ip_1
+    }
+  }
+
+  step "remove_primary_follower_2" {
+    module     = module.remove_node
+    depends_on = [
+      step.get_primary_cluster_ips,
+      step.remove_primary_follower_1
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      node_public_ip = step.get_primary_cluster_ips.follower_public_ip_2
     }
   }
 
   step "remove_primary_leader" {
     module     = module.remove_node
-    depends_on = [step.remove_primary_followers]
+    depends_on = [
+      step.get_primary_cluster_ips,
+      step.remove_primary_follower_2
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      node_private_ip      = step.get_primary_cluster_ips.leader_public_ip
-      vault_instance_count = 1
+      node_public_ip      = step.get_primary_cluster_ips.leader_public_ip
     }
   }
 
   step "get_new_cluster_ips" {
     module     = module.vault_cluster_ips
-    depends_on = [step.remove_primary_leader]
+    depends_on = [
+      step.add_primary_cluster_nodes,
+      step.remove_primary_leader
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      vault_api_addr   = "http://localhost:8200"
       vault_instances  = step.add_primary_cluster_nodes.vault_instances
       vault_root_token = step.add_primary_cluster_nodes.vault_root_token
     }
@@ -610,5 +643,15 @@ scenario "replication" {
   output "vault_secondary_performance_replication_status" {
     description = "The Vault secondary cluster performance replication status"
     value       = step.verify_performance_replication.secondary_replication_status
+  }
+
+  output "vault_primary_updated_performance_replication_status" {
+    description = "The Vault updated primary cluster performance replication status"
+    value       = step.verify_updated_performance_replication.primary_replication_status
+  }
+
+  output "verify_secondary_updated_performance_replication_status" {
+    description = "The Vault updated secondary cluster performance replication status"
+    value       = step.verify_updated_performance_replication.secondary_replication_status
   }
 }
