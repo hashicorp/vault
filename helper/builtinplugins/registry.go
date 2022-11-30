@@ -25,6 +25,7 @@ import (
 	logicalGcpKms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
 	logicalKube "github.com/hashicorp/vault-plugin-secrets-kubernetes"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
 	logicalLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
@@ -158,15 +159,22 @@ func newRegistry() *registry {
 			"kubernetes": {Factory: logicalKube.Factory},
 			"kv":         {Factory: logicalKv.Factory},
 			"mongodb": {
+				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
+			// The mongodbatlas logical database plugin was mistakenly left
+			// out of the deprecation process last release, so it will lag
+			// behind by one release cycle.
 			"mongodbatlas": {
-				DeprecationStatus: consts.Removed,
+				Factory:           logicalMongoAtlas.Factory,
+				DeprecationStatus: consts.PendingRemoval,
 			},
 			"mssql": {
+				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
 			"mysql": {
+				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
 			"nomad":    {Factory: logicalNomad.Factory},
@@ -174,6 +182,7 @@ func newRegistry() *registry {
 			"ldap":     {Factory: logicalLDAP.Factory},
 			"pki":      {Factory: logicalPki.Factory},
 			"postgresql": {
+				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
 			"rabbitmq":  {Factory: logicalRabbit.Factory},
