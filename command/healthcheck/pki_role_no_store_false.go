@@ -11,6 +11,7 @@ import (
 type RoleNoStoreFalse struct {
 	Enabled            bool
 	UnsupportedVersion bool
+	NoPerms            bool
 
 	AllowedRoles map[string]bool
 
@@ -58,18 +59,24 @@ func (h *RoleNoStoreFalse) LoadConfig(config map[string]interface{}) error {
 }
 
 func (h *RoleNoStoreFalse) FetchResources(e *Executor) error {
-	exit, _, roles, err := pkiFetchRolesList(e, func() {
+	exit, f, roles, err := pkiFetchRolesList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit || err != nil {
+		if f != nil && f.IsSecretPermissionsError() {
+			h.NoPerms = true
+		}
 		return err
 	}
 
 	for _, role := range roles {
-		skip, _, entry, err := pkiFetchRole(e, role, func() {
+		skip, f, entry, err := pkiFetchRole(e, role, func() {
 			h.UnsupportedVersion = true
 		})
 		if skip || err != nil || entry == nil {
+			if f != nil && f.IsSecretPermissionsError() {
+				h.NoPerms = true
+			}
 			if err != nil {
 				return err
 			}
@@ -109,6 +116,20 @@ func (h *RoleNoStoreFalse) Evaluate(e *Executor) (results []*Result, err error) 
 		return []*Result{&ret}, nil
 	}
 
+	if h.NoPerms {
+		ret := Result{
+			Status:   ResultInsufficientPermissions,
+			Endpoint: "/{{mount}}/roles",
+			Message:  "lacks permission either to list the roles or to read a specific role. This may restrict the ability to fully execute this health check",
+		}
+		if e.Client.Token() == "" {
+			ret.Message = "No token available and so this health check " + ret.Message
+		} else {
+			ret.Message = "This token " + ret.Message
+		}
+		results = append(results, &ret)
+	}
+
 	crlAutoRebuild := false
 	if h.CRLConfig != nil {
 		if h.CRLConfig.IsSecretPermissionsError() {
@@ -145,6 +166,16 @@ func (h *RoleNoStoreFalse) Evaluate(e *Executor) (results []*Result, err error) 
 		if crlAutoRebuild {
 			ret.Status = ResultInformational
 			ret.Message = "Role currently stores every issued certificate (no_store=false). With auto-rebuild CRL enabled, less performance impact occur on CRL rebuilding, but note that too many issued and/or revoked certificates can exceed Vault's storage limits and make operations slow. It is suggested to limit the number of certificates issued under roles with no_store=false: use shorter lifetimes to avoid revocation and/or BYOC revocation instead."
+		}
+
+		results = append(results, &ret)
+	}
+
+	if len(results) == 0 && len(h.RoleEntryMap) > 0 {
+		ret := Result{
+			Status:   ResultOK,
+			Endpoint: "/{{mount}}/roles",
+			Message:  "Roles follow best practices regarding certificate storage.",
 		}
 
 		results = append(results, &ret)

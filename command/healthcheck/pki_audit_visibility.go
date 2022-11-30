@@ -182,5 +182,14 @@ func (h *AuditVisibility) Evaluate(e *Executor) (results []*Result, err error) {
 		}
 	}
 
+	if len(results) == 0 {
+		ret := Result{
+			Status:   ResultOK,
+			Endpoint: "/sys/mounts/{{mount}}/tune",
+			Message:  "Mount audit information is configured appropriately.",
+		}
+		results = append(results, &ret)
+	}
+
 	return
 }

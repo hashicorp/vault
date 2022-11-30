@@ -1,16 +1,16 @@
 <label
-  for={{dasherize @value}}
+  for={{dasherize (or @title @value)}}
   class="radio-card {{if (eq @value @groupValue) 'is-selected'}} {{if @disabled 'is-disabled'}}"
   ...attributes
 >
   <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
-    <T.Trigger tabindex="-1">
+    <T.Trigger tabindex="-1" class="radio-card-container">
       {{#if (has-block)}}
         {{yield}}
       {{else}}
         <div class="radio-card-row">
           <div>
-            <Icon @name={{@icon}} @size="24" class="has-text-grey-light" />
+            <Icon @name={{@icon}} @size="24" class={{or @iconClass "has-text-grey-light"}} />
           </div>
           <div class="has-left-margin-s">
             <h5 class="radio-card-message-title">
@@ -24,7 +24,7 @@
       {{/if}}
       <div class="radio-card-radio-row">
         <RadioButton
-          id={{dasherize @value}}
+          id={{dasherize (or @title @value)}}
           name="config-mode"
           class="radio"
           @disabled={{@disabled}}

@@ -23,7 +23,7 @@
   secret used to prove who they are and who they trust.</p>
 {{#if this.model.keyModel.length}}
   {{#each this.model.keyModel as |pkiKey|}}
-    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiKey.id}} @linkPrefix={{this.mountPoint}}>
+    <LinkedBlock class="list-item-row" @params={{array "keys.key.details" pkiKey.keyId}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">
         <div class="level-left">
           <div>
@@ -44,12 +44,12 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo @route="keys.key.details" @model={{pkiKey.id}}>
+                    <LinkTo @route="keys.key.details" @model={{pkiKey.keyId}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo @route="keys.key.edit" @model={{pkiKey.id}}>
+                    <LinkTo @route="keys.key.edit" @model={{pkiKey.keyId}}>
                       Edit
                     </LinkTo>
                   </li>
@@ -64,7 +64,7 @@
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
     <LinkTo @route="configuration.create">
-      ARG TODO waiting for language from design
+      Configure PKI
     </LinkTo>
   </EmptyState>
 {{/if}}

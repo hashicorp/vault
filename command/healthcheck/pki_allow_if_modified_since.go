@@ -97,6 +97,13 @@ func (h *AllowIfModifiedSince) Evaluate(e *Executor) (results []*Result, err err
 			Message:  "Mount hasn't enabled If-Modified-Since Request or Last-Modified Response headers; consider enabling these headers to allow clients to fetch CAs and CRLs only when they've changed, reducing total bandwidth.",
 		}
 		results = append(results, &ret)
+	} else {
+		ret := Result{
+			Status:   ResultOK,
+			Endpoint: "/sys/mounts/{{mount}}/tune",
+			Message:  "Mount allows the If-Modified-Since request header and Last-Modified response header.",
+		}
+		results = append(results, &ret)
 	}
 
 	return
