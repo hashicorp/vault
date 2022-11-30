@@ -85,3 +85,24 @@ https://github.com/hashicorp/vault/commit/c36330f4c713b886a8a23c08cbbd862a7c530f
 Affects upgrading from 1.12.0 to 1.12.1. All other upgrade paths are unaffected.
 1.12.2 will introduce a fix that enables upgrades from affected deployments of
 1.12.0.
+
+### Mounts associated with deprecated builtin plugins will result in core shutdown on upgrade
+
+As of 1.12.0 Standalone (logical) DB Engines and the AppId Auth Method have been
+marked with the `Pending Removal` status. Any attempt to unseal Vault with
+mounts backed by one of these builtin plugins will result in an immediate
+shutdown of the Vault core.
+
+It is recommended that set the
+[VAULT_ALLOW_PENDING_REMOVAL_MOUNTS](/docs/commands/server#vault_allow_pending_removal_mounts)
+environment variable and replace any `Pending Removal` feature with the
+[preferred alternative
+feature](/docs/deprecation/faq#q-what-should-i-do-if-i-use-mount-filters-appid-or-any-of-the-standalone-db-engines).
+
+For more information on the phases of deprecation, see the [Deprecation Notices
+FAQ](/docs/deprecation/faq#q-what-are-the-phases-of-deprecation).
+
+#### Impacted Versions
+
+Affects upgrading from any version of Vault to 1.12.x. All other upgrade paths
+are unaffected.
