@@ -3,7 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS, ROLE_SELECTORS } from 'vault/tests/helpers/pki/page-details';
+import { SELECTORS } from 'vault/tests/helpers/pki/role/page-details';
 
 module('Integration | Component | pki role details page', function (hooks) {
   setupRenderingTest(hooks);
@@ -30,15 +30,13 @@ module('Integration | Component | pki role details page', function (hooks) {
     );
     assert.dom(SELECTORS.breadcrumbContainer).exists({ count: 1 }, 'breadcrumb containers exist');
     assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
-    assert.dom(ROLE_SELECTORS.title).containsText('PKI Role Foobar', 'Title includes type and name of role');
+    assert.dom(SELECTORS.title).containsText('PKI Role Foobar', 'Title includes type and name of role');
     // Attribute-specific checks
-    assert.dom(ROLE_SELECTORS.issuerLabel).hasText('Issuer', 'Label is');
-    assert.dom(ROLE_SELECTORS.keyUsageValue).hasText('None', 'Key usage shows none when array is empty');
+    assert.dom(SELECTORS.issuerLabel).hasText('Issuer', 'Label is');
+    assert.dom(SELECTORS.keyUsageValue).hasText('None', 'Key usage shows none when array is empty');
     assert
-      .dom(ROLE_SELECTORS.extKeyUsageValue)
+      .dom(SELECTORS.extKeyUsageValue)
       .hasText('bar, baz,', 'Key usage shows comma-joined values when array has items');
-    assert
-      .dom(ROLE_SELECTORS.noStoreValue)
-      .containsText('Yes', 'noStore shows opposite of what the value is');
+    assert.dom(SELECTORS.noStoreValue).containsText('Yes', 'noStore shows opposite of what the value is');
   });
 });

@@ -1,7 +1,6 @@
 export const PKI_BASE_URL = `/vault/cluster/secrets/backend/pki/roles`;
 
 export const SELECTORS = {
-  // Pki role
   roleName: '[data-test-input="name"]',
   issuerRef: '[data-test-input="issuerRef"]',
   customTtl: '[data-test-field="customTtl"]',
