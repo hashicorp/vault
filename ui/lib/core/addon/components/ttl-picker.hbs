@@ -1,21 +1,15 @@
 <div class="has-bottom-margin-m" ...attributes>
   {{#if @hideToggle}}
-    <span class="ttl-picker-label">{{this.label}}</span><br />
-    <div class="sub-text">
-      <span>{{this.helperText}}</span>
-      {{#if @description}}
-        <ToolTip @verticalPosition="below" as |T|>
-          <T.Trigger data-test-tooltip-trigger tabindex="-1">
-            <Icon @name="info" aria-label="description" />
-          </T.Trigger>
-          <T.Content @defaultClass="tool-tip">
-            <div class="box" data-test-hover-copy-tooltip-text>
-              {{this.description}}
-            </div>
-          </T.Content>
-        </ToolTip>
-      {{/if}}
-    </div>
+    <TtlForm
+      @label={{this.label}}
+      @subText={{this.helperText}}
+      @description={{@description}}
+      @onChange={{this.handleChange}}
+      @initialValue={{@initialValue}}
+      @changeOnInit={{@changeOnInit}}
+      data-test-ttl-picker-group={{this.label}}
+    />
+    {{yield}}
   {{else}}
     <Toggle
       @name={{this.label}}
@@ -42,10 +36,15 @@
         {{/if}}
       </div>
       {{#if (or this.enableTTL this.hideToggle)}}
-        <div data-test-ttl-picker-group={{this.label}}>
-          <TtlForm @onChange={{this.handleChange}} @initialValue={{@initialValue}} @changeOnInit={{@changeOnInit}} />
-        </div>
-        {{yield}}
+        <TtlForm
+          @label={{this.label}}
+          @onChange={{this.handleChange}}
+          @initialValue={{@initialValue}}
+          @changeOnInit={{@changeOnInit}}
+          data-test-ttl-picker-group={{this.label}}
+        >
+          {{yield}}
+        </TtlForm>
       {{/if}}
     </Toggle>
   {{/if}}

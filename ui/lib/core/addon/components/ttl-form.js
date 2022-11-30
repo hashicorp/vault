@@ -1,16 +1,20 @@
 /**
  * @module TtlForm
  * TtlForm components are used to enter a Time To Live (TTL) input.
- * This component does not include a label and is designed to take
+ * This component includes the label and is designed to take
  * a time and unit, and pass an object including seconds,
  * timestring, and go-safe timestring when either values are changed.
+ * This picker recalculates the time when the unit is changed by the user (eg 60s -> 1m)
+ * To allow the user to toggle this form, use TtlPicker
  *
  * @example
  * ```js
  * <TtlForm @onChange={{this.handleChange}} @initialValue="30m"/>
  * ```
- * @param {function} onChange - This function will be called when the user changes the value. An object will be passed in as a parameter with values seconds{number}, timeString{string}
- * @param {string} [initialValue] - InitialValue is the duration value which will be shown when the component is loaded. If it can't be parsed, will default to 0.
+ * @param onChange {Function} - This function will be called when the user changes the value. An object will be passed in as a parameter with values seconds{number}, timeString{string}
+ * @param initialValue=null {string} - InitialValue is the duration value which will be shown when the component is loaded. If it can't be parsed, will default to 0.
+ * @param changeOnInit=false {boolean} - if true, calls the onChange hook when component is initialized
+ * @param label='' {string} - label for the TTL Picker inputs group
  */
 
 import Ember from 'ember';
