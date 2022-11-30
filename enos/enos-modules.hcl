@@ -59,8 +59,6 @@ module "read_license" {
 
 module "remove_node" {
   source = "./modules/remove_node"
-
-  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_agent" {
