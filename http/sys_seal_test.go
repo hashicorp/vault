@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/hashicorp/vault/version"
 )
 
 func TestSysSealStatus(t *testing.T) {
