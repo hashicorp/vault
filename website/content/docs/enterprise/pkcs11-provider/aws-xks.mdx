@@ -39,11 +39,6 @@ On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/km
     vault write kmip/config listen_addrs=0.0.0.0:5696
     ```
 
-    ~> **Note**: When configuring KMIP for Oracle, you will probably need to set the
-    `server_hostnames` and `server_ips` [configuration parameters](/api-docs/secret/kmip#parameters),
-    otherwise the TLS connection to the KMIP Secrets Engine will fail due to certification validation errors.
-    When configuring Oracle TDE, this error can manifest as the `sqlplus` session silently hanging.
-
 1. Create a KMIP scope to contain the AES keys that will be accessible.
    The KMIP scope is essentially an isolated namespace.
    Here is an example creating one called `my-service` (which will be used throughout this document).
