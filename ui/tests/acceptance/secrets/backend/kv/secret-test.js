@@ -183,6 +183,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await fillIn('[data-test-input="maxVersions"]', maxVersion);
     await click('[data-test-input="casRequired"]');
     await click('[data-test-toggle-label="Automate secret deletion"]');
+    await fillIn('[data-test-select="ttl-unit"]', 's');
     await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
     await click('[data-test-mount-submit="true"]');
 
@@ -207,6 +208,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       '1s',
       'displays the delete version after set when configuring the secret-engine'
     );
+    await this.pauseTest();
   });
 
   test('it can create a secret and metadata can be created and edited', async function (assert) {

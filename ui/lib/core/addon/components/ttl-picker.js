@@ -44,49 +44,47 @@ export default class TtlPickerComponent extends Component {
   constructor() {
     super(...arguments);
     const enable = this.args.initialEnabled;
-    const value = this.args.initialValue;
 
-    let setEnable = this.args.hideToggle;
+    let setEnable = !!this.args.hideToggle;
     if (!!enable || typeOf(enable) === 'boolean') {
       // This allows non-boolean values passed in to be evaluated for truthiness
       setEnable = !!enable;
     }
 
     this.enableTTL = setEnable;
+    this.initializeTtl();
+  }
 
-    if (!this.args.changeOnInit) {
-      // If the TTL doesn't change on init, calculate TTL internally
-      // so it sends correct values when toggled on
-      if (!value && value !== 0) {
+  initializeTtl() {
+    const initialValue = this.args.initialValue;
+    let seconds = 0;
+    if (typeof initialValue === 'number') {
+      // if the passed value is a number, assume unit is seconds
+      seconds = initialValue;
+    } else {
+      try {
+        seconds = Duration.parse(initialValue).seconds();
+      } catch (e) {
+        // if parsing fails leave it empty
         return;
       }
-
-      // let unit = 's';
-      let seconds = 0;
-      if (typeof value === 'number') {
-        // if the passed value is a number, assume unit is seconds
-        seconds = value;
-      } else {
-        try {
-          seconds = Duration.parse(value).seconds();
-        } catch (e) {
-          // if parsing fails leave it empty
-          return;
-        }
-      }
-      const unit = largestUnitFromSeconds(seconds);
-      const time = convertFromSeconds(seconds, unit);
-      this.ttl = {
-        seconds,
-        timeString: time + unit,
-        goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
-      };
+    }
+    const unit = largestUnitFromSeconds(seconds);
+    const time = convertFromSeconds(seconds, unit);
+    this.ttl = {
+      seconds,
+      timeString: time + unit,
+      goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
+    };
+    if (this.args.changeOnInit) {
+      this.handleChange();
     }
   }
 
   @action
   handleChange(ttlObj) {
     if (ttlObj) {
+      // Update local TTL object if triggered from child TtlForm
       this.ttl = ttlObj;
     }
     const ttl = {

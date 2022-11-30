@@ -21,7 +21,7 @@
     >
       <span class="ttl-picker-label is-large" data-test-ttl-picker-label={{this.label}}>{{this.label}}</span><br />
       <div class="description has-text-grey">
-        <span>{{this.helperText}}</span>
+        <span data-test-ttl-picker-subtext>{{this.helperText}}</span>
         {{#if @description}}
           <ToolTip @verticalPosition="below" as |T|>
             <T.Trigger data-test-tooltip-trigger tabindex="-1">
