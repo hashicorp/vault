@@ -61,6 +61,11 @@ Vagrantfile
 # Enos
 enos/.enos
 enos/support
+# Enos local Terraform files
+enos/.terraform/*
+enos/.terraform.lock.hcl
+enos/*.tfstate
+enos/*.tfstate.*
 
 .DS_Store
 .idea
