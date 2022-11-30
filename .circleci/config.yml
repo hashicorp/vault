@@ -100,7 +100,7 @@ jobs:
         name: Run Browserstack Tests
   build-go-dev:
     machine:
-      image: ubuntu-2004:202201-02
+      image: ubuntu-2004:2022.10.1
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -368,7 +368,7 @@ jobs:
     - GOTESTSUM_VERSION: 0.5.2
   fmt:
     machine:
-      image: ubuntu-2004:202201-02
+      image: ubuntu-2004:2022.10.1
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -843,7 +843,7 @@ jobs:
         name: Run Semgrep Rules
   pre-flight-checks:
     machine:
-      image: ubuntu-2004:202201-02
+      image: ubuntu-2004:2022.10.1
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
