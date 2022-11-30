@@ -2093,6 +2093,10 @@
             "path": "enterprise/pkcs11-provider"
           },
           {
+            "title": "AWS KMS XKS",
+            "path": "enterprise/pkcs11-provider/aws-xks"
+          },
+          {
             "title": "Oracle TDE",
             "path": "enterprise/pkcs11-provider/oracle-tde"
           }
