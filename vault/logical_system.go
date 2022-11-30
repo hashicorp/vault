@@ -440,11 +440,10 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 		var detailed []map[string]any
 		for _, p := range versionedPlugins {
 			entry := map[string]any{
-				"type":               p.Type,
-				"name":               p.Name,
-				"version":            p.Version,
-				"builtin":            p.Builtin,
-				"deprecation_status": p.DeprecationStatus,
+				"type":    p.Type,
+				"name":    p.Name,
+				"version": p.Version,
+				"builtin": p.Builtin,
 			}
 			if p.SHA256 != "" {
 				entry["sha256"] = p.SHA256
