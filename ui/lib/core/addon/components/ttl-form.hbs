@@ -4,10 +4,10 @@
     {{yield}}
   {{else}}
     <legend>
-      <span class="ttl-picker-label is-large">{{@label}}</span><br />
+      <span class="ttl-picker-label is-large" data-test-ttl-form-label>{{@label}}</span><br />
       {{#if @subText}}
         <div class="sub-text">
-          <span>{{@subText}}</span>
+          <span data-test-ttl-form-subtext>{{@subText}}</span>
           {{#if @description}}
             <ToolTip @verticalPosition="below" as |T|>
               <T.Trigger data-test-tooltip-trigger tabindex="-1">
@@ -34,6 +34,7 @@
       class="input {{if this.errorMessage 'has-error'}}"
       oninput={{perform this.updateTime value="target.value"}}
       pattern="[0-9]*"
+      data-test-ttlform-value
       data-test-ttl-value={{@label}}
     />
   </div>

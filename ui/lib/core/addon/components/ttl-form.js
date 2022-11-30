@@ -42,7 +42,7 @@ export const goSafeConvertFromSeconds = (seconds, unit) => {
   const u = unit === 'd' ? 'h' : unit;
   return convertFromSeconds(seconds, u) + u;
 };
-const largestUnitFromSeconds = (seconds) => {
+export const largestUnitFromSeconds = (seconds) => {
   let unit = 's';
   // get largest unit with no remainder
   if (seconds % secondsMap.d === 0) {
@@ -122,7 +122,10 @@ export default class TtlFormComponent extends Component {
 
   keepSecondsRecalculate(newUnit) {
     const newTime = convertFromSeconds(this.seconds, newUnit);
-    this.time = newTime;
+    if (Number.isInteger(newTime)) {
+      // Only recalculate if time is whole number
+      this.time = newTime;
+    }
     this.unit = newUnit;
   }
 

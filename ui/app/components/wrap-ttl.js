@@ -10,7 +10,6 @@ export default class WrapTtlComponent extends Component {
   constructor() {
     super(...arguments);
     assert('`onChange` handler is a required attr in `' + this.toString() + '`.', this.args.onChange);
-    this.args.onChange(this.wrapTTL);
   }
 
   get wrapTTL() {

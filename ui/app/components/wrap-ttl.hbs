@@ -3,9 +3,10 @@
     @label="Wrap response"
     @helperTextDisabled="Will not wrap response"
     @helperTextEnabled="Will wrap response with a lease of"
-    @enableTTL={{this.wrapResponse}}
+    @initialEnabled={{true}}
     @initialValue="30m"
     @onChange={{this.changedValue}}
+    @changeOnInit={{true}}
     data-test-wrap-ttl-picker
   />
 </div>
