@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func CachelessHandler(ctx context.Context, logger hclog.Logger, proxier Proxier) http.Handler {
+func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
@@ -74,7 +74,7 @@ func CachelessHandler(ctx context.Context, logger hclog.Logger, proxier Proxier)
 	})
 }
 
-func CachingHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool) http.Handler {
+func CachingProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 

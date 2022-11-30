@@ -676,7 +676,7 @@ func (c *AgentCommand) Run(args []string) int {
 		proxyVaultToken := !config.Cache.ForceAutoAuthToken
 
 		// Create the request handler
-		cacheHandler = cache.CachingHandler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
+		cacheHandler = cache.CachingProxyHandler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
 	}
 
 	var listeners []net.Listener
@@ -720,7 +720,7 @@ func (c *AgentCommand) Run(args []string) int {
 				c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
 				return 1
 			}
-			muxHandler = cache.CachelessHandler(ctx, listenerLogger, apiProxy)
+			muxHandler = cache.ProxyHandler(ctx, listenerLogger, apiProxy)
 		}
 
 		// Parse 'require_request_header' listener config option, and wrap
