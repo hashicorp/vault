@@ -121,7 +121,7 @@ BUG FIXES:
 * ui: fix entity policies list link to policy show page [[GH-17950](https://github.com/hashicorp/vault/pull/17950)]
 
 ## 1.12.2
-### Unreleased
+### November 30, 2022
 
 CHANGES:
 
@@ -403,7 +403,7 @@ BUG FIXES:
 * vault: Fix a bug where duplicate policies could be added to an identity group. [[GH-15638](https://github.com/hashicorp/vault/pull/15638)]
 
 ## 1.11.6
-### Unreleased
+### November 30, 2022
 
 IMPROVEMENTS:
 
@@ -780,7 +780,7 @@ rebuilt upon changes to the list of issuers. [[GH-15179](https://github.com/hash
 * ui: masked values no longer give away length or location of special characters [[GH-15025](https://github.com/hashicorp/vault/pull/15025)]
 
 ## 1.10.9
-### Unreleased
+### November 30, 2022
 
 BUG FIXES:
 
