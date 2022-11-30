@@ -93,7 +93,11 @@ marked with the `Pending Removal` status. Any attempt to unseal Vault with
 mounts backed by one of these builtin plugins will result in an immediate
 shutdown of the Vault core.
 
-It is recommended that set the
+-> **NOTE** In the event that an external plugin with the same name and type as
+a deprecated builtin is deregistered, any subsequent unseal of Vault will also
+result in a core shutdown.
+
+The remediation for affected mounts is to set the
 [VAULT_ALLOW_PENDING_REMOVAL_MOUNTS](/docs/commands/server#vault_allow_pending_removal_mounts)
 environment variable and replace any `Pending Removal` feature with the
 [preferred alternative
