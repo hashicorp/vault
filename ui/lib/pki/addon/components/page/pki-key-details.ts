@@ -1,5 +1,7 @@
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
+import RouterService from '@ember/routing/router-service';
+import FlashMessageService from 'vault/services/flash-messages';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 interface Args {
@@ -13,11 +15,8 @@ interface Args {
 }
 
 export default class PkiKeyDetails extends Component<Args> {
-  @service declare router: { transitionTo: (route: string) => void };
-  @service declare flashMessages: {
-    success: (successMessage: string) => void;
-    danger: (errorMessage: string) => void;
-  };
+  @service declare readonly router: RouterService;
+  @service declare readonly flashMessages: FlashMessageService;
 
   get breadcrumbs() {
     return [
