@@ -227,7 +227,6 @@ type RequestExample struct {
 	Response *Response
 }
 
-// Response describes and optional demonstrations an operation response.
 type Response struct {
 	Description string                  // summary of the the response and should always be provided
 	MediaType   string                  // media type of the response, defaulting to "application/json" if empty
