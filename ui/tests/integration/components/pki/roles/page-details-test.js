@@ -3,7 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/role/page-details';
+import { SELECTORS } from 'vault/tests/helpers/pki/roles/page-details';
 
 module('Integration | Component | pki role details page', function (hooks) {
   setupRenderingTest(hooks);
