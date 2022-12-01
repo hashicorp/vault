@@ -506,8 +506,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 							},
 						}
 					}
-
-					break
 				}
 
 				op.Responses[code] = &OASResponse{
