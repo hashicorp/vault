@@ -343,7 +343,6 @@ func TestPredict_Plugins(t *testing.T) {
 			[]string{
 				"ad",
 				"alicloud",
-				"app-id",
 				"approle",
 				"aws",
 				"azure",
@@ -367,6 +366,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"kv",
 				"ldap",
 				"mongodb-database-plugin",
+				"mongodbatlas",
 				"mongodbatlas-database-plugin",
 				"mssql-database-plugin",
 				"mysql-aurora-database-plugin",
@@ -433,7 +433,7 @@ func TestPredict_Plugins(t *testing.T) {
 					}
 				}
 				if !reflect.DeepEqual(act, tc.exp) {
-					t.Errorf("expected:%q, got: %q", tc.exp, act)
+					t.Errorf("expected: %q, got: %q, diff: %v", tc.exp, act, strutil.Difference(act, tc.exp, true))
 				}
 			})
 		}
