@@ -5,13 +5,15 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - enos/ci/**
+      - .github/workflows/enos-ci-bootstrap.yml
   push:
     branches:
       - main
-      - mbaum/qt-318 # TODO: remove this after testing is complete
     paths:
       - enos/ci/**
-      - .github/workflows/enos-bootstrap-ci.yml
+      - .github/workflows/enos-ci-bootstrap.yml
 
 jobs:
   bootstrap-ci:
