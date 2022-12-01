@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -1235,7 +1236,32 @@ func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
 		return err
 	}
 
-	return sc.Storage.Put(sc.Context, entry)
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return err
+	}
+
+	sc.Backend.publishCertCountMetrics.Store(config.PublishMetrics)
+
+	// To Potentially Disable Certificate Counting
+	if config.MaintainCount == false {
+		oldValue := sc.Backend.certCountEnabled.Swap(config.MaintainCount)
+		if oldValue != false {
+			if config.MaintainCount == false {
+				sc.Backend.certCountError = "Cert Count is Disabled: enable via Tidy Config maintain_stored_certificate_counts"
+				sc.Backend.possibleDoubleCountedSerials = nil        // This won't stop a list operation, but will stop an expensive clean up during initialize
+				sc.Backend.possibleDoubleCountedRevokedSerials = nil // This won't stop a list operation, but will stop an expensive clean up during initialize
+				atomic.StoreUint32(sc.Backend.certCount, 0)
+				atomic.StoreUint32(sc.Backend.revokedCertCount, 0)
+			}
+		}
+	} else { // To Potentially Enable Certificate Counting
+		// We haven't written "re-enable certificate counts" outside the initialize function
+		// Any call derived call to do so is likely to time out on ~2 million certs
+		sc.Backend.certCountError = "Certificate Counting Has Not Been Initialized, re-initialize this mount"
+	}
+
+	return nil
 }
 
 func (sc *storageContext) listRevokedCerts() ([]string, error) {

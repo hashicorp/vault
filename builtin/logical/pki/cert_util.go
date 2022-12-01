@@ -234,9 +234,9 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
 		switch {
 		case strings.HasPrefix(prefix, "revoked/"):
-			b.incrementTotalRevokedCertificatesCount(certsCounted, path)
+			b.ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted, path)
 		default:
-			b.incrementTotalCertificatesCount(certsCounted, path)
+			b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, path)
 		}
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
 	}
