@@ -88,7 +88,7 @@ func Test_RegistryKeyCounts(t *testing.T) {
 		{
 			name:       "number of auth plugins",
 			pluginType: consts.PluginTypeCredential,
-			want:       20,
+			want:       19,
 		},
 		{
 			name:       "number of database plugins",
@@ -98,7 +98,7 @@ func Test_RegistryKeyCounts(t *testing.T) {
 		{
 			name:       "number of secrets plugins",
 			pluginType: consts.PluginTypeSecrets,
-			want:       18,
+			want:       19,
 		},
 	}
 	for _, tt := range tests {
@@ -133,9 +133,15 @@ func Test_RegistryContains(t *testing.T) {
 		},
 		{
 			name:       "known builtin lookup",
-			builtin:    "app-id",
+			builtin:    "approle",
 			pluginType: consts.PluginTypeCredential,
 			want:       true,
+		},
+		{
+			name:       "removed builtin lookup",
+			builtin:    "app-id",
+			pluginType: consts.PluginTypeCredential,
+			want:       false,
 		},
 	}
 	for _, tt := range tests {
@@ -193,10 +199,10 @@ func Test_RegistryStatus(t *testing.T) {
 			wantOk:     true,
 		},
 		{
-			name:       "pending removal builtin lookup",
+			name:       "removed builtin lookup",
 			builtin:    "app-id",
 			pluginType: consts.PluginTypeCredential,
-			want:       consts.PendingRemoval,
+			want:       consts.Removed,
 			wantOk:     true,
 		},
 	}
