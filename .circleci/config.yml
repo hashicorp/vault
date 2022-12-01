@@ -73,14 +73,17 @@ jobs:
         path: ui/test-results
   build-go-dev:
     machine:
-      image: ubuntu-2004:202201-02
+      image: ubuntu-2004:2022.10.1
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
+    - checkout
     - run:
         command: |
+          GO_VERSION=$(cat .go-version)
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
+          cd ~
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
@@ -96,8 +99,6 @@ jobs:
           echo "$ go version"
           go version
         name: Setup Go
-        working_directory: ~/
-    - checkout
     - restore_cache:
         keys:
         - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
@@ -119,13 +120,13 @@ jobs:
         root: .
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.3
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.3
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -261,7 +262,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -351,17 +352,23 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.3
     - GO_TAGS: ''
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
   fmt:
     machine:
-      image: ubuntu-2004:202201-02
+      image: ubuntu-2004:2022.10.1
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
+    - checkout
     - run:
         command: |
+          GO_VERSION=$(cat .go-version)
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
+          cd ~
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
@@ -377,8 +384,6 @@ jobs:
           echo "$ go version"
           go version
         name: Setup Go
-        working_directory: ~/
-    - checkout
     - run:
         command: |
           echo "Using gofumpt version ${GOFUMPT_VERSION}"
@@ -391,13 +396,13 @@ jobs:
         name: make fmt
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.3
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.3
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -529,7 +534,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -613,10 +618,13 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.3
     - GO_TAGS: ''
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.3
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -748,7 +756,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -832,7 +840,10 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.3
     - GO_TAGS: ''
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
   semgrep:
     docker:
     - image: docker.mirror.hashicorp.services/returntocorp/semgrep:0.113.0
@@ -847,14 +858,17 @@ jobs:
         name: Run Semgrep Rules
   pre-flight-checks:
     machine:
-      image: ubuntu-2004:202201-02
+      image: ubuntu-2004:2022.10.1
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
+    - checkout
     - run:
         command: |
+          GO_VERSION=$(cat .go-version)
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
+          cd ~
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
@@ -870,8 +884,6 @@ jobs:
           echo "$ go version"
           go version
         name: Setup Go
-        working_directory: ~/
-    - checkout
     - run:
         command: |
           export CCI_PATH=/tmp/circleci-cli/$CIRCLECI_CLI_VERSION
@@ -935,13 +947,13 @@ jobs:
         - /home/circleci/go/pkg/mod
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.3
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.3
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1077,7 +1089,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -1167,7 +1179,10 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.3
     - GO_TAGS: ''
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
 workflows:
   ci:
     jobs:

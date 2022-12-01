@@ -53,6 +53,8 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
 
 1. Configure the [KMIP Secrets Engine](/docs/secrets/kmip) and a KMIP *scope*. The scope is used to hold keys and objects.
 
+    ~> **Note**: These commands will output the credentials in plaintext.
+
     ```sh
     vault secrets enable kmip
     vault write kmip/config listen_addrs=0.0.0.0:5696
@@ -69,8 +71,8 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
     to the KMIP server. You'll need to save these to files so that the PKCS#11 provider can use them.
 
     ```sh
-    jq -r '.data.ca_chain[]' kmip.json > ca.pem
-    jq -r '.data.certificate' kmip.json > cert.pem
+    jq --raw-output --exit-status '.data.ca_chain[]' kmip.json > ca.pem
+    jq --raw-output --exit-status '.data.certificate' kmip.json > cert.pem
     ```
     The certificate file from the KMIP Secrets Engine also contains the key.
 

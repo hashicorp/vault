@@ -384,8 +384,8 @@ func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 		t.Fatalf("%#v", resp)
 	}
 	found := false
-	for _, plugin := range resp.Data["detailed"].([]pluginutil.VersionedPlugin) {
-		if plugin.Name == pluginName && plugin.Version == "v1.2.3" {
+	for _, plugin := range resp.Data["detailed"].([]map[string]any) {
+		if plugin["name"] == pluginName && plugin["version"] == "v1.2.3" {
 			found = true
 			break
 		}
@@ -437,8 +437,8 @@ func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
 		t.Fatalf("%#v", resp)
 	}
 	found := false
-	for _, plugin := range resp.Data["detailed"].([]pluginutil.VersionedPlugin) {
-		if plugin.Name == "noop" && plugin.Version == "v1.2.3" {
+	for _, plugin := range resp.Data["detailed"].([]map[string]any) {
+		if plugin["name"] == "noop" && plugin["version"] == "v1.2.3" {
 			found = true
 			break
 		}

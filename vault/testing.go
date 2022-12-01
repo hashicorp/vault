@@ -33,6 +33,7 @@ import (
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -127,6 +128,9 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 		EnableUI:        false,
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -2247,6 +2251,7 @@ func NewMockBuiltinRegistry() *mockBuiltinRegistry {
 			"postgresql-database-plugin": consts.PluginTypeDatabase,
 			"approle":                    consts.PluginTypeCredential,
 			"aws":                        consts.PluginTypeCredential,
+			"consul":                     consts.PluginTypeSecrets,
 		},
 	}
 }
@@ -2255,7 +2260,6 @@ type mockBuiltinRegistry struct {
 	forTesting map[string]consts.PluginType
 }
 
-// Get only supports getting database plugins, and approle
 func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
 	testPluginType, ok := m.forTesting[name]
 	if !ok {
@@ -2265,28 +2269,35 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 		return nil, false
 	}
 
-	if name == "approle" {
+	switch name {
+	case "approle":
 		return toFunc(approle.Factory), true
-	}
-
-	if name == "aws" {
+	case "aws":
 		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 			b := new(framework.Backend)
 			b.Setup(ctx, config)
 			b.BackendType = logical.TypeCredential
 			return b, nil
 		}), true
-	}
-
-	if name == "postgresql-database-plugin" {
+	case "postgresql-database-plugin":
 		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 			b := new(framework.Backend)
 			b.Setup(ctx, config)
 			b.BackendType = logical.TypeLogical
 			return b, nil
 		}), true
+	case "mysql-database-plugin":
+		return dbMysql.New(dbMysql.DefaultUserNameTemplate), true
+	case "consul":
+		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+			b := new(framework.Backend)
+			b.Setup(ctx, config)
+			b.BackendType = logical.TypeLogical
+			return b, nil
+		}), true
+	default:
+		return nil, false
 	}
-	return dbMysql.New(dbMysql.DefaultUserNameTemplate), true
 }
 
 // Keys only supports getting a realistic list of the keys for database plugins,

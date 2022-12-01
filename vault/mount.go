@@ -691,8 +691,7 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 		return consts.PluginTypeUnknown
 	}
 
-	// Builtin plugins should contain the "builtin" string in their RunningVersion
-	if !strings.Contains(entry.RunningVersion, "builtin") {
+	if !versions.IsBuiltinVersion(entry.RunningVersion) {
 		return consts.PluginTypeUnknown
 	}
 
@@ -1278,6 +1277,12 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 
 		if entry.NamespaceID == "" {
 			entry.NamespaceID = namespace.RootNamespaceID
+			needPersist = true
+		}
+
+		// Don't store built-in version in the mount table, to make upgrades smoother.
+		if versions.IsBuiltinVersion(entry.Version) {
+			entry.Version = ""
 			needPersist = true
 		}
 	}

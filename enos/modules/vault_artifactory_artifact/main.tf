@@ -17,6 +17,6 @@ data "enos_artifactory_item" "vault" {
   properties = tomap({
     "commit"          = var.revision
     "product-name"    = var.edition == "oss" ? "vault" : "vault-enterprise"
-    "product-version" = var.vault_product_version
+    "product-version" = var.product_version
   })
 }
