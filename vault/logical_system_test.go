@@ -3129,6 +3129,38 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_PluginCatalog_ListPlugins_SucceedsWithAuditLogEnabled(t *testing.T) {
+	core, b, root := testCoreSystemBackend(t)
+
+	tempDir := t.TempDir()
+	f, err := os.CreateTemp(tempDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable audit logging.
+	req := logical.TestRequest(t, logical.UpdateOperation, "audit/file")
+	req.Data = map[string]any{
+		"type": "file",
+		"options": map[string]any{
+			"file_path": f.Name(),
+		},
+	}
+	ctx := namespace.RootContext(nil)
+	resp, err := b.HandleRequest(ctx, req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+
+	// List plugins
+	req = logical.TestRequest(t, logical.ReadOperation, "sys/plugins/catalog")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	if err != nil || resp == nil || resp.IsError() {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+}
+
 func TestSystemBackend_PluginCatalog_CannotRegisterBuiltinPlugins(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
 	// Bootstrap the pluginCatalog
