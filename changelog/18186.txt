@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Allow Turning Off Storage Metrics (to reduce time on initialize with 5000 backends)
+```
