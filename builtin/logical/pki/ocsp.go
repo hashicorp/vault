@@ -218,7 +218,15 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 		return base64.StdEncoding.DecodeString(base64Req)
 	case logical.UpdateOperation:
 		// POST bodies should contain the binary form of the DER request.
+		// NOTE: Writing an empty update request to Vault causes a nil request.HTTPRequest, and that object
+		//       says that it is possible for its Body element to be nil as well, so check both just in case.
+		if request.HTTPRequest == nil {
+			return nil, errors.New("no data in request")
+		}
 		rawBody := request.HTTPRequest.Body
+		if rawBody == nil {
+			return nil, errors.New("no data in request body")
+		}
 		defer rawBody.Close()
 
 		requestBytes, err := io.ReadAll(io.LimitReader(rawBody, maximumRequestSize))
