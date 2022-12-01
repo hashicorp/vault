@@ -1,6 +1,7 @@
 import Model, { attr } from '@ember-data/model';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required' }],
@@ -121,5 +122,24 @@ export default class KubernetesRoleModel extends Model {
     return hiddenFieldIndices
       ? this.formFields.filter((field, index) => !hiddenFieldIndices.includes(index))
       : null;
+  }
+
+  @lazyCapabilities(apiPath`${'backend'}/roles/${'name'}`, 'backend', 'name') rolePath;
+  @lazyCapabilities(apiPath`${'backend'}/roles`, 'backend') rolesPath;
+
+  get canCreate() {
+    return this.rolePath.get('canCreate');
+  }
+  get canDelete() {
+    return this.rolePath.get('canDelete');
+  }
+  get canEdit() {
+    return this.rolePath.get('canUpdate');
+  }
+  get canRead() {
+    return this.rolePath.get('canRead');
+  }
+  get canList() {
+    return this.rolesPath.get('canList');
   }
 }

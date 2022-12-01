@@ -45,6 +45,14 @@ module('Integration | Component | kubernetes | TabPageHeader', function (hooks) 
     assert.dom('[data-test-tab="config"]').hasText('Configuration', 'Configuration tab renders');
   });
 
+  test('it should render filter for roles', async function (assert) {
+    await render(
+      hbs`<TabPageHeader @model={{this.model}} @filterRoles={{true}} @rolesFilterValue="test" />`,
+      { owner: this.engine }
+    );
+    assert.dom('[data-test-nav-input] input').hasValue('test', 'Filter renders with provided value');
+  });
+
   test('it should yield block for toolbar actions', async function (assert) {
     await render(
       hbs`
