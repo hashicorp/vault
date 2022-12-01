@@ -38,7 +38,7 @@ export const secondsMap = {
 const convertToSeconds = (time, unit) => {
   return time * secondsMap[unit];
 };
-const convertFromSeconds = (seconds, unit) => {
+export const convertFromSeconds = (seconds, unit) => {
   return seconds / secondsMap[unit];
 };
 const goSafeConvertFromSeconds = (seconds, unit) => {
@@ -46,7 +46,7 @@ const goSafeConvertFromSeconds = (seconds, unit) => {
   const u = unit === 'd' ? 'h' : unit;
   return convertFromSeconds(seconds, u) + u;
 };
-const largestUnitFromSeconds = (seconds) => {
+export const largestUnitFromSeconds = (seconds) => {
   let unit = 's';
   if (seconds === 0) return unit;
   // get largest unit with no remainder
