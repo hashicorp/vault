@@ -1476,12 +1476,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			builtin := plug != nil && plug.Builtin
 			if plugerr != nil || builtin {
 				return errLoadMountsFailed
-			}
-
-			// In the event that newLogicalBackend returned an error and we have
-			// an external plugin or no plugin, mount the entry but skip the
-			// backend initialization.
-			if plug == nil || !plug.Builtin {
+			} else {
 				c.logger.Warn("skipping plugin-based mount entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
