@@ -151,6 +151,7 @@ func newRegistry() *registry {
 			"aws":      {Factory: logicalAws.Factory},
 			"azure":    {Factory: logicalAzure.Factory},
 			"cassandra": {
+				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
 			"consul":     {Factory: logicalConsul.Factory},
