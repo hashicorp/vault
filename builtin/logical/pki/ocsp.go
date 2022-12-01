@@ -239,7 +239,7 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 		}
 		return requestBytes, nil
 	default:
-		return nil, fmt.Errorf("unsupported request method: %s", request.HTTPRequest.Method)
+		return nil, fmt.Errorf("unsupported request method: %s", request.Operation)
 	}
 }
 
