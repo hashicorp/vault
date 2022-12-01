@@ -3,7 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/page-role-details';
+import { SELECTORS } from 'vault/tests/helpers/pki/roles/page-details';
 
 module('Integration | Component | pki role details page', function (hooks) {
   setupRenderingTest(hooks);
@@ -24,7 +24,7 @@ module('Integration | Component | pki role details page', function (hooks) {
     assert.expect(7);
     await render(
       hbs`
-      <PkiRoleDetailsPage @role={{this.model}} />
+      <Page::PkiRoleDetails @role={{this.model}} />
   `,
       { owner: this.engine }
     );
