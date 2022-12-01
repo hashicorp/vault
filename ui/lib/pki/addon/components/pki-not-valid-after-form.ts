@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { HTMLElementEvent } from 'forms';
+import { format } from 'date-fns';
 
 /**
  * <PkiNotValidAfterForm /> components are used to manage two mutually exclusive role options in the form.
@@ -9,24 +10,35 @@ import { HTMLElementEvent } from 'forms';
 interface Args {
   model: {
     notAfter: string;
-    ttl: string;
-    set: (key: string, value: string) => void;
+    ttl: string | number;
+    set: (key: string, value: string | number) => void;
   };
 }
 
 export default class RadioSelectTtlOrString extends Component<Args> {
   @tracked groupValue = 'ttl';
-  @tracked originalNotAfter: string;
-  @tracked originalTtl: string;
+  @tracked cachedNotAfter: string;
+  @tracked cachedTtl: string | number;
+  @tracked formDate: string;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     const { model } = this.args;
-    this.originalNotAfter = model.notAfter;
-    this.originalTtl = model.ttl;
+    this.cachedNotAfter = model.notAfter || '';
+    this.formDate = this.calculateFormDate(model.notAfter);
+    this.cachedTtl = model.ttl || '';
     if (model.notAfter) {
       this.groupValue = 'specificDate';
     }
+  }
+
+  calculateFormDate(value: string) {
+    // API expects and returns full ISO string
+    // but the form input only accepts yyyy-MM-dd format
+    if (value) {
+      return format(new Date(value), 'yyyy-MM-dd');
+    }
+    return '';
   }
 
   @action onRadioButtonChange(selection: string) {
@@ -34,11 +46,13 @@ export default class RadioSelectTtlOrString extends Component<Args> {
     // Clear the previous selection if they have clicked the other radio button.
     if (selection === 'specificDate') {
       this.args.model.set('ttl', '');
-      this.args.model.set('notAfter', this.originalNotAfter);
+      this.args.model.set('notAfter', this.cachedNotAfter);
+      this.formDate = this.calculateFormDate(this.cachedNotAfter);
     }
     if (selection === 'ttl') {
       this.args.model.set('notAfter', '');
-      this.args.model.set('ttl', this.originalTtl);
+      this.args.model.set('ttl', this.cachedTtl);
+      this.formDate = '';
     }
   }
 
@@ -48,12 +62,17 @@ export default class RadioSelectTtlOrString extends Component<Args> {
       // do not save ttl on the model unless the ttl radio button is selected
       return;
     }
-    this.args.model.set('ttl', enabled === true ? goSafeTimeString : '0');
+    const ttlVal = enabled === true ? goSafeTimeString : 0;
+    this.cachedTtl = ttlVal;
+    this.args.model.set('ttl', ttlVal);
   }
 
   @action setAndBroadcastInput(evt: HTMLElementEvent<HTMLInputElement>) {
-    const setDate = evt.target.valueAsDate;
+    const setDate = evt.target.valueAsDate?.toISOString();
     if (!setDate) return;
-    this.args.model.set('notAfter', setDate.toISOString());
+
+    this.cachedNotAfter = setDate;
+    this.args.model.set('notAfter', setDate);
+    this.formDate = this.calculateFormDate(setDate);
   }
 }

@@ -9,22 +9,21 @@
     data-test-radio-button="ttl"
   />
   <div class="has-left-margin-xs">
-    <label class="has-left-margin-xs" for="ttlType">
+    <label class="has-left-margin-xs" for="ttlType" data-test-radio-label="ttl">
       <span class="ttl-picker-label is-large">TTL</span>
     </label>
     {{#if (eq this.groupValue "ttl")}}
-      <label class="sr-only" for="ttl">Set relative certificate expiry with TTL</label>
-      <TtlPicker2
+      <TtlPicker
         data-test-input="ttl"
         @onChange={{this.setAndBroadcastTtl}}
         @label="TTL"
         @helperTextEnabled={{@attr.options.helperTextEnabled}}
         @description={{@attr.helpText}}
-        @time={{this.ttlTime}}
-        @unit="d"
+        @initialValue={{@model.ttl}}
         @hideToggle={{true}}
-        @hideLabel={{true}}
-      />
+      >
+        <label class="sr-only" for="ttl">Set relative certificate expiry with TTL</label>
+      </TtlPicker>
     {{/if}}
   </div>
 </div>
@@ -39,7 +38,7 @@
     data-test-radio-button="not_after"
   />
   <div class="has-left-margin-xs">
-    <label class="ttl-picker-label is-large" for="dateType">Specific date</label>
+    <label class="ttl-picker-label is-large" for="dateType" data-test-radio-label="specificDate">Specific date</label>
     {{#if (eq this.groupValue "specificDate")}}
       <label class="sr-only" for="not_after">Set certificate expiry with specified date value</label>
       <Input
@@ -47,7 +46,7 @@
         @type="date"
         autocomplete="off"
         spellcheck="false"
-        @value={{@model.notAfter}}
+        @value={{this.formDate}}
         {{on "input" this.setAndBroadcastInput}}
         class="input"
         data-test-input="not_after"
