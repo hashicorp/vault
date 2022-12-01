@@ -587,6 +587,9 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 	defer b.tidyStatusLock.RUnlock()
 	sc := b.makeStorageContext(ctx, b.storage)
 	config, err := sc.getAutoTidyConfig()
+	if err != nil {
+		return err
+	}
 
 	b.certCountEnabled.Store(config.MaintainCount)
 	b.publishCertCountMetrics.Store(config.PublishMetrics)
