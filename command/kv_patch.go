@@ -252,14 +252,20 @@ func (c *KVPatchCommand) Run(args []string) int {
 	if code != 0 {
 		return code
 	}
+	if secret == nil {
+		// Don't output anything if there's no secret
+		return 0
+	}
+
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
+	}
 
 	if Format(c.UI) == "table" {
 		outputPath(c.UI, fullPath, "Secret Path")
-		if secret != nil {
-			metadata := secret.Data
-			c.UI.Info(getHeaderForMap("Metadata", metadata))
-			return OutputData(c.UI, metadata)
-		}
+		metadata := secret.Data
+		c.UI.Info(getHeaderForMap("Metadata", metadata))
+		return OutputData(c.UI, metadata)
 	}
 
 	return OutputSecret(c.UI, secret)
