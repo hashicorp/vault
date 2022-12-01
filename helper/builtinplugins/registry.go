@@ -163,13 +163,9 @@ func newRegistry() *registry {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			// The mongodbatlas logical database plugin was mistakenly left
-			// out of the deprecation process last release, so it will lag
-			// behind by one release cycle.
-			"mongodbatlas": {
-				Factory:           logicalMongoAtlas.Factory,
-				DeprecationStatus: consts.PendingRemoval,
-			},
+			// The mongodbatlas secrets engine is not the same as the database plugin equivalent
+			// (`mongodbatlas-database-plugin`), and thus will not be deprecated at this time.
+			"mongodbatlas": {Factory: logicalMongoAtlas.Factory},
 			"mssql": {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
