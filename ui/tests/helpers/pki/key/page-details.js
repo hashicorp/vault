@@ -6,6 +6,6 @@ export const SELECTORS = {
   keyNameValue: '[data-test-value-div="Key name"]',
   keyTypeValue: '[data-test-value-div="Key type"]',
   keyBitsValue: '[data-test-value-div="Key bits"]',
-  keyDeleteButton: '[data-test-pki-key-delete]',
-  confirmDelete: '[data-test-confirm-action-trigger]',
+  keyDeleteButton: '[data-test-pki-key-delete] button',
+  confirmDelete: '[data-test-confirm-button]',
 };
