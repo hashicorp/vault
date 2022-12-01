@@ -51,7 +51,6 @@ export default class PkiRoleModel extends Model {
     helperTextEnabled:
       'Also called the not_before_duration property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
     editType: 'ttl',
-    hideToggle: true,
     defaultValue: '30s', // The API type is "duration" which accepts both an integer and string e.g. 30 || '30s'
   })
   notBeforeDuration;

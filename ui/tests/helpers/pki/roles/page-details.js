@@ -6,4 +6,5 @@ export const SELECTORS = {
   noStoreValue: '[data-test-value-div="Store in storage backend"]',
   keyUsageValue: '[data-test-value-div="Key usage"]',
   extKeyUsageValue: '[data-test-value-div="Ext key usage"]',
+  customTtlValue: '[data-test-value-div="Issued certificates expire after"]',
 };
