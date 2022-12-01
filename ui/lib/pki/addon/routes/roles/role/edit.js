@@ -1,4 +1,4 @@
-import { withConfirmLeave } from 'pki/decorators/confirm-leave';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import PkiRolesIndexRoute from '../index';
 
 @withConfirmLeave()

@@ -1,8 +1,8 @@
 import { inject as service } from '@ember/service';
-import { withConfirmLeave } from 'pki/decorators/confirm-leave';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import PkiRolesIndexRoute from '.';
 
-@withConfirmLeave
+@withConfirmLeave()
 export default class PkiRolesCreateRoute extends PkiRolesIndexRoute {
   @service store;
   @service secretMountPath;

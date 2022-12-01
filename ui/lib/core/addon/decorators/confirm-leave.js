@@ -1,4 +1,5 @@
 import { action } from '@ember/object';
+import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
 /**
@@ -8,7 +9,14 @@ import { inject as service } from '@ember/service';
  */
 export function withConfirmLeave() {
   return function decorator(SuperClass) {
-    return class ModelValidations extends SuperClass {
+    if (!Object.prototype.isPrototypeOf.call(Route, SuperClass)) {
+      // eslint-disable-next-line
+      console.error(
+        'withConfirmLeave decorator must be used on instance of ember Route class. Decorator not applied to returned class'
+      );
+      return SuperClass;
+    }
+    return class ConfirmLeave extends SuperClass {
       @service store;
 
       @action
