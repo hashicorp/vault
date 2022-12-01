@@ -85,6 +85,8 @@ Vault Agent is a client daemon that provides the following features:
 
 - [Auto-Auth][autoauth] - Automatically authenticate to Vault and manage the
   token renewal process for locally-retrieved dynamic secrets.
+- [API Proxy][apiproxy] - Allows Vault Agent to act as a proxy for Vault's API,
+  optionally using (or forcing the use of) the Auto-Auth token.
 - [Caching][caching] - Allows client-side caching of responses containing newly
   created tokens and responses containing leased secrets generated off of these
   newly created tokens. The agent also manages the renewals of the cached tokens and leases.
@@ -100,6 +102,16 @@ environments. Please see the [Auto-Auth docs][autoauth]
 for information.
 
 Auto-Auth functionality takes place within an `auto_auth` configuration stanza.
+
+## API Proxy
+
+Vault Agent can act as an API proxy for Vault, allowing you to talk to Vault's
+APIs a listener defined for Agent. It can be configured to optionally allow or force the automatic use of
+the Auto-Auth token for these requests. Please see the [API Proxy docs][apiproxy]
+for more information.
+
+API Proxy functionality takes place within a defined `listener`, and its behaviour can be configured with an
+`api_proxy` configuration stanza.
 
 ## Caching
 
@@ -168,6 +180,8 @@ These are the currently-available general configuration option:
 
 - `auto_auth` <code>([auto_auth][autoauth]: <optional\>)</code> - Specifies the method and other options used for Auto-Auth functionality.
 
+- `api_proxy` <code>([api_proxy][apiproxy]: <optional\>)</code> - Specifies options used for API Proxy functionality.
+
 - `cache` <code>([cache][caching]: <optional\>)</code> - Specifies options used for Caching functionality.
 
 - `listener` <code>([listener][listener]: <optional\>)</code> - Specifies the addresses and ports on which the Agent will respond to requests.
@@ -211,7 +225,7 @@ These are the currently-available general configuration option:
 
 ### vault Stanza
 
-There can at most be one top level `vault` block and it has the following
+There can at most be one top level `vault` block, and it has the following
 configuration entries:
 
 - `address` `(string: <optional>)` - The address of the Vault server to
@@ -251,7 +265,7 @@ configuration entries:
 
 The `vault` stanza may contain a `retry` stanza that controls how failing Vault
 requests are handled, whether these requests are issued in order to render
-templates, or are proxied requests coming from the proxy cache subsystem.
+templates, or are proxied requests coming from the api proxy subsystem.
 Auto-auth, however, has its own notion of retrying and is not affected by this
 section.
 
@@ -288,8 +302,8 @@ to address in the future.
 
 Vault Agent supports one or more [listener][listener_main] stanzas. Listeners
 can be configured with or without [caching][caching], but will use the cache if it
-has been configured. In addition to the standard listener configuration,
-an Agent's listener configuration also supports the following:
+has been configured, and will enable the [API proxy][apiproxy]. In addition to the standard
+listener configuration, an Agent's listener configuration also supports the following:
 
 - `require_request_header` `(bool: false)` - Require that all incoming HTTP
   requests on this listener must have an `X-Vault-Request: true` header entry.
@@ -387,7 +401,9 @@ auto_auth {
   }
 }
 
-cache {
+cache {}
+
+api_proxy {
   use_auto_auth_token = true
 }
 
@@ -419,6 +435,7 @@ template {
 [vault]: /docs/agent#vault-stanza
 [autoauth]: /docs/agent/autoauth
 [caching]: /docs/agent/caching
+[apiproxy]: /docs/agent/apiproxy
 [persistent-cache]: /docs/agent/caching/persistent-caches
 [template]: /docs/agent/template
 [template-config]: /docs/agent/template#template-configurations

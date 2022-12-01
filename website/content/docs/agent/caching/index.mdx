@@ -36,26 +36,6 @@ specific scenarios.
    that are issued using the tokens managed by the agent, will be cached and
    its renewals are taken care of.
 
-## Using Auto-Auth Token
-
-Vault Agent allows for easy authentication to Vault in a wide variety of
-environments using [Auto-Auth](/docs/agent/autoauth). By setting the
-`use_auto_auth_token` (see below) configuration, clients will not be required
-to provide a Vault token to the requests made to the agent. When this
-configuration is set, if the request doesn't already bear a token, then the
-auto-auth token will be used to forward the request to the Vault server. This
-configuration will be overridden if the request already has a token attached,
-in which case, the token present in the request will be used to forward the
-request to the Vault server.
-
-## Forcing Auto-Auth Token
-
-Vault Agent can be configured to force the use of the auto-auth token by using
-the value `force` for the `use_auto_auth_token` option. This configuration
-overrides the default behavior described above in [Using Auto-Auth
-Token](/docs/agent/caching#using-auto-auth-token), and instead ignores any
-existing Vault token in the request and instead uses the auto-auth token.
-
 ## Persistent Cache
 
 Vault Agent can restore tokens and leases from a persistent cache file created
@@ -160,7 +140,7 @@ but will do nothing (there is no cache to clear) and will return a `200` respons
 ```json
 {
   "type": "token",
-  "value": "s.rlNjegSKykWcplOkwsjd8bP9"
+  "value": "hvs.rlNjegSKykWcplOkwsjd8bP9"
 }
 ```
 
@@ -175,34 +155,24 @@ $ curl \
 
 ## Configuration (`cache`)
 
-The top level `cache` block has the following configuration entries:
-
-- `use_auto_auth_token (bool/string: false)` - If set, the requests made to agent
-  without a Vault token will be forwarded to the Vault server with the
-  auto-auth token attached. If the requests already bear a token, this
-  configuration will be overridden and the token in the request will be used to
-  forward the request to the Vault server. If set to `"force"` Agent will use the
-  auto-auth token, overwriting the attached Vault token if set.
+The presence of the top level `cache` block in any way (including an empty `cache` block)  will enable the cache.
+The top level `cache` block has the following configuration entry:
 
 - `persist` `(object: optional)` - Configuration for the persistent cache.
 
-The following two `cache` options are only useful when talking to a Vault
-Enterprise cluster, and are documented as part of its
-[Eventual Consistency](/docs/enterprise/consistency#vault-agent-and-consistency-headers)
-page.
-
-- `enforce_consistency` `(string: "never")` - Set to one of `"always"`
-  or `"never"`.
-
-- `when_inconsistent` `(string: optional)` - Set to one of `"fail"`, `"retry"`,
-  or `"forward"`.
+The `cache` block also supports the `use_auto_auth_token`, `enforce_consistency`, and
+`when_inconsistent` configuration values of the `api_proxy` block
+[described in the API Proxy documentation](/docs/agent/apiproxy#configuration-api_proxy) for
+legacy reasons. This configuration cannot be specified alongside `api_proxy` equivalents,
+should not be preferred over configuring these values in the `api_proxy` block,
+and should be considered legacy.
 
 -> **Note:** When the `cache` block is defined, at least one
 [template][agent-template] or [listener][agent-listener] must also be defined
 in the config, otherwise there is no way to utilize the cache.
 
 [agent-template]: /docs/agent/template
-[agent-listener]: /docs/agent/caching#configuration-listener
+[agent-listener]: /docs/agent#listener-stanza
 
 ### Configuration (Persist)
 
@@ -225,8 +195,9 @@ These are common configuration values that live within the `persist` block:
 
 - `listener` `(array of objects: required)` - Configuration for the listeners.
 
-There can be one or more `listener` blocks at the top level. These configuration
-values are common to both `tcp` and `unix` listener blocks. Blocks of type
+There can be one or more `listener` blocks at the top level. Adding a listener enables
+the [API Proxy](/docs/agent/apiproxy) and enables the API proxy to use the cache.
+These configuration values are common to both `tcp` and `unix` listener blocks. Blocks of type
 `tcp` support the standard `tcp` [listener](/docs/configuration/listener/tcp)
 options. Additionally, the `role` string option is available as part of the top level
 of the `listener` block, which can be configured to `metrics_only` to serve only metrics,
@@ -252,14 +223,21 @@ or the default role, `default`, which serves everything (including metrics).
 
 ### Example Configuration
 
-Here is an example of a cache configuration alongside a regular listener, and a listener that only serves metrics.
+Here is an example of a cache configuration with the optional `persist` block,
+alongside a regular listener, and a listener that only serves metrics.
 
 ```hcl
 # Other Vault Agent configuration blocks
 # ...
 
 cache {
-  use_auto_auth_token = true
+	persist = {
+		type = "kubernetes"
+		path = "/vault/agent-cache/"
+		keep_after_import = true
+		exit_on_err = true
+		service_account_token_file = "/tmp/serviceaccount/token"
+	}
 }
 
 listener "tcp" {

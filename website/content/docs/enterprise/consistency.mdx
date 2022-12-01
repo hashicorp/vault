@@ -175,8 +175,8 @@ to build equivalent functionality into their client library.
 
 ### Vault Agent and consistency headers
 
-Vault Agent Caching will proxy incoming requests to Vault. There is
-new Agent configuration available in the `cache` stanza that allows making use
+When configured, the [Vault Agent API Proxy](/docs/agent/apiproxy) will proxy incoming requests to Vault. There is
+Agent configuration available in the `api_proxy` stanza that allows making use
 of some of the above mitigations without modifying clients.
 
 By setting `enforce_consistency="always"`, Agent will always provide
