@@ -1471,7 +1471,8 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			// Consult the plugin catalog to see if we can do a lazy mount. We
 			// error out if the plugin catalog returns an error or a builtin
 			// plugin. Otherwise, we can check the plugin type and proceeed
-			// mounting without initializing the backend.
+			// mounting without initializing the backend if the plugin is
+			// external or nil.
 			plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets, entry.Version)
 			builtin := plug != nil && plug.Builtin
 			if plugerr != nil || builtin {
