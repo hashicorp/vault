@@ -30,6 +30,7 @@ const (
 	deltaCRLPathSuffix          = "-delta"
 
 	autoTidyConfigPath = "config/auto-tidy"
+	clusterConfigPath  = "config/cluster"
 
 	// Used as a quick sanity check for a reference id lookups...
 	uuidLength = 36
@@ -168,7 +169,7 @@ type issuerEntry struct {
 	Revoked              bool                      `json:"revoked"`
 	RevocationTime       int64                     `json:"revocation_time"`
 	RevocationTimeUTC    time.Time                 `json:"revocation_time_utc"`
-	AIAURIs              *certutil.URLEntries      `json:"aia_uris,omitempty"`
+	AIAURIs              *aiaConfigEntry           `json:"aia_uris,omitempty"`
 	LastModified         time.Time                 `json:"last_modified"`
 	Version              uint                      `json:"version"`
 }
@@ -193,6 +194,66 @@ type issuerConfigEntry struct {
 	fetchedDefault             issuerID `json:"-"`
 	DefaultIssuerId            issuerID `json:"default"`
 	DefaultFollowsLatestIssuer bool     `json:"default_follows_latest_issuer"`
+}
+
+type clusterConfigEntry struct {
+	Path string `json:"path"`
+}
+
+type aiaConfigEntry struct {
+	IssuingCertificates   []string `json:"issuing_certificates"`
+	CRLDistributionPoints []string `json:"crl_distribution_points"`
+	OCSPServers           []string `json:"ocsp_servers"`
+	EnableTemplating      bool     `json:"enable_templating"`
+}
+
+func (c *aiaConfigEntry) toURLEntries(sc *storageContext, issuer issuerID) (*certutil.URLEntries, error) {
+	if len(c.IssuingCertificates) == 0 && len(c.CRLDistributionPoints) == 0 && len(c.OCSPServers) == 0 {
+		return &certutil.URLEntries{}, nil
+	}
+
+	result := certutil.URLEntries{
+		IssuingCertificates:   c.IssuingCertificates[:],
+		CRLDistributionPoints: c.CRLDistributionPoints[:],
+		OCSPServers:           c.OCSPServers[:],
+	}
+
+	if c.EnableTemplating {
+		cfg, err := sc.getClusterConfig()
+		if err != nil {
+			return nil, fmt.Errorf("error fetching cluster-local address config: %w", err)
+		}
+
+		for name, source := range map[string]*[]string{
+			"issuing_certificates":    &result.IssuingCertificates,
+			"crl_distribution_points": &result.CRLDistributionPoints,
+			"ocsp_servers":            &result.OCSPServers,
+		} {
+			templated := make([]string, len(*source))
+			for index, uri := range *source {
+				if strings.Contains(uri, "{{cluster_path}}") && len(cfg.Path) == 0 {
+					return nil, fmt.Errorf("unable to template AIA URIs as we lack local cluster address information")
+				}
+
+				if strings.Contains(uri, "{{issuer_id}}") && len(issuer) == 0 {
+					// Elide issuer AIA info as we lack an issuer_id.
+					return nil, fmt.Errorf("unable to template AIA URis as we lack an issuer_id for this operation")
+				}
+
+				uri = strings.ReplaceAll(uri, "{{cluster_path}}", cfg.Path)
+				uri = strings.ReplaceAll(uri, "{{issuer_id}}", issuer.String())
+				templated[index] = uri
+			}
+
+			if uri := validateURLs(templated); uri != "" {
+				return nil, fmt.Errorf("error validating templated %v; invalid URI: %v", name, uri)
+			}
+
+			*source = templated
+		}
+	}
+
+	return &result, nil
 }
 
 type storageContext struct {
@@ -506,17 +567,26 @@ func (i issuerEntry) CanMaybeSignWithAlgo(algo x509.SignatureAlgorithm) error {
 	return fmt.Errorf("unable to use issuer of type %v to sign with %v key type", cert.PublicKeyAlgorithm.String(), algo.String())
 }
 
-func (i issuerEntry) GetAIAURLs(sc *storageContext) (urls *certutil.URLEntries, err error) {
+func (i issuerEntry) GetAIAURLs(sc *storageContext) (*certutil.URLEntries, error) {
 	// Default to the per-issuer AIA URLs.
-	urls = i.AIAURIs
+	entries := i.AIAURIs
 
 	// If none are set (either due to a nil entry or because no URLs have
 	// been provided), fall back to the global AIA URL config.
-	if urls == nil || (len(urls.IssuingCertificates) == 0 && len(urls.CRLDistributionPoints) == 0 && len(urls.OCSPServers) == 0) {
-		urls, err = getGlobalAIAURLs(sc.Context, sc.Storage)
+	if entries == nil || (len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 && len(entries.OCSPServers) == 0) {
+		var err error
+
+		entries, err = getGlobalAIAURLs(sc.Context, sc.Storage)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return urls, err
+	if entries == nil {
+		return &certutil.URLEntries{}, nil
+	}
+
+	return entries.toURLEntries(sc, i.ID)
 }
 
 func (sc *storageContext) listIssuers() ([]issuerID, error) {
@@ -1245,4 +1315,31 @@ func (sc *storageContext) listRevokedCerts() ([]string, error) {
 	}
 
 	return list, err
+}
+
+func (sc *storageContext) getClusterConfig() (*clusterConfigEntry, error) {
+	entry, err := sc.Storage.Get(sc.Context, clusterConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var result clusterConfigEntry
+	if entry == nil {
+		return &result, nil
+	}
+
+	if err = entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (sc *storageContext) writeClusterConfig(config *clusterConfigEntry) error {
+	entry, err := logical.StorageEntryJSON(clusterConfigPath, config)
+	if err != nil {
+		return err
+	}
+
+	return sc.Storage.Put(sc.Context, entry)
 }
