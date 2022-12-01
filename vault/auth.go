@@ -800,7 +800,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		backend, entry.RunningSha256, err = c.newCredentialBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
-			plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential, "")
+			plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential, entry.Version)
 			builtin := plug != nil && plug.Builtin
 			if plugerr == nil && !builtin {
 				// If we encounter an error instantiating an external plugin

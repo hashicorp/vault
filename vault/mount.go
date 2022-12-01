@@ -1467,7 +1467,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		backend, entry.RunningSha256, err = c.newLogicalBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create mount entry", "path", entry.Path, "error", err)
-			plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets, "")
+			plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets, entry.Version)
 			builtin := plug != nil && plug.Builtin
 			if plugerr == nil && !builtin {
 				// If we encounter an error instantiating an external plugin
