@@ -33,14 +33,13 @@ module('Integration | Component | radio-select-ttl-or-string', function (hooks) 
   `,
       { owner: this.engine }
     );
-    assert.dom('[data-test-input="ttl"]').exists('shows the TTL component');
-    const inputValue = document.querySelector('[data-test-ttl-value="TTL"]').value;
-    assert.strictEqual(inputValue, '', 'default TTL is empty');
+    assert.dom('[data-test-ttl-inputs]').exists('shows the TTL component');
+    assert.dom('[data-test-ttl-value]').hasValue('', 'default TTL is empty');
     assert.dom('[data-test-radio-button="ttl"]').isChecked('ttl is selected by default');
   });
 
   test('it should set the model properties ttl or notAfter based on the radio button selections', async function (assert) {
-    assert.expect(8);
+    assert.expect(7);
     await render(
       hbs`
       <div class="has-top-margin-xxl">
@@ -68,23 +67,21 @@ module('Integration | Component | radio-select-ttl-or-string', function (hooks) 
       'sets the model property notAfter when this value is selected and filled in.'
     );
 
-    await fillIn('[data-test-ttl-value="TTL"]', ttlDate);
-    assert.strictEqual(this.model.ttl, '', 'No ttl is set because the radio button was not selected.');
-
     await click('[data-test-radio-button="ttl"]');
     assert.strictEqual(
       this.model.notAfter,
       '',
       'The notAfter is cleared on the model because the radio button was selected.'
     );
+    await fillIn('[data-test-ttl-value="TTL"]', ttlDate);
     assert.strictEqual(
       this.model.ttl,
-      ttlDate,
+      '1s',
       'The ttl is now saved on the model because the radio button was selected.'
     );
 
     await click('[data-test-radio-button="not_after"]');
-    assert.strictEqual(this.model.ttl, '', 'Both ttl and notAfter are cleared.');
-    assert.strictEqual(this.model.notAfter, '', 'Both ttl and notAfter are cleared.');
+    assert.strictEqual(this.model.ttl, '', 'TTL is cleared after radio select.');
+    assert.strictEqual(this.model.notAfter, '', 'notAfter is cleared after radio select.');
   });
 });
