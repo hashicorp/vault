@@ -37,8 +37,8 @@ export default class Dashboard extends Component {
   @tracked authMethodOptions = [];
 
   // TEMPLATE VIEW
+  @tracked noActivityData;
   @tracked showBillingStartModal = false;
-  @tracked noActivityRange = '';
   @tracked isLoadingQuery = false;
   @tracked errorObject = null;
 
@@ -48,6 +48,20 @@ export default class Dashboard extends Component {
     this.endMonthTimestamp = this.args.model.currentDate;
     this.activityQueryParams.start.timestamp = this.args.model.licenseStartTimestamp;
     this.activityQueryParams.end.timestamp = this.args.model.currentDate;
+    this.noActivityData = this.args.model.activity.id === 'no-data' ? true : false;
+  }
+
+  // returns text for empty state message if noActivityData
+  get dateRangeMessage() {
+    if (!this.startMonthTimestamp && !this.endMonthTimestamp) return null;
+    const endMonth = isSameMonth(
+      parseAPITimestamp(this.startMonthTimestamp),
+      parseAPITimestamp(this.endMonthTimestamp)
+    )
+      ? ''
+      : ` to ${parseAPITimestamp(this.endMonthTimestamp, 'MMMM yyyy')}`;
+    // completes the message 'No data received from { dateRangeMessage }'
+    return `from ${parseAPITimestamp(this.startMonthTimestamp, 'MMMM yyyy')}` + endMonth;
   }
 
   get versionText() {
@@ -71,13 +85,9 @@ export default class Dashboard extends Component {
   }
 
   get isDateRange() {
-    // TODO update when API consistently returns end_time param
-    // *BUG* if the queried start_time is last month and queried end_time is the current month
-    // the response returns an end_time of the month prior instead of the current month, as requested
-    // this means isSameMonth will return true which is incorrect because the activity data spans from last month to the current month
     return !isSameMonth(
       parseAPITimestamp(this.getActivityResponse.startTime),
-      parseAPITimestamp(this.endMonthTimestamp) // TODO change to parseAPITimestamp(this.getActivityResponse.endTime)
+      parseAPITimestamp(this.getActivityResponse.endTime)
     );
   }
 
@@ -88,7 +98,7 @@ export default class Dashboard extends Component {
         parseAPITimestamp(this.args.model.currentDate)
       ) &&
       isSameMonth(
-        parseAPITimestamp(this.endMonthTimestamp), // TODO change to parseAPITimestamp(this.getActivityResponse.endTime)
+        parseAPITimestamp(this.getActivityResponse.endTime),
         parseAPITimestamp(this.args.model.currentDate)
       )
     );
@@ -222,7 +232,7 @@ export default class Dashboard extends Component {
 
   // new client data for horizontal bar chart
   get newClientAttribution() {
-    // new client attribution only available in a single, historical month (not a date range)
+    // new client attribution only available in a single, historical month (not a date range or current month)
     if (this.isDateRange) return null;
 
     if (this.selectedNamespace) {
@@ -299,20 +309,12 @@ export default class Dashboard extends Component {
         start_time: this.activityQueryParams.start,
         end_time: this.activityQueryParams.end,
       });
+      this.startMonthTimestamp = response.startTime;
+      this.endMonthTimestamp = response.endTime;
       if (response.id === 'no-data') {
-        // if an empty response (204) the adapter returns the queried time params (instead of the backend's activity log start/end times)
-        const endMonth = isSameMonth(
-          parseAPITimestamp(response.startTime),
-          parseAPITimestamp(response.endTime)
-        )
-          ? ''
-          : ` to ${parseAPITimestamp(response.endTime, 'MMMM yyyy')}`;
-        this.noActivityRange = `from ${parseAPITimestamp(response.startTime, 'MMMM yyyy')}` + endMonth;
+        this.noActivityData = true;
       } else {
-        // TODO when API changes are made - would like to remove using the "month" timestamps and rely on response's time params
-        const { byMonth } = response;
-        this.startMonthTimestamp = byMonth[0]?.timestamp || response.startTime;
-        this.endMonthTimestamp = byMonth[byMonth.length - 1]?.timestamp || response.endTime;
+        this.noActivityData = false;
         getStorage().setItem('vault:ui-inputted-start-date', this.startMonthTimestamp);
       }
       this.queriedActivityResponse = response;

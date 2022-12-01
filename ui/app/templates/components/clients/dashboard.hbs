@@ -20,10 +20,10 @@
   <p class="is-8 has-text-grey has-bottom-margin-xl">
     {{this.versionText.description}}
   </p>
-  {{#if (eq @model.config.queriesAvailable false)}}
+  {{#if this.noActivityData}}
     {{#if (eq @model.config.enabled "On")}}
       <EmptyState
-        @title={{concat "No data received " (if this.noActivityRange this.noActivityRange)}}
+        @title="No data received  {{if this.dateRangeMessage this.dateRangeMessage}}"
         @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
       />
     {{else}}
@@ -158,8 +158,8 @@
       <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
     {{else}}
       <EmptyState
-        @title={{concat "No data received " (if this.noActivityRange this.noActivityRange)}}
-        @message="No data exists for that query period. Select a different billing start date above, or choose a different end date here:"
+        @title="No data received  {{if this.dateRangeMessage this.dateRangeMessage}}"
+        @message="Select a different start date above, or choose a different end date here:"
       >
         <DateDropdown
           @handleSubmit={{this.handleClientActivityQuery}}

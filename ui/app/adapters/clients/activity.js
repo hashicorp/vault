@@ -1,14 +1,15 @@
 import ApplicationAdapter from '../application';
-import { formatRFC3339 } from 'date-fns';
+import { getUnixTime } from 'date-fns';
 
 export default class ActivityAdapter extends ApplicationAdapter {
-  // format month index and year from user's date selection into a timestamp string
+  // javascript localizes new Date() objects so use Date.UTC() then convert to unix
+  // from the selected month index and year
   formatQueryParams({ start_time, end_time }) {
-    // javascript localizes new Date() objects, but we don't want a timezone attached to keep metrics data in UTC
-    // hard code 10th and 20th and backend will convert to first or end of month respectively
-    start_time = start_time.timestamp || formatRFC3339(new Date(start_time.year, start_time.monthIdx, 10));
-    end_time = end_time.timestamp || formatRFC3339(new Date(end_time.year, end_time.monthIdx, 20));
-
+    // time params from the backend are formatted as a zulu timestamp
+    start_time = start_time.timestamp || getUnixTime(Date.UTC(start_time.year, start_time.monthIdx, 1));
+    // day=0 for Date.UTC() returns the last day of the month before
+    // increase monthIdx by one to get last day of queried month
+    end_time = end_time.timestamp || getUnixTime(Date.UTC(end_time.year, end_time.monthIdx + 1, 0));
     return { start_time, end_time };
   }
 
@@ -20,12 +21,8 @@ export default class ActivityAdapter extends ApplicationAdapter {
         : this.formatQueryParams(query);
     if (queryParams) {
       return this.ajax(url, 'GET', { data: queryParams }).then((resp) => {
-        let response = resp || {};
+        const response = resp || {};
         response.id = response.request_id || 'no-data';
-        if (response.id === 'no-data') {
-          // add queryParams to return user's queried date range without data
-          response = { ...response, ...queryParams };
-        }
         return response;
       });
     }
