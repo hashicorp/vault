@@ -800,16 +800,24 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		backend, entry.RunningSha256, err = c.newCredentialBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
+
+			// Consult the plugin catalog to see if we can do a lazy mount. We
+			// error out if the plugin catalog returns an error or a builtin
+			// plugin. Otherwise, we can check the plugin type and proceeed
+			// mounting without initializing the backend.
 			plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential, entry.Version)
 			builtin := plug != nil && plug.Builtin
-			if plugerr == nil && !builtin {
-				// If we encounter an error instantiating an external plugin
-				// backend, skip backend initialization but register the entry
-				// to the mount table to preserve storage and path.
-				c.logger.Warn("skipping plugin-based credential entry", "path", entry.Path)
+			if plugerr != nil || builtin {
+				return errLoadMountsFailed
+			}
+
+			// In the event that newLogicalBackend returned an error and we have
+			// an external plugin or no plugin, mount the entry but skip the
+			// backend initialization.
+			if plug == nil || !plug.Builtin {
+				c.logger.Warn("skipping plugin-based mount entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
-			return errLoadAuthFailed
 		}
 		if backend == nil {
 			return fmt.Errorf("nil backend returned from %q factory", entry.Type)
