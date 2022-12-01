@@ -16,10 +16,22 @@
 
 <MessageError @model={{this.config}} @errors={{this.errors}} />
 <form {{action "save" this.section on="submit"}} class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
-  {{#each (get this.config (concat this.section "Attrs")) as |attr|}}
-    <FormField @attr={{attr}} @model={{this.config}} @data-test-field={{attr.name}} />
-  {{/each}}
-  <div class="field is-grouped box is-fullwidth is-bottomless">
+  {{#if (eq this.section "crl")}}
+    <TtlPicker
+      data-test-input="expiry"
+      @onChange={{action "handleCrlTtl"}}
+      @label={{if (get this.config "disable") "CRL building disabled" "CRL building enabled"}}
+      @helperTextDisabled="The CRL will not be built."
+      @helperTextEnabled="The CRL will expire after"
+      @initialValue={{get this.config "expiry"}}
+      @initialEnabled={{not (get this.config "disable")}}
+    />
+  {{else}}
+    {{#each (get this.config (concat this.section "Attrs")) as |attr|}}
+      <FormField @attr={{attr}} @model={{this.config}} @data-test-field={{attr.name}} />
+    {{/each}}
+  {{/if}}
+  <div class="field has-top-margin-m is-grouped box is-fullwidth is-bottomless">
     <div class="control">
       <button
         data-test-submit
