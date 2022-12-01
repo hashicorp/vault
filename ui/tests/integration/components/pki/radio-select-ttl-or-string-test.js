@@ -33,9 +33,8 @@ module('Integration | Component | radio-select-ttl-or-string', function (hooks) 
   `,
       { owner: this.engine }
     );
-    assert.dom('[data-test-input="ttl"]').exists('shows the TTL component');
-    const inputValue = document.querySelector('[data-test-ttl-value="TTL"]').value;
-    assert.strictEqual(inputValue, '', 'default TTL is empty');
+    assert.dom('[data-test-ttl-inputs]').exists('shows the TTL component');
+    assert.dom('[data-test-ttl-value]').hasValue('', 'default TTL is empty');
     assert.dom('[data-test-radio-button="ttl"]').isChecked('ttl is selected by default');
   });
 

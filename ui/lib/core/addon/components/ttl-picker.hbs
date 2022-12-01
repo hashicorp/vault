@@ -1,15 +1,66 @@
 <div class="has-bottom-margin-m" ...attributes>
   {{#if @hideToggle}}
-    <TtlForm
-      @label={{this.label}}
-      @subText={{this.helperText}}
-      @description={{@description}}
-      @onChange={{this.handleChange}}
-      @initialValue={{@initialValue}}
-      @changeOnInit={{@changeOnInit}}
-      data-test-ttl-picker-group={{this.label}}
-    />
-    {{yield}}
+    <fieldset class="field is-grouped is-marginless is-borderless">
+      {{#if (has-block)}}
+        {{! Allow label override }}
+        {{yield}}
+      {{else}}
+        <legend>
+          <span class="ttl-picker-label is-large" data-test-ttl-form-label={{this.label}}>{{this.label}}</span><br />
+          {{#if this.helperText}}
+            <div class="sub-text">
+              <span data-test-ttl-form-subtext>{{this.helperText}}</span>
+              {{#if @description}}
+                <ToolTip @verticalPosition="below" as |T|>
+                  <T.Trigger data-test-tooltip-trigger tabindex="-1">
+                    <Icon @name="info" aria-label="description" />
+                  </T.Trigger>
+                  <T.Content @defaultClass="tool-tip">
+                    <div class="box" data-test-hover-copy-tooltip-text>
+                      {{this.description}}
+                    </div>
+                  </T.Content>
+                </ToolTip>
+              {{/if}}
+            </div>
+          {{/if}}
+        </legend>
+      {{/if}}
+      <div class="control is-marginless" data-test-ttl-inputs>
+        <label for="time-{{this.elementId}}" class="sr-only">Number of units</label>
+        <Input
+          id="time-{{this.elementId}}"
+          @value={{this.time}}
+          @type="text"
+          name="time"
+          class="input {{if this.errorMessage 'has-error'}}"
+          oninput={{perform this.updateTime value="target.value"}}
+          pattern="[0-9]*"
+          data-test-ttl-value={{this.label}}
+        />
+      </div>
+      <div class="control">
+        <label for="unit-{{this.elementId}}" class="sr-only">Unit for TTL</label>
+        <Select
+          id="unit-{{this.elementId}}"
+          @name="ttl-unit"
+          @options={{this.unitOptions}}
+          @onChange={{this.updateUnit}}
+          @selectedValue={{this.unit}}
+          data-test-ttl-unit={{this.label}}
+        />
+      </div>
+      {{#if this.errorMessage}}
+        <div class="columns is-mobile is-variable is-1 ttl-value-error">
+          <div class="is-narrow message-icon">
+            <Icon @name="x-square-fill" class="has-text-danger" />
+          </div>
+          <div class="has-text-danger">
+            {{this.errorMessage}}
+          </div>
+        </div>
+      {{/if}}
+    </fieldset>
   {{else}}
     <Toggle
       @name={{this.label}}
@@ -17,35 +68,72 @@
       @size="small"
       @onChange={{action "toggleEnabled"}}
       @checked={{this.enableTTL}}
-      data-test-ttl-toggle
+      @hideLabel={{true}}
+      data-test-ttl-toggle={{this.label}}
     >
-      <span class="ttl-picker-label is-large" data-test-ttl-picker-label={{this.label}}>{{this.label}}</span><br />
-      <div class="description has-text-grey">
-        <span data-test-ttl-picker-subtext>{{this.helperText}}</span>
-        {{#if @description}}
-          <ToolTip @verticalPosition="below" as |T|>
-            <T.Trigger data-test-tooltip-trigger tabindex="-1">
-              <Icon @name="info" aria-label="description" />
-            </T.Trigger>
-            <T.Content @defaultClass="tool-tip">
-              <div class="box" data-test-hover-copy-tooltip-text>
-                {{this.description}}
-              </div>
-            </T.Content>
-          </ToolTip>
-        {{/if}}
-      </div>
-      {{#if (or this.enableTTL this.hideToggle)}}
-        <TtlForm
-          @label={{this.label}}
-          @onChange={{this.handleChange}}
-          @initialValue={{@initialValue}}
-          @changeOnInit={{@changeOnInit}}
-          data-test-ttl-picker-group={{this.label}}
-        >
+      <fieldset class="field is-grouped is-marginless is-borderless">
+        {{#if (has-block)}}
+          {{! Allow label override }}
           {{yield}}
-        </TtlForm>
-      {{/if}}
+        {{else}}
+          <legend>
+            <span class="ttl-picker-label is-large" data-test-ttl-form-label={{this.label}}>{{this.label}}</span><br />
+            {{#if this.helperText}}
+              <div class="sub-text">
+                <span data-test-ttl-form-subtext>{{this.helperText}}</span>
+                {{#if @description}}
+                  <ToolTip @verticalPosition="below" as |T|>
+                    <T.Trigger data-test-tooltip-trigger tabindex="-1">
+                      <Icon @name="info" aria-label="description" />
+                    </T.Trigger>
+                    <T.Content @defaultClass="tool-tip">
+                      <div class="box" data-test-hover-copy-tooltip-text>
+                        {{this.description}}
+                      </div>
+                    </T.Content>
+                  </ToolTip>
+                {{/if}}
+              </div>
+            {{/if}}
+          </legend>
+        {{/if}}
+        {{#if (or this.enableTTL @hideToggle)}}
+          <div class="control is-marginless" data-test-ttl-inputs>
+            <label for="time-{{this.elementId}}" class="sr-only">Number of units</label>
+            <Input
+              id="time-{{this.elementId}}"
+              @value={{this.time}}
+              @type="text"
+              name="time"
+              class="input {{if this.errorMessage 'has-error'}}"
+              oninput={{perform this.updateTime value="target.value"}}
+              pattern="[0-9]*"
+              data-test-ttl-value={{this.label}}
+            />
+          </div>
+          <div class="control">
+            <label for="unit-{{this.elementId}}" class="sr-only">Unit for TTL</label>
+            <Select
+              id="unit-{{this.elementId}}"
+              @name="ttl-unit"
+              @options={{this.unitOptions}}
+              @onChange={{this.updateUnit}}
+              @selectedValue={{this.unit}}
+              data-test-ttl-unit={{this.label}}
+            />
+          </div>
+          {{#if this.errorMessage}}
+            <div class="columns is-mobile is-variable is-1 ttl-value-error">
+              <div class="is-narrow message-icon">
+                <Icon @name="x-square-fill" class="has-text-danger" />
+              </div>
+              <div class="has-text-danger">
+                {{this.errorMessage}}
+              </div>
+            </div>
+          {{/if}}
+        {{/if}}
+      </fieldset>
     </Toggle>
   {{/if}}
 </div>

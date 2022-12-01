@@ -20,14 +20,14 @@ module('Integration | Component | wrap ttl', function (hooks) {
     this.set('onChange', changeSpy);
     await render(hbs`<WrapTtl @onChange={{this.onChange}} />`);
     assert.ok(changeSpy.calledWithExactly('30m'), 'calls onChange with 30m default on render');
-    assert.dom('[data-test-ttl-picker-label="Wrap response"]').hasText('Wrap response');
+    assert.dom('[data-test-ttl-form-label]').hasText('Wrap response');
   });
 
   test('it nulls out value when you uncheck wrapResponse', async function (assert) {
     const changeSpy = Sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`<WrapTtl @onChange={{this.onChange}} />`);
-    await click('[data-test-ttl-picker-label="Wrap response"]');
+    await click('[data-test-ttl-form-label]');
     assert.ok(changeSpy.calledWithExactly(null), 'calls onChange with null');
   });
 
@@ -38,7 +38,7 @@ module('Integration | Component | wrap ttl', function (hooks) {
     // for testing purposes we need to input unit first because it keeps seconds value
     await fillIn('[data-test-select="ttl-unit"]', 'h');
     assert.ok(changeSpy.calledWithExactly('30h'), 'calls onChange correctly on time input');
-    await fillIn('[data-test-ttl-value="Wrap response"]', '20');
+    await fillIn('[data-test-ttl-value]', '20');
     assert.ok(changeSpy.calledWithExactly('20h'), 'calls onChange correctly on unit change');
   });
 });
