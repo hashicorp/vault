@@ -802,7 +802,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
 			plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential, "")
 			if plugerr == nil && (plug == nil || plug != nil && !plug.Builtin) {
-				// If we encounter an error instantiating the backend due to an error,
+				// If we encounter an error instantiating the backend,
 				// skip backend initialization but register the entry to the mount table
 				// to preserve storage and path.
 				c.logger.Warn("skipping plugin-based credential entry", "path", entry.Path)
