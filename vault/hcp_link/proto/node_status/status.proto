@@ -7,11 +7,6 @@ package hashicorp.vault.hcp_link.node_status;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
-message Logging {
-  string Level = 1;
-  bool Overridden = 2;
-}
-
 message LinkedClusterNodeStatusResponse {
   string Type = 1;
   bool Initialized = 2;
@@ -31,7 +26,7 @@ message LinkedClusterNodeStatusResponse {
   string Hostname = 16;
   string OperatingSystem = 17;
   string OperatingSystemVersion = 18;
-  Logging LogLevel = 19;
+  string LogLevel = 19;
   bool IsActive = 20;
   bool IsVoter = 21;
 }
