@@ -1,6 +1,7 @@
 import { action } from '@ember/object';
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { typeOf } from '@ember/utils';
 
 /**
  * Confirm that the user wants to discard unsaved changes before leaving the page.
@@ -21,6 +22,12 @@ export function withConfirmLeave() {
 
       @action
       willTransition(transition) {
+        try {
+          super.willTransition(...arguments);
+        } catch (e) {
+          // if the SuperClass doesn't have willTransition
+          // defined it will throw an error.
+        }
         const model = this.controller.get('model');
         if (model && model.hasDirtyAttributes) {
           if (
