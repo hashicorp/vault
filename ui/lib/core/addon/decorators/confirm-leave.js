@@ -1,7 +1,6 @@
 import { action } from '@ember/object';
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { typeOf } from '@ember/utils';
 
 /**
  * Confirm that the user wants to discard unsaved changes before leaving the page.
