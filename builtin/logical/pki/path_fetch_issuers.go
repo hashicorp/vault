@@ -499,7 +499,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	if newName != oldName {
 		addWarningOnDereferencing(sc, oldName, response)
 	}
-	if issuer.AIAURIs.EnableTemplating && !b.useLegacyBundleCaStorage() {
+	if issuer.AIAURIs != nil && issuer.AIAURIs.EnableTemplating && !b.useLegacyBundleCaStorage() {
 		_, aiaErr := issuer.AIAURIs.toURLEntries(sc, issuer.ID)
 		if aiaErr != nil {
 			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
@@ -760,7 +760,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	if newName != oldName {
 		addWarningOnDereferencing(sc, oldName, response)
 	}
-	if issuer.AIAURIs.EnableTemplating && !b.useLegacyBundleCaStorage() {
+	if issuer.AIAURIs != nil && issuer.AIAURIs.EnableTemplating && !b.useLegacyBundleCaStorage() {
 		_, aiaErr := issuer.AIAURIs.toURLEntries(sc, issuer.ID)
 		if aiaErr != nil {
 			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
