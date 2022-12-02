@@ -45,13 +45,13 @@ export default class RadioSelectTtlOrString extends Component<Args> {
     this.groupValue = selection;
     // Clear the previous selection if they have clicked the other radio button.
     if (selection === 'specificDate') {
-      this.args.model.set('ttl', '');
-      this.args.model.set('notAfter', this.cachedNotAfter);
+      this.args.model.ttl = '';
+      this.args.model.notAfter = this.cachedNotAfter;
       this.formDate = this.calculateFormDate(this.cachedNotAfter);
     }
     if (selection === 'ttl') {
-      this.args.model.set('notAfter', '');
-      this.args.model.set('ttl', this.cachedTtl);
+      this.args.model.notAfter = '';
+      this.args.model.ttl = this.cachedTtl;
       this.formDate = '';
     }
   }
@@ -64,7 +64,7 @@ export default class RadioSelectTtlOrString extends Component<Args> {
     }
     const ttlVal = enabled === true ? goSafeTimeString : 0;
     this.cachedTtl = ttlVal;
-    this.args.model.set('ttl', ttlVal);
+    this.args.model.ttl = ttlVal;
   }
 
   @action setAndBroadcastInput(evt: HTMLElementEvent<HTMLInputElement>) {
@@ -72,7 +72,7 @@ export default class RadioSelectTtlOrString extends Component<Args> {
     if (!setDate) return;
 
     this.cachedNotAfter = setDate;
-    this.args.model.set('notAfter', setDate);
+    this.args.model.notAfter = setDate;
     this.formDate = this.calculateFormDate(setDate);
   }
 }

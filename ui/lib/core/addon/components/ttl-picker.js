@@ -28,37 +28,12 @@ import Duration from '@icholy/duration';
 import { guidFor } from '@ember/object/internals';
 import Ember from 'ember';
 import { restartableTask, timeout } from 'ember-concurrency';
-
-export const secondsMap = {
-  s: 1,
-  m: 60,
-  h: 3600,
-  d: 86400,
-};
-const convertToSeconds = (time, unit) => {
-  return time * secondsMap[unit];
-};
-export const convertFromSeconds = (seconds, unit) => {
-  return seconds / secondsMap[unit];
-};
-const goSafeConvertFromSeconds = (seconds, unit) => {
-  // Go only accepts s, m, or h units
-  const u = unit === 'd' ? 'h' : unit;
-  return convertFromSeconds(seconds, u) + u;
-};
-export const largestUnitFromSeconds = (seconds) => {
-  let unit = 's';
-  if (seconds === 0) return unit;
-  // get largest unit with no remainder
-  if (seconds % secondsMap.d === 0) {
-    unit = 'd';
-  } else if (seconds % secondsMap.h === 0) {
-    unit = 'h';
-  } else if (seconds % secondsMap.m === 0) {
-    unit = 'm';
-  }
-  return unit;
-};
+import {
+  convertFromSeconds,
+  convertToSeconds,
+  goSafeConvertFromSeconds,
+  largestUnitFromSeconds,
+} from 'core/utils/duration-utils';
 export default class TtlPickerComponent extends Component {
   @tracked enableTTL = false;
   @tracked recalculateSeconds = false;

@@ -2,7 +2,7 @@ import { typeOf } from '@ember/utils';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { convertFromSeconds, largestUnitFromSeconds } from './ttl-picker';
+import { convertFromSeconds, largestUnitFromSeconds } from 'core/utils/duration-utils';
 
 /**
  * @module InfoTableRow
