@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var errMissingSystemView = errors.New("missing system view implementation: this method should not be called during plugin setup")
+var errMissingSystemView = errors.New("missing system view implementation: this method should not be called during plugin Setup, but only during and after Initialize")
 
 func newGRPCSystemView(conn *grpc.ClientConn) *gRPCSystemViewClient {
 	return &gRPCSystemViewClient{
