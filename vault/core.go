@@ -3047,7 +3047,7 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 // the storage and path when a plugin is missing or has otherwise been
 // misconfigured. This allows users to recover from errors when starting Vault
 // with misconfigured plugins. It should not be possible for existing builtins
-// to be misconfigured, so that is a fatal error
+// to be misconfigured, so that is a fatal error.
 func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
 	// Prevent a panic early on
 	if entry == nil || c.pluginCatalog == nil {
