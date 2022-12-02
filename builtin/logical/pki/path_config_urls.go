@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -58,7 +59,7 @@ set on all PR Secondary clusters.`,
 
 func validateURLs(urls []string) string {
 	for _, curr := range urls {
-		if !govalidator.IsURL(curr) {
+		if !govalidator.IsURL(curr) || strings.Contains(curr, "{{issuer_id}}") || strings.Contains(curr, "{{cluster_path}}") {
 			return curr
 		}
 	}
