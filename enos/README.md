@@ -185,6 +185,7 @@ state will be managed by Terraform Cloud. Here are the steps to configure the Gi
 > cd ./enos/ci/service-user-iam
 > export TF_WORKSPACE=<repo name>-ci-service-user-iam
 > export TF_TOKEN_app_terraform_io=<Terraform Cloud Token>
+> export TF_VAR_aws_ssh_public_key=<public key>
 > export TF_VAR_repository=<repository name>
 > terraform init
 > terraform plan
