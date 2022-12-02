@@ -805,7 +805,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				c.logger.Warn("skipping plugin-based mount entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
-			return errLoadMountsFailed
+			return errLoadAuthFailed
 		}
 		if backend == nil {
 			return fmt.Errorf("nil backend returned from %q factory", entry.Type)
