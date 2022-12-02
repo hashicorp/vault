@@ -3049,7 +3049,7 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 // catalog returns no error and an external or nil plugin. We cannot proceed
 // mounting if the plugin catalog returns an error or a builtin plugin.
 func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
-	plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets, entry.Version)
+	plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, pluginType, entry.Version)
 
 	builtin := plug != nil && plug.Builtin
 	return plugerr == nil && !builtin
