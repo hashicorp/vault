@@ -6029,7 +6029,7 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 
 	// Modify our issuer to set custom AIAs: these URLs are bad.
 	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
-		"enable_aia_uri_templating": "false",
+		"enable_aia_url_templating": "false",
 		"crl_distribution_points":   "a",
 		"issuing_certificates":      "b",
 		"ocsp_servers":              "c",
@@ -6038,7 +6038,7 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 
 	// These URLs are good.
 	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
-		"enable_aia_uri_templating": "false",
+		"enable_aia_url_templating": "false",
 		"crl_distribution_points":   "http://localhost/a",
 		"issuing_certificates":      "http://localhost/b",
 		"ocsp_servers":              "http://localhost/c",
@@ -6057,7 +6057,7 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 
 	// These URLs are bad, but will fail at issuance time due to AIA templating.
 	resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
-		"enable_aia_uri_templating": "true",
+		"enable_aia_url_templating": "true",
 		"crl_distribution_points":   "a",
 		"issuing_certificates":      "b",
 		"ocsp_servers":              "c",

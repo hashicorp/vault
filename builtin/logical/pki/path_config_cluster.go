@@ -16,7 +16,7 @@ func pathConfigCluster(b *backend) *framework.Path {
 			"path": {
 				Type: framework.TypeString,
 				Description: `Canonical URI to this mount on this performance
-replication cluster's external address. This is for resolving AIA URIs and
+replication cluster's external address. This is for resolving AIA URLs and
 providing the {{cluster_path}} template parameter but might be used for other
 purposes in the future.
 
@@ -90,7 +90,7 @@ Set cluster-local configuration, including address to this PR cluster.
 const pathConfigClusterHelpDesc = `
 This path allows you to set cluster-local configuration, including the
 URI to this performance replication cluster. This allows you to use
-templated AIA URIs with /config/urls and /issuer/:issuer_ref, setting the
+templated AIA URLs with /config/urls and /issuer/:issuer_ref, setting the
 reference to the cluster's URI.
 
 Only one address can be specified for any given cluster.

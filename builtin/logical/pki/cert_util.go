@@ -704,7 +704,7 @@ func generateCert(sc *storageContext,
 
 			uris, err := entries.toURLEntries(sc, issuerID(""))
 			if err != nil {
-				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse AIA URL information: %v\nUsing templated AIA URI's {{issuer_id}} field when generating root certificates is not supported.", err)}
+				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse AIA URL information: %v\nUsing templated AIA URL's {{issuer_id}} field when generating root certificates is not supported.", err)}
 			}
 
 			data.Params.URLs = uris

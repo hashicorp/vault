@@ -232,12 +232,12 @@ func (c *aiaConfigEntry) toURLEntries(sc *storageContext, issuer issuerID) (*cer
 			templated := make([]string, len(*source))
 			for index, uri := range *source {
 				if strings.Contains(uri, "{{cluster_path}}") && len(cfg.Path) == 0 {
-					return nil, fmt.Errorf("unable to template AIA URIs as we lack local cluster address information")
+					return nil, fmt.Errorf("unable to template AIA URLs as we lack local cluster address information")
 				}
 
 				if strings.Contains(uri, "{{issuer_id}}") && len(issuer) == 0 {
 					// Elide issuer AIA info as we lack an issuer_id.
-					return nil, fmt.Errorf("unable to template AIA URis as we lack an issuer_id for this operation")
+					return nil, fmt.Errorf("unable to template AIA URLs as we lack an issuer_id for this operation")
 				}
 
 				uri = strings.ReplaceAll(uri, "{{cluster_path}}", cfg.Path)

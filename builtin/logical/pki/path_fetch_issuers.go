@@ -134,12 +134,12 @@ for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
 		Description: `Comma-separated list of URLs to be used
 for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 	}
-	fields["enable_aia_uri_templating"] = &framework.FieldSchema{
+	fields["enable_aia_url_templating"] = &framework.FieldSchema{
 		Type: framework.TypeBool,
 		Description: `Whether or not to enabling templating of the
 above AIA fields. When templating is enabled the special values '{{issuer_id}}'
 and '{{cluster_path}}' are available, but the addresses are not checked for
-URI validity until issuance time. This requires /config/cluster's path to be
+URL validity until issuance time. This requires /config/cluster's path to be
 set on all PR Secondary clusters.`,
 		Default: false,
 	}
@@ -345,7 +345,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	// AIA access changes
-	enableTemplating := data.Get("enable_aia_uri_templating").(bool)
+	enableTemplating := data.Get("enable_aia_url_templating").(bool)
 	issuerCertificates := data.Get("issuing_certificates").([]string)
 	if badURL := validateURLs(issuerCertificates); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter issuing_certificates: %s", badURL)), nil
@@ -675,7 +675,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		},
 	}
 
-	if enableTemplatingRaw, ok := data.GetOk("enable_aia_uri_templating"); ok {
+	if enableTemplatingRaw, ok := data.GetOk("enable_aia_url_templating"); ok {
 		enableTemplating := enableTemplatingRaw.(bool)
 		if enableTemplating != issuer.AIAURIs.EnableTemplating {
 			issuer.AIAURIs.EnableTemplating = true
