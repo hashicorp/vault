@@ -277,6 +277,46 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 	}
 }
 
+func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
+	pluginDir, cleanup := MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+
+	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
+	pluginName := "therug"
+	plugin := compilePlugin(t, consts.PluginTypeCredential, "", pluginDir)
+	err := os.Link(path.Join(pluginDir, plugin.fileName), path.Join(pluginDir, pluginName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := &CoreConfig{
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		PluginDirectory: pluginDir,
+	}
+
+	c := TestCoreWithSealAndUI(t, conf)
+	c, keys, root := testCoreUnsealed(t, c)
+
+	// Register a plugin
+	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "", plugin.sha256, plugin.fileName)
+	mountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+
+	// Now pull the rug out from underneath us
+	deregisterPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "", "", "")
+
+	if err := c.Seal(root); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("err: should be unsealed")
+		}
+	}
+}
+
 func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
 	pluginDir, cleanup := MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
