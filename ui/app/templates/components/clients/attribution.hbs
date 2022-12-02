@@ -1,4 +1,4 @@
-{{! show single horizontal bar chart unless data is from a single, historical month (isDateRange = false) }}
+{{! show single horizontal bar chart unless data is from a single, historical month (isDateRange = false or isCurrentMonth = true) }}
 <div
   class={{concat "chart-wrapper" (if (or @isCurrentMonth @isDateRange) " single-chart-grid" " dual-chart-grid")}}
   data-test-clients-attribution
@@ -26,7 +26,7 @@
     {{#if (or @isDateRange @isCurrentMonth)}}
       <div
         class={{concat (unless this.barChartTotalClients "chart-empty-state ") "chart-container-wide"}}
-        data-test-chart-container="total-clients"
+        data-test-chart-container="single-chart"
       >
         <Clients::HorizontalBarChart
           @dataset={{this.barChartTotalClients}}
@@ -55,7 +55,7 @@
           @dataset={{this.barChartNewClients}}
           @chartLegend={{@chartLegend}}
           @totalCounts={{@newUsageCounts}}
-          @noDataMessage={{"There are no new clients for this namespace during this time period."}}
+          @noDataMessage="There are no new clients for this namespace during this time period."
         />
       </div>
 

@@ -39,30 +39,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     return authPage.login();
   });
 
-  test('shows warning when config off, no data, queries_available=true', async function (assert) {
-    assert.expect(6);
-    this.server.get('sys/internal/counters/activity', () => overrideResponse(204));
-    this.server.get('sys/internal/counters/config', () => {
-      return {
-        request_id: 'some-config-id',
-        data: {
-          default_report_months: 12,
-          enabled: 'default-disable',
-          queries_available: true,
-          retention_months: 24,
-        },
-      };
-    });
-    await visit('/vault/clients/dashboard');
-    assert.strictEqual(currentURL(), '/vault/clients/dashboard');
-    assert.dom(SELECTORS.dashboardActiveTab).hasText('Dashboard', 'dashboard tab is active');
-    assert.dom('[data-test-tracking-disabled] .message-title').hasText('Tracking is disabled');
-    assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
-    assert.dom(SELECTORS.filterBar).doesNotExist('Shows filter bar to search previous dates');
-    assert.dom(SELECTORS.usageStats).doesNotExist('No usage stats');
-  });
-
-  test('shows warning when config off, no data, queries_available=false', async function (assert) {
+  test('shows warning when config off, no data', async function (assert) {
     assert.expect(4);
     this.server.get('sys/internal/counters/activity', () => overrideResponse(204));
     this.server.get('sys/internal/counters/config', () => {
@@ -83,7 +60,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     assert.dom(SELECTORS.filterBar).doesNotExist('Filter bar is hidden when no data available');
   });
 
-  test('shows empty state when config enabled and queries_available=false', async function (assert) {
+  test('shows empty state when config enabled and no data', async function (assert) {
     assert.expect(4);
     this.server.get('sys/internal/counters/activity', () => overrideResponse(204));
     this.server.get('sys/internal/counters/config', () => {
@@ -92,7 +69,6 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
         data: {
           default_report_months: 12,
           enabled: 'default-enable',
-          queries_available: false,
           retention_months: 24,
         },
       };
@@ -100,8 +76,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     await visit('/vault/clients/dashboard');
     assert.strictEqual(currentURL(), '/vault/clients/dashboard');
     assert.dom(SELECTORS.dashboardActiveTab).hasText('Dashboard', 'dashboard tab is active');
-
-    assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
+    assert.dom(SELECTORS.emptyStateTitle).hasTextContaining('No data received');
     assert.dom(SELECTORS.filterBar).doesNotExist('Does not show filter bar');
   });
 
@@ -140,7 +115,6 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     // const activity = generateActivityResponse(5, LICENSE_START, LAST_MONTH);
     await visit('/vault/clients/dashboard');
     assert.strictEqual(currentURL(), '/vault/clients/dashboard');
-
     // query for single, historical month with no new counts
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
@@ -239,7 +213,6 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     await click(SELECTORS.yearDropdown);
     await click(`[data-test-dropdown-year="${LICENSE_START.getFullYear() - 3}"]`);
     await click('[data-test-date-dropdown-submit]');
-
     assert
       .dom('[data-test-alert-banner="alert"]')
       .hasTextContaining(

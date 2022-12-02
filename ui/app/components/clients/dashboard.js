@@ -108,9 +108,13 @@ export default class Dashboard extends Component {
     // show banner if startTime returned from activity log (response) is after the queried startTime
     const activityStartDateObject = parseAPITimestamp(this.getActivityResponse.startTime);
     const queryStartDateObject = parseAPITimestamp(this.startMonthTimestamp);
-
+    let message = 'You requested data from';
+    if (this.startMonthTimestamp === this.args.model.licenseStartTimestamp && this.version.isEnterprise) {
+      // on init, date is automatically pulled from license start date and user hasn't queried anything yet
+      message = 'Your license start date is';
+    }
     if (isAfter(activityStartDateObject, queryStartDateObject)) {
-      return `You requested data from ${parseAPITimestamp(this.startMonthTimestamp, 'MMMM yyyy')}. 
+      return `${message} ${parseAPITimestamp(this.startMonthTimestamp, 'MMMM yyyy')}. 
         We only have data from ${parseAPITimestamp(this.getActivityResponse.startTime, 'MMMM yyyy')}, 
         and that is what is being shown here.`;
     } else {
@@ -309,8 +313,10 @@ export default class Dashboard extends Component {
         start_time: this.activityQueryParams.start,
         end_time: this.activityQueryParams.end,
       });
-      this.startMonthTimestamp = response.startTime;
-      this.endMonthTimestamp = response.endTime;
+      // preference for byMonth timestamps because those correspond to a user's query
+      const { byMonth } = response;
+      this.startMonthTimestamp = byMonth[0]?.timestamp || response.startTime;
+      this.endMonthTimestamp = byMonth[byMonth.length - 1]?.timestamp || response.endTime;
       if (response.id === 'no-data') {
         this.noActivityData = true;
       } else {

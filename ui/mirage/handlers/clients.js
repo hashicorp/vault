@@ -9,6 +9,7 @@ import {
   addMonths,
   subMonths,
   differenceInCalendarMonths,
+  fromUnixTime,
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import formatRFC3339 from 'date-fns/formatRFC3339';
@@ -2991,8 +2992,10 @@ export default function (server) {
   });
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
-    const { start_time, end_time } = req.queryParams;
-
+    let { start_time, end_time } = req.queryParams;
+    // backend returns a timestamp if given unix time, so first convert to timestamp string here
+    if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
+    if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
     return {
       request_id: '25f55fbb-f253-9c46-c6f0-3cdd3ada91ab',
       lease_id: '',

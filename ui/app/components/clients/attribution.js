@@ -44,9 +44,11 @@ export default class Attribution extends Component {
   @service downloadCsv;
 
   get formattedStartDate() {
+    if (!this.args.startTimestamp) return null;
     return parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy');
   }
   get formattedEndDate() {
+    if (!this.args.startTimestamp && !this.args.endTimestamp) return null;
     // displays on CSV export modal, no need to display duplicate months and years
     const startDateObject = parseAPITimestamp(this.args.startTimestamp);
     const endDateObject = parseAPITimestamp(this.args.endTimestamp);
@@ -85,7 +87,7 @@ export default class Attribution extends Component {
   }
 
   get chartText() {
-    const dateText = this.args.isDateRange ? 'date range' : 'month';
+    const dateText = this.args.isDateRange && !this.args.isCurrentMonth ? 'date range' : 'month';
     switch (this.isSingleNamespace) {
       case true:
         return {
