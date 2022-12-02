@@ -3052,7 +3052,7 @@ func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType co
 	plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets, entry.Version)
 
 	builtin := plug != nil && plug.Builtin
-	return plugerr == nil || !builtin
+	return plugerr == nil && !builtin
 }
 
 // MatchingMount returns the path of the mount that will be responsible for
