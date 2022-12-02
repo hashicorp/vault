@@ -1468,19 +1468,11 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		if err != nil {
 			c.logger.Error("failed to create mount entry", "path", entry.Path, "error", err)
 
-			// Consult the plugin catalog to see if we can do a lazy mount. We
-			// error out if the plugin catalog returns an error or a builtin
-			// plugin. Otherwise, we can check the plugin type and proceeed
-			// mounting without initializing the backend if the plugin is
-			// external or nil.
-			plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets, entry.Version)
-			builtin := plug != nil && plug.Builtin
-			if plugerr != nil || builtin {
-				return errLoadMountsFailed
-			} else {
+			if c.isMountable(ctx, entry, consts.PluginTypeSecrets) {
 				c.logger.Warn("skipping plugin-based mount entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
+			return errLoadMountsFailed
 		}
 		if backend == nil {
 			return fmt.Errorf("created mount entry of type %q is nil", entry.Type)

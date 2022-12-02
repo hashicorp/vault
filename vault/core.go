@@ -3042,6 +3042,19 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 	return &flags, nil
 }
 
+// isMountable tells us whether or not we can continue mounting a plugin-based
+// mount entry after failing to instantiate a backend.
+//
+// We can proceed mounting without initializing the backend if the plugin
+// catalog returns no error and an external or nil plugin. We cannot proceed
+// mounting if the plugin catalog returns an error or a builtin plugin.
+func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
+	plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets, entry.Version)
+
+	builtin := plug != nil && plug.Builtin
+	return plugerr != nil || builtin
+}
+
 // MatchingMount returns the path of the mount that will be responsible for
 // handling the given request path.
 func (c *Core) MatchingMount(ctx context.Context, reqPath string) string {
