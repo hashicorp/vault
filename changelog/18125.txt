@@ -1,3 +1,3 @@
 ```release-note:improvement
-command/server: Log environment variable keys at startup when log level is set to debug or trace.
+command/server: Environment variable keys are now logged at startup.
 ```
