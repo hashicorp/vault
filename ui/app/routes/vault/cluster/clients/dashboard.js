@@ -9,7 +9,10 @@ export default class DashboardRoute extends Route {
   async getActivity(start_time) {
     // on init ONLY make network request if we have a start_time
     return start_time
-      ? await this.store.queryRecord('clients/activity', { start_time, end_time: this.currentDate })
+      ? await this.store.queryRecord('clients/activity', {
+          start_time: { timestamp: start_time },
+          end_time: { timestamp: this.currentDate },
+        })
       : {};
   }
 

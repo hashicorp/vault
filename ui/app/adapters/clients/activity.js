@@ -2,10 +2,11 @@ import ApplicationAdapter from '../application';
 import { getUnixTime } from 'date-fns';
 
 export default class ActivityAdapter extends ApplicationAdapter {
-  // javascript localizes new Date() objects so use Date.UTC() then convert to unix
-  // from the selected month index and year
-  formatQueryParams({ start_time, end_time }) {
-    // time params from the backend are formatted as a zulu timestamp
+  // javascript localizes new Date() objects but all activity log data is stored in UTC
+  // create date object from user's input using Date.UTC() then send to backend as unix
+  // time params from the backend are formatted as a zulu timestamp
+  formatQueryParams(queryParams) {
+    let { start_time, end_time } = queryParams;
     start_time = start_time.timestamp || getUnixTime(Date.UTC(start_time.year, start_time.monthIdx, 1));
     // day=0 for Date.UTC() returns the last day of the month before
     // increase monthIdx by one to get last day of queried month
@@ -15,10 +16,7 @@ export default class ActivityAdapter extends ApplicationAdapter {
 
   queryRecord(store, type, query) {
     const url = `${this.buildURL()}/internal/counters/activity`;
-    const queryParams =
-      typeof query.start_time === 'string' && typeof query.end_time === 'string'
-        ? query
-        : this.formatQueryParams(query);
+    const queryParams = this.formatQueryParams(query);
     if (queryParams) {
       return this.ajax(url, 'GET', { data: queryParams }).then((resp) => {
         const response = resp || {};
