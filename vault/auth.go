@@ -802,7 +802,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
 
 			if c.isMountable(ctx, entry, consts.PluginTypeCredential) {
-				c.logger.Warn("skipping plugin-based mount entry", "path", entry.Path)
+				c.logger.Warn("skipping plugin-based credential entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
 			return errLoadAuthFailed
