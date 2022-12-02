@@ -113,7 +113,10 @@ export default class Dashboard extends Component {
       // on init, date is automatically pulled from license start date and user hasn't queried anything yet
       message = 'Your license start date is';
     }
-    if (isAfter(activityStartDateObject, queryStartDateObject)) {
+    if (
+      isAfter(activityStartDateObject, queryStartDateObject) &&
+      !isSameMonth(activityStartDateObject, queryStartDateObject)
+    ) {
       return `${message} ${parseAPITimestamp(this.startMonthTimestamp, 'MMMM yyyy')}. 
         We only have data from ${parseAPITimestamp(this.getActivityResponse.startTime, 'MMMM yyyy')}, 
         and that is what is being shown here.`;
@@ -237,7 +240,7 @@ export default class Dashboard extends Component {
   // new client data for horizontal bar chart
   get newClientAttribution() {
     // new client attribution only available in a single, historical month (not a date range or current month)
-    if (this.isDateRange) return null;
+    if (this.isDateRange || this.isCurrentMonth) return null;
 
     if (this.selectedNamespace) {
       return this.newClientCounts?.mounts || null;

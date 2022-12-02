@@ -10,16 +10,16 @@ import { create } from 'ember-cli-page-object';
 import ss from 'vault/tests/pages/components/search-select';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
+import { formatNumber } from 'core/helpers/format-number';
 
 const searchSelect = create(ss);
 
-const NEW_DATE = new Date();
-const LAST_MONTH = startOfMonth(subMonths(NEW_DATE, 1));
-const COUNTS_START = subMonths(NEW_DATE, 12); // pretend vault user started cluster 1 year ago
+const CURRENT_DATE = new Date();
+const LAST_MONTH = startOfMonth(subMonths(CURRENT_DATE, 1));
+const COUNTS_START = subMonths(CURRENT_DATE, 12); // pretend vault user started cluster 1 year ago
 
 // for testing, we're in the middle of a license/billing period
-const LICENSE_START = startOfMonth(subMonths(NEW_DATE, 6));
-
+const LICENSE_START = startOfMonth(subMonths(CURRENT_DATE, 6));
 // upgrade happened 1 month after license start
 const UPGRADE_DATE = addMonths(LICENSE_START, 1);
 
@@ -29,6 +29,10 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
 
   hooks.before(function () {
     ENV['ember-cli-mirage'].handler = 'clients';
+  });
+
+  hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
   });
 
   hooks.after(function () {
@@ -80,18 +84,17 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     assert.dom(SELECTORS.filterBar).doesNotExist('Does not show filter bar');
   });
 
-  test('visiting history tab config on and data with mounts', async function (assert) {
+  test('visiting dashboard tab config on and data with mounts', async function (assert) {
     assert.expect(8);
     await visit('/vault/clients/dashboard');
     assert.strictEqual(currentURL(), '/vault/clients/dashboard');
-
     assert
       .dom(SELECTORS.dateDisplay)
       .hasText(format(LICENSE_START, 'MMMM yyyy'), 'billing start month is correctly parsed from license');
     assert
       .dom(SELECTORS.rangeDropdown)
       .hasText(
-        `${format(LICENSE_START, 'MMM yyyy')} - ${format(NEW_DATE, 'MMM yyyy')}`,
+        `${format(LICENSE_START, 'MMM yyyy')} - ${format(CURRENT_DATE, 'MMM yyyy')}`,
         'Date range shows dates correctly parsed activity response'
       );
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
@@ -111,8 +114,6 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
 
   test('updates correctly when querying date ranges', async function (assert) {
     assert.expect(26);
-    // TODO CMB: wire up dynamically generated activity to mirage clients handler
-    // const activity = generateActivityResponse(5, LICENSE_START, LAST_MONTH);
     await visit('/vault/clients/dashboard');
     assert.strictEqual(currentURL(), '/vault/clients/dashboard');
     // query for single, historical month with no new counts
@@ -167,7 +168,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     // query custom end month
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
-    if (parseInt(find('[data-test-display-year]').innerText) < NEW_DATE.getFullYear()) {
+    if (parseInt(find('[data-test-display-year]').innerText) < CURRENT_DATE.getFullYear()) {
       await click('[data-test-next-year]');
     }
     await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LAST_MONTH.getMonth() - 2]}]`));
@@ -190,7 +191,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     // query for single, historical month
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
-    if (parseInt(find('[data-test-display-year]').innerText) < NEW_DATE.getFullYear()) {
+    if (parseInt(find('[data-test-display-year]').innerText) < CURRENT_DATE.getFullYear()) {
       await click('[data-test-next-year]');
     }
     await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]}]`));
@@ -207,7 +208,6 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     // reset to billing period
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-current-billing-period]');
-
     // query month older than count start date
     await click('[data-test-start-date-editor] button');
     await click(SELECTORS.yearDropdown);
@@ -221,8 +221,8 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
       );
   });
 
-  test('filters correctly on history with full data', async function (assert) {
-    assert.expect(19);
+  test('dashboard filters correctly with full data', async function (assert) {
+    assert.expect(21);
     await visit('/vault/clients/dashboard');
     assert.strictEqual(currentURL(), '/vault/clients/dashboard', 'clients/dashboard URL is correct');
     assert.dom(SELECTORS.dashboardActiveTab).hasText('Dashboard', 'dashboard tab is active');
@@ -231,43 +231,73 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
       .exists('Shows running totals with monthly breakdown charts');
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert.dom(SELECTORS.monthlyUsageBlock).exists('Shows monthly usage block');
+    const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
 
     // FILTER BY NAMESPACE
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
-
     await settled();
+    const topNamespace = response.byNamespace[0];
+    const topMount = topNamespace.mounts[0];
     assert.ok(true, 'Filter by first namespace');
+    assert.strictEqual(
+      find(SELECTORS.selectedNs).innerText.toLowerCase(),
+      topNamespace.label,
+      'selects top namespace'
+    );
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
-    assert.dom('[data-test-running-total-entity]').includesText('23,326', 'total entity clients is accurate');
     assert
-      .dom('[data-test-running-total-nonentity]')
-      .includesText('17,826', 'total non-entity clients is accurate');
-    assert.dom('[data-test-attribution-clients]').includesText('10,142', 'top attribution clients accurate');
+      .dom('[data-test-running-total-entity] p')
+      .includesText(`${formatNumber([topNamespace.entity_clients])}`, 'total entity clients is accurate');
+    assert
+      .dom('[data-test-running-total-nonentity] p')
+      .includesText(
+        `${formatNumber([topNamespace.non_entity_clients])}`,
+        'total non-entity clients is accurate'
+      );
+    assert
+      .dom('[data-test-attribution-clients] p')
+      .includesText(`${formatNumber([topMount.clients])}`, 'top attribution clients accurate');
 
     // FILTER BY AUTH METHOD
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
     await settled();
     assert.ok(true, 'Filter by first auth method');
-    assert.dom('[data-test-running-total-entity]').includesText('6,508', 'total entity clients is accurate');
+    assert.strictEqual(
+      find(SELECTORS.selectedAuthMount).innerText.toLowerCase(),
+      topMount.label,
+      'selects top mount'
+    );
     assert
-      .dom('[data-test-running-total-nonentity]')
-      .includesText('3,634', 'total non-entity clients is accurate');
+      .dom('[data-test-running-total-entity] p')
+      .includesText(`${formatNumber([topMount.entity_clients])}`, 'total entity clients is accurate');
+    assert
+      .dom('[data-test-running-total-nonentity] p')
+      .includesText(`${formatNumber([topMount.non_entity_clients])}`, 'total non-entity clients is accurate');
     assert.dom(SELECTORS.attributionBlock).doesNotExist('Does not show attribution block');
 
     await click('#namespace-search-select [data-test-selected-list-button="delete"]');
     assert.ok(true, 'Remove namespace filter without first removing auth method filter');
     assert.dom('[data-test-top-attribution]').includesText('Top namespace');
     assert
-      .dom('[data-test-attribution-clients]')
-      .hasTextContaining('41,152', 'top attribution clients back to unfiltered value');
-    assert
       .dom('[data-test-running-total-entity]')
-      .hasTextContaining('98,289', 'total entity clients is back to unfiltered value');
+      .hasTextContaining(
+        `${formatNumber([response.total.entity_clients])}`,
+        'total entity clients is back to unfiltered value'
+      );
     assert
       .dom('[data-test-running-total-nonentity]')
-      .hasTextContaining('96,412', 'total non-entity clients is back to unfiltered value');
+      .hasTextContaining(
+        `${formatNumber([formatNumber([response.total.non_entity_clients])])}`,
+        'total non-entity clients is back to unfiltered value'
+      );
+    assert
+      .dom('[data-test-attribution-clients]')
+      .hasTextContaining(
+        `${formatNumber([topNamespace.clients])}`,
+        'top attribution clients back to unfiltered value'
+      );
   });
 
   test('shows warning if upgrade happened within license period', async function (assert) {
@@ -312,8 +342,8 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
 
   test('Shows empty if license start date is current month', async function (assert) {
     // TODO cmb update to reflect new behavior
-    const licenseStart = NEW_DATE;
-    const licenseEnd = addMonths(NEW_DATE, 12);
+    const licenseStart = CURRENT_DATE;
+    const licenseEnd = addMonths(CURRENT_DATE, 12);
     this.server.get('sys/license/status', function () {
       return {
         request_id: 'my-license-request-id',
