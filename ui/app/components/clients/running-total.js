@@ -72,18 +72,17 @@ export default class RunningTotal extends Component {
 
   get showSingleMonth() {
     if (this.args.lineChartData?.length === 1) {
-      const totalData = this.args.runningTotals;
       const monthData = this.args?.lineChartData[0];
       return {
         total: {
-          total: totalData.clients,
-          entityClients: totalData.entity_clients,
-          nonEntityClients: totalData.non_entity_clients,
+          total: monthData.clients,
+          entityClients: monthData.entity_clients,
+          nonEntityClients: monthData.non_entity_clients,
         },
         new: {
-          total: monthData.new_clients.clients || 0,
-          entityClients: monthData.new_clients.entity_clients || 0,
-          nonEntityClients: monthData.new_clients.non_entity_clients || 0,
+          total: monthData.new_clients.clients,
+          entityClients: monthData.new_clients.entity_clients,
+          nonEntityClients: monthData.new_clients.non_entity_clients,
         },
       };
     }
