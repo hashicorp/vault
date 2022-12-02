@@ -385,7 +385,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		MountPoint: "pki/",
 	})
 	require.NoError(t, err, "error from creating role")
-	require.Nil(t, resp, "got non-nil response object from creating role")
+	require.NotNil(t, resp, "got nil response object from creating role")
 
 	// List roles
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -471,7 +471,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		MountPoint: "pki/",
 	})
 	require.NoError(t, err, "error setting CRL config")
-	require.Nil(t, resp, "got non-nil response setting CRL config")
+	require.NotNil(t, resp, "got nil response setting CRL config")
 
 	// Set URL config
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
