@@ -113,6 +113,11 @@ func rolePaths(b *backend) []*framework.Path {
 			Description: "OK",
 		}},
 	}
+	responseNoContent := map[int][]framework.Response{
+		http.StatusNoContent: {{
+			Description: "No Content",
+		}},
+	}
 
 	p := &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role_name"),
@@ -263,7 +268,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback:  b.pathRoleDelete,
-				Responses: responseOK,
+				Responses: responseNoContent,
 			},
 		},
 		HelpSynopsis:    strings.TrimSpace(roleHelp["role"][0]),
@@ -341,7 +346,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRolePoliciesUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathRolePoliciesRead,
@@ -364,7 +369,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRolePoliciesDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-policies"][0]),
@@ -386,7 +391,7 @@ of CIDR blocks. If set, specifies the blocks of IP addresses which can perform t
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleBoundCIDRUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathRoleBoundCIDRListRead,
@@ -405,7 +410,7 @@ of CIDR blocks. If set, specifies the blocks of IP addresses which can perform t
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleBoundCIDRListDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-bound-cidr-list"][0]),
@@ -427,7 +432,7 @@ IP addresses which can perform the login operation.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDBoundCIDRUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathRoleSecretIDBoundCIDRRead,
@@ -445,7 +450,7 @@ IP addresses which can perform the login operation.`,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDBoundCIDRDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["secret-id-bound-cidrs"][0]),
@@ -466,7 +471,7 @@ IP addresses which can perform the login operation.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleTokenBoundCIDRUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathRoleTokenBoundCIDRRead,
@@ -484,7 +489,7 @@ IP addresses which can perform the login operation.`,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleTokenBoundCIDRDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["token-bound-cidrs"][0]),
@@ -506,7 +511,7 @@ IP addresses which can perform the login operation.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleBindSecretIDUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathRoleBindSecretIDRead,
@@ -524,7 +529,7 @@ IP addresses which can perform the login operation.`,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleBindSecretIDDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-bind-secret-id"][0]),
@@ -545,7 +550,7 @@ IP addresses which can perform the login operation.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDNumUsesUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathRoleSecretIDNumUsesRead,
@@ -563,7 +568,7 @@ IP addresses which can perform the login operation.`,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDNumUsesDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-num-uses"][0]),
@@ -585,7 +590,7 @@ to 0, meaning no expiration.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDTTLUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathRoleSecretIDTTLRead,
@@ -603,7 +608,7 @@ to 0, meaning no expiration.`,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDTTLDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-ttl"][0]),
@@ -629,7 +634,7 @@ to 0, meaning no expiration.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRolePeriodUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathRolePeriodRead,
@@ -652,7 +657,7 @@ to 0, meaning no expiration.`,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRolePeriodDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-period"][0]),
@@ -673,7 +678,7 @@ to 0, meaning no expiration.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleTokenNumUsesUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathRoleTokenNumUsesRead,
@@ -691,7 +696,7 @@ to 0, meaning no expiration.`,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleTokenNumUsesDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-num-uses"][0]),
@@ -712,7 +717,7 @@ to 0, meaning no expiration.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleTokenTTLUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathRoleTokenTTLRead,
@@ -730,7 +735,7 @@ to 0, meaning no expiration.`,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleTokenTTLDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-ttl"][0]),
@@ -751,7 +756,7 @@ to 0, meaning no expiration.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleTokenMaxTTLUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathRoleTokenMaxTTLRead,
@@ -769,7 +774,7 @@ to 0, meaning no expiration.`,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleTokenMaxTTLDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-max-ttl"][0]),
@@ -804,7 +809,7 @@ to 0, meaning no expiration.`,
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleRoleIDUpdate,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-id"][0]),
@@ -962,11 +967,11 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDDestroyUpdateDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDDestroyUpdateDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-destroy"][0]),
@@ -1046,11 +1051,11 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDAccessorDestroyUpdateDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDAccessorDestroyUpdateDelete,
-					Responses: responseOK,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-accessor"][0]),
