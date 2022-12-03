@@ -962,30 +962,6 @@ func (c *Core) taintMountEntry(ctx context.Context, nsID, mountPath string, upda
 	return nil
 }
 
-func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
-	if entry == nil {
-		return false
-	}
-
-	// Allow type to be determined from mount entry when not otherwise specified
-	if pluginType == consts.PluginTypeUnknown {
-		pluginType = c.builtinTypeFromMountEntry(ctx, entry)
-	}
-
-	// Handle aliases
-	t := entry.Type
-	if alias, ok := mountAliases[t]; ok {
-		t = alias
-	}
-
-	plug, err := c.pluginCatalog.Get(ctx, t, pluginType, entry.Version)
-	if err != nil || plug == nil {
-		return false
-	}
-
-	return plug.Builtin
-}
-
 // handleDeprecatedMountEntry handles the Deprecation Status of the specified
 // mount entry's builtin engine as follows:
 //

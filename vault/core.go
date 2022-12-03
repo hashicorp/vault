@@ -3099,23 +3099,34 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 // with misconfigured plugins. It should not be possible for existing builtins
 // to be misconfigured, so that is a fatal error.
 func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
+	return !c.isMountEntryBuiltin(ctx, entry, pluginType)
+}
+
+// isMountEntryBuiltin determines whether a mount entry is associated with a
+// builtin of the specified plugin type.
+func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
 	// Prevent a panic early on
 	if entry == nil || c.pluginCatalog == nil {
 		return false
 	}
 
-	// Handle aliases
-	t := entry.Type
-	if alias, ok := mountAliases[t]; ok {
-		t = alias
+	// Allow type to be determined from mount entry when not otherwise specified
+	if pluginType == consts.PluginTypeUnknown {
+		pluginType = c.builtinTypeFromMountEntry(ctx, entry)
 	}
 
-	plug, err := c.pluginCatalog.Get(ctx, t, pluginType, entry.Version)
-	if err != nil {
+	// Handle aliases
+	pluginName := entry.Type
+	if alias, ok := mountAliases[pluginName]; ok {
+		pluginName = alias
+	}
+
+	plug, err := c.pluginCatalog.Get(ctx, pluginName, pluginType, entry.Version)
+	if err != nil || plug == nil {
 		return false
 	}
 
-	return plug == nil || !plug.Builtin
+	return plug.Builtin
 }
 
 // MatchingMount returns the path of the mount that will be responsible for
