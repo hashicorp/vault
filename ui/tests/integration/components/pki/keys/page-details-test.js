@@ -27,7 +27,7 @@ module('Integration | Component | pki key details page', function (hooks) {
   });
 
   test('it renders the page component and deletes a key', async function (assert) {
-    assert.expect(9);
+    assert.expect(7);
     this.server.delete(`${this.backend}/key/${this.model.keyId}`, () => {
       assert.ok(true, 'confirming delete fires off destroyRecord()');
     });

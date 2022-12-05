@@ -22,17 +22,13 @@ module('Integration | Component | pki role details page', function (hooks) {
   });
 
   test('it should render the page component', async function (assert) {
-    assert.expect(8);
+    assert.expect(5);
     await render(
       hbs`
       <Page::PkiRoleDetails @role={{this.model}} />
   `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.breadcrumbContainer).exists({ count: 1 }, 'breadcrumb containers exist');
-    assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
-    assert.dom(SELECTORS.title).containsText('PKI Role Foobar', 'Title includes type and name of role');
-    // Attribute-specific checks
     assert.dom(SELECTORS.issuerLabel).hasText('Issuer', 'Label is');
     assert.dom(SELECTORS.keyUsageValue).hasText('None', 'Key usage shows none when array is empty');
     assert
