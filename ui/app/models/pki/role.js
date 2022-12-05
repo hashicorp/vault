@@ -255,8 +255,7 @@ export default class PkiRoleModel extends Model {
   }
 
   @lazyCapabilities(apiPath`${'backend'}/issue/${'id'}`, 'backend', 'id') generatePath;
-  get canReadIssue() {
-    // ARG TODO was duplicate name, added Issue
+  get canGenerateCert() {
     return this.generatePath.get('canUpdate');
   }
   @lazyCapabilities(apiPath`${'backend'}/sign/${'id'}`, 'backend', 'id') signPath;
@@ -267,8 +266,6 @@ export default class PkiRoleModel extends Model {
   get canSignVerbatim() {
     return this.signVerbatimPath.get('canUpdate');
   }
-
-  _fieldToAttrsGroups = null;
 
   // Gets header/footer copy for specific toggle groups.
   get fieldGroupsInfo() {
@@ -299,65 +296,62 @@ export default class PkiRoleModel extends Model {
   }
 
   get fieldGroups() {
-    if (!this._fieldToAttrsGroups) {
-      this._fieldToAttrsGroups = fieldToAttrs(this, [
-        {
-          default: [
-            'name',
-            'issuerRef',
-            'customTtl',
-            'notBeforeDuration',
-            'maxTtl',
-            'generateLease',
-            'noStore',
-            'addBasicConstraints',
-          ],
-        },
-        {
-          'Domain handling': [
-            'allowedDomains',
-            'allowedDomainsTemplate',
-            'allowBareDomains',
-            'allowSubdomains',
-            'allowGlobDomains',
-            'allowWildcardCertificates',
-            'allowLocalhost', // default: true (returned true by OpenApi)
-            'allowAnyName',
-            'enforceHostnames', // default: true (returned true by OpenApi)
-          ],
-        },
-        {
-          'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
-        },
-        {
-          'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
-        },
-        { 'Policy identifiers': ['policyIdentifiers'] },
-        {
-          'Subject Alternative Name (SAN) Options': [
-            'allowIpSans',
-            'allowedUriSans',
-            'allowUriSansTemplate',
-            'allowedOtherSans',
-          ],
-        },
-        {
-          'Additional subject fields': [
-            'allowedSerialNumbers',
-            'requireCn',
-            'useCsrCommonName',
-            'useCsrSans',
-            'ou',
-            'organization',
-            'country',
-            'locality',
-            'province',
-            'streetAddress',
-            'postalCode',
-          ],
-        },
-      ]);
-    }
-    return this._fieldToAttrsGroups;
+    return fieldToAttrs(this, [
+      {
+        default: [
+          'name',
+          'issuerRef',
+          'customTtl',
+          'notBeforeDuration',
+          'maxTtl',
+          'generateLease',
+          'noStore',
+          'addBasicConstraints',
+        ],
+      },
+      {
+        'Domain handling': [
+          'allowedDomains',
+          'allowedDomainsTemplate',
+          'allowBareDomains',
+          'allowSubdomains',
+          'allowGlobDomains',
+          'allowWildcardCertificates',
+          'allowLocalhost', // default: true (returned true by OpenApi)
+          'allowAnyName',
+          'enforceHostnames', // default: true (returned true by OpenApi)
+        ],
+      },
+      {
+        'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
+      },
+      {
+        'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
+      },
+      { 'Policy identifiers': ['policyIdentifiers'] },
+      {
+        'Subject Alternative Name (SAN) Options': [
+          'allowIpSans',
+          'allowedUriSans',
+          'allowUriSansTemplate',
+          'allowedOtherSans',
+        ],
+      },
+      {
+        'Additional subject fields': [
+          'allowedSerialNumbers',
+          'requireCn',
+          'useCsrCommonName',
+          'useCsrSans',
+          'ou',
+          'organization',
+          'country',
+          'locality',
+          'province',
+          'streetAddress',
+          'postalCode',
+        ],
+      },
+    ]);
   }
 }
