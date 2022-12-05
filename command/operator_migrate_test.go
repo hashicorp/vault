@@ -68,6 +68,44 @@ func TestMigration(t *testing.T) {
 		}
 	})
 
+	t.Run("Concurrent migration", func(t *testing.T) {
+		data := generateData()
+
+		fromFactory := physicalBackends["file"]
+
+		folder := filepath.Join(t.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+
+		confFrom := map[string]string{
+			"path": folder,
+		}
+
+		from, err := fromFactory(confFrom, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := storeData(from, data); err != nil {
+			t.Fatal(err)
+		}
+
+		toFactory := physicalBackends["inmem"]
+		confTo := map[string]string{}
+		to, err := toFactory(confTo, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := OperatorMigrateCommand{
+			logger: log.NewNullLogger(),
+		}
+
+		if err := cmd.migrateAll(context.Background(), from, to, 10); err != nil {
+			t.Fatal(err)
+		}
+		if err := compareStoredData(to, data, ""); err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("Start option", func(t *testing.T) {
 		data := generateData()
 
@@ -192,6 +230,7 @@ storage_destination "dest_type2" {
   path = "dest_path"
 }`)
 	})
+
 	t.Run("DFS Scan", func(t *testing.T) {
 		s, _ := physicalBackends["inmem"](map[string]string{}, nil)
 
@@ -205,15 +244,15 @@ storage_destination "dest_type2" {
 		l := randomLister{s}
 
 		type SafeAppend struct {
-			out []string
-			mux sync.Mutex
+			out  []string
+			lock sync.Mutex
 		}
-		var outKeys = SafeAppend{}
-		parallel := 10
-		dfsScan(context.Background(), l, parallel, func(ctx context.Context, path string) error {
-			outKeys.mux.Lock()
+		outKeys := SafeAppend{}
+		dfsScan(context.Background(), l, 10, func(ctx context.Context, path string) error {
+			outKeys.lock.Lock()
+			defer outKeys.lock.Unlock()
+
 			outKeys.out = append(outKeys.out, path)
-			outKeys.mux.Unlock()
 			return nil
 		})
 
@@ -225,9 +264,9 @@ storage_destination "dest_type2" {
 			keys = append(keys, key)
 		}
 		sort.Strings(keys)
-		outKeys.mux.Lock()
+		outKeys.lock.Lock()
 		sort.Strings(outKeys.out)
-		outKeys.mux.Unlock()
+		outKeys.lock.Unlock()
 		if !reflect.DeepEqual(keys, outKeys.out) {
 			t.Fatalf("expected equal: %v, %v", keys, outKeys.out)
 		}

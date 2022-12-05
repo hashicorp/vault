@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/url"
 	"os"
 	"sort"
@@ -22,6 +23,7 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -103,7 +105,7 @@ func (c *OperatorMigrateCommand) Flags() *FlagSets {
 		Name:    "parallel",
 		Default: 1,
 		Target:  &c.flagParallel,
-		Usage: "Use go rutines when migrating. Can speed up the migration " +
+		Usage: "Use lightweight threads (goroutines) when migrating. Can speed up the migration " +
 			"process on slow backends but uses more resources.",
 	})
 
@@ -144,13 +146,13 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 	}
 	c.logger = logging.NewVaultLogger(log.LevelFromString(c.flagLogLevel))
 
-	if c.flagParallel < 1 || c.flagParallel > 2147483647 {
-		c.UI.Error("Error: argument to flag -parallel must be between 1 and 2147483647")
+	if c.flagParallel < 1 || c.flagParallel > math.MaxInt32 {
+		c.UI.Error(fmt.Sprintf("Argument to flag -parallel must be between 1 and %d", math.MaxInt32))
 		return 1
 	}
 
-	if (c.flagStart != "") && c.flagParallel >= 2 {
-		c.UI.Error("Error: flag -start and -parallel set to more than 1 can't be used together")
+	if (c.flagStart != "") && c.flagParallel > 1 {
+		c.UI.Error("Flags -start and -parallel are both supplied, but cannot be used together")
 		return 1
 	}
 
@@ -385,15 +387,23 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 // dfsScan will invoke cb with every key from source.
 // Keys will be traversed in lexicographic, depth-first order.
 func dfsScan(ctx context.Context, source physical.Backend, maxParallel int, cb func(ctx context.Context, path string) error) error {
-
 	dfs := []string{""}
 	if maxParallel < 1 {
 		maxParallel = 1
 	}
 
 	permitPool := physical.NewPermitPool(maxParallel)
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.SetLimit(maxParallel)
 
 	for l := len(dfs); l > 0; l = len(dfs) {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		key := dfs[len(dfs)-1]
 		if key == "" || strings.HasSuffix(key, "/") {
 			children, err := source.List(ctx, key)
@@ -411,27 +421,15 @@ func dfsScan(ctx context.Context, source physical.Backend, maxParallel int, cb f
 			}
 		} else {
 			// Pooling
-			permitPool.Acquire()
-			go func() error {
+			eg.Go(func() error {
+				permitPool.Acquire()
 				defer permitPool.Release()
-				err := cb(ctx, key)
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
+				return cb(ctx, key)
+			})
+
 			dfs = dfs[:len(dfs)-1]
 		}
+	}
 
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-		}
-	}
-	// Wait for all gorutines to finish
-	for 0 != permitPool.CurrentPermits() {
-		time.Sleep(time.Second)
-	}
-	return nil
+	return eg.Wait()
 }
