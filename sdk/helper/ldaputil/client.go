@@ -120,6 +120,7 @@ func (c *Client) makeLdapSearchRequest(cfg *ConfigEntry, conn Connection, userna
 	}
 	ldapRequest := &ldap.SearchRequest{
 		BaseDN:    cfg.UserDN,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
 		Scope:     ldap.ScopeWholeSubtree,
 		Filter:    renderedFilter,
 		SizeLimit: 2, // Should be only 1 result. Any number larger (2 or more) means access denied.
@@ -276,6 +277,7 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN, username s
 		result, err := conn.Search(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
 			Scope:     ldap.ScopeWholeSubtree,
+			DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
 			Filter:    filter,
 			SizeLimit: math.MaxInt32,
 		})
@@ -337,6 +339,7 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 	result, err := conn.Search(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
 		Scope:  ldap.ScopeWholeSubtree,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
 		Filter: renderedQuery.String(),
 		Attributes: []string{
 			cfg.GroupAttr,
@@ -395,6 +398,7 @@ func (c *Client) performLdapFilterGroupsSearchPaging(cfg *ConfigEntry, conn Pagi
 	result, err := conn.SearchWithPaging(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
 		Scope:  ldap.ScopeWholeSubtree,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
 		Filter: renderedQuery.String(),
 		Attributes: []string{
 			cfg.GroupAttr,
@@ -444,6 +448,7 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 	result, err := conn.Search(&ldap.SearchRequest{
 		BaseDN: userDN,
 		Scope:  ldap.ScopeBaseObject,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
 		Filter: "(objectClass=*)",
 		Attributes: []string{
 			"tokenGroups",
@@ -472,6 +477,7 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 		groupResult, err := conn.Search(&ldap.SearchRequest{
 			BaseDN: fmt.Sprintf("<SID=%s>", sidString),
 			Scope:  ldap.ScopeBaseObject,
+			DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
 			Filter: "(objectClass=*)",
 			Attributes: []string{
 				"1.1", // RFC no attributes
