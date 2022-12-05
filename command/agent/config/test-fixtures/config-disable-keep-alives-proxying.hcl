@@ -1,5 +1,5 @@
 pid_file = "./pidfile"
-disable_keep_alives = ["auto-auth","caching","templating","proxying"]
+disable_keep_alives = ["proxying"]
 
 auto_auth {
   method {
