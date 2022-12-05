@@ -9,9 +9,10 @@ auto_auth {
 	}
 }
 
-cache {
-	use_auto_auth_token = "true"
-	force_auto_auth_token = false
+api_proxy {
+	use_auto_auth_token = "force"
+	enforce_consistency = "always"
+	when_inconsistent = "forward"
 }
 
 listener "tcp" {
