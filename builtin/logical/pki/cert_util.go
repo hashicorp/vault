@@ -144,7 +144,7 @@ func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerU
 
 	entries, err := entry.GetAIAURLs(sc)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch AIA URL information: %v", err)}
 	}
 	caInfo.URLs = entries
 
@@ -699,9 +699,15 @@ func generateCert(sc *storageContext,
 			// issuer entry yet, we default to the global URLs.
 			entries, err := getGlobalAIAURLs(ctx, sc.Storage)
 			if err != nil {
-				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
+				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch AIA URL information: %v", err)}
 			}
-			data.Params.URLs = entries
+
+			uris, err := entries.toURLEntries(sc, issuerID(""))
+			if err != nil {
+				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse AIA URL information: %v\nUsing templated AIA URL's {{issuer_id}} field when generating root certificates is not supported.", err)}
+			}
+
+			data.Params.URLs = uris
 
 			if input.role.MaxPathLength == nil {
 				data.Params.MaxPathLength = -1
