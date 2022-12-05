@@ -43,8 +43,8 @@ var defaultTidyConfig = tidyConfig{
 	SafetyBuffer:       72 * time.Hour,
 	IssuerSafetyBuffer: 365 * 24 * time.Hour,
 	PauseDuration:      0 * time.Second,
-	MaintainCount:      true,
-	PublishMetrics:     true,
+	MaintainCount:      false,
+	PublishMetrics:     false,
 }
 
 func pathTidy(b *backend) *framework.Path {

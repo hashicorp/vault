@@ -212,10 +212,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.lastTidy = time.Now()
 
 	// Metrics initialization for count of certificates in storage
-	b.certCountEnabled = atomic2.NewBool(true) // Overwritten during initialize, don't break count until then
-	b.publishCertCountMetrics = atomic2.NewBool(true)
+	b.certCountEnabled = atomic2.NewBool(false)
+	b.publishCertCountMetrics = atomic2.NewBool(false)
 	b.certsCounted = atomic2.NewBool(false)
-	b.certCountError = ""
+	b.certCountError = "Initialize Not Yet Run, Cert Counts Unavailable"
 	b.certCount = new(uint32)
 	b.revokedCertCount = new(uint32)
 	b.possibleDoubleCountedSerials = make([]string, 0, 250)
@@ -597,12 +597,21 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 	if config.MaintainCount == false {
 		b.possibleDoubleCountedRevokedSerials = nil
 		b.possibleDoubleCountedSerials = nil
-		b.certsCounted.Store(false)
+		b.certsCounted.Store(true)
 		atomic.StoreUint32(b.certCount, 0)
 		atomic.StoreUint32(b.revokedCertCount, 0)
 		b.certCountError = "Cert Count is Disabled: enable via Tidy Config maintain_stored_certificate_counts"
 		return nil
 	}
+
+	// Ideally these three things would be set in one transaction, since that isn't possible, set the counts to "0",
+	// first, so count will over-count (and miss putting things in deduplicate queue), rather than under-count.
+	atomic.StoreUint32(b.certCount, 0)
+	atomic.StoreUint32(b.revokedCertCount, 0)
+	b.possibleDoubleCountedRevokedSerials = nil
+	b.possibleDoubleCountedSerials = nil
+	// A cert issued or revoked here will be double-counted.  That's okay, this is "best effort" metrics.
+	b.certsCounted.Store(false)
 
 	entries, err := b.storage.List(ctx, "certs/")
 	if err != nil {
@@ -701,6 +710,8 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		revokedCertCount := atomic.LoadUint32(b.revokedCertCount)
 		metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(revokedCertCount))
 	}
+
+	b.certCountError = ""
 
 	return nil
 }

@@ -496,7 +496,7 @@ greater period of time. By default this is zero seconds.`,
 		Description: `This configures whether stored certificates 
 are counted upon initialization of the backend, and whether during 
 normal operation, a running count of certificates stored is maintained.`,
-		Default: true,
+		Default: false,
 	}
 
 	fields["publish_stored_certificate_count_metrics"] = &framework.FieldSchema{
