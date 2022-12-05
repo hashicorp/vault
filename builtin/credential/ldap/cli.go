@@ -26,12 +26,15 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 	password, ok := m["password"]
 	if !ok {
-		fmt.Fprintf(os.Stderr, "Password (will be hidden): ")
-		var err error
-		password, err = pwd.Read(os.Stdin)
-		fmt.Fprintf(os.Stderr, "\n")
-		if err != nil {
-			return nil, err
+		password = passwordFromEnv()
+		if password == "" {
+			fmt.Fprintf(os.Stderr, "Password (will be hidden): ")
+			var err error
+			password, err = pwd.Read(os.Stdin)
+			fmt.Fprintf(os.Stderr, "\n")
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -70,8 +73,9 @@ Usage: vault login -method=ldap [CONFIG K=V...]
 Configuration:
 
   password=<string>
-      LDAP password to use for authentication. If not provided, the CLI will
-      prompt for this on stdin.
+      LDAP password to use for authentication. If not provided, it will use
+			the VAULT_LDAP_PASSWORD environment variable. If this is not set, the
+			CLI will prompt for this on stdin.
 
   username=<string>
       LDAP username to use for authentication.
@@ -88,4 +92,8 @@ func usernameFromEnv() string {
 		return user
 	}
 	return ""
+}
+
+func passwordFromEnv() string {
+	return os.Getenv("VAULT_LDAP_PASSWORD")
 }
