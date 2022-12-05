@@ -1,0 +1,53 @@
+<TabPageHeader @model={{@model.backend}}>
+  <ToolbarLink @route="configure">Configure Kubernetes</ToolbarLink>
+</TabPageHeader>
+
+{{#if @model.config}}
+  <div class="has-top-margin-m">
+    <div class="is-flex">
+      <div class="box has-padding-m has-right-margin-m is-rounded column is-flex-half" data-test-roles-card>
+        <div class="is-flex-between">
+          <h2 class="title is-3">
+            Roles
+          </h2>
+          {{#if @model.roles.length}}
+            <LinkTo class="is-no-underline" @route="roles">View Roles</LinkTo>
+          {{else}}
+            <LinkTo class="is-no-underline" @route="roles.create">Create Role</LinkTo>
+          {{/if}}
+        </div>
+        <p>The number of Vault roles being used to generate Kubernetes credentials.</p>
+        <h2 class="title has-font-weight-normal is-3 has-top-margin-l">
+          {{if @model.roles.length @model.roles.length "None"}}
+        </h2>
+      </div>
+      <div class="box has-padding-m is-rounded column is-flex-half" data-test-generate-credential-card>
+        <h2 class="title is-3">
+          Generate credentials
+        </h2>
+        <p>Quickly generate credentials by typing the role name.</p>
+        <div class="is-flex-center has-top-margin-s">
+          <SearchSelect
+            class="is-marginless is-flex-1"
+            @placeholder="Type to find a role..."
+            @disallowNewItems={{true}}
+            @options={{this.roleOptions}}
+            @selectLimit="1"
+            @fallbackComponent="input-search"
+            @onChange={{this.selectRole}}
+          />
+          <button
+            class="button has-left-margin-m"
+            type="button"
+            disabled={{this.isDisabled}}
+            {{on "click" this.generateCredential}}
+          >
+            Generate
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+{{else}}
+  <ConfigCta />
+{{/if}}
