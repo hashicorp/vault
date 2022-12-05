@@ -50,7 +50,7 @@
           >
             {{#if (gt val.length 0)}}
               {{#each val as |key|}}
-                <span>{{key}},</span>
+                <span>{{key}}, </span>
               {{/each}}
             {{else}}
               None
@@ -62,14 +62,23 @@
             @value={{not val}}
             @alwaysRender={{true}}
           />
+        {{else if (eq attr.name "customTtl")}}
+          {{! Show either notAfter or ttl }}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{or @role.notAfter @role.ttl}}
+            @alwaysRender={{true}}
+            @formatDate={{if @role.notAfter "MMM d yyyy HH:mm zzzz"}}
+            @formatTtl={{@role.ttl}}
+          />
         {{else}}
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
             @value={{val}}
             @alwaysRender={{true}}
-            @formatDate={{eq attr.name "customTtl"}}
             @type={{or attr.type attr.options.type}}
             @defaultShown={{attr.options.defaultShown}}
+            @formatTtl={{eq attr.options.editType "ttl"}}
           />
         {{/if}}
       {{/let}}
