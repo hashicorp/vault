@@ -100,6 +100,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				revokedPath,
 				deltaWALPath,
 				legacyCRLPath,
+				clusterConfigPath,
 				"crls/",
 				"certs/",
 			},
@@ -127,6 +128,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathConfigCA(&b),
 			pathConfigCRL(&b),
 			pathConfigURLs(&b),
+			pathConfigCluster(&b),
 			pathSignVerbatim(&b),
 			pathSign(&b),
 			pathIssue(&b),
@@ -177,6 +179,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// OCSP APIs
 			buildPathOcspGet(&b),
 			buildPathOcspPost(&b),
+
+			// CRL Signing
+			pathResignCrls(&b),
+			pathSignRevocationList(&b),
 		},
 
 		Secrets: []*framework.Secret{

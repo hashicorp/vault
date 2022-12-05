@@ -25,3 +25,6 @@
 /package-lock.json.ember-try
 /yarn.lock.ember-try
 /tests/helpers/vault-keys.js
+
+# typescript declaration files
+*.d.ts

@@ -1,10 +1,19 @@
 import Model, { attr } from '@ember-data/model';
+import { inject as service } from '@ember/service';
+import { withFormFields } from 'vault/decorators/model-form-fields';
 
+@withFormFields(['keyId', 'keyName', 'keyType', 'keyBits'])
 export default class PkiKeyModel extends Model {
-  @attr('string', { readOnly: true }) backend;
+  @service secretMountPath;
+
   @attr('boolean') isDefault;
-  @attr('string') keyRef; // reference to an existing key: either, vault generate identifier, literal string 'default', or the name assigned to the key. Part of the request URL.
-  @attr('string') keyId;
+  @attr('string', { possibleValues: ['internal', 'external'] }) type;
+  @attr('string', { detailsLabel: 'Key ID' }) keyId;
   @attr('string') keyName;
   @attr('string') keyType;
+  @attr('string') keyBits;
+
+  get backend() {
+    return this.secretMountPath.currentPath;
+  }
 }

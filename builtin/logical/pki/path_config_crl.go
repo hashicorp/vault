@@ -227,7 +227,18 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		}
 	}
 
-	return nil, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"expiry":                    config.Expiry,
+			"disable":                   config.Disable,
+			"ocsp_disable":              config.OcspDisable,
+			"ocsp_expiry":               config.OcspExpiry,
+			"auto_rebuild":              config.AutoRebuild,
+			"auto_rebuild_grace_period": config.AutoRebuildGracePeriod,
+			"enable_delta":              config.EnableDelta,
+			"delta_rebuild_interval":    config.DeltaRebuildInterval,
+		},
+	}, nil
 }
 
 const pathConfigCRLHelpSyn = `

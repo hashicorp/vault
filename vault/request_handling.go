@@ -206,7 +206,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 	for nsID, nsPolicies := range identityPolicies {
-		policyNames[nsID] = append(policyNames[nsID], nsPolicies...)
+		policyNames[nsID] = policyutil.SanitizePolicies(append(policyNames[nsID], nsPolicies...), false)
 	}
 
 	// Attach token's namespace information to the context. Wrapping tokens by
@@ -363,7 +363,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
 		auth.TokenPolicies = te.Policies
-		auth.Policies = append(te.Policies, identityPolicies[te.NamespaceID]...)
+		auth.Policies = policyutil.SanitizePolicies(append(te.Policies, identityPolicies[te.NamespaceID]...), false)
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
