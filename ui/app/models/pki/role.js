@@ -248,7 +248,7 @@ export default class PkiRoleModel extends Model {
     return this.updatePath.get('canCreate');
   }
   get canEdit() {
-    return this.updatePath.get('canEdit');
+    return this.updatePath.get('canUpdate');
   }
   get canRead() {
     return this.updatePath.get('canRead');
