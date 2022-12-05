@@ -5,22 +5,10 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { click, currentURL, visit } from '@ember/test-helpers';
+import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
+import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 
 const consoleComponent = create(consoleClass);
-
-const SELECTORS = {
-  overviewTab: '[data-test-secret-list-tab="Overview"]',
-  rolesTab: '[data-test-secret-list-tab="Roles"]',
-  issuersTab: '[data-test-secret-list-tab="Issuers"]',
-  certsTab: '[data-test-secret-list-tab="Certificates"]',
-  keysTab: '[data-test-secret-list-tab="Keys"]',
-  configTab: '[data-test-secret-list-tab="Configuration"]',
-  deleteRoleButton: '[data-test-pki-role-delete]',
-  generateCertLink: '[data-test-pki-role-generate-cert]',
-  signCertLink: '[data-test-pki-role-sign-cert]',
-  editRoleLink: '[data-test-pki-role-edit-link]',
-};
 
 const tokenWithPolicy = async function (name, policy) {
   await consoleComponent.runCommands([
@@ -41,7 +29,7 @@ const runCommands = async function (commands) {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(
-      `The following occurred when trying to run the following command(s):\n ${commands.join('\n')} \n\n ${
+      `The following occurred when trying to run the command(s):\n ${commands.join('\n')} \n\n ${
         consoleComponent.lastLogOutput
       }`
     );
@@ -126,7 +114,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.rolesTab).exists('Roles tab is present');
       await click(SELECTORS.rolesTab);
-      assert.dom('.toolbar-link').exists({ count: 1 }, 'Correct number of toolbar links render');
+      assert.dom(SELECTORS.createRoleLink).exists({ count: 1 }, 'Create role link is rendered');
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One role is in list');
       await click('.linked-block');
@@ -163,7 +151,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.rolesTab).exists('Roles tab is present');
       await click(SELECTORS.rolesTab);
-      assert.dom('.toolbar-link').exists({ count: 1 }, 'Correct number of toolbar links render');
+      assert.dom(SELECTORS.createRoleLink).exists({ count: 1 }, 'Create role link is rendered');
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One role is in list');
       await click('.linked-block');
@@ -179,7 +167,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.rolesTab).exists('Roles tab is present');
       await click(SELECTORS.rolesTab);
-      assert.dom('.toolbar-link').exists({ count: 1 }, 'Correct number of toolbar links render');
+      assert.dom(SELECTORS.createRoleLink).exists({ count: 1 }, 'Create role link is rendered');
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One role is in list');
       await click('.linked-block');
@@ -190,6 +178,22 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.editRoleLink).exists('Edit link is shown');
       await click(SELECTORS.editRoleLink);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/edit`);
+    });
+
+    test('create role happy path', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.dom(SELECTORS.rolesTab).exists('Roles tab is present');
+      await click(SELECTORS.rolesTab);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
+      await click(SELECTORS.createRoleLink);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/create`);
+
+      await fillIn(SELECTORS.roleForm.roleName, 'another-role');
+      await click(SELECTORS.roleForm.roleCreateButton);
+
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/another-role/details`);
     });
   });
 });
