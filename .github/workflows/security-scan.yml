@@ -73,16 +73,6 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        git fetch
-        CHANGED_FILES_JSON="$(git diff origin/${{ github.base_ref }} --name-only | jq -R '[.]' | jq -nc '[inputs|.[]] | flatten')"
-        cat results.sarif | \
-          jq 'del(.runs[]?.results[]?
-                  | select([.locations[]?.physicalLocation?.artifactLocation?.uri?]
-                           | inside('$CHANGED_FILES_JSON')
-                           | not))
-              ' > file-filtered.sarif
-        cat file-filtered.sarif | jq 'del(.runs[]?.results[]? | select(has("suppressions")))' > suppression-filtered.sarif
-        cat suppression-filtered.sarif | jq '(.runs[]?.results? | select(. | length == 0)) = []' > results.sarif
         cat results.sarif
 
     - name: Upload SARIF file
