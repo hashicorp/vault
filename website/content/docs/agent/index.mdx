@@ -106,12 +106,12 @@ Auto-Auth functionality takes place within an `auto_auth` configuration stanza.
 ## API Proxy
 
 Vault Agent can act as an API proxy for Vault, allowing you to talk to Vault's
-APIs a listener defined for Agent. It can be configured to optionally allow or force the automatic use of
+API via a listener defined for Agent. It can be configured to optionally allow or force the automatic use of
 the Auto-Auth token for these requests. Please see the [API Proxy docs][apiproxy]
 for more information.
 
 API Proxy functionality takes place within a defined `listener`, and its behaviour can be configured with an
-`api_proxy` configuration stanza.
+[`api_proxy` stanza](/docs/agent/apiproxy#configuration-api_proxy).
 
 ## Caching
 
@@ -174,7 +174,7 @@ See the [caching](/docs/agent/caching#api) page for details on the cache API.
 
 ### Configuration File Options
 
-These are the currently-available general configuration option:
+These are the currently-available general configuration options:
 
 - `vault` <code>([vault][vault]: <optional\>)</code> - Specifies the remote Vault server the Agent connects to.
 
@@ -401,7 +401,9 @@ auto_auth {
   }
 }
 
-cache {}
+cache {
+  // An empty cache stanza still enables caching
+}
 
 api_proxy {
   use_auto_auth_token = true

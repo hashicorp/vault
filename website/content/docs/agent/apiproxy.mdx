@@ -15,13 +15,13 @@ for Vault's API.
 
 The [`listener` stanza](/docs/agent#listener-stanza) for Vault Agent configures a listener for Vault Agent. If
 its `role` is not set to `metrics_only`, it will act as a proxy for the Vault server that
-has been configured in the `vault` stanza of Vault Agent. This enables access to the Vault
+has been configured in the [`vault` stanza](/docs/agent#vault-stanza) stanza of Vault Agent. This enables access to the Vault
 API from the Agent API, and can be configured to optionally allow or force the automatic use of
 the Auto-Auth token for these requests, as described below.
 
 If a `listener` has been configured alongside a `cache` stanza, the API Proxy will
-go through and utilize the cache subsystem. See the [caching docs](/docs/agent/caching)
-for more information on caching.
+first attempt to utilize the cache subsystem for qualifying requests, before forwarding the
+request to Vault. See the [caching docs](/docs/agent/caching) for more information on caching.
 
 ## Using Auto-Auth Token
 
@@ -48,14 +48,14 @@ existing Vault token in the request and instead uses the auto-auth token.
 
 The top level `api_proxy` block has the following configuration entries:
 
-- `use_auto_auth_token (bool/string: false)` - If set, the requests made to Agent
+- `use_auto_auth_token` `(bool/string: false)` - If set, the requests made to Agent
 without a Vault token will be forwarded to the Vault server with the
 auto-auth token attached. If the requests already bear a token, this
 configuration will be overridden and the token in the request will be used to
 forward the request to the Vault server. If set to `"force"` Agent will use the
 auto-auth token, overwriting the attached Vault token if set.
 
-The following two `api_proxy` options are only useful when talking to a Vault
+The following two `api_proxy` options are only useful when making requests to a Vault
 Enterprise cluster, and are documented as part of its
 [Eventual Consistency](/docs/enterprise/consistency#vault-agent-and-consistency-headers)
 page.
