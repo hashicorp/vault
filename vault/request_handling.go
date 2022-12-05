@@ -39,6 +39,8 @@ import (
 const (
 	replTimeout                           = 1 * time.Second
 	EnvVaultDisableLocalAuthMountEntities = "VAULT_DISABLE_LOCAL_AUTH_MOUNT_ENTITIES"
+	// base path to store locked users
+	coreLockedUsersPath = "core/login/lockedUsers/"
 )
 
 var (
@@ -1328,7 +1330,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 
 	// check if user lockout feature is disabled
-	isUserLockoutDisabled, err := c.isUserLockoutDisabled(entry, req)
+	isUserLockoutDisabled, err := c.isUserLockoutDisabled(entry)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1625,15 +1627,18 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		resp = respTokenCreate
 	}
 
-	// if login succeeds, remove any entry from userFailedLoginInfo map
-	// if it exists. This is done for batch tokens here as for others
-	// it is taken care by RegisterAuth method
-	if !isUserLockoutDisabled && auth.TokenType == logical.TokenTypeBatch {
-		loginUserInfoKey, err := c.getLoginUserInfoKey(entry, req, ctx)
-		if err != nil {
-			return nil, nil, err
+	// Successful login, remove any entry from userFailedLoginInfo map
+	// if it exists. This is done for batch tokens (for oss & ent)
+	// For service tokens on oss it is taken care by core RegisterAuth function.
+	// For service tokens on ent it is taken care by registerAuth RPC calls.
+	// This update is done as part of registerAuth of RPC calls from standby
+	// to active node. This is added there to reduce RPC calls
+	if !isUserLockoutDisabled && (auth.TokenType == logical.TokenTypeBatch) {
+		loginUserInfoKey := FailedLoginUser{
+			aliasName:     auth.Alias.Name,
+			mountAccessor: auth.Alias.MountAccessor,
 		}
-		err = c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true)
+		err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1768,13 +1773,16 @@ func (c *Core) failedUserLoginProcess(ctx context.Context, mountEntry *MountEntr
 	userLockoutConfiguration := c.getUserLockoutConfiguration(mountEntry)
 
 	// determine the key for userFailedLoginInfo map
-	loginUserInfoKey, err := c.getLoginUserInfoKey(mountEntry, req, ctx)
+	loginUserInfoKey, err := c.getLoginUserInfoKey(ctx, mountEntry, req)
 	if err != nil {
 		return err
 	}
 
 	// get entry from userFailedLoginInfo map for the key
-	userFailedLoginInfo := getUserFailedLoginInfo(ctx, c, loginUserInfoKey)
+	userFailedLoginInfo, err := getUserFailedLoginInfo(ctx, c, loginUserInfoKey)
+	if err != nil {
+		return err
+	}
 
 	// update the last failed login time with current time
 	failedLoginInfo := FailedLoginInfo{
@@ -1789,14 +1797,15 @@ func (c *Core) failedUserLoginProcess(ctx context.Context, mountEntry *MountEntr
 		failedLoginInfo.count = userFailedLoginInfo.count + 1
 
 		// if counter reset, set the count value to 1 as this gets counted as new entry
-		isLockoutCounterReset := time.Now().Unix()-int64(userFailedLoginInfo.lastFailedLoginTime) >= int64(userLockoutConfiguration.LockoutCounterReset)
-		if isLockoutCounterReset {
+		lastFailedLoginTime := time.Unix(int64(userFailedLoginInfo.lastFailedLoginTime), 0)
+		counterResetDuration := userLockoutConfiguration.LockoutCounterReset
+		if time.Now().After(lastFailedLoginTime.Add(counterResetDuration)) {
 			failedLoginInfo.count = 1
 		}
 	}
 
 	// update the userFailedLoginInfo map with the updated/new entry
-	err = c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, &failedLoginInfo, false)
+	err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, &failedLoginInfo, false)
 	if err != nil {
 		return err
 	}
@@ -1808,7 +1817,7 @@ func (c *Core) failedUserLoginProcess(ctx context.Context, mountEntry *MountEntr
 		if err != nil {
 			return fmt.Errorf("could not parse namespace from http context: %w", err)
 		}
-		storageUserLockoutPath := fmt.Sprintf("core/login/lockedUsers/%s/%s/%s>", ns.ID, loginUserInfoKey.mountAccessor, loginUserInfoKey.aliasName)
+		storageUserLockoutPath := fmt.Sprintf(coreLockedUsersPath+"%s/%s/%s", ns.ID, loginUserInfoKey.mountAccessor, loginUserInfoKey.aliasName)
 		compressedBytes, err := jsonutil.EncodeJSONAndCompress(failedLoginInfo.lastFailedLoginTime, nil)
 		if err != nil {
 			c.logger.Error("failed to encode or compress failed login user entry", "error", err)
@@ -1832,8 +1841,12 @@ func (c *Core) failedUserLoginProcess(ctx context.Context, mountEntry *MountEntr
 }
 
 // getLoginUserInfoKey gets failedUserLoginInfo map key for login user
-func (c *Core) getLoginUserInfoKey(mountEntry *MountEntry, req *logical.Request, ctx context.Context) (userInfo FailedLoginUser, err error) {
-	aliasName := c.PathLoginAliasLookAheadFromLoginRequest(req, ctx)
+func (c *Core) getLoginUserInfoKey(ctx context.Context, mountEntry *MountEntry, req *logical.Request) (FailedLoginUser, error) {
+	userInfo := FailedLoginUser{}
+	aliasName, err := c.aliasNameFromLoginRequest(ctx, req)
+	if err != nil {
+		return userInfo, err
+	}
 	if aliasName == "" {
 		return userInfo, errors.New("failed to determine alias name from login request")
 	}
@@ -1846,8 +1859,8 @@ func (c *Core) getLoginUserInfoKey(mountEntry *MountEntry, req *logical.Request,
 // isUserLockoutDisabled checks if user lockout feature to prevent brute forcing is disabled
 // Auth types userpass, ldap and approle support this feature
 // precedence: environment var setting >> auth tune setting >> config file setting >> default (enabled)
-func (c *Core) isUserLockoutDisabled(mountEntry *MountEntry, req *logical.Request) (disabled bool, err error) {
-	if !(mountEntry.Type == "userpass" || mountEntry.Type == "ldap" || mountEntry.Type == "approle") {
+func (c *Core) isUserLockoutDisabled(mountEntry *MountEntry) (bool, error) {
+	if !strutil.StrListContains(configutil.GetSupportedUserLockoutsAuthMethods(), mountEntry.Type) {
 		return true, nil
 	}
 
@@ -1883,13 +1896,16 @@ func (c *Core) isUserLockoutDisabled(mountEntry *MountEntry, req *logical.Reques
 // isUserLocked determines if the login user is locked
 func (c *Core) isUserLocked(ctx context.Context, mountEntry *MountEntry, req *logical.Request) (locked bool, err error) {
 	// get userFailedLoginInfo map key for login user
-	loginUserInfoKey, err := c.getLoginUserInfoKey(mountEntry, req, ctx)
+	loginUserInfoKey, err := c.getLoginUserInfoKey(ctx, mountEntry, req)
 	if err != nil {
 		return false, err
 	}
 
 	// get entry from userFailedLoginInfo map for the key
-	userFailedLoginInfo := getUserFailedLoginInfo(ctx, c, loginUserInfoKey)
+	userFailedLoginInfo, err := getUserFailedLoginInfo(ctx, c, loginUserInfoKey)
+	if err != nil {
+		return false, err
+	}
 	userLockoutConfiguration := c.getUserLockoutConfiguration(mountEntry)
 
 	switch userFailedLoginInfo {
@@ -1899,7 +1915,7 @@ func (c *Core) isUserLocked(ctx context.Context, mountEntry *MountEntry, req *lo
 		if err != nil {
 			return false, fmt.Errorf("could not parse namespace from http context: %w", err)
 		}
-		storageUserLockoutPath := fmt.Sprintf("core/login/lockedUsers/%s/%s/%s>", ns.ID, loginUserInfoKey.mountAccessor, loginUserInfoKey.aliasName)
+		storageUserLockoutPath := fmt.Sprintf(coreLockedUsersPath+"%s/%s/%s", ns.ID, loginUserInfoKey.mountAccessor, loginUserInfoKey.aliasName)
 		existingEntry, err := c.barrier.Get(ctx, storageUserLockoutPath)
 		if err != nil {
 			return false, err
@@ -2103,25 +2119,32 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		if te.ExternalID != "" {
 			auth.ClientToken = te.ExternalID
 		}
-		// This is a successful login, remove any entry from userFailedLoginInfo map
-		// if it exists. For batch tokens, it is taken care by handleLoginRequest
-		// Add update to userFailedLoginInfo to reduce the number of RPC calls
-		loginUserInfoKey := FailedLoginUser{
-			aliasName:     auth.Alias.Name,
-			mountAccessor: auth.Alias.MountAccessor,
-		}
-		err = c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true)
-		if err != nil {
-			return err
+		// Successful login, remove any entry from userFailedLoginInfo map
+		// if it exists. This is done for service tokens (for oss) here.
+		// For ent it is taken care by registerAuth RPC calls.
+		if auth.Alias != nil {
+			loginUserInfoKey := FailedLoginUser{
+				aliasName:     auth.Alias.Name,
+				mountAccessor: auth.Alias.MountAccessor,
+			}
+			err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true)
+			if err != nil {
+				return err
+			}
 		}
 	}
-
 	return nil
 }
 
 // GetUserFailedLoginInfo gets the failed login information for a user based on alias name and mountAccessor
 func (c *Core) GetUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser) *FailedLoginInfo {
-	return c.userFailedLoginInfo[userKey]
+	c.userFailedLoginInfoLock.Lock()
+	value, exists := c.userFailedLoginInfo[userKey]
+	c.userFailedLoginInfoLock.Unlock()
+	if exists {
+		return value
+	}
+	return nil
 }
 
 // UpdateUserFailedLoginInfo updates the failed login information for a user based on alias name and mountAccessor

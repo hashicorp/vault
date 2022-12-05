@@ -123,23 +123,14 @@ func TestIdentityStore_UserFailedLoginMapResetOnSuccess(t *testing.T) {
 	// tune auth mount
 	userlockoutConfig := &api.UserLockoutConfigInput{
 		LockoutThreshold:            "3",
-		LockoutDuration:             "10s",
-		LockoutCounterResetDuration: "10s",
+		LockoutDuration:             "5s",
+		LockoutCounterResetDuration: "5s",
 	}
 	err = client.Sys().TuneMount("auth/userpass", api.MountConfigInput{
 		UserLockoutConfig: userlockoutConfig,
 	})
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	// read auth tune
-	resp, err := client.Logical().Read("sys/auth/userpass/tune")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("expected a response for reading auth tune")
 	}
 
 	// create a user for userpass

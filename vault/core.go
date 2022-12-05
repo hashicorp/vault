@@ -525,6 +525,9 @@ type Core struct {
 	// and login counter, last failed login time as value
 	userFailedLoginInfo map[FailedLoginUser]*FailedLoginInfo
 
+	// userFailedLoginInfoLock controls access to the userFailedLoginInfoMap
+	userFailedLoginInfoLock sync.RWMutex
+
 	enableMlock bool
 
 	// This can be used to trigger operations to stop running when Vault is
@@ -3455,17 +3458,25 @@ func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]
 	return resp.Data["role"].(string)
 }
 
-// PathAliasLookAheadFromLoginRequest will determine the aliasName from the login Request
-func (c *Core) PathLoginAliasLookAheadFromLoginRequest(req *logical.Request, ctx context.Context) string {
+// aliasNameFromLoginRequest will determine the aliasName from the login Request
+func (c *Core) aliasNameFromLoginRequest(ctx context.Context, req *logical.Request) (string, error) {
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
-	matchingBackend := c.router.MatchingBackend(ctx, req.MountPoint)
-	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
-		// pathLoginAliasLookAhead operation does not apply to this request
-		return ""
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return "", err
 	}
 
-	path := strings.ReplaceAll(req.Path, req.MountPoint, "")
+	// ns path is added while checking matching backend
+	mountPath := strings.TrimPrefix(req.MountPoint, ns.Path)
+
+	matchingBackend := c.router.MatchingBackend(ctx, mountPath)
+	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
+		// pathLoginAliasLookAhead operation does not apply to this request
+		return "", nil
+	}
+
+	path := strings.ReplaceAll(req.Path, mountPath, "")
 
 	resp, err := matchingBackend.HandleRequest(ctx, &logical.Request{
 		MountPoint: req.MountPoint,
@@ -3475,9 +3486,9 @@ func (c *Core) PathLoginAliasLookAheadFromLoginRequest(req *logical.Request, ctx
 		Storage:    c.router.MatchingStorageByAPIPath(ctx, req.Path),
 	})
 	if err != nil || resp.Auth.Alias == nil {
-		return ""
+		return "", nil
 	}
-	return resp.Auth.Alias.Name
+	return resp.Auth.Alias.Name, nil
 }
 
 // ListMounts will provide a slice containing a deep copy each mount entry

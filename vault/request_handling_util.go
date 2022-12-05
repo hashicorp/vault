@@ -50,11 +50,11 @@ func getAuthRegisterFunc(c *Core) (RegisterAuthFunc, error) {
 	return c.RegisterAuth, nil
 }
 
-func getUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUser) *FailedLoginInfo {
-	return c.GetUserFailedLoginInfo(ctx, userInfo)
+func getUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUser) (*FailedLoginInfo, error) {
+	return c.GetUserFailedLoginInfo(ctx, userInfo), nil
 }
 
-func (c *Core) updateUserFailedLoginInfo(ctx context.Context, userInfo FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
+func updateUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
 	return c.UpdateUserFailedLoginInfo(ctx, userInfo, failedLoginInfo, deleteEntry)
 }
 
