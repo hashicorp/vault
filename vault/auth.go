@@ -202,6 +202,8 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		backend = nil
 	}
 
+	entry.LastMounted = c.currentVaultVersion.Version
+
 	// Update the auth table
 	newTable := c.auth.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
@@ -469,6 +471,8 @@ func (c *Core) remountCredential(ctx context.Context, src, dst namespace.MountPa
 	srcMatch.namespace = dst.Namespace
 	srcPath := srcMatch.Path
 	srcMatch.Path = strings.TrimPrefix(dst.MountPath, credentialRoutePrefix)
+
+	srcMatch.LastMounted = c.currentVaultVersion.Version
 
 	// Update the mount table
 	if err := c.persistAuth(ctx, c.auth, &srcMatch.Local); err != nil {
@@ -817,12 +821,12 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// don't set the running version to a builtin if it is running as an external plugin
 			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
-				if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential); err != nil {
-					c.logger.Error("shutting down core", "error", err)
-					if shutdownErr := c.Shutdown(); shutdownErr != nil {
-						c.Logger().Error("failed to shutdown core", "error", shutdownErr)
-					}
-					return err
+
+				// Shutdown or skip on initial mount, depending on whether or not this is a major/minor upgrade.
+				isNonPatchUpdate := isMajorOrMinorUpgrade(c.currentVaultVersion.Version, entry.LastMounted)
+				if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential, isNonPatchUpdate); err != nil {
+					c.logger.Error("skipping deprecated credential entry", "path", entry.Path, "error", err)
+					goto ROUTER_MOUNT
 				}
 			}
 		}
@@ -900,6 +904,13 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				}
 			})
 		}
+
+		// Update the last mounted version and persist
+		entry.LastMounted = c.currentVaultVersion.Version
+		if err := c.persistAuth(ctx, c.auth, &entry.Local); err != nil {
+			c.logger.Error("failed to persist last mounted version to auth table", "error", err)
+		}
+
 	}
 
 	return nil

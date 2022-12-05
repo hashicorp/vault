@@ -328,6 +328,7 @@ type MountEntry struct {
 	Tainted               bool              `json:"tainted,omitempty"`                 // Set as a Write-Ahead flag for unmount/remount
 	MountState            string            `json:"mount_state,omitempty"`             // The current mount state.  The only non-empty mount state right now is "unmounting"
 	NamespaceID           string            `json:"namespace_id"`
+	LastMounted           string            `json:"last_mounted,omitempty"` // The last version of Vault with which this entry was mounted.
 
 	// namespace contains the populated namespace
 	namespace *namespace.Namespace
@@ -538,6 +539,8 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 			return logical.CodedError(403, fmt.Sprintf("mount type of %q is not mountable", entry.Type))
 		}
 	}
+
+	entry.LastMounted = c.currentVaultVersion.Version
 
 	// Mount internally
 	if err := c.mountInternal(ctx, entry, MountTableUpdateStorage); err != nil {
@@ -970,7 +973,7 @@ func (c *Core) taintMountEntry(ctx context.Context, nsID, mountPath string, upda
 // * PendingRemoval - log an error about builtin deprecation and return an error
 // if VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
 // * Removed - log an error about builtin deprecation and return an error
-func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (*logical.Response, error) {
+func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType, shutdownOnErr bool) (*logical.Response, error) {
 	resp := &logical.Response{}
 
 	if c.builtinRegistry == nil || entry == nil {
@@ -1006,10 +1009,23 @@ func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry
 				resp.AddWarning(errMountPendingRemoval.Error())
 				return resp, nil
 			}
-			return nil, fmt.Errorf("could not mount %q: %w", t, errMountPendingRemoval)
-
+			err := fmt.Errorf("could not mount %q: %w", t, errMountPendingRemoval)
+			if shutdownOnErr {
+				c.Logger().Error("shutting down core", "error", err)
+				if shutdownErr := c.Shutdown(); shutdownErr != nil {
+					c.Logger().Error("failed to shutdown core", "error", shutdownErr)
+				}
+			}
+			return nil, err
 		case consts.Removed:
-			return nil, fmt.Errorf("could not mount %s: %w", t, errMountRemoved)
+			err := fmt.Errorf("could not mount %q: %w", t, errMountRemoved)
+			if shutdownOnErr {
+				c.Logger().Error("shutting down core", "error", err)
+				if shutdownErr := c.Shutdown(); shutdownErr != nil {
+					c.Logger().Error("failed to shutdown core", "error", shutdownErr)
+				}
+			}
+			return nil, err
 		}
 	}
 	return nil, nil
@@ -1483,13 +1499,12 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			// don't set the running version to a builtin if it is running as an external plugin
 			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
-				_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets)
-				if err != nil {
-					c.logger.Error("shutting down core", "error", err)
-					if shutdownErr := c.Shutdown(); shutdownErr != nil {
-						c.Logger().Error("failed to shutdown core", "error", shutdownErr)
-					}
-					return err
+
+				// Shutdown or skip on initial mount, depending on whether or not this is a major/minor upgrade.
+				isNonPatchUpdate := isMajorOrMinorUpgrade(c.currentVaultVersion.Version, entry.LastMounted)
+				if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets, isNonPatchUpdate); err != nil {
+					c.logger.Error("skipping deprecated mount entry", "path", entry.Path, "error", err)
+					goto ROUTER_MOUNT
 				}
 			}
 		}
@@ -1540,6 +1555,12 @@ func (c *Core) setupMounts(ctx context.Context) error {
 					c.logger.Error("failed to initialize mount entry", "path", localEntry.Path, "error", err)
 				}
 			})
+		}
+
+		// Update the last mounted version and persist
+		entry.LastMounted = c.currentVaultVersion.Version
+		if err := c.persistMounts(ctx, c.mounts, &entry.Local); err != nil {
+			c.logger.Error("failed to persist last mounted version to mount table", "error", err)
 		}
 
 		if c.logger.IsInfo() {

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -143,10 +144,36 @@ func (c *Core) loadVersionHistory(ctx context.Context) error {
 					"vault version", vaultVersion.Version, "UTC time", vaultVersion.TimestampInstalled)
 			}
 		}
-
-		c.versionHistory[vaultVersion.Version] = vaultVersion
 	}
 	return nil
+}
+
+// isMajorOrMinorUpgrade compares two versions of Vault to see if currentVersion is is a
+// major/minor upgrade from the prevVersion. This is useful in determining
+// shutdown behavior for deprecated builtins.
+func isMajorOrMinorUpgrade(currentVersion, prevVersion string) bool {
+	// Get versions into comparable form
+	curr, err := semver.NewSemver(currentVersion)
+	if err != nil {
+		return false
+	}
+	prev, err := semver.NewSemver(prevVersion)
+	if err != nil {
+		// If we can't find a previous version, this is effectively an upgrade
+		return true
+	}
+
+	// Check for major version upgrade
+	if curr.Segments()[0] > prev.Segments()[0] {
+		return true
+	}
+
+	// Check for minor version upgrade
+	if curr.Segments()[1] > prev.Segments()[1] {
+		return true
+	}
+
+	return false
 }
 
 func IsJWT(token string) bool {
