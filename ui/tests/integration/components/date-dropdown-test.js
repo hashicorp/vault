@@ -125,8 +125,10 @@ module('Integration | Component | date-dropdown', function (hooks) {
     }
   });
 
-  test('selecting month first: it disables current year and enables past years when selecting future month', async function (assert) {
-    assert.expect(CURRENT_MONTH - 11);
+  test('selecting month first: it disables current year when selecting future months', async function (assert) {
+    // assertions only run for future months
+    const yearsDisabled = 11 - CURRENT_MONTH; // ex: in December, current year is enabled for all months, so 0 assertions will run
+    assert.expect(yearsDisabled);
     await render(hbs`
     <div class="is-flex-align-baseline">
       <DateDropdown/>
@@ -136,21 +138,15 @@ module('Integration | Component | date-dropdown', function (hooks) {
     const monthDropdown = find('[data-test-popup-menu-trigger="month"]');
     const yearDropdown = find('[data-test-popup-menu-trigger="year"]');
 
-    // select future months and assert current year (index=0) is disabled and past years enabled
+    // select future months and assert current year is disabled
     for (let monthIdx = CURRENT_MONTH + 1; monthIdx < 12; monthIdx++) {
       await click(monthDropdown);
       const dropdownListMonths = findAll('[data-test-month-list] button');
       await click(dropdownListMonths[monthIdx]);
       await click(yearDropdown);
       const dropdownListYears = findAll('[data-test-year-list] button');
-      const currentYear = dropdownListYears.entries()[0];
+      const currentYear = dropdownListYears[0];
       assert.true(currentYear.disabled, `${ARRAY_OF_MONTHS[monthIdx]} ${currentYear.innerText} disabled`);
-
-      // remove current year, assert rest of years enabled
-      dropdownListYears.entries()[0].splice(0, 1);
-      for (const year of dropdownListYears.entries()) {
-        assert.false(year.disabled, `${ARRAY_OF_MONTHS[monthIdx]} ${year.innerText} enabled`);
-      }
       await click(yearDropdown);
     }
   });
