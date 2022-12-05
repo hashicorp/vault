@@ -19,8 +19,8 @@ module('Unit | Adapter | clients activity', function (hooks) {
   test('it does not format if both params are timestamp strings', async function (assert) {
     assert.expect(1);
     const queryParams = {
-      start_time: this.startDate.toISOString(),
-      end_time: this.endDate.toISOString(),
+      start_time: { timestamp: this.startDate.toISOString() },
+      end_time: { timestamp: this.endDate.toISOString() },
     };
     this.server.get('sys/internal/counters/activity', (schema, req) => {
       assert.propEqual(req.queryParams, {
