@@ -10,7 +10,7 @@ jobs:
   scan:
     runs-on:
       labels: ['linux', 'large']
-    if: ${{ github.actor != 'dependabot[bot]' }}
+    if: ${{ github.actor != 'dependabot[bot]' || github.actor != 'hc-github-team-secure-vault-core' }}
     steps:
     - uses: actions/checkout@v3
 
