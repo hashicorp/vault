@@ -462,14 +462,14 @@ func (c *AgentCommand) Run(args []string) int {
 		switch config.Cache.WhenInconsistent {
 		case "retry":
 			if whenInconsistent != cache.WhenInconsistentFail {
-				c.UI.Error("enforce_consistency configured in both api_proxy and cache blocks. Please remove this configuration from the cache block.")
+				c.UI.Error("when_inconsistent configured in both api_proxy and cache blocks. Please remove this configuration from the cache block.")
 				return 1
 			} else {
 				whenInconsistent = cache.WhenInconsistentRetry
 			}
 		case "forward":
 			if whenInconsistent != cache.WhenInconsistentFail {
-				c.UI.Error("enforce_consistency configured in both api_proxy and cache blocks. Please remove this configuration from the cache block.")
+				c.UI.Error("when_inconsistent configured in both api_proxy and cache blocks. Please remove this configuration from the cache block.")
 				return 1
 			} else {
 				whenInconsistent = cache.WhenInconsistentForward
