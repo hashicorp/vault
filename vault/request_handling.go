@@ -1994,16 +1994,22 @@ func (c *Core) getUserLockoutConfiguration(mountEntry *MountEntry) (userLockoutC
 // If "all" type is configured in config file, any missing fields are updated with default values
 // similarly missing values for a given mount type in config file are updated with "all" type
 // default values
+// If user_lockout configuration is not configured using config file at all, defaults are returned
 func (c *Core) getUserLockoutFromConfig(mountType string) UserLockoutConfig {
+	defaultUserLockoutConfig := UserLockoutConfig{
+		LockoutThreshold:    configutil.UserLockoutThresholdDefault,
+		LockoutDuration:     configutil.UserLockoutDurationDefault,
+		LockoutCounterReset: configutil.UserLockoutCounterResetDefault,
+		DisableLockout:      configutil.DisableUserLockoutDefault,
+	}
 	conf := c.rawConfig.Load()
 	if conf == nil {
-		return UserLockoutConfig{}
+		return defaultUserLockoutConfig
 	}
 	userlockouts := conf.(*server.Config).UserLockouts
 	if userlockouts == nil {
-		return UserLockoutConfig{}
+		return defaultUserLockoutConfig
 	}
-	var defaultUserLockoutConfig UserLockoutConfig
 	for _, userLockoutConfig := range userlockouts {
 		switch userLockoutConfig.Type {
 		case "all":
