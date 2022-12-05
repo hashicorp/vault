@@ -286,7 +286,7 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 		MountPoint: "pki-int/",
 	})
 	require.NoError(t, err, "failed setting up role example")
-	require.Nil(t, resp, "got non-nil response from setting up role example: %#v", resp)
+	require.NotNil(t, resp, "got nil response from setting up role example: %#v", resp)
 
 	// Issue cert
 	resp, err = intBackend.HandleRequest(context.Background(), &logical.Request{

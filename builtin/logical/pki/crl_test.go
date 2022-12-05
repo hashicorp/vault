@@ -89,7 +89,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 				"auto_rebuild":              tc.autoRebuild,
 				"auto_rebuild_grace_period": tc.autoRebuildGracePeriod,
 			})
-			requireSuccessNilResponse(t, resp, err)
+			requireSuccessNonNilResponse(t, resp, err)
 
 			resp, err = CBRead(b, s, "config/crl")
 			requireSuccessNonNilResponse(t, resp, err)

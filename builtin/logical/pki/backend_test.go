@@ -5914,7 +5914,7 @@ func TestPKI_ListRevokedCerts(t *testing.T) {
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
-	requireSuccessNilResponse(t, resp, err, "error setting up pki role")
+	requireSuccessNonNilResponse(t, resp, err, "error setting up pki role")
 
 	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "test1.test.com",

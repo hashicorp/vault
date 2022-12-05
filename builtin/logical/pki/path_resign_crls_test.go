@@ -426,14 +426,14 @@ func setupResignCrlMounts(t *testing.T, b1 *backend, s1 logical.Storage, b2 *bac
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
-	requireSuccessNilResponse(t, resp, err, "error setting up pki role on backend 1")
+	requireSuccessNonNilResponse(t, resp, err, "error setting up pki role on backend 1")
 
 	resp, err = CBWrite(b2, s2, "roles/test", map[string]interface{}{
 		"allowed_domains":  "test.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
-	requireSuccessNilResponse(t, resp, err, "error setting up pki role on backend 2")
+	requireSuccessNonNilResponse(t, resp, err, "error setting up pki role on backend 2")
 
 	// Issue and revoke a cert in backend 1
 	resp, err = CBWrite(b1, s1, "issue/test", map[string]interface{}{

@@ -40,7 +40,7 @@ func TestOcsp_Disabled(t *testing.T) {
 			resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
 				"ocsp_disable": "true",
 			})
-			requireSuccessNilResponse(t, resp, err)
+			requireSuccessNonNilResponse(t, resp, err)
 			resp, err = SendOcspRequest(t, b, s, localTT.reqType, testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
 			require.NoError(t, err)
 			requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
@@ -538,7 +538,7 @@ func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, ca
 			"issuer_ref":         issuerId,
 			"key_type":           keyType,
 		})
-		requireSuccessNilResponse(t, resp, err, "roles/test"+strconv.FormatInt(int64(i), 10))
+		requireSuccessNonNilResponse(t, resp, err, "roles/test"+strconv.FormatInt(int64(i), 10))
 
 		resp, err = CBWrite(b, s, "issue/test"+strconv.FormatInt(int64(i), 10), map[string]interface{}{
 			"common_name": "test.foobar.com",
