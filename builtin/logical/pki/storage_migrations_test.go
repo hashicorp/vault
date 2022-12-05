@@ -483,8 +483,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		},
 		MountPoint: "pki/",
 	})
-	require.NoError(t, err, "error setting URL config")
-	require.Nil(t, resp, "got non-nil response setting URL config")
+	requireSuccessNonNilResponse(t, resp, err)
 
 	// Make sure we can fetch the old values...
 	for _, path := range []string{"ca/pem", "ca_chain", "cert/" + serialNum, "cert/ca", "cert/crl", "cert/ca_chain", "config/crl", "config/urls"} {

@@ -5966,6 +5966,110 @@ func TestPKI_ListRevokedCerts(t *testing.T) {
 	require.Equal(t, 4, len(certKeys), "Expected 4 cert entries got %d: %v", len(certKeys), certKeys)
 }
 
+func TestPKI_TemplatedAIAs(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Setting templated AIAs should succeed.
+	_, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
+		"path": "http://localhost:8200/v1/pki",
+	})
+	require.NoError(t, err)
+
+	aiaData := map[string]interface{}{
+		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
+		"issuing_certificates":    "{{cluster_path}}/issuer/{{issuer_id}}/der",
+		"ocsp_servers":            "{{cluster_path}}/ocsp",
+		"enable_templating":       true,
+	}
+	_, err = CBWrite(b, s, "config/urls", aiaData)
+	require.NoError(t, err)
+
+	// But root generation will fail.
+	rootData := map[string]interface{}{
+		"common_name": "Long-Lived Root X1",
+		"issuer_name": "long-root-x1",
+		"key_type":    "ec",
+	}
+	_, err = CBWrite(b, s, "root/generate/internal", rootData)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unable to parse AIA URL")
+
+	// Clearing the config and regenerating the root should succeed.
+	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+		"crl_distribution_points": "",
+		"issuing_certificates":    "",
+		"ocsp_servers":            "",
+		"enable_templating":       false,
+	})
+	require.NoError(t, err)
+	resp, err := CBWrite(b, s, "root/generate/internal", rootData)
+	requireSuccessNonNilResponse(t, resp, err)
+	issuerId := string(resp.Data["issuer_id"].(issuerID))
+
+	// Now write the original AIA config and sign a leaf.
+	_, err = CBWrite(b, s, "config/urls", aiaData)
+	require.NoError(t, err)
+	_, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+		"allow_any_name": "true",
+		"key_type":       "ec",
+		"ttl":            "50m",
+	})
+	require.NoError(t, err)
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "example.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	// Validate the AIA info is correctly templated.
+	cert := parseCert(t, resp.Data["certificate"].(string))
+	require.Equal(t, cert.OCSPServer, []string{"http://localhost:8200/v1/pki/ocsp"})
+	require.Equal(t, cert.IssuingCertificateURL, []string{"http://localhost:8200/v1/pki/issuer/" + issuerId + "/der"})
+	require.Equal(t, cert.CRLDistributionPoints, []string{"http://localhost:8200/v1/pki/issuer/" + issuerId + "/crl/der"})
+
+	// Modify our issuer to set custom AIAs: these URLs are bad.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"enable_aia_url_templating": "false",
+		"crl_distribution_points":   "a",
+		"issuing_certificates":      "b",
+		"ocsp_servers":              "c",
+	})
+	require.Error(t, err)
+
+	// These URLs are good.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"enable_aia_url_templating": "false",
+		"crl_distribution_points":   "http://localhost/a",
+		"issuing_certificates":      "http://localhost/b",
+		"ocsp_servers":              "http://localhost/c",
+	})
+
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "example.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	// Validate the AIA info is correctly templated.
+	cert = parseCert(t, resp.Data["certificate"].(string))
+	require.Equal(t, cert.OCSPServer, []string{"http://localhost/c"})
+	require.Equal(t, cert.IssuingCertificateURL, []string{"http://localhost/b"})
+	require.Equal(t, cert.CRLDistributionPoints, []string{"http://localhost/a"})
+
+	// These URLs are bad, but will fail at issuance time due to AIA templating.
+	resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"enable_aia_url_templating": "true",
+		"crl_distribution_points":   "a",
+		"issuing_certificates":      "b",
+		"ocsp_servers":              "c",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	require.NotEmpty(t, resp.Warnings)
+	_, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "example.com",
+	})
+	require.Error(t, err)
+}
+
 var (
 	initTest  sync.Once
 	rsaCAKey  string

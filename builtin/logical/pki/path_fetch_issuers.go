@@ -134,6 +134,15 @@ for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
 		Description: `Comma-separated list of URLs to be used
 for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 	}
+	fields["enable_aia_url_templating"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Whether or not to enabling templating of the
+above AIA fields. When templating is enabled the special values '{{issuer_id}}'
+and '{{cluster_path}}' are available, but the addresses are not checked for
+URL validity until issuance time. This requires /config/cluster's path to be
+set on all PR Secondary clusters.`,
+		Default: false,
+	}
 
 	return &framework.Path{
 		// Returns a JSON entry.
@@ -336,16 +345,17 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	// AIA access changes
+	enableTemplating := data.Get("enable_aia_url_templating").(bool)
 	issuerCertificates := data.Get("issuing_certificates").([]string)
-	if badURL := validateURLs(issuerCertificates); badURL != "" {
+	if badURL := validateURLs(issuerCertificates); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter issuing_certificates: %s", badURL)), nil
 	}
 	crlDistributionPoints := data.Get("crl_distribution_points").([]string)
-	if badURL := validateURLs(crlDistributionPoints); badURL != "" {
+	if badURL := validateURLs(crlDistributionPoints); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter crl_distribution_points: %s", badURL)), nil
 	}
 	ocspServers := data.Get("ocsp_servers").([]string)
-	if badURL := validateURLs(ocspServers); badURL != "" {
+	if badURL := validateURLs(ocspServers); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter ocsp_servers: %s", badURL)), nil
 	}
 
@@ -393,7 +403,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	if issuer.AIAURIs == nil && (len(issuerCertificates) > 0 || len(crlDistributionPoints) > 0 || len(ocspServers) > 0) {
-		issuer.AIAURIs = &certutil.URLEntries{}
+		issuer.AIAURIs = &aiaConfigEntry{}
 	}
 	if issuer.AIAURIs != nil {
 		// Associative mapping from data source to destination on the
@@ -423,6 +433,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 				*pair.Dest = *pair.Source
 				modified = true
 			}
+		}
+		if enableTemplating != issuer.AIAURIs.EnableTemplating {
+			issuer.AIAURIs.EnableTemplating = enableTemplating
+			modified = true
 		}
 
 		// If no AIA URLs exist on the issuer, set the AIA URLs entry to nil
@@ -484,6 +498,12 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	response, err := respondReadIssuer(issuer)
 	if newName != oldName {
 		addWarningOnDereferencing(sc, oldName, response)
+	}
+	if issuer.AIAURIs != nil && issuer.AIAURIs.EnableTemplating {
+		_, aiaErr := issuer.AIAURIs.toURLEntries(sc, issuer.ID)
+		if aiaErr != nil {
+			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
+		}
 	}
 
 	return response, err
@@ -629,7 +649,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 
 	// AIA access changes.
 	if issuer.AIAURIs == nil {
-		issuer.AIAURIs = &certutil.URLEntries{}
+		issuer.AIAURIs = &aiaConfigEntry{}
 	}
 
 	// Associative mapping from data source to destination on the
@@ -655,12 +675,20 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		},
 	}
 
+	if enableTemplatingRaw, ok := data.GetOk("enable_aia_url_templating"); ok {
+		enableTemplating := enableTemplatingRaw.(bool)
+		if enableTemplating != issuer.AIAURIs.EnableTemplating {
+			issuer.AIAURIs.EnableTemplating = true
+			modified = true
+		}
+	}
+
 	// For each pair, if it is different on the object, update it.
 	for _, pair := range pairs {
 		rawURLsValue, ok := data.GetOk(pair.Source)
 		if ok {
 			urlsValue := rawURLsValue.([]string)
-			if badURL := validateURLs(urlsValue); badURL != "" {
+			if badURL := validateURLs(urlsValue); !issuer.AIAURIs.EnableTemplating && badURL != "" {
 				return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter %v: %s", pair.Source, badURL)), nil
 			}
 
@@ -731,6 +759,12 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	response, err := respondReadIssuer(issuer)
 	if newName != oldName {
 		addWarningOnDereferencing(sc, oldName, response)
+	}
+	if issuer.AIAURIs != nil && issuer.AIAURIs.EnableTemplating {
+		_, aiaErr := issuer.AIAURIs.toURLEntries(sc, issuer.ID)
+		if aiaErr != nil {
+			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
+		}
 	}
 
 	return response, err
