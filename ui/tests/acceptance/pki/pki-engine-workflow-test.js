@@ -49,6 +49,11 @@ const runCommands = async function (commands) {
   }
 };
 
+/**
+ * This test module should test the PKI workflow, including:
+ * - link between pages and confirm that the url is as expected
+ * - log in as user with a policy and ensure expected UI elements are shown/hidden
+ */
 module('Acceptance | pki workflow', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -97,6 +102,9 @@ module('Acceptance | pki workflow', function (hooks) {
         path "${this.mountPath}/roles" {
           capabilities = ["read", "list"]
         },
+        path "${this.mountPath}/roles/*" {
+          capabilities = ["read", "list"]
+        },
       `;
       const pki_editor_policy = `
         path "${this.mountPath}/roles" {
@@ -111,6 +119,7 @@ module('Acceptance | pki workflow', function (hooks) {
       this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
       await logout.visit();
     });
+
     test('shows correct items if user has all permissions', async function (assert) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
@@ -121,10 +130,32 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One role is in list');
       await click('.linked-block');
-      assert.dom(SELECTORS.deleteRoleButton).exists('Delete role button is shown');
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
+
       assert.dom(SELECTORS.generateCertLink).exists('Generate cert link is shown');
+      await click(SELECTORS.generateCertLink);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/generate`);
+
+      // Go back to details and test all the links
+      await visit(`/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(SELECTORS.signCertLink).exists('Sign cert link is shown');
+      await click(SELECTORS.signCertLink);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/sign`);
+
+      await visit(`/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(SELECTORS.editRoleLink).exists('Edit link is shown');
+      await click(SELECTORS.editRoleLink);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/edit`);
+
+      await visit(`/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
+      assert.dom(SELECTORS.deleteRoleButton).exists('Delete role button is shown');
+      await click(`${SELECTORS.deleteRoleButton} [data-test-confirm-action-trigger]`);
+      await click(`[data-test-confirm-button]`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/roles`,
+        'redirects to roles list after deletion'
+      );
     });
 
     test('it does not show toolbar items the user does not have permission to see', async function (assert) {
@@ -136,6 +167,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One role is in list');
       await click('.linked-block');
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(SELECTORS.deleteRoleButton).doesNotExist('Delete role button is not shown');
       assert.dom(SELECTORS.generateCertLink).doesNotExist('Generate cert link is not shown');
       assert.dom(SELECTORS.signCertLink).doesNotExist('Sign cert link is not shown');
@@ -143,7 +175,7 @@ module('Acceptance | pki workflow', function (hooks) {
     });
 
     test('it shows correct toolbar items for the user policy', async function (assert) {
-      await authPage.login(this.pkiRoleReader);
+      await authPage.login(this.pkiRoleEditor);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.rolesTab).exists('Roles tab is present');
       await click(SELECTORS.rolesTab);
@@ -151,10 +183,13 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One role is in list');
       await click('.linked-block');
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(SELECTORS.deleteRoleButton).doesNotExist('Delete role button is not shown');
       assert.dom(SELECTORS.generateCertLink).doesNotExist('Generate cert link is not shown');
       assert.dom(SELECTORS.signCertLink).doesNotExist('Sign cert link is not shown');
       assert.dom(SELECTORS.editRoleLink).exists('Edit link is shown');
+      await click(SELECTORS.editRoleLink);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/edit`);
     });
   });
 });
