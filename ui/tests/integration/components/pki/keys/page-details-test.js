@@ -39,8 +39,6 @@ module('Integration | Component | pki key details page', function (hooks) {
       { owner: this.engine }
     );
 
-    assert.dom(SELECTORS.breadcrumbContainer).exists({ count: 1 }, 'breadcrumb containers exist');
-    assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
     assert.dom(SELECTORS.title).containsText('View key', 'title renders');
     assert.dom(SELECTORS.keyIdValue).hasText(' 724862ff-6438-bad0-b598-77a6c7f4e934', 'key id renders');
     assert.dom(SELECTORS.keyNameValue).hasText('test-key', 'key name renders');

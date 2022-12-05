@@ -181,6 +181,7 @@ module('Acceptance | pki workflow', function (hooks) {
     });
 
     test('create role happy path', async function (assert) {
+      const roleName = 'another-role';
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
@@ -189,11 +190,16 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
       await click(SELECTORS.createRoleLink);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/create`);
+      assert.dom(SELECTORS.breadcrumbContainer).exists({ count: 1 }, 'breadcrumbs are rendered');
+      assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
+      assert.dom(SELECTORS.pageTitle).hasText('Create a PKI role');
 
-      await fillIn(SELECTORS.roleForm.roleName, 'another-role');
+      await fillIn(SELECTORS.roleForm.roleName, roleName);
       await click(SELECTORS.roleForm.roleCreateButton);
 
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/another-role/details`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/${roleName}/details`);
+      assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
+      assert.dom(SELECTORS.pageTitle).hasText(`PKI Role ${roleName}`);
     });
   });
 });

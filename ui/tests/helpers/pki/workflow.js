@@ -1,5 +1,9 @@
 import { SELECTORS as ROLEFORM } from './roles/form';
 export const SELECTORS = {
+  breadcrumbContainer: '[data-test-breadcrumbs]',
+  breadcrumbs: '[data-test-breadcrumbs] li',
+  pageTitle: '[data-test-pki-role-page-title]',
+  // TABS
   overviewTab: '[data-test-secret-list-tab="Overview"]',
   rolesTab: '[data-test-secret-list-tab="Roles"]',
   issuersTab: '[data-test-secret-list-tab="Issuers"]',
