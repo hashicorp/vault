@@ -42,7 +42,7 @@
                 data-test-details
                 @route="roles.role.details"
                 @model={{role}}
-                @disabled={{not role.canRead}}
+                @disabled={{eq role.canRead false}}
               >
                 Details
               </LinkTo>
