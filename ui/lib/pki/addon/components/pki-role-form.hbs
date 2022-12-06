@@ -3,7 +3,7 @@
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! ARG TODO write a test for namespace reminder }}
     <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI role" />
-    {{#each @model.fieldGroups as |fieldGroup|}}
+    {{#each @model.formFieldGroups as |fieldGroup|}}
       {{#each-in fieldGroup as |group fields|}}
         {{! DEFAULT VIEW }}
         {{#if (eq group "default")}}

@@ -32,7 +32,7 @@
     {{/if}}
   </ToolbarActions>
 </Toolbar>
-{{#each @role.fieldGroups as |fg|}}
+{{#each @role.formFieldGroups as |fg|}}
   {{#each-in fg as |group fields|}}
     {{#if (not-eq group "default")}}
       <h3 class="is-size-4 has-text-semibold has-top-margin-m">{{group}}</h3>
