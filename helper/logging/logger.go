@@ -139,10 +139,11 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 	}
 
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
-		Name:       config.Name,
-		Level:      config.LogLevel,
-		Output:     io.MultiWriter(writers...),
-		JSONFormat: config.isFormatJson(),
+		Name:              config.Name,
+		Level:             config.LogLevel,
+		IndependentLevels: true,
+		Output:            io.MultiWriter(writers...),
+		JSONFormat:        config.isFormatJson(),
 	})
 
 	return logger, nil
