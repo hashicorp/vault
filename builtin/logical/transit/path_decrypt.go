@@ -22,7 +22,7 @@ type DecryptBatchResponseItem struct {
 
 	// Reference is an arbitrary caller supplied string value that will be placed on the
 	// batch response to ease correlation between inputs and outputs
-	Reference string `json:"reference"`
+	Reference string `json:"reference" structs:"reference" mapstructure:"reference"`
 }
 
 func (b *backend) pathDecrypt() *framework.Path {
