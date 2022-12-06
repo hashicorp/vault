@@ -2058,6 +2058,94 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_tuneAuth_userLockoutConfig tests tuning user lockout configuration
+// for different auth methods and also tests that it cannot be tuned
+// using mounts/auth tune as it requires sudo capability
+func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
+	err := AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, b, _ := testCoreSystemBackend(t)
+
+	// tune user_lockout_config for token auth type
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/tune")
+	req.Data["user_lockout_config"] = map[string]interface{}{
+		"lockout_threshold": "3",
+	}
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), "tuning of user lockout configuration for auth type \"token\" not allowed") {
+		t.Fatalf("expected tune request to fail, but got resp: %#v, err: %s", resp, err)
+	}
+
+	// tune user_lockout_config for userpass auth type
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/userpass/tune")
+	req.Data["user_lockout_config"] = map[string]interface{}{
+		"lockout_threshold": "3",
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	req = logical.TestRequest(t, logical.ReadOperation, "auth/userpass/tune")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("resp is nil")
+	}
+
+	if resp.Data["user_lockout_threshold"] != uint64(3) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data["user_lockout_threshold"], uint64(3))
+	}
+
+	// tune description using mounts/auth/ tune
+	// this should work as description does not need sudo capability
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/userpass/tune")
+	req.Data["description"] = "this is userpass"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts/auth/userpass/tune")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("resp is nil")
+	}
+
+	if resp.Data["description"] != "this is userpass" {
+		t.Fatalf("got: %#v expect: %#v", resp.Data["user_lockout_threshold"], "this is userpass")
+	}
+
+	// tune user_lockout_config using mounts/auth/ tune
+	// this should not work as user_lockout_config needs sudo capability
+	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/auth/userpass/tune")
+	req.Data["user_lockout_config"] = map[string]interface{}{
+		"lockout_threshold": "5",
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), "tuning of user lockout configuration using mounts tune not allowed") {
+		t.Fatalf("expected tune request to fail, but got resp: %#v, err: %s", resp, err)
+	}
+}
+
 func TestSystemBackend_policyList(t *testing.T) {
 	b := testSystemBackend(t)
 	req := logical.TestRequest(t, logical.ReadOperation, "policy")
@@ -3497,6 +3585,14 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 
 	// Mount-tune a secret mount
 	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/secret/tune")
+	req.Data["listing_visibility"] = "unauth"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if resp.IsError() || err != nil {
+		t.Fatalf("resp.Error: %v, err:%v", resp.Error(), err)
+	}
+
+	// tune auth using mounts/auth/ tune
+	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/auth/token/tune")
 	req.Data["listing_visibility"] = "unauth"
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if resp.IsError() || err != nil {

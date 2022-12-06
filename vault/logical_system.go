@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -1666,7 +1667,7 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 	// if we try to change it using mounts tune, return error
 	userLockoutConfigMap := data.Get("user_lockout_config").(map[string]interface{})
 	if len(userLockoutConfigMap) != 0 {
-		return logical.ErrorResponse("cannot tune user_lockout_config using mounts tune "), nil
+		return logical.ErrorResponse("tuning of user lockout configuration using mounts tune not allowed"), logical.ErrInvalidRequest
 	}
 
 	// This call will write both logical backend's configuration as well as auth methods'.
@@ -1775,12 +1776,10 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			}
 
 			// Supported auth methods for user lockout configuration: ldap, approle, userpass
-			switch strings.ToLower(mountEntry.Type) {
-			case "ldap", "approle", "userpass":
-			default:
+			mountEntryType := strings.ToLower(mountEntry.Type)
+			if !strutil.StrListContains(configutil.GetSupportedUserLockoutsAuthMethods(), mountEntryType) {
 				return logical.ErrorResponse("tuning of user lockout configuration for auth type %q not allowed", mountEntry.Type),
 					logical.ErrInvalidRequest
-
 			}
 		}
 
