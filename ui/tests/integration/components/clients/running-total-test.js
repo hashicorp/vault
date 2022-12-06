@@ -1440,7 +1440,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       // @barChartData={{this.byMonthNewClients}}
       @runningTotals={{this.totalUsageCounts}}
       @upgradeData={{this.upgradeDuringActivity}}
-      @timestamp={{this.timestamp}}
+      @responseTimestamp={{this.timestamp}}
     />
     `);
 
@@ -1509,7 +1509,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       @selectedAuthMethod={{this.selectedAuthMethod}}
       @lineChartData={{this.byMonthActivityData}}
       @runningTotals={{this.totalUsageCounts}}
-      @timestamp={{this.timestamp}}
+      @responseTimestamp={{this.timestamp}}
     />
     `);
 
@@ -1554,7 +1554,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       @lineChartData={{this.singleMonth}}
       @barChartData={{this.singleMonthNew}}
       @runningTotals={{this.totalUsageCounts}}
-      @timestamp={{this.timestamp}}
+      @responseTimestamp={{this.timestamp}}
     />
     `);
     assert.dom('[data-test-running-total]').exists('running total component renders');

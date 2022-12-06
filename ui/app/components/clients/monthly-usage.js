@@ -9,7 +9,7 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
  * ```js
   <Clients::MonthlyUsage 
     @chartLegend={{this.chartLegend}} 
-    @timestamp={{this.responseTimestamp}}
+    @responseTimestamp={{this.responseTimestamp}}
     @verticalBarChartData={{this.byMonthActivityData}} 
   />
  * ```

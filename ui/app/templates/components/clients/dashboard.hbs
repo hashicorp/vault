@@ -2,7 +2,7 @@
   <p class="has-bottom-margin-xl">
     This dashboard will surface Vault client usage over time. Clients represent a user or service that has authenticated to
     Vault. Documentation is available
-    <DocLink @path="/docs/concepts/client-count">here</DocLink>.
+    <DocLink @path="/docs/concepts/client-count">here</DocLink>. Date queries are sent in UTC.
   </p>
   <h2 class="title is-6 has-bottom-margin-xs">
     {{this.versionText.label}}
@@ -126,7 +126,7 @@
               @barChartData={{this.byMonthNewClients}}
               @runningTotals={{this.totalUsageCounts}}
               @upgradeData={{this.upgradeDuringActivity}}
-              @timestamp={{this.responseTimestamp}}
+              @responseTimestamp={{this.responseTimestamp}}
             />
           {{/if}}
           {{#if this.hasAttributionData}}
@@ -148,7 +148,7 @@
             <Clients::MonthlyUsage
               @chartLegend={{this.chartLegend}}
               @verticalBarChartData={{this.byMonthActivityData}}
-              @timestamp={{this.responseTimestamp}}
+              @responseTimestamp={{this.responseTimestamp}}
             />
           {{/if}}
         {{/if}}
