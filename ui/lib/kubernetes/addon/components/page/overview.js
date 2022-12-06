@@ -7,9 +7,14 @@ export default class OverviewPageComponent extends Component {
   @service router;
 
   @tracked selectedRole = null;
-  @tracked roleOptions = this.args.model.roles.map((role) => {
-    return { name: role.name, id: role.name };
-  });
+  @tracked roleOptions = [];
+
+  constructor() {
+    super(...arguments);
+    this.roleOptions = this.args.model.roles.map((role) => {
+      return { name: role.name, id: role.name };
+    });
+  }
 
   @action
   selectRole([roleName]) {
