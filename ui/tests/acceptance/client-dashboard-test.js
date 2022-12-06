@@ -210,6 +210,8 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     await click('[data-test-current-billing-period]');
     // query month older than count start date
     await click('[data-test-start-date-editor] button');
+    await click(SELECTORS.monthDropdown);
+    await click(`[data-test-dropdown-month="${ARRAY_OF_MONTHS[LICENSE_START.getMonth()]}"]`);
     await click(SELECTORS.yearDropdown);
     await click(`[data-test-dropdown-year="${LICENSE_START.getFullYear() - 3}"]`);
     await click('[data-test-date-dropdown-submit]');
