@@ -18,7 +18,7 @@
         </div>
         <p>The number of Vault roles being used to generate Kubernetes credentials.</p>
         <h2 class="title has-font-weight-normal is-3 has-top-margin-l">
-          {{if @model.roles.length @model.roles.length "None"}}
+          {{or @model.roles.length @model.roles.length "None"}}
         </h2>
       </div>
       <div class="box has-padding-m is-rounded column is-flex-half" data-test-generate-credential-card>
