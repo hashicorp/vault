@@ -5,9 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches:
-      - main
-    branches-ignore:    
-      - 'oss-merge-main*'
+      - 'main'
+      - '!oss-merge-main*'
 
 jobs:
   scan:
