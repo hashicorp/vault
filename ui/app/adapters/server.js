@@ -12,8 +12,8 @@ export default ApplicationAdapter.extend({
     return '/v1/sys/storage/raft/remove-peer';
   },
   deleteRecord(store, type, snapshot) {
-    let server_id = snapshot.attr('nodeId');
-    let url = '/v1/sys/storage/raft/remove-peer';
+    const server_id = snapshot.attr('nodeId');
+    const url = '/v1/sys/storage/raft/remove-peer';
     return this.ajax(url, 'POST', { data: { server_id } });
   },
 });

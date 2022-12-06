@@ -7,7 +7,7 @@ module('Unit | Adapter | capabilities', function (hooks) {
 
   test('calls the correct url', function (assert) {
     let url, method, options;
-    let adapter = this.owner.factoryFor('adapter:capabilities').create({
+    const adapter = this.owner.factoryFor('adapter:capabilities').create({
       ajax: (...args) => {
         [url, method, options] = args;
         return resolve();

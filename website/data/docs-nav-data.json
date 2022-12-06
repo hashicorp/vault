@@ -655,6 +655,10 @@
         ]
       },
       {
+        "title": "<code>patch</code>",
+        "path": "commands/patch"
+      },
+      {
         "title": "<code>path-help</code>",
         "path": "commands/path-help"
       },
@@ -889,6 +893,10 @@
             ]
           }
         ]
+      },
+      {
+        "title": "API Proxy",
+        "path": "agent/apiproxy"
       },
       {
         "title": "Caching",
@@ -1698,6 +1706,11 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.13.x",
+        "path": "upgrading/upgrade-to-1.13.x",
+        "hidden": true
+      },
+      {
         "title": "Upgrade to 1.12.x",
         "path": "upgrading/upgrade-to-1.12.x"
       },
@@ -2082,6 +2095,10 @@
           {
             "title": "Overview",
             "path": "enterprise/pkcs11-provider"
+          },
+          {
+            "title": "AWS KMS XKS",
+            "path": "enterprise/pkcs11-provider/aws-xks"
           },
           {
             "title": "Oracle TDE",

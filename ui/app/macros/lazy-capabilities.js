@@ -15,8 +15,8 @@ import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 
 export function apiPath(strings, ...keys) {
   return function (data) {
-    let dict = data || {};
-    let result = [strings[0]];
+    const dict = data || {};
+    const result = [strings[0]];
     keys.forEach((key, i) => {
       result.push(dict[key], strings[i + 1]);
     });
@@ -25,14 +25,14 @@ export function apiPath(strings, ...keys) {
 }
 
 export default function () {
-  let [templateFn, ...keys] = arguments;
+  const [templateFn, ...keys] = arguments;
   return maybeQueryRecord(
     'capabilities',
     (context) => {
       // pull all context attrs
-      let contextObject = context.getProperties(...keys);
+      const contextObject = context.getProperties(...keys);
       // remove empty ones
-      let nonEmptyContexts = Object.keys(contextObject).reduce((ret, key) => {
+      const nonEmptyContexts = Object.keys(contextObject).reduce((ret, key) => {
         if (contextObject[key] != null) {
           ret[key] = contextObject[key];
         }

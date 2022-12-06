@@ -44,13 +44,13 @@ func TestPatchCommand_Run(t *testing.T) {
 		{
 			"force_kvs",
 			[]string{"-force", "pki/roles/example"},
-			"Success!",
+			"allow_localhost",
 			0,
 		},
 		{
 			"force_f_kvs",
 			[]string{"-f", "pki/roles/example"},
-			"Success!",
+			"allow_localhost",
 			0,
 		},
 		{
@@ -62,13 +62,13 @@ func TestPatchCommand_Run(t *testing.T) {
 		{
 			"single_value",
 			[]string{"pki/roles/example", "allow_localhost=true"},
-			"Success!",
+			"allow_localhost",
 			0,
 		},
 		{
 			"multi_value",
 			[]string{"pki/roles/example", "allow_localhost=true", "allowed_domains=true"},
-			"Success!",
+			"allow_localhost",
 			0,
 		},
 	}

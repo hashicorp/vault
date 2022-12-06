@@ -1,3 +1,13 @@
-import Route from '@ember/routing/route';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import PkiRolesIndexRoute from '../index';
 
-export default class RolesRoleEditRoute extends Route {}
+@withConfirmLeave()
+export default class PkiRoleEditRoute extends PkiRolesIndexRoute {
+  model() {
+    const { role } = this.paramsFor('roles/role');
+    return this.store.queryRecord('pki/role', {
+      backend: this.secretMountPath.currentPath,
+      id: role,
+    });
+  }
+}

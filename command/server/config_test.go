@@ -36,6 +36,10 @@ func TestParseListeners(t *testing.T) {
 	testParseListeners(t)
 }
 
+func TestParseUserLockouts(t *testing.T) {
+	testParseUserLockouts(t)
+}
+
 func TestParseSockaddrTemplate(t *testing.T) {
 	testParseSockaddrTemplate(t)
 }
@@ -54,6 +58,14 @@ func TestParseStorage(t *testing.T) {
 
 func TestUnknownFieldValidation(t *testing.T) {
 	testUnknownFieldValidation(t)
+}
+
+func TestUnknownFieldValidationJson(t *testing.T) {
+	testUnknownFieldValidationJson(t)
+}
+
+func TestUnknownFieldValidationHcl(t *testing.T) {
+	testUnknownFieldValidationHcl(t)
 }
 
 func TestUnknownFieldValidationListenerAndStorage(t *testing.T) {

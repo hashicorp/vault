@@ -10,13 +10,9 @@
       }}. Add a new license to your configuration and restart Vault."
       @marginless={{true}}
     >
-      <a
-        href="https://learn.hashicorp.com/tutorials/nomad/hashicorp-enterprise-license"
-        target="_blank"
-        rel="noreferrer noopener"
-      >
+      <LearnLink @path="/tutorials/nomad/hashicorp-enterprise-license">
         Read documentation
-      </a>
+      </LearnLink>
     </AlertBanner>
   </div>
 {{else if (lte this.licenseExpiringInDays 30)}}
@@ -35,13 +31,9 @@
       }}"
       @marginless={{true}}
     >
-      <a
-        href="https://learn.hashicorp.com/tutorials/nomad/hashicorp-enterprise-license"
-        target="_blank"
-        rel="noreferrer noopener"
-      >
+      <LearnLink @path="/tutorials/nomad/hashicorp-enterprise-license">
         Read documentation
-      </a>
+      </LearnLink>
     </AlertBanner>
   </div>
 {{/if}}

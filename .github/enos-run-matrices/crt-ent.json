@@ -1,27 +1,27 @@
 {
   "include": [
     {
-      "scenario": "smoke backend:consul consul_version:1.13.2 distro:ubuntu seal:awskms arch:amd64 artifact_source:crt edition:ent",
+      "scenario": "smoke backend:consul consul_version:1.13.2 distro:ubuntu seal:awskms arch:amd64 artifact_source:crt edition:ent artifact_type:bundle",
       "aws_region": "us-west-1"
     },
     {
-      "scenario": "smoke backend:raft consul_version:1.13.2 distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent",
+      "scenario": "smoke backend:raft consul_version:1.13.2 distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent artifact_type:bundle",
       "aws_region": "us-west-2"
     },
     {
-      "scenario": "upgrade backend:raft consul_version:1.12.5 distro:rhel seal:shamir arch:amd64 artifact_source:crt edition:ent",
+      "scenario": "upgrade backend:raft consul_version:1.12.5 distro:rhel seal:shamir arch:amd64 artifact_source:crt edition:ent artifact_type:bundle",
       "aws_region": "us-west-1"
     },
     {
-      "scenario": "upgrade backend:consul consul_version:1.12.5 distro:rhel seal:awskms arch:amd64 artifact_source:crt edition:ent",
+      "scenario": "upgrade backend:consul consul_version:1.12.5 distro:rhel seal:awskms arch:amd64 artifact_source:crt edition:ent artifact_type:bundle",
       "aws_region": "us-west-2"
     },
     {
-      "scenario": "autopilot distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent undo_logs_status:0",
+      "scenario": "autopilot distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent artifact_type:bundle undo_logs_status:0",
       "aws_region": "us-west-1"
     },
     {
-      "scenario": "autopilot distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent undo_logs_status:1",
+      "scenario": "autopilot distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent artifact_type:bundle undo_logs_status:1",
       "aws_region": "us-west-1"
     }
   ]

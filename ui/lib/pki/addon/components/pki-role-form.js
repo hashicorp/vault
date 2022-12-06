@@ -14,7 +14,7 @@ import { tracked } from '@glimmer/tracking';
  * ```
  * @callback onCancel
  * @callback onSave
- * @param {Object} model - Pki-role-engine model.
+ * @param {Object} model - pki/role model.
  * @param {onCancel} onCancel - Callback triggered when cancel button is clicked.
  * @param {onSave} onSave - Callback triggered on save success.
  */
@@ -26,6 +26,19 @@ export default class PkiRoleForm extends Component {
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked modelValidations;
+
+  get breadcrumbs() {
+    const backend = this.args.model.backend || 'pki';
+    const crumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: backend, route: 'overview' },
+      { label: 'roles', route: 'roles.index' },
+    ];
+    if (!this.args.model.isNew) {
+      crumbs.push({ label: this.args.model.id, route: 'roles.role.details' }, { label: 'edit' });
+    }
+    return crumbs;
+  }
 
   @task
   *save(event) {

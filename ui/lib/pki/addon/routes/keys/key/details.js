@@ -1,3 +1,3 @@
 import Route from '@ember/routing/route';
 
-export default class PkiKeysKeyDetailsRoute extends Route {}
+export default class PkiKeyDetailsRoute extends Route {}

@@ -30,7 +30,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
   waitForKeyUp: task(function* () {
     while (true) {
-      let event = yield waitForEvent(document.body, 'keyup');
+      const event = yield waitForEvent(document.body, 'keyup');
       this.onEscape(event);
     }
   })

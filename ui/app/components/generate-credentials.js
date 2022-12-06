@@ -96,7 +96,7 @@ export default Component.extend({
 
   actions: {
     create() {
-      let model = this.model;
+      const model = this.model;
       this.set('loading', true);
       this.model
         .save()

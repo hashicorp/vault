@@ -67,7 +67,7 @@ module('Integration | Component | search select', function (hooks) {
 
   hooks.beforeEach(function () {
     const mockFunctionFromParent = (selection, dropdownOptions) => {
-      let modelExists =
+      const modelExists =
         !!dropdownOptions.findBy('id', selection) ||
         !!dropdownOptions.findBy('uuid', selection) ||
         isWildcardString([selection]);
@@ -491,7 +491,7 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['server/error'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    let promise = waitForError();
+    const promise = waitForError();
     await render(hbs`
       <SearchSelect
         @label="foo"
@@ -500,7 +500,7 @@ module('Integration | Component | search select', function (hooks) {
         @inputValue={{this.inputValue}}
       />
     `);
-    let err = await promise;
+    const err = await promise;
     assert.ok(err.message.includes('internal server error'), 'it throws an internal server error');
   });
 

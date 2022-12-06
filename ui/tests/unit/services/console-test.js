@@ -22,7 +22,7 @@ module('Unit | Service | console', function (hooks) {
     assert.strictEqual(ensureTrailingSlash('baz/'), 'baz/', 'keeps trailing slash if there is one');
   });
 
-  let testCases = [
+  const testCases = [
     {
       method: 'read',
       args: ['/sys/health', {}],
@@ -77,8 +77,8 @@ module('Unit | Service | console', function (hooks) {
 
   test('it reads, writes, lists, deletes', function (assert) {
     assert.expect(18);
-    let ajax = sinon.stub();
-    let uiConsole = this.owner.factoryFor('service:console').create({
+    const ajax = sinon.stub();
+    const uiConsole = this.owner.factoryFor('service:console').create({
       adapter() {
         return {
           buildURL(url) {
@@ -91,7 +91,7 @@ module('Unit | Service | console', function (hooks) {
 
     testCases.forEach((testCase) => {
       uiConsole[testCase.method](...testCase.args);
-      let [url, verb, options] = ajax.lastCall.args;
+      const [url, verb, options] = ajax.lastCall.args;
       assert.strictEqual(url, testCase.expectedURL, `${testCase.method}: uses trimmed passed url`);
       assert.strictEqual(verb, testCase.expectedVerb, `${testCase.method}: uses the correct verb`);
       assert.deepEqual(options, testCase.expectedOptions, `${testCase.method}: uses the correct options`);

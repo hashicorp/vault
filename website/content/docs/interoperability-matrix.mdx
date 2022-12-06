@@ -44,7 +44,7 @@ The below table shows the partner product and if the partner’s technology work
 
 Partners who integrate with Vault to have Vault store and/or manage encryption keys with their products
 
-~> Note: HCP Vault Verified means that the integration has been verified to work with HCP Vault. All integrations have been verified with Vaut self-managed.
+~> Note: HCP Vault Verified means that the integration has been verified to work with HCP Vault. All integrations have been verified with Vault self-managed.
 
 <span style={{fontSize:'12px'}}>
 Vault Secrets Engine Key: K/V = <a href="/docs/secrets/kv">K/V secrets engine</a>; KMSE = <a href="/docs/secrets/key-management">Key Management Secrets Engine</a>; KMIP = <a href="/docs/secrets/kmip">KMIP Secrets Engine</a>; Transit = <a href="/docs/secrets/transit">Transit Secrets Engine</a>
@@ -60,6 +60,7 @@ Vault Secrets Engine Key: K/V = <a href="/docs/secrets/kv">K/V secrets engine</a
 | Commvault Systems | CommVault              | KMIP                 | 1.9                         | N/A                 |
 | Cribl             | Cribl Stream           | K/V                  | 1.8                         | Yes                 |
 | DataStax          | DataStax Enterprise    | KMIP                 | 1.11                        | Yes                 |
+| Dell              | PowerMax               | KMIP                 | 1.12.1                      | N/A                 |
 | Garantir          | GaraSign               | Transit              | 1.5                         | Yes                 |
 | Google            | Google KMS             | KMSE                 | 1.9                         | N/A                 |
 | HPE               | Exmeral Data Fabric    | KMIP                 | 1.2                         | N/A                 |
@@ -71,14 +72,15 @@ Vault Secrets Engine Key: K/V = <a href="/docs/secrets/kv">K/V secrets engine</a
 | MongoDB           | MongoDB Enterprise     | KMIP                 | 1.2                         | N/A                 |
 | MongoDB           | Client Libraries       | KMIP                 | 1.9                         | N/A                 |
 | NetApp            | ONTAP                  | KMIP                 | 1.2                         | N/A                 |
+| Nutanix           | AHV/AOS 6.5.1.6        | KMIP                 | 1.12                        | N/A                 |
 | Ondat             | Trousseau              | Transit              | 1.9                         | Yes                 |
 | Percona           | Server 8.0             | KMIP                 | 1.9                         | N/A                 |
 | Percona           | XtraBackup 8.0         | KMIP                 | 1.9                         | N/A                 |
 | Snowflake         | Snowflake              | KMSE                 | 1.6                         | N/A                 |
-| VMware            | vSphere 7.0            | KMIP                 | 1.2                         | N/A                 |
-| VMware            | vSan                   | KMIP                 | 1.2                         | N/A                 |
+| VMware            | vSphere 7.0, 8.0       | KMIP                 | 1.2                         | N/A                 |
+| VMware            | vSan 7.0, 8.0          | KMIP                 | 1.2                         | N/A                 |
 | Yugabyte          | Yugabyte Platform      | Transit              | 1.9                         | No                  |
-<span style={{display:'block', textAlign:'right', fontSize:'12px'}}><em>Last Updated September 29, 2022</em></span>
+<span style={{display:'block', textAlign:'right', fontSize:'12px'}}><em>Last Updated November 30, 2022</em></span>
 
 Please reach out to [technologypartners@hashicorp.com](mailto:technologypartners@hashicorp.com) if there are any questions on the above tables. 
 

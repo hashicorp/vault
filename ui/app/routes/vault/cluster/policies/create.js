@@ -9,7 +9,7 @@ export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
   wizard: service(),
 
   model() {
-    let policyType = this.policyType();
+    const policyType = this.policyType();
     if (
       policyType === 'acl' &&
       this.wizard.currentMachine === 'policies' &&

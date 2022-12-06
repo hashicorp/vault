@@ -1,0 +1,37 @@
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-key-details-title>
+      <Icon @name="certificate" @size="24" class="has-text-grey-light" />
+      View key
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<Toolbar>
+  <ToolbarActions>
+    <ConfirmAction
+      @buttonClasses="toolbar-link"
+      @onConfirmAction={{this.deleteKey}}
+      @confirmTitle="Delete key?"
+      @confirmButtonText="Delete"
+      data-test-pki-key-delete
+    >
+      Delete
+    </ConfirmAction>
+    <ToolbarLink @route="keys.key.edit" @model={{@key.model.name}}>
+      Edit key
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  {{#each @key.formFields as |attr|}}
+    <InfoTableRow
+      @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+      @value={{get @key attr.name}}
+    />
+  {{/each}}
+</div>

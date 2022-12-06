@@ -7,14 +7,14 @@ module('Unit | Model | role-jwt', function (hooks) {
   setupTest(hooks);
 
   test('it exists', function (assert) {
-    let model = this.owner.lookup('service:store').createRecord('role-jwt');
+    const model = this.owner.lookup('service:store').createRecord('role-jwt');
     assert.ok(!!model);
     assert.strictEqual(model.providerName, null, 'no providerName');
     assert.strictEqual(model.providerButtonComponent, null, 'no providerButtonComponent');
   });
 
   test('it computes providerName when known provider url match fails', function (assert) {
-    let model = this.owner.lookup('service:store').createRecord('role-jwt', {
+    const model = this.owner.lookup('service:store').createRecord('role-jwt', {
       authUrl: 'http://example.com',
     });
 
@@ -25,11 +25,11 @@ module('Unit | Model | role-jwt', function (hooks) {
   test('it provides a providerName for listed known providers', function (assert) {
     assert.expect(12);
     Object.keys(DOMAIN_STRINGS).forEach((domainPart) => {
-      let model = this.owner.lookup('service:store').createRecord('role-jwt', {
+      const model = this.owner.lookup('service:store').createRecord('role-jwt', {
         authUrl: `http://provider-${domainPart}.com`,
       });
 
-      let expectedName = DOMAIN_STRINGS[domainPart];
+      const expectedName = DOMAIN_STRINGS[domainPart];
       assert.strictEqual(model.providerName, expectedName, `computes providerName: ${expectedName}`);
       if (PROVIDER_WITH_LOGO.includes(expectedName)) {
         assert.strictEqual(
