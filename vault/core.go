@@ -2342,31 +2342,38 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 			postUnsealFuncConcurrency = pv
 		}
 	}
-	workerChans := make([]chan func(), postUnsealFuncConcurrency)
-	var wg sync.WaitGroup
-	for i := 0; i < postUnsealFuncConcurrency; i++ {
-		wc := make(chan func())
-		workerChans[i] = wc
-		go func() {
-			for {
-				v, more := <-wc
-				if more {
-					wg.Done()
-					v()
-				} else {
-					break
+	if postUnsealFuncConcurrency <= 1 {
+		// Out of paranoia, keep the old logic for parallism=1
+		for _, v := range c.postUnsealFuncs {
+			v()
+		}
+	} else {
+		workerChans := make([]chan func(), postUnsealFuncConcurrency)
+		var wg sync.WaitGroup
+		for i := 0; i < postUnsealFuncConcurrency; i++ {
+			wc := make(chan func())
+			workerChans[i] = wc
+			go func() {
+				for {
+					v, more := <-wc
+					if more {
+						wg.Done()
+						v()
+					} else {
+						break
+					}
 				}
-			}
-		}()
+			}()
+		}
+		for i, v := range c.postUnsealFuncs {
+			wg.Add(1)
+			workerChans[i%postUnsealFuncConcurrency] <- v
+		}
+		for i := 0; i < postUnsealFuncConcurrency; i++ {
+			close(workerChans[i])
+		}
+		wg.Wait()
 	}
-	for i, v := range c.postUnsealFuncs {
-		wg.Add(1)
-		workerChans[i%postUnsealFuncConcurrency] <- v
-	}
-	for i := 0; i < postUnsealFuncConcurrency; i++ {
-		close(workerChans[i])
-	}
-	wg.Wait()
 
 	if atomic.LoadUint32(c.sealMigrationDone) == 1 {
 		if err := c.postSealMigration(ctx); err != nil {
