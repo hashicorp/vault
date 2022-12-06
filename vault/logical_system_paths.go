@@ -1958,10 +1958,6 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},
-				"user_lockout_config": {
-					Type:        framework.TypeMap,
-					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
-				},
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{

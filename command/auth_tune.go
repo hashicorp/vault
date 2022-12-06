@@ -297,7 +297,7 @@ func (c *AuthTuneCommand) Run(args []string) int {
 	// indicate it's a path in output
 	mountPath := ensureTrailingSlash(sanitizePath(args[0]))
 
-	if err := client.Sys().TuneMount("/auth/"+mountPath, mountConfigInput); err != nil {
+	if err := client.Sys().TuneAuth(mountPath, mountConfigInput); err != nil {
 		c.UI.Error(fmt.Sprintf("Error tuning auth method %s: %s", mountPath, err))
 		return 2
 	}
