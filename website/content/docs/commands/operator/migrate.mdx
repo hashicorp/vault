@@ -132,3 +132,8 @@ The following flags are available for the `operator migrate` command.
 - `-reset` - Reset the migration lock. A lock file is added during migration to prevent
   starting the Vault server or another migration. The `-reset` option can be used to
   remove a stale lock file if present.
+
+- `-parallel` `int: 1` - Allows the operator to specify the maximum number of light weight threads (goroutines)
+  which can be used to migrate data in parallel. This can potentially speed up migration on slower backends at 
+  the cost of more resources (e.g. CPU, memory). Permitted values range from greater than `1` to the maximum value 
+  for an `integer`, and when supplied parallel migration will be attempted.
