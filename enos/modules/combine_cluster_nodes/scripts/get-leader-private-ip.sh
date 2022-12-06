@@ -25,6 +25,7 @@ while :; do
     wait=$((5 ** count))
     count=$((count + 1))
     if [ "$count" -lt "$retries" ]; then
+        # echo "count is $count for ip $leader_private_ip in $instance_ips"
         sleep "$wait"
     else
         fail "leader IP address $leader_private_ip was not found in $instance_ips"

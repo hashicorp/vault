@@ -194,7 +194,6 @@ scenario "replication" {
 
     variables {
       vault_instances = step.create_vault_primary_cluster.vault_instances
-      // vault_root_token = step.create_vault_primary_cluster.vault_root_token
     }
   }
 
@@ -306,8 +305,10 @@ scenario "replication" {
 
   step "unseal_secondary_followers" {
     // skip_step  = matrix.primary_seal != "shamir"
-    module     = module.vault_unseal_nodes
+    module = module.vault_unseal_nodes
     depends_on = [
+      step.create_vault_primary_cluster,
+      step.create_vault_secondary_cluster,
       step.get_secondary_cluster_ips,
       step.configure_performance_replication_secondary
     ]
@@ -318,8 +319,8 @@ scenario "replication" {
 
     variables {
       follower_public_ips = step.get_secondary_cluster_ips.follower_public_ips
-      vault_unseal_keys   = matrix.secondary_seal != "shamir" ? null : step.create_vault_primary_cluster.vault_unseal_keys_hex
-      unseal_method       = matrix.secondary_seal
+      vault_unseal_keys   = matrix.primary_seal == "shamir" ? step.create_vault_primary_cluster.vault_unseal_keys_hex : null
+      vault_seal_type     = matrix.secondary_seal
     }
   }
 
@@ -354,22 +355,6 @@ scenario "replication" {
     }
   }
 
-  // step "verify_secondary_auth" {
-  //   module = module.vault_verify_auth
-  //   depends_on = [step.verify_performance_replication]
-  //   // depends_on = [step.verify_vault_secondary_unsealed_after_replication]
-
-  //   providers = {
-  //     enos = local.enos_provider[matrix.distro]
-  //   }
-
-  //   variables {
-  //     secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
-  //     secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
-  //     secondary_vault_root_token  = step.create_vault_secondary_cluster.vault_root_token
-  //   }
-  // }
-
   step "verify_replicated_data" {
     module     = module.vault_verify_replicated_data
     depends_on = [step.verify_performance_replication]
@@ -385,7 +370,7 @@ scenario "replication" {
   }
 
   step "add_primary_cluster_nodes" {
-    module     = module.vault_cluster
+    module = module.vault_cluster
     depends_on = [
       step.create_vpc,
       step.create_primary_backend_cluster,
@@ -436,8 +421,8 @@ scenario "replication" {
   }
 
   step "verify_raft_auto_join_voter" {
-    skip_step  = matrix.primary_backend != "raft"
-    module     = module.vault_verify_raft_auto_join_voter
+    skip_step = matrix.primary_backend != "raft"
+    module    = module.vault_verify_raft_auto_join_voter
     depends_on = [
       step.add_primary_cluster_nodes,
       step.create_vault_primary_cluster,
@@ -455,7 +440,7 @@ scenario "replication" {
   }
 
   step "remove_primary_follower_1" {
-    module     = module.remove_node
+    module = module.remove_node
     depends_on = [
       step.get_primary_cluster_ips,
       step.verify_raft_auto_join_voter
@@ -470,8 +455,8 @@ scenario "replication" {
     }
   }
 
-  step "remove_primary_follower_2" {
-    module     = module.remove_node
+  step "remove_primary_leader" {
+    module = module.remove_node
     depends_on = [
       step.get_primary_cluster_ips,
       step.remove_primary_follower_1
@@ -482,30 +467,15 @@ scenario "replication" {
     }
 
     variables {
-      node_public_ip = step.get_primary_cluster_ips.follower_public_ip_2
+      node_public_ip = step.get_primary_cluster_ips.leader_public_ip
     }
   }
 
-  step "remove_primary_leader" {
-    module     = module.remove_node
-    depends_on = [
-      step.get_primary_cluster_ips,
-      step.remove_primary_follower_2
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      node_public_ip      = step.get_primary_cluster_ips.leader_public_ip
-    }
-  }
-
-  step "get_new_cluster_ips" {
-    module     = module.vault_cluster_ips
+  step "combine_primary_cluster_nodes" {
+    module = module.combine_primary_cluster_nodes
     depends_on = [
       step.add_primary_cluster_nodes,
+      step.remove_primary_follower_1,
       step.remove_primary_leader
     ]
 
@@ -514,22 +484,24 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances  = step.add_primary_cluster_nodes.vault_instances
-      vault_root_token = step.add_primary_cluster_nodes.vault_root_token
+      primary_vault_instances = step.create_vault_primary_cluster.vault_instances
+      added_vault_instances   = step.add_primary_cluster_nodes.vault_instances
+      vault_root_token        = step.create_vault_primary_cluster.vault_root_token
+      node_public_ip          = step.get_primary_cluster_ips.follower_public_ip_2
     }
   }
 
   step "verify_updated_performance_replication" {
     module     = module.vault_verify_performance_replication
-    depends_on = [step.get_new_cluster_ips]
+    depends_on = [step.combine_primary_cluster_nodes]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      primary_leader_public_ip    = step.get_new_cluster_ips.leader_public_ip
-      primary_leader_private_ip   = step.get_new_cluster_ips.leader_private_ip
+      primary_leader_public_ip    = step.combine_primary_cluster_nodes.leader_public_ip
+      primary_leader_private_ip   = step.combine_primary_cluster_nodes.leader_private_ip
       secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
       secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
     }
