@@ -341,14 +341,14 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 
 func (b *backend) extractKeyFromFields(ctx context.Context, req *logical.Request, d *framework.FieldData, polReq *keysutil.PolicyRequest) ([]byte, *logical.Response, error) {
 	var key []byte
-	hashFnStr := d.Get("hash_function").(string)
 	if polReq.IsPrivateKey {
-		ciphertextString := d.Get("ciphertext").(string)
+		hashFnStr := d.Get("hash_function").(string)
 		hashFn, err := parseHashFn(hashFnStr)
 		if err != nil {
 			return key, logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
 
+		ciphertextString := d.Get("ciphertext").(string)
 		ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
 		if err != nil {
 			return key, nil, err
@@ -391,7 +391,7 @@ func checkKeyFieldsSet(d *framework.FieldData) (bool, error) {
 	if !isFieldSet("ciphertext", d) {
 		isCiphertextSet = false
 		if !isFieldSet("public_key", d) {
-			return isCiphertextSet, errors.New("one of the following fields, ciphertext xor public_key, has to be set")
+			return isCiphertextSet, errors.New("one of the following fields, ciphertext or public_key, has to be set")
 		}
 	}
 

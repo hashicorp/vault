@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"strconv"
 	"sync"
@@ -760,10 +761,17 @@ func getPublicKey(privateKey crypto.PrivateKey, keyType string) ([]byte, error) 
 }
 
 func publicKeyToBytes(publicKey crypto.PublicKey) ([]byte, error) {
+	var publicKeyBytesPem []byte
 	publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
-		return []byte(""), fmt.Errorf("failed to marshal public key: %s", err)
+		return publicKeyBytesPem, fmt.Errorf("failed to marshal public key: %s", err)
 	}
 
-	return publicKeyBytes, nil
+	pemBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: publicKeyBytes,
+	}
+	publicKeyBytesPem = pem.EncodeToMemory(pemBlock)
+
+	return publicKeyBytesPem, nil
 }

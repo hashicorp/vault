@@ -1411,7 +1411,8 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 				}
 			}
 		} else {
-			parsedKey, err = x509.ParsePKIXPublicKey(key)
+			pemBlock, _ := pem.Decode(key)
+			parsedKey, err = x509.ParsePKIXPublicKey(pemBlock.Bytes)
 			if err != nil {
 				return fmt.Errorf("error parsing public key: %s", err)
 			}
@@ -1965,12 +1966,12 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 
 	// Validations
 	if !p.Type.ImportPublicKeySupported() {
-		return errors.New("provided type does not support updating key versions")
+		return errors.New("provided type does not support importing key versions")
 	}
 
 	publicKeyImported := keyEntry.isPublicKeyImported()
 	if publicKeyImported && !isPrivateKey {
-		return errors.New("cannot add a public key to a key version that already as a public key set")
+		return errors.New("cannot add a public key to a key version that already has a public key set")
 	}
 
 	if !publicKeyImported {

@@ -940,7 +940,6 @@ func TestShouldWarnAboutNonceUsage(t *testing.T) {
 	}
 }
 
-// NOTE: Is this the right place to have these tests?
 func TestTransit_EncryptWithRSAPublicKey(t *testing.T) {
 	generateKeys(t)
 	b, s := createBackendWithStorage(t)
