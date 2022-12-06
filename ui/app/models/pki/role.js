@@ -300,29 +300,31 @@ export default class PkiRoleModel extends Model {
   @attr({ hideFormSection: true }) postalCode;
   /* End of overriding Additional subject field options */
 
-  /* CAPABILITIES */
+  /* CAPABILITIES
+   * Default to show UI elements unless we know they can't access the given path
+   */
   @lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id') updatePath;
   get canDelete() {
-    return this.updatePath.get('canCreate');
+    return this.updatePath.get('isLoading') || this.updatePath.get('canCreate') !== false;
   }
   get canEdit() {
-    return this.updatePath.get('canUpdate');
+    return this.updatePath.get('isLoading') || this.updatePath.get('canUpdate') !== false;
   }
   get canRead() {
-    return this.updatePath.get('canRead');
+    return this.updatePath.get('isLoading') || this.updatePath.get('canRead') !== false;
   }
 
   @lazyCapabilities(apiPath`${'backend'}/issue/${'id'}`, 'backend', 'id') generatePath;
   get canGenerateCert() {
-    return this.generatePath.get('canUpdate');
+    return this.generatePath.get('isLoading') || this.generatePath.get('canUpdate') !== false;
   }
   @lazyCapabilities(apiPath`${'backend'}/sign/${'id'}`, 'backend', 'id') signPath;
   get canSign() {
-    return this.signPath.get('canUpdate');
+    return this.signPath.get('isLoading') || this.signPath.get('canUpdate') !== false;
   }
   @lazyCapabilities(apiPath`${'backend'}/sign-verbatim/${'id'}`, 'backend', 'id') signVerbatimPath;
   get canSignVerbatim() {
-    return this.signVerbatimPath.get('canUpdate');
+    return this.signVerbatimPath.get('isLoading') || this.signVerbatimPath.get('canUpdate') !== false;
   }
 
   // Gets header/footer copy for specific toggle groups.

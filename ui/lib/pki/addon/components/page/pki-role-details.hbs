@@ -1,6 +1,6 @@
 <Toolbar>
   <ToolbarActions>
-    {{#if (or @role.updatePath.isLoading @role.canDelete)}}
+    {{#if @role.canDelete}}
       <ConfirmAction
         @buttonClasses="toolbar-link"
         @onConfirmAction={{this.deleteRole}}
@@ -12,19 +12,19 @@
       </ConfirmAction>
       <div class="toolbar-separator"></div>
     {{/if}}
-    {{#if (or @role.generatePath.isLoading @role.canGenerateCert)}}
+    {{#if @role.canGenerateCert}}
       <LinkTo class="toolbar-link" @route="roles.role.generate" @model={{@role.id}} data-test-pki-role-generate-cert>
         Generate Certificate
         <Icon @name="chevron-right" />
       </LinkTo>
     {{/if}}
-    {{#if (or @role.signPath.isLoading @role.canSign)}}
+    {{#if @role.canSign}}
       <LinkTo class="toolbar-link" @route="roles.role.sign" @model={{@role.id}} data-test-pki-role-sign-cert>
         Sign Certificate
         <Icon @name="chevron-right" />
       </LinkTo>
     {{/if}}
-    {{#if (or @role.updatePath.isLoading @role.canEdit)}}
+    {{#if @role.canEdit}}
       <LinkTo class="toolbar-link" @route="roles.role.edit" @model={{@role.id}} data-test-pki-role-edit-link>
         Edit
         <Icon @name="chevron-right" />
