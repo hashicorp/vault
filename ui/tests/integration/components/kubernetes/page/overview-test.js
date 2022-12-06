@@ -5,37 +5,42 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import { typeInSearch, clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
 import hbs from 'htmlbars-inline-precompile';
-import ENV from 'vault/config/environment';
 
 module('Integration | Component | kubernetes | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kubernetes');
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'kubernetes';
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
-  });
-
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.store.pushPayload('secret-engine', {
+      modelName: 'secret-engine',
+      data: {
+        accessor: 'kubernetes_f3400dee',
+        path: 'kubernetes-test/',
+        type: 'kubernetes',
+      },
+    });
+    this.store.pushPayload('kubernetes/config', {
+      modelName: 'kubernetes/config',
+      backend: 'kubernetes-test',
+      ...this.server.create('kubernetes-config'),
+    });
+    this.store.pushPayload('kubernetes/role', {
+      modelName: 'kubernetes/role',
+      backend: 'kubernetes-test',
+      ...this.server.create('kubernetes-role'),
+    });
+    this.store.pushPayload('kubernetes/role', {
+      modelName: 'kubernetes/role',
+      backend: 'kubernetes-test',
+      ...this.server.create('kubernetes-role'),
+    });
     this.model = {
-      config: this.server.create('kubernetes-config'),
-      backend: this.store.createRecord('secret-engine', {
-        modelName: 'secret-engine',
-        data: {
-          accessor: 'kubernetes_f3400dee',
-          path: 'kubernetes-test/',
-          type: 'kubernetes',
-        },
-      }),
-      roles: this.server.createList('kubernetes-role', 2),
+      backend: this.store.peekRecord('secret-engine', 'kubernetes-test'),
+      config: this.store.peekRecord('kubernetes/config', 'kubernetes-test'),
+      roles: this.store.peekAll('kubernetes/role'),
     };
-
-    this.server.createList('kubernetes-role', 2);
   });
 
   test('it should display role card', async function (assert) {
