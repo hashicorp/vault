@@ -1662,6 +1662,13 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("missing path"), nil
 	}
 
+	// user_lockout configuration needs to be changed only with sudo capability
+	// if we try to change it using mounts tune, return error
+	userLockoutConfigMap := data.Get("user_lockout_config").(map[string]interface{})
+	if len(userLockoutConfigMap) != 0 {
+		return logical.ErrorResponse("cannot tune user_lockout_config using mounts tune "), nil
+	}
+
 	// This call will write both logical backend's configuration as well as auth methods'.
 	// Retaining this behavior for backward compatibility. If this behavior is not desired,
 	// an error can be returned if path has a prefix of "auth/".
@@ -1759,7 +1766,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		userLockoutConfigMap := data.Get("user_lockout_config").(map[string]interface{})
 		var err error
-		if userLockoutConfigMap != nil && len(userLockoutConfigMap) != 0 {
+		if len(userLockoutConfigMap) != 0 {
 			err := mapstructure.Decode(userLockoutConfigMap, &apiuserLockoutConfig)
 			if err != nil {
 				return logical.ErrorResponse(

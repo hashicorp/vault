@@ -187,7 +187,7 @@ func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) 
 }
 
 func (c *Sys) TuneAuth(path string, config MountConfigInput) error {
-	return c.TuneMountWithContext(context.Background(), path, config)
+	return c.TuneAuthWithContext(context.Background(), path, config)
 }
 
 func (c *Sys) TuneAuthWithContext(ctx context.Context, path string, config MountConfigInput) error {
