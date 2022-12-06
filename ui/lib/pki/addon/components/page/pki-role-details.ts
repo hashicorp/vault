@@ -36,7 +36,7 @@ export default class DetailsPage extends Component<Args> {
   async deleteRole() {
     try {
       await this.args.role.destroyRecord();
-      this.flashMessages.success('Key deleted successfully');
+      this.flashMessages.success('Role deleted successfully');
       this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.index');
     } catch (error) {
       this.args.role.rollbackAttributes();
