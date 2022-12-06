@@ -60,6 +60,8 @@ export default class DateDropdown extends Component {
       year: this.selectedYear,
       dateType: this.args.dateType,
     });
+    this.selectedMonth = null;
+    this.selectedYear = null;
   }
 
   @action

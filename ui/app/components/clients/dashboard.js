@@ -292,11 +292,11 @@ export default class Dashboard extends Component {
     switch (dateType) {
       case 'cancel':
         return;
-      case 'reset': // reset to initial start/end dates (current billing period)
+      case 'reset': // clicked 'Current billing period' in calendar widget -> reset to initial start/end dates
         this.activityQueryParams.start.timestamp = this.args.model.licenseStartTimestamp;
         this.activityQueryParams.end.timestamp = this.args.model.currentDate;
         break;
-      case 'currentMonth':
+      case 'currentMonth': // clicked 'Current month' from calendar widget
         this.activityQueryParams.start.timestamp = this.args.model.currentDate;
         this.activityQueryParams.end.timestamp = this.args.model.currentDate;
         break;
@@ -304,7 +304,7 @@ export default class Dashboard extends Component {
         this.activityQueryParams.start = { monthIdx, year };
         this.activityQueryParams.end.timestamp = this.args.model.currentDate;
         break;
-      case 'endDate': // selected end date from calendar widget
+      case 'endDate': // selected month and year from calendar widget
         this.activityQueryParams.end = { monthIdx, year };
         break;
       default:

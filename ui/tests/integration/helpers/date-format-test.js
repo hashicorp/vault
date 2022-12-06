@@ -54,6 +54,6 @@ module('Integration | Helper | date-format', function (hooks) {
     this.set('timestampDate', timestampDate);
 
     await render(hbs`{{date-format this.timestampDate 'MMM d yyyy, h:mm:ss aaa' withTimeZone=true}}`);
-    assert.dom(this.element).hasText(`Dec 6 2022, 11:29:15 am ${zone}`);
+    assert.dom(this.element).hasTextContaining(`${zone}`);
   });
 });

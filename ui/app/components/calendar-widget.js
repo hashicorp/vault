@@ -1,6 +1,4 @@
 import Component from '@glimmer/component';
-import layout from '../templates/components/calendar-widget';
-import { setComponentTemplate } from '@ember/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { ARRAY_OF_MONTHS, parseAPITimestamp } from 'core/utils/date-formatters';
@@ -20,7 +18,7 @@ import { addYears, isSameYear, subYears } from 'date-fns';
  *  />
  * ```
  */
-class CalendarWidget extends Component {
+export default class CalendarWidget extends Component {
   currentDate = new Date();
   @tracked calendarDisplayDate = this.currentDate; // init to current date, updates when user clicks on calendar chevrons
   @tracked showCalendar = false;
@@ -68,14 +66,18 @@ class CalendarWidget extends Component {
     });
   }
 
-  // ACTIONS (alphabetically) //
   @action
   addTooltip() {
     if (this.disablePastYear) {
-      const previousYear = Number(this.displayYear) - 1;
+      const previousYear = this.displayYear - 1;
       this.tooltipText = `${previousYear} is unavailable because it is before your start date. Change your start month to a date in ${previousYear} to see data for this year.`;
       this.tooltipTarget = '#previous-year';
     }
+  }
+
+  @action
+  removeTooltip() {
+    this.tooltipTarget = null;
   }
 
   @action
@@ -84,8 +86,14 @@ class CalendarWidget extends Component {
   }
 
   @action
-  removeTooltip() {
-    this.tooltipTarget = null;
+  subYear() {
+    this.calendarDisplayDate = subYears(this.calendarDisplayDate, 1);
+  }
+
+  @action
+  toggleShowCalendar() {
+    this.showCalendar = !this.showCalendar;
+    this.calendarDisplayDate = this.endDate;
   }
 
   @action
@@ -102,16 +110,4 @@ class CalendarWidget extends Component {
     this.args.selectMonth({ monthIdx: index, monthName: name, year, dateType: 'endDate' });
     dropdown.close();
   }
-
-  @action
-  subYear() {
-    this.calendarDisplayDate = subYears(this.calendarDisplayDate, 1);
-  }
-
-  @action
-  toggleShowCalendar() {
-    this.showCalendar = !this.showCalendar;
-    this.calendarDisplayDate = this.endDate;
-  }
 }
-export default setComponentTemplate(layout, CalendarWidget);

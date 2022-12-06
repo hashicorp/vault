@@ -3,8 +3,8 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import isSameMonth from 'date-fns/isSameMonth';
-import format from 'date-fns/format';
+import { format, isSameMonth } from 'date-fns';
+
 /**
  * @module Attribution
  * Attribution components display the top 10 total client counts for namespaces or auth methods (mounts) during a billing period.
