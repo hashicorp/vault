@@ -92,6 +92,9 @@
 .is-no-flex-grow {
   flex-grow: 0 !important;
 }
+.is-flex-half {
+  flex: 50%;
+}
 .is-auto-width {
   width: auto;
 }
