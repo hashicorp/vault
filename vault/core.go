@@ -2328,13 +2328,42 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		seal.StartHealthCheck()
 	}
 
+	ps := time.Now()
 	// This is intentionally the last block in this function. We want to allow
 	// writes just before allowing client requests, to ensure everything has
 	// been set up properly before any writes can have happened.
-	for _, v := range c.postUnsealFuncs {
-		v()
+	const PostUnsealFuncConcurrency = 32
+	workerChans := make([]chan func(), PostUnsealFuncConcurrency)
+	var wg sync.WaitGroup
+	for i := 0; i < PostUnsealFuncConcurrency; i++ {
+		wc := make(chan func())
+		workerChans[i] = wc
+		go func() {
+			for {
+				v, more := <-wc
+				if more {
+					wg.Done()
+					v()
+				} else {
+					break
+				}
+			}
+		}()
 	}
-
+	for i, v := range c.postUnsealFuncs {
+		wg.Add(1)
+		workerChans[i%PostUnsealFuncConcurrency] <- v
+	}
+	for i := 0; i < PostUnsealFuncConcurrency; i++ {
+		close(workerChans[i])
+	}
+	wg.Wait()
+	/*
+		for _, v := range c.postUnsealFuncs {
+			v()
+		}
+	*/
+	c.logger.Info("PostUnsealFuncs complete", "seconds", time.Since(ps).Seconds())
 	if atomic.LoadUint32(c.sealMigrationDone) == 1 {
 		if err := c.postSealMigration(ctx); err != nil {
 			c.logger.Warn("post-unseal post seal migration failed", "error", err)
