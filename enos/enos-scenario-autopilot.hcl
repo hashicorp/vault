@@ -37,7 +37,7 @@ scenario "autopilot" {
       arm64 = "t4g.small"
     }
 
-    enable_undo_logs = semverconstraint(var.vault_product_version, ">=1.12.0-0") && semverconstraint(var.vault_product_version, "<1.13.0-0") ? true : false
+    enable_undo_logs = matrix.undo_logs_status == "1" && semverconstraint(var.vault_product_version, ">=1.12.0-0") && semverconstraint(var.vault_product_version, "<1.13.0-0") ? true : false
 
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
     vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
@@ -177,7 +177,7 @@ scenario "autopilot" {
       vault_unseal_when_no_init   = matrix.seal == "shamir"
       vault_unseal_keys           = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
       vpc_id                      = step.create_vpc.vpc_id
-      vault_environment           = local.enable_undo_logs ? { "VAULT_REPLICATION_USE_UNDO_LOGS": true } : null
+      vault_environment           = { "VAULT_REPLICATION_USE_UNDO_LOGS" : local.enable_undo_logs }
     }
   }
 
@@ -246,7 +246,7 @@ scenario "autopilot" {
 
     variables {
       vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_undo_logs_status          = matrix.undo_logs_status
+      vault_undo_logs_status          = semverconstraint(var.vault_product_version, "<1.13.0-0") ? matrix.undo_logs_status : "1"
       vault_instances                 = step.create_vault_cluster.vault_instances
       vault_root_token                = step.create_vault_cluster.vault_root_token
     }
