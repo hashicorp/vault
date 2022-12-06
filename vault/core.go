@@ -2328,14 +2328,23 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		seal.StartHealthCheck()
 	}
 
-	ps := time.Now()
 	// This is intentionally the last block in this function. We want to allow
 	// writes just before allowing client requests, to ensure everything has
 	// been set up properly before any writes can have happened.
-	const PostUnsealFuncConcurrency = 32
-	workerChans := make([]chan func(), PostUnsealFuncConcurrency)
+	//
+	// Use a small temporary worker pool to run postUnsealFuncs in parallel
+	postUnsealFuncConcurrency := 32
+	if v := os.Getenv("VAULT_POSTUNSEAL_FUNC_CONCURRENCY"); v != "" {
+		pv, err := strconv.Atoi(v)
+		if err != nil || pv < 1 {
+			c.logger.Warn("invalid value for VAULT_POSTUNSEAL_FUNC_CURRENCY, must be a positive integer", "error", err, "value", pv)
+		} else {
+			postUnsealFuncConcurrency = pv
+		}
+	}
+	workerChans := make([]chan func(), postUnsealFuncConcurrency)
 	var wg sync.WaitGroup
-	for i := 0; i < PostUnsealFuncConcurrency; i++ {
+	for i := 0; i < postUnsealFuncConcurrency; i++ {
 		wc := make(chan func())
 		workerChans[i] = wc
 		go func() {
@@ -2352,18 +2361,13 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	}
 	for i, v := range c.postUnsealFuncs {
 		wg.Add(1)
-		workerChans[i%PostUnsealFuncConcurrency] <- v
+		workerChans[i%postUnsealFuncConcurrency] <- v
 	}
-	for i := 0; i < PostUnsealFuncConcurrency; i++ {
+	for i := 0; i < postUnsealFuncConcurrency; i++ {
 		close(workerChans[i])
 	}
 	wg.Wait()
-	/*
-		for _, v := range c.postUnsealFuncs {
-			v()
-		}
-	*/
-	c.logger.Info("PostUnsealFuncs complete", "seconds", time.Since(ps).Seconds())
+
 	if atomic.LoadUint32(c.sealMigrationDone) == 1 {
 		if err := c.postSealMigration(ctx); err != nil {
 			c.logger.Warn("post-unseal post seal migration failed", "error", err)
