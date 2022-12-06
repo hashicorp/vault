@@ -33,11 +33,11 @@
       "aws_region": "us-east-2"
     },
     {
-      "scenario": "autopilot arch:amd64 artifact_source:artifactory distro:ubuntu edition:ent seal:awskms undo_logs_status:1",
+      "scenario": "autopilot arch:amd64 artifact_source:artifactory distro:ubuntu edition:ent seal:awskms artifact_type:bundle undo_logs_status:1",
       "aws_region": "us-west-1"
     },
     {
-      "scenario": "autopilot arch:arm64 artifact_source:artifactory distro:rhel edition:ent seal:shamir undo_logs_status:0",
+      "scenario": "autopilot arch:arm64 artifact_source:artifactory distro:rhel edition:ent seal:shamir artifact_type:bundle undo_logs_status:0",
       "aws_region": "us-west-2"
     }
   ]
