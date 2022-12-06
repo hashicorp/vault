@@ -3591,14 +3591,6 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 		t.Fatalf("resp.Error: %v, err:%v", resp.Error(), err)
 	}
 
-	// tune auth using mounts/auth/ tune
-	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/auth/token/tune")
-	req.Data["listing_visibility"] = "unauth"
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if resp.IsError() || err != nil {
-		t.Fatalf("resp.Error: %v, err:%v", resp.Error(), err)
-	}
-
 	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
