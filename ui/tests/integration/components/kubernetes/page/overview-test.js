@@ -5,42 +5,37 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import { typeInSearch, clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
 import hbs from 'htmlbars-inline-precompile';
+import ENV from 'vault/config/environment';
 
 module('Integration | Component | kubernetes | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kubernetes');
   setupMirage(hooks);
 
+  hooks.before(function () {
+    ENV['ember-cli-mirage'].handler = 'kubernetes';
+  });
+
+  hooks.after(function () {
+    ENV['ember-cli-mirage'].handler = null;
+  });
+
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'kubernetes_f3400dee',
-        path: 'kubernetes-test/',
-        type: 'kubernetes',
-      },
-    });
-    this.store.pushPayload('kubernetes/config', {
-      modelName: 'kubernetes/config',
-      backend: 'kubernetes-test',
-      ...this.server.create('kubernetes-config'),
-    });
-    this.store.pushPayload('kubernetes/role', {
-      modelName: 'kubernetes/role',
-      backend: 'kubernetes-test',
-      ...this.server.create('kubernetes-role'),
-    });
-    this.store.pushPayload('kubernetes/role', {
-      modelName: 'kubernetes/role',
-      backend: 'kubernetes-test',
-      ...this.server.create('kubernetes-role'),
-    });
     this.model = {
-      backend: this.store.peekRecord('secret-engine', 'kubernetes-test'),
-      config: this.store.peekRecord('kubernetes/config', 'kubernetes-test'),
-      roles: this.store.peekAll('kubernetes/role'),
+      config: this.server.create('kubernetes-config'),
+      backend: this.store.createRecord('secret-engine', {
+        modelName: 'secret-engine',
+        data: {
+          accessor: 'kubernetes_f3400dee',
+          path: 'kubernetes-test/',
+          type: 'kubernetes',
+        },
+      }),
+      roles: this.server.createList('kubernetes-role', 2),
     };
+
+    this.server.createList('kubernetes-role', 2);
   });
 
   test('it should display role card', async function (assert) {
@@ -51,11 +46,7 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
       .hasText('The number of Vault roles being used to generate Kubernetes credentials.');
     assert.dom('[data-test-roles-card] a').hasText('View Roles');
 
-    this.model = {
-      backend: this.store.peekRecord('secret-engine', 'kubernetes-test'),
-      config: this.store.peekRecord('kubernetes/config', 'kubernetes-test'),
-      roles: [],
-    };
+    this.model.roles = [];
 
     await render(hbs`<Page::Overview @model={{this.model}} />`, { owner: this.engine });
 
@@ -66,11 +57,7 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
     await render(hbs`<Page::Overview @model={{this.model}} />`, { owner: this.engine });
     assert.dom('[data-test-roles-card] .has-font-weight-normal').hasText('2');
 
-    this.model = {
-      backend: this.store.peekRecord('secret-engine', 'kubernetes-test'),
-      config: this.store.peekRecord('kubernetes/config', 'kubernetes-test'),
-      roles: [],
-    };
+    this.model.roles = [];
 
     await render(hbs`<Page::Overview @model={{this.model}} />`, { owner: this.engine });
     assert.dom('[data-test-roles-card] .has-font-weight-normal').hasText('None');
@@ -93,5 +80,18 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
     assert.dom('[data-test-generate-credential-card] button').isDisabled();
     await selectChoose('', '.ember-power-select-option', 2);
     assert.dom('[data-test-generate-credential-card] button').isNotDisabled();
+  });
+
+  test('it should show ConfigCta when no config is set up', async function (assert) {
+    this.model.config = null;
+
+    await render(hbs`<Page::Overview @model={{this.model}} />`, { owner: this.engine });
+    assert.dom('.empty-state .empty-state-title').hasText('Kubernetes not configured');
+    assert
+      .dom('.empty-state .empty-state-message')
+      .hasText(
+        'Get started by establishing the URL of the Kubernetes API to connect to, along with some additional options.'
+      );
+    assert.dom('.empty-state .empty-state-actions').hasText('Configure Kubernetes');
   });
 });

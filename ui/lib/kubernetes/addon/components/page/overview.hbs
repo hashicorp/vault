@@ -39,7 +39,7 @@
           <button
             class="button has-left-margin-m"
             type="button"
-            disabled={{this.isDisabled}}
+            disabled={{not this.selectedRole}}
             {{on "click" this.generateCredential}}
           >
             Generate

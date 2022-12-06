@@ -6,20 +6,10 @@ import { action } from '@ember/object';
 export default class OverviewPageComponent extends Component {
   @service router;
 
-  @tracked roles = [];
   @tracked selectedRole = null;
-  @tracked roleOptions = this.roles.map((role) => {
+  @tracked roleOptions = this.args.model.roles.map((role) => {
     return { name: role.name, id: role.name };
   });
-
-  constructor() {
-    super(...arguments);
-    this.roles = this.args.model.roles.toArray();
-  }
-
-  get isDisabled() {
-    return !this.selectedRole;
-  }
 
   @action
   selectRole([roleName]) {
@@ -28,8 +18,9 @@ export default class OverviewPageComponent extends Component {
 
   @action
   generateCredential() {
-    const { selectedRole } = this;
-
-    this.router.transitionTo('vault.cluster.secrets.backend.kubernetes.roles.role.credentials', selectedRole);
+    this.router.transitionTo(
+      'vault.cluster.secrets.backend.kubernetes.roles.role.credentials',
+      this.selectedRole
+    );
   }
 }
