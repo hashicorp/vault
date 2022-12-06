@@ -1,13 +1,71 @@
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
-
-import fieldToAttrs from 'vault/utils/field-to-attrs';
+import { withFormFields } from 'vault/decorators/model-form-fields';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
 };
 
+const fieldGroups = [
+  {
+    default: [
+      'name',
+      'issuerRef',
+      'customTtl',
+      'notBeforeDuration',
+      'maxTtl',
+      'generateLease',
+      'noStore',
+      'addBasicConstraints',
+    ],
+  },
+  {
+    'Domain handling': [
+      'allowedDomains',
+      'allowedDomainsTemplate',
+      'allowBareDomains',
+      'allowSubdomains',
+      'allowGlobDomains',
+      'allowWildcardCertificates',
+      'allowLocalhost', // default: true (returned true by OpenApi)
+      'allowAnyName',
+      'enforceHostnames', // default: true (returned true by OpenApi)
+    ],
+  },
+  {
+    'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
+  },
+  {
+    'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
+  },
+  { 'Policy identifiers': ['policyIdentifiers'] },
+  {
+    'Subject Alternative Name (SAN) Options': [
+      'allowIpSans',
+      'allowedUriSans',
+      'allowUriSansTemplate',
+      'allowedOtherSans',
+    ],
+  },
+  {
+    'Additional subject fields': [
+      'allowedSerialNumbers',
+      'requireCn',
+      'useCsrCommonName',
+      'useCsrSans',
+      'ou',
+      'organization',
+      'country',
+      'locality',
+      'province',
+      'streetAddress',
+      'postalCode',
+    ],
+  },
+];
+
+@withFormFields(null, fieldGroups)
 @withModelValidations(validations)
 export default class PkiRoleModel extends Model {
   get useOpenAPI() {
@@ -293,65 +351,5 @@ export default class PkiRoleModel extends Model {
         },
       },
     };
-  }
-
-  get fieldGroups() {
-    return fieldToAttrs(this, [
-      {
-        default: [
-          'name',
-          'issuerRef',
-          'customTtl',
-          'notBeforeDuration',
-          'maxTtl',
-          'generateLease',
-          'noStore',
-          'addBasicConstraints',
-        ],
-      },
-      {
-        'Domain handling': [
-          'allowedDomains',
-          'allowedDomainsTemplate',
-          'allowBareDomains',
-          'allowSubdomains',
-          'allowGlobDomains',
-          'allowWildcardCertificates',
-          'allowLocalhost', // default: true (returned true by OpenApi)
-          'allowAnyName',
-          'enforceHostnames', // default: true (returned true by OpenApi)
-        ],
-      },
-      {
-        'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
-      },
-      {
-        'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
-      },
-      { 'Policy identifiers': ['policyIdentifiers'] },
-      {
-        'Subject Alternative Name (SAN) Options': [
-          'allowIpSans',
-          'allowedUriSans',
-          'allowUriSansTemplate',
-          'allowedOtherSans',
-        ],
-      },
-      {
-        'Additional subject fields': [
-          'allowedSerialNumbers',
-          'requireCn',
-          'useCsrCommonName',
-          'useCsrSans',
-          'ou',
-          'organization',
-          'country',
-          'locality',
-          'province',
-          'streetAddress',
-          'postalCode',
-        ],
-      },
-    ]);
   }
 }
