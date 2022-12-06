@@ -11,9 +11,8 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/role');
-    this.model.backend = 'pki';
-    [this.fields] = Object.values(this.model.fieldGroups.find((g) => g['Key parameters']));
+    this.model = this.store.createRecord('pki/role', { backend: 'pki' });
+    [this.fields] = Object.values(this.model.formFieldGroups.find((g) => g['Key parameters']));
   });
 
   test('it should render the component and display the correct defaults', async function (assert) {
