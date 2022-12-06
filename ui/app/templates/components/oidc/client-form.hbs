@@ -39,6 +39,7 @@
     <h4 class="title is-4">Assign access</h4>
     <div class="is-flex-row">
       <RadioCard
+        data-test-oidc-radio="allow-all"
         @title="Allow everyone to access existing"
         @description="All Vault entities can authenticate through this application."
         @icon="org"
@@ -47,6 +48,7 @@
         @onChange={{this.handleAssignmentSelection}}
       />
       <RadioCard
+        data-test-oidc-radio="limited"
         @title="Limit access to selected users"
         @description="Choose or create an assignment to give access to selected entities."
         @icon="users"

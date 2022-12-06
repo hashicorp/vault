@@ -11,7 +11,7 @@ import (
 func pkiFetchIssuersList(e *Executor, versionError func()) (bool, *PathFetch, []string, error) {
 	issuersRet, err := e.FetchIfNotFetched(logical.ListOperation, "/{{mount}}/issuers")
 	if err != nil {
-		return true, nil, nil, err
+		return true, issuersRet, nil, err
 	}
 
 	if !issuersRet.IsSecretOK() {
@@ -19,7 +19,11 @@ func pkiFetchIssuersList(e *Executor, versionError func()) (bool, *PathFetch, []
 			versionError()
 		}
 
-		return true, nil, nil, nil
+		if issuersRet.Is404NotFound() {
+			return true, issuersRet, nil, fmt.Errorf("this mount lacks any configured issuers, limiting health check usefulness")
+		}
+
+		return true, issuersRet, nil, nil
 	}
 
 	if len(issuersRet.ParsedCache) == 0 {
@@ -74,20 +78,20 @@ func parsePEMCRL(contents string) (*x509.RevocationList, error) {
 func pkiFetchIssuer(e *Executor, issuer string, versionError func()) (bool, *PathFetch, *x509.Certificate, error) {
 	issuerRet, err := e.FetchIfNotFetched(logical.ReadOperation, "/{{mount}}/issuer/"+issuer+"/json")
 	if err != nil {
-		return true, nil, nil, err
+		return true, issuerRet, nil, err
 	}
 
 	if !issuerRet.IsSecretOK() {
 		if issuerRet.IsUnsupportedPathError() {
 			versionError()
 		}
-		return true, nil, nil, nil
+		return true, issuerRet, nil, nil
 	}
 
 	if len(issuerRet.ParsedCache) == 0 {
 		cert, err := parsePEMCert(issuerRet.Secret.Data["certificate"].(string))
 		if err != nil {
-			return true, nil, nil, fmt.Errorf("unable to parse issuer %v's certificate: %w", issuer, err)
+			return true, issuerRet, nil, fmt.Errorf("unable to parse issuer %v's certificate: %w", issuer, err)
 		}
 
 		issuerRet.ParsedCache["certificate"] = cert
@@ -99,20 +103,20 @@ func pkiFetchIssuer(e *Executor, issuer string, versionError func()) (bool, *Pat
 func pkiFetchIssuerEntry(e *Executor, issuer string, versionError func()) (bool, *PathFetch, map[string]interface{}, error) {
 	issuerRet, err := e.FetchIfNotFetched(logical.ReadOperation, "/{{mount}}/issuer/"+issuer)
 	if err != nil {
-		return true, nil, nil, err
+		return true, issuerRet, nil, err
 	}
 
 	if !issuerRet.IsSecretOK() {
 		if issuerRet.IsUnsupportedPathError() {
 			versionError()
 		}
-		return true, nil, nil, nil
+		return true, issuerRet, nil, nil
 	}
 
 	if len(issuerRet.ParsedCache) == 0 {
 		cert, err := parsePEMCert(issuerRet.Secret.Data["certificate"].(string))
 		if err != nil {
-			return true, nil, nil, fmt.Errorf("unable to parse issuer %v's certificate: %w", issuer, err)
+			return true, issuerRet, nil, fmt.Errorf("unable to parse issuer %v's certificate: %w", issuer, err)
 		}
 
 		issuerRet.ParsedCache["certificate"] = cert
@@ -136,20 +140,20 @@ func pkiFetchIssuerCRL(e *Executor, issuer string, delta bool, versionError func
 
 	crlRet, err := e.FetchIfNotFetched(logical.ReadOperation, path)
 	if err != nil {
-		return true, nil, nil, err
+		return true, crlRet, nil, err
 	}
 
 	if !crlRet.IsSecretOK() {
 		if crlRet.IsUnsupportedPathError() {
 			versionError()
 		}
-		return true, nil, nil, nil
+		return true, crlRet, nil, nil
 	}
 
 	if len(crlRet.ParsedCache) == 0 {
 		crl, err := parsePEMCRL(crlRet.Secret.Data["crl"].(string))
 		if err != nil {
-			return true, nil, nil, fmt.Errorf("unable to parse issuer %v's %v: %w", issuer, name, err)
+			return true, crlRet, nil, fmt.Errorf("unable to parse issuer %v's %v: %w", issuer, name, err)
 		}
 		crlRet.ParsedCache["crl"] = crl
 	}
@@ -160,14 +164,14 @@ func pkiFetchIssuerCRL(e *Executor, issuer string, delta bool, versionError func
 func pkiFetchKeyEntry(e *Executor, key string, versionError func()) (bool, *PathFetch, map[string]interface{}, error) {
 	keyRet, err := e.FetchIfNotFetched(logical.ReadOperation, "/{{mount}}/key/"+key)
 	if err != nil {
-		return true, nil, nil, err
+		return true, keyRet, nil, err
 	}
 
 	if !keyRet.IsSecretOK() {
 		if keyRet.IsUnsupportedPathError() {
 			versionError()
 		}
-		return true, nil, nil, nil
+		return true, keyRet, nil, nil
 	}
 
 	var data map[string]interface{} = nil
@@ -181,7 +185,7 @@ func pkiFetchKeyEntry(e *Executor, key string, versionError func()) (bool, *Path
 func pkiFetchLeavesList(e *Executor, versionError func()) (bool, *PathFetch, []string, error) {
 	leavesRet, err := e.FetchIfNotFetched(logical.ListOperation, "/{{mount}}/certs")
 	if err != nil {
-		return true, nil, nil, err
+		return true, leavesRet, nil, err
 	}
 
 	if !leavesRet.IsSecretOK() {
@@ -189,7 +193,7 @@ func pkiFetchLeavesList(e *Executor, versionError func()) (bool, *PathFetch, []s
 			versionError()
 		}
 
-		return true, nil, nil, nil
+		return true, leavesRet, nil, nil
 	}
 
 	if len(leavesRet.ParsedCache) == 0 {
@@ -207,20 +211,20 @@ func pkiFetchLeavesList(e *Executor, versionError func()) (bool, *PathFetch, []s
 func pkiFetchLeaf(e *Executor, serial string, versionError func()) (bool, *PathFetch, *x509.Certificate, error) {
 	leafRet, err := e.FetchIfNotFetched(logical.ReadOperation, "/{{mount}}/cert/"+serial)
 	if err != nil {
-		return true, nil, nil, err
+		return true, leafRet, nil, err
 	}
 
 	if !leafRet.IsSecretOK() {
 		if leafRet.IsUnsupportedPathError() {
 			versionError()
 		}
-		return true, nil, nil, nil
+		return true, leafRet, nil, nil
 	}
 
 	if len(leafRet.ParsedCache) == 0 {
 		cert, err := parsePEMCert(leafRet.Secret.Data["certificate"].(string))
 		if err != nil {
-			return true, nil, nil, fmt.Errorf("unable to parse leaf %v's certificate: %w", serial, err)
+			return true, leafRet, nil, fmt.Errorf("unable to parse leaf %v's certificate: %w", serial, err)
 		}
 
 		leafRet.ParsedCache["certificate"] = cert
@@ -232,7 +236,7 @@ func pkiFetchLeaf(e *Executor, serial string, versionError func()) (bool, *PathF
 func pkiFetchRolesList(e *Executor, versionError func()) (bool, *PathFetch, []string, error) {
 	rolesRet, err := e.FetchIfNotFetched(logical.ListOperation, "/{{mount}}/roles")
 	if err != nil {
-		return true, nil, nil, err
+		return true, rolesRet, nil, err
 	}
 
 	if !rolesRet.IsSecretOK() {
@@ -240,7 +244,7 @@ func pkiFetchRolesList(e *Executor, versionError func()) (bool, *PathFetch, []st
 			versionError()
 		}
 
-		return true, nil, nil, nil
+		return true, rolesRet, nil, nil
 	}
 
 	if len(rolesRet.ParsedCache) == 0 {
@@ -257,14 +261,14 @@ func pkiFetchRolesList(e *Executor, versionError func()) (bool, *PathFetch, []st
 func pkiFetchRole(e *Executor, name string, versionError func()) (bool, *PathFetch, map[string]interface{}, error) {
 	roleRet, err := e.FetchIfNotFetched(logical.ReadOperation, "/{{mount}}/roles/"+name)
 	if err != nil {
-		return true, nil, nil, err
+		return true, roleRet, nil, err
 	}
 
 	if !roleRet.IsSecretOK() {
 		if roleRet.IsUnsupportedPathError() {
 			versionError()
 		}
-		return true, nil, nil, nil
+		return true, roleRet, nil, nil
 	}
 
 	var data map[string]interface{} = nil

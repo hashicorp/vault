@@ -179,6 +179,15 @@ func (h *EnableAutoTidy) Evaluate(e *Executor) (results []*Result, err error) {
 			}
 			results = append(results, &ret)
 		}
+
+		if len(results) == 0 {
+			ret := Result{
+				Status:   ResultOK,
+				Endpoint: "/{{mount}}/config/auto-tidy",
+				Message:  "Auto-tidy is enabled and configured appropriately.",
+			}
+			results = append(results, &ret)
+		}
 	}
 
 	return
