@@ -25,12 +25,12 @@
 /plugins/                     @hashicorp/vault-ecosystem
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
-
-/website/content/docs/plugin-portal.mdx   @acahn
+/website/content/ @tjperry07
+/website/content/docs/plugin-portal.mdx   @acahn @tjperry07
 
 # Plugin docs
-/website/content/docs/plugins/              @fairclothjm
-/website/content/docs/upgrading/plugins.mdx @fairclothjm
+/website/content/docs/plugins/              @fairclothjm @tjperry07
+/website/content/docs/upgrading/plugins.mdx @fairclothjm @tjperry07
 
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
 # Changes to these files often require coordination with backend code,
