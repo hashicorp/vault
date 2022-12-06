@@ -11,11 +11,11 @@ export default class ClientsRoute extends Route {
     return this.store
       .findAll('clients/version-history')
       .then((response) => {
-        return response.map((model) => {
+        return response.map(({ version, previousVersion, timestampInstalled }) => {
           return {
-            id: model.id,
-            previousVersion: model.previousVersion,
-            timestampInstalled: model.timestampInstalled,
+            version,
+            previousVersion,
+            timestampInstalled,
           };
         });
       })

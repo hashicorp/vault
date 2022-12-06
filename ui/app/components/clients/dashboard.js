@@ -133,7 +133,7 @@ export default class Dashboard extends Component {
 
     // filter for upgrade data of noteworthy upgrades (1.9 and/or 1.10)
     const upgradeVersionHistory = versionHistory.filter(
-      (version) => version.id.match('1.9') || version.id.match('1.10')
+      ({ version }) => version.match('1.9') || version.match('1.10')
     );
     if (!upgradeVersionHistory || upgradeVersionHistory.length === 0) {
       return null;
@@ -156,10 +156,10 @@ export default class Dashboard extends Component {
       const [firstUpgrade, secondUpgrade] = this.upgradeDuringActivity;
       const firstDate = parseAPITimestamp(firstUpgrade.timestampInstalled, 'MMM d, yyyy');
       const secondDate = parseAPITimestamp(secondUpgrade.timestampInstalled, 'MMM d, yyyy');
-      return `Vault was upgraded to ${firstUpgrade.id} (${firstDate}) and ${secondUpgrade.id} (${secondDate}) during this time range.`;
+      return `Vault was upgraded to ${firstUpgrade.version} (${firstDate}) and ${secondUpgrade.version} (${secondDate}) during this time range.`;
     } else {
       const [upgrade] = this.upgradeDuringActivity;
-      return `Vault was upgraded to ${upgrade.id} on ${parseAPITimestamp(
+      return `Vault was upgraded to ${upgrade.version} on ${parseAPITimestamp(
         upgrade.timestampInstalled,
         'MMM d, yyyy'
       )}.`;
@@ -171,7 +171,7 @@ export default class Dashboard extends Component {
       return null;
     }
     if (this.upgradeDuringActivity.length === 1) {
-      const version = this.upgradeDuringActivity[0].id;
+      const version = this.upgradeDuringActivity[0].version;
       if (version.match('1.9')) {
         return ' How we count clients changed in 1.9, so keep that in mind when looking at the data below.';
       }
