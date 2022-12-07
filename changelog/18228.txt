@@ -1,0 +1,3 @@
+```release-note:improvement
+hybrid-management: Add OSS support for hybrid management
+```
