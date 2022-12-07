@@ -287,4 +287,40 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 		_, cmd := testAuthTuneCommand(t)
 		assertNoTabs(t, cmd)
 	})
+
+	// tests that vault auth tune needs sudo capability
+	t.Run("non_sudo_failure", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		// Mount
+		if err := client.Sys().EnableAuthWithOptions("my-auth", &api.EnableAuthOptions{
+			Type:        "userpass",
+			Description: "initial description",
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		// Use non-root token to tune auth mount
+		token, _ := testTokenAndAccessor(t, client)
+		client.SetToken(token)
+
+		ui, cmd := testAuthTuneCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-default-lease-ttl", "30m",
+			"my-auth/",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+		expected := "permission denied"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
 }
