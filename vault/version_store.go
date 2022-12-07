@@ -144,6 +144,8 @@ func (c *Core) loadVersionHistory(ctx context.Context) error {
 					"vault version", vaultVersion.Version, "UTC time", vaultVersion.TimestampInstalled)
 			}
 		}
+
+		c.versionHistory[vaultVersion.Version] = vaultVersion
 	}
 	return nil
 }
