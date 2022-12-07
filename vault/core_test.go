@@ -360,6 +360,22 @@ func TestCore_SealUnseal(t *testing.T) {
 	}
 }
 
+// Verify mount LastMounted for all mount entries.
+func TestCore_LastMounted(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	for _, entry := range c.auth.Entries {
+		if entry.LastMounted != c.currentVaultVersion.Version {
+			t.Fatalf("expected auth entry to contain %s, got %s", c.currentVaultVersion.Version, entry.LastMounted)
+		}
+	}
+
+	for _, entry := range c.mounts.Entries {
+		if entry.LastMounted != c.currentVaultVersion.Version {
+			t.Fatalf("expected mount entry to contain %s, got %s", c.currentVaultVersion.Version, entry.LastMounted)
+		}
+	}
+}
+
 // Attempt to shutdown after unseal
 func TestCore_Shutdown(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
