@@ -451,11 +451,12 @@ constrain requests, using the following options:
     ```ruby
     # This allows the user to update the userpass auth method's user
     # configurations (e.g., "password") but cannot update the "token_policies"
-    # parameter value.
+    # and "policies" parameter values.
     path "auth/userpass/users/*" {
       capabilities = ["update"]
       denied_parameters = {
         "token_policies" = []
+        "policies" = []
       }
     }
     ```

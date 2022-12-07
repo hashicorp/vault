@@ -477,6 +477,16 @@ func TestOpenAPI_Paths(t *testing.T) {
 									"amount": 42,
 								},
 							},
+							Fields: map[string]*FieldSchema{
+								"field_a": {
+									Type:        TypeString,
+									Description: "field_a description",
+								},
+								"field_b": {
+									Type:        TypeBool,
+									Description: "field_b description",
+								},
+							},
 						}},
 					},
 				},

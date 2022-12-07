@@ -214,12 +214,21 @@ func requireFieldsSetInResp(t *testing.T, resp *logical.Response, fields ...stri
 
 func requireSuccessNonNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
 	require.NoError(t, err, msgAndArgs...)
-	require.False(t, resp.IsError(), msgAndArgs...)
+	if resp.IsError() {
+		errContext := fmt.Sprintf("Expected successful response but got error: %v", resp.Error())
+		require.Falsef(t, resp.IsError(), errContext, msgAndArgs...)
+	}
 	require.NotNil(t, resp, msgAndArgs...)
 }
 
 func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
 	require.NoError(t, err, msgAndArgs...)
-	require.False(t, resp.IsError(), msgAndArgs...)
-	require.Nil(t, resp, msgAndArgs...)
+	if resp.IsError() {
+		errContext := fmt.Sprintf("Expected successful response but got error: %v", resp.Error())
+		require.Falsef(t, resp.IsError(), errContext, msgAndArgs...)
+	}
+	if resp != nil {
+		msg := fmt.Sprintf("expected nil response but got: %v", resp)
+		require.Nilf(t, resp, msg, msgAndArgs...)
+	}
 }

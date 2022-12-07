@@ -7,6 +7,7 @@ export default Component.extend({
   classNames: ['ui-wizard-container'],
   wizard: service(),
   auth: service(),
+  router: service(),
 
   shouldRender: or('auth.currentToken', 'wizard.showWhenUnauthenticated'),
   currentState: alias('wizard.currentState'),
@@ -16,6 +17,7 @@ export default Component.extend({
   componentState: alias('wizard.componentState'),
   nextFeature: alias('wizard.nextFeature'),
   nextStep: alias('wizard.nextStep'),
+  currentRouteName: alias('router.currentRouteName'),
 
   actions: {
     dismissWizard() {

@@ -727,8 +727,7 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 		return consts.PluginTypeUnknown
 	}
 
-	// Builtin plugins should contain the "builtin" string in their RunningVersion
-	if !strings.Contains(entry.RunningVersion, "builtin") {
+	if !versions.IsBuiltinVersion(entry.RunningVersion) {
 		return consts.PluginTypeUnknown
 	}
 
@@ -1317,6 +1316,11 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 			needPersist = true
 		}
 
+		// Don't store built-in version in the mount table, to make upgrades smoother.
+		if versions.IsBuiltinVersion(entry.Version) {
+			entry.Version = ""
+			needPersist = true
+		}
 	}
 	// Done if we have restored the mount table and we don't need
 	// to persist
@@ -1463,10 +1467,8 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		backend, entry.RunningSha256, err = c.newLogicalBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create mount entry", "path", entry.Path, "error", err)
-			if !c.builtinRegistry.Contains(entry.Type, consts.PluginTypeSecrets) {
-				// If we encounter an error instantiating the backend due to an error,
-				// skip backend initialization but register the entry to the mount table
-				// to preserve storage and path.
+
+			if c.isMountable(ctx, entry, consts.PluginTypeSecrets) {
 				c.logger.Warn("skipping plugin-based mount entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}

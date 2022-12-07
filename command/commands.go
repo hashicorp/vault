@@ -82,8 +82,8 @@ const (
 	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
 	// EnvVaultDetailed is to output detailed information (e.g., ListResponseWithInfo).
 	EnvVaultDetailed = `VAULT_DETAILED`
-	// EnvVaultLogFile is used to specify the path to the log file that Vault should use for logging
-	EnvVaultLogFile = "VAULT_LOG_FILE"
+	// EnvVaultLogFormat is used to specify the log format. Supported values are "standard" and "json"
+	EnvVaultLogFormat = "VAULT_LOG_FORMAT"
 	// EnvVaultLogLevel is used to specify the log level applied to logging
 	// Supported log levels: Trace, Debug, Error, Warn, Info
 	EnvVaultLogLevel = "VAULT_LOG_LEVEL"
@@ -141,8 +141,18 @@ const (
 	flagNameUserLockoutDisable = "user-lockout-disable"
 	// flagNameDisableRedirects is used to prevent the client from honoring a single redirect as a response to a request
 	flagNameDisableRedirects = "disable-redirects"
+	// flagNameCombineLogs is used to specify whether log output should be combined and sent to stdout
+	flagNameCombineLogs = "combine-logs"
 	// flagNameLogFile is used to specify the path to the log file that Vault should use for logging
 	flagNameLogFile = "log-file"
+	// flagNameLogRotateBytes is the flag used to specify the number of bytes a log file should be before it is rotated.
+	flagNameLogRotateBytes = "log-rotate-bytes"
+	// flagNameLogRotateDuration is the flag used to specify the duration after which a log file should be rotated.
+	flagNameLogRotateDuration = "log-rotate-duration"
+	// flagNameLogRotateMaxFiles is the flag used to specify the maximum number of older/archived log files to keep.
+	flagNameLogRotateMaxFiles = "log-rotate-max-files"
+	// flagNameLogFormat is the flag used to specify the log format. Supported values are "standard" and "json"
+	flagNameLogFormat = "log-format"
 	// flagNameLogLevel is used to specify the log level applied to logging
 	// Supported log levels: Trace, Debug, Error, Warn, Info
 	flagNameLogLevel = "log-level"

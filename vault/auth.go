@@ -636,6 +636,12 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 			needPersist = true
 		}
 
+		// Don't store built-in version in the mount table, to make upgrades smoother.
+		if versions.IsBuiltinVersion(entry.Version) {
+			entry.Version = ""
+			needPersist = true
+		}
+
 		if entry.NamespaceID == "" {
 			entry.NamespaceID = namespace.RootNamespaceID
 			needPersist = true
@@ -794,11 +800,8 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		backend, entry.RunningSha256, err = c.newCredentialBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
-			plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential, "")
-			if plugerr == nil && plug != nil && !plug.Builtin {
-				// If we encounter an error instantiating the backend due to an error,
-				// skip backend initialization but register the entry to the mount table
-				// to preserve storage and path.
+
+			if c.isMountable(ctx, entry, consts.PluginTypeCredential) {
 				c.logger.Warn("skipping plugin-based credential entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}

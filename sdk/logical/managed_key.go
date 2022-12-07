@@ -37,6 +37,7 @@ type (
 	ManagedKeyConsumer           func(context.Context, ManagedKey) error
 	ManagedSigningKeyConsumer    func(context.Context, ManagedSigningKey) error
 	ManagedEncryptingKeyConsumer func(context.Context, ManagedEncryptingKey) error
+	ManagedMACKeyConsumer        func(context.Context, ManagedMACKey) error
 )
 
 type ManagedKeySystemView interface {
@@ -59,6 +60,12 @@ type ManagedKeySystemView interface {
 	// WithManagedSigningKeyByUUID retrieves an instantiated managed signing key for consumption by the given function,
 	// with the same semantics as WithManagedKeyByUUID
 	WithManagedEncryptingKeyByUUID(ctx context.Context, keyUuid, backendUUID string, f ManagedEncryptingKeyConsumer) error
+	// WithManagedMACKeyByName retrieves an instantiated managed MAC key by name for consumption by the given function,
+	// with the same semantics as WithManagedKeyByName.
+	WithManagedMACKeyByName(ctx context.Context, keyName, backendUUID string, f ManagedMACKeyConsumer) error
+	// WithManagedMACKeyByUUID retrieves an instantiated managed MAC key by UUID for consumption by the given function,
+	// with the same semantics as WithManagedKeyByUUID.
+	WithManagedMACKeyByUUID(ctx context.Context, keyUUID, backendUUID string, f ManagedMACKeyConsumer) error
 }
 
 type ManagedAsymmetricKey interface {
@@ -94,4 +101,11 @@ type ManagedSigningKey interface {
 type ManagedEncryptingKey interface {
 	ManagedKey
 	GetAEAD(iv []byte) (cipher.AEAD, error)
+}
+
+type ManagedMACKey interface {
+	ManagedKey
+
+	// MAC generates a MAC tag using the provided algorithm for the provided value.
+	MAC(ctx context.Context, algorithm string, data []byte) ([]byte, error)
 }
