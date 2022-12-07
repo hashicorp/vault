@@ -177,12 +177,12 @@ export default Service.extend({
   // Makes a call to grab the OpenAPI document.
   // Returns relevant information from OpenAPI
   // as determined by the expandOpenApiProps util
-  getProps(helpUrl, backend, pathName = '') {
+  getProps(helpUrl, backend) {
     debug(`Fetching schema properties for ${backend} from ${helpUrl}`);
 
     return this.ajax(helpUrl, backend).then((help) => {
-      // help.openapi.paths is an array. Get the first unless the pathName is passed from caller
-      const path = pathName || Object.keys(help.openapi.paths)[0];
+      // help.openapi.paths is an array with one item
+      const path = Object.keys(help.openapi.paths)[0];
       const pathInfo = help.openapi.paths[path];
       const params = pathInfo.parameters;
       const paramProp = {};
@@ -299,8 +299,7 @@ export default Service.extend({
   },
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
-    const pathName = modelName === 'model:generated-user-userpass' ? '/users/{username}' : '';
-    return this.getProps(helpUrl, backend, pathName).then((props) => {
+    return this.getProps(helpUrl, backend).then((props) => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
       const owner = getOwner(this);
       newModel = newModel.extend(attrs, { newFields });
