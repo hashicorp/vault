@@ -8,7 +8,7 @@ import (
 
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 )
 
 const (

@@ -547,7 +547,16 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	genericMountPaths, _ := req.Get("genericMountPaths").(bool)
 
 	// Build OpenAPI response for the entire backend
-	doc := NewOASDocument()
+	vaultVersion := "unknown"
+	if b.System() != nil {
+		env, err := b.System().PluginEnv(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		vaultVersion = env.VaultVersion
+	}
+
+	doc := NewOASDocument(vaultVersion)
 	if err := documentPaths(b, requestResponsePrefix, genericMountPaths, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
