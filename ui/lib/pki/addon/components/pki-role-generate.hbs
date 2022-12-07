@@ -1,0 +1,76 @@
+{{#if this.certificate}}
+  <Toolbar>
+    <ToolbarActions>
+      <button type="button" class="toolbar-link" {{on "click" this.download}} data-test-database-connection-delete>
+        Download
+        <Chevron @direction="down" @isButton={{true}} />
+      </button>
+      <button type="button" class="toolbar-link" {{on "click" (perform this.revoke)}} data-test-database-connection-delete>
+        Revoke certificate
+        <Chevron @direction="right" @isButton={{true}} />
+      </button>
+    </ToolbarActions>
+  </Toolbar>
+  {{#each-in this.certificate as |key val|}}
+    {{#if (eq key "contents")}}
+      <InfoTableRow @label="Certificate" @value={{val}}>
+        <MaskedInput @value={{val}} @name="Certificate" @displayOnly={{true}} @allowCopy={{true}} />
+      </InfoTableRow>
+    {{else}}
+      <InfoTableRow @label={{humanize (dasherize key)}} @value={{val}} />
+    {{/if}}
+  {{/each-in}}
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="button"
+        class="button has-left-margin-s"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.cancel}}
+        data-test-pki-generate-back
+      >
+        Back
+      </button>
+    </div>
+  </div>
+{{else}}
+  <form {{on "submit" (perform this.save)}}>
+    <div class="box is-bottomless is-fullwidth is-marginless">
+      <MessageError @errorMessage={{this.errorBanner}} />
+      <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
+      <div class="field">
+        <label for="common-name" class="is-label">Common Name</label>
+        <div class="control">
+          <Input
+            @type="text"
+            @value={{this.commonName}}
+            id="common-name"
+            class="input"
+            data-test-pki-generate="commonName"
+          />
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button
+          type="submit"
+          class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+          disabled={{this.save.isRunning}}
+          data-test-policy-save
+        >
+          Generate
+        </button>
+        <button
+          type="button"
+          class="button has-left-margin-s"
+          disabled={{this.save.isRunning}}
+          {{on "click" this.cancel}}
+          data-test-pki-generate-cancel
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </form>
+{{/if}}

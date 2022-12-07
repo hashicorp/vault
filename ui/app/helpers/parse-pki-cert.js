@@ -3,15 +3,10 @@ import * as asn1js from 'asn1js';
 import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';
 
-export function parsePkiCert([model]) {
-  // model has to be the responseJSON from PKI serializer
-  // return if no certificate or if the "certificate" is actually a CRL
-  if (!model.certificate || model.certificate.includes('BEGIN X509 CRL')) {
-    return;
-  }
+export function parseCertificate(certificateContent) {
   let cert;
   try {
-    const cert_base64 = model.certificate.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
+    const cert_base64 = certificateContent.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
     const cert_der = fromBase64(cert_base64);
     const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
     cert = new Certificate({ schema: cert_asn1.result });
@@ -21,7 +16,6 @@ export function parsePkiCert([model]) {
       can_parse: false,
     };
   }
-
   // We wish to get the CN element out of this certificate's subject. A
   // subject is a list of RDNs, where each RDN is a (type, value) tuple
   // and where a type is an OID. The OID for CN can be found here:
@@ -55,6 +49,15 @@ export function parsePkiCert([model]) {
     expiry_date: expiryDate,
     issue_date: issueDate,
   };
+}
+
+export function parsePkiCert([model]) {
+  // model has to be the responseJSON from PKI serializer
+  // return if no certificate or if the "certificate" is actually a CRL
+  if (!model.certificate || model.certificate.includes('BEGIN X509 CRL')) {
+    return;
+  }
+  return parseCertificate(model.certificate);
 }
 
 export default helper(parsePkiCert);
