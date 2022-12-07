@@ -186,29 +186,6 @@ func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) 
 	return &result, err
 }
 
-// TuneAuth calls the sys/auth/[auth-path]/tune endpoint which needs sudo capability
-// Added this function as sys/mounts/auth/[auth-path]/tune called
-// using TuneMount did not need sudo capability
-func (c *Sys) TuneAuth(path string, config MountConfigInput) error {
-	return c.TuneAuthWithContext(context.Background(), path, config)
-}
-
-func (c *Sys) TuneAuthWithContext(ctx context.Context, path string, config MountConfigInput) error {
-	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
-	defer cancelFunc()
-
-	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/auth/%s/tune", path))
-	if err := r.SetJSONBody(config); err != nil {
-		return err
-	}
-
-	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
-		defer resp.Body.Close()
-	}
-	return err
-}
-
 func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 	return c.TuneMountWithContext(context.Background(), path, config)
 }

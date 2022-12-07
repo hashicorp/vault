@@ -2059,21 +2059,23 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 }
 
 // TestSystemBackend_tuneAuth_userLockoutConfig tests tuning user lockout configuration
-// for different auth methods and also tests that it cannot be tuned
-// using mounts/auth tune as it requires sudo capability
+// for different auth methods using auth/[auth-path]/tune (sudo compatible)
+// Tests that user_lockout_config can be tuned using mounts/auths/[auth-path]/tune
+// if token has sudo capability
 func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
 	err := AddTestCredentialBackend("userpass", credUserpass.Factory)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	c, b, _ := testCoreSystemBackend(t)
+	c, b, rootToken := testCoreSystemBackend(t)
 
 	// tune user_lockout_config for token auth type
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/tune")
 	req.Data["user_lockout_config"] = map[string]interface{}{
 		"lockout_threshold": "3",
 	}
+	req.ClientToken = rootToken
 
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), "tuning of user lockout configuration for auth type \"token\" not allowed") {
@@ -2096,11 +2098,13 @@ func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
 	req.Data["user_lockout_config"] = map[string]interface{}{
 		"lockout_threshold": "3",
 	}
+	req.ClientToken = rootToken
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	req = logical.TestRequest(t, logical.ReadOperation, "auth/userpass/tune")
+	req.ClientToken = rootToken
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -2113,10 +2117,13 @@ func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data["user_lockout_threshold"], uint64(3))
 	}
 
-	// tune description using mounts/auth/ tune
-	// this should work as description does not need sudo capability
+	// tune user_lockout_config using mounts/auth/ tune with rootToken
+	// this should work as user_lockout_config needs sudo capability
 	req = logical.TestRequest(t, logical.UpdateOperation, "auth/userpass/tune")
-	req.Data["description"] = "this is userpass"
+	req.Data["user_lockout_config"] = map[string]interface{}{
+		"lockout_threshold": "5",
+	}
+	req.ClientToken = rootToken
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -2130,18 +2137,18 @@ func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
 		t.Fatal("resp is nil")
 	}
 
-	if resp.Data["description"] != "this is userpass" {
-		t.Fatalf("got: %#v expect: %#v", resp.Data["user_lockout_threshold"], "this is userpass")
+	if resp.Data["user_lockout_threshold"] != uint64(5) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data["user_lockout_threshold"], uint64(5))
 	}
 
-	// tune user_lockout_config using mounts/auth/ tune
+	// tune user_lockout_config using mounts/auth/ tune without rootToken
 	// this should not work as user_lockout_config needs sudo capability
 	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/auth/userpass/tune")
 	req.Data["user_lockout_config"] = map[string]interface{}{
 		"lockout_threshold": "5",
 	}
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), "tuning of user lockout configuration using mounts tune not allowed") {
+	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), "tuning of user lockout configuration needs sudo capability") {
 		t.Fatalf("expected tune request to fail, but got resp: %#v, err: %s", resp, err)
 	}
 }

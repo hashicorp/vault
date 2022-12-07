@@ -1664,10 +1664,10 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 	}
 
 	// user_lockout configuration needs to be changed only with sudo capability
-	// if we try to change it using mounts tune, return error
+	isSudo := b.Core.tokenStore.System().(extendedSystemView).SudoPrivilege(ctx, path, req.ClientToken)
 	userLockoutConfigMap := data.Get("user_lockout_config").(map[string]interface{})
-	if len(userLockoutConfigMap) != 0 {
-		return logical.ErrorResponse("tuning of user lockout configuration using mounts tune not allowed"), logical.ErrInvalidRequest
+	if len(userLockoutConfigMap) != 0 && !isSudo {
+		return logical.ErrorResponse("tuning of user lockout configuration needs sudo capability"), logical.ErrInvalidRequest
 	}
 
 	// This call will write both logical backend's configuration as well as auth methods'.
