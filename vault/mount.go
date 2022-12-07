@@ -1505,7 +1505,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 				if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets, isNonPatchUpdate); err != nil {
 					backend.Cleanup(ctx)
 					backend = nil
-					c.logger.Error("skipping deprecated mount entry", "path", entry.Path)
+					c.logger.Error("skipping deprecated mount entry", "path", entry.Path, "error", err)
 					goto ROUTER_MOUNT
 				}
 			}

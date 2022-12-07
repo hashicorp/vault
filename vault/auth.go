@@ -827,7 +827,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential, isNonPatchUpdate); err != nil {
 					backend.Cleanup(ctx)
 					backend = nil
-					c.logger.Error("skipping deprecated credential entry", "path", entry.Path)
+					c.logger.Error("skipping deprecated credential entry", "path", entry.Path, "error", err)
 					goto ROUTER_MOUNT
 				}
 			}
