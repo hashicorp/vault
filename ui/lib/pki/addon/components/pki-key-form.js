@@ -48,13 +48,12 @@ export default class PkiKeyForm extends Component {
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
-        const { isNew, name } = this.args.model;
+        const { isNew, keyName } = this.args.model;
         yield this.args.model.save();
-        this.flashMessages.success(`Successfully ${isNew ? 'generated' : 'updated'} the key ${name}.`);
+        this.flashMessages.success(`Successfully ${isNew ? 'generated' : 'updated'} the key ${keyName}.`);
         this.args.onSave();
       }
     } catch (error) {
-      // TODO add error banner
       this.errorBanner = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
     }

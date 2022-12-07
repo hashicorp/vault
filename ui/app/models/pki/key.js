@@ -6,7 +6,6 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 const validations = {
   type: [{ type: 'presence', message: 'Type is required.' }],
 };
-
 const displayFields = ['keyId', 'keyName', 'keyType', 'keyBits'];
 const formFieldGroups = [{ default: ['keyName', 'type'] }, { 'Key parameters': ['keyType', 'keyBits'] }];
 @withModelValidations(validations)
@@ -14,28 +13,28 @@ const formFieldGroups = [{ default: ['keyName', 'type'] }, { 'Key parameters': [
 export default class PkiKeyModel extends Model {
   @service secretMountPath;
 
-  @attr('boolean') isDefault;
+  @attr('string', { detailsLabel: 'Key ID' }) keyId;
+  @attr('string', { subText: 'Optional, human-readable name for this key.' }) keyName;
+  @attr('string') privateKey;
   @attr('string', {
     noDefault: true,
-    possibleValues: ['internal', 'external'],
+    possibleValues: ['internal', 'exported'],
     subText:
       'The type of operation. If exported, the private key will be returned in the response; if internal the private key will not be returned and cannot be retrieved later.',
   })
   type;
-  @attr('string', { detailsLabel: 'Key ID' }) keyId;
-  @attr('string', { subText: 'Optional, human-readable name for this key.' }) keyName;
   @attr('string', {
-    defaultValue: 'rsa',
+    noDefault: true,
     possibleValues: ['rsa', 'ec', 'ed25519'],
     subText: 'The type of key that will be generated. Must be rsa, ed25519, or ec. ',
   })
   keyType;
   @attr('string', {
     label: 'Key bits',
-    defaultValue: '2048',
+    noDefault: true,
     subText: 'Bit length of the key to generate.',
   })
-  keyBits; // no possibleValues set here because dependent on selected key type
+  keyBits; // no possibleValues because dependent on selected key type
 
   get backend() {
     return this.secretMountPath.currentPath;

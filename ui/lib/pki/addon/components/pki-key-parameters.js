@@ -3,7 +3,7 @@ import { action } from '@ember/object';
 
 /**
  * @module PkiKeyParameters
- * PkiKeyParameters components are used to display a list of key bit options depending on the selected key type.
+ * PkiKeyParameters components are used to display a list of key bit options depending on the selected key type. The key bits field is disabled until a key type is selected.
  * If the component renders in a group, other attrs may be passed in and will be rendered using the <FormField> component
  * @example
  * ```js
@@ -21,7 +21,6 @@ const KEY_BITS_OPTIONS = {
 };
 
 export default class PkiKeyParameters extends Component {
-  // TODO clarify types here
   get keyBitOptions() {
     return KEY_BITS_OPTIONS[this.args.model.keyType];
   }
