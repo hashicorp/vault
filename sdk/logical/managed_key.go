@@ -34,10 +34,11 @@ type ManagedKey interface {
 }
 
 type (
-	ManagedKeyConsumer           func(context.Context, ManagedKey) error
-	ManagedSigningKeyConsumer    func(context.Context, ManagedSigningKey) error
-	ManagedEncryptingKeyConsumer func(context.Context, ManagedEncryptingKey) error
-	ManagedMACKeyConsumer        func(context.Context, ManagedMACKey) error
+	ManagedKeyConsumer             func(context.Context, ManagedKey) error
+	ManagedSigningKeyConsumer      func(context.Context, ManagedSigningKey) error
+	ManagedEncryptingKeyConsumer   func(context.Context, ManagedEncryptingKey) error
+	ManagedMACKeyConsumer          func(context.Context, ManagedMACKey) error
+	ManagedKeyRandomSourceConsumer func(context.Context, ManagedKeyRandomSource) error
 )
 
 type ManagedKeySystemView interface {
@@ -108,4 +109,11 @@ type ManagedMACKey interface {
 
 	// MAC generates a MAC tag using the provided algorithm for the provided value.
 	MAC(ctx context.Context, algorithm string, data []byte) ([]byte, error)
+}
+
+type ManagedKeyRandomSource interface {
+	ManagedKey
+
+	// GetRandomBytes returns a number (specified by the count parameter) of random bytes sourced from the target managed key.
+	GetRandomBytes(ctx context.Context, count int) ([]byte, error)
 }
