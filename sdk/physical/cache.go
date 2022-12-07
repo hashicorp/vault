@@ -179,11 +179,11 @@ func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 	c.metricSink.IncrCounter([]string{"cache", "miss"}, 1)
 	// Read from the underlying backend
 	ent, err := c.backend.Get(ctx, key)
-	if err != nil {
+	if err != nil || ent == nil {
 		return nil, err
 	}
 
-	// Cache the result, even if nil
+	// Cache the result
 	c.lru.Add(key, ent)
 
 	return ent, nil
