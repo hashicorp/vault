@@ -1,3 +1,3 @@
 ```release-note:bug
-core: Prevent sys/mounts/auth/[auth-path]/tune from modifying user lockout configuration.
+core: Prevent sys/mounts/auth/[auth-path]/tune from modifying user lockout configuration without sudo capability.
 ```
