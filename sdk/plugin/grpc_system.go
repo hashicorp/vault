@@ -26,6 +26,8 @@ func newGRPCSystemView(conn *grpc.ClientConn) *gRPCSystemViewClient {
 	}
 }
 
+var _ logical.SystemView = &gRPCSystemViewClient{}
+
 type gRPCSystemViewClient struct {
 	client pb.SystemViewClient
 }
@@ -175,6 +177,15 @@ func (s *gRPCSystemViewClient) PluginEnv(ctx context.Context) (*logical.PluginEn
 	}
 
 	return reply.PluginEnvironment, nil
+}
+
+func (s *gRPCSystemViewClient) VaultVersion(ctx context.Context) (string, error) {
+	reply, err := s.client.PluginEnv(ctx, &pb.Empty{})
+	if err != nil {
+		return "", err
+	}
+
+	return reply.PluginEnvironment.VaultVersion, nil
 }
 
 func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {

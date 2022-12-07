@@ -206,7 +206,7 @@ func TestLogger_ChangeLogLevels(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, logger)
 
-	assert.True(t, logger.IsDebug())
+	assert.Equal(t, log.Debug, logger.GetLevel())
 
 	// Create new named loggers from the base logger and change the levels
 	logger2 := logger.Named("test2")
@@ -215,7 +215,7 @@ func TestLogger_ChangeLogLevels(t *testing.T) {
 	logger2.SetLevel(log.Info)
 	logger3.SetLevel(log.Error)
 
-	assert.True(t, logger.IsDebug())
-	assert.True(t, logger2.IsInfo())
-	assert.True(t, logger3.IsError())
+	assert.Equal(t, log.Debug, logger.GetLevel())
+	assert.Equal(t, log.Info, logger2.GetLevel())
+	assert.Equal(t, log.Error, logger3.GetLevel())
 }

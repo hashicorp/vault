@@ -11,7 +11,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -21,13 +20,13 @@ import (
 const OASVersion = "3.0.2"
 
 // NewOASDocument returns an empty OpenAPI document.
-func NewOASDocument() *OASDocument {
+func NewOASDocument(version string) *OASDocument {
 	return &OASDocument{
 		Version: OASVersion,
 		Info: OASInfo{
 			Title:       "HashiCorp Vault API",
 			Description: "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
-			Version:     version.GetVersion().Version,
+			Version:     version,
 			License: OASLicense{
 				Name: "Mozilla Public License 2.0",
 				URL:  "https://www.mozilla.org/en-US/MPL/2.0",
