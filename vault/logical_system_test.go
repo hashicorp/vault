@@ -2067,7 +2067,6 @@ func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	c, b, rootToken := testCoreSystemBackend(t)
 
 	// tune user_lockout_config for token auth type
@@ -2076,7 +2075,6 @@ func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
 		"lockout_threshold": "3",
 	}
 	req.ClientToken = rootToken
-
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), "tuning of user lockout configuration for auth type \"token\" not allowed") {
 		t.Fatalf("expected tune request to fail, but got resp: %#v, err: %s", resp, err)
@@ -2093,7 +2091,6 @@ func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	req = logical.TestRequest(t, logical.UpdateOperation, "auth/userpass/tune")
 	req.Data["user_lockout_config"] = map[string]interface{}{
 		"lockout_threshold": "3",
@@ -2112,7 +2109,6 @@ func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
 	if resp == nil {
 		t.Fatal("resp is nil")
 	}
-
 	if resp.Data["user_lockout_threshold"] != uint64(3) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data["user_lockout_threshold"], uint64(3))
 	}
@@ -2136,7 +2132,6 @@ func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
 	if resp == nil {
 		t.Fatal("resp is nil")
 	}
-
 	if resp.Data["user_lockout_threshold"] != uint64(5) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data["user_lockout_threshold"], uint64(5))
 	}
