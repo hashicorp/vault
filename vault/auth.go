@@ -825,7 +825,9 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				// Shutdown or skip on initial mount, depending on whether or not this is a major/minor upgrade.
 				isNonPatchUpdate := isMajorOrMinorUpgrade(c.currentVaultVersion.Version, entry.LastMounted)
 				if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential, isNonPatchUpdate); err != nil {
-					c.logger.Error("skipping deprecated credential entry", "path", entry.Path, "error", err)
+					backend.Cleanup(ctx)
+					backend = nil
+					c.logger.Error("skipping deprecated credential entry", "path", entry.Path)
 					goto ROUTER_MOUNT
 				}
 			}
