@@ -2059,7 +2059,7 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 }
 
 // TestSystemBackend_tuneAuth_userLockoutConfig tests tuning user lockout configuration
-// for different auth methods using auth/[auth-path]/tune (needs sudo compability)
+// for different auth methods using auth/[auth-path]/tune (needs sudo capability)
 // Tests that user_lockout_config can be tuned using mounts/auths/[auth-path]/tune
 // if token has sudo capability
 func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
