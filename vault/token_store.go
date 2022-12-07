@@ -659,7 +659,17 @@ func (ts *TokenStore) paths() []*framework.Path {
 		ExistenceCheck: ts.tokenStoreRoleExistenceCheck,
 	}
 
-	tokenutil.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy", "token_num_uses"})
+	tokenutil.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{
+		"token_bound_cidrs",
+		"token_explicit_max_ttl",
+		"token_max_ttl",
+		"token_no_default_policy",
+		"token_period",
+		// token_policies omitted, as roles use allowed_policies(_glob), disallowed_policies(_glob) instead
+		"token_type",
+		"token_ttl",
+		"token_num_uses",
+	})
 	p = append(p, rolesPath)
 
 	return p
@@ -3140,9 +3150,20 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	sysView := ts.System().(extendedSystemView)
 
+	// At this point, te.TTL is the TTL requested in the token creation API without any policy applied to it.
 	// Only calculate a TTL if you are A) periodic, B) have a TTL, C) do not have a TTL and are not a root token
 	if periodToUse > 0 || te.TTL > 0 || (te.TTL == 0 && !strutil.StrListContains(te.Policies, "root")) {
-		ttl, warnings, err := framework.CalculateTTL(sysView, 0, te.TTL, periodToUse, 0, explicitMaxTTLToUse, time.Unix(te.CreationTime, 0))
+		var maxTTL time.Duration
+		if role != nil {
+			// If using a role, and no TTL specified in token creation API request, then apply role configured
+			// token_ttl value, if any.
+			if te.TTL == 0 {
+				te.TTL = role.TokenTTL
+			}
+			// If using a role, role token_max_ttl applies further restriction over system or mount max_lease_ttl.
+			maxTTL = role.TokenMaxTTL
+		}
+		ttl, warnings, err := framework.CalculateTTL(sysView, 0, te.TTL, periodToUse, maxTTL, explicitMaxTTLToUse, time.Unix(te.CreationTime, 0))
 		if err != nil {
 			return nil, err
 		}
@@ -3502,6 +3523,8 @@ func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *fr
 
 	req.Auth.Period = role.TokenPeriod
 	req.Auth.ExplicitMaxTTL = role.TokenExplicitMaxTTL
+	req.Auth.TTL = role.TokenTTL
+	req.Auth.MaxTTL = role.TokenMaxTTL
 	return &logical.Response{Auth: req.Auth}, nil
 }
 
