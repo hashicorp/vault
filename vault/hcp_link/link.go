@@ -54,9 +54,7 @@ type HCPLinkVault struct {
 	running      bool
 }
 
-var _ HCPLinkVaultInterface = &HCPLinkVault{}
-
-func NewHCPLink(linkConf *configutil.HCPLinkConfig, core *vault.Core, logger hclog.Logger) (*WrappedHCPLinkVault, error) {
+func NewHCPLink(linkConf *configutil.HCPLinkConfig, core *vault.Core, logger hclog.Logger) (*HCPLinkVault, error) {
 	if linkConf == nil {
 		return nil, nil
 	}
@@ -137,8 +135,7 @@ func NewHCPLink(linkConf *configutil.HCPLinkConfig, core *vault.Core, logger hcl
 		return nil, fmt.Errorf("failed to start hcp link, %w", err)
 	}
 
-	wrapped := &WrappedHCPLinkVault{hcpLinkVault}
-	return wrapped, nil
+	return hcpLinkVault, nil
 }
 
 func initializeCapabilities(linkConf *configutil.HCPLinkConfig, scadaConfig *scada.Config, scadaProvider scada.SCADAProvider, core *vault.Core, logger hclog.Logger) (map[string]capabilities.Capability, error) {

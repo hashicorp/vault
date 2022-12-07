@@ -16,12 +16,12 @@ import (
 )
 
 type VaultHCPLinkInstances struct {
-	instances []*hcp_link.WrappedHCPLinkVault
+	instances []*hcp_link.HCPLinkVault
 }
 
 func NewVaultHCPLinkInstances() *VaultHCPLinkInstances {
 	i := &VaultHCPLinkInstances{
-		instances: make([]*hcp_link.WrappedHCPLinkVault, 0),
+		instances: make([]*hcp_link.HCPLinkVault, 0),
 	}
 
 	return i
