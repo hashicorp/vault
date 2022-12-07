@@ -15,17 +15,17 @@
                 class="select"
                 id={{attr.name}}
                 name={{attr.name}}
-                onchange={{this.onKeyBitsChange}}
                 data-test-input={{attr.name}}
                 disabled={{unless @model.keyType true}}
+                {{on "change" this.onKeyBitsChange}}
               >
-                {{#if attr.options.noDefault}}
+                {{#if (and attr.options.noDefault (not @model.keyType))}}
                   <option value="">
                     Select one
                   </option>
                 {{/if}}
                 {{#each this.keyBitOptions as |val|}}
-                  <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{val}}>
+                  <option selected={{eq (get @model "keyBits") val}} value={{val}}>
                     {{val}}
                   </option>
                 {{/each}}
@@ -49,7 +49,7 @@
       @model={{@model}}
       @modelValidations={{@modelValidations}}
       @showHelpText={{false}}
-      @onChange={{this.onSignatureBitsOrKeyTypeChange}}
+      @onChange={{this.handleSelection}}
     />
   {{/if}}
 {{/each}}
