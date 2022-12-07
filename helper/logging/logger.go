@@ -139,10 +139,11 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 	}
 
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
-		Name:       config.Name,
-		Level:      config.LogLevel,
-		Output:     io.MultiWriter(writers...),
-		JSONFormat: config.isFormatJson(),
+		Name:              config.Name,
+		Level:             config.LogLevel,
+		IndependentLevels: true,
+		Output:            io.MultiWriter(writers...),
+		JSONFormat:        config.isFormatJson(),
 	})
 
 	return logger, nil
@@ -188,21 +189,12 @@ func ParseLogLevel(logLevel string) (log.Level, error) {
 
 // TranslateLoggerLevel returns the string that corresponds with logging level of the hclog.Logger.
 func TranslateLoggerLevel(logger log.Logger) (string, error) {
-	var result string
+	logLevel := logger.GetLevel()
 
-	if logger.IsTrace() {
-		result = "trace"
-	} else if logger.IsDebug() {
-		result = "debug"
-	} else if logger.IsInfo() {
-		result = "info"
-	} else if logger.IsWarn() {
-		result = "warn"
-	} else if logger.IsError() {
-		result = "error"
-	} else {
+	switch logLevel {
+	case log.Trace, log.Debug, log.Info, log.Warn, log.Error:
+		return logLevel.String(), nil
+	default:
 		return "", fmt.Errorf("unknown log level")
 	}
-
-	return result, nil
 }

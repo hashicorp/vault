@@ -42,7 +42,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/sha3"
 )
@@ -4444,7 +4444,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	// Set up target document and convert to map[string]interface{} which is what will
 	// be received from plugin backends.
-	doc := framework.NewOASDocument()
+	doc := framework.NewOASDocument(version.Version)
 
 	genericMountPaths, _ := d.Get("generic_mount_paths").(bool)
 
