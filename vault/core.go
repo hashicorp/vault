@@ -525,6 +525,9 @@ type Core struct {
 	// and login counter, last failed login time as value
 	userFailedLoginInfo map[FailedLoginUser]*FailedLoginInfo
 
+	// userFailedLoginInfoLock controls access to the userFailedLoginInfoMap
+	userFailedLoginInfoLock sync.RWMutex
+
 	enableMlock bool
 
 	// This can be used to trigger operations to stop running when Vault is
@@ -3453,6 +3456,39 @@ func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]
 		return ""
 	}
 	return resp.Data["role"].(string)
+}
+
+// aliasNameFromLoginRequest will determine the aliasName from the login Request
+func (c *Core) aliasNameFromLoginRequest(ctx context.Context, req *logical.Request) (string, error) {
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// ns path is added while checking matching backend
+	mountPath := strings.TrimPrefix(req.MountPoint, ns.Path)
+
+	matchingBackend := c.router.MatchingBackend(ctx, mountPath)
+	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
+		// pathLoginAliasLookAhead operation does not apply to this request
+		return "", nil
+	}
+
+	path := strings.ReplaceAll(req.Path, mountPath, "")
+
+	resp, err := matchingBackend.HandleRequest(ctx, &logical.Request{
+		MountPoint: req.MountPoint,
+		Path:       path,
+		Operation:  logical.AliasLookaheadOperation,
+		Data:       req.Data,
+		Storage:    c.router.MatchingStorageByAPIPath(ctx, req.Path),
+	})
+	if err != nil || resp.Auth.Alias == nil {
+		return "", nil
+	}
+	return resp.Auth.Alias.Name, nil
 }
 
 // ListMounts will provide a slice containing a deep copy each mount entry
