@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) pathConfig() *framework.Path {
+func (b *backend) pathKeysConfig() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/config",
 		Fields: map[string]*framework.FieldSchema{
@@ -58,15 +58,15 @@ disables automatic rotation for the key.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigWrite,
+			logical.UpdateOperation: b.pathKeysConfigWrite,
 		},
 
-		HelpSynopsis:    pathConfigHelpSyn,
-		HelpDescription: pathConfigHelpDesc,
+		HelpSynopsis:    pathKeysConfigHelpSyn,
+		HelpDescription: pathKeysConfigHelpDesc,
 	}
 }
 
-func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (resp *logical.Response, retErr error) {
+func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (resp *logical.Response, retErr error) {
 	name := d.Get("name").(string)
 
 	// Check if the policy already exists before we lock everything
@@ -228,9 +228,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	return resp, p.Persist(ctx, req.Storage)
 }
 
-const pathConfigHelpSyn = `Configure a named encryption key`
+const pathKeysConfigHelpSyn = `Configure a named encryption key`
 
-const pathConfigHelpDesc = `
+const pathKeysConfigHelpDesc = `
 This path is used to configure the named key. Currently, this
 supports adjusting the minimum version of the key allowed to
 be used for decryption via the min_decryption_version parameter.
