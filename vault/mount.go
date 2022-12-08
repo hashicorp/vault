@@ -1493,14 +1493,14 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// plugin, skip backend initialization and mount the data for posterity.
 		if versions.IsBuiltinVersion(entry.RunningVersion) {
 			shutdown := isMajorOrMinorUpgrade(c.currentVaultVersion.Version, entry.LastMounted)
-			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential)
+			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets)
 			if shutdown && err != nil {
 				go c.ShutdownCoreError(err)
 				return errLoadAuthFailed
 			} else if err != nil {
 				backend.Cleanup(ctx)
 				backend = nil
-				c.logger.Error("skipping deprecated credential entry", "path", entry.Path, "error", err)
+				c.logger.Error("skipping deprecated mount entry", "path", entry.Path, "error", err)
 				goto ROUTER_MOUNT
 			}
 		}
