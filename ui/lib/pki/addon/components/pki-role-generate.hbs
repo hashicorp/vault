@@ -39,7 +39,7 @@
     </div>
   </div>
 {{else}}
-  <form {{on "submit" (perform this.save)}}>
+  <form {{on "submit" (perform this.save)}} data-test-pki-generate-cert-form>
     <div class="box is-bottomless is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorBanner}} />
       <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
