@@ -1572,7 +1572,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 	}
 
 	if err := c.persistMounts(ctx, c.mounts, nil); err != nil {
-		c.logger.Error("failed to persist last mounted version to mount table", "error", err)
+		return fmt.Errorf("failed to persist last mounted version to mount table: %w", err)
 	}
 
 	return nil

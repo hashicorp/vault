@@ -929,7 +929,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 	}
 
 	if err := c.persistAuth(ctx, c.auth, nil); err != nil {
-		c.logger.Error("failed to persist last mounted version to auth table", "error", err)
+		return fmt.Errorf("failed to persist last mounted version to auth table: %w", err)
 	}
 
 	return nil
