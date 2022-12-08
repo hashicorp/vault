@@ -324,3 +324,96 @@ func TestIdentityStore_LockoutCounterResetTest(t *testing.T) {
 		t.Fatalf("expected to see invalid username or password error as user is not locked out, got %v", err)
 	}
 }
+
+func TestIdentityStore_UnlockUserTest(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	active := cluster.Cores[0].Client
+	standby := cluster.Cores[1].Client
+
+	// enable userpass auth method on path userpass
+	err := active.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// get mount accessor for userpass mount
+	secret, err := standby.Logical().Read("sys/auth/userpass")
+	if err != nil || secret == nil {
+		t.Fatal(err)
+	}
+	mountAccessor := secret.Data["accessor"].(string)
+
+	// tune auth mount
+	userlockoutConfig := &api.UserLockoutConfigInput{
+		LockoutThreshold: "2",
+		LockoutDuration:  "5m",
+	}
+	err = active.Sys().TuneMount("auth/userpass", api.MountConfigInput{
+		UserLockoutConfig: userlockoutConfig,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a user for userpass
+	_, err = standby.Logical().Write("auth/userpass/users/bsmith", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// login failure count 1
+	standby.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+		"password": "wrongPassword",
+	})
+	// login failure count 2
+	standby.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+		"password": "wrongPassword",
+	})
+	// login : permission denied as user locked out
+	_, err = standby.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+		"password": "training",
+	})
+	if err == nil {
+		t.Fatal("expected login to fail as user locked out")
+	}
+	if !strings.Contains(err.Error(), logical.ErrPermissionDenied.Error()) {
+		t.Fatalf("expected to see permission denied error as user locked out, got %v", err)
+	}
+
+	// unlock user
+	_, err = standby.Logical().Write("sys/lockedusers/"+mountAccessor+"/unlock/bsmith", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// login: should be successful as user unlocked
+	_, err = standby.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal("expected login to succeed as user is unlocked")
+	}
+
+	// unlock user with wrong mount_accessor
+	_, err = active.Logical().Write("sys/lockedusers/mountAccessor/unlock/bsmith", nil)
+	if err == nil {
+		t.Fatal("expected unlock user to fail as wrong mount accessor provided")
+	}
+	expected := "locked user with mount_accessor mountAccessor and alias_identifier bsmith not found"
+	if !strings.Contains(err.Error(), expected) {
+		t.Fatalf("expected %v, got %v", expected, err)
+	}
+}

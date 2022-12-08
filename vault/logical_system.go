@@ -176,6 +176,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.mountPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.authPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.lockerUserPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.leasePaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.policyPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.wrappingPaths()...)
@@ -2223,7 +2224,7 @@ func (b *SystemBackend) handleUnlockUser(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	lockedUserStoragePath := ns.ID + "/" + mountAccessor + "/" + aliasName
+	lockedUserStoragePath := coreLockedUsersPath + ns.ID + "/" + mountAccessor + "/" + aliasName
 
 	// get the entry for the locked user
 	existingEntry, err := b.Core.barrier.Get(ctx, lockedUserStoragePath)
