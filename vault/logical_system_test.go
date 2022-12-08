@@ -2113,9 +2113,29 @@ func TestSystemBackend_tuneAuth_userLockoutConfig(t *testing.T) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data["user_lockout_threshold"], uint64(3))
 	}
 
+	// tune auth mount's description using mounts/auth/ tune
+	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/auth/userpass/tune")
+	req.Data["description"] = "testing"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts/auth/userpass/tune")
+	req.Data["description"] = "testing"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("resp is nil")
+	}
+	if resp.Data["description"] != "testing" {
+		t.Fatalf("got: %#v expect: %#v", resp.Data["description"], "testing")
+	}
+
 	// tune user_lockout_config using mounts/auth/ tune with rootToken
 	// this should work as user_lockout_config needs sudo capability
-	req = logical.TestRequest(t, logical.UpdateOperation, "auth/userpass/tune")
+	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/auth/userpass/tune")
 	req.Data["user_lockout_config"] = map[string]interface{}{
 		"lockout_threshold": "5",
 	}
