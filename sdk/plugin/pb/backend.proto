@@ -47,6 +47,13 @@ message Paths {
 	// should be seal wrapped with extra encryption. It is exact matching
 	// unless it ends with '/' in which case it will be treated as a prefix.
 	repeated string seal_wrap_storage = 4;
+
+	// WriteForwardedStorage are storage paths that, when running on a PR
+	// Secondary cluster, cause a GRPC call up to the PR Primary cluster's
+	// active node to handle storage.Put(...) and storage.Delete(...) events.
+	//
+	// See extended note in /sdk/logical/logical.go.
+	repeated string write_forwarded_storage = 5;
 }
 
 message Request {
