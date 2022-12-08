@@ -1708,7 +1708,7 @@ func (c *ServerCommand) configureLogging(config *server.Config) (hclog.Intercept
 	return loghelper.Setup(logCfg, c.logWriter)
 }
 
-func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.WrappedHCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.WrappedHCPLinkVault, error) {
+func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.HCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.HCPLinkVault, error) {
 	// trigger a shutdown
 	if hcpLinkVault != nil {
 		err := hcpLinkVault.Shutdown()
