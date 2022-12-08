@@ -2630,7 +2630,6 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		b.Backend.Logger().Error("error occurred during enable credential", "path", me.Path, "error", err)
 		return handleError(err)
 	}
-
 	return resp, nil
 }
 
