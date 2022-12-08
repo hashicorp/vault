@@ -967,13 +967,9 @@ func (c *Core) taintMountEntry(ctx context.Context, nsID, mountPath string, upda
 }
 
 // handleDeprecatedMountEntry handles the Deprecation Status of the specified
-// mount entry's builtin engine as follows:
-//
-// * Supported - do nothing
-// * Deprecated - log a warning about builtin deprecation
-// * PendingRemoval - log an error about builtin deprecation and return an error
-// if VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
-// * Removed - log an error about builtin deprecation and return an error
+// mount entry's builtin engine. Warnings are appended to the returned response
+// and logged. Errors are returned with a nil response to be processed by the
+// caller.
 func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (*logical.Response, error) {
 	resp := &logical.Response{}
 
@@ -994,25 +990,22 @@ func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry
 
 	status, ok := c.builtinRegistry.DeprecationStatus(t, pluginType)
 	if ok {
-		// Deprecation sublogger with some identifying information
-		dl := c.logger.With("name", t, "type", pluginType, "status", status, "path", entry.Path)
-
 		switch status {
 		case consts.Deprecated:
-			dl.Warn(errMountDeprecated.Error())
+			c.logger.Warn("mounting deprecated builtin", "name", t, "type", pluginType, "path", entry.Path)
 			resp.AddWarning(errMountDeprecated.Error())
 			return resp, nil
 
 		case consts.PendingRemoval:
-			dl.Error(errMountPendingRemoval.Error())
 			if c.pendingRemovalMountsAllowed {
 				c.Logger().Info("mount allowed by environment variable", "env", consts.EnvVaultAllowPendingRemovalMounts)
 				resp.AddWarning(errMountPendingRemoval.Error())
 				return resp, nil
 			}
-			return nil, fmt.Errorf("could not mount %q: %w", t, errMountPendingRemoval)
+			return nil, errMountPendingRemoval
+
 		case consts.Removed:
-			return nil, fmt.Errorf("could not mount %q: %w", t, errMountRemoved)
+			return nil, errMountRemoved
 		}
 	}
 	return nil, nil
@@ -1497,12 +1490,12 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			shutdown := isMajorOrMinorUpgrade(version.Version, entry.LastMounted)
 			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets)
 			if shutdown && err != nil {
-				go c.ShutdownCoreError(err)
+				go c.ShutdownCoreError(fmt.Errorf("could not mount %q: %w", entry.Type, err))
 				return errLoadMountsFailed
 			} else if err != nil {
+				c.logger.Error("skipping deprecated mount entry", "name", entry.Type, "path", entry.Path, "error", err)
 				backend.Cleanup(ctx)
 				backend = nil
-				c.logger.Error("skipping deprecated mount entry", "path", entry.Path, "error", err)
 				goto ROUTER_MOUNT
 			}
 		}

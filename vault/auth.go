@@ -833,12 +833,12 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			shutdown := isMajorOrMinorUpgrade(version.Version, entry.LastMounted)
 			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential)
 			if shutdown && err != nil {
-				go c.ShutdownCoreError(err)
+				go c.ShutdownCoreError(fmt.Errorf("could not mount %q: %w", entry.Type, err))
 				return errLoadAuthFailed
 			} else if err != nil {
+				c.logger.Error("skipping deprecated credential entry", "name", entry.Type, "path", entry.Path, "error", err)
 				backend.Cleanup(ctx)
 				backend = nil
-				c.logger.Error("skipping deprecated credential entry", "path", entry.Path, "error", err)
 				goto ROUTER_MOUNT
 			}
 		}
