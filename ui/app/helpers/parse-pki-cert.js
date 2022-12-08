@@ -48,6 +48,8 @@ export function parseCertificate(certificateContent) {
     common_name: commonName,
     expiry_date: expiryDate,
     issue_date: issueDate,
+    not_valid_after: expiryDate.valueOf(),
+    not_valid_before: issueDate.valueOf(),
   };
 }
 

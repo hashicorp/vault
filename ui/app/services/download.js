@@ -1,13 +1,12 @@
 import Service from '@ember/service';
 
-// SAMPLE CSV FORMAT ('content' argument)
-// Must be a string with each row \n separated and each column comma separated
-// 'Namespace path,Authentication method,Total clients,Entity clients,Non-entity clients\n
-//  namespacelonglonglong4/,,191,171,20\n
-//  namespacelonglonglong4/,auth/method/uMGBU,35,20,15\n'
-
-export default class DownloadCsvService extends Service {
-  download(filename, content) {
+export default class DownloadService extends Service {
+  // SAMPLE CSV FORMAT ('content' argument)
+  // Must be a string with each row \n separated and each column comma separated
+  // 'Namespace path,Authentication method,Total clients,Entity clients,Non-entity clients\n
+  //  namespacelonglonglong4/,,191,171,20\n
+  //  namespacelonglonglong4/,auth/method/uMGBU,35,20,15\n'
+  csv(filename, content) {
     // even though Blob type 'text/csv' is specified below, some browsers (ex. Firefox) require the filename has an explicit extension
     const formattedFilename = `${filename?.replace(/\s+/g, '-')}.csv` || 'vault-data.csv';
     const { document, URL } = window;
