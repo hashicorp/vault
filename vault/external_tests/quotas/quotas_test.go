@@ -253,6 +253,37 @@ func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
 	require.Zero(t, numFail)
 }
 
+func TestQuotas_RateLimitQuota_DefaultExemptPaths(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
+
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	_, err := client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
+		"rate": 1,
+	})
+	require.NoError(t, err)
+
+	resp, err := client.Logical().Read("sys/health")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// The second sys/health call should not fail as /v1/sys/health is
+	// part of the default exempt paths
+	resp, err = client.Logical().Read("sys/health")
+	require.NoError(t, err)
+	// If the response is nil, then we are being rate limited
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+}
+
 func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	cluster := vault.NewTestCluster(t, conf, opts)
