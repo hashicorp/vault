@@ -3,16 +3,21 @@ import { inject as service } from '@ember/service';
 export default class PkiRoleGenerateRoute extends Route {
   @service store;
   @service secretMountPath;
+  @service pathHelp;
+
+  beforeModel() {
+    // Must call this promise before the model hook otherwise
+    // the model doesn't hydrate from OpenAPI correctly.
+    return this.pathHelp.getNewModel('pki/certificate/generate', this.secretMountPath.currentPath);
+  }
 
   async model() {
     const { role } = this.paramsFor('roles/role');
-    // const adapter = this.store.adapterFor('pki/role');
-    return {
-      role,
-      backend: this.secretMountPath.currentPath,
-    };
-    // return adapter.generateCertificate(this.secretMountPath.currentPath, role);
+    return this.store.createRecord('pki/certificate/generate', {
+      name: role,
+    });
   }
+
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     const { role } = this.paramsFor('roles/role');

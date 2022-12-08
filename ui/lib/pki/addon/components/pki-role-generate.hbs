@@ -1,4 +1,4 @@
-{{#if this.certificate}}
+{{#if @model.serialNumber}}
   <Toolbar>
     <ToolbarActions>
       <button type="button" class="toolbar-link" {{on "click" this.download}} data-test-database-connection-delete>
@@ -11,15 +11,20 @@
       </button>
     </ToolbarActions>
   </Toolbar>
-  {{#each-in this.certificate as |key val|}}
-    {{#if (eq key "contents")}}
-      <InfoTableRow @label="Certificate" @value={{val}}>
-        <MaskedInput @value={{val}} @name="Certificate" @displayOnly={{true}} @allowCopy={{true}} />
+
+  {{#each @model.formFields as |attr|}}
+    {{#if (eq attr.name "certificate")}}
+      <InfoTableRow @label="Certificate" @value={{@model.certificate}}>
+        <MaskedInput @value={{@model.certificate}} @name="Certificate" @displayOnly={{true}} @allowCopy={{true}} />
       </InfoTableRow>
     {{else}}
-      <InfoTableRow @label={{humanize (dasherize key)}} @value={{val}} />
+      <InfoTableRow
+        @label={{or attr.options.label (humanize (dasherize attr.name))}}
+        @value={{get @model attr.name}}
+        @formatDate={{if (eq attr.type "date") "MMM d yyyy HH:mm:ss a zzzz"}}
+      />
     {{/if}}
-  {{/each-in}}
+  {{/each}}
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
       <button
@@ -38,18 +43,7 @@
     <div class="box is-bottomless is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorBanner}} />
       <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
-      <div class="field">
-        <label for="common-name" class="is-label">Common Name</label>
-        <div class="control">
-          <Input
-            @type="text"
-            @value={{this.commonName}}
-            id="common-name"
-            class="input"
-            data-test-pki-generate="commonName"
-          />
-        </div>
-      </div>
+      <FormFieldGroupsLoop @model={{@model}} @mode="create" @groupName="formFieldGroups" />
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
