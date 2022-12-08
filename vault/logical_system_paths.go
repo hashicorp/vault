@@ -2052,3 +2052,29 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 		},
 	}
 }
+
+func (b *SystemBackend) lockerUserPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "lockedusers/(?P<mount_accessor>.+?)/unlock/(?P<alias_identifier>.+)",
+			Fields: map[string]*framework.FieldSchema{
+				"mount_accessor": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["auth_tune"][0]),
+				},
+				"alias_identifier": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleUnlockUser,
+					Summary:  "Unlocks the user with given mount_accessor and alias_identifier",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["auth_tune"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["auth_tune"][1]),
+		},
+	}
+}

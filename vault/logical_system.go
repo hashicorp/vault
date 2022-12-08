@@ -2202,6 +2202,58 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	return resp, nil
 }
 
+// handleUnlockUser is used to unlock user with given mount_accessor and alias_identifier
+func (b *SystemBackend) handleUnlockUser(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	mountAccessor := data.Get("mount_accessor").(string)
+	if mountAccessor == "" {
+		return logical.ErrorResponse(
+				"missing mount_accessor"),
+			logical.ErrInvalidRequest
+	}
+
+	aliasName := data.Get("alias_identifier").(string)
+	if aliasName == "" {
+		return logical.ErrorResponse(
+				"missing alias_identifier"),
+			logical.ErrInvalidRequest
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	lockedUserStoragePath := ns.ID + "/" + mountAccessor + "/" + aliasName
+
+	// get the entry for the locked user
+	existingEntry, err := b.Core.barrier.Get(ctx, lockedUserStoragePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if existingEntry == nil {
+		return nil, logical.CodedError(http.StatusNotFound,
+			fmt.Sprintf("locked user with mount_accessor %s and alias_identifier %s not found", mountAccessor, aliasName))
+	}
+
+	// if exists, remove it from storage
+	if err := b.Core.barrier.Delete(ctx, lockedUserStoragePath); err != nil {
+		return nil, err
+	}
+
+	loginUserInfoKey := FailedLoginUser{
+		aliasName:     aliasName,
+		mountAccessor: mountAccessor,
+	}
+
+	// remove it from userFailedLoginInfo map
+	if err := updateUserFailedLoginInfo(ctx, b.Core, loginUserInfoKey, nil, true); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 // handleLease is use to view the metadata for a given LeaseID
 func (b *SystemBackend) handleLeaseLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	leaseID := data.Get("lease_id").(string)
