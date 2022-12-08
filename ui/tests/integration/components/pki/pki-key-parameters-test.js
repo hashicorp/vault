@@ -74,25 +74,25 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
     );
 
     await fillIn(SELECTORS.keyType, 'ec');
-    await fillIn(SELECTORS.keyBits, 384);
+    await fillIn(SELECTORS.keyBits, '384');
     assert.strictEqual(this.model.keyType, 'ec', 'sets the new selected value for key_type on the model.');
     assert.strictEqual(
       this.model.keyBits,
-      384,
+      '384',
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
     await fillIn(SELECTORS.signatureBits, '384');
     assert.strictEqual(
       this.model.signatureBits,
-      384,
+      '384',
       'sets the new selected value for signature_bits on the model.'
     );
 
     await fillIn(SELECTORS.signatureBits, '0');
     assert.strictEqual(
       this.model.signatureBits,
-      0,
+      '0',
       'sets the default value for signature_bits on the model.'
     );
   });
