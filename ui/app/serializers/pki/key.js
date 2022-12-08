@@ -2,6 +2,10 @@ import ApplicationSerializer from '../application';
 
 export default class PkiKeySerializer extends ApplicationSerializer {
   primaryKey = 'key_id';
+  attrs = {
+    type: { serialize: false },
+  };
+
   // rehydrate each keys model so all model attributes are accessible from the LIST response
   normalizeItems(payload) {
     if (payload.data) {

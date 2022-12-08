@@ -5,7 +5,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/roles/form';
 
-module('Integration | Component | pki-key-parameters', function (hooks) {
+module('Integration | Component | pki key parameters', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
@@ -47,17 +47,17 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
       { owner: this.engine }
     );
     assert.strictEqual(this.model.keyType, 'rsa', 'sets the default value for key_type on the model.');
-    assert.strictEqual(this.model.keyBits, 2048, 'sets the default value for key_bits on the model.');
+    assert.strictEqual(this.model.keyBits, '2048', 'sets the default value for key_bits on the model.');
     assert.strictEqual(
       this.model.signatureBits,
-      0,
+      '0',
       'sets the default value for signature_bits on the model.'
     );
     await fillIn(SELECTORS.keyType, 'ec');
     assert.strictEqual(this.model.keyType, 'ec', 'sets the new selected value for key_type on the model.');
     assert.strictEqual(
       this.model.keyBits,
-      256,
+      '256',
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
@@ -69,30 +69,30 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
     );
     assert.strictEqual(
       this.model.keyBits,
-      0,
+      '0',
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
     await fillIn(SELECTORS.keyType, 'ec');
-    await fillIn(SELECTORS.keyBits, 384);
+    await fillIn(SELECTORS.keyBits, '384');
     assert.strictEqual(this.model.keyType, 'ec', 'sets the new selected value for key_type on the model.');
     assert.strictEqual(
       this.model.keyBits,
-      384,
+      '384',
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
     await fillIn(SELECTORS.signatureBits, '384');
     assert.strictEqual(
       this.model.signatureBits,
-      384,
+      '384',
       'sets the new selected value for signature_bits on the model.'
     );
 
     await fillIn(SELECTORS.signatureBits, '0');
     assert.strictEqual(
       this.model.signatureBits,
-      0,
+      '0',
       'sets the default value for signature_bits on the model.'
     );
   });
