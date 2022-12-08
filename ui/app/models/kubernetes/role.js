@@ -2,6 +2,7 @@ import Model, { attr } from '@ember-data/model';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import { tracked } from '@glimmer/tracking';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required' }],
@@ -52,7 +53,7 @@ export default class KubernetesRoleModel extends Model {
   })
   serviceAccountName;
 
-  @attr('array', {
+  @attr('string', {
     label: 'Allowed Kubernetes namespaces',
     subText:
       'A list of the valid Kubernetes namespaces in which this role can be used for creating service accounts. If set to "*" all namespaces are allowed.',
@@ -85,6 +86,7 @@ export default class KubernetesRoleModel extends Model {
 
   @attr('string') generatedRoleRules;
 
+  @tracked _generationPreference;
   get generationPreference() {
     // when the user interacts with the radio cards the value will be set to the pseudo prop which takes precedence
     if (this._generationPreference) {
@@ -102,12 +104,14 @@ export default class KubernetesRoleModel extends Model {
     return pref;
   }
   set generationPreference(pref) {
-    // unset related model props
+    // unset model props specific to filteredFormFields when changing preference
     // only one of service_account_name, kubernetes_role_name or generated_role_rules can be set
-    // these correspond to the 3 options for role generation
-    this.serviceAccountName = null;
-    this.kubernetesRoleName = null;
-    this.generatedRoleRules = null;
+    const props = {
+      basic: ['kubernetesRoleType', 'kubernetesRoleName', 'generatedRoleRules', 'nameTemplate'],
+      expanded: ['serviceAccountName', 'generatedRoleRules'],
+      full: ['serviceAccountName', 'kubernetesRoleName'],
+    }[pref];
+    props.forEach((prop) => (this[prop] = null));
     this._generationPreference = pref;
   }
 
@@ -115,7 +119,7 @@ export default class KubernetesRoleModel extends Model {
     // return different form fields based on generationPreference
     const hiddenFieldIndices = {
       basic: [2, 3, 7], // kubernetesRoleType, kubernetesRoleName and nameTemplate
-      expanded: [1, 7], // serviceAccountName and nameTemplate
+      expanded: [1], // serviceAccountName
       full: [1, 3], // serviceAccountName and kubernetesRoleName
     }[this.generationPreference];
 
