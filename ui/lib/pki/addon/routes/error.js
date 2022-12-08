@@ -17,5 +17,6 @@ export default class PkiRolesErrorRoute extends Route {
       { label: 'Certificates', route: 'certificates.index' },
       { label: 'Keys', route: 'keys.index' },
     ];
+    controller.title = this.secretMountPath.currentPath;
   }
 }
