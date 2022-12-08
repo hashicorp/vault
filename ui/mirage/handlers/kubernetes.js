@@ -72,6 +72,18 @@ export default function (server) {
       errors = ["'kubernetes_namespace' is required"];
     }
     // creds cannot be fetched after creation so we don't need to store them
-    return errors ? new Response(400, {}, { errors }) : new Response(204);
+    return errors
+      ? new Response(400, {}, { errors })
+      : {
+          request_id: '58fefc6c-5195-c17a-94f2-8f889f3df57c',
+          lease_id: 'kubernetes/creds/default-role/aWczfcfJ7NKUdiirJrPXIs38',
+          renewable: false,
+          lease_duration: 3600,
+          data: {
+            service_account_name: 'default',
+            service_account_namespace: 'default',
+            service_account_token: 'eyJhbGciOiJSUzI1NiIsImtpZCI6Imlr',
+          },
+        };
   });
 }

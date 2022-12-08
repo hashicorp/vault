@@ -30,4 +30,8 @@ export default class KubernetesRoleAdapter extends NamedPathAdapter {
       return resp;
     });
   }
+  generateCredentials(backend, data) {
+    const generateCredsUrl = `${this.buildURL()}/${encodePath(backend)}/creds/${data.role}`;
+    return this.ajax(generateCredsUrl, 'POST', { data });
+  }
 }
