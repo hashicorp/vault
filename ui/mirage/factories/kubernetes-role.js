@@ -1,4 +1,13 @@
-import { Factory } from 'ember-cli-mirage';
+import { Factory, trait } from 'ember-cli-mirage';
+
+const generated_role_rules = `rules:
+- apiGroups: [""]
+resources: ["secrets", "services"]
+verbs: ["get", "watch", "list", "create", "delete", "deletecollection", "patch", "update"]
+`;
+const name_template = '{{.FieldName | lowercase}}';
+const extra_annotations = { foo: 'bar', bar: 'baz' };
+const extra_labels = { baz: 'bar', bar: 'foo' };
 
 export default Factory.extend({
   name: (i) => `role-${i}`,
@@ -27,4 +36,19 @@ export default Factory.extend({
       record.kubernetes_role_name = null;
     }
   },
+  withRoleName: trait({
+    service_account_name: null,
+    generated_role_rules: null,
+    kubernetes_role_name: 'vault-k8s-secrets-role',
+    extra_annotations,
+    name_template,
+  }),
+  withRoleRules: trait({
+    service_account_name: null,
+    kubernetes_role_name: null,
+    generated_role_rules,
+    extra_annotations,
+    extra_labels,
+    name_template,
+  }),
 });
