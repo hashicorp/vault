@@ -1,3 +1,3 @@
 ```release-note:improvement
-hybrid-management: Add OSS support for hybrid management
+hcp/connectivity: Add foundational OSS support for opt-in secure communication between self-managed Vault nodes and [HashiCorp Cloud Platform](https://cloud.hashicorp.com)
 ```
