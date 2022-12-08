@@ -1240,6 +1240,14 @@ func (c *Core) DisableSSCTokens() bool {
 	return c.disableSSCTokens
 }
 
+// ShutdownCoreError logs a shutdown error and shuts down the Vault core.
+func (c *Core) ShutdownCoreError(err error) {
+	c.Logger().Error("shutting down core", "error", err)
+	if shutdownErr := c.ShutdownWait(); shutdownErr != nil {
+		c.Logger().Error("failed to shutdown core", "error", shutdownErr)
+	}
+}
+
 // Shutdown is invoked when the Vault instance is about to be terminated. It
 // should not be accessible as part of an API call as it will cause an availability
 // problem. It is only used to gracefully quit in the case of HA so that failover

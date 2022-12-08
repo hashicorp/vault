@@ -827,6 +827,11 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential, isNonPatchUpdate); err != nil {
 					backend.Cleanup(ctx)
 					backend = nil
+					// Return an error so Vault can clean up while the shutdown
+					// request is processed in a goroutine.
+					if isNonPatchUpdate {
+						return errLoadAuthFailed
+					}
 					c.logger.Error("skipping deprecated credential entry", "path", entry.Path, "error", err)
 					goto ROUTER_MOUNT
 				}

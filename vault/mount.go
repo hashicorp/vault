@@ -1011,19 +1011,13 @@ func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry
 			}
 			err := fmt.Errorf("could not mount %q: %w", t, errMountPendingRemoval)
 			if shutdownOnErr {
-				c.Logger().Error("shutting down core", "error", err)
-				if shutdownErr := c.Shutdown(); shutdownErr != nil {
-					c.Logger().Error("failed to shutdown core", "error", shutdownErr)
-				}
+				go c.ShutdownCoreError(err)
 			}
 			return nil, err
 		case consts.Removed:
 			err := fmt.Errorf("could not mount %q: %w", t, errMountRemoved)
 			if shutdownOnErr {
-				c.Logger().Error("shutting down core", "error", err)
-				if shutdownErr := c.Shutdown(); shutdownErr != nil {
-					c.Logger().Error("failed to shutdown core", "error", shutdownErr)
-				}
+				go c.ShutdownCoreError(err)
 			}
 			return nil, err
 		}
@@ -1505,6 +1499,11 @@ func (c *Core) setupMounts(ctx context.Context) error {
 				if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets, isNonPatchUpdate); err != nil {
 					backend.Cleanup(ctx)
 					backend = nil
+					// Return an error so Vault can clean up while the shutdown
+					// request is processed.
+					if isNonPatchUpdate {
+						return errLoadMountsFailed
+					}
 					c.logger.Error("skipping deprecated mount entry", "path", entry.Path, "error", err)
 					goto ROUTER_MOUNT
 				}
