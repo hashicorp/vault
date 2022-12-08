@@ -15,10 +15,10 @@ import { action } from '@ember/object';
 
 // first value in array is the default bits for that key type
 const KEY_BITS_OPTIONS = {
-  rsa: [2048, 3072, 4096],
-  ec: [256, 224, 384, 521],
-  ed25519: [0],
-  any: [0],
+  rsa: ['2048', '3072', '4096'],
+  ec: ['256', '224', '384', '521'],
+  ed25519: ['0'],
+  any: ['0'],
 };
 
 export default class PkiKeyParameters extends Component {
@@ -37,6 +37,6 @@ export default class PkiKeyParameters extends Component {
   }
 
   @action onKeyBitsChange({ target }) {
-    this.handleSelection(target.name, Number(target.value));
+    this.handleSelection(target.name, target.value);
   }
 }
