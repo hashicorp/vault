@@ -1496,7 +1496,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets)
 			if shutdown && err != nil {
 				go c.ShutdownCoreError(err)
-				return errLoadAuthFailed
+				return errLoadMountsFailed
 			} else if err != nil {
 				backend.Cleanup(ctx)
 				backend = nil
