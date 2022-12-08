@@ -1188,7 +1188,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets) {
-		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets, false)
+		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
 		if err != nil {
 			return handleError(err)
 		}
@@ -2619,7 +2619,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	var resp *logical.Response
 	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential) {
-		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential, false)
+		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
 		if err != nil {
 			return handleError(err)
 		}

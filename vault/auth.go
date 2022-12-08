@@ -821,20 +821,23 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// don't set the running version to a builtin if it is running as an external plugin
 			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+			}
+		}
 
-				// Shutdown or skip on initial mount, depending on whether or not this is a major/minor upgrade.
-				isNonPatchUpdate := isMajorOrMinorUpgrade(c.currentVaultVersion.Version, entry.LastMounted)
-				if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential, isNonPatchUpdate); err != nil {
-					backend.Cleanup(ctx)
-					backend = nil
-					// Return an error so Vault can clean up while the shutdown
-					// request is processed in a goroutine.
-					if isNonPatchUpdate {
-						return errLoadAuthFailed
-					}
-					c.logger.Error("skipping deprecated credential entry", "path", entry.Path, "error", err)
-					goto ROUTER_MOUNT
-				}
+		// Do no start up deprecated builtin plugins. If this is a major/minor
+		// upgrade, stop unsealing and shutdown. If we've already mounted this
+		// plugin, skip backend initialization and mount the data for posterity.
+		if versions.IsBuiltinVersion(entry.RunningVersion) {
+			shutdown := isMajorOrMinorUpgrade(c.currentVaultVersion.Version, entry.LastMounted)
+			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential)
+			if shutdown && err != nil {
+				go c.ShutdownCoreError(err)
+				return errLoadAuthFailed
+			} else if err != nil {
+				backend.Cleanup(ctx)
+				backend = nil
+				c.logger.Error("skipping deprecated credential entry", "path", entry.Path, "error", err)
+				goto ROUTER_MOUNT
 			}
 		}
 

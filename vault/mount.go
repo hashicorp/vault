@@ -973,7 +973,7 @@ func (c *Core) taintMountEntry(ctx context.Context, nsID, mountPath string, upda
 // * PendingRemoval - log an error about builtin deprecation and return an error
 // if VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
 // * Removed - log an error about builtin deprecation and return an error
-func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType, shutdownOnErr bool) (*logical.Response, error) {
+func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (*logical.Response, error) {
 	resp := &logical.Response{}
 
 	if c.builtinRegistry == nil || entry == nil {
@@ -1009,17 +1009,9 @@ func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry
 				resp.AddWarning(errMountPendingRemoval.Error())
 				return resp, nil
 			}
-			err := fmt.Errorf("could not mount %q: %w", t, errMountPendingRemoval)
-			if shutdownOnErr {
-				go c.ShutdownCoreError(err)
-			}
-			return nil, err
+			return nil, fmt.Errorf("could not mount %q: %w", t, errMountPendingRemoval)
 		case consts.Removed:
-			err := fmt.Errorf("could not mount %q: %w", t, errMountRemoved)
-			if shutdownOnErr {
-				go c.ShutdownCoreError(err)
-			}
-			return nil, err
+			return nil, fmt.Errorf("could not mount %q: %w", t, errMountRemoved)
 		}
 	}
 	return nil, nil
@@ -1493,20 +1485,23 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			// don't set the running version to a builtin if it is running as an external plugin
 			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
+			}
+		}
 
-				// Shutdown or skip on initial mount, depending on whether or not this is a major/minor upgrade.
-				isNonPatchUpdate := isMajorOrMinorUpgrade(c.currentVaultVersion.Version, entry.LastMounted)
-				if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets, isNonPatchUpdate); err != nil {
-					backend.Cleanup(ctx)
-					backend = nil
-					// Return an error so Vault can clean up while the shutdown
-					// request is processed.
-					if isNonPatchUpdate {
-						return errLoadMountsFailed
-					}
-					c.logger.Error("skipping deprecated mount entry", "path", entry.Path, "error", err)
-					goto ROUTER_MOUNT
-				}
+		// Do no start up deprecated builtin plugins. If this is a major/minor
+		// upgrade, stop unsealing and shutdown. If we've already mounted this
+		// plugin, skip backend initialization and mount the data for posterity.
+		if versions.IsBuiltinVersion(entry.RunningVersion) {
+			shutdown := isMajorOrMinorUpgrade(c.currentVaultVersion.Version, entry.LastMounted)
+			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential)
+			if shutdown && err != nil {
+				go c.ShutdownCoreError(err)
+				return errLoadAuthFailed
+			} else if err != nil {
+				backend.Cleanup(ctx)
+				backend = nil
+				c.logger.Error("skipping deprecated credential entry", "path", entry.Path, "error", err)
+				goto ROUTER_MOUNT
 			}
 		}
 
