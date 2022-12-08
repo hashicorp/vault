@@ -43,7 +43,6 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 		Paths: []*framework.Path{
 			// Rotate/Config needs to come before Keys
 			// as the handler is greedy
-			b.pathConfig(),
 			b.pathRotate(),
 			b.pathRewrap(),
 			b.pathWrappingKey(),
@@ -52,6 +51,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathKeys(),
 			b.pathListKeys(),
 			b.pathExportKeys(),
+			b.pathKeysConfig(),
 			b.pathEncrypt(),
 			b.pathDecrypt(),
 			b.pathDatakey(),
