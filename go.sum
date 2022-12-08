@@ -1080,6 +1080,10 @@ github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uG
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
 github.com/hashicorp/hcl v1.0.1-vault-5 h1:kI3hhbbyzr4dldA8UdTb7ZlVVlI2DACdCfz31RPDgJM=
 github.com/hashicorp/hcl v1.0.1-vault-5/go.mod h1:XYhtn6ijBSAj6n4YqAaf7RBPS4I06AItNorpy+MoQNM=
+github.com/hashicorp/hcp-link v0.1.0 h1:F6F1cpADc+o5EBI5CbJn5RX4qdFSLpuA4fN69eeE5lQ=
+github.com/hashicorp/hcp-link v0.1.0/go.mod h1:BWVDuJDHrKJtWc5qI07bX5xlLjSgWq6kYLQUeG1g5dM=
+github.com/hashicorp/hcp-scada-provider v0.1.0 h1:FSjTw7EBl6GJFv5533harm1vw15OaEYodNGHde908MI=
+github.com/hashicorp/hcp-scada-provider v0.1.0/go.mod h1:8Pp3pBLzZ9DL56OHSbf55qhh+TpvmXBuR5cJx9jcdcA=
 github.com/hashicorp/hcp-sdk-go v0.22.0 h1:LWkLOkJFYWSojBM3IkwvYK6nrwrL+p4Fw8zEaoCQG10=
 github.com/hashicorp/hcp-sdk-go v0.22.0/go.mod h1:mM3nYdVHuv2X2tv88MGVKRf/o2k3zF8jUZSMkwICQ28=
 github.com/hashicorp/jsonapi v0.0.0-20210826224640-ee7dae0fb22d h1:9ARUJJ1VVynB176G1HCwleORqCaXm/Vx0uUi0dL26I0=
@@ -1092,6 +1096,8 @@ github.com/hashicorp/mdns v1.0.4/go.mod h1:mtBihi+LeNXGtG8L9dX59gAEa12BDtBQSp4v/
 github.com/hashicorp/memberlist v0.3.0/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOnAH9VT3Sh9MUE=
 github.com/hashicorp/memberlist v0.3.1 h1:MXgUXLqva1QvpVEDQW1IQLG0wivQAtmFlHRQ+1vWZfM=
 github.com/hashicorp/memberlist v0.3.1/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOnAH9VT3Sh9MUE=
+github.com/hashicorp/net-rpc-msgpackrpc v0.0.0-20151116020338-a14192a58a69 h1:lc3c72qGlIMDqQpQH82Y4vaglRMMFdJbziYWriR4UcE=
+github.com/hashicorp/net-rpc-msgpackrpc v0.0.0-20151116020338-a14192a58a69/go.mod h1:/z+jUGRBlwVpUZfjute9jWaF6/HuhjuFQuL1YXzVD1Q=
 github.com/hashicorp/nomad/api v0.0.0-20220707195938-75f4c2237b28 h1:fo8EbQ6tc9hYqxik9CAdFMqy48TW8hh2I3znysPqf+0=
 github.com/hashicorp/nomad/api v0.0.0-20220707195938-75f4c2237b28/go.mod h1:FslB+3eLbZgkuPWffqO1GeNzBFw1SuVqN2PXsMNe0Fg=
 github.com/hashicorp/raft v1.0.1/go.mod h1:DVSAWItjLjTOkVbSpWQ0j0kUADIvDaCtBxIcbNAQLkI=
@@ -1164,6 +1170,8 @@ github.com/hashicorp/vault-plugin-secrets-terraform v0.6.0/go.mod h1:GzYAJYytgbN
 github.com/hashicorp/vault-testing-stepwise v0.1.1/go.mod h1:3vUYn6D0ZadvstNO3YQQlIcp7u1a19MdoOC0NQ0yaOE=
 github.com/hashicorp/vault-testing-stepwise v0.1.2 h1:3obC/ziAPGnsz2IQxr5e4Ayb7tu7WL6pm6mmZ5gwhhs=
 github.com/hashicorp/vault-testing-stepwise v0.1.2/go.mod h1:TeU6B+5NqxUjto+Zey+QQEH1iywuHn0ciHZNYh4q3uI=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221202210228-12b2fab87559 h1:fCQL4JFn/iQJsM3eQPDGtiGxEXEE+A3Yv4TBwk8IJAA=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221202210228-12b2fab87559/go.mod h1:hsrm1EXNYpQwErumOLeaTY74+Tj7poOwckbR4d+0hEQ=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 h1:O/pT5C1Q3mVXMyuqg7yuAWUg/jMZR1/0QTzTRdNR6Uw=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443/go.mod h1:bEpDU35nTu0ey1EXjwNwPjI9xErAsoOCmcMb9GKvyxo=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
@@ -1403,6 +1411,8 @@ github.com/mitchellh/cli v1.0.0/go.mod h1:hNIlj7HEI86fIcpObd7a0FcrxTWetlwJDGcceT
 github.com/mitchellh/cli v1.1.0/go.mod h1:xcISNoH86gajksDmfB23e/pu+B+GeFRMYmoHXxx3xhI=
 github.com/mitchellh/cli v1.1.2 h1:PvH+lL2B7IQ101xQL63Of8yFS2y+aDlsFcsqNc+u/Kw=
 github.com/mitchellh/cli v1.1.2/go.mod h1:6iaV0fGdElS6dPBx0EApTxHrcWvmJphyh2n8YBLPPZ4=
+github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db h1:62I3jR2EmQ4l5rM/4FEfDWcRD+abF5XlKShorW5LRoQ=
+github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db/go.mod h1:l0dey0ia/Uv7NcFFVbCLtqEBQbrT4OCwCSKTEv6enCw=
 github.com/mitchellh/copystructure v1.0.0/go.mod h1:SNtv71yrdKgLRyLFxmLdkAbkKEFWgYaq1OVrnRcwhnw=
 github.com/mitchellh/copystructure v1.2.0 h1:vpKXTN4ewci03Vljg/q9QvCGUDttBOGBIa15WveJJGw=
 github.com/mitchellh/copystructure v1.2.0/go.mod h1:qLl+cE2AmVv+CoeAwDPye/v+N2HKCj9FbZEVFJRxO9s=
@@ -1698,6 +1708,8 @@ github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic
 github.com/sirupsen/logrus v1.8.1/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
+github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 h1:JIAuq3EEf9cgbU6AtGPK4CTG3Zf6CKMNqf0MHTggAUA=
+github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966/go.mod h1:sUM3LWHvSMaG192sy56D9F7CNvL7jUJVXoqM1QKLnog=
 github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d h1:zE9ykElWQ6/NYmHa3jpm/yHnI4xSofP+UP6SpjHcSeM=
 github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d/go.mod h1:OnSkiWE9lh6wB0YB77sQom3nweQdgAjqCqsofrRNTgc=
 github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
