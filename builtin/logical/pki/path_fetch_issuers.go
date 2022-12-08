@@ -971,14 +971,14 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	if err := b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
+	sc := b.makeStorageContext(ctx, req.Storage)
+	if err := b.crlBuilder.rebuildIfForced(sc); err != nil {
 		return nil, err
 	}
 
 	var certificate []byte
 	var contentType string
 
-	sc := b.makeStorageContext(ctx, req.Storage)
 	response := &logical.Response{}
 	var crlType ifModifiedReqType = ifModifiedCRL
 	if strings.Contains(req.Path, "delta") {
