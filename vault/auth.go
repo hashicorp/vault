@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/version"
 )
 
 const (
@@ -202,7 +203,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		backend = nil
 	}
 
-	entry.LastMounted = c.currentVaultVersion.Version
+	entry.LastMounted = version.Version
 
 	// Update the auth table
 	newTable := c.auth.shallowClone()
@@ -472,7 +473,7 @@ func (c *Core) remountCredential(ctx context.Context, src, dst namespace.MountPa
 	srcPath := srcMatch.Path
 	srcMatch.Path = strings.TrimPrefix(dst.MountPath, credentialRoutePrefix)
 
-	srcMatch.LastMounted = c.currentVaultVersion.Version
+	srcMatch.LastMounted = version.Version
 
 	// Update the mount table
 	if err := c.persistAuth(ctx, c.auth, &srcMatch.Local); err != nil {
@@ -765,6 +766,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 
+	var needPersist bool
 	for _, entry := range c.auth.sortEntriesByPathDepth().Entries {
 		var backend logical.Backend
 
@@ -828,7 +830,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// upgrade, stop unsealing and shutdown. If we've already mounted this
 		// plugin, skip backend initialization and mount the data for posterity.
 		if versions.IsBuiltinVersion(entry.RunningVersion) {
-			shutdown := isMajorOrMinorUpgrade(c.currentVaultVersion.Version, entry.LastMounted)
+			shutdown := isMajorOrMinorUpgrade(version.Version, entry.LastMounted)
 			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential)
 			if shutdown && err != nil {
 				go c.ShutdownCoreError(err)
@@ -915,12 +917,19 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			})
 		}
 
-		// Update the last mounted version and persist
-		entry.LastMounted = c.currentVaultVersion.Version
-		if err := c.persistAuth(ctx, c.auth, &entry.Local); err != nil {
-			c.logger.Error("failed to persist last mounted version to auth table", "error", err)
+		// Update the last mounted version
+		if entry.LastMounted != version.Version {
+			entry.LastMounted = version.Version
+			needPersist = true
 		}
+	}
 
+	if !needPersist {
+		return nil
+	}
+
+	if err := c.persistAuth(ctx, c.auth, nil); err != nil {
+		c.logger.Error("failed to persist last mounted version to auth table", "error", err)
 	}
 
 	return nil

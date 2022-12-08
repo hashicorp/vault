@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -540,7 +541,7 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 		}
 	}
 
-	entry.LastMounted = c.currentVaultVersion.Version
+	entry.LastMounted = version.Version
 
 	// Mount internally
 	if err := c.mountInternal(ctx, entry, MountTableUpdateStorage); err != nil {
@@ -1430,6 +1431,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
+	var needPersist bool
 	for _, entry := range c.mounts.sortEntriesByPathDepth().Entries {
 		// Initialize the backend, special casing for system
 		barrierPath := entry.ViewPath()
@@ -1492,7 +1494,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// upgrade, stop unsealing and shutdown. If we've already mounted this
 		// plugin, skip backend initialization and mount the data for posterity.
 		if versions.IsBuiltinVersion(entry.RunningVersion) {
-			shutdown := isMajorOrMinorUpgrade(c.currentVaultVersion.Version, entry.LastMounted)
+			shutdown := isMajorOrMinorUpgrade(version.Version, entry.LastMounted)
 			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets)
 			if shutdown && err != nil {
 				go c.ShutdownCoreError(err)
@@ -1553,12 +1555,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			})
 		}
 
-		// Update the last mounted version and persist
-		entry.LastMounted = c.currentVaultVersion.Version
-		if err := c.persistMounts(ctx, c.mounts, &entry.Local); err != nil {
-			c.logger.Error("failed to persist last mounted version to mount table", "error", err)
-		}
-
 		if c.logger.IsInfo() {
 			c.logger.Info("successfully mounted backend", "type", entry.Type, "version", entry.Version, "path", entry.Path)
 		}
@@ -1570,7 +1566,22 @@ func (c *Core) setupMounts(ctx context.Context) error {
 
 		// Ensure the cache is populated, don't need the result
 		NamespaceByID(ctx, entry.NamespaceID, c)
+
+		// Update the last mounted version
+		if entry.LastMounted != version.Version {
+			entry.LastMounted = version.Version
+			needPersist = true
+		}
 	}
+
+	if !needPersist {
+		return nil
+	}
+
+	if err := c.persistMounts(ctx, c.mounts, nil); err != nil {
+		c.logger.Error("failed to persist last mounted version to mount table", "error", err)
+	}
+
 	return nil
 }
 

@@ -645,8 +645,7 @@ type Core struct {
 	// was first run. Note that because perf standbys should be upgraded first, and
 	// only the active node will actually write the new version timestamp, a perf
 	// standby shouldn't rely on the stored version timestamps being present.
-	versionHistory      map[string]VaultVersion
-	currentVaultVersion *VaultVersion
+	versionHistory map[string]VaultVersion
 
 	// effectiveSDKVersion contains the SDK version that standby nodes should use when
 	// heartbeating with the active node. Default to the current SDK version.
@@ -1202,13 +1201,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	currentTime := time.Now().UTC()
 
-	c.currentVaultVersion = &VaultVersion{
+	vaultVersion := &VaultVersion{
 		TimestampInstalled: currentTime,
 		Version:            version.Version,
 		BuildDate:          version.BuildDate,
 	}
 
-	isUpdated, err := c.storeVersionEntry(ctx, c.currentVaultVersion, false)
+	isUpdated, err := c.storeVersionEntry(ctx, vaultVersion, false)
 	if err != nil {
 		return fmt.Errorf("error storing vault version: %w", err)
 	}

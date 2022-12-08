@@ -364,14 +364,14 @@ func TestCore_SealUnseal(t *testing.T) {
 func TestCore_LastMounted(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	for _, entry := range c.auth.Entries {
-		if entry.LastMounted != c.currentVaultVersion.Version {
-			t.Fatalf("expected auth entry to contain %s, got %s", c.currentVaultVersion.Version, entry.LastMounted)
+		if entry.LastMounted != version.Version {
+			t.Fatalf("expected auth entry to contain %s, got %s", version.Version, entry.LastMounted)
 		}
 	}
 
 	for _, entry := range c.mounts.Entries {
-		if entry.LastMounted != c.currentVaultVersion.Version {
-			t.Fatalf("expected mount entry to contain %s, got %s", c.currentVaultVersion.Version, entry.LastMounted)
+		if entry.LastMounted != version.Version {
+			t.Fatalf("expected mount entry to contain %s, got %s", version.Version, entry.LastMounted)
 		}
 	}
 }
