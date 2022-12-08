@@ -37,16 +37,16 @@ variable "vault_unseal_keys" {}
 locals {
   followers      = toset([for idx in range(var.vault_instance_count - 1) : tostring(idx)])
   vault_bin_path = "${var.vault_install_dir}/vault"
-  unseal_keys    = flatten(var.vault_unseal_keys)
+  # unseal_keys    = flatten(var.vault_unseal_keys)
 }
 
-# wait for 60s before unsealing the nodes
-# resource "time_sleep" "wait_60_seconds" {
-#   create_duration = "60s"
+# # wait for 120s before unsealing the nodes
+# resource "time_sleep" "wait_120_seconds" {
+#   create_duration = "120s"
 # }
 
 resource "enos_vault_unseal" "node" {
-  # depends_on = [time_sleep.wait_60_seconds]
+  # depends_on = [time_sleep.wait_120_seconds]
   for_each = {
     for idx, follower in local.followers : idx => follower
     if var.vault_seal_type == "shamir"
@@ -55,7 +55,7 @@ resource "enos_vault_unseal" "node" {
   bin_path    = local.vault_bin_path
   vault_addr  = "http://localhost:8200"
   seal_type   = var.vault_seal_type
-  unseal_keys = local.unseal_keys
+  unseal_keys = var.vault_unseal_keys
 
   transport = {
     ssh = {

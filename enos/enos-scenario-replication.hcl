@@ -320,7 +320,7 @@ scenario "replication" {
     variables {
       follower_public_ips = step.get_secondary_cluster_ips.follower_public_ips
       vault_unseal_keys   = matrix.primary_seal == "shamir" ? step.create_vault_primary_cluster.vault_unseal_keys_hex : null
-      vault_seal_type     = matrix.secondary_seal
+      vault_seal_type     = matrix.primary_seal
     }
   }
 
@@ -443,7 +443,7 @@ scenario "replication" {
     module = module.remove_node
     depends_on = [
       step.get_primary_cluster_ips,
-      step.verify_raft_auto_join_voter
+      step.verify_add_node_unsealed
     ]
 
     providers = {
@@ -471,8 +471,8 @@ scenario "replication" {
     }
   }
 
-  step "combine_primary_cluster_nodes" {
-    module = module.combine_primary_cluster_nodes
+  step "get_updated_primary_cluster_ips" {
+    module = module.vault_cluster_ips
     depends_on = [
       step.add_primary_cluster_nodes,
       step.remove_primary_follower_1,
@@ -484,24 +484,24 @@ scenario "replication" {
     }
 
     variables {
-      primary_vault_instances = step.create_vault_primary_cluster.vault_instances
-      added_vault_instances   = step.add_primary_cluster_nodes.vault_instances
-      vault_root_token        = step.create_vault_primary_cluster.vault_root_token
-      node_public_ip          = step.get_primary_cluster_ips.follower_public_ip_2
+      vault_instances       = step.create_vault_primary_cluster.vault_instances
+      added_vault_instances = step.add_primary_cluster_nodes.vault_instances
+      vault_root_token      = step.create_vault_primary_cluster.vault_root_token
+      node_public_ip        = step.get_primary_cluster_ips.follower_public_ip_2
     }
   }
 
   step "verify_updated_performance_replication" {
     module     = module.vault_verify_performance_replication
-    depends_on = [step.combine_primary_cluster_nodes]
+    depends_on = [step.get_updated_primary_cluster_ips]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      primary_leader_public_ip    = step.combine_primary_cluster_nodes.leader_public_ip
-      primary_leader_private_ip   = step.combine_primary_cluster_nodes.leader_private_ip
+      primary_leader_public_ip    = step.get_updated_primary_cluster_ips.leader_public_ip
+      primary_leader_private_ip   = step.get_updated_primary_cluster_ips.leader_private_ip
       secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
       secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
     }
@@ -600,11 +600,6 @@ scenario "replication" {
   output "vault_primary_performance_replication_status" {
     description = "The Vault primary cluster performance replication status"
     value       = step.verify_performance_replication.primary_replication_status
-  }
-
-  output "secondary_token" {
-    description = "The secondary token created for replication"
-    value       = step.generate_secondary_token.secondary_token
   }
 
   output "vault_replication_known_primary_cluster_addrs" {

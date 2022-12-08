@@ -43,12 +43,6 @@ module "create_vpc" {
   ami_architectures = ["amd64", "arm64"]
 }
 
-module "combine_primary_cluster_nodes" {
-  source = "./modules/combine_cluster_nodes"
-
-  vault_install_dir = var.vault_install_dir
-}
-
 module "get_local_metadata" {
   source = "./modules/get_local_metadata"
 }
@@ -97,7 +91,6 @@ module "vault_cluster_ips" {
   source = "./modules/vault_cluster_ips"
 
   vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_unseal_nodes" {
