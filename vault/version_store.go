@@ -87,7 +87,7 @@ func (c *Core) FindOldestVersionTimestamp() (string, time.Time, error) {
 	return oldestVersion, oldestUpgradeTime, nil
 }
 
-func (c *Core) FindNewestVersionTimestamp() (string, time.Time, error) {
+func (c *Core) FindNewestVersionTimestamp(ctx context.Context) (string, time.Time, error) {
 	if c.versionHistory == nil {
 		return "", time.Time{}, fmt.Errorf("version history is not initialized")
 	}
@@ -156,18 +156,9 @@ func (c *Core) loadVersionHistory(ctx context.Context) error {
 // milestone or major upgrade. This is useful in determining shutdown behavior
 // for deprecated builtins.
 func (c *Core) isMajorVersionFirstMount(ctx context.Context) (bool, error) {
-	existingEntry, err := c.barrier.Get(ctx, unsealInfoPath)
+	newestVersion, _, err := c.FindNewestVersionTimestamp(ctx)
 	if err != nil {
-		return false, err
-	}
-
-	if existingEntry == nil {
-		return true, nil
-	}
-
-	var info *unsealInformation
-	if err := json.Unmarshal(existingEntry.Value, &info); err != nil {
-		return false, err
+		return true, err
 	}
 
 	// Get versions into comparable form
@@ -175,7 +166,7 @@ func (c *Core) isMajorVersionFirstMount(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	prev, err := semver.NewSemver(info.Version)
+	prev, err := semver.NewSemver(newestVersion)
 	if err != nil {
 		// If we can't find a previous version, this is effectively an upgrade
 		return true, nil

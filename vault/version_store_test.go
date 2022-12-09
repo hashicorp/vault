@@ -96,7 +96,7 @@ func TestVersionStore_GetNewestVersion(t *testing.T) {
 	if len(c.versionHistory) != 3 {
 		t.Fatalf("expected 3 entries in timestamps map after refresh, found: %d", len(c.versionHistory))
 	}
-	v, tm, err := c.FindNewestVersionTimestamp()
+	v, tm, err := c.FindNewestVersionTimestamp(c.activeContext)
 	if err != nil {
 		t.Fatal(err)
 	}
