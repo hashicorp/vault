@@ -6,20 +6,24 @@ export default class PkiCertificateGenerateSerializer extends ApplicationSeriali
 
   serialize() {
     const json = super.serialize(...arguments);
+    // role name is part of the URL, remove from payload
     delete json.name;
     return json;
   }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    // Parse certificate back from the API and add to payload
-    const parsedCert = parseCertificate(payload.data.certificate);
-    const json = super.normalizeResponse(
-      store,
-      primaryModelClass,
-      { ...payload, ...parsedCert },
-      id,
-      requestType
-    );
-    return json;
+    if (requestType === 'createRecord') {
+      // Parse certificate back from the API and add to payload
+      const parsedCert = parseCertificate(payload.data.certificate);
+      const json = super.normalizeResponse(
+        store,
+        primaryModelClass,
+        { ...payload, ...parsedCert },
+        id,
+        requestType
+      );
+      return json;
+    }
+    return super.normalizeResponse(...arguments);
   }
 }

@@ -5,6 +5,7 @@ import { service } from '@ember/service';
 import Router from '@ember/routing/router';
 import Store from '@ember-data/store';
 import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
 interface Args {
   onSuccess: CallableFunction;
@@ -21,6 +22,7 @@ interface CertModel {
   }[];
   save: () => void;
   rollbackAttributes: () => void;
+  deleteRecord: () => void;
   destroyRecord: () => void;
 }
 interface FormField {
@@ -34,6 +36,10 @@ export default class PkiRoleGenerate extends Component<Args> {
 
   @tracked errorBanner = '';
 
+  transitionToRole() {
+    this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.role.details');
+  }
+
   @task
   *save(evt: Event) {
     evt.preventDefault();
@@ -42,25 +48,28 @@ export default class PkiRoleGenerate extends Component<Args> {
     try {
       yield model.save();
       onSuccess();
-    } catch (e) {
-      const err = e as {
-        errors: string[];
-        message: string;
-      };
-      this.errorBanner = err.errors.join('. ') || err.message;
+    } catch (err) {
+      this.errorBanner = errorMessage(err, 'Could not generate certificate. See Vault logs for details.');
     }
   }
 
-  @action revoke() {
-    // TODO
+  @task
+  *revoke() {
+    try {
+      yield this.args.model.destroyRecord();
+      this.transitionToRole();
+    } catch (err) {
+      this.errorBanner = errorMessage(err, 'Could not revoke certificate. See Vault logs for details.');
+    }
   }
 
-  @action download() {
+  @task
+  *download() {
     // TODO
   }
 
   @action cancel() {
-    this.args.model.destroyRecord();
-    this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.role.details');
+    this.args.model.deleteRecord();
+    this.transitionToRole();
   }
 }

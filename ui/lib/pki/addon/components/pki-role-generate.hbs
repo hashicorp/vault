@@ -1,7 +1,7 @@
 {{#if @model.serialNumber}}
   <Toolbar>
     <ToolbarActions>
-      <button type="button" class="toolbar-link" {{on "click" this.download}} data-test-pki-cert-download-button>
+      <button type="button" class="toolbar-link" {{on "click" (perform this.download)}} data-test-pki-cert-download-button>
         Download
         <Chevron @direction="down" @isButton={{true}} />
       </button>
