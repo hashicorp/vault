@@ -2060,11 +2060,11 @@ func (b *SystemBackend) lockerUserPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"mount_accessor": {
 					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["auth_tune"][0]),
+					Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
 				},
 				"alias_identifier": {
 					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
+					Description: strings.TrimSpace(sysHelp["alias_identifier"][0]),
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -2073,8 +2073,8 @@ func (b *SystemBackend) lockerUserPaths() []*framework.Path {
 					Summary:  "Unlocks the user with given mount_accessor and alias_identifier",
 				},
 			},
-			HelpSynopsis:    strings.TrimSpace(sysHelp["auth_tune"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["auth_tune"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
 		},
 	}
 }
