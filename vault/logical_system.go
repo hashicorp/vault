@@ -5361,7 +5361,7 @@ the mount.`,
 		"",
 	},
 	"alias_identifier": {
-		`It is the name of the alias (user).For example, if the alias belongs to userpass backend, 
+		`It is the name of the alias (user). For example, if the alias belongs to userpass backend, 
 	   the name should be a valid username within userpass auth method. If the alias belongs
 	    to an approle auth method, the name should be a valid RoleID`,
 		"",
