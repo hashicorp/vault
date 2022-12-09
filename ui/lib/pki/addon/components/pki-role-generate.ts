@@ -6,16 +6,19 @@ import Router from '@ember/routing/router';
 import Store from '@ember-data/store';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
+import FlashMessageService from 'vault/services/flash-messages';
+import DownloadService from 'vault/services/download';
 
 interface Args {
   onSuccess: CallableFunction;
-  model: CertModel;
+  model: PkiCertificateGenerateModel;
 }
 
-// pki/certificate/generate model
-interface CertModel {
+interface PkiCertificateGenerateModel {
   name: string;
   backend: string;
+  serialNumber: string;
+  certificate: string;
   formFields: FormField;
   formFieldsGroup: {
     [k: string]: FormField[];
@@ -33,6 +36,8 @@ interface FormField {
 export default class PkiRoleGenerate extends Component<Args> {
   @service declare readonly router: Router;
   @service declare readonly store: Store;
+  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly download: DownloadService;
 
   @tracked errorBanner = '';
 
@@ -57,15 +62,21 @@ export default class PkiRoleGenerate extends Component<Args> {
   *revoke() {
     try {
       yield this.args.model.destroyRecord();
+      this.flashMessages.success('The certificate has been revoked.');
       this.transitionToRole();
     } catch (err) {
       this.errorBanner = errorMessage(err, 'Could not revoke certificate. See Vault logs for details.');
     }
   }
 
-  @task
-  *download() {
-    // TODO
+  @action downloadCert() {
+    try {
+      const formattedSerial = this.args.model.serialNumber?.replace(/(\s|:)+/g, '-');
+      this.download.pem(formattedSerial, this.args.model.certificate);
+      this.flashMessages.info('Your download has started.');
+    } catch (err) {
+      this.flashMessages.danger(errorMessage(err, 'Unable to prepare certificate for download.'));
+    }
   }
 
   @action cancel() {
