@@ -24,6 +24,7 @@ module('Unit | Adapter | kubernetes/role', function (hooks) {
     assert.expect(1);
     this.server.get('/kubernetes-test/roles/test-role', () => {
       assert.ok('GET request made to correct endpoint when querying record');
+      return { data: {} };
     });
     await this.store.queryRecord('kubernetes/role', { backend: 'kubernetes-test', name: 'test-role' });
   });

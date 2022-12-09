@@ -25,9 +25,9 @@ export default class KubernetesRoleAdapter extends NamedPathAdapter {
   queryRecord(store, type, query) {
     const { backend, name } = query;
     return this.ajax(this.getURL(backend, name), 'GET').then((resp) => {
-      resp.backend = backend;
-      resp.name = name;
-      return resp;
+      resp.data.backend = backend;
+      resp.data.name = name;
+      return resp.data;
     });
   }
 }
