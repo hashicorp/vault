@@ -24,7 +24,7 @@
 <Toolbar>
   <ToolbarActions>
     <DownloadButton
-      @buttonClass="toolbar-link"
+      class="toolbar-link"
       @extension={{if (eq this.policyType "acl") this.model.format "sentinel"}}
       @filename={{this.model.name}}
       @data={{this.model.policy}}

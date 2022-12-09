@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
  * @example
  * ```js
  *   <DownloadButton
- *     @buttonClass="toolbar-link"
+ *     class="button"
  *     @data={{this.data}}
  *     @filename={{this.filename}}
  *     @mime={{this.mime}}
@@ -23,7 +23,6 @@ import Component from '@glimmer/component';
  * @param {string} [filename] - name of file that prefixes the ISO timestamp generated when download
  * @param {string} [mime='text/plain'] - media type to be downloaded
  * @param {string} [extension='txt'] - file extension
- * @param {string} [buttonClass] - override css class defaults to customize how the button looks
  */
 
 export default class DownloadButton extends Component {

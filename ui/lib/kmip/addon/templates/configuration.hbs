@@ -3,7 +3,7 @@
   <ToolbarActions>
     {{#if this.model}}
       <DownloadButton
-        @buttonClass="toolbar-link"
+        class="toolbar-link"
         @extension="pem"
         @filename={{concat this.model.ca.id "-ca"}}
         @data={{this.model.ca.caPem}}
