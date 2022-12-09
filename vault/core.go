@@ -227,8 +227,8 @@ type migrationInformation struct {
 // lastUnsealInformation includes information about the last version of Vault
 // that successfully mounted backends and unsealed.
 type unsealInformation struct {
-	// last version of Vault to be successfully unsealed
-	version string
+	// last Version of Vault to be successfully unsealed
+	Version string `json:"version"`
 }
 
 // Core is used as the central manager of Vault activity. It is the primary point of
@@ -1238,16 +1238,12 @@ func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 
 	// Set the unseal information to be persisted after all backends are successfully mounted.
 	c.unsealInfo = &unsealInformation{
-		version: version.Version,
+		Version: version.Version,
 	}
 
-	firstUnseal, err := c.isMajorVersionFirstMount(ctx)
+	c.majorVersionFirstMount, err = c.isMajorVersionFirstMount(ctx)
 	if err != nil {
 		return fmt.Errorf("error checking first unseal information: %w", err)
-	}
-
-	if firstUnseal {
-		c.majorVersionFirstMount = true
 	}
 
 	// Finally, populate the version history cache

@@ -175,10 +175,10 @@ func (c *Core) isMajorVersionFirstMount(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	prev, err := semver.NewSemver(info.version)
+	prev, err := semver.NewSemver(info.Version)
 	if err != nil {
 		// If we can't find a previous version, this is effectively an upgrade
-		return true, err
+		return true, nil
 	}
 
 	// Check for milestone version upgrade
