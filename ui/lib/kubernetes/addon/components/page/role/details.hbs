@@ -26,15 +26,22 @@
 
 <Toolbar>
   <ToolbarActions>
-    <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{this.delete}} data-test-delete>
-      Delete role
-    </ConfirmAction>
-    <ToolbarLink @route="roles.role.credentials" data-test-generate-credentials>
-      Generate credentials
-    </ToolbarLink>
-    <ToolbarLink @route="roles.role.edit" data-test-edit>
-      Edit role
-    </ToolbarLink>
+    {{#if @model.canDelete}}
+      <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{this.delete}} data-test-delete>
+        Delete role
+      </ConfirmAction>
+      <div class="toolbar-separator"></div>
+    {{/if}}
+    {{#if @model.canGenerateCreds}}
+      <ToolbarLink @route="roles.role.credentials" data-test-generate-credentials>
+        Generate credentials
+      </ToolbarLink>
+    {{/if}}
+    {{#if @model.canEdit}}
+      <ToolbarLink @route="roles.role.edit" data-test-edit>
+        Edit role
+      </ToolbarLink>
+    {{/if}}
   </ToolbarActions>
 </Toolbar>
 
