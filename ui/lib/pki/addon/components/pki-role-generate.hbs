@@ -1,11 +1,11 @@
 {{#if @model.serialNumber}}
   <Toolbar>
     <ToolbarActions>
-      <button type="button" class="toolbar-link" {{on "click" this.download}} data-test-database-connection-delete>
+      <button type="button" class="toolbar-link" {{on "click" this.download}} data-test-pki-cert-download-button>
         Download
         <Chevron @direction="down" @isButton={{true}} />
       </button>
-      <button type="button" class="toolbar-link" {{on "click" (perform this.revoke)}} data-test-database-connection-delete>
+      <button type="button" class="toolbar-link" {{on "click" (perform this.revoke)}} data-test-pki-cert-revoke-button>
         Revoke certificate
         <Chevron @direction="right" @isButton={{true}} />
       </button>
@@ -51,7 +51,7 @@
           type="submit"
           class="button is-primary {{if this.save.isRunning 'is-loading'}}"
           disabled={{this.save.isRunning}}
-          data-test-policy-save
+          data-test-pki-generate-button
         >
           Generate
         </button>
