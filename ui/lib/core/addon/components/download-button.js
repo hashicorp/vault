@@ -10,38 +10,29 @@ export default class DownloadButton extends Component {
     return this.args.mime || 'text/plain';
   }
 
-  get download() {
+  get filename() {
     return `${this.args.filename}-${new Date().toISOString()}.${this.extension}`;
   }
 
-  get fileLike() {
-    let file;
+  get content() {
     let data = this.args.data;
-    const filename = this.download;
-    const mime = this.mime;
     if (this.args.stringify) {
       data = JSON.stringify(data, null, 2);
     }
-    if (window.navigator.msSaveOrOpenBlob) {
-      file = new Blob([data], { type: mime });
-      file.name = filename;
-    } else {
-      file = new File([data], filename, { type: mime });
-    }
-    return file;
+    const content = new File([data], this.filename, { type: this.mime });
+    return content;
   }
 
-  get href() {
-    return window.URL.createObjectURL(this.fileLike);
-  }
-
+  // TODO refactor and call service instead
   @action
-  handleDownload(event) {
-    if (!window.navigator.msSaveOrOpenBlob) {
-      return;
-    }
-    event.preventDefault();
-    const file = this.fileLike;
-    window.navigator.msSaveOrOpenBlob(file, file.name);
+  handleDownload() {
+    const { document, URL } = window;
+    const downloadElement = document.createElement('a');
+    downloadElement.download = this.filename;
+    downloadElement.href = URL.createObjectURL(this.content);
+    document.body.appendChild(downloadElement);
+    downloadElement.click();
+    URL.revokeObjectURL(downloadElement.href);
+    downloadElement.remove();
   }
 }

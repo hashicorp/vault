@@ -90,13 +90,15 @@
             </div>
           {{/if}}
           <DownloadButton
-            @actionText="Download keys"
             @data={{this.keyData}}
             @filename={{this.keyFilename}}
             @mime="application/json"
             @extension="json"
             @stringify={{true}}
-          />
+          >
+            <Icon @name="download" />
+            Download keys
+          </DownloadButton>
         </div>
       </div>
     </Page.content>
