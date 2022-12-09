@@ -46,18 +46,14 @@ export default class DownloadButton extends Component {
     return this.args.data;
   }
 
-  get content() {
-    const content = new File([this.data], this.filename, { type: this.mime });
-    return content;
-  }
-
   // TODO refactor and call service instead
   @action
   handleDownload() {
     const { document, URL } = window;
     const downloadElement = document.createElement('a');
+    const content = new File([this.data], this.filename, { type: this.mime });
     downloadElement.download = this.filename;
-    downloadElement.href = URL.createObjectURL(this.content);
+    downloadElement.href = URL.createObjectURL(content);
     document.body.appendChild(downloadElement);
     downloadElement.click();
     URL.revokeObjectURL(downloadElement.href);
