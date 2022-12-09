@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities"
 	"github.com/hashicorp/vault/vault/hcp_link/internal"
+	"github.com/hashicorp/vault/vault/hcp_link/proto/link_control"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
@@ -21,7 +22,7 @@ import (
 type purgePolicyFunc func()
 
 type hcpLinkControlHandler struct {
-	UnimplementedHCPLinkControlServer
+	link_control.UnimplementedHCPLinkControlServer
 
 	purgeFunc     purgePolicyFunc
 	wrappedCore   internal.WrappedCoreStandbyStates
@@ -53,7 +54,7 @@ func NewHCPLinkControlService(scadaProvider scada.SCADAProvider, core *vault.Cor
 		wrappedCore:   core,
 	}
 
-	RegisterHCPLinkControlServer(grpcServer, handler)
+	link_control.RegisterHCPLinkControlServer(grpcServer, handler)
 	reflection.Register(grpcServer)
 
 	return handler
@@ -109,7 +110,7 @@ func (h *hcpLinkControlHandler) Stop() error {
 	return nil
 }
 
-func (h *hcpLinkControlHandler) PurgePolicy(ctx context.Context, req *PurgePolicyRequest) (*PurgePolicyResponse, error) {
+func (h *hcpLinkControlHandler) PurgePolicy(ctx context.Context, req *link_control.PurgePolicyRequest) (*link_control.PurgePolicyResponse, error) {
 	standby, perfStandby := h.wrappedCore.StandbyStates()
 	// only purging an active node, perf/standby nodes should purge
 	// automatically
@@ -120,5 +121,5 @@ func (h *hcpLinkControlHandler) PurgePolicy(ctx context.Context, req *PurgePolic
 		h.logger.Debug("Purged token and policy")
 	}
 
-	return &PurgePolicyResponse{}, nil
+	return &link_control.PurgePolicyResponse{}, nil
 }

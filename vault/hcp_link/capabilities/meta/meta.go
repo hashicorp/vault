@@ -14,13 +14,14 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities"
 	"github.com/hashicorp/vault/vault/hcp_link/internal"
+	"github.com/hashicorp/vault/vault/hcp_link/proto/meta"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 )
 
 type hcpLinkMetaHandler struct {
-	UnimplementedHCPLinkMetaServer
+	meta.UnimplementedHCPLinkMetaServer
 
 	wrappedCore   internal.WrappedCoreListNamespacesMounts
 	scadaProvider scada.SCADAProvider
@@ -51,7 +52,7 @@ func NewHCPLinkMetaService(scadaProvider scada.SCADAProvider, c *vault.Core, bas
 		scadaProvider: scadaProvider,
 	}
 
-	RegisterHCPLinkMetaServer(grpcServer, handler)
+	meta.RegisterHCPLinkMetaServer(grpcServer, handler)
 	reflection.Register(grpcServer)
 
 	return handler
@@ -112,7 +113,7 @@ func (h *hcpLinkMetaHandler) Stop() error {
 	return nil
 }
 
-func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *ListNamespacesRequest) (*ListNamespacesResponse, error) {
+func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *meta.ListNamespacesRequest) (*meta.ListNamespacesResponse, error) {
 	children := h.wrappedCore.ListNamespaces(true)
 
 	var namespaces []string
@@ -120,18 +121,18 @@ func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *ListNamesp
 		namespaces = append(namespaces, child.Path)
 	}
 
-	return &ListNamespacesResponse{
+	return &meta.ListNamespacesResponse{
 		Paths: namespaces,
 	}, nil
 }
 
-func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *ListMountsRequest) (*ListMountsResponse, error) {
+func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMountsRequest) (*meta.ListMountsResponse, error) {
 	mountEntries, err := h.wrappedCore.ListMounts()
 	if err != nil {
 		return nil, err
 	}
 
-	var mounts []*Mount
+	var mounts []*meta.Mount
 	for _, entry := range mountEntries {
 		nsID := entry.NamespaceID
 		path := entry.Path
@@ -145,25 +146,25 @@ func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *ListMountsRequ
 			path = ns.Path + path
 		}
 
-		mounts = append(mounts, &Mount{
+		mounts = append(mounts, &meta.Mount{
 			Path:        path,
 			Type:        entry.Type,
 			Description: entry.Description,
 		})
 	}
 
-	return &ListMountsResponse{
+	return &meta.ListMountsResponse{
 		Mounts: mounts,
 	}, nil
 }
 
-func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *ListAuthsRequest) (*ListAuthResponse, error) {
+func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsRequest) (*meta.ListAuthResponse, error) {
 	authEntries, err := h.wrappedCore.ListAuths()
 	if err != nil {
 		return nil, err
 	}
 
-	var auths []*Auth
+	var auths []*meta.Auth
 	for _, entry := range authEntries {
 		nsID := entry.NamespaceID
 		path := entry.Path
@@ -177,14 +178,14 @@ func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *ListAuthsReques
 			path = ns.Path + path
 		}
 
-		auths = append(auths, &Auth{
+		auths = append(auths, &meta.Auth{
 			Path:        path,
 			Type:        entry.Type,
 			Description: entry.Description,
 		})
 	}
 
-	return &ListAuthResponse{
+	return &meta.ListAuthResponse{
 		Auths: auths,
 	}, nil
 }
