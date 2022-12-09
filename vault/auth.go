@@ -830,7 +830,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// plugin, skip backend initialization and mount the data for posterity.
 		if versions.IsBuiltinVersion(entry.RunningVersion) {
 			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential)
-			if c.majorUpdateInProgress && err != nil {
+			if c.majorUpgradeInProgress && err != nil {
 				go c.ShutdownCoreError(fmt.Errorf("could not mount %q: %w", entry.Type, err))
 				return errLoadAuthFailed
 			} else if err != nil {

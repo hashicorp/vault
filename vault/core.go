@@ -655,12 +655,12 @@ type Core struct {
 
 	pendingRemovalMountsAllowed bool
 
-	// majorUpdateInProgress tells Vault how to handle mount entries
+	// majorUpgradeInProgress tells Vault how to handle mount entries
 	// associated with deprecated builtins. If true, this results in a core
 	// shutdown on unseal.  Otherwise, it informs setupCredentials and
 	// setupMounts to continue processing the mount entry, but skips backend
 	// initialization.
-	majorUpdateInProgress bool
+	majorUpgradeInProgress bool
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -1221,6 +1221,16 @@ func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	if isUpdated {
 		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime, "build date", version.BuildDate)
 	}
+
+	majorUpgrade, err := c.isMajorUpgrade(ctx)
+	if err != nil {
+		return fmt.Errorf("error checking major upgrade status: %w", err)
+	}
+
+	if majorUpgrade {
+		c.majorUpgradeInProgress = true
+	}
+
 	// Finally, populate the version history cache
 	err = c.loadVersionHistory(ctx)
 	if err != nil {

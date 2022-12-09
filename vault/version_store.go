@@ -79,20 +79,6 @@ func (c *Core) storeLastUnsealed(ctx context.Context, vaultVersion string) error
 		return err
 	}
 
-	lastUnsealed, err := c.barrier.Get(ctx, lastUnsealedKey)
-	if err != nil {
-		return err
-	}
-
-	var lastVersion string
-	if err := json.Unmarshal(lastUnsealed.Value, &lastVersion); err != nil {
-		return err
-	}
-
-	if isMajorOrMinorUpgrade(version.Version, lastVersion) {
-		c.majorUpdateInProgress = true
-	}
-
 	newEntry := &logical.StorageEntry{
 		Key:   lastUnsealedKey,
 		Value: versionData,
@@ -101,6 +87,8 @@ func (c *Core) storeLastUnsealed(ctx context.Context, vaultVersion string) error
 	if err := c.barrier.Put(ctx, newEntry); err != nil {
 		return err
 	}
+
+	c.majorUpgradeInProgress = false
 
 	return nil
 }
@@ -188,32 +176,46 @@ func (c *Core) loadVersionHistory(ctx context.Context) error {
 	return nil
 }
 
-// isMajorOrMinorUpgrade compares two versions of Vault to see if currentVersion is is a
-// major/minor upgrade from the prevVersion. This is useful in determining
-// shutdown behavior for deprecated builtins.
-func isMajorOrMinorUpgrade(currentVersion, prevVersion string) bool {
-	// Get versions into comparable form
-	curr, err := semver.NewSemver(currentVersion)
+// isMajorUpgrade compares the current version of Vault with the last version
+// that was successfully unsealed to see if it is a milestone or major upgrade.
+// This is useful in determining shutdown behavior for deprecated builtins.
+func (c *Core) isMajorUpgrade(ctx context.Context) (bool, error) {
+	lastUnsealed, err := c.barrier.Get(ctx, lastUnsealedKey)
 	if err != nil {
-		return false
+		return false, err
 	}
-	prev, err := semver.NewSemver(prevVersion)
+
+	if lastUnsealed == nil {
+		return true, nil
+	}
+
+	var lastVersion string
+	if err := json.Unmarshal(lastUnsealed.Value, &lastVersion); err != nil {
+		return false, err
+	}
+
+	// Get versions into comparable form
+	curr, err := semver.NewSemver(version.Version)
+	if err != nil {
+		return false, err
+	}
+	prev, err := semver.NewSemver(lastVersion)
 	if err != nil {
 		// If we can't find a previous version, this is effectively an upgrade
-		return true
+		return true, err
+	}
+
+	// Check for milestone version upgrade
+	if curr.Segments()[0] > prev.Segments()[0] {
+		return true, nil
 	}
 
 	// Check for major version upgrade
-	if curr.Segments()[0] > prev.Segments()[0] {
-		return true
-	}
-
-	// Check for minor version upgrade
 	if curr.Segments()[1] > prev.Segments()[1] {
-		return true
+		return true, nil
 	}
 
-	return false
+	return false, nil
 }
 
 func IsJWT(token string) bool {
