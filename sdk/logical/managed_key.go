@@ -16,6 +16,9 @@ const (
 	KeyUsageVerify
 	KeyUsageWrap
 	KeyUsageUnwrap
+	KeyUsageMACGenerate
+	KeyUsageMACVerify
+	KeyUsageGenerateRandom
 )
 
 type ManagedKey interface {
