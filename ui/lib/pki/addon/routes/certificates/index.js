@@ -8,7 +8,7 @@ export default class PkiCertificatesIndexRoute extends Route {
 
   beforeModel() {
     // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/certificate', 'pki');
+    return this.pathHelp.getNewModel('pki/certificate', this.secretMountPath.currentPath);
   }
 
   model() {

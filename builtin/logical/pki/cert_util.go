@@ -1,7 +1,6 @@
 package pki
 
 import (
-	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -144,15 +143,15 @@ func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerU
 
 	entries, err := entry.GetAIAURLs(sc)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch AIA URL information: %v", err)}
 	}
 	caInfo.URLs = entries
 
 	return caInfo, nil
 }
 
-func fetchCertBySerialBigInt(ctx context.Context, b *backend, req *logical.Request, prefix string, serial *big.Int) (*logical.StorageEntry, error) {
-	return fetchCertBySerial(ctx, b, req, prefix, serialFromBigInt(serial))
+func fetchCertBySerialBigInt(sc *storageContext, prefix string, serial *big.Int) (*logical.StorageEntry, error) {
+	return fetchCertBySerial(sc, prefix, serialFromBigInt(serial))
 }
 
 // Allows fetching certificates from the backend; it handles the slightly
@@ -160,7 +159,7 @@ func fetchCertBySerialBigInt(ctx context.Context, b *backend, req *logical.Reque
 //
 // Support for fetching CA certificates was removed, due to the new issuers
 // changes.
-func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
+func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.StorageEntry, error) {
 	var path, legacyPath string
 	var err error
 	var certEntry *logical.StorageEntry
@@ -175,10 +174,9 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
 	case serial == legacyCRLPath || serial == deltaCRLPath:
-		if err = b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
+		if err = sc.Backend.crlBuilder.rebuildIfForced(sc); err != nil {
 			return nil, err
 		}
-		sc := b.makeStorageContext(ctx, req.Storage)
 		path, err = sc.resolveIssuerCRLPath(defaultRef)
 		if err != nil {
 			return nil, err
@@ -196,7 +194,7 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 		path = "certs/" + hyphenSerial
 	}
 
-	certEntry, err = req.Storage.Get(ctx, path)
+	certEntry, err = sc.Storage.Get(sc.Context, path)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
 	}
@@ -216,7 +214,7 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 	// always manifest on Windows, and thus the initial check for a revoked
 	// cert fails would return an error when the cert isn't revoked, preventing
 	// the happy path from working.
-	certEntry, _ = req.Storage.Get(ctx, legacyPath)
+	certEntry, _ = sc.Storage.Get(sc.Context, legacyPath)
 	if certEntry == nil {
 		return nil, nil
 	}
@@ -226,17 +224,17 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 
 	// Update old-style paths to new-style paths
 	certEntry.Key = path
-	certsCounted := b.certsCounted.Load()
-	if err = req.Storage.Put(ctx, certEntry); err != nil {
+	certsCounted := sc.Backend.certsCounted.Load()
+	if err = sc.Storage.Put(sc.Context, certEntry); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location", serial)}
 	}
-	if err = req.Storage.Delete(ctx, legacyPath); err != nil {
+	if err = sc.Storage.Delete(sc.Context, legacyPath); err != nil {
 		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
 		switch {
 		case strings.HasPrefix(prefix, "revoked/"):
-			b.incrementTotalRevokedCertificatesCount(certsCounted, path)
+			sc.Backend.incrementTotalRevokedCertificatesCount(certsCounted, path)
 		default:
-			b.incrementTotalCertificatesCount(certsCounted, path)
+			sc.Backend.incrementTotalCertificatesCount(certsCounted, path)
 		}
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
 	}
@@ -699,9 +697,15 @@ func generateCert(sc *storageContext,
 			// issuer entry yet, we default to the global URLs.
 			entries, err := getGlobalAIAURLs(ctx, sc.Storage)
 			if err != nil {
-				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
+				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch AIA URL information: %v", err)}
 			}
-			data.Params.URLs = entries
+
+			uris, err := entries.toURLEntries(sc, issuerID(""))
+			if err != nil {
+				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse AIA URL information: %v\nUsing templated AIA URL's {{issuer_id}} field when generating root certificates is not supported.", err)}
+			}
+
+			data.Params.URLs = uris
 
 			if input.role.MaxPathLength == nil {
 				data.Params.MaxPathLength = -1

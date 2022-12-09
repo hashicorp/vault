@@ -18,15 +18,6 @@ export default class PkiKeyDetails extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
 
-  get breadcrumbs() {
-    return [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.args.key.backend || 'pki', route: 'overview' },
-      { label: 'keys', route: 'keys.index' },
-      { label: this.args.key.keyId },
-    ];
-  }
-
   @action
   async deleteKey() {
     try {
