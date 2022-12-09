@@ -1,0 +1,16 @@
+{{! TODO when importing service, change element to button }}
+<a
+  ...attributes
+  href={{this.href}}
+  download={{this.download}}
+  class={{if @isToolbarAction "toolbar-link" "button is-ghost"}}
+  {{on "click" this.handleDownload}}
+>
+
+  {{#if (has-block)}}
+    {{yield}}
+  {{else}}
+    <Icon @name="download" />
+    {{or @actionText "Download"}}
+  {{/if}}
+</a>
