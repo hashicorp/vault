@@ -12,7 +12,7 @@ export default class PkiCertificateGenerateSerializer extends ApplicationSeriali
   }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    if (requestType === 'createRecord') {
+    if (requestType === 'createRecord' && payload.data.certificate) {
       // Parse certificate back from the API and add to payload
       const parsedCert = parseCertificate(payload.data.certificate);
       const json = super.normalizeResponse(
