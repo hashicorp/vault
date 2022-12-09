@@ -89,7 +89,6 @@ export default class CreateAndEditRolePageComponent extends Component {
   @action
   selectTemplate(event) {
     this.selectedTemplateId = event.target.value;
-    this.args.model.generationPreferences;
   }
 
   @task

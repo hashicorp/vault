@@ -104,7 +104,7 @@
             @valueUpdated={{fn (mut template.rules)}}
             @helpText={{this.roleRulesHelpText}}
           >
-            <button type="button" class="toolbar-link" onClick={{this.resetRoleRules}} data-test-restore-example>
+            <button type="button" class="toolbar-link" {{on "click" this.resetRoleRules}} data-test-restore-example>
               Restore example
               <Icon @name="reload" />
             </button>
