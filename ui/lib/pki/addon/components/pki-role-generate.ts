@@ -19,7 +19,7 @@ interface PkiCertificateGenerateModel {
   backend: string;
   serialNumber: string;
   certificate: string;
-  formFields: FormField;
+  formFields: FormField[];
   formFieldsGroup: {
     [k: string]: FormField[];
   }[];
@@ -27,6 +27,7 @@ interface PkiCertificateGenerateModel {
   rollbackAttributes: () => void;
   deleteRecord: () => void;
   destroyRecord: () => void;
+  canRevoke: boolean;
 }
 interface FormField {
   name: string;

@@ -2,6 +2,7 @@ import Model, { attr } from '@ember-data/model';
 import { assert } from '@ember/debug';
 import { service } from '@ember/service';
 import { withFormFields } from 'vault/decorators/model-form-fields';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 /**
  * There are many ways to generate a cert, but we want to display them in a consistent way.
@@ -10,16 +11,7 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
  * attributes and adapter methods.
  */
 
-const certDisplayFields = [
-  'certificate',
-  'commonName',
-  'serialNumber',
-  'issueDate',
-  'notValidAfter',
-  'notValidBefore',
-  'ip_sans',
-  'other_sans',
-];
+const certDisplayFields = ['certificate', 'commonName', 'serialNumber', 'notValidAfter', 'notValidBefore'];
 
 @withFormFields(certDisplayFields, null)
 export default class PkiCertificateBaseModel extends Model {
@@ -49,4 +41,9 @@ export default class PkiCertificateBaseModel extends Model {
   // Parsed from cert in serializer
   @attr('date') notValidAfter;
   @attr('date') notValidBefore;
+
+  @lazyCapabilities(apiPath`${'backend'}/revoke`, 'backend') revokePath;
+  get canRevoke() {
+    return this.revokePath.get('isLoading') || this.revokePath.get('canCreate') !== false;
+  }
 }

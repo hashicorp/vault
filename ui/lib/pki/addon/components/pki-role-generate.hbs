@@ -5,19 +5,20 @@
         Download
         <Chevron @direction="down" @isButton={{true}} />
       </button>
-      <button
-        type="button"
-        class="toolbar-link"
-        {{on "click" (perform this.revoke)}}
-        disabled={{this.revoke.isRunning}}
-        data-test-pki-cert-revoke-button
-      >
-        Revoke certificate
-        <Chevron @direction="right" @isButton={{true}} />
-      </button>
+      {{#if @model.canRevoke}}
+        <button
+          type="button"
+          class="toolbar-link"
+          {{on "click" (perform this.revoke)}}
+          disabled={{this.revoke.isRunning}}
+          data-test-pki-cert-revoke-button
+        >
+          Revoke certificate
+          <Chevron @direction="right" @isButton={{true}} />
+        </button>
+      {{/if}}
     </ToolbarActions>
   </Toolbar>
-
   {{#each @model.formFields as |attr|}}
     {{#if (eq attr.name "certificate")}}
       <InfoTableRow @label="Certificate" @value={{@model.certificate}}>

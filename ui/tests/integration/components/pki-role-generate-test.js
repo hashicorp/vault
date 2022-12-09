@@ -2,33 +2,30 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
 import Sinon from 'sinon';
-
-const SELECTORS = {
-  form: '[data-test-pki-generate-cert-form]',
-  commonNameField: '[data-test-input="commonName"]',
-  optionsToggle: '[data-test-toggle-group="Options"]',
-  generateButton: '[data-test-pki-generate-button]',
-  cancelButton: '[data-test-pki-generate-cancel]',
-  downloadButton: '[data-test-pki-cert-download-button]',
-  revokeButton: '[data-test-pki-cert-revoke-button]',
-  serialNumber: '[data-test-value-div="Serial number"]',
-  certificate: '[data-test-value-div="Certificate"]',
-};
+import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-generate';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | pki-role-generate', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(async function () {
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub);
     this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/certificate/generate', { role: 'my-role' });
+    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
+    this.secretMountPath.currentPath = 'pki-test';
+    this.model = this.store.createRecord('pki/certificate/generate', {
+      role: 'my-role',
+    });
+    this.onSuccess = Sinon.spy();
   });
 
   test('it should render the component with the form by default', async function (assert) {
     assert.expect(4);
-    this.set('onSuccess', Sinon.spy());
     await render(
       hbs`
       <div class="has-top-margin-xxl">
@@ -52,9 +49,9 @@ module('Integration | Component | pki-role-generate', function (hooks) {
     const record = this.store.createRecord('pki/certificate/generate', {
       role: 'my-role',
       serialNumber: 'abcd-efgh-ijkl',
+      certificate: 'my-very-cool-certificate',
     });
     this.set('model', record);
-    this.set('onSuccess', Sinon.spy());
     await render(
       hbs`
       <div class="has-top-margin-xxl">
