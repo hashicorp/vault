@@ -38,8 +38,9 @@ func (c *NodeStatusReporter) GetNodeStatus(ctx context.Context) (nodestatus.Node
 		return status, err
 	}
 
-	raftStatus := &node_status.RaftStatus{
-		IsVoter: c.NodeStatusGetter.IsRaftVoter(),
+	raftStatus := &node_status.RaftStatus{}
+	if sealStatus.StorageType == "raft" {
+		raftStatus.IsVoter = c.NodeStatusGetter.IsRaftVoter()
 	}
 
 	protoRes := &node_status.LinkedClusterNodeStatusResponse{
