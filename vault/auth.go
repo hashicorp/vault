@@ -766,7 +766,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 
-	var needPersist bool
 	for _, entry := range c.auth.sortEntriesByPathDepth().Entries {
 		var backend logical.Backend
 
@@ -830,9 +829,8 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// upgrade, stop unsealing and shutdown. If we've already mounted this
 		// plugin, skip backend initialization and mount the data for posterity.
 		if versions.IsBuiltinVersion(entry.RunningVersion) {
-			shutdown := isMajorOrMinorUpgrade(version.Version, entry.LastMounted)
 			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential)
-			if shutdown && err != nil {
+			if c.majorUpdateInProgress && err != nil {
 				go c.ShutdownCoreError(fmt.Errorf("could not mount %q: %w", entry.Type, err))
 				return errLoadAuthFailed
 			} else if err != nil {
@@ -916,20 +914,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				}
 			})
 		}
-
-		// Update the last mounted version
-		if entry.LastMounted != version.Version {
-			entry.LastMounted = version.Version
-			needPersist = true
-		}
-	}
-
-	if !needPersist {
-		return nil
-	}
-
-	if err := c.persistAuth(ctx, c.auth, nil); err != nil {
-		return fmt.Errorf("failed to persist last mounted version to auth table: %w", err)
 	}
 
 	return nil

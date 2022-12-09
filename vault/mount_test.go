@@ -313,7 +313,7 @@ func TestCore_Mount_Local(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(localMountsTable.Entries) != 1 || localMountsTable.Entries[0].Type != "cubbyhole" {
-		t.Fatalf("expected only cubbyhole entry in local mount table, got %#v", localMountsTable)
+		t.Fatalf("expected only cubbyhole entry in local mount table, got %+v", localMountsTable)
 	}
 
 	c.mounts.Entries[1].Local = true

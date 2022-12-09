@@ -10,10 +10,12 @@ import (
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/version"
 )
 
 const (
 	vaultVersionPath string = "core/versions/"
+	lastUnsealedKey  string = "core/last_unsealed_version/"
 )
 
 // storeVersionEntry will store the version, timestamp, and build date to storage
@@ -65,6 +67,42 @@ func (c *Core) storeVersionEntry(ctx context.Context, vaultVersion *VaultVersion
 	}
 
 	return true, nil
+}
+
+// storeLastUnsealed will store the last version of Vault that successfully
+// unsealed. This is set on successful startup of Vault after an upgrade, which
+// is useful in determining how we handle mount entries associated with
+// deprecated builtin plugins.
+func (c *Core) storeLastUnsealed(ctx context.Context, vaultVersion string) error {
+	versionData, err := json.Marshal(vaultVersion)
+	if err != nil {
+		return err
+	}
+
+	lastUnsealed, err := c.barrier.Get(ctx, lastUnsealedKey)
+	if err != nil {
+		return err
+	}
+
+	var lastVersion string
+	if err := json.Unmarshal(lastUnsealed.Value, &lastVersion); err != nil {
+		return err
+	}
+
+	if isMajorOrMinorUpgrade(version.Version, lastVersion) {
+		c.majorUpdateInProgress = true
+	}
+
+	newEntry := &logical.StorageEntry{
+		Key:   lastUnsealedKey,
+		Value: versionData,
+	}
+
+	if err := c.barrier.Put(ctx, newEntry); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // FindOldestVersionTimestamp searches for the vault version with the oldest

@@ -654,6 +654,13 @@ type Core struct {
 	rollbackPeriod time.Duration
 
 	pendingRemovalMountsAllowed bool
+
+	// majorUpdateInProgress tells Vault how to handle mount entries
+	// associated with deprecated builtins. If true, this results in a core
+	// shutdown on unseal.  Otherwise, it informs setupCredentials and
+	// setupMounts to continue processing the mount entry, but skips backend
+	// initialization.
+	majorUpdateInProgress bool
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -1815,6 +1822,10 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 
 	if c.logger.IsInfo() {
 		c.logger.Info("vault is unsealed")
+	}
+
+	if err := c.storeLastUnsealed(ctx, version.Version); err != nil {
+		return err
 	}
 
 	if c.serviceRegistration != nil {

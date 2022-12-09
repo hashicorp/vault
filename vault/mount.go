@@ -1424,7 +1424,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	var needPersist bool
 	for _, entry := range c.mounts.sortEntriesByPathDepth().Entries {
 		// Initialize the backend, special casing for system
 		barrierPath := entry.ViewPath()
@@ -1487,9 +1486,8 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// upgrade, stop unsealing and shutdown. If we've already mounted this
 		// plugin, skip backend initialization and mount the data for posterity.
 		if versions.IsBuiltinVersion(entry.RunningVersion) {
-			shutdown := isMajorOrMinorUpgrade(version.Version, entry.LastMounted)
 			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets)
-			if shutdown && err != nil {
+			if c.majorUpdateInProgress && err != nil {
 				go c.ShutdownCoreError(fmt.Errorf("could not mount %q: %w", entry.Type, err))
 				return errLoadMountsFailed
 			} else if err != nil {
@@ -1563,16 +1561,10 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Update the last mounted version
 		if entry.LastMounted != version.Version {
 			entry.LastMounted = version.Version
-			needPersist = true
+			if err := c.persistMounts(ctx, c.mounts, &entry.Local); err != nil {
+				return fmt.Errorf("failed to persist last mounted version to mount table: %w", err)
+			}
 		}
-	}
-
-	if !needPersist {
-		return nil
-	}
-
-	if err := c.persistMounts(ctx, c.mounts, nil); err != nil {
-		return fmt.Errorf("failed to persist last mounted version to mount table: %w", err)
 	}
 
 	return nil

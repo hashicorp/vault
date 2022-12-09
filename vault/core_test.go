@@ -361,7 +361,7 @@ func TestCore_SealUnseal(t *testing.T) {
 }
 
 // Verify mount LastMounted for all mount entries.
-func TestCore_LastMounted(t *testing.T) {
+func TestCore_LastUnsealedVersion(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	for _, entry := range c.auth.Entries {
 		if entry.LastMounted != version.Version {
