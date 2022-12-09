@@ -7,6 +7,8 @@ export default function (server) {
 
   if (handler === 'kubernetes') {
     server.create('kubernetes-config', { path: 'kubernetes' });
-    server.createList('kubernetes-role', 5);
+    server.create('kubernetes-role');
+    server.create('kubernetes-role', 'withRoleName');
+    server.create('kubernetes-role', 'withRoleRules');
   }
 }
