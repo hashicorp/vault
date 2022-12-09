@@ -6,15 +6,15 @@ resources: ["secrets", "services"]
 verbs: ["get", "watch", "list", "create", "delete", "deletecollection", "patch", "update"]
 `;
 const name_template = '{{.FieldName | lowercase}}';
-const extra_annotations = { foo: 'bar', bar: 'baz' };
-const extra_labels = { baz: 'bar', bar: 'foo' };
+const extra_annotations = { foo: 'bar', baz: 'qux' };
+const extra_labels = { foobar: 'baz', barbaz: 'foo' };
 
 export default Factory.extend({
   name: (i) => `role-${i}`,
   allowed_kubernetes_namespaces: '*',
   allowed_kubernetes_namespace_selector: '',
   token_max_ttl: 86400,
-  token_default_ttl: 0,
+  token_default_ttl: 600,
   service_account_name: 'default',
   kubernetes_role_name: '',
   kubernetes_role_type: 'Role',

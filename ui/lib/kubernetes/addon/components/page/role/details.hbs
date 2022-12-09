@@ -26,13 +26,13 @@
 
 <Toolbar>
   <ToolbarActions>
-    <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{this.delete}}>
+    <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{this.delete}} data-test-delete>
       Delete role
     </ConfirmAction>
     <ToolbarLink @route="roles.role.credentials" data-test-generate-credentials>
       Generate credentials
     </ToolbarLink>
-    <ToolbarLink @route="roles.role.edit" data-test-generate-credentials>
+    <ToolbarLink @route="roles.role.edit" data-test-edit>
       Edit role
     </ToolbarLink>
   </ToolbarActions>
@@ -41,6 +41,7 @@
 {{#each @model.filteredFormFields as |field|}}
   {{#let (get @model field.name) as |value|}}
     <InfoTableRow
+      data-test-filtered-field
       @label={{field.options.label}}
       @value={{if (eq field.options.editType "ttl") (format-duration value) value}}
     />
@@ -48,7 +49,7 @@
 {{/each}}
 
 {{#if @model.generatedRoleRules}}
-  <div class="has-top-margin-xl">
+  <div class="has-top-margin-xl" data-test-generated-role-rules>
     <h2 class="title is-4">Generated role rules</h2>
     <JsonEditor
       @title="Role rules"
@@ -62,7 +63,7 @@
 {{/if}}
 
 {{#each this.extraFields as |field|}}
-  <div class="has-top-margin-xl">
+  <div class="has-top-margin-xl" data-test-extra-fields={{field.label}}>
     <h2 class="title is-4 is-marginless">{{field.label}}</h2>
     {{#each-in (get @model field.key) as |key value|}}
       <InfoTableRow @label={{key}} @value={{value}} />
