@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/link_control";
+
+package link_control;
+
+message PurgePolicyRequest {}
+
+message PurgePolicyResponse {}
+
+service HCPLinkControl {
+  // PurgePolicy Forgets the current Batch token, and its associated policy,
+  // such that the policy is forced to be refreshed.
+  rpc PurgePolicy(PurgePolicyRequest) returns (PurgePolicyResponse);
+}
