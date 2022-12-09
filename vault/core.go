@@ -2247,9 +2247,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
 	}
-	if err := c.handleVersionTimeStamps(ctx); err != nil {
-		return err
-	}
 
 	if !c.IsDRSecondary() {
 		if err := c.startRollback(); err != nil {
@@ -2353,6 +2350,10 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	}
 
 	if err := unsealer.unseal(ctx, c.logger, c); err != nil {
+		return err
+	}
+
+	if err := c.handleVersionTimeStamps(ctx); err != nil {
 		return err
 	}
 
