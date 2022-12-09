@@ -6,7 +6,6 @@
   class={{if @isToolbarAction "toolbar-link" "button is-ghost"}}
   {{on "click" this.handleDownload}}
 >
-
   {{#if (has-block)}}
     {{yield}}
   {{else}}
