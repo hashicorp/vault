@@ -2203,7 +2203,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	return resp, nil
 }
 
-// handleUnlockUser is used to unlock user with given mount_accessor and alias_identifier
+// handleUnlockUser is used to unlock user with given mount_accessor and alias_identifier if locked
 func (b *SystemBackend) handleUnlockUser(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	mountAccessor := data.Get("mount_accessor").(string)
 	if mountAccessor == "" {
@@ -2219,27 +2219,26 @@ func (b *SystemBackend) handleUnlockUser(ctx context.Context, req *logical.Reque
 			logical.ErrInvalidRequest
 	}
 
+	if err := unlockUser(ctx, b.Core, mountAccessor, aliasName); err != nil {
+		b.Backend.Logger().Error("unlock user failed", "mount accessor", mountAccessor, "alias identifier", aliasName, "error", err)
+		return handleError(err)
+	}
+
+	return nil, nil
+}
+
+// unlockUser deletes the entry for locked user from storage and userFailedLoginInfo map
+func unlockUser(ctx context.Context, core *Core, mountAccessor string, aliasName string) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	lockedUserStoragePath := coreLockedUsersPath + ns.ID + "/" + mountAccessor + "/" + aliasName
 
-	// get the entry for the locked user
-	existingEntry, err := b.Core.barrier.Get(ctx, lockedUserStoragePath)
-	if err != nil {
-		return nil, err
-	}
-
-	if existingEntry == nil {
-		return nil, logical.CodedError(http.StatusNotFound,
-			fmt.Sprintf("locked user with mount_accessor %s and alias_identifier %s not found", mountAccessor, aliasName))
-	}
-
-	// if exists, remove it from storage
-	if err := b.Core.barrier.Delete(ctx, lockedUserStoragePath); err != nil {
-		return nil, err
+	// remove entry for locked user from storage
+	if err := core.barrier.Delete(ctx, lockedUserStoragePath); err != nil {
+		return err
 	}
 
 	loginUserInfoKey := FailedLoginUser{
@@ -2247,12 +2246,12 @@ func (b *SystemBackend) handleUnlockUser(ctx context.Context, req *logical.Reque
 		mountAccessor: mountAccessor,
 	}
 
-	// remove it from userFailedLoginInfo map
-	if err := updateUserFailedLoginInfo(ctx, b.Core, loginUserInfoKey, nil, true); err != nil {
-		return nil, err
+	// remove entry for locked user from userFailedLoginInfo map
+	if err := updateUserFailedLoginInfo(ctx, core, loginUserInfoKey, nil, true); err != nil {
+		return err
 	}
 
-	return nil, nil
+	return nil
 }
 
 // handleLease is use to view the metadata for a given LeaseID
@@ -5354,7 +5353,7 @@ the mount.`,
 		lockout threshold value, the user is locked for a duration as specified 
 		in the lockout duration. However, in some cases you may want to unlock 
 		the user before the lockout duration has passed. This endpoint is used to 
-		unlock the user for a given mount accessor and alias identifier.`,
+		unlock the user with given mount accessor and alias identifier if locked`,
 	},
 	"mount_accessor": {
 		"MountAccessor is the identifier of the mount entry to which the user belongs",

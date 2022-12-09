@@ -325,6 +325,9 @@ func TestIdentityStore_LockoutCounterResetTest(t *testing.T) {
 	}
 }
 
+// TestIdentityStore_UnlockUserTest tests the user is
+// unlocked if locked  using
+// sys/lockedusers/[mount_accessor]/unlock/[alias-identifier]
 func TestIdentityStore_UnlockUserTest(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -409,11 +412,7 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 
 	// unlock user with wrong mount_accessor
 	_, err = active.Logical().Write("sys/lockedusers/mountAccessor/unlock/bsmith", nil)
-	if err == nil {
-		t.Fatal("expected unlock user to fail as wrong mount accessor provided")
-	}
-	expected := "locked user with mount_accessor mountAccessor and alias_identifier bsmith not found"
-	if !strings.Contains(err.Error(), expected) {
-		t.Fatalf("expected %v, got %v", expected, err)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
