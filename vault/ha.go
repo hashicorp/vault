@@ -1029,7 +1029,7 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 		}
 
 		// Retry the acquisition
-		c.logger.Error("failed to acquire lock", "error", err)
+		c.logger.Warn("failed to acquire lock", "error", err)
 		select {
 		case <-time.After(lockRetryInterval):
 		case <-stopCh:
