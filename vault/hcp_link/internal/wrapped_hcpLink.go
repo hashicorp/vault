@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -10,7 +11,11 @@ import (
 )
 
 type WrappedCoreNodeStatus interface {
+	ActiveTime() time.Time
 	GetSealStatus(ctx context.Context) (*vault.SealStatusResponse, error)
+	IsRaftVoter() bool
+	ListenerAddresses() ([]string, error)
+	LogLevel() string
 	ReplicationState() consts.ReplicationState
 }
 

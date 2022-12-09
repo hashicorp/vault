@@ -2986,6 +2986,11 @@ func (c *Core) LogFormat() string {
 	return conf.(*server.Config).LogFormat
 }
 
+// LogLevel returns the log level provided by level provided by config, CLI flag, or env
+func (c *Core) LogLevel() string {
+	return c.logLevel
+}
+
 // MetricsHelper returns the global metrics helper which allows external
 // packages to access Vault's internal metrics.
 func (c *Core) MetricsHelper() *metricsutil.MetricsHelper {
@@ -3550,4 +3555,37 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 	resourceID := c.hcpLinkStatus.ResourceIDOnHCP
 
 	return status, resourceID
+}
+
+// ListenerAddresses provides a slice of configured listener addresses
+func (c *Core) ListenerAddresses() ([]string, error) {
+	addresses := make([]string, 0)
+
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return nil, fmt.Errorf("failed to load core raw config")
+	}
+
+	listeners := conf.(*server.Config).Listeners
+	if lns == nil {
+		return nil, fmt.Errorf("no listener configured")
+	}
+
+	for _, listener := range listeners {
+		addresses = append(addresses, listener.Address)
+	}
+
+	return addresses, nil
+}
+
+// IsRaftVoter specifies whether the node is a raft voter which is
+// always false if raft storage is not in use.
+func (c *Core) IsRaftVoter() bool {
+	raftInfo := c.raftInfo.Load().(*raftInformation)
+
+	if raftInfo == nil {
+		return false
+	}
+
+	return !raftInfo.nonVoter
 }
