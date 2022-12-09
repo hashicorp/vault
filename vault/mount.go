@@ -1557,7 +1557,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Ensure the cache is populated, don't need the result
 		NamespaceByID(ctx, entry.NamespaceID, c)
 	}
-
 	return nil
 }
 

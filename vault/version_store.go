@@ -71,7 +71,7 @@ func (c *Core) storeVersionEntry(ctx context.Context, vaultVersion *VaultVersion
 
 // storeLastUpgrade will store the last version of Vault that was successfully
 // upgraded and unsealed. This is set on successful startup of Vault after an
-// upgrade, which is useful in determining how we handle mount entries
+// upgrade. This method is used to set the shutdown behavior for mount entries
 // associated with deprecated builtin plugins.
 func (c *Core) storeLastUpgrade(ctx context.Context, vaultVersion string) error {
 	versionData, err := json.Marshal(vaultVersion)
