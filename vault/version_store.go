@@ -15,7 +15,7 @@ import (
 
 const (
 	vaultVersionPath string = "core/versions/"
-	lastUnsealedKey  string = "core/last_unsealed_version/"
+	lastUpgradeKey   string = "core/last_upgrade_version/"
 )
 
 // storeVersionEntry will store the version, timestamp, and build date to storage
@@ -69,18 +69,18 @@ func (c *Core) storeVersionEntry(ctx context.Context, vaultVersion *VaultVersion
 	return true, nil
 }
 
-// storeLastUnsealed will store the last version of Vault that successfully
-// unsealed. This is set on successful startup of Vault after an upgrade, which
-// is useful in determining how we handle mount entries associated with
-// deprecated builtin plugins.
-func (c *Core) storeLastUnsealed(ctx context.Context, vaultVersion string) error {
+// storeLastUpgrade will store the last version of Vault that was successfully
+// upgraded and unsealed. This is set on successful startup of Vault after an
+// upgrade, which is useful in determining how we handle mount entries
+// associated with deprecated builtin plugins.
+func (c *Core) storeLastUpgrade(ctx context.Context, vaultVersion string) error {
 	versionData, err := json.Marshal(vaultVersion)
 	if err != nil {
 		return err
 	}
 
 	newEntry := &logical.StorageEntry{
-		Key:   lastUnsealedKey,
+		Key:   lastUpgradeKey,
 		Value: versionData,
 	}
 
@@ -180,17 +180,17 @@ func (c *Core) loadVersionHistory(ctx context.Context) error {
 // that was successfully unsealed to see if it is a milestone or major upgrade.
 // This is useful in determining shutdown behavior for deprecated builtins.
 func (c *Core) isMajorUpgrade(ctx context.Context) (bool, error) {
-	lastUnsealed, err := c.barrier.Get(ctx, lastUnsealedKey)
+	lastUpgrade, err := c.barrier.Get(ctx, lastUpgradeKey)
 	if err != nil {
 		return false, err
 	}
 
-	if lastUnsealed == nil {
+	if lastUpgrade == nil {
 		return true, nil
 	}
 
 	var lastVersion string
-	if err := json.Unmarshal(lastUnsealed.Value, &lastVersion); err != nil {
+	if err := json.Unmarshal(lastUpgrade.Value, &lastVersion); err != nil {
 		return false, err
 	}
 
