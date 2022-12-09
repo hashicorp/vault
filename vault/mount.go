@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -329,7 +328,6 @@ type MountEntry struct {
 	Tainted               bool              `json:"tainted,omitempty"`                 // Set as a Write-Ahead flag for unmount/remount
 	MountState            string            `json:"mount_state,omitempty"`             // The current mount state.  The only non-empty mount state right now is "unmounting"
 	NamespaceID           string            `json:"namespace_id"`
-	LastMounted           string            `json:"last_mounted,omitempty"` // The last version of Vault with which this entry was mounted.
 
 	// namespace contains the populated namespace
 	namespace *namespace.Namespace
@@ -540,8 +538,6 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 			return logical.CodedError(403, fmt.Sprintf("mount type of %q is not mountable", entry.Type))
 		}
 	}
-
-	entry.LastMounted = version.Version
 
 	// Mount internally
 	if err := c.mountInternal(ctx, entry, MountTableUpdateStorage); err != nil {
@@ -1557,14 +1553,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 
 		// Ensure the cache is populated, don't need the result
 		NamespaceByID(ctx, entry.NamespaceID, c)
-
-		// Update the last mounted version
-		if entry.LastMounted != version.Version {
-			entry.LastMounted = version.Version
-			if err := c.persistMounts(ctx, c.mounts, &entry.Local); err != nil {
-				return fmt.Errorf("failed to persist last mounted version to mount table: %w", err)
-			}
-		}
 	}
 
 	return nil

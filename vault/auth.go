@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/version"
 )
 
 const (
@@ -202,8 +201,6 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		backend.Cleanup(ctx)
 		backend = nil
 	}
-
-	entry.LastMounted = version.Version
 
 	// Update the auth table
 	newTable := c.auth.shallowClone()
@@ -472,8 +469,6 @@ func (c *Core) remountCredential(ctx context.Context, src, dst namespace.MountPa
 	srcMatch.namespace = dst.Namespace
 	srcPath := srcMatch.Path
 	srcMatch.Path = strings.TrimPrefix(dst.MountPath, credentialRoutePrefix)
-
-	srcMatch.LastMounted = version.Version
 
 	// Update the mount table
 	if err := c.persistAuth(ctx, c.auth, &srcMatch.Local); err != nil {
