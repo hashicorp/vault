@@ -14,12 +14,15 @@ export default class DownloadButton extends Component {
     return `${this.args.filename}-${new Date().toISOString()}.${this.extension}`;
   }
 
-  get content() {
-    let data = this.args.data;
+  get data() {
     if (this.args.stringify) {
-      data = JSON.stringify(data, null, 2);
+      return JSON.stringify(this.args.data, null, 2);
     }
-    const content = new File([data], this.filename, { type: this.mime });
+    return this.args.data;
+  }
+
+  get content() {
+    const content = new File([this.data], this.filename, { type: this.mime });
     return content;
   }
 
