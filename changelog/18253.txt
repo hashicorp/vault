@@ -1,0 +1,3 @@
+```release-note:bug
+sdk/physical/cache: adding non-nil validation check before caching an entry
+```
