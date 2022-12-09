@@ -11,6 +11,8 @@ on:
     branches:
       - main
       - release/**
+      # lets test this
+      - skip-build-docs
 
 env:
   PKG_NAME: vault
