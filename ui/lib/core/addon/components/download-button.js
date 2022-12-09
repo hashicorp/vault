@@ -1,5 +1,30 @@
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
+/**
+ * @module DownloadButton
+ * DownloadButton components are an action button used to download data. Both the action text and icon are yielded.
+ *
+ * @example
+ * ```js
+ *   <DownloadButton
+ *     @buttonClass="toolbar-link"
+ *     @data={{this.data}}
+ *     @filename={{this.filename}}
+ *     @mime={{this.mime}}
+ *     @extension={{this.extension}}
+ *     @stringify={{true}}
+ *   >
+ *    <Icon @name="download" />
+ *      Download
+ *   </DownloadButton>
+ * ```
+ * @param {string} data - data to download
+ * @param {boolean} [stringify=false] - argument to stringify the data before passing to the File constructor
+ * @param {string} [filename] - name of file that prefixes the ISO timestamp generated when download
+ * @param {string} [mime='text/plain'] - media type to be downloaded
+ * @param {string} [extension='txt'] - file extension
+ * @param {string} [buttonClass] - override css class defaults to customize how the button looks
+ */
 
 export default class DownloadButton extends Component {
   get extension() {
@@ -11,7 +36,8 @@ export default class DownloadButton extends Component {
   }
 
   get filename() {
-    return `${this.args.filename}-${new Date().toISOString()}.${this.extension}`;
+    const defaultFilename = `${new Date().toISOString()}.${this.extension}`;
+    return this.args.filename ? this.args.filename + '-' + defaultFilename : defaultFilename;
   }
 
   get data() {
