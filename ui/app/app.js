@@ -52,14 +52,15 @@ export default class App extends Application {
       dependencies: {
         services: [
           'auth',
+          'download-file',
           'flash-messages',
           'namespace',
           'path-help',
           'router',
+          'secret-mount-path',
           'store',
           'version',
           'wizard',
-          'secret-mount-path',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
