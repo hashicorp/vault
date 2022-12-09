@@ -249,7 +249,6 @@ func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
 
 func TestQuotas_RateLimitQuota_DefaultExemptPaths(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
-	opts.NoDefaultQuotas = true
 
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
