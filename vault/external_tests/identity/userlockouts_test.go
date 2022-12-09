@@ -343,10 +343,9 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 	standby := cluster.Cores[1].Client
 
 	// enable userpass auth method on path userpass
-	err := active.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+	if err := active.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
 		Type: "userpass",
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -362,18 +361,16 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 		LockoutThreshold: "2",
 		LockoutDuration:  "5m",
 	}
-	err = active.Sys().TuneMount("auth/userpass", api.MountConfigInput{
+	if err = active.Sys().TuneMount("auth/userpass", api.MountConfigInput{
 		UserLockoutConfig: userlockoutConfig,
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 
 	// create a user for userpass
-	_, err = standby.Logical().Write("auth/userpass/users/bsmith", map[string]interface{}{
+	if _, err = standby.Logical().Write("auth/userpass/users/bsmith", map[string]interface{}{
 		"password": "training",
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -386,10 +383,9 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 		"password": "wrongPassword",
 	})
 	// login : permission denied as user locked out
-	_, err = standby.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+	if _, err = standby.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "training",
-	})
-	if err == nil {
+	}); err == nil {
 		t.Fatal("expected login to fail as user locked out")
 	}
 	if !strings.Contains(err.Error(), logical.ErrPermissionDenied.Error()) {
@@ -397,22 +393,19 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 	}
 
 	// unlock user
-	_, err = standby.Logical().Write("sys/lockedusers/"+mountAccessor+"/unlock/bsmith", nil)
-	if err != nil {
+	if _, err = standby.Logical().Write("sys/lockedusers/"+mountAccessor+"/unlock/bsmith", nil); err != nil {
 		t.Fatal(err)
 	}
 
 	// login: should be successful as user unlocked
-	_, err = standby.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+	if _, err = standby.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "training",
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatal("expected login to succeed as user is unlocked")
 	}
 
-	// unlock user with wrong mount_accessor
-	_, err = active.Logical().Write("sys/lockedusers/mountAccessor/unlock/bsmith", nil)
-	if err != nil {
+	// unlock unlocked user
+	if _, err = active.Logical().Write("sys/lockedusers/mountAccessor/unlock/bsmith", nil); err != nil {
 		t.Fatal(err)
 	}
 }
