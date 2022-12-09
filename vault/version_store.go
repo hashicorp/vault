@@ -15,7 +15,6 @@ import (
 
 const (
 	vaultVersionPath string = "core/versions/"
-	lastUpgradeKey   string = "core/last_upgrade_version/"
 )
 
 // storeVersionEntry will store the version, timestamp, and build date to storage
@@ -67,30 +66,6 @@ func (c *Core) storeVersionEntry(ctx context.Context, vaultVersion *VaultVersion
 	}
 
 	return true, nil
-}
-
-// storeLastUpgrade will store the last version of Vault that was successfully
-// upgraded and unsealed. This is set on successful startup of Vault after an
-// upgrade. This method is used to set the shutdown behavior for mount entries
-// associated with deprecated builtin plugins.
-func (c *Core) storeLastUpgrade(ctx context.Context, vaultVersion string) error {
-	versionData, err := json.Marshal(vaultVersion)
-	if err != nil {
-		return err
-	}
-
-	newEntry := &logical.StorageEntry{
-		Key:   lastUpgradeKey,
-		Value: versionData,
-	}
-
-	if err := c.barrier.Put(ctx, newEntry); err != nil {
-		return err
-	}
-
-	c.majorUpgradeInProgress = false
-
-	return nil
 }
 
 // FindOldestVersionTimestamp searches for the vault version with the oldest
@@ -176,21 +151,22 @@ func (c *Core) loadVersionHistory(ctx context.Context) error {
 	return nil
 }
 
-// isMajorUpgrade compares the current version of Vault with the last version
-// that was successfully unsealed to see if it is a milestone or major upgrade.
-// This is useful in determining shutdown behavior for deprecated builtins.
-func (c *Core) isMajorUpgrade(ctx context.Context) (bool, error) {
-	lastUpgrade, err := c.barrier.Get(ctx, lastUpgradeKey)
+// isMajorVersionFirstMount compares the current version of Vault with the last
+// version that was successfully mounted and unsealed to see if it is a
+// milestone or major upgrade. This is useful in determining shutdown behavior
+// for deprecated builtins.
+func (c *Core) isMajorVersionFirstMount(ctx context.Context) (bool, error) {
+	existingEntry, err := c.barrier.Get(ctx, unsealInfoPath)
 	if err != nil {
 		return false, err
 	}
 
-	if lastUpgrade == nil {
+	if existingEntry == nil {
 		return true, nil
 	}
 
-	var lastVersion string
-	if err := json.Unmarshal(lastUpgrade.Value, &lastVersion); err != nil {
+	var info *unsealInformation
+	if err := json.Unmarshal(existingEntry.Value, &info); err != nil {
 		return false, err
 	}
 
@@ -199,7 +175,7 @@ func (c *Core) isMajorUpgrade(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	prev, err := semver.NewSemver(lastVersion)
+	prev, err := semver.NewSemver(info.version)
 	if err != nil {
 		// If we can't find a previous version, this is effectively an upgrade
 		return true, err

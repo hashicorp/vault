@@ -820,12 +820,12 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			}
 		}
 
-		// Do not start up deprecated builtin plugins. If this is a major/minor
+		// Do not start up deprecated builtin plugins. If this is a major
 		// upgrade, stop unsealing and shutdown. If we've already mounted this
 		// plugin, skip backend initialization and mount the data for posterity.
 		if versions.IsBuiltinVersion(entry.RunningVersion) {
 			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential)
-			if c.majorUpgradeInProgress && err != nil {
+			if c.majorVersionFirstMount && err != nil {
 				go c.ShutdownCoreError(fmt.Errorf("could not mount %q: %w", entry.Type, err))
 				return errLoadAuthFailed
 			} else if err != nil {

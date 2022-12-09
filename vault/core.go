@@ -102,6 +102,11 @@ const (
 	// undoLogsAreSafeStoragePath is a storage path that we write once we know undo logs are
 	// safe, so we don't have to keep checking all the time.
 	undoLogsAreSafeStoragePath = "core/raft/undo_logs_are_safe"
+
+	// unsealInfoPath is a storage path that we write once we've successfully
+	// unsealed Vault. This persists some information about the last successful
+	// unseal, including the Vault version.
+	unsealInfoPath string = "core/unseal_info"
 )
 
 var (
@@ -217,6 +222,13 @@ type migrationInformation struct {
 	// we don't store the shamir combined key for shamir seals, nor when
 	// migrating auto->auto because then the recovery key doesn't change.
 	unsealKey []byte
+}
+
+// lastUnsealInformation includes information about the last version of Vault
+// that successfully mounted backends and unsealed.
+type unsealInformation struct {
+	// last version of Vault to be successfully unsealed
+	version string
 }
 
 // Core is used as the central manager of Vault activity. It is the primary point of
@@ -655,12 +667,14 @@ type Core struct {
 
 	pendingRemovalMountsAllowed bool
 
-	// majorUpgradeInProgress tells Vault how to handle mount entries
-	// associated with deprecated builtins. If true, this results in a core
-	// shutdown on unseal.  Otherwise, it informs setupCredentials and
-	// setupMounts to continue processing the mount entry, but skips backend
-	// initialization.
-	majorUpgradeInProgress bool
+	// majorVersionFirstMount informs setupCredentials and setupMounts whether
+	// or not Vault has been unsealed with this major version of Vault yet.
+	// If true, this results in a core shutdown on unseal if there are any mount
+	// entries associated with deprecated builtins.  Otherwise, it informs
+	// setupCredentials and setupMounts to continue processing the mount entry,
+	// but skips backend initialization.
+	unsealInfo             *unsealInformation
+	majorVersionFirstMount bool
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -1222,13 +1236,18 @@ func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime, "build date", version.BuildDate)
 	}
 
-	majorUpgrade, err := c.isMajorUpgrade(ctx)
-	if err != nil {
-		return fmt.Errorf("error checking major upgrade status: %w", err)
+	// Set the unseal information to be persisted after all backends are successfully mounted.
+	c.unsealInfo = &unsealInformation{
+		version: version.Version,
 	}
 
-	if majorUpgrade {
-		c.majorUpgradeInProgress = true
+	firstUnseal, err := c.isMajorVersionFirstMount(ctx)
+	if err != nil {
+		return fmt.Errorf("error checking first unseal information: %w", err)
+	}
+
+	if firstUnseal {
+		c.majorVersionFirstMount = true
 	}
 
 	// Finally, populate the version history cache
@@ -2248,7 +2267,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
 	}
-	if err := c.storeLastUpgrade(ctx, version.Version); err != nil {
+	if err := c.storeUnsealInformation(ctx, c.unsealInfo); err != nil {
 		return err
 	}
 
@@ -2509,6 +2528,28 @@ func (c *Core) preSeal() error {
 
 	c.logger.Info("pre-seal teardown complete")
 	return result
+}
+
+// storeUnsealInformation will store information about the last successful
+// unseal. This currently holds the last version of Vault that was unsealed.
+func (c *Core) storeUnsealInformation(ctx context.Context, info *unsealInformation) error {
+	unsealData, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+
+	newEntry := &logical.StorageEntry{
+		Key:   unsealInfoPath,
+		Value: unsealData,
+	}
+
+	if err := c.barrier.Put(ctx, newEntry); err != nil {
+		return err
+	}
+
+	c.majorVersionFirstMount = false
+
+	return nil
 }
 
 func enterprisePostUnsealImpl(c *Core, isStandby bool) error {
