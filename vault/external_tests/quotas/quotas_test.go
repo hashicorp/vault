@@ -1,6 +1,7 @@
 package quotas
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -266,18 +267,22 @@ func TestQuotas_RateLimitQuota_DefaultExemptPaths(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	resp, err := client.Logical().Read("sys/health")
+	req := client.NewRequest("GET", "/v1/sys/health")
+	resp, err := client.RawRequestWithContext(context.Background(), req)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
+	require.NotNil(t, resp.Body)
+	require.Equal(t, 200, resp.StatusCode)
 
 	// The second sys/health call should not fail as /v1/sys/health is
 	// part of the default exempt paths
-	resp, err = client.Logical().Read("sys/health")
+	req = client.NewRequest("GET", "/v1/sys/health")
+	resp, err = client.RawRequestWithContext(context.Background(), req)
 	require.NoError(t, err)
-	// If the response is nil, then we are being rate limited
 	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
+	require.NotNil(t, resp.Body)
+	// If the response is not 200, then we are being rate limited
+	require.Equal(t, 200, resp.StatusCode)
 }
 
 func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
