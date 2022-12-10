@@ -5347,18 +5347,21 @@ the auth path.`,
 		`Read and write the 'default-lease-ttl' and 'max-lease-ttl' values of
 the mount.`,
 	},
+
 	"unlock_user": {
-		"Unlock the locked user for given mount_accessor and alias_identifier.",
-		`When the number of subsequent failed logins for a user passes a 
-		lockout threshold value, the user is locked for a duration as specified 
-		in the lockout duration. However, in some cases you may want to unlock 
-		the user before the lockout duration has passed. This endpoint is used to 
-		unlock the user with given mount accessor and alias identifier if locked`,
+		"Unlock the locked user with given mount_accessor and alias_identifier.",
+		`
+This path responds to the following HTTP methods.
+    POST sys/lockedusers/:mount_accessor/unlock/:alias_identifier
+		Unlocks the user with given mount_accessor and alias_identifier
+		if locked.`,
 	},
+
 	"mount_accessor": {
 		"MountAccessor is the identifier of the mount entry to which the user belongs",
 		"",
 	},
+
 	"alias_identifier": {
 		`It is the name of the alias (user). For example, if the alias belongs to userpass backend, 
 	   the name should be a valid username within userpass auth method. If the alias belongs
