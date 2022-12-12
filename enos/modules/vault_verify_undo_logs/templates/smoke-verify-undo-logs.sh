@@ -14,7 +14,7 @@ function fail() {
 count=0
 retries=7
 while :; do
-    state=$(curl "$VAULT_ADDR/v1/sys/metrics"  | jq -r '.Gauges[] | select(.Name == "vault.core.replication.write_undo_logs")')
+    state=$(curl --header "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/sys/metrics"  | jq -r '.Gauges[] | select(.Name == "vault.core.replication.write_undo_logs")')
     target_undo_logs_status="$(jq -r '.Value' <<< "$state")"
 
     if [ "$undo_logs_status" = "$target_undo_logs_status" ]; then
