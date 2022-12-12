@@ -31,6 +31,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
       backend: 'kubernetes-test',
       ...this.server.create('kubernetes-role'),
     });
+
     this.model = {
       backend: this.store.peekRecord('secret-engine', 'kubernetes-test'),
       roleModel: this.store.peekRecord('kubernetes/role', 'role-0'),
@@ -60,32 +61,29 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
   test('it should show errors states when generating credentials', async function (assert) {
     assert.expect(2);
 
-    this.server.post(`/kubernetes-test/creds/${this.model.roleModel.name}`, () => {
-      return new Response(
-        400,
-        {},
-        {
-          errors: ["'kubernetes_namespace' is required"],
-        }
-      );
-    });
+    const getCreateCredentialsError = (roleName, errorType = null) => {
+      let errors;
 
+      if (errorType === 'noNamespace') {
+        errors = ["'kubernetes_namespace' is required"];
+      } else {
+        errors = [`role '${roleName}' does not exist`];
+      }
+
+      this.server.post(`/kubernetes-test/creds/${roleName}`, () => {
+        return new Response(400, {}, { errors });
+      });
+    };
+
+    getCreateCredentialsError(this.model.roleModel.name, 'noNamespace');
     await render(hbs`<Page::Credentials @backend={{this.model.backend}} @role={{this.model.roleModel}} />`, {
       owner: this.engine,
     });
     await click('[data-test-generate-credentials-button]');
     assert.dom('[data-test-error] .alert-banner-message-body').hasText("'kubernetes_namespace' is required");
 
-    this.model.roleModel.name = 'role-1';
-    this.server.post(`/kubernetes-test/creds/${this.model.roleModel.name}`, () => {
-      return new Response(
-        400,
-        {},
-        {
-          errors: [`role '${this.model.roleModel.name}' does not exist`],
-        }
-      );
-    });
+    this.model.roleModel.name = 'role-2';
+    getCreateCredentialsError(this.model.roleModel.name);
 
     await render(hbs`<Page::Credentials @backend={{this.model.backend}} @role={{this.model.roleModel}} />`, {
       owner: this.engine,
