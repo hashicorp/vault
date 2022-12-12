@@ -1,12 +1,12 @@
-import FetchConfigRoute from '../../fetch-config';
-import { hash } from 'ember-concurrency';
-export default class KubernetesRoleCredentialsRoute extends FetchConfigRoute {
-  model() {
-    const roleModel = this.modelFor('roles.role');
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+export default class KubernetesRoleCredentialsRoute extends Route {
+  @service secretMountPath;
 
-    return hash({
-      roleModel,
+  model() {
+    return {
+      roleModel: this.modelFor('roles.role'),
       backend: this.secretMountPath.get(),
-    });
+    };
   }
 }

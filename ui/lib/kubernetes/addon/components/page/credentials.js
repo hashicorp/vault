@@ -4,34 +4,22 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { add } from 'date-fns';
 import errorMessage from 'vault/utils/error-message';
 
 export default class CredentialsPageComponent extends Component {
   @service store;
   @service router;
 
-  @tracked ttl;
+  @tracked ttl = '';
+  @tracked clusterRoleBinding = false;
   @tracked kubernetesNamespace;
   @tracked error;
-  @tracked clusterRoleBinding = false;
 
-  @tracked serviceAcctName;
-  @tracked serviceAcctNamespace;
-  @tracked serviceAcctToken;
-  @tracked leaseDuration;
-  @tracked leaseId;
-
-  @tracked showCredentialDetails;
-
-  constructor() {
-    super(...arguments);
-  }
+  @tracked credentials;
 
   get leaseExpiry() {
-    let date = new Date();
-    date.setSeconds(date.getSeconds() + this.leaseDuration);
-    date = new Date(date);
-    return date;
+    return add(new Date(), { seconds: this.credentials.lease_duration });
   }
 
   @action
@@ -54,7 +42,7 @@ export default class CredentialsPageComponent extends Component {
   *fetchCredentials() {
     try {
       const payload = {
-        role: this.args.model.roleModel.name,
+        role: this.args.role.name,
         kubernetes_namespace: this.kubernetesNamespace,
         cluster_role_binding: this.clusterRoleBinding,
         ttl: this.ttl,
@@ -62,20 +50,9 @@ export default class CredentialsPageComponent extends Component {
 
       const credentials = yield this.store
         .adapterFor('kubernetes/role')
-        .generateCredentials(this.args.model.backend, payload);
+        .generateCredentials(this.args.role.backend, payload);
 
-      const {
-        lease_duration,
-        lease_id,
-        data: { service_account_token, service_account_name, service_account_namespace },
-      } = credentials;
-
-      this.showCredentialDetails = true;
-      this.serviceAcctName = service_account_name;
-      this.serviceAcctNamespace = service_account_namespace;
-      this.serviceAcctToken = service_account_token;
-      this.leaseDuration = lease_duration;
-      this.leaseId = lease_id;
+      this.credentials = credentials;
     } catch (error) {
       this.error = errorMessage(error);
     }
