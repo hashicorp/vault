@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -2334,7 +2335,7 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	// been set up properly before any writes can have happened.
 	//
 	// Use a small temporary worker pool to run postUnsealFuncs in parallel
-	postUnsealFuncConcurrency := 32
+	postUnsealFuncConcurrency := runtime.NumCPU() * 2
 	if v := os.Getenv("VAULT_POSTUNSEAL_FUNC_CONCURRENCY"); v != "" {
 		pv, err := strconv.Atoi(v)
 		if err != nil || pv < 1 {
