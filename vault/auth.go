@@ -907,8 +907,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
 				if err != nil {
 					postUnsealLogger.Error("failed to initialize auth backend", "error", err)
-				} else {
-					postUnsealLogger.Info("successfully initialized auth backend")
 				}
 			})
 		}

@@ -1539,8 +1539,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
 				if err != nil {
 					postUnsealLogger.Error("failed to initialize mount backend", "error", err)
-				} else {
-					postUnsealLogger.Error("successfully initialized mount backend")
 				}
 			})
 		}
