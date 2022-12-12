@@ -375,6 +375,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	// item fails, respectively mark the error in the response
 	// collection and continue to process other items.
 	warnAboutNonceUsage := false
+	successesInBatch := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			continue
@@ -409,6 +410,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 		batchResponseItems[i].Ciphertext = ciphertext
 		batchResponseItems[i].KeyVersion = keyVersion
+		successesInBatch = true
 	}
 
 	resp := &logical.Response{}
@@ -443,15 +445,31 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 	p.Unlock()
 
-	// Depending on the errors in the batch, different status codes should be returned. User errors
-	// will return a 400 and precede internal errors which return a 500. The reasoning behind this is
-	// that user errors are non-retryable without making changes to the request, and should be surfaced
-	// to the user first.
-	switch {
-	case userErrorInBatch:
-		return logical.RespondWithStatusCode(resp, req, http.StatusBadRequest)
-	case internalErrorInBatch:
-		return logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
+	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
+}
+
+// Depending on the errors in the batch, different status codes should be returned. User errors
+// will return a 400 and precede internal errors which return a 500. The reasoning behind this is
+// that user errors are non-retryable without making changes to the request, and should be surfaced
+// to the user first.
+func batchRequestResponse(d *framework.FieldData, resp *logical.Response, req *logical.Request, successesInBatch, userErrorInBatch, internalErrorInBatch bool) (*logical.Response, error) {
+	if userErrorInBatch || internalErrorInBatch {
+		var code int
+		switch {
+		case userErrorInBatch:
+			code = http.StatusBadRequest
+		case internalErrorInBatch:
+			code = http.StatusInternalServerError
+		}
+		if codeRaw, ok := d.GetOk("partial_failure_response_code"); ok && successesInBatch {
+			newCode := codeRaw.(int)
+			if newCode < 1 || newCode > 599 {
+				resp.AddWarning(fmt.Sprintf("invalid HTTP response code override from partial_failure_response_code, reverting to %d", code))
+			} else {
+				code = newCode
+			}
+		}
+		return logical.RespondWithStatusCode(resp, req, code)
 	}
 
 	return resp, nil
