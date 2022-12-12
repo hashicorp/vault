@@ -164,23 +164,20 @@ func (c *Core) updateMajorVersionFirstMount(ctx context.Context) error {
 	}
 
 	// Get versions into comparable form
-	curr, err := semver.NewSemver(version.Version)
-	if err != nil {
-		return err
-	}
 	prev, err := semver.NewSemver(prevMounted)
 	if err != nil {
 		// If we can't find a previous version, this is effectively an upgrade
 		c.majorVersionFirstMount = true
+		return nil
+	}
+	curr, err := semver.NewSemver(version.Version)
+	if err != nil {
+		return err
 	}
 
-	// Check for milestone version upgrade
-	if curr.Segments()[0] > prev.Segments()[0] {
-		c.majorVersionFirstMount = true
-	}
-
-	// Check for major version upgrade
-	if curr.Segments()[1] > prev.Segments()[1] {
+	// Check for milestone or major version upgrade
+	if curr.Segments()[0] > prev.Segments()[0] ||
+		curr.Segments()[1] > prev.Segments()[1] {
 		c.majorVersionFirstMount = true
 	}
 
