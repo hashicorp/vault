@@ -9,10 +9,10 @@ on:
 jobs:
   metadata:
     if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
-    runs-on: ubuntu-default
+    runs-on: ubuntu-latest
     outputs:
       matrix-test-group: ${{ steps.matrix-group.outputs.matrix-test-group }}
-     steps:
+    steps:
       - uses: actions/checkout@v3
       - id: matrix-group
         env:
