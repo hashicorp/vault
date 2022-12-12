@@ -509,21 +509,23 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 // that user errors are non-retryable without making changes to the request, and should be surfaced
 // to the user first.
 func batchRequestResponse(d *framework.FieldData, resp *logical.Response, req *logical.Request, successesInBatch, userErrorInBatch, internalErrorInBatch bool) (*logical.Response, error) {
-	switch {
-	case userErrorInBatch:
-		code := http.StatusBadRequest
-		if successesInBatch {
-			if codeRaw, ok := d.GetOk("partial_failure_response_code"); ok {
-				code = codeRaw.(int)
-				if code < 1 || code > 599 {
-					resp.AddWarning("invalid HTTP response code override from partial_failure_response_code, reverting to HTTP 400")
-					code = http.StatusBadRequest
-				}
+	if userErrorInBatch || internalErrorInBatch {
+		var code int
+		switch {
+		case userErrorInBatch:
+			code = http.StatusBadRequest
+		case internalErrorInBatch:
+			code = http.StatusInternalServerError
+		}
+		if codeRaw, ok := d.GetOk("partial_failure_response_code"); ok && successesInBatch {
+			newCode := codeRaw.(int)
+			if newCode < 1 || newCode > 599 {
+				resp.AddWarning(fmt.Sprintf("invalid HTTP response code override from partial_failure_response_code, reverting to %d", code))
+			} else {
+				code = newCode
 			}
 		}
 		return logical.RespondWithStatusCode(resp, req, code)
-	case internalErrorInBatch:
-		return logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
 	}
 
 	return resp, nil
