@@ -2171,16 +2171,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	// for the active startup.
 	c.activeTime = time.Now().UTC()
 
-	if err := c.loadVersionHistory(ctx); err != nil {
-		return err
-	}
-
-	var err error
-	c.majorVersionFirstMount, err = c.isMajorVersionFirstMount(ctx)
-	if err != nil {
-		return err
-	}
-
 	if err := postUnsealPhysical(c); err != nil {
 		return err
 	}
@@ -2311,6 +2301,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	c.metricsCh = make(chan struct{})
 	go c.emitMetricsActiveNode(c.metricsCh)
 
+	// Establish version timestamps at the end of unseal on active nodes only.
+	if err := c.handleVersionTimeStamps(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -2349,11 +2344,17 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		_ = c.seal.SetRecoveryConfig(ctx, nil)
 	}
 
-	if err := unsealer.unseal(ctx, c.logger, c); err != nil {
+	// Load prior un-updated store into version history cache to compare
+	// previous state.
+	if err := c.loadVersionHistory(ctx); err != nil {
 		return err
 	}
 
-	if err := c.handleVersionTimeStamps(ctx); err != nil {
+	if err := c.updateMajorVersionFirstMount(ctx); err != nil {
+		return err
+	}
+
+	if err := unsealer.unseal(ctx, c.logger, c); err != nil {
 		return err
 	}
 
