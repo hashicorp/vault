@@ -95,7 +95,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
   });
 
   test('it should show correct credential information after generate credentials is clicked', async function (assert) {
-    assert.expect(14);
+    assert.expect(15);
 
     this.server.post('/kubernetes-test/creds/role-0', () => {
       assert.ok('POST request made to generate credentials');
@@ -123,6 +123,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     await fillIn('[data-test-ttl-value="Time-to-Live (TTL)"]', 2);
     await click('[data-test-generate-credentials-button]');
 
+    assert.dom('[data-test-credentials-header]').hasText('Credentials');
     assert.dom('[data-test-alert-banner] .message-title').hasText('Warning');
     assert
       .dom('[data-test-alert-banner] .alert-banner-message-body')
