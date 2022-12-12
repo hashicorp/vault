@@ -4,7 +4,7 @@ scenario "autopilot" {
     artifact_source  = ["local", "crt", "artifactory"]
     artifact_type    = ["bundle", "package"]
     distro           = ["ubuntu", "rhel"]
-    edition          = ["ent"]
+    edition          = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     seal             = ["awskms", "shamir"]
     undo_logs_status = ["0", "1"]
   }
@@ -19,7 +19,10 @@ scenario "autopilot" {
 
   locals {
     build_tags = {
-      "ent" = ["enterprise", "ent"]
+      "ent"              = ["ui", "enterprise", "ent"]
+      "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
+      "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
+      "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
     }
     bundle_path             = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
     dependencies_to_install = ["jq"]
