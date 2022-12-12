@@ -7,6 +7,7 @@ import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import { engines, KMIP, TRANSFORM, KEYMGMT } from 'vault/helpers/mountable-secret-engines';
 import { waitFor } from '@ember/test-waiters';
+import { optionsForBackend } from 'core/helpers/options-for-backend';
 
 /**
  * @module MountBackendForm
@@ -45,15 +46,6 @@ export default class MountBackendForm extends Component {
   @tracked errors = '';
   @tracked errorMessage = '';
 
-  constructor() {
-    super(...arguments);
-    const type = this.args.mountType || 'auth';
-    const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
-    const model = this.store.createRecord(modelType);
-    model.set('config', this.store.createRecord('mount-config'));
-    this.mountModel = model;
-  }
-
   get mountTypes() {
     return this.mountType === 'secret' ? this.engines : METHODS;
   }
@@ -65,14 +57,22 @@ export default class MountBackendForm extends Component {
     return ENGINES;
   }
 
+  get customConfigComponent() {
+    if (this.args.mountType === 'secret' && this.args.mountModel.type) {
+      const options = optionsForBackend(this.args.mountModel.type);
+      return options.configComponent;
+    }
+    return null;
+  }
+
   willDestroy() {
     // if unsaved, we want to unload so it doesn't show up in the auth mount list
     super.willDestroy(...arguments);
-    this.mountModel.rollbackAttributes();
+    this.args.mountModel.rollbackAttributes();
   }
 
   checkPathChange(type) {
-    const mount = this.mountModel;
+    const mount = this.args.mountModel;
     const currentPath = mount.path;
     const list = this.mountTypes;
     // if the current path matches a type (meaning the user hasn't altered it),
@@ -97,7 +97,7 @@ export default class MountBackendForm extends Component {
   @waitFor
   *mountBackend(event) {
     event.preventDefault();
-    const mountModel = this.mountModel;
+    const mountModel = this.args.mountModel;
     const { type, path } = mountModel;
     // only submit form if validations pass
     if (!this.checkModelValidity(mountModel)) {
@@ -108,6 +108,7 @@ export default class MountBackendForm extends Component {
       capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
     } catch (err) {
       if (Ember.testing) {
+        // TODO: smells like we need to fix a test
         //captures mount-backend-form component test
         yield mountModel.save();
         let mountType = this.mountType;
@@ -156,11 +157,11 @@ export default class MountBackendForm extends Component {
         'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
       );
       // remove the config data from the model otherwise it will save it even if the network request failed.
-      [this.mountModel.maxVersions, this.mountModel.casRequired, this.mountModel.deleteVersionAfter] = [
-        0,
-        false,
-        0,
-      ];
+      [
+        this.args.mountModel.maxVersions,
+        this.args.mountModel.casRequired,
+        this.args.mountModel.deleteVersionAfter,
+      ] = [0, false, 0];
     }
     let mountType = this.mountType;
     mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
@@ -171,7 +172,7 @@ export default class MountBackendForm extends Component {
 
   @action
   onKeyUp(name, value) {
-    this.mountModel.set(name, value);
+    this.args.mountModel.set(name, value);
   }
 
   @action
@@ -186,9 +187,24 @@ export default class MountBackendForm extends Component {
   toggleShowEnable(value) {
     this.showEnable = value;
     if (value === true && this.wizard.featureState === 'idle') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.mountModel.type);
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.args.mountModel.type);
     } else {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.mountModel.type);
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.args.mountModel.type);
+    }
+  }
+
+  @action
+  setMountType(value) {
+    this.args.mountModel.set('type', value);
+    this.checkPathChange(value);
+    if (value === '') {
+      // resets wizard
+      if (this.wizard.featureState === 'idle') {
+        this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.args.mountModel.type);
+      }
+    } else {
+      this.wizard.set('componentState', value);
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.args.mountModel.type);
     }
   }
 }
