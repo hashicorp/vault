@@ -517,7 +517,7 @@ func batchRequestResponse(d *framework.FieldData, resp *logical.Response, req *l
 		case internalErrorInBatch:
 			code = http.StatusInternalServerError
 		}
-		if codeRaw, ok := d.GetOk("partial_failure_response_code"); ok {
+		if codeRaw, ok := d.GetOk("partial_failure_response_code"); ok && successesInBatch {
 			newCode := codeRaw.(int)
 			if newCode < 1 || newCode > 599 {
 				resp.AddWarning(fmt.Sprintf("invalid HTTP response code override from partial_failure_response_code, reverting to %d", code))
