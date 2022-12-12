@@ -37,11 +37,9 @@ const (
 // Verify PostgreSQLBackend satisfies the correct interfaces
 var _ physical.Backend = (*PostgreSQLBackend)(nil)
 
-//
 // HA backend was implemented based on the DynamoDB backend pattern
 // With distinction using central postgres clock, hereby avoiding
 // possible issues with multiple clocks
-//
 var (
 	_ physical.HABackend = (*PostgreSQLBackend)(nil)
 	_ physical.Lock      = (*PostgreSQLLock)(nil)
