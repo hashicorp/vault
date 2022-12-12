@@ -87,7 +87,7 @@ func (c *Core) FindOldestVersionTimestamp() (string, time.Time, error) {
 	return oldestVersion, oldestUpgradeTime, nil
 }
 
-func (c *Core) FindNewestVersionTimestamp(ctx context.Context) (string, time.Time, error) {
+func (c *Core) FindNewestVersionTimestamp() (string, time.Time, error) {
 	if c.versionHistory == nil {
 		return "", time.Time{}, fmt.Errorf("version history is not initialized")
 	}

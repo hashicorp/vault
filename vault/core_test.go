@@ -429,7 +429,7 @@ func TestCore_PreOneTen_BatchTokens(t *testing.T) {
 	}
 
 	// double check that we're working with 1.9
-	v, _, err := c.FindNewestVersionTimestamp(c.activeContext)
+	v, _, err := c.FindNewestVersionTimestamp()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -479,7 +479,7 @@ func TestCore_OneTenPlus_BatchTokens(t *testing.T) {
 	}
 
 	// double check that we're working with 1.10
-	v, _, err := c.FindNewestVersionTimestamp(c.activeContext)
+	v, _, err := c.FindNewestVersionTimestamp()
 	if err != nil {
 		t.Fatal(err)
 	}

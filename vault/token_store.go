@@ -1177,7 +1177,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		}
 
 		bEntry := base64.RawURLEncoding.EncodeToString(eEntry)
-		ver, _, err := ts.core.FindNewestVersionTimestamp(ctx)
+		ver, _, err := ts.core.FindNewestVersionTimestamp()
 		if err != nil {
 			return err
 		}
