@@ -77,6 +77,13 @@ listener "tcp" {
   tls_key_file  = "TMPDIR/reload_key.pem"
 }
 `
+	cloudHCL = `
+cloud {
+      resource_id = "organization/bc58b3d0-2eab-4ab8-abf4-f61d3c9975ff/project/1c78e888-2142-4000-8918-f933bbbc7690/hashicorp.example.resource/example"
+    client_id = "J2TtcSYOyPUkPV2z0mSyDtvitxLVjJmu"
+    client_secret = "N9JtHZyOnHrIvJZs82pqa54vd4jnkyU3xCcqhFXuQKJZZuxqxxbP1xCfBZVB82vY"
+}
+`
 )
 
 func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
@@ -265,6 +272,13 @@ func TestServer(t *testing.T) {
 			"environment_variables_logged",
 			testBaseHCL(t, "") + inmemHCL,
 			"Environment Variables",
+			0,
+			[]string{"-test-verify-only"},
+		},
+		{
+			"cloud_config",
+			testBaseHCL(t, "") + inmemHCL + cloudHCL,
+			"HCP Organization: bc58b3d0-2eab-4ab8-abf4-f61d3c9975ff",
 			0,
 			[]string{"-test-verify-only"},
 		},

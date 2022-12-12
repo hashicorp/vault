@@ -1377,6 +1377,17 @@ func (c *ServerCommand) Run(args []string) int {
 		info["fips"] = fipsStatus
 	}
 
+	if config.HCPLinkConf != nil {
+		infoKeys = append(infoKeys, "HCP organization")
+		info["HCP organization"] = config.HCPLinkConf.Resource.Organization
+
+		infoKeys = append(infoKeys, "HCP project")
+		info["HCP project"] = config.HCPLinkConf.Resource.Project
+
+		infoKeys = append(infoKeys, "HCP resource ID")
+		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
+	}
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1446,12 +1457,12 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	hcpLogger := c.logger.Named("hcpLink")
+	hcpLogger := c.logger.Named("hcp-connectivity")
 	hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, core, hcpLogger)
 	if err != nil {
-		c.logger.Error("failed to start HCP Link", "error", err)
+		c.logger.Error("failed to establish HCP connection", "error", err)
 	} else if hcpLink != nil {
-		c.logger.Trace("started HCP link")
+		c.logger.Trace("established HCP connection")
 	}
 
 	if c.flagTestServerConfig {
