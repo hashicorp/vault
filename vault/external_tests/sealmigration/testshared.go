@@ -322,7 +322,8 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 }
 
 func validateMigration(t *testing.T, storage teststorage.ReusableStorage,
-	cluster *vault.TestCluster, leaderIdx int, f func(t *testing.T, core *vault.TestClusterCore)) {
+	cluster *vault.TestCluster, leaderIdx int, f func(t *testing.T, core *vault.TestClusterCore),
+) {
 	t.Helper()
 
 	leader := cluster.Cores[leaderIdx]
@@ -681,7 +682,8 @@ func runShamir(t *testing.T, logger hclog.Logger, storage teststorage.ReusableSt
 
 // initializeTransit initializes a brand new backend storage with Transit.
 func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int,
-	tss *sealhelper.TransitSealServer, sealKeyName string) (*vault.TestCluster, *vault.TestClusterOptions) {
+	tss *sealhelper.TransitSealServer, sealKeyName string,
+) (*vault.TestCluster, *vault.TestClusterOptions) {
 	t.Helper()
 
 	baseClusterPort := basePort + 10
