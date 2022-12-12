@@ -16,8 +16,6 @@ const (
 	KeyUsageVerify
 	KeyUsageWrap
 	KeyUsageUnwrap
-	KeyUsageMACGenerate
-	KeyUsageMACVerify
 	KeyUsageGenerateRandom
 )
 
