@@ -27,7 +27,7 @@ module('Integration | Component | pki key details page', function (hooks) {
   });
 
   test('it renders the page component and deletes a key', async function (assert) {
-    assert.expect(9);
+    assert.expect(6);
     this.server.delete(`${this.backend}/key/${this.model.keyId}`, () => {
       assert.ok(true, 'confirming delete fires off destroyRecord()');
     });
@@ -39,9 +39,6 @@ module('Integration | Component | pki key details page', function (hooks) {
       { owner: this.engine }
     );
 
-    assert.dom(SELECTORS.breadcrumbContainer).exists({ count: 1 }, 'breadcrumb containers exist');
-    assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
-    assert.dom(SELECTORS.title).containsText('View key', 'title renders');
     assert.dom(SELECTORS.keyIdValue).hasText(' 724862ff-6438-bad0-b598-77a6c7f4e934', 'key id renders');
     assert.dom(SELECTORS.keyNameValue).hasText('test-key', 'key name renders');
     assert.dom(SELECTORS.keyTypeValue).hasText('ec', 'key type renders');

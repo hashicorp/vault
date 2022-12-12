@@ -2,7 +2,6 @@ package pki
 
 import (
 	"bytes"
-	"context"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -242,17 +241,17 @@ func (cb *crlBuilder) flushCRLBuildTimeInvalidation(sc *storageContext) error {
 
 // rebuildIfForced is to be called by readers or periodic functions that might need to trigger
 // a refresh of the CRL before the read occurs.
-func (cb *crlBuilder) rebuildIfForced(ctx context.Context, b *backend, request *logical.Request) error {
+func (cb *crlBuilder) rebuildIfForced(sc *storageContext) error {
 	if cb.forceRebuild.Load() {
-		return cb._doRebuild(ctx, b, request, true, _enforceForceFlag)
+		return cb._doRebuild(sc, true, _enforceForceFlag)
 	}
 
 	return nil
 }
 
 // rebuild is to be called by various write apis that know the CRL is to be updated and can be now.
-func (cb *crlBuilder) rebuild(ctx context.Context, b *backend, request *logical.Request, forceNew bool) error {
-	return cb._doRebuild(ctx, b, request, forceNew, _ignoreForceFlag)
+func (cb *crlBuilder) rebuild(sc *storageContext, forceNew bool) error {
+	return cb._doRebuild(sc, forceNew, _ignoreForceFlag)
 }
 
 // requestRebuildIfActiveNode will schedule a rebuild of the CRL from the next read or write api call assuming we are the active node of a cluster
@@ -270,7 +269,7 @@ func (cb *crlBuilder) requestRebuildIfActiveNode(b *backend) {
 	cb.forceRebuild.Store(true)
 }
 
-func (cb *crlBuilder) _doRebuild(ctx context.Context, b *backend, request *logical.Request, forceNew bool, ignoreForceFlag bool) error {
+func (cb *crlBuilder) _doRebuild(sc *storageContext, forceNew bool, ignoreForceFlag bool) error {
 	cb._builder.Lock()
 	defer cb._builder.Unlock()
 	// Re-read the lock in case someone beat us to the punch between the previous load op.
@@ -284,7 +283,7 @@ func (cb *crlBuilder) _doRebuild(ctx context.Context, b *backend, request *logic
 
 		// if forceRebuild was requested, that should force a complete rebuild even if requested not too by forceNew
 		myForceNew := forceBuildFlag || forceNew
-		return buildCRLs(ctx, b, request, myForceNew)
+		return buildCRLs(sc, myForceNew)
 	}
 
 	return nil
@@ -469,13 +468,13 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509
 }
 
 // Revokes a cert, and tries to be smart about error recovery
-func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial string, fromLease bool) (*logical.Response, error) {
+func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Response, error) {
 	// As this backend is self-contained and this function does not hook into
 	// third parties to manage users or resources, if the mount is tainted,
 	// revocation doesn't matter anyways -- the CRL that would be written will
 	// be immediately blown away by the view being cleared. So we can simply
 	// fast path a successful exit.
-	if b.System().Tainted() {
+	if sc.Backend.System().Tainted() {
 		return nil, nil
 	}
 
@@ -483,8 +482,6 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	// to gracefully degrade to the legacy cert bundle when it is required, as
 	// secondary PR clusters might not have been upgraded, but still need to
 	// handle revoking certs.
-	sc := b.makeStorageContext(ctx, req.Storage)
-
 	issuerIDCertMap, err := fetchIssuerMapForRevocationChecking(sc)
 	if err != nil {
 		return nil, err
@@ -502,7 +499,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	alreadyRevoked := false
 	var revInfo revocationInfo
 
-	revEntry, err := fetchCertBySerial(ctx, b, req, revokedPath, serial)
+	revEntry, err := fetchCertBySerial(sc, revokedPath, serial)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -521,7 +518,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	}
 
 	if !alreadyRevoked {
-		certEntry, err := fetchCertBySerial(ctx, b, req, "certs/", serial)
+		certEntry, err := fetchCertBySerial(sc, "certs/", serial)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -535,7 +532,6 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 				// We can't write to revoked/ or update the CRL anyway because we don't have the cert,
 				// and there's no reason to expect this will work on a subsequent
 				// retry.  Just give up and let the lease get deleted.
-				b.Logger().Warn("expired certificate revoke failed because not found in storage, treating as success", "serial", serial)
 				return nil, nil
 			}
 			return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found", serial)), nil
@@ -577,18 +573,18 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			return nil, fmt.Errorf("error creating revocation entry")
 		}
 
-		certsCounted := b.certsCounted.Load()
-		err = req.Storage.Put(ctx, revEntry)
+		certsCounted := sc.Backend.certsCounted.Load()
+		err = sc.Storage.Put(sc.Context, revEntry)
 		if err != nil {
 			return nil, fmt.Errorf("error saving revoked certificate to new location")
 		}
-		b.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
+		sc.Backend.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 	}
 
 	// Fetch the config and see if we need to rebuild the CRL. If we have
 	// auto building enabled, we will wait for the next rebuild period to
 	// actually rebuild it.
-	config, err := b.crlBuilder.getConfigWithUpdate(sc)
+	config, err := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error building CRL: while updating config: %w", err)
 	}
@@ -598,7 +594,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		// already rebuilt the full CRL so the Delta WAL will be cleared
 		// afterwards. Writing an entry only to immediately remove it
 		// isn't necessary.
-		crlErr := b.crlBuilder.rebuild(ctx, b, req, false)
+		crlErr := sc.Backend.crlBuilder.rebuild(sc, false)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:
@@ -628,7 +624,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			return nil, fmt.Errorf("unable to create delta CRL WAL entry")
 		}
 
-		if err = req.Storage.Put(ctx, walEntry); err != nil {
+		if err = sc.Storage.Put(sc.Context, walEntry); err != nil {
 			return nil, fmt.Errorf("error saving delta CRL WAL entry")
 		}
 
@@ -640,7 +636,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		if err != nil {
 			return nil, fmt.Errorf("unable to create last delta CRL WAL entry")
 		}
-		if err = req.Storage.Put(ctx, lastWALEntry); err != nil {
+		if err = sc.Storage.Put(sc.Context, lastWALEntry); err != nil {
 			return nil, fmt.Errorf("error saving last delta CRL WAL entry")
 		}
 	}
@@ -656,8 +652,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	return resp, nil
 }
 
-func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew bool) error {
-	sc := b.makeStorageContext(ctx, req.Storage)
+func buildCRLs(sc *storageContext, forceNew bool) error {
 	return buildAnyCRLs(sc, forceNew, false)
 }
 

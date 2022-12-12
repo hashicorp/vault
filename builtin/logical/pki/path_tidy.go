@@ -451,7 +451,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		}
 
 		if !config.AutoRebuild {
-			if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
+			if err := b.crlBuilder.rebuild(sc, false); err != nil {
 				return err
 			}
 		}
@@ -557,7 +557,7 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 		b.revokeStorageLock.Lock()
 		defer b.revokeStorageLock.Unlock()
 
-		if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
+		if err := b.crlBuilder.rebuild(sc, false); err != nil {
 			return err
 		}
 	}

@@ -12,24 +12,22 @@ terraform {
   }
 }
 
-provider "aws" {
-  region = "us-east-1"
-}
-
 locals {
   enterprise_repositories = ["vault-enterprise"]
   is_ent                  = contains(local.enterprise_repositories, var.repository)
-  ci_account_prefix       = local.is_ent ? "vault-enterprise" : "vault"
+  ci_account_prefix       = local.is_ent ? "vault_enterprise" : "vault"
   service_user            = "github_actions-${local.ci_account_prefix}_ci"
   aws_account_id          = local.is_ent ? "505811019928" : "040730498200"
 }
 
 resource "aws_iam_role" "role" {
+  provider           = aws.us_east_1
   name               = local.service_user
   assume_role_policy = data.aws_iam_policy_document.assume_role_policy_document.json
 }
 
 data "aws_iam_policy_document" "assume_role_policy_document" {
+  provider = aws.us_east_1
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRole"]
@@ -42,12 +40,14 @@ data "aws_iam_policy_document" "assume_role_policy_document" {
 }
 
 resource "aws_iam_role_policy" "role_policy" {
-  role   = aws_iam_role.role.name
-  name   = "${local.service_user}_policy"
-  policy = data.aws_iam_policy_document.iam_policy_document.json
+  provider = aws.us_east_1
+  role     = aws_iam_role.role.name
+  name     = "${local.service_user}_policy"
+  policy   = data.aws_iam_policy_document.iam_policy_document.json
 }
 
 data "aws_iam_policy_document" "iam_policy_document" {
+  provider = aws.us_east_1
   statement {
     effect = "Allow"
     actions = [

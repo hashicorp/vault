@@ -2136,7 +2136,6 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	oidExtensionSubjectAltName = []int{2, 5, 29, 17}
 	csrReq := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",

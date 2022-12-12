@@ -317,8 +317,20 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 		}
 
 		// Build OpenAPI response for this path
-		doc := NewOASDocument()
-		if err := documentPath(p, b.SpecialPaths(), requestResponsePrefix, false, b.BackendType, doc); err != nil {
+		vaultVersion := "unknown"
+		if b.System() != nil {
+			// b.System() should always be non-nil, except tests might create a
+			// Backend without one.
+			env, err := b.System().PluginEnv(context.Background())
+			if err != nil {
+				return nil, err
+			}
+			if env != nil {
+				vaultVersion = env.VaultVersion
+			}
+		}
+		doc := NewOASDocument(vaultVersion)
+		if err := documentPath(p, b.SpecialPaths(), requestResponsePrefix, b.BackendType, doc); err != nil {
 			b.Logger().Warn("error generating OpenAPI", "error", err)
 		}
 

@@ -33,7 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -3602,66 +3602,13 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_OASGenericMount(t *testing.T) {
-	_, b, rootToken := testCoreSystemBackend(t)
-	var oapi map[string]interface{}
-
-	// Check that default paths are present with a root token
-	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	req.Data["generic_mount_paths"] = true
-	req.ClientToken = rootToken
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	body := resp.Data["http_raw_body"].([]byte)
-	err = jsonutil.DecodeJSON(body, &oapi)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	doc, err := framework.NewOASDocumentFromMap(oapi)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pathSamples := []struct {
-		path string
-		tag  string
-	}{
-		{"/auth/{mountPath}/lookup", "auth"},
-		{"/{mountPath}/{path}", "secrets"},
-		{"/identity/group/id", "identity"},
-		{"/{mountPath}/.*", "secrets"},
-		{"/sys/policy", "system"},
-	}
-
-	for _, path := range pathSamples {
-		if doc.Paths[path.path] == nil {
-			t.Fatalf("didn't find expected path '%s'.", path)
-		}
-		tag := doc.Paths[path.path].Get.Tags[0]
-		if tag != path.tag {
-			t.Fatalf("path: %s; expected tag: %s, actual: %s", path.path, tag, path.tag)
-		}
-	}
-
-	// Simple check of response size (which is much larger than most
-	// Vault responses), mainly to catch mass omission of expected path data.
-	const minLen = 70000
-	if len(body) < minLen {
-		t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
-	}
-}
-
 func TestSystemBackend_OpenAPI(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
 	var oapi map[string]interface{}
 
 	// Ensure no paths are reported if there is no token
 	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := b.HandleRequest(namespace.RootContext(context.Background()), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -3715,10 +3662,10 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		path string
 		tag  string
 	}{
-		{"/auth/token/lookup", "auth"},
-		{"/cubbyhole/{path}", "secrets"},
+		{"/auth/{token_mount_path}/lookup", "auth"},
+		{"/{cubbyhole_mount_path}/{path}", "secrets"},
 		{"/identity/group/id", "identity"},
-		{"/secret/.*", "secrets"}, // TODO update after kv repo update
+		{"/{secret_mount_path}/.*", "secrets"}, // TODO update after kv repo update
 		{"/sys/policy", "system"},
 	}
 

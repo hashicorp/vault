@@ -20,7 +20,8 @@ type ListenerFactory func(*configutil.Listener, io.Writer, cli.Ui) (net.Listener
 
 // BuiltinListeners is the list of built-in listener types.
 var BuiltinListeners = map[string]ListenerFactory{
-	"tcp": tcpListenerFactory,
+	"tcp":  tcpListenerFactory,
+	"unix": unixListenerFactory,
 }
 
 // NewListener creates a new listener of the given type with the given

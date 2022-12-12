@@ -216,7 +216,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	if oldDisable != config.Disable || (oldAutoRebuild && !config.AutoRebuild) {
 		// It wasn't disabled but now it is (or equivalently, we were set to
 		// auto-rebuild and we aren't now), so rotate the CRL.
-		crlErr := b.crlBuilder.rebuild(ctx, b, req, true)
+		crlErr := b.crlBuilder.rebuild(sc, true)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:
