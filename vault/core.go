@@ -2356,19 +2356,13 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		workerChans := make([]chan func(), postUnsealFuncConcurrency)
 		var wg sync.WaitGroup
 		for i := 0; i < postUnsealFuncConcurrency; i++ {
-			wc := make(chan func())
-			workerChans[i] = wc
-			go func() {
-				for {
-					v, more := <-wc
-					if more {
-						wg.Done()
-						v()
-					} else {
-						break
-					}
+			workerChans[i] = make(chan func())
+			go func(i int) {
+				defer wg.Done()
+				for v := range workerChans[i] {
+					v()
 				}
-			}()
+			}(i)
 		}
 		for i, v := range c.postUnsealFuncs {
 			wg.Add(1)
