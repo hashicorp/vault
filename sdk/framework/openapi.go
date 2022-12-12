@@ -239,6 +239,14 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 	paths := expandPattern(p.Pattern)
 
 	for _, path := range paths {
+
+		log.L().Warn(
+			fmt.Sprintf(
+				`"{prefix: "%s", path: "%s"}: "%s",`,
+				requestResponsePrefix,
+				path,
+				constructRequestIdentifier(logical.Operation(""), path, requestResponsePrefix, "")))
+
 		// Construct a top level PathItem which will be populated as the path is processed.
 		pi := OASPathItem{
 			Description: cleanString(p.HelpSynopsis),
@@ -395,7 +403,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					requestName := constructRequestResponseName(path, requestResponsePrefix, "Request")
+					requestName := constructRequestIdentifier(opType, path, requestResponsePrefix, "request")
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
 						Required: true,
@@ -502,7 +510,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					}
 
 					if len(resp.Fields) != 0 {
-						responseName := constructRequestResponseName(path, requestResponsePrefix, "Response")
+						responseName := constructRequestIdentifier(opType, path, requestResponsePrefix, "response")
 						doc.Components.Schemas[responseName] = responseSchema
 						content = OASContent{
 							"application/json": &OASMediaTypeObject{
@@ -534,31 +542,50 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 	return nil
 }
 
-// constructRequestResponseName joins the given path with prefix & suffix into
-// a CamelCase request or response name.
+// When constructing a request or response name from a prefix + path, certain
+// paths result in very long names or names with duplicate parts. For such paths,
+// we use custom path mappings instead.
+type customPathKey struct {
+	prefix string
+	path   string
+}
+
+var customPathMappings = map[customPathKey]string{}
+
+// constructRequestIdentifier joins the given inputs into a title case string,
+// e.g. 'UpdateSecretConfigLeaseRequest'. This function is used to generate:
 //
-// For example, path=/config/lease/{name}, prefix="secret", suffix="request"
-// will result in "SecretConfigLeaseRequest"
-func constructRequestResponseName(path, prefix, suffix string) string {
-	var b strings.Builder
+//   - operation id
+//   - request name
+//   - response name
+//
+// For certain prefix + path combinations, which would otherwise result in an
+// ugly string, the function uses a custom lookup table to construct part of
+// the string instead.
+func constructRequestIdentifier(operation logical.Operation, path, prefix, suffix string) string {
+	var parts []string
 
-	title := cases.Title(language.English)
+	// Split the operation by non-word characters
+	parts = append(parts, nonWordRe.Split(strings.ToLower(string(operation)), -1)...)
 
-	b.WriteString(title.String(prefix))
-
-	// split the path by / _ - separators
-	for _, token := range strings.FieldsFunc(path, func(r rune) bool {
-		return r == '/' || r == '_' || r == '-'
-	}) {
-		// exclude request fields
-		if !strings.ContainsAny(token, "{}") {
-			b.WriteString(title.String(token))
-		}
+	// Append either the known mapping or prefix + path split by non-word characters
+	if mapping, ok := customPathMappings[customPathKey{prefix: prefix, path: path}]; ok {
+		parts = append(parts, mapping)
+	} else {
+		parts = append(parts, nonWordRe.Split(strings.ToLower(prefix), -1)...)
+		parts = append(parts, nonWordRe.Split(strings.ToLower(path), -1)...)
 	}
 
-	b.WriteString(suffix)
+	parts = append(parts, suffix)
 
-	return b.String()
+	// Title case everything & join the result into a string
+	title := cases.Title(language.English)
+
+	for i, s := range parts {
+		parts[i] = title.String(s)
+	}
+
+	return strings.Join(parts, "")
 }
 
 func specialPathMatch(path string, specialPaths []string) bool {
@@ -771,69 +798,5 @@ func cleanResponse(resp *logical.Response) *cleanedResponse {
 		Warnings: resp.Warnings,
 		WrapInfo: resp.WrapInfo,
 		Headers:  resp.Headers,
-	}
-}
-
-// CreateOperationIDs generates unique operationIds for all paths/methods.
-// The transform will convert path/method into camelcase. e.g.:
-//
-// /sys/tools/random/{urlbytes} -> postSysToolsRandomUrlbytes
-//
-// In the unlikely case of a duplicate ids, a numeric suffix is added:
-//
-//	postSysToolsRandomUrlbytes_2
-//
-// An optional user-provided suffix ("context") may also be appended.
-func (d *OASDocument) CreateOperationIDs(context string) {
-	// title caser
-	title := cases.Title(language.English)
-
-	opIDCount := make(map[string]int)
-	var paths []string
-
-	// traverse paths in a stable order to ensure stable output
-	for path := range d.Paths {
-		paths = append(paths, path)
-	}
-	sort.Strings(paths)
-
-	for _, path := range paths {
-		pi := d.Paths[path]
-		for _, method := range []string{"get", "post", "delete"} {
-			var oasOperation *OASOperation
-			switch method {
-			case "get":
-				oasOperation = pi.Get
-			case "post":
-				oasOperation = pi.Post
-			case "delete":
-				oasOperation = pi.Delete
-			}
-
-			if oasOperation == nil {
-				continue
-			}
-
-			// Discard "_mount_path" from any {thing_mount_path} parameters
-			path = strings.Replace(path, "_mount_path", "", 1)
-
-			// Space-split on non-words, title case everything, recombine
-			opID := nonWordRe.ReplaceAllString(strings.ToLower(path), " ")
-			opID = title.String(opID)
-			opID = method + strings.ReplaceAll(opID, " ", "")
-
-			// deduplicate operationIds. This is a safeguard, since generated IDs should
-			// already be unique given our current path naming conventions.
-			opIDCount[opID]++
-			if opIDCount[opID] > 1 {
-				opID = fmt.Sprintf("%s_%d", opID, opIDCount[opID])
-			}
-
-			if context != "" {
-				opID += "_" + context
-			}
-
-			oasOperation.OperationID = opID
-		}
 	}
 }
