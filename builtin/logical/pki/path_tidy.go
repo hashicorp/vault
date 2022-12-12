@@ -5,13 +5,12 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-hclog"
 	"net/http"
 	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -455,7 +454,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		}
 
 		if !config.AutoRebuild {
-			if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
+			if err := b.crlBuilder.rebuild(sc, false); err != nil {
 				return err
 			}
 		}
@@ -561,7 +560,7 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 		b.revokeStorageLock.Lock()
 		defer b.revokeStorageLock.Unlock()
 
-		if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
+		if err := b.crlBuilder.rebuild(sc, false); err != nil {
 			return err
 		}
 	}
@@ -758,7 +757,23 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		config.PublishMetrics = runningStorageMetricsEnabledRaw.(bool)
 	}
 
-	return nil, sc.writeAutoTidyConfig(config)
+	if err := sc.writeAutoTidyConfig(config); err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"enabled":                               config.Enabled,
+			"interval_duration":                     int(config.Interval / time.Second),
+			"tidy_cert_store":                       config.CertStore,
+			"tidy_revoked_certs":                    config.RevokedCerts,
+			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
+			"tidy_expired_issuers":                  config.ExpiredIssuers,
+			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
+			"issuer_safety_buffer":                  int(config.IssuerSafetyBuffer / time.Second),
+			"pause_duration":                        config.PauseDuration.String(),
+		},
+	}, nil
 }
 
 func (b *backend) tidyStatusStart(config *tidyConfig) {

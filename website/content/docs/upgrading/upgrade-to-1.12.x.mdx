@@ -123,3 +123,40 @@ FAQ](/docs/deprecation/faq#q-what-are-the-phases-of-deprecation).
 
 Affects upgrading from any version of Vault to 1.12.x. All other upgrade paths
 are unaffected.
+
+### `vault plugin list` fails when audit logging is enabled
+
+If audit logging is enabled, Vault will fail to audit the response from any
+calls to the [`GET /v1/sys/plugins/catalog`](/api-docs/system/plugins-catalog#list-plugins)
+endpoint, which causes the whole request to fail and return a 500 internal
+server error. From the CLI, this looks like the following:
+
+```shell-session
+$ vault plugin list
+Error listing available plugins: data from server response is empty
+```
+
+It will produce errors in Vault Server's logs such as:
+
+```text
+2022-11-30T20:04:22.397Z [ERROR] audit: panic during logging: request_path=sys/plugins/catalog error="reflect: reflect.Value.Set using value obtained using unexported field"
+2022-11-30T20:04:22.398Z [ERROR] core: failed to audit response: request_path=sys/plugins/catalog
+  error=
+  | 1 error occurred:
+  | 	* panic generating audit log
+  | 
+```
+
+As a workaround, [listing plugins by type](/api-docs/system/plugins-catalog#list-plugins-1)
+will succeed:
+
+* `vault list sys/plugins/catalog/auth`
+* `vault list sys/plugins/catalog/database`
+* `vault list sys/plugins/catalog/secret`
+
+The bug was introduced by commit
+https://github.com/hashicorp/vault/commit/76165052e54f884ed0aa2caa496083dc84ad1c19.
+
+#### Impacted Versions
+
+Affects versions 1.12.0, 1.12.1, and 1.12.2. A fix will be released in 1.12.3.

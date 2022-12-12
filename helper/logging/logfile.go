@@ -48,14 +48,13 @@ type LogFile struct {
 func (l *LogFile) Write(b []byte) (n int, err error) {
 	l.acquire.Lock()
 	defer l.acquire.Unlock()
+
 	// Create a new file if we have no file to write to
 	if l.fileInfo == nil {
 		if err := l.openNew(); err != nil {
 			return 0, err
 		}
-	}
-	// Check for the last contact and rotate if necessary
-	if err := l.rotate(); err != nil {
+	} else if err := l.rotate(); err != nil { // Check for the last contact and rotate if necessary
 		return 0, err
 	}
 

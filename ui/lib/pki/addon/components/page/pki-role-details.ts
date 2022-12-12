@@ -1,22 +1,24 @@
 import { action } from '@ember/object';
+import RouterService from '@ember/routing/router-service';
 import Component from '@glimmer/component';
-
-// interface Attribute {
-//   name: string;
-//   options?: {
-//     label?: string;
-//   };
-// }
+import FlashMessageService from 'vault/services/flash-messages';
+import { inject as service } from '@ember/service';
+import errorMessage from 'vault/utils/error-message';
 
 // TODO: pull this in from route model once it's TS
 interface Args {
   role: {
     backend: string;
     id: string;
+    rollbackAttributes: () => void;
+    destroyRecord: () => void;
   };
 }
 
 export default class DetailsPage extends Component<Args> {
+  @service declare readonly router: RouterService;
+  @service declare readonly flashMessages: FlashMessageService;
+
   get breadcrumbs() {
     return [
       { label: 'secrets', route: 'secrets', linkExternal: true },
@@ -30,7 +32,15 @@ export default class DetailsPage extends Component<Args> {
     return ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'];
   }
 
-  @action deleteRole() {
-    // TODO: delete role
+  @action
+  async deleteRole() {
+    try {
+      await this.args.role.destroyRecord();
+      this.flashMessages.success('Role deleted successfully');
+      this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.index');
+    } catch (error) {
+      this.args.role.rollbackAttributes();
+      this.flashMessages.danger(errorMessage(error));
+    }
   }
 }

@@ -270,7 +270,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 
 	// Build a fresh CRL
-	err = b.crlBuilder.rebuild(ctx, b, req, true)
+	err = b.crlBuilder.rebuild(sc, true)
 	if err != nil {
 		return nil, err
 	}

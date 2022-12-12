@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
 )
 
 func TestOpenAPI_Regex(t *testing.T) {
@@ -263,7 +262,7 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 		{"foo/bar", []string{"a", "b", "foo/*"}, true, []string{"foo/baz/*"}, false},
 	}
 	for i, test := range tests {
-		doc := NewOASDocument()
+		doc := NewOASDocument("version")
 		path := Path{
 			Pattern: test.pattern,
 		}
@@ -271,7 +270,7 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 			Root:            test.rootPaths,
 			Unauthenticated: test.unauthPaths,
 		}
-		err := documentPath(&path, sp, "kv", false, logical.TypeLogical, doc)
+		err := documentPath(&path, sp, "kv", logical.TypeLogical, doc)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -477,6 +476,16 @@ func TestOpenAPI_Paths(t *testing.T) {
 									"amount": 42,
 								},
 							},
+							Fields: map[string]*FieldSchema{
+								"field_a": {
+									Type:        TypeString,
+									Description: "field_a description",
+								},
+								"field_b": {
+									Type:        TypeBool,
+									Description: "field_b description",
+								},
+							},
 						}},
 					},
 				},
@@ -518,12 +527,12 @@ func TestOpenAPI_OperationID(t *testing.T) {
 	}
 
 	for _, context := range []string{"", "bar"} {
-		doc := NewOASDocument()
-		err := documentPath(path1, nil, "kv", false, logical.TypeLogical, doc)
+		doc := NewOASDocument("version")
+		err := documentPath(path1, nil, "kv", logical.TypeLogical, doc)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = documentPath(path2, nil, "kv", false, logical.TypeLogical, doc)
+		err = documentPath(path2, nil, "kv", logical.TypeLogical, doc)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -582,8 +591,8 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 		},
 	}
 
-	docOrig := NewOASDocument()
-	err := documentPath(p, nil, "kv", false, logical.TypeLogical, docOrig)
+	docOrig := NewOASDocument("version")
+	err := documentPath(p, nil, "kv", logical.TypeLogical, docOrig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -645,8 +654,8 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) {
 	t.Helper()
 
-	doc := NewOASDocument()
-	if err := documentPath(path, sp, "kv", false, logical.TypeLogical, doc); err != nil {
+	doc := NewOASDocument("dummyversion")
+	if err := documentPath(path, sp, "kv", logical.TypeLogical, doc); err != nil {
 		t.Fatal(err)
 	}
 	doc.CreateOperationIDs("")
@@ -655,6 +664,8 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	t.Log(string(docJSON))
 
 	// Compare json by first decoding, then comparing with a deep equality check.
 	var expected, actual interface{}
@@ -691,7 +702,7 @@ func expected(name string) string {
 		panic(err)
 	}
 
-	content := strings.Replace(string(data), "<vault_version>", version.GetVersion().Version, 1)
+	content := strings.Replace(string(data), "<vault_version>", "dummyversion", 1)
 
 	return content
 }

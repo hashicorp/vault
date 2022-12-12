@@ -745,9 +745,6 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return nil, err
 	}
 	if warning != "" {
-		if resp == nil {
-			resp = &logical.Response{}
-		}
 		resp.AddWarning(warning)
 	}
 	if resp.IsError() {
@@ -767,7 +764,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 }
 
 func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.Storage) (*logical.Response, error) {
-	var resp *logical.Response
+	resp := &logical.Response{}
 	var err error
 
 	if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
@@ -828,6 +825,7 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 		return nil, errutil.UserError{Err: err.Error()}
 	}
 
+	resp.Data = entry.ToResponseData()
 	return resp, nil
 }
 

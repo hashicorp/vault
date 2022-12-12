@@ -48,5 +48,10 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	return revokeCert(ctx, b, req, serialInt.(string), true)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	resp, err := revokeCert(sc, serialInt.(string), true)
+	if resp == nil && err == nil {
+		b.Logger().Warn("expired certificate revoke failed because not found in storage, treating as success", "serial", serialInt.(string))
+	}
+	return resp, err
 }

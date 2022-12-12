@@ -1,13 +1,71 @@
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
-
-import fieldToAttrs from 'vault/utils/field-to-attrs';
+import { withFormFields } from 'vault/decorators/model-form-fields';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
 };
 
+const fieldGroups = [
+  {
+    default: [
+      'name',
+      'issuerRef',
+      'customTtl',
+      'notBeforeDuration',
+      'maxTtl',
+      'generateLease',
+      'noStore',
+      'addBasicConstraints',
+    ],
+  },
+  {
+    'Domain handling': [
+      'allowedDomains',
+      'allowedDomainsTemplate',
+      'allowBareDomains',
+      'allowSubdomains',
+      'allowGlobDomains',
+      'allowWildcardCertificates',
+      'allowLocalhost', // default: true (returned true by OpenApi)
+      'allowAnyName',
+      'enforceHostnames', // default: true (returned true by OpenApi)
+    ],
+  },
+  {
+    'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
+  },
+  {
+    'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
+  },
+  { 'Policy identifiers': ['policyIdentifiers'] },
+  {
+    'Subject Alternative Name (SAN) Options': [
+      'allowIpSans',
+      'allowedUriSans',
+      'allowUriSansTemplate',
+      'allowedOtherSans',
+    ],
+  },
+  {
+    'Additional subject fields': [
+      'allowedSerialNumbers',
+      'requireCn',
+      'useCsrCommonName',
+      'useCsrSans',
+      'ou',
+      'organization',
+      'country',
+      'locality',
+      'province',
+      'streetAddress',
+      'postalCode',
+    ],
+  },
+];
+
+@withFormFields(null, fieldGroups)
 @withModelValidations(validations)
 export default class PkiRoleModel extends Model {
   get useOpenAPI() {
@@ -24,6 +82,7 @@ export default class PkiRoleModel extends Model {
   @attr('string', {
     label: 'Role name',
     fieldValue: 'name',
+    editDisabled: true,
   })
   name;
 
@@ -50,7 +109,6 @@ export default class PkiRoleModel extends Model {
     helperTextEnabled:
       'Also called the not_before_duration property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
     editType: 'ttl',
-    hideToggle: true,
     defaultValue: '30s', // The API type is "duration" which accepts both an integer and string e.g. 30 || '30s'
   })
   notBeforeDuration;
@@ -117,15 +175,15 @@ export default class PkiRoleModel extends Model {
 
   @attr('string', {
     label: 'Key bits',
-    defaultValue: 2048,
+    defaultValue: '2048',
   })
-  keyBits; // keyBits is a conditional value based on keyType. The model param is handled in the pkiKeyParameters component.
+  keyBits; // no possibleValues because options are dependent on selected key type
 
   @attr('number', {
     label: 'Signature bits',
     subText: `Only applicable for key_type 'RSA'. Ignore for other key types.`,
-    defaultValue: 0,
-    possibleValues: [0, 256, 384, 512],
+    defaultValue: '0',
+    possibleValues: ['0', '256', '384', '512'],
   })
   signatureBits;
   /* End of overriding Key parameters options */
@@ -242,33 +300,32 @@ export default class PkiRoleModel extends Model {
   @attr({ hideFormSection: true }) postalCode;
   /* End of overriding Additional subject field options */
 
-  /* CAPABILITIES */
+  /* CAPABILITIES
+   * Default to show UI elements unless we know they can't access the given path
+   */
   @lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id') updatePath;
   get canDelete() {
-    return this.updatePath.get('canCreate');
+    return this.updatePath.get('isLoading') || this.updatePath.get('canCreate') !== false;
   }
   get canEdit() {
-    return this.updatePath.get('canEdit');
+    return this.updatePath.get('isLoading') || this.updatePath.get('canUpdate') !== false;
   }
   get canRead() {
-    return this.updatePath.get('canRead');
+    return this.updatePath.get('isLoading') || this.updatePath.get('canRead') !== false;
   }
 
   @lazyCapabilities(apiPath`${'backend'}/issue/${'id'}`, 'backend', 'id') generatePath;
-  get canReadIssue() {
-    // ARG TODO was duplicate name, added Issue
-    return this.generatePath.get('canUpdate');
+  get canGenerateCert() {
+    return this.generatePath.get('isLoading') || this.generatePath.get('canUpdate') !== false;
   }
   @lazyCapabilities(apiPath`${'backend'}/sign/${'id'}`, 'backend', 'id') signPath;
   get canSign() {
-    return this.signPath.get('canUpdate');
+    return this.signPath.get('isLoading') || this.signPath.get('canUpdate') !== false;
   }
   @lazyCapabilities(apiPath`${'backend'}/sign-verbatim/${'id'}`, 'backend', 'id') signVerbatimPath;
   get canSignVerbatim() {
-    return this.signVerbatimPath.get('canUpdate');
+    return this.signVerbatimPath.get('isLoading') || this.signVerbatimPath.get('canUpdate') !== false;
   }
-
-  _fieldToAttrsGroups = null;
 
   // Gets header/footer copy for specific toggle groups.
   get fieldGroupsInfo() {
@@ -296,68 +353,5 @@ export default class PkiRoleModel extends Model {
         },
       },
     };
-  }
-
-  get fieldGroups() {
-    if (!this._fieldToAttrsGroups) {
-      this._fieldToAttrsGroups = fieldToAttrs(this, [
-        {
-          default: [
-            'name',
-            'issuerRef',
-            'customTtl',
-            'notBeforeDuration',
-            'maxTtl',
-            'generateLease',
-            'noStore',
-            'addBasicConstraints',
-          ],
-        },
-        {
-          'Domain handling': [
-            'allowedDomains',
-            'allowedDomainsTemplate',
-            'allowBareDomains',
-            'allowSubdomains',
-            'allowGlobDomains',
-            'allowWildcardCertificates',
-            'allowLocalhost', // default: true (returned true by OpenApi)
-            'allowAnyName',
-            'enforceHostnames', // default: true (returned true by OpenApi)
-          ],
-        },
-        {
-          'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
-        },
-        {
-          'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
-        },
-        { 'Policy identifiers': ['policyIdentifiers'] },
-        {
-          'Subject Alternative Name (SAN) Options': [
-            'allowIpSans',
-            'allowedUriSans',
-            'allowUriSansTemplate',
-            'allowedOtherSans',
-          ],
-        },
-        {
-          'Additional subject fields': [
-            'allowedSerialNumbers',
-            'requireCn',
-            'useCsrCommonName',
-            'useCsrSans',
-            'ou',
-            'organization',
-            'country',
-            'locality',
-            'province',
-            'streetAddress',
-            'postalCode',
-          ],
-        },
-      ]);
-    }
-    return this._fieldToAttrsGroups;
   }
 }
