@@ -129,6 +129,7 @@ export default class KubernetesRoleModel extends Model {
   }
 
   @lazyCapabilities(apiPath`${'backend'}/roles/${'name'}`, 'backend', 'name') rolePath;
+  @lazyCapabilities(apiPath`${'backend'}/creds/${'name'}`, 'backend', 'name') credsPath;
   @lazyCapabilities(apiPath`${'backend'}/roles`, 'backend') rolesPath;
 
   get canCreate() {
@@ -145,5 +146,8 @@ export default class KubernetesRoleModel extends Model {
   }
   get canList() {
     return this.rolesPath.get('canList');
+  }
+  get canGenerateCreds() {
+    return this.credsPath.get('canCreate');
   }
 }
