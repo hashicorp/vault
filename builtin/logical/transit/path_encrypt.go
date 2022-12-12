@@ -520,7 +520,7 @@ func batchRequestResponse(d *framework.FieldData, resp *logical.Response, req *l
 		if codeRaw, ok := d.GetOk("partial_failure_response_code"); ok {
 			newCode := codeRaw.(int)
 			if newCode < 1 || newCode > 599 {
-				resp.AddWarning("invalid HTTP response code override from partial_failure_response_code, reverting to HTTP 400")
+				resp.AddWarning(fmt.Sprintf("invalid HTTP response code override from partial_failure_response_code, reverting to %d", code))
 			} else {
 				code = newCode
 			}
