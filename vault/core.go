@@ -2358,9 +2358,11 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		for i := 0; i < postUnsealFuncConcurrency; i++ {
 			workerChans[i] = make(chan func())
 			go func(i int) {
-				defer wg.Done()
 				for v := range workerChans[i] {
-					v()
+					func() {
+						defer wg.Done()
+						v()
+					}()
 				}
 			}(i)
 		}
