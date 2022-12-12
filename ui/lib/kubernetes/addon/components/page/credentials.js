@@ -62,7 +62,7 @@ export default class CredentialsPageComponent extends Component {
 
       const credentials = yield this.store
         .adapterFor('kubernetes/role')
-        .generateCredentials(this.args.model.kubernetesBackend, payload);
+        .generateCredentials(this.args.model.backend, payload);
 
       const {
         lease_duration,
