@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -2335,8 +2336,42 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	// This is intentionally the last block in this function. We want to allow
 	// writes just before allowing client requests, to ensure everything has
 	// been set up properly before any writes can have happened.
-	for _, v := range c.postUnsealFuncs {
-		v()
+	//
+	// Use a small temporary worker pool to run postUnsealFuncs in parallel
+	postUnsealFuncConcurrency := runtime.NumCPU() * 2
+	if v := os.Getenv("VAULT_POSTUNSEAL_FUNC_CONCURRENCY"); v != "" {
+		pv, err := strconv.Atoi(v)
+		if err != nil || pv < 1 {
+			c.logger.Warn("invalid value for VAULT_POSTUNSEAL_FUNC_CURRENCY, must be a positive integer", "error", err, "value", pv)
+		} else {
+			postUnsealFuncConcurrency = pv
+		}
+	}
+	if postUnsealFuncConcurrency <= 1 {
+		// Out of paranoia, keep the old logic for parallism=1
+		for _, v := range c.postUnsealFuncs {
+			v()
+		}
+	} else {
+		workerChans := make([]chan func(), postUnsealFuncConcurrency)
+		var wg sync.WaitGroup
+		for i := 0; i < postUnsealFuncConcurrency; i++ {
+			workerChans[i] = make(chan func())
+			go func(i int) {
+				for v := range workerChans[i] {
+					v()
+					wg.Done()
+				}
+			}(i)
+		}
+		for i, v := range c.postUnsealFuncs {
+			wg.Add(1)
+			workerChans[i%postUnsealFuncConcurrency] <- v
+		}
+		for i := 0; i < postUnsealFuncConcurrency; i++ {
+			close(workerChans[i])
+		}
+		wg.Wait()
 	}
 
 	if atomic.LoadUint32(c.sealMigrationDone) == 1 {
