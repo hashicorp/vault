@@ -1480,7 +1480,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 
 		// Do not start up deprecated builtin plugins. If this is a major
 		// upgrade, stop unsealing and shutdown. If we've already mounted this
-		// plugin, skip backend initialization and mount the data for posterity.
+		// plugin, proceed with unsealing and skip backend initialization.
 		if versions.IsBuiltinVersion(entry.RunningVersion) {
 			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets)
 			if c.majorVersionFirstMount && err != nil {
