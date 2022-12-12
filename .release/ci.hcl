@@ -175,12 +175,12 @@ event "verify" {
   }
 }
 
-event "enos-verify-stable" {
+event "enos-release-testing-oss" {
   depends = ["verify"]
-  action "enos-verify-stable" {
+  action "enos-release-testing-oss" {
     organization = "hashicorp"
     repository = "vault"
-    workflow = "enos-verify-stable"
+    workflow = "enos-release-testing-oss"
   }
 
   notification {
@@ -268,7 +268,7 @@ event "promote-production-packaging" {
 }
 
 # The post-publish-website event should not be merged into the enterprise repo.
-# It is for OSS use only. 
+# It is for OSS use only.
 event "post-publish-website" {
   depends = ["promote-production-packaging"]
   action "post-publish-website" {
