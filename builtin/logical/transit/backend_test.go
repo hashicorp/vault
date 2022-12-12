@@ -1524,8 +1524,8 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				// keys start at version 1 so we want [1, latestVersion] not [0, latestVersion)
 				setVersion := (rand.Int() % latestVersion) + 1
 				fd.Raw["min_decryption_version"] = setVersion
-				fd.Schema = be.pathConfig().Fields
-				resp, err = be.pathConfigWrite(context.Background(), req, fd)
+				fd.Schema = be.pathKeysConfig().Fields
+				resp, err = be.pathKeysConfigWrite(context.Background(), req, fd)
 				if err != nil {
 					t.Errorf("got an error setting min decryption version: %v", err)
 				}
