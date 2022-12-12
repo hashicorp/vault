@@ -12,7 +12,6 @@ const SUPPORTED_SECRET_BACKENDS = [
   'kmip',
   'transform',
   'keymgmt',
-  'kubernetes',
 ];
 
 export function supportedSecretBackends() {
