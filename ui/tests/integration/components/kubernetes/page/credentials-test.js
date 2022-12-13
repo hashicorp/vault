@@ -13,14 +13,6 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'kubernetes_f3400dee',
-        path: 'kubernetes-test/',
-        type: 'kubernetes',
-      },
-    });
     this.store.pushPayload('kubernetes/config', {
       modelName: 'kubernetes/config',
       backend: 'kubernetes-test',
@@ -33,19 +25,38 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     });
 
     this.model = {
-      backend: this.store.peekRecord('secret-engine', 'kubernetes-test'),
-      roleModel: this.store.peekRecord('kubernetes/role', 'role-0'),
+      backend: 'kubernetes-test',
+      roleName: this.store.peekRecord('kubernetes/role', 'role-0').name,
+    };
+
+    this.getCreateCredentialsError = (roleName, errorType = null) => {
+      let errors;
+
+      if (errorType === 'noNamespace') {
+        errors = ["'kubernetes_namespace' is required"];
+      } else {
+        errors = [`role '${roleName}' does not exist`];
+      }
+
+      this.server.post(`/kubernetes-test/creds/${roleName}`, () => {
+        return new Response(400, {}, { errors });
+      });
+    };
+
+    this.renderComponent = () => {
+      return render(
+        hbs`<Page::Credentials @backend={{this.model.backend}} @roleName={{this.model.roleName}} />`,
+        { owner: this.engine }
+      );
     };
   });
 
   test('it should display generate credentials form', async function (assert) {
-    await render(hbs`<Page::Credentials @backend={{this.model.backend}} @role={{this.model.roleModel}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
     assert.dom('[data-test-credentials-header]').hasText('Generate credentials');
     assert
       .dom('[data-test-generate-credentials] p')
-      .hasText(`This will generate credentials using the role ${this.model.roleModel.name}.`);
+      .hasText(`This will generate credentials using the role ${this.model.roleName}.`);
     assert.dom('[data-test-generate-credentials] label').hasText('Kubernetes namespace');
     assert
       .dom('[data-test-generate-credentials] .is-size-8')
@@ -61,37 +72,20 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
   test('it should show errors states when generating credentials', async function (assert) {
     assert.expect(2);
 
-    const getCreateCredentialsError = (roleName, errorType = null) => {
-      let errors;
-
-      if (errorType === 'noNamespace') {
-        errors = ["'kubernetes_namespace' is required"];
-      } else {
-        errors = [`role '${roleName}' does not exist`];
-      }
-
-      this.server.post(`/kubernetes-test/creds/${roleName}`, () => {
-        return new Response(400, {}, { errors });
-      });
-    };
-
-    getCreateCredentialsError(this.model.roleModel.name, 'noNamespace');
-    await render(hbs`<Page::Credentials @backend={{this.model.backend}} @role={{this.model.roleModel}} />`, {
-      owner: this.engine,
-    });
+    this.getCreateCredentialsError(this.model.roleName, 'noNamespace');
+    await this.renderComponent();
     await click('[data-test-generate-credentials-button]');
+
     assert.dom('[data-test-error] .alert-banner-message-body').hasText("'kubernetes_namespace' is required");
 
-    this.model.roleModel.name = 'role-2';
-    getCreateCredentialsError(this.model.roleModel.name);
+    this.model.roleName = 'role-2';
+    this.getCreateCredentialsError(this.model.roleName);
 
-    await render(hbs`<Page::Credentials @backend={{this.model.backend}} @role={{this.model.roleModel}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
     await click('[data-test-generate-credentials-button]');
     assert
       .dom('[data-test-error] .alert-banner-message-body')
-      .hasText(`role '${this.model.roleModel.name}' does not exist`);
+      .hasText(`role '${this.model.roleName}' does not exist`);
   });
 
   test('it should show correct credential information after generate credentials is clicked', async function (assert) {
@@ -112,9 +106,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
       };
     });
 
-    await render(hbs`<Page::Credentials @backend={{this.model.backend}} @role={{this.model.roleModel}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
     await fillIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
     assert.dom('[data-test-kubernetes-namespace]').hasValue('kubernetes-test', 'kubernetes-test');
 
