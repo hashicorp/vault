@@ -14,9 +14,9 @@ module('Integration | Component | pki-configure-form', function (hooks) {
     assert.dom('[data-test-pki-config-option]').exists({ count: 3 }, 'Three configuration options are shown');
 
     await click('[data-test-pki-config-option="import"]');
-    assert.dom('[data-test-pki-config-option="import"] input').isChecked('Selected item is checked');
+    assert.dom('[data-test-pki-config-option="import"]').isChecked('Selected item is checked');
 
     await click('[data-test-pki-config-option="generate-csr"]');
-    assert.dom('[data-test-pki-config-option="generate-csr"] input').isChecked('Selected item is checked');
+    assert.dom('[data-test-pki-config-option="generate-csr"]').isChecked('Selected item is checked');
   });
 });
