@@ -151,34 +151,31 @@ func (c *Core) loadVersionHistory(ctx context.Context) error {
 	return nil
 }
 
-// isMajorVersionFirstMount compares the current version of Vault with the
-// last version that was successfully mounted and unsealed to see if it is a
-// milestone or major upgrade. It updates the core majorVersionFirstMount
-// variable if so. This is useful in determining shutdown behavior for
-// deprecated builtins.
-func (c *Core) isMajorVersionFirstMount(ctx context.Context) (bool, error) {
+// isMajorVersionFirstMount checks the current running version of Vault against
+// the newest version in the version store to see if this major version has
+// already been mounted.
+func (c *Core) isMajorVersionFirstMount(ctx context.Context) bool {
 	// Grab the most recent previous version from the version store
 	prevMounted, _, err := c.FindNewestVersionTimestamp()
 	if err != nil {
-		return false, err
+		return true
 	}
 
 	// Get versions into comparable form
 	prev, err := semver.NewSemver(prevMounted)
 	if err != nil {
-		// If we can't find a previous version, this is effectively an upgrade
-		return true, nil
+		return true
 	}
 	curr, err := semver.NewSemver(version.Version)
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	// Check for milestone or major version upgrade
 	isMilestoneUpdate := curr.Segments()[0] > prev.Segments()[0]
 	isMajorVersionUpdate := curr.Segments()[1] > prev.Segments()[1]
 
-	return isMilestoneUpdate || isMajorVersionUpdate, nil
+	return isMilestoneUpdate || isMajorVersionUpdate
 }
 
 func IsJWT(token string) bool {

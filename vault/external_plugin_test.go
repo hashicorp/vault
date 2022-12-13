@@ -344,7 +344,14 @@ func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
 	}
 }
 
-func TestCore_Unseal_MajorUpgrade_PendingRemoval_Plugin(t *testing.T) {
+// TestCore_Unseal_isMajorVersionFirstMount_PendingRemoval_Plugin tests the
+// behavior of deprecated builtins when attempting to unseal Vault after a major
+// version upgrade. It simulates this behavior by instantiating a Vault cluster,
+// registering a shadow plugin to mount a builtin, and deregistering the shadow
+// plugin. The first unseal should work. Before sealing and unsealing again, the
+// version store is cleared.  Vault sees the next unseal as a major upgrade and
+// should immediately shut down.
+func TestCore_Unseal_majorVersionFirstMount_PendingRemoval_Plugin(t *testing.T) {
 	pluginDir, cleanup := MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
@@ -369,6 +376,11 @@ func TestCore_Unseal_MajorUpgrade_PendingRemoval_Plugin(t *testing.T) {
 	// Deregister shadow plugin
 	deregisterPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "", plugin.sha256, plugin.fileName)
 
+	// Make sure this isn't the first mount for the current major version.
+	if c.isMajorVersionFirstMount(context.Background()) {
+		t.Fatalf("expected major version to register as mounted")
+	}
+
 	if err := c.Seal(root); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -389,12 +401,18 @@ func TestCore_Unseal_MajorUpgrade_PendingRemoval_Plugin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Refresh the version history cache. loadVersionHistory doesn't care about
-	// invalidating old entries, since they shouldn't really be deleted from the
-	// version store. It just updates the map, so we need to manually delete the
-	// current entry.
+	// loadVersionHistory doesn't care about invalidating old entries, since
+	// they shouldn't really be deleted from the version store. It just updates
+	// the map, so we need to manually delete the current entry.
 	delete(c.versionHistory, version.Version)
 
+	// Make sure this appears to be the first mount for the current major
+	// version.
+	if !c.isMajorVersionFirstMount(context.Background()) {
+		t.Fatalf("expected major version first mount")
+	}
+
+	// Seal again and check for unseal failure.
 	if err := c.Seal(root); err != nil {
 		t.Fatalf("err: %v", err)
 	}

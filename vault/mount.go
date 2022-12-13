@@ -1483,7 +1483,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// plugin, proceed with unsealing and skip backend initialization.
 		if versions.IsBuiltinVersion(entry.RunningVersion) {
 			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets)
-			if c.majorVersionFirstMount && err != nil {
+			if c.isMajorVersionFirstMount(ctx) && err != nil {
 				go c.ShutdownCoreError(fmt.Errorf("could not mount %q: %w", entry.Type, err))
 				return errLoadMountsFailed
 			} else if err != nil {

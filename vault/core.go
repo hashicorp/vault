@@ -654,14 +654,6 @@ type Core struct {
 	rollbackPeriod time.Duration
 
 	pendingRemovalMountsAllowed bool
-
-	// majorVersionFirstMount informs setupCredentials and setupMounts whether
-	// or not Vault has been unsealed with this major version of Vault yet.
-	// If true, this results in a core shutdown on unseal if there are any mount
-	// entries associated with deprecated builtins.  Otherwise, it informs
-	// setupCredentials and setupMounts to continue processing the mount entry,
-	// but skips backend initialization.
-	majorVersionFirstMount bool
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -2349,12 +2341,6 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	if err := c.loadVersionHistory(ctx); err != nil {
 		return err
 	}
-
-	firstMount, err := c.isMajorVersionFirstMount(ctx)
-	if err != nil {
-		return err
-	}
-	c.majorVersionFirstMount = firstMount
 
 	if err := unsealer.unseal(ctx, c.logger, c); err != nil {
 		return err
