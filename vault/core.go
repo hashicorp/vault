@@ -3586,3 +3586,7 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 
 	return status, resourceID
 }
+
+func (c *Core) HAEnabled() bool {
+	return c.ha != nil && c.ha.HAEnabled()
+}
