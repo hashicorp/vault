@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,6 +39,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity/mfa"
+	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
@@ -48,12 +50,12 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
+	"github.com/hashicorp/vault/version"
 	"github.com/patrickmn/go-cache"
 	uberAtomic "go.uber.org/atomic"
 	"google.golang.org/grpc"
@@ -298,7 +300,7 @@ type Core struct {
 	auditBackends map[string]audit.Factory
 
 	// stateLock protects mutable state
-	stateLock DeadlockRWMutex
+	stateLock locking.DeadlockRWMutex
 	sealed    *uint32
 
 	standby              bool
@@ -523,6 +525,9 @@ type Core struct {
 	// It has user information (alias-name and mount accessor) as a key
 	// and login counter, last failed login time as value
 	userFailedLoginInfo map[FailedLoginUser]*FailedLoginInfo
+
+	// userFailedLoginInfoLock controls access to the userFailedLoginInfoMap
+	userFailedLoginInfoLock sync.RWMutex
 
 	enableMlock bool
 
@@ -1305,13 +1310,13 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 }
 
 // unseal takes a key fragment and attempts to use it to unseal Vault.
-// Vault may remain unsealed afterwards even when no error is returned,
+// Vault may remain sealed afterwards even when no error is returned,
 // depending on whether enough key fragments were provided to meet the
 // target threshold.
 //
 // The provided key should be a recovery key fragment if the seal
 // is an autoseal, or a regular seal key fragment for shamir.  In
-// migration scenarios "seal" in the preceding sentance refers to
+// migration scenarios "seal" in the preceding sentence refers to
 // the migration seal in c.migrationInfo.seal.
 //
 // We use getUnsealKey to work out if we have enough fragments,
@@ -1555,13 +1560,13 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	} else {
 		unsealKey, err = shamir.Combine(c.unlockInfo.Parts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to compute combined key: %w", err)
+			return nil, &ErrInvalidKey{fmt.Sprintf("failed to compute combined key: %v", err)}
 		}
 	}
 
 	if seal.RecoveryKeySupported() {
 		if err := seal.VerifyRecoveryKey(ctx, unsealKey); err != nil {
-			return nil, err
+			return nil, &ErrInvalidKey{fmt.Sprintf("failed to verify recovery key: %v", err)}
 		}
 	}
 
@@ -2331,8 +2336,42 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	// This is intentionally the last block in this function. We want to allow
 	// writes just before allowing client requests, to ensure everything has
 	// been set up properly before any writes can have happened.
-	for _, v := range c.postUnsealFuncs {
-		v()
+	//
+	// Use a small temporary worker pool to run postUnsealFuncs in parallel
+	postUnsealFuncConcurrency := runtime.NumCPU() * 2
+	if v := os.Getenv("VAULT_POSTUNSEAL_FUNC_CONCURRENCY"); v != "" {
+		pv, err := strconv.Atoi(v)
+		if err != nil || pv < 1 {
+			c.logger.Warn("invalid value for VAULT_POSTUNSEAL_FUNC_CURRENCY, must be a positive integer", "error", err, "value", pv)
+		} else {
+			postUnsealFuncConcurrency = pv
+		}
+	}
+	if postUnsealFuncConcurrency <= 1 {
+		// Out of paranoia, keep the old logic for parallism=1
+		for _, v := range c.postUnsealFuncs {
+			v()
+		}
+	} else {
+		workerChans := make([]chan func(), postUnsealFuncConcurrency)
+		var wg sync.WaitGroup
+		for i := 0; i < postUnsealFuncConcurrency; i++ {
+			workerChans[i] = make(chan func())
+			go func(i int) {
+				for v := range workerChans[i] {
+					v()
+					wg.Done()
+				}
+			}(i)
+		}
+		for i, v := range c.postUnsealFuncs {
+			wg.Add(1)
+			workerChans[i%postUnsealFuncConcurrency] <- v
+		}
+		for i := 0; i < postUnsealFuncConcurrency; i++ {
+			close(workerChans[i])
+		}
+		wg.Wait()
 	}
 
 	if atomic.LoadUint32(c.sealMigrationDone) == 1 {
@@ -2794,7 +2833,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 
 		err := seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(combinedKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to setup unseal key: %w", err)
+			return nil, &ErrInvalidKey{fmt.Sprintf("failed to setup unseal key: %v", err)}
 		}
 		storedKeys, err := seal.GetStoredKeys(ctx)
 		if storedKeys == nil && err == nil && allowMissing {
@@ -3039,6 +3078,32 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 		}
 	}
 	return &flags, nil
+}
+
+// isMountable tells us whether or not we can continue mounting a plugin-based
+// mount entry after failing to instantiate a backend. We do this to preserve
+// the storage and path when a plugin is missing or has otherwise been
+// misconfigured. This allows users to recover from errors when starting Vault
+// with misconfigured plugins. It should not be possible for existing builtins
+// to be misconfigured, so that is a fatal error.
+func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
+	// Prevent a panic early on
+	if entry == nil || c.pluginCatalog == nil {
+		return false
+	}
+
+	// Handle aliases
+	t := entry.Type
+	if alias, ok := mountAliases[t]; ok {
+		t = alias
+	}
+
+	plug, err := c.pluginCatalog.Get(ctx, t, pluginType, entry.Version)
+	if err != nil {
+		return false
+	}
+
+	return plug == nil || !plug.Builtin
 }
 
 // MatchingMount returns the path of the mount that will be responsible for
@@ -3426,6 +3491,39 @@ func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]
 		return ""
 	}
 	return resp.Data["role"].(string)
+}
+
+// aliasNameFromLoginRequest will determine the aliasName from the login Request
+func (c *Core) aliasNameFromLoginRequest(ctx context.Context, req *logical.Request) (string, error) {
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// ns path is added while checking matching backend
+	mountPath := strings.TrimPrefix(req.MountPoint, ns.Path)
+
+	matchingBackend := c.router.MatchingBackend(ctx, mountPath)
+	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
+		// pathLoginAliasLookAhead operation does not apply to this request
+		return "", nil
+	}
+
+	path := strings.ReplaceAll(req.Path, mountPath, "")
+
+	resp, err := matchingBackend.HandleRequest(ctx, &logical.Request{
+		MountPoint: req.MountPoint,
+		Path:       path,
+		Operation:  logical.AliasLookaheadOperation,
+		Data:       req.Data,
+		Storage:    c.router.MatchingStorageByAPIPath(ctx, req.Path),
+	})
+	if err != nil || resp.Auth.Alias == nil {
+		return "", nil
+	}
+	return resp.Auth.Alias.Name, nil
 }
 
 // ListMounts will provide a slice containing a deep copy each mount entry

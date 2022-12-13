@@ -135,6 +135,10 @@ type mockRunnerUtil struct {
 	mock.Mock
 }
 
+func (m *mockRunnerUtil) VaultVersion(ctx context.Context) (string, error) {
+	return "dummyversion", nil
+}
+
 func (m *mockRunnerUtil) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error) {
 	args := m.Called(ctx, config)
 	return args.Get(0).(pluginutil.PluginClient), args.Error(1)

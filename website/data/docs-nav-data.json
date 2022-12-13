@@ -214,6 +214,10 @@
           {
             "title": "TCP",
             "path": "configuration/listener/tcp"
+          },
+          {
+            "title": "Unix",
+            "path": "configuration/listener/unix"
           }
         ]
       },
@@ -893,6 +897,10 @@
             ]
           }
         ]
+      },
+      {
+        "title": "API Proxy",
+        "path": "agent/apiproxy"
       },
       {
         "title": "Caching",
@@ -2091,6 +2099,10 @@
           {
             "title": "Overview",
             "path": "enterprise/pkcs11-provider"
+          },
+          {
+            "title": "AWS KMS XKS",
+            "path": "enterprise/pkcs11-provider/aws-xks"
           },
           {
             "title": "Oracle TDE",

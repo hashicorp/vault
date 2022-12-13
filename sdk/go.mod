@@ -37,6 +37,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/atomic v1.9.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+	golang.org/x/text v0.3.3
 	google.golang.org/grpc v1.41.0
 	google.golang.org/protobuf v1.26.0
 )
@@ -59,7 +60,6 @@ require (
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110 // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
-	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )

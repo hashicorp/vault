@@ -7,7 +7,6 @@ import Model from '@ember-data/model';
 import Service from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
-import { assign } from '@ember/polyfills';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
@@ -179,31 +178,36 @@ export default Service.extend({
   // Returns relevant information from OpenAPI
   // as determined by the expandOpenApiProps util
   getProps(helpUrl, backend) {
-    // add name of thing you want
     debug(`Fetching schema properties for ${backend} from ${helpUrl}`);
 
     return this.ajax(helpUrl, backend).then((help) => {
-      // paths is an array but it will have a single entry
-      // for the scope we're in
-      const path = Object.keys(help.openapi.paths)[0]; // do this or look at name
+      // help.openapi.paths is an array with one item
+      const path = Object.keys(help.openapi.paths)[0];
       const pathInfo = help.openapi.paths[path];
       const params = pathInfo.parameters;
       const paramProp = {};
 
       // include url params
       if (params) {
-        const { name, schema, description } = params[0];
-        const label = capitalize(name.split('_').join(' '));
+        params.forEach((param) => {
+          const { name, schema, description } = param;
+          if (name === '_mount_path') {
+            // this param refers to the engine mount path,
+            // which is already accounted for as backend
+            return;
+          }
+          const label = capitalize(name.split('_').join(' '));
 
-        paramProp[name] = {
-          'x-vault-displayAttrs': {
-            name: label,
-            group: 'default',
-          },
-          type: schema.type,
-          description: description,
-          isId: true,
-        };
+          paramProp[name] = {
+            'x-vault-displayAttrs': {
+              name: label,
+              group: 'default',
+            },
+            type: schema.type,
+            description: description,
+            isId: true,
+          };
+        });
       }
 
       let props = {};
@@ -220,7 +224,7 @@ export default Service.extend({
       }
       // put url params (e.g. {name}, {role})
       // at the front of the props list
-      const newProps = assign({}, paramProp, props);
+      const newProps = { ...paramProp, ...props };
       return expandOpenApiProps(newProps);
     });
   },

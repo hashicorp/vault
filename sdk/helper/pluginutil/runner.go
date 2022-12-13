@@ -27,6 +27,7 @@ type RunnerUtil interface {
 	NewPluginClient(ctx context.Context, config PluginClientConfig) (PluginClient, error)
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
+	VaultVersion(ctx context.Context) (string, error)
 }
 
 // LookRunnerUtil defines the functions for both Looker and Wrapper

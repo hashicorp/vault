@@ -451,7 +451,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		}
 
 		if !config.AutoRebuild {
-			if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
+			if err := b.crlBuilder.rebuild(sc, false); err != nil {
 				return err
 			}
 		}
@@ -557,7 +557,7 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 		b.revokeStorageLock.Lock()
 		defer b.revokeStorageLock.Unlock()
 
-		if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
+		if err := b.crlBuilder.rebuild(sc, false); err != nil {
 			return err
 		}
 	}
@@ -736,7 +736,23 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations)."), nil
 	}
 
-	return nil, sc.writeAutoTidyConfig(config)
+	if err := sc.writeAutoTidyConfig(config); err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"enabled":                               config.Enabled,
+			"interval_duration":                     int(config.Interval / time.Second),
+			"tidy_cert_store":                       config.CertStore,
+			"tidy_revoked_certs":                    config.RevokedCerts,
+			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
+			"tidy_expired_issuers":                  config.ExpiredIssuers,
+			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
+			"issuer_safety_buffer":                  int(config.IssuerSafetyBuffer / time.Second),
+			"pause_duration":                        config.PauseDuration.String(),
+		},
+	}, nil
 }
 
 func (b *backend) tidyStatusStart(config *tidyConfig) {

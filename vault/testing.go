@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,8 +34,10 @@ import (
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -127,6 +130,9 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 		EnableUI:        false,
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -601,9 +607,9 @@ func TestRunTestPlugin(t testing.T, c *Core, pluginType consts.PluginType, plugi
 }
 
 func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName string) pluginutil.PluginClientConfig {
+	dsv := TestDynamicSystemView(c, nil)
 	switch pluginType {
 	case consts.PluginTypeCredential, consts.PluginTypeSecrets:
-		dsv := TestDynamicSystemView(c, nil)
 		return pluginutil.PluginClientConfig{
 			Name:            pluginName,
 			PluginType:      pluginType,
@@ -623,6 +629,7 @@ func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName st
 			Logger:          log.NewNullLogger(),
 			AutoMTLS:        true,
 			IsMetadataMode:  false,
+			Wrapper:         dsv,
 		}
 	}
 	return pluginutil.PluginClientConfig{}
@@ -900,9 +907,14 @@ type TestCluster struct {
 	base              *CoreConfig
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
+	opts              *TestClusterOptions
 }
 
 func (c *TestCluster) Start() {
+}
+
+func (c *TestCluster) start(t testing.T) {
+	t.Helper()
 	for i, core := range c.Cores {
 		if core.Server != nil {
 			for _, ln := range core.Listeners {
@@ -913,6 +925,54 @@ func (c *TestCluster) Start() {
 	}
 	if c.SetupFunc != nil {
 		c.SetupFunc()
+	}
+
+	if c.opts != nil && c.opts.SkipInit {
+		// SkipInit implies that vault may not be ready to service requests, or that
+		// we're restarting a cluster from an existing storage.
+		return
+	}
+
+	activeCore := -1
+WAITACTIVE:
+	for i := 0; i < 60; i++ {
+		for i, core := range c.Cores {
+			if standby, _ := core.Core.Standby(); !standby {
+				activeCore = i
+				break WAITACTIVE
+			}
+		}
+
+		time.Sleep(time.Second)
+	}
+	if activeCore == -1 {
+		t.Fatalf("no core became active")
+	}
+
+	switch {
+	case c.opts == nil:
+	case c.opts.NoDefaultQuotas:
+	case c.opts.HandlerFunc == nil:
+	// If no HandlerFunc is provided that means that we can't actually do
+	// regular vault requests.
+	case reflect.TypeOf(c.opts.HandlerFunc).PkgPath() != "github.com/hashicorp/vault/http":
+	case reflect.TypeOf(c.opts.HandlerFunc).Name() != "Handler":
+	default:
+		cli := c.Cores[activeCore].Client
+		_, err := cli.Logical().Write("sys/quotas/rate-limit/rl-NewTestCluster", map[string]interface{}{
+			"rate": 1000000,
+		})
+		if err != nil {
+			t.Fatalf("error setting up global rate limit quota: %v", err)
+		}
+		if constants.IsEnterprise {
+			_, err = cli.Logical().Write("sys/quotas/lease-count/lc-NewTestCluster", map[string]interface{}{
+				"max_leases": 1000000,
+			})
+			if err != nil {
+				t.Fatalf("error setting up global lease count quota: %v", err)
+			}
+		}
 	}
 }
 
@@ -1145,10 +1205,14 @@ type PhysicalBackendBundle struct {
 	Cleanup   func()
 }
 
+type HandlerHandler interface {
+	Handler(*HandlerProperties) http.Handler
+}
+
 type TestClusterOptions struct {
 	KeepStandbysSealed       bool
 	SkipInit                 bool
-	HandlerFunc              func(*HandlerProperties) http.Handler
+	HandlerFunc              HandlerHandler
 	DefaultHandlerProperties HandlerProperties
 
 	// BaseListenAddress is used to explicitly assign ports in sequence to the
@@ -1221,6 +1285,8 @@ type TestClusterOptions struct {
 	RedundancyZoneMap      map[int]string
 	KVVersion              string
 	EffectiveSDKVersionMap map[int]string
+
+	NoDefaultQuotas bool
 }
 
 var DefaultNumCores = 3
@@ -1801,6 +1867,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 	}
 
+	testCluster.opts = opts
+	testCluster.start(t)
 	return &testCluster
 }
 
@@ -1997,7 +2065,7 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		if props.ListenerConfig != nil && props.ListenerConfig.MaxRequestDuration == 0 {
 			props.ListenerConfig.MaxRequestDuration = DefaultMaxRequestDuration
 		}
-		handler = opts.HandlerFunc(&props)
+		handler = opts.HandlerFunc.Handler(&props)
 	}
 
 	// Set this in case the Seal was manually set before the core was
