@@ -1,16 +1,19 @@
 import Route from '@ember/routing/route';
-import UnloadModelRoute from 'vault/mixins/unload-model-route';
-import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
 import { inject as service } from '@ember/service';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
-  store: service(),
-  // intentionally blank - we don't want a model until one is
-  // created via the form in the controller
-  model() {
-    return {};
-  },
-  activate() {
+@withConfirmLeave()
+export default class VaultClusterSettingsMountSecretBackendRoute extends Route {
+  @service store;
+
+  beforeModel() {
+    // Unload to prevent naming collisions when we mount a new engine
     this.store.unloadAll('secret-engine');
-  },
-});
+  }
+
+  model() {
+    const secretEngine = this.store.createRecord('secret-engine');
+    secretEngine.set('config', this.store.createRecord('mount-config'));
+    return secretEngine;
+  }
+}
