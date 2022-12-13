@@ -38,7 +38,7 @@ module('Unit | Adapter | pki/certificate/sign', function (hooks) {
       D1YfvqXieNij4UrduRqCXj1m8SVZlM+X
       -----END CERTIFICATE REQUEST-----`,
     };
-    this.server.post(`${this.backend}/sign/${generateData.name}`, () => {
+    this.server.post(`${this.backend}/sign/${generateData.role}`, () => {
       assert.ok(true, 'request made to correct endpoint on create');
       return {
         data: this.data,

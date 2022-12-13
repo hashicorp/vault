@@ -23,7 +23,7 @@ module('Unit | Adapter | pki/certificate/generate', function (hooks) {
       role: 'my-role',
       common_name: 'example.com',
     };
-    this.server.post(`${this.backend}/issue/${generateData.name}`, () => {
+    this.server.post(`${this.backend}/issue/${generateData.role}`, () => {
       assert.ok(true, 'request made to correct endpoint on create');
       return {
         data: {
