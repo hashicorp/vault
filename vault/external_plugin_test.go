@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
+	"github.com/hashicorp/vault/version"
 )
 
 const vaultTestingMockPluginEnv = "VAULT_TESTING_MOCK_PLUGIN"
@@ -339,6 +341,74 @@ func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
 
 	if !found {
 		t.Fatalf("expected to find %s mount, but got none", pluginName)
+	}
+}
+
+func TestCore_Unseal_MajorUpgrade_PendingRemoval_Plugin(t *testing.T) {
+	pluginDir, cleanup := MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+
+	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
+	pluginName := "pending-removal-test-plugin"
+	plugin := compilePlugin(t, consts.PluginTypeCredential, "", pluginDir)
+	err := os.Link(path.Join(pluginDir, plugin.fileName), path.Join(pluginDir, pluginName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := &CoreConfig{
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		PluginDirectory: pluginDir,
+	}
+	c := TestCoreWithSealAndUI(t, conf)
+	c, keys, root := testCoreUnsealed(t, c)
+
+	// Register a shadow plugin
+	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "", plugin.sha256, plugin.fileName)
+	mountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+
+	// Deregister shadow plugin
+	deregisterPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "", plugin.sha256, plugin.fileName)
+
+	if err := c.Seal(root); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("err: should be unsealed")
+		}
+	}
+
+	// Now remove version history and try again
+	vaultVersionPath := "core/versions/"
+	key := vaultVersionPath + version.Version
+	if err := c.barrier.Delete(context.Background(), key); err != nil {
+		t.Fatal(err)
+	}
+
+	// Refresh the version history cache. loadVersionHistory doesn't care about
+	// invalidating old entries, since they shouldn't really be deleted from the
+	// version store. It just updates the map, so we need to manually delete the
+	// current entry.
+	delete(c.versionHistory, version.Version)
+
+	if err := c.Seal(root); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c, key)
+		if i+1 == len(keys) {
+			if !errors.Is(err, errLoadAuthFailed) {
+				t.Fatalf("expected error: %q, got: %q", errLoadAuthFailed, err)
+			}
+
+			if unseal {
+				t.Fatalf("err: should not be unsealed")
+			}
+		}
 	}
 }
 
