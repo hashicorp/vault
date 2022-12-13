@@ -42,6 +42,10 @@ type BatchRequestItem struct {
 
 	// Associated Data for AEAD ciphers
 	AssociatedData string `json:"associated_data" struct:"associated_data" mapstructure:"associated_data"`
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" structs:"reference" mapstructure:"reference"`
 }
 
 // EncryptBatchResponseItem represents a response item for batch processing
@@ -56,6 +60,10 @@ type EncryptBatchResponseItem struct {
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference"`
 }
 
 type AssocDataFactory struct {
@@ -259,6 +267,14 @@ func decodeBatchRequestItems(src interface{}, requirePlaintext bool, requireCiph
 				(*dst)[i].AssociatedData = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].associated_data' expected type 'string', got unconvertible type '%T'", i, item["associated_data"]))
+			}
+		}
+		if v, has := item["reference"]; has {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
+				(*dst)[i].Reference = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].reference' expected type 'string', got unconvertible type '%T'", i, item["reference"]))
 			}
 		}
 	}
@@ -471,6 +487,10 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			batchResponseItems[i].Reference = batchInputItems[i].Reference
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": batchResponseItems,
 		}
