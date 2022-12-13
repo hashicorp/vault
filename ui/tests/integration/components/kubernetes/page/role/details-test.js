@@ -25,6 +25,11 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
 
   hooks.beforeEach(function () {
     const store = this.owner.lookup('service:store');
+    this.server.post('/sys/capabilities-self', () => ({
+      data: {
+        capabilities: ['root'],
+      },
+    }));
     this.renderComponent = (trait) => {
       const data = this.server.create('kubernetes-role', trait);
       store.pushPayload('kubernetes/role', {

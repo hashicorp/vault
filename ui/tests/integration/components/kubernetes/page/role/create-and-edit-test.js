@@ -6,14 +6,6 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
-const generated_role_rules = `rules:
-- apiGroups: ['policy']
-  resources: ['podsecuritypolicies']
-  verbs:     ['use']
-  resourceNames:
-  - <list of policies to authorize>
-`;
-
 module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kubernetes');
@@ -29,12 +21,8 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     };
 
     const store = this.owner.lookup('service:store');
-    this.getRole = (prefType) => {
-      const data = {
-        expanded: { kubernetes_role_name: 'test' },
-        full: { generated_role_rules },
-      }[prefType];
-      const role = this.server.create('kubernetes-role', data);
+    this.getRole = (trait) => {
+      const role = this.server.create('kubernetes-role', trait);
       store.pushPayload('kubernetes/role', {
         modelName: 'kubernetes/role',
         backend: 'kubernetes-test',
@@ -160,17 +148,22 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     this.server.post('/kubernetes-test/roles/:name', () => assert.ok('POST request made to save role'));
 
     for (const pref of ['basic', 'expanded', 'full']) {
-      this.role = this.getRole(pref);
+      const trait = { expanded: 'withRoleName', full: 'withRoleRules' }[pref];
+      this.role = this.getRole(trait);
       await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} />`, { owner: this.engine });
       assert.dom(`[data-test-radio-card="${pref}"] input`).isChecked('Correct radio card is checked');
       assert.dom('[data-test-input="name"]').hasValue(this.role.name, 'Role name is populated');
       const selector = {
         basic: { name: '[data-test-input="serviceAccountName"]', method: 'hasValue', value: 'default' },
-        expanded: { name: '[data-test-input="kubernetesRoleName"]', method: 'hasValue', value: 'test' },
+        expanded: {
+          name: '[data-test-input="kubernetesRoleName"]',
+          method: 'hasValue',
+          value: 'vault-k8s-secrets-role',
+        },
         full: {
           name: '[data-test-select-template]',
           method: 'hasValue',
-          value: '6',
+          value: '5',
         },
       }[pref];
       assert.dom(selector.name)[selector.method](selector.value);
@@ -199,13 +192,63 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     assert.deepEqual(this.newModel.extraLabels, { bar: 'baz' }, 'Labels set');
   });
 
+  test('it should expand annotations and labels when editing if they were populated', async function (assert) {
+    this.role = this.getRole();
+    await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} />`, { owner: this.engine });
+    assert
+      .dom('[data-test-annotations]')
+      .doesNotExist('Annotations and labels are collapsed initially when not defined');
+    this.role = this.getRole('withRoleRules');
+    await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} />`, { owner: this.engine });
+    assert
+      .dom('[data-test-annotations]')
+      .exists('Annotations and labels are expanded initially when defined');
+  });
+
   test('it should restore role rule example', async function (assert) {
-    this.role = this.getRole('full');
+    this.role = this.getRole('withRoleRules');
     await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} />`, { owner: this.engine });
     const addedText = 'this will be add to the start of the first line in the JsonEditor';
     await fillIn('[data-test-component="code-mirror-modifier"] textarea', addedText);
     await click('[data-test-restore-example]');
     assert.dom('.CodeMirror-code').doesNotContainText(addedText, 'Role rules example restored');
+  });
+
+  test('it should set generatedRoleRoles model prop on save', async function (assert) {
+    assert.expect(1);
+
+    this.server.post('/kubernetes-test/roles/role-1', (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      const role = this.server.create('kubernetes-role', 'withRoleRules');
+      assert.strictEqual(
+        payload.generated_role_rules,
+        role.generated_role_rules,
+        'Generated roles rules are passed in save request'
+      );
+    });
+
+    await render(hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} />`, { owner: this.engine });
+    await click('[data-test-radio-card="full"]');
+    await fillIn('[data-test-input="name"]', 'role-1');
+    await fillIn('[data-test-select-template]', '5');
+    await click('[data-test-save]');
+  });
+
+  test('it should unset selectedTemplateId when switching from full generation preference', async function (assert) {
+    assert.expect(1);
+
+    this.server.post('/kubernetes-test/roles/role-1', (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.strictEqual(payload.generated_role_rules, null, 'Generated roles rules are not set');
+    });
+
+    await render(hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} />`, { owner: this.engine });
+    await click('[data-test-radio-card="full"]');
+    await fillIn('[data-test-input="name"]', 'role-1');
+    await fillIn('[data-test-select-template]', '5');
+    await click('[data-test-radio-card="basic"]');
+    await fillIn('[data-test-input="serviceAccountName"]', 'default');
+    await click('[data-test-save]');
   });
 
   test('it should go back to list route and clean up model', async function (assert) {
@@ -215,7 +258,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     assert.ok(unloadSpy.calledOnce, 'New model is unloaded on cancel');
     assert.ok(this.transitionCalledWith('roles'), 'Transitions to roles list on cancel');
 
-    this.role = this.getRole('basic');
+    this.role = this.getRole();
     const rollbackSpy = sinon.spy(this.role, 'rollbackAttributes');
     await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} />`, { owner: this.engine });
     await click('[data-test-cancel]');

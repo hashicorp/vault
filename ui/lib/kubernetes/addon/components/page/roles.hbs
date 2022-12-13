@@ -1,12 +1,12 @@
-<TabPageHeader @model={{@model.backend}} @filterRoles={{true}} @rolesFilterValue={{@filterValue}}>
+<TabPageHeader @model={{@backend}} @filterRoles={{true}} @rolesFilterValue={{@filterValue}}>
   <ToolbarLink @route="roles.create" @type="add" data-test-toolbar-roles-action>
     Create role
   </ToolbarLink>
 </TabPageHeader>
 
-{{#if (not @model.config)}}
+{{#if (not @config)}}
   <ConfigCta />
-{{else if (not @model.roles)}}
+{{else if (not @roles)}}
   {{#if @filterValue}}
     <EmptyState @title="There are no roles matching &quot;{{@filterValue}}&quot;" />
   {{else}}
@@ -22,7 +22,7 @@
   {{/if}}
 {{else}}
   <div class="has-bottom-margin-s">
-    {{#each @model.roles as |role|}}
+    {{#each @roles as |role|}}
       <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role.details" role.name}} as |Item|>
         <Item.content>
           <Icon @name="user" />
@@ -65,7 +65,7 @@
                 @triggerText="Delete"
                 @title="Are you sure?"
                 @message="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
-                @onConfirm={{this.onDelete}}
+                @onConfirm={{fn this.onDelete role}}
               />
             </li>
           {{/if}}
