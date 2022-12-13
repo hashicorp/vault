@@ -7,7 +7,7 @@ export default class PkiCertificateGenerateSerializer extends ApplicationSeriali
   serialize() {
     const json = super.serialize(...arguments);
     // role name is part of the URL, remove from payload
-    delete json.name;
+    delete json.role;
     return json;
   }
 

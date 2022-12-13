@@ -3,10 +3,10 @@ import PkiCertificateBaseAdapter from './base';
 
 export default class PkiCertificateSignAdapter extends PkiCertificateBaseAdapter {
   urlForCreateRecord(modelName, snapshot) {
-    const { name, backend } = snapshot.record;
-    if (!name || !backend) {
+    const { role, backend } = snapshot.record;
+    if (!role || !backend) {
       throw new Error('URL for create record is missing required attributes');
     }
-    return `${this.buildURL()}/${encodePath(backend)}/sign/${encodePath(name)}`;
+    return `${this.buildURL()}/${encodePath(backend)}/sign/${encodePath(role)}`;
   }
 }

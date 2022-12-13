@@ -21,7 +21,7 @@ export default class PkiCertificateSignModel extends PkiCertificateBaseModel {
   getHelpUrl(backend) {
     return `/v1/${backend}/sign/example?help=1`;
   }
-  @attr('string') name; // associated role
+  @attr('string') role;
 
   @attr('string', {
     label: 'CSR',

@@ -15,7 +15,7 @@ export default class PkiRoleSignRoute extends Route {
   async model() {
     const { role } = this.paramsFor('roles/role');
     return this.store.createRecord('pki/certificate/sign', {
-      name: role,
+      role,
     });
   }
 

@@ -20,7 +20,7 @@ module('Unit | Adapter | pki/certificate/sign', function (hooks) {
   test('it should make request to correct endpoint on create', async function (assert) {
     assert.expect(1);
     const generateData = {
-      name: 'my-role',
+      role: 'my-role',
       csr: `-----BEGIN CERTIFICATE REQUEST-----
       MIIChDCCAWwCAQAwFjEUMBIGA1UEAxMLZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3
       DQEBAQUAA4IBDwAwggEKAoIBAQCuW9C58M1wO0vdGmtLcJbbCkKyfsHJJae1j4LL
