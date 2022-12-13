@@ -48,11 +48,9 @@ export default class CredentialsPageComponent extends Component {
         ttl: this.ttl,
       };
 
-      const credentials = yield this.store
+      this.credentials = yield this.store
         .adapterFor('kubernetes/role')
         .generateCredentials(this.args.role.backend, payload);
-
-      this.credentials = credentials;
     } catch (error) {
       this.error = errorMessage(error);
     }

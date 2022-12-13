@@ -45,7 +45,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     assert.dom('[data-test-credentials-header]').hasText('Generate credentials');
     assert
       .dom('[data-test-generate-credentials] p')
-      .hasText('This will generate credentials using the role rolename.');
+      .hasText(`This will generate credentials using the role ${this.model.roleModel.name}.`);
     assert.dom('[data-test-generate-credentials] label').hasText('Kubernetes namespace');
     assert
       .dom('[data-test-generate-credentials] .is-size-8')
