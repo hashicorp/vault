@@ -1,0 +1,43 @@
+name: enos-release-testing-oss
+
+on:
+  repository_dispatch:
+    types:
+      - enos-release-testing-oss
+      - enos-release-testing-oss::*
+
+jobs:
+  metadata:
+    if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
+    runs-on: ubuntu-latest
+    outputs:
+      matrix-test-group: ${{ steps.matrix-group.outputs.matrix-test-group }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: matrix-group
+        env:
+          # MATRIX_MAX_TEST_GROUPS is required to determine the randomly selected
+          # test group. It should be set to the highest test_group used in the
+          # enos-run-matrices.
+          MATRIX_MAX_TEST_GROUPS: 2
+        run: echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> $GITHUB_OUTPUT
+
+  test:
+    name: Test ${{ matrix.matrix-file-name }}
+    if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
+    needs: metadata
+    uses: ./.github/workflows/enos-run.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - matrix-file-name: enos_release_testing_oss-artifactory-oss-linux-amd64-zip
+            test-name: Linux AMD64 Zip
+          - matrix-file-name: enos_release_testing_oss-artifactory-oss-linux-arm64-zip
+            test-name: Linux ARM64 Zip
+    with:
+      matrix-file-name: ${{ matrix.test-name }}
+      matrix-test-group: ${{ needs.metadata.outputs.matrix-test-group }}
+      vault-edition: oss
+      vault-revision: ${{ github.event.client_payload.payload.sha }}
+    secrets: inherit
