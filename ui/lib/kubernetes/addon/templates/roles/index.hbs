@@ -1,1 +1,6 @@
-<Page::Roles @model={{this.model}} @filterValue={{this.pageFilter}} />
+<Page::Roles
+  @roles={{this.model.roles}}
+  @config={{this.model.config}}
+  @backend={{this.model.backend}}
+  @filterValue={{this.pageFilter}}
+/>

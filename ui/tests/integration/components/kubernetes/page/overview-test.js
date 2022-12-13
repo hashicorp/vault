@@ -36,40 +36,44 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
       backend: 'kubernetes-test',
       ...this.server.create('kubernetes-role'),
     });
-    this.model = {
-      backend: this.store.peekRecord('secret-engine', 'kubernetes-test'),
-      config: this.store.peekRecord('kubernetes/config', 'kubernetes-test'),
-      roles: this.store.peekAll('kubernetes/role'),
+    this.backend = this.store.peekRecord('secret-engine', 'kubernetes-test');
+    this.config = this.store.peekRecord('kubernetes/config', 'kubernetes-test');
+    this.roles = this.store.peekAll('kubernetes/role');
+
+    this.renderComponent = () => {
+      return render(
+        hbs`<Page::Overview @config={{this.config}} @backend={{this.backend}} @roles={{this.roles}} />`,
+        { owner: this.engine }
+      );
     };
   });
 
   test('it should display role card', async function (assert) {
-    await render(hbs`<Page::Overview @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
     assert.dom('[data-test-roles-card] .title').hasText('Roles');
     assert
       .dom('[data-test-roles-card] p')
       .hasText('The number of Vault roles being used to generate Kubernetes credentials.');
     assert.dom('[data-test-roles-card] a').hasText('View Roles');
 
-    this.model.roles = [];
+    this.roles = [];
 
-    await render(hbs`<Page::Overview @model={{this.model}} />`, { owner: this.engine });
-
+    await this.renderComponent();
     assert.dom('[data-test-roles-card] a').hasText('Create Role');
   });
 
   test('it should display correct number of roles in role card', async function (assert) {
-    await render(hbs`<Page::Overview @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
     assert.dom('[data-test-roles-card] .has-font-weight-normal').hasText('2');
 
-    this.model.roles = [];
+    this.roles = [];
 
-    await render(hbs`<Page::Overview @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
     assert.dom('[data-test-roles-card] .has-font-weight-normal').hasText('None');
   });
 
   test('it should display generate credentials card', async function (assert) {
-    await render(hbs`<Page::Overview @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
     assert.dom('[data-test-generate-credential-card] .title').hasText('Generate credentials');
     assert
       .dom('[data-test-generate-credential-card] p')
@@ -77,7 +81,7 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
   });
 
   test('it should show options for SearchSelect', async function (assert) {
-    await render(hbs`<Page::Overview @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
     await clickTrigger();
     assert.strictEqual(this.element.querySelectorAll('.ember-power-select-option').length, 2);
     await typeInSearch('role-0');
@@ -88,9 +92,9 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
   });
 
   test('it should show ConfigCta when no config is set up', async function (assert) {
-    this.model.config = null;
+    this.config = null;
 
-    await render(hbs`<Page::Overview @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
     assert.dom('.empty-state .empty-state-title').hasText('Kubernetes not configured');
     assert
       .dom('.empty-state .empty-state-message')

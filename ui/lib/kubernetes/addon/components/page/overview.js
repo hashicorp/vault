@@ -11,7 +11,7 @@ export default class OverviewPageComponent extends Component {
 
   constructor() {
     super(...arguments);
-    this.roleOptions = this.args.model.roles.map((role) => {
+    this.roleOptions = this.args.roles.map((role) => {
       return { name: role.name, id: role.name };
     });
   }

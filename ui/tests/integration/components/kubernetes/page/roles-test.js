@@ -30,16 +30,22 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
       backend: 'kubernetes-test',
       ...this.server.create('kubernetes-role'),
     });
-    this.model = {
-      backend: this.store.peekRecord('secret-engine', 'kubernetes-test'),
-      config: this.store.peekRecord('kubernetes/config', 'kubernetes-test'),
-      roles: this.store.peekAll('kubernetes/role'),
+    this.backend = this.store.peekRecord('secret-engine', 'kubernetes-test');
+    this.config = this.store.peekRecord('kubernetes/config', 'kubernetes-test');
+    this.roles = this.store.peekAll('kubernetes/role');
+    this.filterValue = '';
+
+    this.renderComponent = () => {
+      return render(
+        hbs`<Page::Roles @config={{this.config}} @backend={{this.backend}} @roles={{this.roles}} @filterValue={{this.filterValue}} />`,
+        { owner: this.engine }
+      );
     };
   });
 
   test('it should render tab page header and config cta', async function (assert) {
-    this.model.config = null;
-    await render(hbs`<Page::Roles @model={{this.model}} @filterValue="" />`, { owner: this.engine });
+    this.config = null;
+    await this.renderComponent();
     assert.dom('.title svg').hasClass('flight-icon-kubernetes', 'Kubernetes icon renders in title');
     assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
     assert.dom('[data-test-toolbar-roles-action]').hasText('Create role', 'Toolbar action has correct text');
@@ -51,8 +57,8 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   });
 
   test('it should render create roles cta', async function (assert) {
-    this.model.roles = null;
-    await render(hbs`<Page::Roles @model={{this.model}} />`, { owner: this.engine });
+    this.roles = null;
+    await this.renderComponent();
     assert.dom('[data-test-empty-state-title]').hasText('No roles yet', 'Title renders');
     assert
       .dom('[data-test-empty-state-message]')
@@ -64,8 +70,9 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   });
 
   test('it should render no matches filter message', async function (assert) {
-    this.model.roles = [];
-    await render(hbs`<Page::Roles @model={{this.model}} @filterValue="test" />`, { owner: this.engine });
+    this.roles = [];
+    this.filterValue = 'test';
+    await this.renderComponent();
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('There are no roles matching "test"', 'Filter message renders');
@@ -77,11 +84,11 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
         'kubernetes/role': ['root'],
       },
     }));
-    await render(hbs`<Page::Roles @model={{this.model}} @filterValue="" />`, { owner: this.engine });
+    await this.renderComponent();
     assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-user', 'List item icon renders');
     assert
       .dom('[data-test-list-item-content]')
-      .hasText(this.model.roles.firstObject.name, 'List item name renders');
+      .hasText(this.roles.firstObject.name, 'List item name renders');
     await click('[data-test-popup-menu-trigger]');
     assert.dom('[data-test-details]').hasText('Details', 'Details link renders in menu');
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');
