@@ -2,8 +2,8 @@ import { Factory, trait } from 'ember-cli-mirage';
 
 const generated_role_rules = `rules:
 - apiGroups: [""]
-resources: ["secrets", "services"]
-verbs: ["get", "watch", "list", "create", "delete", "deletecollection", "patch", "update"]
+  resources: ["secrets", "services"]
+  verbs: ["get", "watch", "list", "create", "delete", "deletecollection", "patch", "update"]
 `;
 const name_template = '{{.FieldName | lowercase}}';
 const extra_annotations = { foo: 'bar', baz: 'qux' };

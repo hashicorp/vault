@@ -21,7 +21,7 @@
       @icon="token"
       @value={{pref.value}}
       @groupValue={{@model.generationPreference}}
-      @onChange={{fn (mut @model.generationPreference)}}
+      @onChange={{this.changePreference}}
       data-test-radio-card={{pref.value}}
     />
   {{/each}}

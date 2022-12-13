@@ -13,25 +13,17 @@ export default class CreateAndEditRolePageComponent extends Component {
   @service flashMessages;
 
   @tracked roleRulesTemplates;
-  @tracked selectedTemplateId = '1';
+  @tracked selectedTemplateId;
   @tracked modelValidations;
 
   constructor() {
     super(...arguments);
-    // first check if generatedRoleRules matches one of the templates, the user may have chosen a template and not made changes
-    // in this case we need to select the corresponding template in the dropdown
-    // if there is no match then replace the example rules with the user defined value for no template option
-    const { generatedRoleRules } = this.args.model;
-    const rulesTemplates = getRules();
-    if (generatedRoleRules) {
-      const template = rulesTemplates.findBy('rules', generatedRoleRules);
-      if (template) {
-        this.selectedTemplateId = template.id;
-      } else {
-        rulesTemplates.findBy('1').rules = generatedRoleRules;
-      }
+    this.initRoleRules();
+    // if editing and annotations or labels exist expand the section
+    const { extraAnnotations, extraLabels } = this.args.model;
+    if (extraAnnotations || extraLabels) {
+      this.showAnnotations = true;
     }
-    this.roleRulesTemplates = rulesTemplates;
   }
 
   get generationPreferences() {
@@ -82,6 +74,26 @@ export default class CreateAndEditRolePageComponent extends Component {
   }
 
   @action
+  initRoleRules() {
+    // first check if generatedRoleRules matches one of the templates, the user may have chosen a template and not made changes
+    // in this case we need to select the corresponding template in the dropdown
+    // if there is no match then replace the example rules with the user defined value for no template option
+    const { generatedRoleRules } = this.args.model;
+    const rulesTemplates = getRules();
+    this.selectedTemplateId = '1';
+
+    if (generatedRoleRules) {
+      const template = rulesTemplates.findBy('rules', generatedRoleRules);
+      if (template) {
+        this.selectedTemplateId = template.id;
+      } else {
+        rulesTemplates.findBy('id', '1').rules = generatedRoleRules;
+      }
+    }
+    this.roleRulesTemplates = rulesTemplates;
+  }
+
+  @action
   resetRoleRules() {
     this.roleRulesTemplates = getRules();
   }
@@ -91,10 +103,25 @@ export default class CreateAndEditRolePageComponent extends Component {
     this.selectedTemplateId = event.target.value;
   }
 
+  @action
+  changePreference(pref) {
+    if (pref === 'full') {
+      this.initRoleRules();
+    } else {
+      this.selectedTemplateId = null;
+    }
+    this.args.model.generationPreference = pref;
+  }
+
   @task
   @waitFor
   *save() {
     try {
+      // set generatedRoleRoles to value of selected template
+      const selectedTemplate = this.roleRulesTemplates.findBy('id', this.selectedTemplateId);
+      if (selectedTemplate) {
+        this.args.model.generatedRoleRules = selectedTemplate.rules;
+      }
       yield this.args.model.save();
       this.router.transitionTo(
         'vault.cluster.secrets.backend.kubernetes.roles.role.details',

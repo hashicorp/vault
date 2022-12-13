@@ -20,10 +20,9 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
         type: 'kubernetes',
       },
     });
-    this.model = {
-      backend: this.store.peekRecord('secret-engine', 'kubernetes-test'),
-      config: null,
-    };
+    this.backend = this.store.peekRecord('secret-engine', 'kubernetes-test');
+    this.config = null;
+
     this.setConfig = (disableLocal) => {
       const data = this.server.create(
         'kubernetes-config',
@@ -34,12 +33,18 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
         backend: 'kubernetes-test',
         ...data,
       });
-      this.model.config = this.store.peekRecord('kubernetes/config', 'kubernetes-test');
+      this.config = this.store.peekRecord('kubernetes/config', 'kubernetes-test');
+    };
+
+    this.renderComponent = () => {
+      return render(hbs`<Page::Configuration @backend={{this.backend}} @config={{this.config}} />`, {
+        owner: this.engine,
+      });
     };
   });
 
   test('it should render tab page header and config cta', async function (assert) {
-    await render(hbs`<Page::Configuration @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
     assert.dom('.title svg').hasClass('flight-icon-kubernetes', 'Kubernetes icon renders in title');
     assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
     assert
@@ -50,7 +55,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
 
   test('it should render message for inferred configuration', async function (assert) {
     this.setConfig(false);
-    await render(hbs`<Page::Configuration @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
     assert
       .dom('[data-test-inferred-message] svg')
       .hasClass('flight-icon-check-circle-fill', 'Inferred message icon renders');
@@ -64,11 +69,11 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
 
   test('it should render host and certificate info', async function (assert) {
     this.setConfig(true);
-    await render(hbs`<Page::Configuration @model={{this.model}} />`, { owner: this.engine });
+    await this.renderComponent();
     assert.dom('[data-test-row-label="Kubernetes host"]').exists('Kubernetes host label renders');
     assert
       .dom('[data-test-row-value="Kubernetes host"]')
-      .hasText(this.model.config.kubernetesHost, 'Kubernetes host value renders');
+      .hasText(this.config.kubernetesHost, 'Kubernetes host value renders');
     assert.dom('[data-test-row-label="Certificate"]').exists('Certificate label renders');
     assert
       .dom('[data-test-certificate-icon]')
@@ -76,7 +81,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     assert.dom('[data-test-certificate-label]').hasText('PEM Format', 'Certificate card label renders');
     assert
       .dom('[data-test-certificate-value]')
-      .hasText(this.model.config.kubernetesCaCert, 'Certificate card value renders');
+      .hasText(this.config.kubernetesCaCert, 'Certificate card value renders');
     assert.dom('[data-test-certificate-copy]').exists('Certificate copy button renders');
   });
 });
