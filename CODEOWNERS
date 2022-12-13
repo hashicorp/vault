@@ -47,15 +47,16 @@
 /enos/     @hashicorp/quality-team
 
 # Cryptosec
-/builtin/logical/pki/         @hashicorp/cryptosec
-/builtin/credential/cert/     @hashicorp/cryptosec
-/builtin/logical/ssh/         @hashicorp/cryptosec
-/builtin/logical/transit/     @hashicorp/cryptosec
-/helper/random/               @hashicorp/cryptosec
-/sdk/helper/cryptoutil/       @hashicorp/cryptosec
-/sdk/helper/keysutil/         @hashicorp/cryptosec
-/shamir/                      @hashicorp/cryptosec
-/vault/barrier*               @hashicorp/cryptosec
-/vault/seal*                  @hashicorp/cryptosec
-/vault/seal/                  @hashicorp/cryptosec
+/builtin/logical/pki/         @hashicorp/vault-crypto
+/builtin/credential/cert/     @hashicorp/vault-crypto
+/builtin/logical/ssh/         @hashicorp/vault-crypto
+/builtin/logical/transit/     @hashicorp/vault-crypto
+/helper/random/               @hashicorp/vault-crypto
+/sdk/helper/certutil/         @hashicorp/vault-crypto
+/sdk/helper/cryptoutil/       @hashicorp/vault-crypto
+/sdk/helper/keysutil/         @hashicorp/vault-crypto
+/shamir/                      @hashicorp/vault-crypto
+/vault/barrier*               @hashicorp/vault-crypto
+/vault/seal*                  @hashicorp/vault-crypto
+/vault/seal/                  @hashicorp/vault-crypto
 
