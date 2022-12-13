@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - matrix-file-name: enos_release_testing_oss-artifactory-oss-linux-amd65-zip
+          - matrix-file-name: enos_release_testing_oss-artifactory-oss-linux-amd64-zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
           - matrix-file-name: enos_release_testing_oss-artifactory-oss-linux-arm64-zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
