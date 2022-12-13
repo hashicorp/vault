@@ -1445,6 +1445,7 @@ func (b *SystemBackend) metricsPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Format to export metrics into. Currently accepts only \"prometheus\".",
 				Query:       true,
+				Default:     "",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1463,6 +1464,7 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Log level to view system logs at. Currently supported values are \"trace\", \"debug\", \"info\", \"warn\", \"error\".",
 				Query:       true,
+				Default:	 "info",
 			},
 			"log_format": {
 				Type:        framework.TypeString,
