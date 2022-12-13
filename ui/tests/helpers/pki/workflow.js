@@ -1,4 +1,5 @@
 import { SELECTORS as ROLEFORM } from './roles/form';
+import { SELECTORS as GENERATECERT } from './pki-role-generate';
 export const SELECTORS = {
   breadcrumbContainer: '[data-test-breadcrumbs]',
   breadcrumbs: '[data-test-breadcrumbs] li',
@@ -18,5 +19,8 @@ export const SELECTORS = {
   createRoleLink: '[data-test-pki-role-create-link]',
   roleForm: {
     ...ROLEFORM,
+  },
+  generateCertForm: {
+    ...GENERATECERT,
   },
 };
