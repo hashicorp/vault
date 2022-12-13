@@ -351,7 +351,7 @@ func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
 // plugin. The first unseal should work. Before sealing and unsealing again, the
 // version store is cleared.  Vault sees the next unseal as a major upgrade and
 // should immediately shut down.
-func TestCore_Unseal_majorVersionFirstMount_PendingRemoval_Plugin(t *testing.T) {
+func TestCore_Unseal_isMajorVersionFirstMount_PendingRemoval_Plugin(t *testing.T) {
 	pluginDir, cleanup := MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 

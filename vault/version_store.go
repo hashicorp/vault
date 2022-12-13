@@ -161,14 +161,15 @@ func (c *Core) isMajorVersionFirstMount(ctx context.Context) bool {
 		return true
 	}
 
-	// Get versions into comparable form
+	// Get versions into comparable form. Errors should be treated as the first
+	// unseal with this major version.
 	prev, err := semver.NewSemver(prevMounted)
 	if err != nil {
 		return true
 	}
 	curr, err := semver.NewSemver(version.Version)
 	if err != nil {
-		return false
+		return true
 	}
 
 	// Check for milestone or major version upgrade
