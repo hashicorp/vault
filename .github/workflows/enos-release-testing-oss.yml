@@ -12,18 +12,25 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix-test-group: ${{ steps.matrix-group.outputs.matrix-test-group }}
+      vault-revision: ${{ steps.get-metadata.outputs.vault-revision }}
+      vault-version: ${{ steps.get-metadata.outputs.vault-version }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.client_payload.payload.sha }}
       - id: matrix-group
         env:
           # MATRIX_MAX_TEST_GROUPS is required to determine the randomly selected
           # test group. It should be set to the highest test_group used in the
           # enos-run-matrices.
           MATRIX_MAX_TEST_GROUPS: 2
-        run: echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> $GITHUB_OUTPUT
+        run: |
+          echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> $GITHUB_OUTPUT
+          echo "vault-revision=$(make ci-get-revision)" >> $GITHUB_OUTPUT
+          echo "vault-version=$(make ci-get-version)" >> $GITHUB_OUTPUT
 
   test:
-    name: Test ${{ matrix.matrix-file-name }}
+    name: Test ${{ matrix.build-artifact-name }}
     if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
     needs: metadata
     uses: ./.github/workflows/enos-run.yml
@@ -32,12 +39,12 @@ jobs:
       matrix:
         include:
           - matrix-file-name: enos_release_testing_oss-artifactory-oss-linux-amd64-zip
-            test-name: Linux AMD64 Zip
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
           - matrix-file-name: enos_release_testing_oss-artifactory-oss-linux-arm64-zip
-            test-name: Linux ARM64 Zip
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
     with:
       matrix-file-name: ${{ matrix.test-name }}
       matrix-test-group: ${{ needs.metadata.outputs.matrix-test-group }}
       vault-edition: oss
-      vault-revision: ${{ github.event.client_payload.payload.sha }}
+      vault-revision: ${{ needs.product-metadata.outputs.vault-revision }}
     secrets: inherit
