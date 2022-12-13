@@ -7,7 +7,7 @@ const generateFromRole = [
     default: ['commonName'],
   },
   {
-    Options: [
+    'Subject Alternative Name (SAN) Options': [
       'altNames',
       'ipSans',
       'uriSans',
