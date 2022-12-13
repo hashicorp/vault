@@ -11,7 +11,8 @@ export default class KubernetesRolesRoute extends FetchConfigRoute {
         pageFilter
           ? models.filter((model) => model.name.toLowerCase().includes(pageFilter.toLowerCase()))
           : models
-      );
+      )
+      .catch(() => []);
     return hash({
       backend: this.modelFor('application'),
       config: this.configModel,
