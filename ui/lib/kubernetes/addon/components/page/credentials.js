@@ -39,7 +39,8 @@ export default class CredentialsPageComponent extends Component {
 
   @task
   @waitFor
-  *fetchCredentials() {
+  *fetchCredentials(event) {
+    event.preventDefault();
     try {
       const payload = {
         role: this.args.roleName,
