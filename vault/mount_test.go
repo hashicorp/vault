@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -184,6 +185,30 @@ func TestCore_Mount(t *testing.T) {
 	// Verify matching mount tables
 	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
 		t.Fatalf("mismatch: %v", diff)
+	}
+}
+
+func TestCore_Mount_secrets_builtin_RunningVersion(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "generic",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount(namespace.RootContext(nil), "foo/bar")
+	if match != "foo/" {
+		t.Fatalf("missing mount")
+	}
+
+	raw, _ := c.router.root.Get(match)
+	// we override the running version of builtins
+	if !versions.IsBuiltinVersion(raw.(*routeEntry).mountEntry.RunningVersion) {
+		t.Errorf("Expected mount to have builtin version but got %s", raw.(*routeEntry).mountEntry.RunningVersion)
 	}
 }
 

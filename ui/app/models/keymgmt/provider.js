@@ -3,13 +3,16 @@ import { tracked } from '@glimmer/tracking';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import { inject as service } from '@ember/service';
 
 const CRED_PROPS = {
   azurekeyvault: ['client_id', 'client_secret', 'tenant_id'],
   awskms: ['access_key', 'secret_key', 'session_token', 'endpoint'],
   gcpckms: ['service_account_file'],
 };
+
 const OPTIONAL_CRED_PROPS = ['session_token', 'endpoint'];
+
 // since we have dynamic credential attributes based on provider we need a dynamic presence validator
 // add validators for all cred props and return true for value if not associated with selected provider
 const credValidators = Object.keys(CRED_PROPS).reduce((obj, providerKey) => {
@@ -27,13 +30,16 @@ const credValidators = Object.keys(CRED_PROPS).reduce((obj, providerKey) => {
   });
   return obj;
 }, {});
+
 const validations = {
   name: [{ type: 'presence', message: 'Provider name is required' }],
   keyCollection: [{ type: 'presence', message: 'Key Vault instance name' }],
   ...credValidators,
 };
+
 @withModelValidations(validations)
 export default class KeymgmtProviderModel extends Model {
+  @service store;
   @attr('string') backend;
   @attr('string', {
     label: 'Provider name',
@@ -95,7 +101,7 @@ export default class KeymgmtProviderModel extends Model {
     const [creds, fields] = this.credentialProps.reduce(
       ([creds, fields], prop) => {
         creds[prop] = null;
-        let field = { name: `credentials.${prop}`, type: 'string', options: { label: prop } };
+        const field = { name: `credentials.${prop}`, type: 'string', options: { label: prop } };
         if (prop === 'service_account_file') {
           field.options.subText = 'The path to a Google service account key file, not the file itself.';
         }

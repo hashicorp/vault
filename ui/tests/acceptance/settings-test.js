@@ -25,7 +25,7 @@ module('Acceptance | settings', function (hooks) {
     // mount unsupported backend
     await visit('/vault/settings/mount-secret-backend');
 
-    assert.equal(currentURL(), '/vault/settings/mount-secret-backend');
+    assert.strictEqual(currentURL(), '/vault/settings/mount-secret-backend');
 
     await mountSecrets.selectType(type);
     await mountSecrets
@@ -42,10 +42,10 @@ module('Acceptance | settings', function (hooks) {
       `Successfully mounted '${type}' at '${path}'!`
     );
     await settled();
-    assert.equal(currentURL(), `/vault/secrets`, 'redirects to secrets page');
-    let row = backendListPage.rows.filterBy('path', path + '/')[0];
+    assert.strictEqual(currentURL(), `/vault/secrets`, 'redirects to secrets page');
+    const row = backendListPage.rows.filterBy('path', path + '/')[0];
     await row.menu();
     await backendListPage.configLink();
-    assert.equal(currentURL(), `/vault/secrets/${path}/configuration`, 'navigates to the config page');
+    assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration`, 'navigates to the config page');
   });
 });

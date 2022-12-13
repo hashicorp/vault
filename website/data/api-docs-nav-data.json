@@ -1,9 +1,5 @@
 [
   {
-    "title": "Overview",
-    "path": "index"
-  },
-  {
     "title": "Client Libraries",
     "path": "libraries"
   },
@@ -102,6 +98,14 @@
             "path": "secret/databases/postgresql"
           },
           {
+            "title": "Redis",
+            "path": "secret/databases/redis"
+          },
+          {
+            "title": "Redis ElastiCache",
+            "path": "secret/databases/rediselasticache"
+          },
+          {
             "title": "Redshift",
             "path": "secret/databases/redshift"
           },
@@ -186,7 +190,12 @@
         ]
       },
       {
-        "title": "Key Management <sup>ENTERPRISE</sup>",
+        "title": "Key Management",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "routes": [
           {
             "title": "Overview",
@@ -224,7 +233,12 @@
         ]
       },
       {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "title": "KMIP",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "secret/kmip"
       },
       {
@@ -240,8 +254,8 @@
         "path": "secret/nomad"
       },
       {
-        "title": "OpenLDAP",
-        "path": "secret/openldap"
+        "title": "LDAP",
+        "path": "secret/ldap"
       },
       {
         "title": "PKI",
@@ -264,7 +278,12 @@
         "path": "secret/totp"
       },
       {
-        "title": "Transform <sup>ENTERPRISE</sup>",
+        "title": "Transform",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "secret/transform"
       },
       {
@@ -349,7 +368,12 @@
         "path": "auth/userpass"
       },
       {
-        "title": "App ID <sup>DEPRECATED</sup>",
+        "title": "App ID",
+        "badge": {
+          "text": "DEPRECATED",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "auth/app-id"
       }
     ]
@@ -442,6 +466,19 @@
         "path": "system/internal-counters"
       },
       {
+        "title": "<code>/sys/internal/inspect</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "system/inspect"
+          },
+          {
+            "title": "<code>/sys/internal/inspect/router</code>",
+            "path": "system/inspect/router"
+          }
+        ]
+      },
+      {
         "title": "<code>/sys/internal/specs/openapi</code>",
         "path": "system/internal-specs-openapi"
       },
@@ -486,8 +523,13 @@
         "path": "system/loggers"
       },
       {
-        "title": "<code>/sys/managed-keys <sup>ENT</sup></code>",
-        "path": "system/managed-keys"
+        "title": "<code>/sys/managed-keys</code>",
+        "path": "system/managed-keys",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/metrics</code>",

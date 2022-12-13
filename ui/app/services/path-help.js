@@ -7,7 +7,6 @@ import Model from '@ember-data/model';
 import Service from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
-import { assign } from '@ember/polyfills';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
@@ -27,15 +26,15 @@ export default Service.extend({
   attrs: null,
   dynamicApiPath: '',
   ajax(url, options = {}) {
-    let appAdapter = getOwner(this).lookup(`adapter:application`);
-    let { data } = options;
+    const appAdapter = getOwner(this).lookup(`adapter:application`);
+    const { data } = options;
     return appAdapter.ajax(url, 'GET', {
       data,
     });
   },
 
   getNewModel(modelType, backend, apiPath, itemType) {
-    let owner = getOwner(this);
+    const owner = getOwner(this);
     const modelName = `model:${modelType}`;
 
     const modelFactory = owner.factoryFor(modelName);
@@ -74,9 +73,9 @@ export default Service.extend({
           const adapter = this.getNewAdapter(pathInfo, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
-        let path, paths;
+        let path;
         // if we have an item we want the create info for that itemType
-        paths = itemType ? this.filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
+        const paths = itemType ? this.filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
         const createPath = paths.find((path) => path.operations.includes('post') && path.action !== 'Delete');
         path = createPath.path;
         path = path.includes('{') ? path.slice(0, path.indexOf('{') - 1) + '/example' : path;
@@ -93,7 +92,7 @@ export default Service.extend({
       })
       .catch((err) => {
         // TODO: we should handle the error better here
-        console.error(err);
+        console.error(err); // eslint-disable-line
       });
   },
 
@@ -156,14 +155,14 @@ export default Service.extend({
   },
 
   getPaths(apiPath, backend, itemType, itemID) {
-    let debugString =
+    const debugString =
       itemID && itemType
         ? `Fetching relevant paths for ${backend} ${itemType} ${itemID} from ${apiPath}`
         : `Fetching relevant paths for ${backend} ${itemType} from ${apiPath}`;
     debug(debugString);
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then((help) => {
       const pathInfo = help.openapi.paths;
-      let paths = Object.entries(pathInfo);
+      const paths = Object.entries(pathInfo);
 
       return paths.reduce(this.reducePathsByPathName, {
         apiPath,
@@ -179,31 +178,36 @@ export default Service.extend({
   // Returns relevant information from OpenAPI
   // as determined by the expandOpenApiProps util
   getProps(helpUrl, backend) {
-    // add name of thing you want
     debug(`Fetching schema properties for ${backend} from ${helpUrl}`);
 
     return this.ajax(helpUrl, backend).then((help) => {
-      // paths is an array but it will have a single entry
-      // for the scope we're in
-      const path = Object.keys(help.openapi.paths)[0]; // do this or look at name
+      // help.openapi.paths is an array with one item
+      const path = Object.keys(help.openapi.paths)[0];
       const pathInfo = help.openapi.paths[path];
       const params = pathInfo.parameters;
-      let paramProp = {};
+      const paramProp = {};
 
       // include url params
       if (params) {
-        const { name, schema, description } = params[0];
-        let label = capitalize(name.split('_').join(' '));
+        params.forEach((param) => {
+          const { name, schema, description } = param;
+          if (name === '_mount_path') {
+            // this param refers to the engine mount path,
+            // which is already accounted for as backend
+            return;
+          }
+          const label = capitalize(name.split('_').join(' '));
 
-        paramProp[name] = {
-          'x-vault-displayAttrs': {
-            name: label,
-            group: 'default',
-          },
-          type: schema.type,
-          description: description,
-          isId: true,
-        };
+          paramProp[name] = {
+            'x-vault-displayAttrs': {
+              name: label,
+              group: 'default',
+            },
+            type: schema.type,
+            description: description,
+            isId: true,
+          };
+        });
       }
 
       let props = {};
@@ -211,7 +215,7 @@ export default Service.extend({
       if (schema.$ref) {
         // $ref will be shaped like `#/components/schemas/MyResponseType
         // which maps to the location of the item within the openApi response
-        let loc = schema.$ref.replace('#/', '').split('/');
+        const loc = schema.$ref.replace('#/', '').split('/');
         props = loc.reduce((prev, curr) => {
           return prev[curr] || {};
         }, help.openapi).properties;
@@ -220,14 +224,14 @@ export default Service.extend({
       }
       // put url params (e.g. {name}, {role})
       // at the front of the props list
-      const newProps = assign({}, paramProp, props);
+      const newProps = { ...paramProp, ...props };
       return expandOpenApiProps(newProps);
     });
   },
 
   getNewAdapter(pathInfo, itemType) {
     // we need list and create paths to set the correct urls for actions
-    let paths = this.filterPathsByItemType(pathInfo, itemType);
+    const paths = this.filterPathsByItemType(pathInfo, itemType);
     let { apiPath } = pathInfo;
     const getPath = paths.find((path) => path.operations.includes('get'));
 
@@ -297,7 +301,7 @@ export default Service.extend({
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
     return this.getProps(helpUrl, backend).then((props) => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
-      let owner = getOwner(this);
+      const owner = getOwner(this);
       newModel = newModel.extend(attrs, { newFields });
       // if our newModel doesn't have fieldGroups already
       // we need to create them
@@ -346,10 +350,10 @@ export default Service.extend({
     });
   },
   getFieldGroups(newModel) {
-    let groups = {
+    const groups = {
       default: [],
     };
-    let fieldGroups = [];
+    const fieldGroups = [];
     newModel.attributes.forEach((attr) => {
       // if the attr comes in with a fieldGroup from OpenAPI,
       // add it to that group
@@ -364,7 +368,7 @@ export default Service.extend({
         groups.default.push(attr.name);
       }
     });
-    for (let group in groups) {
+    for (const group in groups) {
       fieldGroups.push({ [group]: groups[group] });
     }
     return fieldToAttrs(newModel, fieldGroups);

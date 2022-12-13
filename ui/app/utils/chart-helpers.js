@@ -32,6 +32,6 @@ export function calculateAverage(dataset, objectKey) {
   // if an array of objects, objectKey of the integer we want to calculate, ex: 'entity_clients'
   // if d[objectKey] is undefined there is no value, so return 0
   const getIntegers = objectKey ? dataset?.map((d) => (d[objectKey] ? d[objectKey] : 0)) : dataset;
-  let checkIntegers = getIntegers.every((n) => Number.isInteger(n)); // decimals will be false
+  const checkIntegers = getIntegers.every((n) => Number.isInteger(n)); // decimals will be false
   return checkIntegers ? Math.round(mean(getIntegers)) : null;
 }

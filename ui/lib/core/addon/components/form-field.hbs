@@ -1,23 +1,13 @@
 {{! template-lint-configure simple-unless "warn" }}
 <div class="field" data-test-field={{or @attr.name true}}>
-  {{#unless
-    (or
-      (eq @attr.type "boolean")
-      (contains
-        @attr.options.editType
-        (array "boolean" "optionalText" "searchSelect" "mountAccessor" "kv" "file" "ttl" "stringArray" "json" "regex")
-      )
-    )
-  }}
-    {{#unless (eq @attr.type "object")}}
-      <FormFieldLabel
-        for={{@attr.name}}
-        @label={{this.labelString}}
-        @helpText={{@attr.options.helpText}}
-        @subText={{@attr.options.subText}}
-        @docLink={{@attr.options.docLink}}
-      />
-    {{/unless}}
+  {{#unless this.hideLabel}}
+    <FormFieldLabel
+      for={{@attr.name}}
+      @label={{this.labelString}}
+      @helpText={{(if this.showHelpText @attr.options.helpText)}}
+      @subText={{@attr.options.subText}}
+      @docLink={{@attr.options.docLink}}
+    />
   {{/unless}}
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}
@@ -43,7 +33,13 @@
     {{else}}
       <div class="control is-expanded">
         <div class="select is-fullwidth">
-          <select name={{@attr.name}} id={{@attr.name}} onchange={{this.onChangeWithEvent}} data-test-input={{@attr.name}}>
+          <select
+            class="{{if this.validationError 'has-error-border'}}"
+            name={{@attr.name}}
+            id={{@attr.name}}
+            onchange={{this.onChangeWithEvent}}
+            data-test-input={{@attr.name}}
+          >
             {{#if @attr.options.noDefault}}
               <option value="">
                 Select one
@@ -56,6 +52,9 @@
             {{/each}}
           </select>
         </div>
+        {{#if this.validationError}}
+          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+        {{/if}}
       </div>
     {{/if}}
   {{else if (and (eq @attr.type "string") (eq @attr.options.editType "boolean"))}}
@@ -71,7 +70,7 @@
 
       <label for={{@attr.name}} class="is-label">
         {{this.labelString}}
-        {{#if @attr.options.helpText}}
+        {{#if (and this.showHelpText @attr.options.helpText)}}
           <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>
         {{/if}}
       </label>
@@ -83,16 +82,15 @@
         @models={{@attr.options.models}}
         @onChange={{this.setAndBroadcast}}
         @inputValue={{get @model this.valuePath}}
-        @helpText={{@attr.options.helpText}}
-        @subText={{@attr.options.subText}}
         @wildcardLabel={{@attr.options.wildcardLabel}}
         @label={{this.labelString}}
-        @subLabel={{@attr.options.subLabel}}
+        @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
+        @subText={{@attr.options.subText}}
+        @helpText={{@attr.options.helpText}}
         @fallbackComponent={{@attr.options.fallbackComponent}}
         @selectLimit={{@attr.options.selectLimit}}
         @backend={{@model.backend}}
         @disallowNewItems={{@attr.options.onlyAllowExisting}}
-        @labelClass={{@labelClass}}
         class={{if this.validationError "dropdown-has-error-border"}}
       />
     </div>
@@ -132,7 +130,7 @@
     {{! TTL Picker }}
     <div class="field">
       {{#let (or (get @model this.valuePath) @attr.options.setDefault) as |initialValue|}}
-        <TtlPicker2
+        <TtlPicker
           data-test-input={{@attr.name}}
           @onChange={{this.setAndBroadcastTtl}}
           @label={{this.labelString}}
@@ -205,10 +203,12 @@
       data-test-input={{@attr.name}}
       @label={{this.labelString}}
       @warning={{@attr.options.warning}}
-      @helpText={{@attr.options.helpText}}
+      @helpText={{if this.showHelpText @attr.options.helpText}}
       @inputValue={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @attrName={{@attr.name}}
+      @subText={{@attr.options.subText}}
+      @hideFormSection={{@attr.options.hideFormSection}}
     />
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}
@@ -321,7 +321,6 @@
         onchange={{this.onChangeWithEvent}}
         data-test-input={{@attr.name}}
       />
-
       <label for={{@attr.name}} class="is-label">
         {{this.labelString}}
         {{#if (and this.showHelpText @attr.options.helpText)}}
@@ -329,7 +328,14 @@
         {{/if}}
       </label>
       {{#if @attr.options.subText}}
-        <p class="sub-text">{{@attr.options.subText}}</p>
+        <p class="sub-text">
+          {{@attr.options.subText}}
+          {{#if @attr.options.docLink}}
+            <DocLink @path={{@attr.options.docLink}}>
+              Learn more here.
+            </DocLink>
+          {{/if}}
+        </p>
       {{/if}}
     </div>
   {{else if (eq @attr.type "object")}}
@@ -339,5 +345,7 @@
       @valueUpdated={{fn this.codemirrorUpdated false}}
       @helpText={{@attr.options.helpText}}
     />
+  {{else if (eq @attr.options.editType "yield")}}
+    {{yield}}
   {{/if}}
 </div>

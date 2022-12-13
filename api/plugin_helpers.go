@@ -37,9 +37,9 @@ const (
 // path matches that path or not (useful specifically for the paths that
 // contain templated fields.)
 var sudoPaths = map[string]*regexp.Regexp{
-	"/auth/token/accessors/":                        regexp.MustCompile(`^/auth/token/accessors/$`),
-	"/pki/root":                                     regexp.MustCompile(`^/pki/root$`),
-	"/pki/root/sign-self-issued":                    regexp.MustCompile(`^/pki/root/sign-self-issued$`),
+	"/auth/{token_mount_path}/accessors/":     regexp.MustCompile(`^/auth/.+/accessors/$`),
+	"/{pki_mount_path}/root":                  regexp.MustCompile(`^/.+/root$`),
+	"/{pki_mount_path}/root/sign-self-issued": regexp.MustCompile(`^/.+/root/sign-self-issued$`),
 	"/sys/audit":                                    regexp.MustCompile(`^/sys/audit$`),
 	"/sys/audit/{path}":                             regexp.MustCompile(`^/sys/audit/.+$`),
 	"/sys/auth/{path}":                              regexp.MustCompile(`^/sys/auth/.+$`),
@@ -63,6 +63,7 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/revoke-force/{prefix}":                    regexp.MustCompile(`^/sys/revoke-force/.+$`),
 	"/sys/revoke-prefix/{prefix}":                   regexp.MustCompile(`^/sys/revoke-prefix/.+$`),
 	"/sys/rotate":                                   regexp.MustCompile(`^/sys/rotate$`),
+	"/sys/internal/inspect/router/{tag}":            regexp.MustCompile(`^/sys/internal/inspect/router/.+$`),
 
 	// enterprise-only paths
 	"/sys/replication/dr/primary/secondary-token":          regexp.MustCompile(`^/sys/replication/dr/primary/secondary-token$`),

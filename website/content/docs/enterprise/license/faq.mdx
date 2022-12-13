@@ -32,7 +32,7 @@ This FAQ section is for license changes and updates introduced for Vault Enterpr
 
 Per the [feature deprecation plans](/docs/deprecation), Vault will no longer support licenses in storage. An [auto-loaded license](/docs/enterprise/license/autoloading) must be used instead. If you are using stored licenses, you must migrate to auto-loaded licenses prior to upgrading to Vault 1.11
 
-Vault 1.12 will also introduce different termination behavior for evaluation licenses versus non-evaluation licenses. An [evaluation](https://www.hashicorp.com/products/vault/trial) license will include a 30-day trial period after which a running Vault server will terminate. Vault servers using a non-evaluation license will not terminate.
+Vault 1.12 will also introduce different termination behavior for evaluation licenses versus non-evaluation licenses. An evaluation license will include a 30-day trial period after which a running Vault server will terminate. Vault servers using a non-evaluation license will not terminate.
 
 ### Q: How do the license termination changes affect upgrades?
 Vault 1.12 will introduce changes to the license termination behavior. Upgrades when using expired licenses will now be limited.
@@ -51,7 +51,7 @@ Vault will start normally
 Vault will not start
 
 **Evaluation license is terminated:**
-Vault will not start independent of the binary’s build date
+Vault will not start independent of the binary's build date
 
 **Non-evaluation license is terminated, binary build date _before_ license expiry date:**
 Vault will start normally
@@ -125,7 +125,7 @@ It is not necessary to remove the stored license entry. That will occur automati
 
 1. Use the command `vault license get -signed` to retrieve the license from storage of your running cluster.
 2. Put the license on disk
-3. Configure license auto-loading by specifying the [`license_path`](/docs/configuration#license_path) config option or setting the [`VAULT_LICENSE`](/docs/commands#vault_license) or [`VAULT_LICENSE_PATH`](o/docs/commands#vault_license_path) environment variable.
+3. Configure license auto-loading by specifying the [`license_path`](/docs/configuration#license_path) config option or setting the [`VAULT_LICENSE`](/docs/commands#vault_license) or [`VAULT_LICENSE_PATH`](/docs/commands#vault_license_path) environment variable.
 
 ### Q: What is the path for customers who want to downgrade/rollback from Vault 1.11 or later (auto-loaded license mandatory) to a pre-Vault 1.11 (auto-loading not mandatory, stored license supported)?
 

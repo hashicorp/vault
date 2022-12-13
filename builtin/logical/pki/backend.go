@@ -3,10 +3,13 @@ package pki
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	atomic2 "go.uber.org/atomic"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 
@@ -97,6 +100,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				revokedPath,
 				deltaWALPath,
 				legacyCRLPath,
+				clusterConfigPath,
 				"crls/",
 				"certs/",
 			},
@@ -124,6 +128,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathConfigCA(&b),
 			pathConfigCRL(&b),
 			pathConfigURLs(&b),
+			pathConfigCluster(&b),
 			pathSignVerbatim(&b),
 			pathSign(&b),
 			pathIssue(&b),
@@ -131,6 +136,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathRotateDeltaCRL(&b),
 			pathRevoke(&b),
 			pathRevokeWithKey(&b),
+			pathListCertsRevoked(&b),
 			pathTidy(&b),
 			pathTidyCancel(&b),
 			pathTidyStatus(&b),
@@ -173,6 +179,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// OCSP APIs
 			buildPathOcspGet(&b),
 			buildPathOcspPost(&b),
+
+			// CRL Signing
+			pathResignCrls(&b),
+			pathSignRevocationList(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -193,10 +203,22 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.pkiStorageVersion.Store(0)
 
-	b.crlBuilder = newCRLBuilder()
+	// b isn't yet initialized with SystemView state; calling b.System() will
+	// result in a nil pointer dereference. Instead query BackendConfig's
+	// copy of SystemView.
+	cannotRebuildCRLs := conf.System.ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
+		conf.System.ReplicationState().HasState(consts.ReplicationDRSecondary)
+	b.crlBuilder = newCRLBuilder(!cannotRebuildCRLs)
 
 	// Delay the first tidy until after we've started up.
 	b.lastTidy = time.Now()
+
+	// Metrics initialization for count of certificates in storage
+	b.certsCounted = atomic2.NewBool(false)
+	b.certCount = new(uint32)
+	b.revokedCertCount = new(uint32)
+	b.possibleDoubleCountedSerials = make([]string, 0, 250)
+	b.possibleDoubleCountedRevokedSerials = make([]string, 0, 250)
 
 	return &b
 }
@@ -213,6 +235,12 @@ type backend struct {
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
 	lastTidy       time.Time
+
+	certCount                           *uint32
+	revokedCertCount                    *uint32
+	certsCounted                        *atomic2.Bool
+	possibleDoubleCountedSerials        []string
+	possibleDoubleCountedRevokedSerials []string
 
 	pkiStorageVersion atomic.Value
 	crlBuilder        *crlBuilder
@@ -237,11 +265,13 @@ const (
 
 type tidyStatus struct {
 	// Parameters used to initiate the operation
-	safetyBuffer      int
-	tidyCertStore     bool
-	tidyRevokedCerts  bool
-	tidyRevokedAssocs bool
-	pauseDuration     string
+	safetyBuffer       int
+	issuerSafetyBuffer int
+	tidyCertStore      bool
+	tidyRevokedCerts   bool
+	tidyRevokedAssocs  bool
+	tidyExpiredIssuers bool
+	pauseDuration      string
 
 	// Status
 	state                   tidyStatusState
@@ -325,6 +355,21 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 		return err
 	}
 
+	err := b.initializePKIIssuersStorage(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Initialize also needs to populate our certificate and revoked certificate count
+	err = b.initializeStoredCertificateCounts(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {
 	// Grab the lock prior to the updating of the storage lock preventing us flipping
 	// the storage flag midway through the request stream of other requests.
 	b.issuersLock.Lock()
@@ -438,7 +483,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		}
 
 		// Then attempt to rebuild the CRLs if required.
-		if err := b.crlBuilder.rebuildIfForced(ctx, b, request); err != nil {
+		if err := b.crlBuilder.rebuildIfForced(sc); err != nil {
 			return err
 		}
 
@@ -507,15 +552,15 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 	tidyErr := doAutoTidy()
 
 	if crlErr != nil && tidyErr != nil {
-		return fmt.Errorf("Error building CRLs:\n - %v\n\nError running auto-tidy:\n - %v\n", crlErr, tidyErr)
+		return fmt.Errorf("Error building CRLs:\n - %v\n\nError running auto-tidy:\n - %w\n", crlErr, tidyErr)
 	}
 
 	if crlErr != nil {
-		return fmt.Errorf("Error building CRLs:\n - %v\n", crlErr)
+		return fmt.Errorf("Error building CRLs:\n - %w\n", crlErr)
 	}
 
 	if tidyErr != nil {
-		return fmt.Errorf("Error running auto-tidy:\n - %v\n", tidyErr)
+		return fmt.Errorf("Error running auto-tidy:\n - %w\n", tidyErr)
 	}
 
 	// Check if the CRL was invalidated due to issuer swap and update
@@ -526,4 +571,165 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 	// All good!
 	return nil
+}
+
+func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
+	b.tidyStatusLock.RLock()
+	defer b.tidyStatusLock.RUnlock()
+	// For performance reasons, we can't lock on issuance/storage of certs until a list operation completes,
+	// but we want to limit possible miscounts / double-counts to over-counting, so we take the tidy lock which
+	// prevents (most) deletions - in particular we take a read lock (sufficient to block the write lock in
+	// tidyStatusStart while allowing tidy to still acquire a read lock to report via its endpoint)
+
+	entries, err := b.storage.List(ctx, "certs/")
+	if err != nil {
+		return err
+	}
+	atomic.AddUint32(b.certCount, uint32(len(entries)))
+
+	revokedEntries, err := b.storage.List(ctx, "revoked/")
+	if err != nil {
+		return err
+	}
+	atomic.AddUint32(b.revokedCertCount, uint32(len(revokedEntries)))
+
+	b.certsCounted.Store(true)
+	// Now that the metrics are set, we can switch from appending newly-stored certificates to the possible double-count
+	// list, and instead have them update the counter directly.  We need to do this so that we are looking at a static
+	// slice of possibly double counted serials.  Note that certsCounted is computed before the storage operation, so
+	// there may be some delay here.
+
+	// Sort the listed-entries first, to accommodate that delay.
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i] < entries[j]
+	})
+
+	sort.Slice(revokedEntries, func(i, j int) bool {
+		return revokedEntries[i] < revokedEntries[j]
+	})
+
+	// We assume here that these lists are now complete.
+	sort.Slice(b.possibleDoubleCountedSerials, func(i, j int) bool {
+		return b.possibleDoubleCountedSerials[i] < b.possibleDoubleCountedSerials[j]
+	})
+
+	listEntriesIndex := 0
+	possibleDoubleCountIndex := 0
+	for {
+		if listEntriesIndex >= len(entries) {
+			break
+		}
+		if possibleDoubleCountIndex >= len(b.possibleDoubleCountedSerials) {
+			break
+		}
+		if entries[listEntriesIndex] == b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
+			// This represents a double-counted entry
+			b.decrementTotalCertificatesCountNoReport()
+			listEntriesIndex = listEntriesIndex + 1
+			possibleDoubleCountIndex = possibleDoubleCountIndex + 1
+			continue
+		}
+		if entries[listEntriesIndex] < b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
+			listEntriesIndex = listEntriesIndex + 1
+			continue
+		}
+		if entries[listEntriesIndex] > b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
+			possibleDoubleCountIndex = possibleDoubleCountIndex + 1
+			continue
+		}
+	}
+
+	sort.Slice(b.possibleDoubleCountedRevokedSerials, func(i, j int) bool {
+		return b.possibleDoubleCountedRevokedSerials[i] < b.possibleDoubleCountedRevokedSerials[j]
+	})
+
+	listRevokedEntriesIndex := 0
+	possibleRevokedDoubleCountIndex := 0
+	for {
+		if listRevokedEntriesIndex >= len(revokedEntries) {
+			break
+		}
+		if possibleRevokedDoubleCountIndex >= len(b.possibleDoubleCountedRevokedSerials) {
+			break
+		}
+		if revokedEntries[listRevokedEntriesIndex] == b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
+			// This represents a double-counted revoked entry
+			b.decrementTotalRevokedCertificatesCountNoReport()
+			listRevokedEntriesIndex = listRevokedEntriesIndex + 1
+			possibleRevokedDoubleCountIndex = possibleRevokedDoubleCountIndex + 1
+			continue
+		}
+		if revokedEntries[listRevokedEntriesIndex] < b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
+			listRevokedEntriesIndex = listRevokedEntriesIndex + 1
+			continue
+		}
+		if revokedEntries[listRevokedEntriesIndex] > b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
+			possibleRevokedDoubleCountIndex = possibleRevokedDoubleCountIndex + 1
+			continue
+		}
+	}
+
+	b.possibleDoubleCountedRevokedSerials = nil
+	b.possibleDoubleCountedSerials = nil
+
+	certCount := atomic.LoadUint32(b.certCount)
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(certCount))
+	revokedCertCount := atomic.LoadUint32(b.revokedCertCount)
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(revokedCertCount))
+
+	return nil
+}
+
+// The "certsCounted" boolean here should be loaded from the backend certsCounted before the corresponding storage call:
+// eg. certsCounted := b.certsCounted.Load()
+func (b *backend) incrementTotalCertificatesCount(certsCounted bool, newSerial string) {
+	certCount := atomic.AddUint32(b.certCount, 1)
+	switch {
+	case !certsCounted:
+		// This is unsafe, but a good best-attempt
+		if strings.HasPrefix(newSerial, "certs/") {
+			newSerial = newSerial[6:]
+		}
+		b.possibleDoubleCountedSerials = append(b.possibleDoubleCountedSerials, newSerial)
+	default:
+		metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(certCount))
+	}
+}
+
+func (b *backend) decrementTotalCertificatesCountReport() {
+	certCount := b.decrementTotalCertificatesCountNoReport()
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(certCount))
+}
+
+// Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
+func (b *backend) decrementTotalCertificatesCountNoReport() uint32 {
+	newCount := atomic.AddUint32(b.certCount, ^uint32(0))
+	return newCount
+}
+
+// The "certsCounted" boolean here should be loaded from the backend certsCounted before the corresponding storage call:
+// eg. certsCounted := b.certsCounted.Load()
+func (b *backend) incrementTotalRevokedCertificatesCount(certsCounted bool, newSerial string) {
+	newRevokedCertCount := atomic.AddUint32(b.revokedCertCount, 1)
+	switch {
+	case !certsCounted:
+		// This is unsafe, but a good best-attempt
+		if strings.HasPrefix(newSerial, "revoked/") { // allow passing in the path (revoked/serial) OR the serial
+			newSerial = newSerial[8:]
+		}
+		b.possibleDoubleCountedRevokedSerials = append(b.possibleDoubleCountedRevokedSerials, newSerial)
+	default:
+		metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(newRevokedCertCount))
+	}
+}
+
+func (b *backend) decrementTotalRevokedCertificatesCountReport() {
+	revokedCertCount := b.decrementTotalRevokedCertificatesCountNoReport()
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(revokedCertCount))
+}
+
+// Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
+func (b *backend) decrementTotalRevokedCertificatesCountNoReport() uint32 {
+	newRevokedCertCount := atomic.AddUint32(b.revokedCertCount, ^uint32(0))
+	return newRevokedCertCount
 }

@@ -26,7 +26,7 @@ import (
 
 // Tests converting back and forth between a CertBundle and a ParsedCertBundle.
 //
-// Also tests the GetSubjKeyID, GetHexFormatted, and
+// Also tests the GetSubjKeyID, GetHexFormatted, ParseHexFormatted and
 // ParsedCertBundle.getSigner functions.
 func TestCertBundleConversion(t *testing.T) {
 	cbuts := []*CertBundle{
@@ -243,6 +243,10 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 
 	if cb.SerialNumber != GetHexFormatted(pcbut.Certificate.SerialNumber.Bytes(), ":") {
 		return fmt.Errorf("bundle serial number does not match")
+	}
+
+	if !bytes.Equal(pcbut.Certificate.SerialNumber.Bytes(), ParseHexFormatted(cb.SerialNumber, ":")) {
+		return fmt.Errorf("failed re-parsing hex formatted number %s", cb.SerialNumber)
 	}
 
 	switch {
@@ -907,6 +911,34 @@ func TestNotAfterValues(t *testing.T) {
 
 	if PermitNotAfterBehavior != 2 {
 		t.Fatalf("Expected PermitNotAfterBehavior=%v to have value 2", PermitNotAfterBehavior)
+	}
+}
+
+func TestSignatureAlgorithmRoundTripping(t *testing.T) {
+	for leftName, value := range SignatureAlgorithmNames {
+		if leftName == "pureed25519" && value == x509.PureEd25519 {
+			continue
+		}
+
+		rightName, present := InvSignatureAlgorithmNames[value]
+		if !present {
+			t.Fatalf("%v=%v is present in SignatureAlgorithmNames but not in InvSignatureAlgorithmNames", leftName, value)
+		}
+
+		if strings.ToLower(rightName) != leftName {
+			t.Fatalf("%v=%v is present in SignatureAlgorithmNames but inverse for %v has different name: %v", leftName, value, value, rightName)
+		}
+	}
+
+	for leftValue, name := range InvSignatureAlgorithmNames {
+		rightValue, present := SignatureAlgorithmNames[strings.ToLower(name)]
+		if !present {
+			t.Fatalf("%v=%v is present in InvSignatureAlgorithmNames but not in SignatureAlgorithmNames", leftValue, name)
+		}
+
+		if rightValue != leftValue {
+			t.Fatalf("%v=%v is present in InvSignatureAlgorithmNames but forwards for %v has different value: %v", leftValue, name, name, rightValue)
+		}
 	}
 }
 

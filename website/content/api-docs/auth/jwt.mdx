@@ -111,7 +111,8 @@ entities attempting to login. At least one of the bound values must be set.
 - `name` `(string: <required>)` - Name of the role.
 - `role_type` `(string: <optional>)` - Type of role, either "oidc" (default) or "jwt".
 - `bound_audiences` `(array: <optional>)` - List of `aud` claims to match against.
-  Any match is sufficient. Required for "jwt" roles, optional for "oidc" roles.
+  Any match is sufficient. For "jwt" roles, at least one of `bound_audiences`, `bound_subject`,
+  `bound_claims` or `token_bound_cidrs` is required. Optional for "oidc" roles.
 - `user_claim` `(string: <required>)` - The claim to use to uniquely identify
   the user; this will be used as the name for the Identity entity alias created
   due to a successful login. The claim value must be a string.
@@ -303,7 +304,7 @@ Obtain an authorization URL from Vault to start an OIDC login flow.
 - `role` `(string: <optional>)` - Name of the role against which the login is being
   attempted. Defaults to configured `default_role` if not provided.
 - `redirect_uri` `(string: <required>)` - Path to the callback to complete the login. This will be
-  of the form, "https://.../oidc/callback" where the leading portion is dependent on your Vault
+  of the form, "https&#x3A;//.../oidc/callback" where the leading portion is dependent on your Vault
   server location, port, and the mount of the JWT plugin. This must be configured with Vault and the
   provider. See [Redirect URIs](/docs/auth/jwt#redirect-uris) for more information.
 - `client_nonce` `(string: <optional>)` - Optional client-provided nonce that

@@ -3,11 +3,12 @@ package command
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
-	"github.com/posener/complete"
-
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
 
 var (
@@ -36,11 +37,11 @@ Usage: vault namespace patch [options] PATH
 
   Patch an existing child namespace by adding and removing custom-metadata (e.g. ns1/):
 
-      $ vault namespace patch ns1 -custom-metadata=foo=abc -remove-custom-metadata=bar
+      $ vault namespace patch -custom-metadata=foo=abc -remove-custom-metadata=bar ns1
 
   Patch an existing child namespace from a parent namespace (e.g. ns1/ns2/):
 
-      $ vault namespace patch -namespace=ns1 ns2 -custom-metadata=foo=abc
+      $ vault namespace patch -namespace=ns1 -custom-metadata=foo=abc ns2
 
 ` + c.Flags().Help()
 
@@ -119,12 +120,12 @@ func (c *NamespacePatchCommand) Run(args []string) int {
 
 	secret, err := client.Logical().JSONMergePatch(context.Background(), "sys/namespaces/"+namespacePath, data)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error patching namespace: %s", err))
-		return 2
-	}
+		if re, ok := err.(*api.ResponseError); ok && re.StatusCode == http.StatusNotFound {
+			c.UI.Error("Namespace not found")
+			return 2
+		}
 
-	if secret == nil || secret.Data == nil {
-		c.UI.Error(fmt.Sprintf("No namespace found: %s", err))
+		c.UI.Error(fmt.Sprintf("Error patching namespace: %s", err))
 		return 2
 	}
 

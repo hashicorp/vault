@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 )
 
 type ctxKeyForwardedRequestMountAccessor struct{}
@@ -23,8 +23,9 @@ func (c ctxKeyForwardedRequestMountAccessor) String() string {
 }
 
 type dynamicSystemView struct {
-	core       *Core
-	mountEntry *MountEntry
+	core        *Core
+	mountEntry  *MountEntry
+	perfStandby bool
 }
 
 type extendedSystemView interface {
@@ -178,7 +179,7 @@ func (d dynamicSystemView) LocalMount() bool {
 // in read mode.
 func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
 	state := d.core.ReplicationState()
-	if d.core.perfStandby {
+	if d.perfStandby {
 		state |= consts.ReplicationPerformanceStandby
 	}
 	return state
@@ -378,6 +379,10 @@ func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironm
 		VaultVersionPrerelease: v.VersionPrerelease,
 		VaultVersionMetadata:   v.VersionMetadata,
 	}, nil
+}
+
+func (d dynamicSystemView) VaultVersion(_ context.Context) (string, error) {
+	return version.GetVersion().Version, nil
 }
 
 func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {

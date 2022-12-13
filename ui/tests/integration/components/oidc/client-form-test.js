@@ -80,8 +80,10 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       .dom('[data-test-oidc-client-title]')
       .hasText('Create application', 'Form title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Create', 'Save button has correct text');
-    assert.equal(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
-    assert.dom('input#allow-all').isChecked('Allow all radio button selected by default');
+    assert.strictEqual(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
+    assert
+      .dom('[data-test-oidc-radio="allow-all"] input')
+      .isChecked('Allow all radio button selected by default');
     assert.dom('[data-test-ttl-value="ID Token TTL"]').hasValue('1', 'ttl defaults to 24h');
     assert.dom('[data-test-ttl-value="Access Token TTL"]').hasValue('1', 'ttl defaults to 24h');
     assert.dom('[data-test-selected-option]').hasText('default', 'Search select has default key selected');
@@ -91,7 +93,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     await click('[data-test-selected-list-button="delete"]');
     await click(SELECTORS.clientSaveButton);
 
-    let validationErrors = findAll(SELECTORS.inlineAlert);
+    const validationErrors = findAll(SELECTORS.inlineAlert);
     assert
       .dom(validationErrors[0])
       .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');
@@ -103,7 +105,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     await fillIn('.ember-power-select-search input', 'default');
     await searchSelect.options.objectAt(0).click();
 
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     assert
       .dom('[data-test-search-select-with-modal]')
       .exists('Limited radio button shows assignments search select');
@@ -149,7 +151,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert
       .dom('[data-test-input="clientType"] input#confidential')
       .isChecked('Correct radio button is selected');
-    assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
+    assert.dom('[data-test-oidc-radio="allow-all"] input').isChecked('Allow all radio button is selected');
     await click(SELECTORS.clientSaveButton);
   });
 
@@ -188,11 +190,11 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
     await click('[data-test-string-list-button="add"]');
     await click(SELECTORS.clientCancelButton);
-    assert.equal(this.model.redirectUris, undefined, 'Model attributes rolled back on cancel');
+    assert.strictEqual(this.model.redirectUris, undefined, 'Model attributes rolled back on cancel');
   });
 
   test('it should show create assignment modal', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
     this.model = this.store.createRecord('oidc/client');
 
     await render(hbs`
@@ -203,13 +205,14 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       />
       <div id="modal-wormhole"></div>
     `);
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     await clickTrigger();
     await fillIn('.ember-power-select-search input', 'test-new');
     await searchSelect.options.objectAt(0).click();
+    assert.dom('[data-test-modal-div]').hasClass('is-active', 'modal with form opens');
     assert.dom('[data-test-modal-title]').hasText('Create new assignment', 'Create assignment modal renders');
     await click(SELECTORS.assignmentCancelButton);
-    assert.dom('[data-test-modal-div]').doesNotExist('Modal disappears after clicking cancel');
+    assert.dom('[data-test-modal-div]').doesNotExist('modal disappears onCancel');
   });
 
   test('it should render fallback for search select', async function (assert) {
@@ -224,7 +227,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       />
     `);
 
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     assert
       .dom('[data-test-component="string-list"]')
       .exists('Radio toggle shows assignments string-list input');

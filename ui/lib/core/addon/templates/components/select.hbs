@@ -18,6 +18,7 @@
       {{/if}}
       {{#each this.options as |op|}}
         <option
+          disabled={{or op.isDisabled false}}
           value={{or (get op this.valueAttribute) op}}
           selected={{eq this.selectedValue (or (get op this.valueAttribute) op)}}
         >

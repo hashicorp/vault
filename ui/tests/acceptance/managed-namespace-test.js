@@ -43,8 +43,8 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
     assert.dom('[data-test-managed-namespace-root]').hasText('/admin', 'Shows /admin namespace prefix');
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Default)');
     await fillIn('input#namespace', '/foo');
-    let encodedNamespace = encodeURIComponent('admin/foo');
-    assert.equal(
+    const encodedNamespace = encodeURIComponent('admin/foo');
+    assert.strictEqual(
       currentURL(),
       `/vault/auth?namespace=${encodedNamespace}&with=token`,
       'Correctly prepends root to namespace'
@@ -53,17 +53,17 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
 
   test('getManagedNamespace helper works as expected', function (assert) {
     let managedNs = getManagedNamespace(null, 'admin');
-    assert.equal(managedNs, 'admin', 'returns root ns when no namespace present');
+    assert.strictEqual(managedNs, 'admin', 'returns root ns when no namespace present');
     managedNs = getManagedNamespace('admin/', 'admin');
-    assert.equal(managedNs, 'admin', 'returns root ns when matches passed ns');
+    assert.strictEqual(managedNs, 'admin', 'returns root ns when matches passed ns');
     managedNs = getManagedNamespace('adminfoo/', 'admin');
-    assert.equal(
+    assert.strictEqual(
       managedNs,
       'admin/adminfoo/',
       'appends passed namespace to root even if it matches without slashes'
     );
     managedNs = getManagedNamespace('admin/foo/', 'admin');
-    assert.equal(managedNs, 'admin/foo/', 'returns passed namespace if it starts with root and /');
+    assert.strictEqual(managedNs, 'admin/foo/', 'returns passed namespace if it starts with root and /');
   });
 
   test('it redirects to root prefixed ns when non-root passed', async function (assert) {

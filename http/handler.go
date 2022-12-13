@@ -118,9 +118,25 @@ func init() {
 	})
 }
 
-// Handler returns an http.Handler for the API. This can be used on
+type HandlerAnchor struct{}
+
+func (h HandlerAnchor) Handler(props *vault.HandlerProperties) http.Handler {
+	return handler(props)
+}
+
+var Handler vault.HandlerHandler = HandlerAnchor{}
+
+type HandlerFunc func(props *vault.HandlerProperties) http.Handler
+
+func (h HandlerFunc) Handler(props *vault.HandlerProperties) http.Handler {
+	return h(props)
+}
+
+var _ vault.HandlerHandler = HandlerFunc(func(props *vault.HandlerProperties) http.Handler { return nil })
+
+// handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
-func Handler(props *vault.HandlerProperties) http.Handler {
+func handler(props *vault.HandlerProperties) http.Handler {
 	core := props.Core
 
 	// Create the muxer to handle the actual endpoints
@@ -1178,6 +1194,10 @@ func respondError(w http.ResponseWriter, status int, err error) {
 	logical.RespondError(w, status, err)
 }
 
+func respondErrorAndData(w http.ResponseWriter, status int, data interface{}, err error) {
+	logical.RespondErrorAndData(w, status, data, err)
+}
+
 func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logical.Response, err error) bool {
 	statusCode, newErr := logical.RespondErrorCommon(req, resp, err)
 	if newErr == nil && statusCode == 0 {
@@ -1193,6 +1213,12 @@ func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logic
 		return true
 	}
 
+	if resp != nil {
+		if data := resp.Data["data"]; data != nil {
+			respondErrorAndData(w, statusCode, data, newErr)
+			return true
+		}
+	}
 	respondError(w, statusCode, newErr)
 	return true
 }

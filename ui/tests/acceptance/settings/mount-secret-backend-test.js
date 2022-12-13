@@ -23,12 +23,12 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     const path = `kv-${new Date().getTime()}`;
     const defaultTTLHours = 100;
     const maxTTLHours = 300;
-    const defaultTTLSeconds = defaultTTLHours * 60 * 60;
-    const maxTTLSeconds = maxTTLHours * 60 * 60;
+    const defaultTTLSeconds = (defaultTTLHours * 60 * 60).toString();
+    const maxTTLSeconds = (maxTTLHours * 60 * 60).toString();
 
     await page.visit();
 
-    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
     await page
       .next()
@@ -42,19 +42,19 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.equal(configPage.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
-    assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
+    assert.strictEqual(configPage.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
+    assert.strictEqual(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
   });
 
   test('it sets the ttl when enabled then disabled', async function (assert) {
     // always force the new mount to the top of the list
     const path = `kv-${new Date().getTime()}`;
     const maxTTLHours = 300;
-    const maxTTLSeconds = maxTTLHours * 60 * 60;
+    const maxTTLSeconds = (maxTTLHours * 60 * 60).toString();
 
     await page.visit();
 
-    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
     await page
       .next()
@@ -67,8 +67,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.equal(configPage.defaultTTL, 0, 'shows the proper TTL');
-    assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
+    assert.strictEqual(configPage.defaultTTL, '0', 'shows the proper TTL');
+    assert.strictEqual(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
   });
 
   test('it throws error if setting duplicate path name', async function (assert) {
@@ -81,7 +81,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
     await page.visit();
 
-    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
     await page.next().path(path).submit();
     await page.secretList();
@@ -90,7 +90,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await page.selectType('kv');
     await page.next().path(path).submit();
     assert.dom('[data-test-alert-banner="alert"]').containsText(`path is already in use at ${path}`);
-    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
 
     await page.secretList();
     await settled();
@@ -100,7 +100,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   });
 
   test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
-    let enginePath = `kv-noUpdate-${new Date().getTime()}`;
+    const enginePath = `kv-noUpdate-${new Date().getTime()}`;
     const V2_POLICY = `
       path "${enginePath}/*" {
         capabilities = ["list","create","read","sudo","delete"]
@@ -123,7 +123,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
     await settled();
-    let userToken = consoleComponent.lastLogOutput;
+    const userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
     // create the engine

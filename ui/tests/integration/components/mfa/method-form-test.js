@@ -56,14 +56,14 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     await fillIn('[data-test-confirmation-modal-input="Edit totp configuration?"]', 'totp');
     await click('[data-test-confirm-button="Edit totp configuration?"]');
     assert.true(this.didSave, 'onSave callback triggered');
-    assert.equal(this.model.issuer, 'Vault', 'Issuer property set on model');
+    assert.strictEqual(this.model.issuer, 'Vault', 'Issuer property set on model');
   });
 
   test('it should populate form fields with model data', async function (assert) {
     assert.expect(3);
 
     this.model.issuer = 'Vault';
-    this.model.period = '30';
+    this.model.period = '30s';
     this.model.algorithm = 'SHA512';
 
     await render(hbs`
@@ -75,7 +75,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     `);
     assert.dom('[data-test-input="issuer"]').hasValue('Vault', 'Issuer input is populated');
     assert.dom('[data-test-ttl-value="Period"]').hasValue('30', 'Period input ttl is populated');
-    let checkedAlgorithm = this.element.querySelector('input[name=algorithm]:checked');
+    const checkedAlgorithm = this.element.querySelector('input[name=algorithm]:checked');
     assert.dom(checkedAlgorithm).hasValue('SHA512', 'SHA512 radio input is selected');
   });
 });

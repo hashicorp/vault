@@ -41,9 +41,9 @@ export default Controller.extend(DEFAULTS, {
 
   actions: {
     initCluster(data) {
-      let isCloudSeal = !!this.model.sealType && this.model.sealType !== 'shamir';
+      const isCloudSeal = !!this.model.sealType && this.model.sealType !== 'shamir';
       if (data.secret_shares) {
-        let shares = parseInt(data.secret_shares, 10);
+        const shares = parseInt(data.secret_shares, 10);
         data.secret_shares = shares;
         if (isCloudSeal) {
           data.stored_shares = 1;
@@ -51,7 +51,7 @@ export default Controller.extend(DEFAULTS, {
         }
       }
       if (data.secret_threshold) {
-        let threshold = parseInt(data.secret_threshold, 10);
+        const threshold = parseInt(data.secret_threshold, 10);
         data.secret_threshold = threshold;
         if (isCloudSeal) {
           data.recovery_threshold = threshold;

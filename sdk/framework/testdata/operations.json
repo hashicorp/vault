@@ -34,6 +34,15 @@
             "type": "string"
           },
           "required": true
+        },
+        {
+          "name": "secret_mount_path",
+          "description": "Path where the backend was mounted; the endpoint path will be offset by the mount path",
+          "in": "path",
+          "schema": {
+            "type": "string",
+            "default": "secret"
+          }
         }
       ],
       "get": {
@@ -63,6 +72,7 @@
         "summary": "Update Summary",
         "description": "Update Description",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {

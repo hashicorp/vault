@@ -126,8 +126,9 @@ func testConfig(t *testing.T, pluginCmd string) (*logical.BackendConfig, func())
 		Logger: logging.NewVaultLogger(log.Debug),
 		System: sys,
 		Config: map[string]string{
-			"plugin_name": "mock-plugin",
-			"plugin_type": "secret",
+			"plugin_name":    "mock-plugin",
+			"plugin_type":    "secret",
+			"plugin_version": "v0.0.0+mock",
 		},
 	}
 

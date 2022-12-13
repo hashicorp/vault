@@ -9,17 +9,17 @@ module('Unit | Service | auth', function (hooks) {
     ['#calculateExpiration w/lease_duration', { ttl: 15 }, 15],
   ].forEach(([testName, response, ttlValue]) => {
     test(testName, function (assert) {
-      let now = Date.now();
-      let service = this.owner.factoryFor('service:auth').create({
+      const now = Date.now();
+      const service = this.owner.factoryFor('service:auth').create({
         now() {
           return now;
         },
       });
 
-      let resp = service.calculateExpiration(response);
+      const resp = service.calculateExpiration(response);
 
-      assert.equal(resp.ttl, ttlValue, 'returns the ttl');
-      assert.equal(
+      assert.strictEqual(resp.ttl, ttlValue, 'returns the ttl');
+      assert.strictEqual(
         resp.tokenExpirationEpoch,
         now + ttlValue * 1e3,
         'calculates expiration from ttl as epoch timestamp'

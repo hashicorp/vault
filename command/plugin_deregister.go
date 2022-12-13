@@ -19,7 +19,7 @@ var (
 type PluginDeregisterCommand struct {
 	*BaseCommand
 
-	flagVersion string
+	flagPluginVersion string
 }
 
 func (c *PluginDeregisterCommand) Synopsis() string {
@@ -54,9 +54,9 @@ func (c *PluginDeregisterCommand) Flags() *FlagSets {
 
 	f.StringVar(&StringVar{
 		Name:       "version",
-		Target:     &c.flagVersion,
+		Target:     &c.flagPluginVersion,
 		Completion: complete.PredictAnything,
-		Usage: "Version of the plugin to deregister. If unset, " +
+		Usage: "Semantic version of the plugin to deregister. If unset, " +
 			"only an unversioned plugin may be deregistered.",
 	})
 
@@ -108,10 +108,10 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 		return 2
 	}
 	pluginName := strings.TrimSpace(pluginNameRaw)
-	if c.flagVersion != "" {
-		_, err := semver.NewSemver(c.flagVersion)
+	if c.flagPluginVersion != "" {
+		_, err := semver.NewSemver(c.flagPluginVersion)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("version %q is not a valid semantic version: %v", c.flagVersion, err))
+			c.UI.Error(fmt.Sprintf("version %q is not a valid semantic version: %v", c.flagPluginVersion, err))
 			return 2
 		}
 	}
@@ -119,7 +119,7 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
 		Name:    pluginName,
 		Type:    pluginType,
-		Version: c.flagVersion,
+		Version: c.flagPluginVersion,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error deregistering plugin named %s: %s", pluginName, err))
 		return 2

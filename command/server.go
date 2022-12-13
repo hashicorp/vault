@@ -29,28 +29,30 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/audit"
 	config2 "github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/constants"
+	loghelper "github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/hcp_link"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/pkg/errors"
@@ -77,13 +79,13 @@ const (
 
 	// Even though there are more types than the ones below, the following consts
 	// are declared internally for value comparison and reusability.
-	storageTypeRaft            = "raft"
-	storageTypeConsul          = "consul"
-	disableStorageTypeCheckEnv = "VAULT_DISABLE_SUPPORTED_STORAGE_CHECK"
+	storageTypeRaft   = "raft"
+	storageTypeConsul = "consul"
 )
 
 type ServerCommand struct {
 	*BaseCommand
+	logFlags logFlags
 
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
@@ -98,9 +100,9 @@ type ServerCommand struct {
 
 	WaitGroup *sync.WaitGroup
 
-	logOutput   io.Writer
-	gatedWriter *gatedwriter.Writer
-	logger      hclog.InterceptLogger
+	logWriter io.Writer
+	logGate   *gatedwriter.Writer
+	logger    hclog.InterceptLogger
 
 	cleanupGuard sync.Once
 
@@ -112,10 +114,7 @@ type ServerCommand struct {
 
 	allLoggers []hclog.Logger
 
-	// new stuff
 	flagConfigs            []string
-	flagLogLevel           string
-	flagLogFormat          string
 	flagRecovery           bool
 	flagDev                bool
 	flagDevTLS             bool
@@ -136,11 +135,9 @@ type ServerCommand struct {
 	flagDevTransactional   bool
 	flagDevAutoSeal        bool
 	flagTestVerifyOnly     bool
-	flagCombineLogs        bool
 	flagTestServerConfig   bool
 	flagDevConsul          bool
 	flagExitOnCoreShutdown bool
-	flagDiagnose           string
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -176,6 +173,9 @@ func (c *ServerCommand) Flags() *FlagSets {
 
 	f := set.NewFlagSet("Command Options")
 
+	// Augment with the log flags
+	f.addLogFlags(&c.logFlags)
+
 	f.StringSliceVar(&StringSliceVar{
 		Name:   "config",
 		Target: &c.flagConfigs,
@@ -188,27 +188,6 @@ func (c *ServerCommand) Flags() *FlagSets {
 			"files. This flag can be specified multiple times to load multiple " +
 			"configurations. If the path is a directory, all files which end in " +
 			".hcl or .json are loaded.",
-	})
-
-	f.StringVar(&StringVar{
-		Name:       "log-level",
-		Target:     &c.flagLogLevel,
-		Default:    notSetValue,
-		EnvVar:     "VAULT_LOG_LEVEL",
-		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
-		Usage: "Log verbosity level. Supported values (in order of detail) are " +
-			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
-	})
-
-	f.StringVar(&StringVar{
-		Name:    "log-format",
-		Target:  &c.flagLogFormat,
-		Default: notSetValue,
-		// EnvVar can't be just "VAULT_LOG_FORMAT", because more than one env var name is supported
-		// for backwards compatibility reasons.
-		// See github.com/hashicorp/vault/sdk/helper/logging.ParseEnvLogFormat()
-		Completion: complete.PredictSet("standard", "json"),
-		Usage:      `Log format. Supported values are "standard" and "json".`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -224,19 +203,6 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
 			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
-
-	// Disabled by default until functional
-	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
-		f.StringVar(&StringVar{
-			Name:    "diagnose",
-			Target:  &c.flagDiagnose,
-			Default: notSetValue,
-			Usage:   "Run diagnostics before starting Vault. Specify a filename to direct output to that file.",
-		})
-	} else {
-		// Ensure diagnose is *not* run when feature flag is off.
-		c.flagDiagnose = notSetValue
-	}
 
 	f = set.NewFlagSet("Dev Options")
 
@@ -390,13 +356,6 @@ func (c *ServerCommand) Flags() *FlagSets {
 
 	// TODO: should the below flags be public?
 	f.BoolVar(&BoolVar{
-		Name:    "combine-logs",
-		Target:  &c.flagCombineLogs,
-		Default: false,
-		Hidden:  true,
-	})
-
-	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
 		Target:  &c.flagTestVerifyOnly,
 		Default: false,
@@ -425,8 +384,8 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 
 func (c *ServerCommand) flushLog() {
 	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-		Output: c.logOutput,
-	}, c.gatedWriter)
+		Output: c.logWriter,
+	}, c.logGate)
 }
 
 func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError, error) {
@@ -473,20 +432,15 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
+	// Update the 'log' related aspects of shared config based on config/env var/cli
+	c.Flags().updateLogConfig(config.SharedConfig)
+	l, err := c.configureLogging(config)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
-
-	c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-		Output:            c.gatedWriter,
-		Level:             level,
-		IndependentLevels: true,
-		// Note that if logFormat is either unspecified or standard, then
-		// the resulting logger's format will be standard.
-		JSONFormat: logFormat == logging.JSONFormat,
-	})
+	c.logger = l
+	c.allLoggers = append(c.allLoggers, l)
 
 	// reporting Errors found in the config
 	for _, cErr := range configErrors {
@@ -495,15 +449,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	// Ensure logging is flushed if initialization fails
 	defer c.flushLog()
-
-	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-	if logLevelStr != "" {
-		logLevelString = logLevelStr
-	}
 
 	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
@@ -549,7 +494,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = logLevelString
+	info["log level"] = config.LogLevel
 	infoKeys = append(infoKeys, "log level")
 
 	var barrierSeal vault.Seal
@@ -614,7 +559,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		Physical:     backend,
 		StorageType:  config.Storage.Type,
 		Seal:         barrierSeal,
-		LogLevel:     logLevelString,
+		LogLevel:     config.LogLevel,
 		Logger:       c.logger,
 		DisableMlock: config.DisableMlock,
 		RecoveryMode: c.flagRecovery,
@@ -646,7 +591,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	// Initialize the listeners
 	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
 	for _, lnConfig := range config.Listeners {
-		ln, _, _, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
+		ln, _, _, err := server.NewListener(lnConfig, c.logGate, c.UI)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
 			return 1
@@ -704,7 +649,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	c.UI.Output("")
 
 	for _, ln := range lns {
-		handler := vaulthttp.Handler(&vault.HandlerProperties{
+		handler := vaulthttp.Handler.Handler(&vault.HandlerProperties{
 			Core:                  core,
 			ListenerConfig:        ln.Config,
 			DisablePrintableCheck: config.DisablePrintableCheck,
@@ -742,7 +687,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		c.UI.Warn("")
 	}
 
-	if !c.flagCombineLogs {
+	if !c.logFlags.flagCombineLogs {
 		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
 	}
 
@@ -792,82 +737,6 @@ func logProxyEnvironmentVariables(logger hclog.Logger) {
 	}
 	logger.Info("proxy environment", "http_proxy", cfgMap["http_proxy"],
 		"https_proxy", cfgMap["https_proxy"], "no_proxy", cfgMap["no_proxy"])
-}
-
-func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet bool) (string, error) {
-	var logLevelString string
-	if config.LogLevel != "" && logLevelWasNotSet {
-		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
-		logLevelString = configLogLevel
-		switch configLogLevel {
-		case "trace":
-			c.logger.SetLevel(hclog.Trace)
-		case "debug":
-			c.logger.SetLevel(hclog.Debug)
-		case "notice", "info", "":
-			c.logger.SetLevel(hclog.Info)
-		case "warn", "warning":
-			c.logger.SetLevel(hclog.Warn)
-		case "err", "error":
-			c.logger.SetLevel(hclog.Error)
-		default:
-			return "", fmt.Errorf("unknown log level: %s", config.LogLevel)
-		}
-	}
-	return logLevelString, nil
-}
-
-func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (hclog.Level, string, bool, logging.LogFormat, error) {
-	// Create a logger. We wrap it in a gated writer so that it doesn't
-	// start logging too early.
-	c.logOutput = os.Stderr
-	if c.flagCombineLogs {
-		c.logOutput = os.Stdout
-	}
-	c.gatedWriter = gatedwriter.NewWriter(c.logOutput)
-	var level hclog.Level
-	var logLevelWasNotSet bool
-	logFormat := logging.UnspecifiedFormat
-	logLevelString := c.flagLogLevel
-	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
-	switch c.flagLogLevel {
-	case notSetValue, "":
-		logLevelWasNotSet = true
-		logLevelString = "info"
-		level = hclog.Info
-	case "trace":
-		level = hclog.Trace
-	case "debug":
-		level = hclog.Debug
-	case "notice", "info":
-		level = hclog.Info
-	case "warn", "warning":
-		level = hclog.Warn
-	case "err", "error":
-		level = hclog.Error
-	default:
-		return level, logLevelString, logLevelWasNotSet, logFormat, fmt.Errorf("unknown log level: %s", c.flagLogLevel)
-	}
-
-	if c.flagLogFormat != notSetValue {
-		var err error
-		logFormat, err = logging.ParseLogFormat(c.flagLogFormat)
-		if err != nil {
-			return level, logLevelString, logLevelWasNotSet, logFormat, err
-		}
-	}
-	if logFormat == logging.UnspecifiedFormat {
-		logFormat = logging.ParseEnvLogFormat()
-	}
-	if logFormat == logging.UnspecifiedFormat {
-		var err error
-		logFormat, err = logging.ParseLogFormat(config.LogFormat)
-		if err != nil {
-			return level, logLevelString, logLevelWasNotSet, logFormat, err
-		}
-	}
-
-	return level, logLevelString, logLevelWasNotSet, logFormat, nil
 }
 
 type quiescenceSink struct {
@@ -961,7 +830,7 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 
 	var errMsg error
 	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
+		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.logGate, c.UI)
 		if err != nil {
 			errMsg = fmt.Errorf("Error initializing listener of type %s: %s", lnConfig.Type, err)
 			return 1, nil, nil, errMsg
@@ -1042,6 +911,13 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	c.logGate = gatedwriter.NewWriter(os.Stderr)
+	c.logWriter = c.logGate
+
+	if c.logFlags.flagCombineLogs {
+		c.logWriter = os.Stdout
+	}
+
 	if c.flagRecovery {
 		return c.runRecoveryMode()
 	}
@@ -1063,21 +939,6 @@ func (c *ServerCommand) Run(args []string) int {
 					"Your request has been ignored."))
 			c.flagDevRootTokenID = ""
 		}
-	}
-
-	if c.flagDiagnose != notSetValue {
-		if c.flagDev {
-			c.UI.Error("Cannot run diagnose on Vault in dev mode.")
-			return 1
-		}
-		// TODO: add a file output flag to Diagnose
-		diagnose := &OperatorDiagnoseCommand{
-			BaseCommand: c.BaseCommand,
-			flagDebug:   false,
-			flagSkips:   []string{},
-			flagConfigs: c.flagConfigs,
-		}
-		diagnose.RunWithParsedFlags()
 	}
 
 	// Load the configuration
@@ -1178,31 +1039,20 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
+	f.updateLogConfig(config.SharedConfig)
+
+	// Set 'trace' log level for the following 'dev' clusters
+	if c.flagDevThreeNode || c.flagDevFourCluster {
+		config.LogLevel = "trace"
+	}
+
+	l, err := c.configureLogging(config)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
-
-	config.LogFormat = logFormat.String()
-
-	if c.flagDevThreeNode || c.flagDevFourCluster {
-		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-			Mutex:             &sync.Mutex{},
-			Output:            c.gatedWriter,
-			Level:             hclog.Trace,
-			IndependentLevels: true,
-		})
-	} else {
-		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-			Output:            c.gatedWriter,
-			Level:             level,
-			IndependentLevels: true,
-			// Note that if logFormat is either unspecified or standard, then
-			// the resulting logger's format will be standard.
-			JSONFormat: logFormat == logging.JSONFormat,
-		})
-	}
+	c.logger = l
+	c.allLoggers = append(c.allLoggers, l)
 
 	// reporting Errors found in the config
 	for _, cErr := range configErrors {
@@ -1211,17 +1061,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Ensure logging is flushed if initialization fails
 	defer c.flushLog()
-
-	c.allLoggers = []hclog.Logger{c.logger}
-
-	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-	if logLevelStr != "" {
-		logLevelString = logLevelStr
-	}
 
 	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
@@ -1263,6 +1102,16 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
 				"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS env var: " +
 				"setting to default value false"))
+		}
+	}
+
+	if allowPendingRemoval := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allowPendingRemoval != "" {
+		var err error
+		vault.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				consts.VaultAllowPendingRemovalMountsEnv + " env var: " +
+				"defaulting to false."))
 		}
 	}
 
@@ -1317,8 +1166,23 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = logLevelString
+	info["log level"] = config.LogLevel
 	infoKeys = append(infoKeys, "log level")
+
+	// returns a slice of env vars formatted as "key=value"
+	envVars := os.Environ()
+	var envVarKeys []string
+	for _, v := range envVars {
+		splitEnvVars := strings.Split(v, "=")
+		envVarKeys = append(envVarKeys, splitEnvVars[0])
+	}
+
+	sort.Strings(envVarKeys)
+
+	key := "environment variables"
+	info[key] = strings.Join(envVarKeys, ", ")
+	infoKeys = append(infoKeys, key)
+
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
 	// Check error here
 	if err != nil {
@@ -1326,16 +1190,20 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	if seals != nil {
-		for _, seal := range seals {
-			// Ensure that the seal finalizer is called, even if using verify-only
-			defer func(seal *vault.Seal) {
-				err = (*seal).Finalize(context.Background())
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-				}
-			}(&seal)
+	for _, seal := range seals {
+		// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
+		// section.
+		if seal == nil {
+			continue
 		}
+		seal := seal // capture range variable
+		// Ensure that the seal finalizer is called, even if using verify-only
+		defer func(seal *vault.Seal) {
+			err = (*seal).Finalize(context.Background())
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+			}
+		}(&seal)
 	}
 
 	if barrierSeal == nil {
@@ -1400,7 +1268,13 @@ func (c *ServerCommand) Run(args []string) int {
 	// Apply any enterprise configuration onto the coreConfig.
 	adjustCoreConfigForEnt(config, &coreConfig)
 
-	if !c.flagDev && os.Getenv(disableStorageTypeCheckEnv) == "" {
+	if !storageSupportedForEnt(&coreConfig) {
+		c.UI.Warn("")
+		c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING: storage configured to use %q which is not supported for Vault Enterprise, must be \"raft\" or \"consul\"", coreConfig.StorageType)))
+		c.UI.Warn("")
+	}
+
+	if !c.flagDev {
 		inMemStorageTypes := []string{
 			"inmem", "inmem_ha", "inmem_transactional", "inmem_transactional_ha",
 		}
@@ -1409,12 +1283,6 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Warn("")
 			c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING: storage configured to use %q which should NOT be used in production", coreConfig.StorageType)))
 			c.UI.Warn("")
-		} else {
-			err = checkStorageTypeForEnt(&coreConfig)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Invalid storage type: %s", err))
-				return 1
-			}
 		}
 	}
 
@@ -1509,6 +1377,17 @@ func (c *ServerCommand) Run(args []string) int {
 		info["fips"] = fipsStatus
 	}
 
+	if config.HCPLinkConf != nil {
+		infoKeys = append(infoKeys, "HCP organization")
+		info["HCP organization"] = config.HCPLinkConf.Resource.Organization
+
+		infoKeys = append(infoKeys, "HCP project")
+		info["HCP project"] = config.HCPLinkConf.Resource.Project
+
+		infoKeys = append(infoKeys, "HCP resource ID")
+		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
+	}
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1530,7 +1409,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterHandler(vaulthttp.Handler(&vault.HandlerProperties{
+	core.SetClusterHandler(vaulthttp.Handler.Handler(&vault.HandlerProperties{
 		Core: core,
 	}))
 
@@ -1578,12 +1457,12 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	hcpLogger := c.logger.Named("hcpLink")
+	hcpLogger := c.logger.Named("hcp-connectivity")
 	hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, core, hcpLogger)
 	if err != nil {
-		c.logger.Error("failed to start HCP Link", "error", err)
+		c.logger.Error("failed to establish HCP connection", "error", err)
 	} else if hcpLink != nil {
-		c.logger.Trace("started HCP link")
+		c.logger.Trace("established HCP connection")
 	}
 
 	if c.flagTestServerConfig {
@@ -1603,7 +1482,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Output the header that the server has started
-	if !c.flagCombineLogs {
+	if !c.logFlags.flagCombineLogs {
 		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
 	}
 
@@ -1657,7 +1536,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 			// Check for new log level
 			var config *server.Config
-			var level hclog.Level
 			var configErrors []configutil.ConfigError
 			for _, path := range c.flagConfigs {
 				current, err := server.LoadConfig(path)
@@ -1703,20 +1581,10 @@ func (c *ServerCommand) Run(args []string) int {
 				c.logger.Error(err.Error())
 			}
 
+			// Reload log level for loggers
 			if config.LogLevel != "" {
-				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
-				switch configLogLevel {
-				case "trace":
-					level = hclog.Trace
-				case "debug":
-					level = hclog.Debug
-				case "notice", "info", "":
-					level = hclog.Info
-				case "warn", "warning":
-					level = hclog.Warn
-				case "err", "error":
-					level = hclog.Error
-				default:
+				level, err := loghelper.ParseLogLevel(config.LogLevel)
+				if err != nil {
 					c.logger.Error("unknown log level found on reload", "level", config.LogLevel)
 					goto RUNRELOADFUNCS
 				}
@@ -1748,6 +1616,41 @@ func (c *ServerCommand) Run(args []string) int {
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
+
+			if os.Getenv("VAULT_STACKTRACE_WRITE_TO_FILE") != "" {
+				c.logger.Info("Writing stacktrace to file")
+
+				dir := ""
+				path := os.Getenv("VAULT_STACKTRACE_FILE_PATH")
+				if path != "" {
+					if _, err := os.Stat(path); err != nil {
+						c.logger.Error("Checking stacktrace path failed", "error", err)
+						continue
+					}
+					dir = path
+				} else {
+					dir, err = os.MkdirTemp("", "vault-stacktrace")
+					if err != nil {
+						c.logger.Error("Could not create temporary directory for stacktrace", "error", err)
+						continue
+					}
+				}
+
+				f, err := os.CreateTemp(dir, "stacktrace")
+				if err != nil {
+					c.logger.Error("Could not create stacktrace file", "error", err)
+					continue
+				}
+
+				if err := pprof.Lookup("goroutine").WriteTo(f, 2); err != nil {
+					f.Close()
+					c.logger.Error("Could not write stacktrace to file", "error", err)
+					continue
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
+				f.Close()
+			}
 		}
 	}
 	// Notify systemd that the server is shutting down
@@ -1774,7 +1677,49 @@ func (c *ServerCommand) Run(args []string) int {
 	return retCode
 }
 
-func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.WrappedHCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.WrappedHCPLinkVault, error) {
+// configureLogging takes the configuration and attempts to parse config values into 'log' friendly configuration values
+// If all goes to plan, a logger is created and setup.
+func (c *ServerCommand) configureLogging(config *server.Config) (hclog.InterceptLogger, error) {
+	// Parse all the log related config
+	logLevel, err := loghelper.ParseLogLevel(config.LogLevel)
+	if err != nil {
+		return nil, err
+	}
+
+	logFormat, err := loghelper.ParseLogFormat(config.LogFormat)
+	if err != nil {
+		return nil, err
+	}
+
+	logRotateDuration, err := parseutil.ParseDurationSecond(config.LogRotateDuration)
+	if err != nil {
+		return nil, err
+	}
+
+	logRotateBytes, err := parseutil.ParseInt(config.LogRotateBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	logRotateMaxFiles, err := parseutil.ParseInt(config.LogRotateMaxFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	logCfg := &loghelper.LogConfig{
+		Name:              "vault",
+		LogLevel:          logLevel,
+		LogFormat:         logFormat,
+		LogFilePath:       config.LogFile,
+		LogRotateDuration: logRotateDuration,
+		LogRotateBytes:    int(logRotateBytes),
+		LogRotateMaxFiles: int(logRotateMaxFiles),
+	}
+
+	return loghelper.Setup(logCfg, c.logWriter)
+}
+
+func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.HCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.HCPLinkVault, error) {
 	// trigger a shutdown
 	if hcpLinkVault != nil {
 		err := hcpLinkVault.Shutdown()
@@ -2015,7 +1960,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	c.UI.Output("")
 
 	for _, core := range testCluster.Cores {
-		core.Server.Handler = vaulthttp.Handler(&vault.HandlerProperties{
+		core.Server.Handler = vaulthttp.Handler.Handler(&vault.HandlerProperties{
 			Core: core.Core,
 		})
 		core.SetClusterHandler(core.Server.Handler)
@@ -2872,7 +2817,7 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 			return err
 		}
 
-		handler := vaulthttp.Handler(&vault.HandlerProperties{
+		handler := vaulthttp.Handler.Handler(&vault.HandlerProperties{
 			Core:                  core,
 			ListenerConfig:        ln.Config,
 			DisablePrintableCheck: config.DisablePrintableCheck,

@@ -2,7 +2,7 @@ import { module, test } from 'qunit';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, triggerEvent } from '@ember/test-helpers';
+import { render, settled, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const VALUE = 'test value';
@@ -66,8 +66,8 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
     await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
 
-    let tooltip = document.querySelector('div.box').textContent.trim();
-    assert.equal(tooltip, 'Tooltip text!', 'renders tooltip text');
+    const tooltip = document.querySelector('div.box').textContent.trim();
+    assert.strictEqual(tooltip, 'Tooltip text!', 'renders tooltip text');
   });
 
   test('it should copy tooltip', async function (assert) {
@@ -147,8 +147,12 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     this.set('value', '');
     this.set('label', '');
     this.set('default', '');
-    let dashCount = document.querySelectorAll('.flight-icon').length;
-    assert.equal(dashCount, 2, 'Renders dash (-) when both label and value do not exist (and no defaults)');
+    const dashCount = document.querySelectorAll('.flight-icon').length;
+    assert.strictEqual(
+      dashCount,
+      2,
+      'Renders dash (-) when both label and value do not exist (and no defaults)'
+    );
   });
 
   test('block content overrides any passed in value content', async function (assert) {
@@ -159,8 +163,8 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       Block content is here
       </InfoTableRow>`);
 
-    let block = document.querySelector('[data-test-value-div]').textContent.trim();
-    assert.equal(block, 'Block content is here', 'renders block passed through');
+    const block = document.querySelector('[data-test-value-div]').textContent.trim();
+    assert.strictEqual(block, 'Block content is here', 'renders block passed through');
   });
 
   test('Row renders when block content even if alwaysRender = false', async function (assert) {
@@ -250,7 +254,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
 
   test('Formats the value as date when formatDate present', async function (assert) {
-    let yearString = new Date().getFullYear().toString();
+    const yearString = new Date().getFullYear().toString();
     this.set('value', new Date());
     await render(hbs`<InfoTableRow
       @label={{this.label}}
@@ -259,5 +263,19 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     />`);
 
     assert.dom('[data-test-value-div]').hasText(yearString, 'Renders date with passed format');
+  });
+
+  test('Formats the value as TTL when formatTtl present', async function (assert) {
+    this.set('value', 6000);
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @value={{this.value}}
+      @formatTtl={{true}}
+    />`);
+
+    assert.dom('[data-test-value-div]').hasText('100m', 'Translates number value to largest unit');
+    this.set('value', '45m');
+    await settled();
+    assert.dom('[data-test-value-div]').hasText('45m', 'Renders non-number values as-is');
   });
 });

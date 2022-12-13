@@ -12,9 +12,11 @@ EXTERNAL_TOOLS_CI=\
 EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
+SED?=$(shell command -v gsed || command -v sed)
 
 
-GO_VERSION_MIN=1.19.1
+GO_VERSION_MIN=$$(cat $(CURDIR)/.go-version)
+PROTOC_VERSION_MIN=3.21.9
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -170,6 +172,7 @@ static-dist: ember-dist
 static-dist-dev: ember-dist-dev
 
 proto: bootstrap
+	@sh -c "'$(CURDIR)/scripts/protocversioncheck.sh' '$(PROTOC_VERSION_MIN)'"
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/*.proto
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/activity/activity_log.proto
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/storagepacker/types.proto
@@ -183,13 +186,13 @@ proto: bootstrap
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/plugin/pb/*.proto
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/tokens/token.proto
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/helper/pluginutil/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/hcp_link/proto/node_status/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/hcp_link/proto/*/*.proto
 
 	# No additional sed expressions should be added to this list. Going forward
 	# we should just use the variable names choosen by protobuf. These are left
 	# here for backwards compatability, namely for SDK compilation.
-	sed -i -e 's/Id/ID/' vault/request_forwarding_service.pb.go
-	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
+	$(SED) -i -e 's/Id/ID/' vault/request_forwarding_service.pb.go
+	$(SED) -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
 
 	# This will inject the sentinel struct tags as decorated in the proto files.
 	protoc-go-inject-tag -input=./helper/identity/types.pb.go
@@ -251,18 +254,72 @@ ci-verify:
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 
-.PHONY: build
-# This is used for release builds by .github/workflows/build.yml
-build:
-	@echo "--> Building Vault $(VAULT_VERSION)"
-	@go build -v -tags "$(GO_TAGS)" -ldflags " -X github.com/hashicorp/vault/sdk/version.Version=$(VAULT_VERSION) -X github.com/hashicorp/vault/sdk/version.GitCommit=$(VAULT_REVISION) -X github.com/hashicorp/vault/sdk/version.BuildDate=$(VAULT_BUILD_DATE)" -o dist/
+# These ci targets are used for used for building and testing in Github Actions
+# workflows and for Enos scenarios.
+.PHONY: ci-build
+ci-build:
+	@$(CURDIR)/scripts/ci-helper.sh build
 
-.PHONY: version
-# This is used for release builds by .github/workflows/build.yml
-version:
-	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
+.PHONY: ci-build-ui
+ci-build-ui:
+	@$(CURDIR)/scripts/ci-helper.sh build-ui
 
-.PHONY: build-date
-# This is used for release builds by .github/workflows/build.yml
-build-date:
-	@$(CURDIR)/scripts/build_date.sh
+.PHONY: ci-bundle
+ci-bundle:
+	@$(CURDIR)/scripts/ci-helper.sh bundle
+
+.PHONY: ci-filter-matrix
+ci-filter-matrix:
+	@$(CURDIR)/scripts/ci-helper.sh matrix-filter-file
+
+.PHONY: ci-get-artifact-basename
+ci-get-artifact-basename:
+	@$(CURDIR)/scripts/ci-helper.sh artifact-basename
+
+.PHONY: ci-get-date
+ci-get-date:
+	@$(CURDIR)/scripts/ci-helper.sh date
+
+.PHONY: ci-get-matrix-group-id
+ci-get-matrix-group-id:
+	@$(CURDIR)/scripts/ci-helper.sh matrix-group-id
+
+.PHONY: ci-get-revision
+ci-get-revision:
+	@$(CURDIR)/scripts/ci-helper.sh revision
+
+.PHONY: ci-get-version
+ci-get-version:
+	@$(CURDIR)/scripts/ci-helper.sh version
+
+.PHONY: ci-get-version-base
+ci-get-version-base:
+	@$(CURDIR)/scripts/ci-helper.sh version-base
+
+.PHONY: ci-get-version-major
+ci-get-version-major:
+	@$(CURDIR)/scripts/ci-helper.sh version-major
+
+.PHONY: ci-get-version-meta
+ci-get-version-meta:
+	@$(CURDIR)/scripts/ci-helper.sh version-meta
+
+.PHONY: ci-get-version-minor
+ci-get-version-minor:
+	@$(CURDIR)/scripts/ci-helper.sh version-minor
+
+.PHONY: ci-get-version-package
+ci-get-version-package:
+	@$(CURDIR)/scripts/ci-helper.sh version-package
+
+.PHONY: ci-get-version-patch
+ci-get-version-patch:
+	@$(CURDIR)/scripts/ci-helper.sh version-patch
+
+.PHONY: ci-get-version-pre
+ci-get-version-pre:
+	@$(CURDIR)/scripts/ci-helper.sh version-pre
+
+.PHONY: ci-prepare-legal
+ci-prepare-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-legal

@@ -63,7 +63,7 @@
             @secret=""
             @mode="create"
             @type="add"
-            @queryParams={{query-params initialKey=@model.name itemType="role"}}
+            @queryParams={{hash initialKey=@model.name itemType="role"}}
             data-test-secret-create={{true}}
           >
             Add role
@@ -89,7 +89,7 @@
     </AlertBanner>
   {{/if}}
 
-  <form {{on "submit" this.handleCreateConnection}}>
+  <form {{on "submit" this.handleCreateConnection}} aria-label="create connection form">
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (not-eq attr.options.readOnly true)}}
         <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -107,7 +107,7 @@
                 <div class="columns is-desktop is-multiline">
                   {{#each fields as |attr|}}
                     {{#if
-                      (contains attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
+                      (includes attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
                     }}
                       <div class="column is-one-third">
                         <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -177,7 +177,7 @@
     </div>
   </form>
 {{else if (and (eq @mode "edit") @model.isAvailablePlugin)}}
-  <form {{on "submit" this.handleUpdateConnection}}>
+  <form {{on "submit" this.handleUpdateConnection}} aria-label="plugin config form">
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (or (eq attr.name "name") (eq attr.name "plugin_name"))}}
         <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
@@ -196,7 +196,7 @@
               <div class="columns is-desktop is-multiline">
                 {{#each fields as |attr|}}
                   {{#if
-                    (contains attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
+                    (includes attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
                   }}
                     <div class="column is-one-third">
                       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -272,7 +272,7 @@
     </div>
 
     {{! Statements Edit Section }}
-    {{#unless (and @model.plugin_name (not @model.statementFields))}}
+    {{#if (not (and @model.plugin_name (not @model.statementFields)))}}
       <div class="form-section box is-shadowless is-fullwidth">
         <fieldset class="form-fieldset">
           <legend class="title is-5">Statements</legend>
@@ -281,7 +281,7 @@
           {{/each}}
         </fieldset>
       </div>
-    {{/unless}}
+    {{/if}}
 
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
@@ -310,7 +310,7 @@
       <Chevron @direction="left" />
       Go back
     </LinkTo>
-    <a href="https://www.vaultproject.io/api/secret/databases" target="_blank" rel="noreferrer noopener">Documentation</a>
+    <DocLink @path="/api/secret/databases">Documentation</DocLink>
   </EmptyState>
 {{else}}
   {{#each @model.showAttrs as |attr|}}

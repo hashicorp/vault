@@ -50,6 +50,7 @@ export default class MountBackendForm extends Component {
     const type = this.args.mountType || 'auth';
     const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
     const model = this.store.createRecord(modelType);
+    model.set('config', this.store.createRecord('mount-config'));
     this.mountModel = model;
   }
 
@@ -71,12 +72,12 @@ export default class MountBackendForm extends Component {
   }
 
   checkPathChange(type) {
-    let mount = this.mountModel;
-    let currentPath = mount.path;
-    let list = this.mountTypes;
+    const mount = this.mountModel;
+    const currentPath = mount.path;
+    const list = this.mountTypes;
     // if the current path matches a type (meaning the user hasn't altered it),
     // change it here to match the new type
-    let isUnchanged = list.findBy('type', currentPath);
+    const isUnchanged = list.findBy('type', currentPath);
     if (!currentPath || isUnchanged) {
       mount.path = type;
     }
@@ -94,7 +95,8 @@ export default class MountBackendForm extends Component {
 
   @task
   @waitFor
-  *mountBackend() {
+  *mountBackend(event) {
+    event.preventDefault();
     const mountModel = this.mountModel;
     const { type, path } = mountModel;
     // only submit form if validations pass
@@ -118,8 +120,8 @@ export default class MountBackendForm extends Component {
       }
     }
 
-    let changedAttrKeys = Object.keys(mountModel.changedAttributes());
-    let updatesConfig =
+    const changedAttrKeys = Object.keys(mountModel.changedAttributes());
+    const updatesConfig =
       changedAttrKeys.includes('casRequired') ||
       changedAttrKeys.includes('deleteVersionAfter') ||
       changedAttrKeys.includes('maxVersions');
@@ -135,7 +137,7 @@ export default class MountBackendForm extends Component {
         return;
       }
       if (err.errors) {
-        let errors = err.errors.map((e) => {
+        const errors = err.errors.map((e) => {
           if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
           return e;
         });

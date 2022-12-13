@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -33,11 +34,13 @@ func TestAutoTidy(t *testing.T) {
 		},
 		// See notes below about usage of /sys/raw for reading cluster
 		// storage without barrier encryption.
-		EnableRaw: true,
+		EnableRaw:      true,
+		RollbackPeriod: newPeriod,
 	}
-	cluster := vault.CreateTestClusterWithRollbackPeriod(t, newPeriod, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
+	cluster.Start()
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
@@ -61,6 +64,7 @@ func TestAutoTidy(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data)
 	require.NotEmpty(t, resp.Data["issuer_id"])
+	issuerId := resp.Data["issuer_id"]
 
 	// Run tidy so status is not empty when we run it later...
 	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
@@ -99,6 +103,17 @@ func TestAutoTidy(t *testing.T) {
 	leafSerial := resp.Data["serial_number"].(string)
 	leafCert := parseCert(t, resp.Data["certificate"].(string))
 
+	// Read cert before revoking
+	resp, err = client.Logical().Read("pki/cert/" + leafSerial)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["certificate"])
+	revocationTime, err := (resp.Data["revocation_time"].(json.Number)).Int64()
+	require.Equal(t, int64(0), revocationTime, "revocation time was not zero")
+	require.Empty(t, resp.Data["revocation_time_rfc3339"], "revocation_time_rfc3339 was not empty")
+	require.Empty(t, resp.Data["issuer_id"], "issuer_id was not empty")
+
 	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
 		"serial_number": leafSerial,
 	})
@@ -110,6 +125,22 @@ func TestAutoTidy(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
 	require.NotEmpty(t, resp.Data["certificate"])
+	revocationTime, err = (resp.Data["revocation_time"].(json.Number)).Int64()
+	require.NoError(t, err, "failed converting %s to int", resp.Data["revocation_time"])
+	revTime := time.Unix(revocationTime, 0)
+	now := time.Now()
+	if !(now.After(revTime) && now.Add(-10*time.Minute).Before(revTime)) {
+		t.Fatalf("parsed revocation time not within the last 10 minutes current time: %s, revocation time: %s", now, revTime)
+	}
+	utcLoc, err := time.LoadLocation("UTC")
+	require.NoError(t, err, "failed to parse UTC location?")
+
+	rfc3339RevocationTime, err := time.Parse(time.RFC3339Nano, resp.Data["revocation_time_rfc3339"].(string))
+	require.NoError(t, err, "failed parsing revocation_time_rfc3339 field: %s", resp.Data["revocation_time_rfc3339"])
+
+	require.Equal(t, revTime.In(utcLoc), rfc3339RevocationTime.Truncate(time.Second),
+		"revocation times did not match revocation_time: %s, "+"rfc3339 time: %s", revTime, rfc3339RevocationTime)
+	require.Equal(t, issuerId, resp.Data["issuer_id"], "issuer_id on leaf cert did not match")
 
 	// Wait for cert to expire and the safety buffer to elapse.
 	time.Sleep(time.Until(leafCert.NotAfter) + 3*time.Second)
@@ -161,7 +192,7 @@ func TestTidyCancellation(t *testing.T) {
 
 	numLeaves := 100
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root, a role, and a bunch of leaves.
 	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -232,4 +263,111 @@ func TestTidyCancellation(t *testing.T) {
 	if howMany+3 <= nowMany {
 		t.Fatalf("expected to only process at most 3 more certificates, but processed (%v >>> %v) certs", nowMany, howMany)
 	}
+}
+
+func TestTidyIssuers(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+
+	// Create a root that expires quickly and one valid for longer.
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root1 example.com",
+		"issuer_name": "root-expired",
+		"ttl":         "1s",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root2 example.com",
+		"issuer_name": "root-valid",
+		"ttl":         "60m",
+		"key_type":    "rsa",
+	})
+	require.NoError(t, err)
+
+	// Sleep long enough to expire the root.
+	time.Sleep(2 * time.Second)
+
+	// First tidy run shouldn't remove anything; too long of safety buffer.
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_expired_issuers": true,
+		"issuer_safety_buffer": "60m",
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+
+	// Expired issuer should exist.
+	resp, err := CBRead(b, s, "issuer/root-expired")
+	requireSuccessNonNilResponse(t, resp, err, "expired should still be present")
+	resp, err = CBRead(b, s, "issuer/root-valid")
+	requireSuccessNonNilResponse(t, resp, err, "valid should still be present")
+
+	// Second tidy run with shorter safety buffer shouldn't remove the
+	// expired one, as it should be the default issuer.
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_expired_issuers": true,
+		"issuer_safety_buffer": "1s",
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+
+	// Expired issuer should still exist.
+	resp, err = CBRead(b, s, "issuer/root-expired")
+	requireSuccessNonNilResponse(t, resp, err, "expired should still be present")
+	resp, err = CBRead(b, s, "issuer/root-valid")
+	requireSuccessNonNilResponse(t, resp, err, "valid should still be present")
+
+	// Update the default issuer.
+	_, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
+		"default": "root-valid",
+	})
+	require.NoError(t, err)
+
+	// Third tidy run should remove the expired one.
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_expired_issuers": true,
+		"issuer_safety_buffer": "1s",
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+
+	// Valid issuer should exist still; other should be removed.
+	resp, err = CBRead(b, s, "issuer/root-expired")
+	require.Error(t, err)
+	require.Nil(t, resp)
+	resp, err = CBRead(b, s, "issuer/root-valid")
+	requireSuccessNonNilResponse(t, resp, err, "valid should still be present")
+
+	// Finally, one more tidy should cause no changes.
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_expired_issuers": true,
+		"issuer_safety_buffer": "1s",
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+
+	// Valid issuer should exist still; other should be removed.
+	resp, err = CBRead(b, s, "issuer/root-expired")
+	require.Error(t, err)
+	require.Nil(t, resp)
+	resp, err = CBRead(b, s, "issuer/root-valid")
+	requireSuccessNonNilResponse(t, resp, err, "valid should still be present")
+
+	// Ensure we have safety buffer and expired issuers set correctly.
+	statusResp, err := CBRead(b, s, "tidy-status")
+	require.NoError(t, err)
+	require.NotNil(t, statusResp)
+	require.NotNil(t, statusResp.Data)
+	require.Equal(t, statusResp.Data["issuer_safety_buffer"], 1)
+	require.Equal(t, statusResp.Data["tidy_expired_issuers"], true)
 }

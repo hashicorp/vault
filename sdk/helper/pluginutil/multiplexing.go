@@ -2,6 +2,7 @@ package pluginutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -12,6 +13,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
+
+var ErrNoMultiplexingIDFound = errors.New("no multiplexing ID found")
 
 type PluginMultiplexingServerImpl struct {
 	UnimplementedPluginMultiplexingServer
@@ -62,7 +65,9 @@ func GetMultiplexIDFromContext(ctx context.Context) (string, error) {
 	}
 
 	multiplexIDs := md[MultiplexingCtxKey]
-	if len(multiplexIDs) != 1 {
+	if len(multiplexIDs) == 0 {
+		return "", ErrNoMultiplexingIDFound
+	} else if len(multiplexIDs) != 1 {
 		return "", fmt.Errorf("unexpected number of IDs in metadata: (%d)", len(multiplexIDs))
 	}
 

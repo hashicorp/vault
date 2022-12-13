@@ -65,23 +65,28 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodGet, "/v1/"+path)
+	resp, err := c.readRawWithDataWithContext(ctx, path, data)
+	return c.ParseRawResponseAndCloseBody(resp, err)
+}
 
-	var values url.Values
-	for k, v := range data {
-		if values == nil {
-			values = make(url.Values)
-		}
-		for _, val := range v {
-			values.Add(k, val)
-		}
-	}
+func (c *Logical) ReadRaw(path string) (*Response, error) {
+	return c.ReadRawWithData(path, nil)
+}
 
-	if values != nil {
-		r.Params = values
-	}
+func (c *Logical) ReadRawWithData(path string, data map[string][]string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(context.Background(), path, data)
+}
 
-	resp, err := c.c.rawRequestWithContext(ctx, r)
+func (c *Logical) ReadRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
+	// See note in client.go, RawRequestWithContext for why we do not call
+	// Cancel here. The difference between these two methods are that the
+	// former takes a Request object directly, whereas this builds one
+	// up for the caller.
+	ctx, _ = c.c.withConfiguredTimeout(ctx)
+	return c.readRawWithDataWithContext(ctx, path, data)
+}
+
+func (c *Logical) ParseRawResponseAndCloseBody(resp *Response, err error) (*Secret, error) {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -104,6 +109,26 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	}
 
 	return ParseSecret(resp.Body)
+}
+
+func (c *Logical) readRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
+	r := c.c.NewRequest(http.MethodGet, "/v1/"+path)
+
+	var values url.Values
+	for k, v := range data {
+		if values == nil {
+			values = make(url.Values)
+		}
+		for _, val := range v {
+			values.Add(k, val)
+		}
+	}
+
+	if values != nil {
+		r.Params = values
+	}
+
+	return c.c.RawRequestWithContext(ctx, r)
 }
 
 func (c *Logical) List(path string) (*Secret, error) {

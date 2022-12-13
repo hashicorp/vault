@@ -39,6 +39,9 @@ type BatchRequestItem struct {
 
 	// DecodedNonce is the base64 decoded version of Nonce
 	DecodedNonce []byte
+
+	// Associated Data for AEAD ciphers
+	AssociatedData string `json:"associated_data" struct:"associated_data" mapstructure:"associated_data"`
 }
 
 // EncryptBatchResponseItem represents a response item for batch processing
@@ -53,6 +56,14 @@ type EncryptBatchResponseItem struct {
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
+}
+
+type AssocDataFactory struct {
+	Encoded string
+}
+
+func (a AssocDataFactory) GetAssociatedData() ([]byte, error) {
+	return base64.StdEncoding.DecodeString(a.Encoded)
 }
 
 func (b *backend) pathEncrypt() *framework.Path {
@@ -113,6 +124,7 @@ will severely impact the ciphertext's security.`,
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
 			},
+
 			"partial_failure_response_code": {
 				Type: framework.TypeInt,
 				Description: `
@@ -120,6 +132,17 @@ Ordinarily, if a batch item fails to encrypt due to a bad input, but other batch
 the HTTP response code is 400 (Bad Request).  Some applications may want to treat partial failures differently.
 Providing the parameter returns the given response code integer instead of a 400 in this case. If all values fail
 HTTP 400 is still returned.`,
+			},
+
+			"associated_data": {
+				Type: framework.TypeString,
+				Description: `
+When using an AEAD cipher mode, such as AES-GCM, this parameter allows
+passing associated data (AD/AAD) into the encryption function; this data
+must be passed on subsequent decryption requests but can be transited in
+plaintext. On successful decryption, both the ciphertext and the associated
+data are attested not to have been tampered with.
+				`,
 			},
 		},
 
@@ -229,6 +252,15 @@ func decodeBatchRequestItems(src interface{}, requirePlaintext bool, requireCiph
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].key_version' expected type 'int', got unconvertible type '%T'", i, item["key_version"]))
 			}
 		}
+
+		if v, has := item["associated_data"]; has {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
+				(*dst)[i].AssociatedData = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].associated_data' expected type 'string', got unconvertible type '%T'", i, item["associated_data"]))
+			}
+		}
 	}
 
 	if len(errs.Errors) > 0 {
@@ -279,10 +311,11 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 		batchInputItems = make([]BatchRequestItem, 1)
 		batchInputItems[0] = BatchRequestItem{
-			Plaintext:  valueRaw.(string),
-			Context:    d.Get("context").(string),
-			Nonce:      d.Get("nonce").(string),
-			KeyVersion: d.Get("key_version").(int),
+			Plaintext:      valueRaw.(string),
+			Context:        d.Get("context").(string),
+			Nonce:          d.Get("nonce").(string),
+			KeyVersion:     d.Get("key_version").(int),
+			AssociatedData: d.Get("associated_data").(string),
 		}
 	}
 
@@ -340,8 +373,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			return logical.ErrorResponse("convergent encryption requires derivation to be enabled, so context is required"), nil
 		}
 
+		cfg, err := b.readConfigKeys(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+
 		polReq = keysutil.PolicyRequest{
-			Upsert:     true,
+			Upsert:     !cfg.DisableUpsert,
 			Storage:    req.Storage,
 			Name:       name,
 			Derived:    contextSet,
@@ -393,7 +431,17 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			warnAboutNonceUsage = true
 		}
 
-		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext)
+		var factory interface{}
+		if item.AssociatedData != "" {
+			if !p.Type.AssociatedDataSupported() {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, p.Type.String())
+				continue
+			}
+
+			factory = AssocDataFactory{item.AssociatedData}
+		}
+
+		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext, factory)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:
@@ -461,21 +509,23 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 // that user errors are non-retryable without making changes to the request, and should be surfaced
 // to the user first.
 func batchRequestResponse(d *framework.FieldData, resp *logical.Response, req *logical.Request, successesInBatch, userErrorInBatch, internalErrorInBatch bool) (*logical.Response, error) {
-	switch {
-	case userErrorInBatch:
-		code := http.StatusBadRequest
-		if successesInBatch {
-			if codeRaw, ok := d.GetOk("partial_failure_response_code"); ok {
-				code = codeRaw.(int)
-				if code < 1 || code > 599 {
-					resp.AddWarning("invalid HTTP response code override from partial_failure_response_code, reverting to HTTP 400")
-					code = http.StatusBadRequest
-				}
+	if userErrorInBatch || internalErrorInBatch {
+		var code int
+		switch {
+		case userErrorInBatch:
+			code = http.StatusBadRequest
+		case internalErrorInBatch:
+			code = http.StatusInternalServerError
+		}
+		if codeRaw, ok := d.GetOk("partial_failure_response_code"); ok && successesInBatch {
+			newCode := codeRaw.(int)
+			if newCode < 1 || newCode > 599 {
+				resp.AddWarning(fmt.Sprintf("invalid HTTP response code override from partial_failure_response_code, reverting to %d", code))
+			} else {
+				code = newCode
 			}
 		}
 		return logical.RespondWithStatusCode(resp, req, code)
-	case internalErrorInBatch:
-		return logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
 	}
 
 	return resp, nil

@@ -21,7 +21,7 @@ import { dasherize } from 'vault/helpers/dasherize';
  *     label: "Foo", // custom label to be shown, otherwise attr.name will be displayed
  *     defaultValue: "", // default value to display if model value is not present
  *     fieldValue: "bar", // used for value lookup on model over attr.name
- *     editType: "ttl", type of field to use -- example boolean, searchSelect, etc.
+ *     editType: "ttl", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
  *     helpText: "This will be in a tooltip",
  *     readOnly: true
  *   },
@@ -42,9 +42,21 @@ import { dasherize } from 'vault/helpers/dasherize';
  */
 
 export default class FormFieldComponent extends Component {
+  emptyData = '{\n}';
+  shouldHideLabel = [
+    'boolean',
+    'file',
+    'json',
+    'kv',
+    'mountAccessor',
+    'optionalText',
+    'regex',
+    'searchSelect',
+    'stringArray',
+    'ttl',
+  ];
   @tracked showInput = false;
   @tracked file = { value: '' }; // used by the pgp-file component when an attr is editType of 'file'
-  emptyData = '{\n}';
 
   constructor() {
     super(...arguments);
@@ -54,11 +66,20 @@ export default class FormFieldComponent extends Component {
     this.showInput = !!modelValue;
   }
 
+  get hideLabel() {
+    const { type, options } = this.args.attr;
+    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
+      return true;
+    }
+    // falsey values render a <FormFieldLabel>
+    return this.shouldHideLabel.includes(options?.editType);
+  }
+
   get disabled() {
     return this.args.disabled || false;
   }
   get showHelpText() {
-    return this.args.showHelpText || true;
+    return this.args.showHelpText === false ? false : true;
   }
   get subText() {
     return this.args.subText || '';
@@ -109,20 +130,20 @@ export default class FormFieldComponent extends Component {
   }
   @action
   setAndBroadcastBool(trueVal, falseVal, event) {
-    let valueToSet = event.target.checked === true ? trueVal : falseVal;
+    const valueToSet = event.target.checked === true ? trueVal : falseVal;
     this.setAndBroadcast(valueToSet);
   }
   @action
   setAndBroadcastTtl(value) {
     const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
-    let valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
+    const valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
     this.setAndBroadcast(`${valueToSet}`);
   }
   @action
   codemirrorUpdated(isString, value, codemirror) {
     codemirror.performLint();
     const hasErrors = codemirror.state.lint.marked.length > 0;
-    let valToSet = isString ? value : JSON.parse(value);
+    const valToSet = isString ? value : JSON.parse(value);
 
     if (!hasErrors) {
       this.args.model.set(this.valuePath, valToSet);

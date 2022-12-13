@@ -70,7 +70,7 @@ export default RESTSerializer.extend({
   },
 
   serialize(snapshot, requestType) {
-    let data = this._super(snapshot, requestType);
+    const data = this._super(snapshot, requestType);
     if (data.database) {
       const db = data.database[0];
       data.db_name = db;

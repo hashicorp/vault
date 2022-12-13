@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
+	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -27,7 +28,24 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	BasicHclConfig = `
+log_file = "/foo/bar/juan.log"
+vault {
+	address = "http://127.0.0.1:8200"
+	retry {
+		num_retries = 5
+	}
+}
+
+listener "tcp" {
+	address = "127.0.0.1:8100"
+	tls_disable = true
+}`
 )
 
 func testAgentCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *AgentCommand) {
@@ -1245,6 +1263,27 @@ func makeTempFile(t *testing.T, name, contents string) string {
 	return path
 }
 
+func populateTempFile(t *testing.T, name, contents string) *os.File {
+	t.Helper()
+
+	file, err := os.CreateTemp(t.TempDir(), name)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = file.WriteString(contents)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return file
+}
+
 // handler makes 500 errors happen for reads on /v1/secret.
 // Definitely not thread-safe, do not use t.Parallel with this.
 type handler struct {
@@ -1263,7 +1302,7 @@ func (h *handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		}
 		h.t.Logf("passing GET request on %s", req.URL.Path)
 	}
-	vaulthttp.Handler(h.props).ServeHTTP(resp, req)
+	vaulthttp.Handler.Handler(h.props).ServeHTTP(resp, req)
 }
 
 // TestAgent_Template_Retry verifies that the template server retries requests
@@ -1286,11 +1325,12 @@ func TestAgent_Template_Retry(t *testing.T) {
 		},
 		&vault.TestClusterOptions{
 			NumCores: 1,
-			HandlerFunc: func(properties *vault.HandlerProperties) http.Handler {
-				h.props = properties
-				h.t = t
-				return &h
-			},
+			HandlerFunc: vaulthttp.HandlerFunc(
+				func(properties *vault.HandlerProperties) http.Handler {
+					h.props = properties
+					h.t = t
+					return &h
+				}),
 		})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -1573,11 +1613,11 @@ func TestAgent_Cache_Retry(t *testing.T) {
 		},
 		&vault.TestClusterOptions{
 			NumCores: 1,
-			HandlerFunc: func(properties *vault.HandlerProperties) http.Handler {
+			HandlerFunc: vaulthttp.HandlerFunc(func(properties *vault.HandlerProperties) http.Handler {
 				h.props = properties
 				h.t = t
 				return &h
-			},
+			}),
 		})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -2209,6 +2249,58 @@ cache {}
 	}
 
 	wg.Wait()
+}
+
+func TestAgent_LogFile_CliOverridesConfig(t *testing.T) {
+	// Create basic config
+	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
+	cfg, err := agentConfig.LoadConfig(configFile.Name())
+	if err != nil {
+		t.Fatal("Cannot load config to test update/merge", err)
+	}
+
+	// Sanity check that the config value is the current value
+	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile)
+
+	// Initialize the command and parse any flags
+	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+	f := cmd.Flags()
+	// Simulate the flag being specified
+	err = f.Parse([]string{"-log-file=/foo/bar/test.log"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Update the config based on the inputs.
+	cmd.updateConfig(f, cfg)
+
+	assert.NotEqual(t, "/foo/bar/juan.log", cfg.LogFile)
+	assert.NotEqual(t, "/squiggle/logs.txt", cfg.LogFile)
+	assert.Equal(t, "/foo/bar/test.log", cfg.LogFile)
+}
+
+func TestAgent_LogFile_Config(t *testing.T) {
+	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
+
+	cfg, err := agentConfig.LoadConfig(configFile.Name())
+	if err != nil {
+		t.Fatal("Cannot load config to test update/merge", err)
+	}
+
+	// Sanity check that the config value is the current value
+	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "sanity check on log config failed")
+
+	// Parse the cli flags (but we pass in an empty slice)
+	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+	f := cmd.Flags()
+	err = f.Parse([]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd.updateConfig(f, cfg)
+
+	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "actual config check")
 }
 
 // Get a randomly assigned port and then free it again before returning it.

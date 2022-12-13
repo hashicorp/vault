@@ -209,6 +209,67 @@ func TestClientBadToken(t *testing.T) {
 	}
 }
 
+func TestClientDisableRedirects(t *testing.T) {
+	tests := map[string]struct {
+		statusCode       int
+		expectedNumReqs  int
+		disableRedirects bool
+	}{
+		"Disabled redirects: Moved permanently":  {statusCode: 301, expectedNumReqs: 1, disableRedirects: true},
+		"Disabled redirects: Found":              {statusCode: 302, expectedNumReqs: 1, disableRedirects: true},
+		"Disabled redirects: Temporary Redirect": {statusCode: 307, expectedNumReqs: 1, disableRedirects: true},
+		"Enable redirects: Moved permanently":    {statusCode: 301, expectedNumReqs: 2, disableRedirects: false},
+	}
+
+	for name, tc := range tests {
+		test := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			numReqs := 0
+			var config *Config
+
+			respFunc := func(w http.ResponseWriter, req *http.Request) {
+				// Track how many requests the server has handled
+				numReqs++
+				// Send back the relevant status code and generate a location
+				w.Header().Set("Location", fmt.Sprintf(config.Address+"/reqs/%v", numReqs))
+				w.WriteHeader(test.statusCode)
+			}
+
+			config, ln := testHTTPServer(t, http.HandlerFunc(respFunc))
+			config.DisableRedirects = test.disableRedirects
+			defer ln.Close()
+
+			client, err := NewClient(config)
+			if err != nil {
+				t.Fatalf("%s: error %v", name, err)
+			}
+
+			req := client.NewRequest("GET", "/")
+			resp, err := client.rawRequestWithContext(context.Background(), req)
+			if err != nil {
+				t.Fatalf("%s: error %v", name, err)
+			}
+
+			if numReqs != test.expectedNumReqs {
+				t.Fatalf("%s: expected %v request(s) but got %v", name, test.expectedNumReqs, numReqs)
+			}
+
+			if resp.StatusCode != test.statusCode {
+				t.Fatalf("%s: expected status code %v got %v", name, test.statusCode, resp.StatusCode)
+			}
+
+			location, err := resp.Location()
+			if err != nil {
+				t.Fatalf("%s error %v", name, err)
+			}
+			if req.URL.String() == location.String() {
+				t.Fatalf("%s: expected request URL %v to be different from redirect URL %v", name, req.URL, resp.Request.URL)
+			}
+		})
+	}
+}
+
 func TestClientRedirect(t *testing.T) {
 	primary := func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("test"))
@@ -320,6 +381,7 @@ func TestClientEnvSettings(t *testing.T) {
 	oldClientKey := os.Getenv(EnvVaultClientKey)
 	oldSkipVerify := os.Getenv(EnvVaultSkipVerify)
 	oldMaxRetries := os.Getenv(EnvVaultMaxRetries)
+	oldDisableRedirects := os.Getenv(EnvVaultDisableRedirects)
 
 	os.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv(EnvVaultCACertBytes, string(caCertBytes))
@@ -328,6 +390,7 @@ func TestClientEnvSettings(t *testing.T) {
 	os.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
 	os.Setenv(EnvVaultSkipVerify, "true")
 	os.Setenv(EnvVaultMaxRetries, "5")
+	os.Setenv(EnvVaultDisableRedirects, "true")
 
 	defer func() {
 		os.Setenv(EnvVaultCACert, oldCACert)
@@ -337,6 +400,7 @@ func TestClientEnvSettings(t *testing.T) {
 		os.Setenv(EnvVaultClientKey, oldClientKey)
 		os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
 		os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
+		os.Setenv(EnvVaultDisableRedirects, oldDisableRedirects)
 	}()
 
 	config := DefaultConfig()
@@ -353,6 +417,9 @@ func TestClientEnvSettings(t *testing.T) {
 	}
 	if tlsConfig.InsecureSkipVerify != true {
 		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
+	}
+	if config.DisableRedirects != true {
+		t.Fatalf("bad: expected disable redirects to be true: %v", config.DisableRedirects)
 	}
 }
 

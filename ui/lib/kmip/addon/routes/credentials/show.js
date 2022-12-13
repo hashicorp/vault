@@ -5,14 +5,14 @@ export default Route.extend({
   store: service(),
   secretMountPath: service(),
   credParams() {
-    let { role_name: role, scope_name: scope } = this.paramsFor('credentials');
+    const { role_name: role, scope_name: scope } = this.paramsFor('credentials');
     return {
       role,
       scope,
     };
   },
   model(params) {
-    let { role, scope } = this.credParams();
+    const { role, scope } = this.credParams();
     return this.store.queryRecord('kmip/credential', {
       role,
       scope,
@@ -22,7 +22,7 @@ export default Route.extend({
   },
 
   setupController(controller) {
-    let { role, scope } = this.credParams();
+    const { role, scope } = this.credParams();
     this._super(...arguments);
     controller.setProperties({ role, scope });
   },

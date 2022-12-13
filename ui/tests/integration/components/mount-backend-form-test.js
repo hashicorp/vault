@@ -26,7 +26,11 @@ module('Integration | Component | mount backend form', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(hbs`{{mount-backend-form}}`);
-    assert.equal(component.header, 'Enable an Authentication Method', 'renders auth header in default state');
+    assert.strictEqual(
+      component.header,
+      'Enable an Authentication Method',
+      'renders auth header in default state'
+    );
     assert.ok(component.types.length > 0, 'renders type picker');
   });
 
@@ -34,23 +38,23 @@ module('Integration | Component | mount backend form', function (hooks) {
     await render(hbs`{{mount-backend-form}}`);
     await component.selectType('aws');
     await component.next();
-    assert.equal(component.pathValue, 'aws', 'sets the value of the type');
+    assert.strictEqual(component.pathValue, 'aws', 'sets the value of the type');
     await component.back();
     await component.selectType('approle');
     await component.next();
-    assert.equal(component.pathValue, 'approle', 'updates the value of the type');
+    assert.strictEqual(component.pathValue, 'approle', 'updates the value of the type');
   });
 
   test('it keeps path value if the user has changed it', async function (assert) {
     await render(hbs`{{mount-backend-form}}`);
     await component.selectType('approle');
     await component.next();
-    assert.equal(component.pathValue, 'approle', 'defaults to approle (first in the list)');
+    assert.strictEqual(component.pathValue, 'approle', 'defaults to approle (first in the list)');
     await component.path('newpath');
     await component.back();
     await component.selectType('aws');
     await component.next();
-    assert.equal(component.pathValue, 'newpath', 'updates to the value of the type');
+    assert.strictEqual(component.pathValue, 'newpath', 'updates to the value of the type');
   });
 
   test('it calls mount success', async function (assert) {
@@ -59,13 +63,13 @@ module('Integration | Component | mount backend form', function (hooks) {
     });
     const spy = sinon.spy();
     this.set('onMountSuccess', spy);
-    await render(hbs`{{mount-backend-form onMountSuccess=onMountSuccess}}`);
+    await render(hbs`{{mount-backend-form onMountSuccess=this.onMountSuccess}}`);
 
     await component.mount('approle', 'foo');
 
     later(() => cancelTimers(), 50);
     await settled();
-    let enableRequest = this.server.handledRequests.findBy('url', '/v1/sys/auth/foo');
+    const enableRequest = this.server.handledRequests.findBy('url', '/v1/sys/auth/foo');
     assert.ok(enableRequest, 'it calls enable on an auth method');
     assert.ok(spy.calledOnce, 'calls the passed success method');
   });

@@ -146,7 +146,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		apiData: data,
 		role:    role,
 	}
-	parsedBundle, err := generateCert(sc, input, nil, true, b.Backend.GetRandomReader())
+	parsedBundle, warnings, err := generateCert(sc, input, nil, true, b.Backend.GetRandomReader())
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -236,37 +236,41 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	resp.Data["key_id"] = myKey.ID
 	resp.Data["key_name"] = myKey.Name
 
-	// Update the issuer to reflect the PSS status here for revocation; this
-	// allows CRL building to succeed if the root is using a managed key with
-	// only PSS support.
-	if input.role.KeyType == "rsa" && input.role.UsePSS {
-		// The one time that it is safe (and good) to copy the
-		// SignatureAlgorithm field off the certificate (for the purposes of
-		// detecting PSS support) is when we've freshly generated it AND it
-		// is a root (exactly this endpoint).
-		//
-		// For intermediates, this doesn't hold (not this endpoint) as that
-		// reflects the parent key's preferences. For imports, this doesn't
-		// hold as the old system might've allowed other signature types that
-		// the new system (whether Vault or a managed key) doesn't.
-		myIssuer.RevocationSigAlg = parsedBundle.Certificate.SignatureAlgorithm
-		if err := sc.writeIssuer(myIssuer); err != nil {
-			return nil, fmt.Errorf("unable to store PSS-updated issuer: %v", err)
-		}
+	// The one time that it is safe (and good) to copy the
+	// SignatureAlgorithm field off the certificate (for the purposes of
+	// detecting PSS support) is when we've freshly generated it AND it
+	// is a root (exactly this endpoint).
+	//
+	// For intermediates, this doesn't hold (not this endpoint) as that
+	// reflects the parent key's preferences. For imports, this doesn't
+	// hold as the old system might've allowed other signature types that
+	// the new system (whether Vault or a managed key) doesn't.
+	//
+	// Previously we did this conditionally on whether or not PSS was in
+	// use. This is insufficient as some cloud KMS providers (namely, GCP)
+	// restrict the key to a single signature algorithm! So e.g., a RSA 3072
+	// key MUST use SHA-384 as the hash algorithm. Thus we pull in the
+	// RevocationSigAlg unconditionally on roots now.
+	myIssuer.RevocationSigAlg = parsedBundle.Certificate.SignatureAlgorithm
+	if err := sc.writeIssuer(myIssuer); err != nil {
+		return nil, fmt.Errorf("unable to store PSS-updated issuer: %w", err)
 	}
 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
+	key := "certs/" + normalizeSerial(cb.SerialNumber)
+	certsCounted := b.certsCounted.Load()
 	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   "certs/" + normalizeSerial(cb.SerialNumber),
+		Key:   key,
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 	}
+	b.incrementTotalCertificatesCount(certsCounted, key)
 
 	// Build a fresh CRL
-	err = b.crlBuilder.rebuild(ctx, b, req, true)
+	err = b.crlBuilder.rebuild(sc, true)
 	if err != nil {
 		return nil, err
 	}
@@ -274,6 +278,18 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
 		resp.AddWarning("Max path length of the generated certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
 	}
+
+	// Check whether we need to update our default issuer configuration.
+	config, err := sc.getIssuersConfig()
+	if err != nil {
+		resp.AddWarning("Unable to fetch default issuers configuration to update default issuer if necessary: " + err.Error())
+	} else if config.DefaultFollowsLatestIssuer {
+		if err := sc.updateDefaultIssuerId(myIssuer.ID); err != nil {
+			resp.AddWarning("Unable to update this new root as the default issuer: " + err.Error())
+		}
+	}
+
+	resp = addWarnings(resp, warnings)
 
 	return resp, nil
 }
@@ -355,7 +371,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		apiData: data,
 		role:    role,
 	}
-	parsedBundle, err := signCert(b, input, signingBundle, true, useCSRValues)
+	parsedBundle, warnings, err := signCert(b, input, signingBundle, true, useCSRValues)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -439,17 +455,22 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
 
+	key := "certs/" + normalizeSerial(cb.SerialNumber)
+	certsCounted := b.certsCounted.Load()
 	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   "certs/" + normalizeSerial(cb.SerialNumber),
+		Key:   key,
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 	}
+	b.incrementTotalCertificatesCount(certsCounted, key)
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
 		resp.AddWarning("Max path length of the signed certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
 	}
+
+	resp = addWarnings(resp, warnings)
 
 	return resp, nil
 }

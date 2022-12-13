@@ -18,6 +18,21 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+func pathListCertsRevoked(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "certs/revoked/?$",
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathListRevokedCertsHandler,
+			},
+		},
+
+		HelpSynopsis:    pathListRevokedHelpSyn,
+		HelpDescription: pathListRevokedHelpDesc,
+	}
+}
+
 func pathRevoke(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `revoke`,
@@ -168,7 +183,8 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 	//
 	// Start with the latter since its cheaper. Fetch the cert (by serial)
 	// and if it exists, compare the contents.
-	certEntry, err := fetchCertBySerial(ctx, b, req, req.Path, serial)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
 	if err != nil {
 		return serial, false, nil, err
 	}
@@ -200,7 +216,6 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 	// parameter (except in error cases) should cause the cert to write out.
 	//
 	// Fetch and iterate through each issuer.
-	sc := b.makeStorageContext(ctx, req.Storage)
 	issuers, err := sc.listIssuers()
 	if err != nil {
 		return serial, false, nil, err
@@ -261,7 +276,7 @@ func (b *backend) pathRevokeWriteHandleKey(ctx context.Context, req *logical.Req
 	// Parse the inner DER key.
 	signer, _, err := certutil.ParseDERKey(pemBlock.Bytes)
 	if err != nil {
-		return fmt.Errorf("failed to parse provided private key: %v", err)
+		return fmt.Errorf("failed to parse provided private key: %w", err)
 	}
 
 	// Finally, verify if the cert and key match. This code has been
@@ -341,7 +356,8 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 		}
 
 		// Here, fetch the certificate from disk to validate we can revoke it.
-		certEntry, err := fetchCertBySerial(ctx, b, req, req.Path, serial)
+		sc := b.makeStorageContext(ctx, req.Storage)
+		certEntry, err := fetchCertBySerial(sc, "certs/", serial)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -409,14 +425,16 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	return revokeCert(ctx, b, req, serial, false)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	return revokeCert(sc, serial, false)
 }
 
 func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	b.revokeStorageLock.RLock()
 	defer b.revokeStorageLock.RUnlock()
 
-	crlErr := b.crlBuilder.rebuild(ctx, b, req, false)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	crlErr := b.crlBuilder.rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -438,7 +456,7 @@ func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Reque
 
 	cfg, err := b.crlBuilder.getConfigWithUpdate(sc)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching CRL configuration: %v", err)
+		return nil, fmt.Errorf("error fetching CRL configuration: %w", err)
 	}
 
 	isEnabled := cfg.EnableDelta
@@ -464,6 +482,22 @@ func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Reque
 	}
 
 	return resp, nil
+}
+
+func (b *backend) pathListRevokedCertsHandler(ctx context.Context, request *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	sc := b.makeStorageContext(ctx, request.Storage)
+
+	revokedCerts, err := sc.listRevokedCerts()
+	if err != nil {
+		return nil, err
+	}
+
+	// Normalize serial back to a format people are expecting.
+	for i, serial := range revokedCerts {
+		revokedCerts[i] = denormalizeSerial(serial)
+	}
+
+	return logical.ListResponse(revokedCerts), nil
 }
 
 const pathRevokeHelpSyn = `
@@ -492,4 +526,12 @@ Force a rebuild of the delta CRL.
 
 const pathRotateDeltaCRLHelpDesc = `
 Force a rebuild of the delta CRL. This can be used to force an update of the otherwise periodically-rebuilt delta CRLs.
+`
+
+const pathListRevokedHelpSyn = `
+List all revoked serial numbers within the local cluster
+`
+
+const pathListRevokedHelpDesc = `
+Returns a list of serial numbers for revoked certificates in the local cluster. 
 `

@@ -49,9 +49,10 @@ export default class LineChart extends Component {
     const upgradeData = this.args.upgradeData;
     if (!upgradeData) return null;
     if (!Array.isArray(upgradeData)) {
-      console.debug('upgradeData must be an array of objects containing upgrade history');
+      console.debug('upgradeData must be an array of objects containing upgrade history'); // eslint-disable-line
       return null;
     } else if (!Object.keys(upgradeData[0]).includes('timestampInstalled')) {
+      // eslint-disable-next-line
       console.debug(
         `upgrade must be an object with the following key names: ['id', 'previousVersion', 'timestampInstalled']`
       );
@@ -181,14 +182,14 @@ export default class LineChart extends Component {
       this.tooltipTotal = formatNumber([data[this.yKey]]) + ' total clients';
       this.tooltipNew = (formatNumber([data?.new_clients[this.yKey]]) || '0') + ' new clients';
       this.tooltipUpgradeText = '';
-      let upgradeInfo = findUpgradeData(data);
+      const upgradeInfo = findUpgradeData(data);
       if (upgradeInfo) {
-        let { id, previousVersion } = upgradeInfo;
+        const { id, previousVersion } = upgradeInfo;
         this.tooltipUpgradeText = `Vault was upgraded 
         ${previousVersion ? 'from ' + previousVersion : ''} to ${id}`;
       }
 
-      let node = hoverCircles.filter((plot) => plot[this.xKey] === data[this.xKey]).node();
+      const node = hoverCircles.filter((plot) => plot[this.xKey] === data[this.xKey]).node();
       this.tooltipTarget = node;
     });
   }

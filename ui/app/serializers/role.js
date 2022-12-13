@@ -2,8 +2,6 @@ import ApplicationSerializer from './application';
 
 export default ApplicationSerializer.extend({
   extractLazyPaginatedData(payload) {
-    let ret;
-
     if (payload.zero_address_roles) {
       payload.zero_address_roles.forEach((role) => {
         // mutate key_info object to add zero_address info
@@ -12,7 +10,7 @@ export default ApplicationSerializer.extend({
     }
     if (!payload.data.key_info) {
       return payload.data.keys.map((key) => {
-        let model = {
+        const model = {
           id: key,
         };
         if (payload.backend) {
@@ -22,8 +20,8 @@ export default ApplicationSerializer.extend({
       });
     }
 
-    ret = payload.data.keys.map((key) => {
-      let model = {
+    const ret = payload.data.keys.map((key) => {
+      const model = {
         id: key,
         key_type: payload.data.key_info[key].key_type,
         zero_address: payload.data.key_info[key].zero_address,

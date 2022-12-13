@@ -80,11 +80,8 @@ workaround in some compatibility scenarios
 with Active Directory Certificate Services.`,
 	}
 
-	// Signature bits isn't respected on intermediate generation, as this
-	// only impacts the CSR's internal signature and doesn't impact the
-	// signed certificate's bits (that's on the /sign-intermediate
-	// endpoints). Remove it from the list of fields to avoid confusion.
-	delete(ret.Fields, "signature_bits")
+	// At this time Go does not support signing CSRs using PSS signatures, see
+	// https://github.com/golang/go/issues/45990
 	delete(ret.Fields, "use_pss")
 
 	return ret
@@ -246,16 +243,41 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	if len(createdIssuers) > 0 {
-		err := b.crlBuilder.rebuild(ctx, b, req, true)
+		err := b.crlBuilder.rebuild(sc, true)
 		if err != nil {
 			// Before returning, check if the error message includes the
 			// string "PSS". If so, it indicates we might've wanted to modify
 			// this issuer, so convert the error to a warning.
 			if strings.Contains(err.Error(), "PSS") || strings.Contains(err.Error(), "pss") {
-				err = fmt.Errorf("Rebuilding the CRL failed with a message relating to the PSS signature algorithm. This likely means the revocation_signature_algorithm needs to be set on the newly imported issuer(s) because a managed key supports only the PSS algorithm; by default PKCS#1v1.5 was used to build the CRLs. CRLs will not be generated until this has been addressed, however the import was successful. The original error is reproduced below:\n\n\t%v", err)
+				err = fmt.Errorf("Rebuilding the CRL failed with a message relating to the PSS signature algorithm. This likely means the revocation_signature_algorithm needs to be set on the newly imported issuer(s) because a managed key supports only the PSS algorithm; by default PKCS#1v1.5 was used to build the CRLs. CRLs will not be generated until this has been addressed, however the import was successful. The original error is reproduced below:\n\n\t%w", err)
+			} else {
+				// Note to the caller that while this is an error, we did
+				// successfully import the issuers.
+				err = fmt.Errorf("Rebuilding the CRL failed. While this is indicative of a problem with the imported issuers (perhaps because of their revocation_signature_algorithm), they did import successfully and are now usable. It is strongly suggested to fix the CRL building errors before continuing. The original error is reproduced below:\n\n\t%w", err)
 			}
 
 			return nil, err
+		}
+
+		var issuersWithKeys []string
+		for _, issuer := range createdIssuers {
+			if issuerKeyMap[issuer] != "" {
+				issuersWithKeys = append(issuersWithKeys, issuer)
+			}
+		}
+
+		// Check whether we need to update our default issuer configuration.
+		config, err := sc.getIssuersConfig()
+		if err != nil {
+			response.AddWarning("Unable to fetch default issuers configuration to update default issuer if necessary: " + err.Error())
+		} else if config.DefaultFollowsLatestIssuer {
+			if len(issuersWithKeys) == 1 {
+				if err := sc.updateDefaultIssuerId(issuerID(issuersWithKeys[0])); err != nil {
+					response.AddWarning("Unable to update this new root as the default issuer: " + err.Error())
+				}
+			} else if len(issuersWithKeys) > 1 {
+				response.AddWarning("Default issuer left unchanged: could not select new issuer automatically as multiple imported issuers had key material in Vault.")
+			}
 		}
 	}
 
@@ -410,18 +432,18 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	// include both in two separate CRLs. Hence, the former is the condition
 	// we check in CRL building, but this step satisfies other guarantees
 	// within Vault.
-	certEntry, err := fetchCertBySerial(ctx, b, req, "certs/", issuer.SerialNumber)
+	certEntry, err := fetchCertBySerial(sc, "certs/", issuer.SerialNumber)
 	if err == nil && certEntry != nil {
 		// We've inverted this error check as it doesn't matter; we already
 		// consider this certificate revoked.
 		storageCert, err := x509.ParseCertificate(certEntry.Value)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing stored certificate value: %v", err)
+			return nil, fmt.Errorf("error parsing stored certificate value: %w", err)
 		}
 
 		issuerCert, err := issuer.GetCertificate()
 		if err != nil {
-			return nil, fmt.Errorf("error parsing issuer certificate value: %v", err)
+			return nil, fmt.Errorf("error parsing issuer certificate value: %w", err)
 		}
 
 		if bytes.Equal(issuerCert.Raw, storageCert.Raw) {
@@ -442,18 +464,18 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 
 			revEntry, err := logical.StorageEntryJSON(revokedPath+normalizeSerial(issuer.SerialNumber), revInfo)
 			if err != nil {
-				return nil, fmt.Errorf("error creating revocation entry for issuer: %v", err)
+				return nil, fmt.Errorf("error creating revocation entry for issuer: %w", err)
 			}
 
 			err = req.Storage.Put(ctx, revEntry)
 			if err != nil {
-				return nil, fmt.Errorf("error saving revoked issuer to new location: %v", err)
+				return nil, fmt.Errorf("error saving revoked issuer to new location: %w", err)
 			}
 		}
 	}
 
 	// Rebuild the CRL to include the newly revoked issuer.
-	crlErr := b.crlBuilder.rebuild(ctx, b, req, false)
+	crlErr := b.crlBuilder.rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:

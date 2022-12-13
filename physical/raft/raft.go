@@ -31,17 +31,23 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/hashicorp/vault/version"
 	bolt "go.etcd.io/bbolt"
 )
 
-// EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
-const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
+const (
+	// EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
+	EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 
-// EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
-const EnvVaultRaftPath = "VAULT_RAFT_PATH"
+	// EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
+	EnvVaultRaftPath = "VAULT_RAFT_PATH"
+
+	// EnvVaultRaftNonVoter is used to override the non_voter config option, telling Vault to join as a non-voter (i.e. read replica).
+	EnvVaultRaftNonVoter  = "VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER"
+	raftNonVoterConfigKey = "retry_join_as_non_voter"
+)
 
 var getMmapFlags = func(string) int { return 0 }
 
@@ -169,6 +175,12 @@ type RaftBackend struct {
 
 	// redundancyZone specifies a redundancy zone for autopilot.
 	redundancyZone string
+
+	// nonVoter specifies whether the node should join the cluster as a non-voter. Non-voters get
+	// replicated to and can serve reads, but do not take part in leader elections.
+	nonVoter bool
+
+	effectiveSDKVersion string
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -469,6 +481,22 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 	}
 
+	var nonVoter bool
+	if v := os.Getenv(EnvVaultRaftNonVoter); v != "" {
+		// Consistent with handling of other raft boolean env vars
+		// VAULT_RAFT_AUTOPILOT_DISABLE and VAULT_RAFT_FREELIST_SYNC
+		nonVoter = true
+	} else if v, ok := conf[raftNonVoterConfigKey]; ok {
+		nonVoter, err = strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %s config value %q as a boolean: %w", raftNonVoterConfigKey, v, err)
+		}
+	}
+
+	if nonVoter && conf["retry_join"] == "" {
+		return nil, fmt.Errorf("setting %s to true is only valid if at least one retry_join stanza is specified", raftNonVoterConfigKey)
+	}
+
 	return &RaftBackend{
 		logger:                     logger,
 		fsm:                        fsm,
@@ -485,6 +513,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		autopilotReconcileInterval: reconcileInterval,
 		autopilotUpdateInterval:    updateInterval,
 		redundancyZone:             conf["autopilot_redundancy_zone"],
+		nonVoter:                   nonVoter,
 		upgradeVersion:             upgradeVersion,
 	}, nil
 }
@@ -537,11 +566,24 @@ func (b *RaftBackend) Close() error {
 	return nil
 }
 
+func (b *RaftBackend) SetEffectiveSDKVersion(sdkVersion string) {
+	b.l.Lock()
+	b.effectiveSDKVersion = sdkVersion
+	b.l.Unlock()
+}
+
 func (b *RaftBackend) RedundancyZone() string {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
 	return b.redundancyZone
+}
+
+func (b *RaftBackend) NonVoter() bool {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	return b.nonVoter
 }
 
 func (b *RaftBackend) EffectiveVersion() string {
@@ -571,9 +613,22 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	b.l.RLock()
 	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
 	fsmStats := b.fsm.db.Stats()
+	stats := b.raft.Stats()
 	b.l.RUnlock()
 	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
 	b.collectMetricsWithStats(fsmStats, sink, "fsm")
+	labels := []metrics.Label{
+		{
+			Name:  "peer_id",
+			Value: b.localID,
+		},
+	}
+	for _, key := range []string{"term", "commit_index", "applied_index", "fsm_pending"} {
+		n, err := strconv.ParseUint(stats[key], 10, 64)
+		if err == nil {
+			sink.SetGaugeWithLabels([]string{"raft_storage", "stats", key}, float32(n), labels)
+		}
+	}
 }
 
 func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
@@ -1508,30 +1563,12 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		return err
 	}
 
-	// Partition our txns into read and write. The read ones will get updated via the FSM to
-	// support undo logs. The write ones we process like normal.
-	readTxns := make([]*physical.TxnEntry, 0)
-	writeTxns := make([]*physical.TxnEntry, 0)
-
-	for _, txn := range txns {
-		if txn.Operation == physical.GetOperation {
-			readTxns = append(readTxns, txn)
-		} else {
-			writeTxns = append(writeTxns, txn)
-		}
-	}
-
-	if len(readTxns) > 0 {
-		err := b.fsm.Transaction(ctx, readTxns)
-		if err != nil {
-			return fmt.Errorf("error passing read transactions to the fsm: %w", err)
-		}
-	}
+	txnMap := make(map[string]*physical.TxnEntry)
 
 	command := &LogData{
-		Operations: make([]*LogOperation, len(writeTxns)),
+		Operations: make([]*LogOperation, len(txns)),
 	}
-	for i, txn := range writeTxns {
+	for i, txn := range txns {
 		op := &LogOperation{}
 		switch txn.Operation {
 		case physical.PutOperation:
@@ -1544,6 +1581,10 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		case physical.DeleteOperation:
 			op.OpType = deleteOp
 			op.Key = txn.Entry.Key
+		case physical.GetOperation:
+			op.OpType = getOp
+			op.Key = txn.Entry.Key
+			txnMap[op.Key] = txn
 		default:
 			return fmt.Errorf("%q is not a supported transaction operation", txn.Operation)
 		}
@@ -1557,6 +1598,15 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 	b.l.RLock()
 	err := b.applyLog(ctx, command)
 	b.l.RUnlock()
+
+	// loop over results and update pointers to get operations
+	for _, logOp := range command.Operations {
+		if logOp.OpType == getOp {
+			if txn, found := txnMap[logOp.Key]; found {
+				txn.Entry.Value = logOp.Value
+			}
+		}
+	}
 
 	return err
 }
@@ -1622,8 +1672,31 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		resp = chunkedSuccess.Response
 	}
 
-	if resp, ok := resp.(*FSMApplyResponse); !ok || !resp.Success {
+	fsmar, ok := resp.(*FSMApplyResponse)
+	if !ok || !fsmar.Success {
 		return errors.New("could not apply data")
+	}
+
+	// populate command with our results
+	if fsmar.EntrySlice == nil {
+		return errors.New("entries on FSM response were empty")
+	}
+
+	for i, logOp := range command.Operations {
+		if logOp.OpType == getOp {
+			fsmEntry := fsmar.EntrySlice[i]
+
+			// this should always be true because the entries in the slice were created in the same order as
+			// the command operations.
+			if logOp.Key == fsmEntry.Key {
+				if len(fsmEntry.Value) > 0 {
+					logOp.Value = fsmEntry.Value
+				}
+			} else {
+				// this shouldn't happen
+				return errors.New("entries in FSM response were out of order")
+			}
+		}
 	}
 
 	return nil

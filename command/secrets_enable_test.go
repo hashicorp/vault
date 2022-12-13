@@ -1,6 +1,7 @@
 package command
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -12,9 +13,10 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-// logicalBackendAdjustmentFactor is set to 1 for the database backend
-// which is a plugin but not found in go.mod files
-var logicalBackendAdjustmentFactor = 1
+// logicalBackendAdjustmentFactor is set to plus 1 for the database backend
+// which is a plugin but not found in go.mod files, and minus 1 for the ldap
+// and openldap secret backends which have the same underlying plugin.
+var logicalBackendAdjustmentFactor = 1 - 1
 
 func testSecretsEnableCommand(tb testing.TB) (*cli.MockUi, *SecretsEnableCommand) {
 	tb.Helper()
@@ -214,6 +216,10 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		for _, f := range files {
 			if f.IsDir() {
 				if f.Name() == "plugin" {
+					continue
+				}
+				if _, err := os.Stat("../builtin/logical/" + f.Name() + "/backend.go"); errors.Is(err, os.ErrNotExist) {
+					// Skip ext test packages (fake plugins without backends).
 					continue
 				}
 				backends = append(backends, f.Name())

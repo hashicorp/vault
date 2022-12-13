@@ -4,8 +4,9 @@ import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
+import lazyCapabilities from 'vault/macros/lazy-capabilities';
 
-let Model = IdentityModel.extend({
+const Model = IdentityModel.extend({
   formFields: computed(function () {
     return ['name', 'disabled', 'policies', 'metadata'];
   }),
@@ -20,10 +21,8 @@ let Model = IdentityModel.extend({
     editType: 'kv',
   }),
   policies: attr({
-    label: 'Policies',
-    editType: 'searchSelect',
-    fallbackComponent: 'string-list',
-    models: ['policy/acl', 'policy/rgp'],
+    editType: 'yield',
+    isSectionHeader: true,
   }),
   creationTime: attr('string', {
     readOnly: true,
@@ -45,6 +44,8 @@ let Model = IdentityModel.extend({
   canEdit: alias('updatePath.canUpdate'),
   canRead: alias('updatePath.canRead'),
   canAddAlias: alias('aliasPath.canCreate'),
+  policyPath: lazyCapabilities(apiPath`sys/policies`),
+  canCreatePolicies: alias('policyPath.canCreate'),
 });
 
 export default attachCapabilities(Model, {

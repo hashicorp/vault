@@ -14,7 +14,7 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
     this.server.shutdown();
   });
 
-  let fakeStore = {
+  const fakeStore = {
     peekRecord() {
       return {
         rollbackAttributes() {},
@@ -80,11 +80,11 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
     ([testName, adapterMethod, args, expectedHttpVerb, expectedURL, exptectedRequestBody, assertCount]) => {
       test(`${testName}`, function (assert) {
         assert.expect(assertCount);
-        let adapter = this.owner.lookup('adapter:secret-v2-version');
+        const adapter = this.owner.lookup('adapter:secret-v2-version');
         adapter[adapterMethod](...args);
-        let { url, method, requestBody } = this.server.handledRequests[0];
-        assert.equal(url, expectedURL, `${adapterMethod} calls the correct url: ${expectedURL}`);
-        assert.equal(
+        const { url, method, requestBody } = this.server.handledRequests[0];
+        assert.strictEqual(url, expectedURL, `${adapterMethod} calls the correct url: ${expectedURL}`);
+        assert.strictEqual(
           method,
           expectedHttpVerb,
           `${adapterMethod} uses the correct http verb: ${expectedHttpVerb}`

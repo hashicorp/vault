@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -20,22 +19,23 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// Config is the configuration for the vault server.
+// Config is the configuration for Vault Agent.
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
 	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
 	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
 	Cache                       *Cache                     `hcl:"cache"`
+	APIProxy                    *APIProxy                  `hcl:"api_proxy""`
 	Vault                       *Vault                     `hcl:"vault"`
 	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
 	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
 	DisableIdleConns            []string                   `hcl:"disable_idle_connections"`
-	DisableIdleConnsCaching     bool                       `hcl:"-"`
+	DisableIdleConnsAPIProxy    bool                       `hcl:"-"`
 	DisableIdleConnsTemplating  bool                       `hcl:"-"`
 	DisableIdleConnsAutoAuth    bool                       `hcl:"-"`
 	DisableKeepAlives           []string                   `hcl:"disable_keep_alives"`
-	DisableKeepAlivesCaching    bool                       `hcl:"-"`
+	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
 	DisableKeepAlivesTemplating bool                       `hcl:"-"`
 	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
 }
@@ -89,6 +89,15 @@ type transportDialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
 }
 
+// APIProxy contains any configuration needed for proxy mode
+type APIProxy struct {
+	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool        `hcl:"-"`
+	ForceAutoAuthToken  bool        `hcl:"-"`
+	EnforceConsistency  string      `hcl:"enforce_consistency"`
+	WhenInconsistent    string      `hcl:"when_inconsistent"`
+}
+
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
 	UseAutoAuthTokenRaw interface{}     `hcl:"use_auto_auth_token"`
@@ -130,6 +139,7 @@ type Method struct {
 	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
 	MaxBackoff    time.Duration `hcl:"-"`
 	Namespace     string        `hcl:"namespace"`
+	ExitOnError   bool          `hcl:"exit_on_err"`
 	Config        map[string]interface{}
 }
 
@@ -172,7 +182,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -222,12 +232,33 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'cache':%w", err)
 	}
 
+	if err := parseAPIProxy(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'api_proxy':%w", err)
+	}
+
+	if result.APIProxy != nil && result.Cache != nil {
+		if result.Cache.UseAutoAuthTokenRaw != nil {
+			if result.APIProxy.UseAutoAuthTokenRaw != nil {
+				return nil, fmt.Errorf("use_auto_auth_token defined in both api_proxy and cache config. Please remove this configuration from the cache block")
+			} else {
+				result.APIProxy.ForceAutoAuthToken = result.Cache.ForceAutoAuthToken
+			}
+		}
+	}
+
 	if err := parseTemplateConfig(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'template_config': %w", err)
 	}
 
 	if err := parseTemplates(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'template': %w", err)
+	}
+
+	if result.Cache != nil && result.APIProxy == nil && len(result.Listeners) > 0 {
+		result.APIProxy = &APIProxy{
+			UseAutoAuthToken:   result.Cache.UseAutoAuthToken,
+			ForceAutoAuthToken: result.Cache.ForceAutoAuthToken,
+		}
 	}
 
 	if result.Cache != nil {
@@ -239,17 +270,32 @@ func LoadConfig(path string) (*Config, error) {
 			if result.AutoAuth == nil {
 				return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
 			}
-			if result.AutoAuth.Method.WrapTTL > 0 {
+			if result.AutoAuth != nil && result.AutoAuth.Method != nil && result.AutoAuth.Method.WrapTTL > 0 {
 				return nil, fmt.Errorf("cache.use_auto_auth_token is true and auto_auth uses wrapping")
+			}
+		}
+	}
+
+	if result.APIProxy != nil {
+		if len(result.Listeners) < 1 {
+			return nil, fmt.Errorf("configuring the api_proxy requires at least 1 listener to be defined")
+		}
+
+		if result.APIProxy.UseAutoAuthToken {
+			if result.AutoAuth == nil {
+				return nil, fmt.Errorf("api_proxy.use_auto_auth_token is true but auto_auth not configured")
+			}
+			if result.AutoAuth != nil && result.AutoAuth.Method != nil && result.AutoAuth.Method.WrapTTL > 0 {
+				return nil, fmt.Errorf("api_proxy.use_auto_auth_token is true and auto_auth uses wrapping")
 			}
 		}
 	}
 
 	if result.AutoAuth != nil {
 		if len(result.AutoAuth.Sinks) == 0 &&
-			(result.Cache == nil || !result.Cache.UseAutoAuthToken) &&
+			(result.APIProxy == nil || !result.APIProxy.UseAutoAuthToken) &&
 			len(result.Templates) == 0 {
-			return nil, fmt.Errorf("auto_auth requires at least one sink or at least one template or cache.use_auto_auth_token=true")
+			return nil, fmt.Errorf("auto_auth requires at least one sink or at least one template or api_proxy.use_auto_auth_token=true")
 		}
 	}
 
@@ -284,8 +330,8 @@ func LoadConfig(path string) (*Config, error) {
 		switch subsystem {
 		case "auto-auth":
 			result.DisableIdleConnsAutoAuth = true
-		case "caching":
-			result.DisableIdleConnsCaching = true
+		case "caching", "proxying":
+			result.DisableIdleConnsAPIProxy = true
 		case "templating":
 			result.DisableIdleConnsTemplating = true
 		case "":
@@ -306,8 +352,8 @@ func LoadConfig(path string) (*Config, error) {
 		switch subsystem {
 		case "auto-auth":
 			result.DisableKeepAlivesAutoAuth = true
-		case "caching":
-			result.DisableKeepAlivesCaching = true
+		case "caching", "proxying":
+			result.DisableKeepAlivesAPIProxy = true
 		case "templating":
 			result.DisableKeepAlivesTemplating = true
 		case "":
@@ -382,6 +428,50 @@ func parseRetry(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.Vault.Retry = &r
+
+	return nil
+}
+
+func parseAPIProxy(result *Config, list *ast.ObjectList) error {
+	name := "api_proxy"
+
+	apiProxyList := list.Filter(name)
+	if len(apiProxyList.Items) == 0 {
+		return nil
+	}
+
+	if len(apiProxyList.Items) > 1 {
+		return fmt.Errorf("one and only one %q block is required", name)
+	}
+
+	item := apiProxyList.Items[0]
+
+	var apiProxy APIProxy
+	err := hcl.DecodeObject(&apiProxy, item.Val)
+	if err != nil {
+		return err
+	}
+
+	if apiProxy.UseAutoAuthTokenRaw != nil {
+		apiProxy.UseAutoAuthToken, err = parseutil.ParseBool(apiProxy.UseAutoAuthTokenRaw)
+		if err != nil {
+			// Could be a value of "force" instead of "true"/"false"
+			switch apiProxy.UseAutoAuthTokenRaw.(type) {
+			case string:
+				v := apiProxy.UseAutoAuthTokenRaw.(string)
+
+				if !strings.EqualFold(v, "force") {
+					return fmt.Errorf("value of 'use_auto_auth_token' can be either true/false/force, %q is an invalid option", apiProxy.UseAutoAuthTokenRaw)
+				}
+				apiProxy.UseAutoAuthToken = true
+				apiProxy.ForceAutoAuthToken = true
+
+			default:
+				return err
+			}
+		}
+	}
+	result.APIProxy = &apiProxy
 
 	return nil
 }

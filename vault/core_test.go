@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 )
 
 // invalidKey is used to test Unseal
@@ -1889,10 +1889,11 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	// Create the first core and initialize it
 	redirectOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
-		Physical:     inm,
-		HAPhysical:   inmha,
-		RedirectAddr: redirectOriginal,
-		DisableMlock: true,
+		Physical:        inm,
+		HAPhysical:      inmha,
+		RedirectAddr:    redirectOriginal,
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)

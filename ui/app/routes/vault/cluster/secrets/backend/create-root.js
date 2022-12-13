@@ -2,18 +2,18 @@ import { hash } from 'rsvp';
 import { inject as service } from '@ember/service';
 import EditBase from './secret-edit';
 
-let secretModel = (store, backend, key) => {
-  let backendModel = store.peekRecord('secret-engine', backend);
-  let modelType = backendModel.get('modelTypeForKV');
+const secretModel = (store, backend, key) => {
+  const backendModel = store.peekRecord('secret-engine', backend);
+  const modelType = backendModel.get('modelTypeForKV');
   if (modelType !== 'secret-v2') {
-    let model = store.createRecord(modelType, {
+    const model = store.createRecord(modelType, {
       path: key,
     });
     return model;
   }
-  let secret = store.createRecord(modelType);
+  const secret = store.createRecord(modelType);
   secret.set('engine', backendModel);
-  let version = store.createRecord('secret-v2-version', {
+  const version = store.createRecord('secret-v2-version', {
     path: key,
   });
   secret.set('selectedVersion', version);
@@ -21,13 +21,14 @@ let secretModel = (store, backend, key) => {
 };
 
 const transformModel = (queryParams) => {
-  let modelType = 'transform';
+  const modelType = 'transform';
   if (!queryParams || !queryParams.itemType) return modelType;
 
   return `${modelType}/${queryParams.itemType}`;
 };
 
 export default EditBase.extend({
+  store: service(),
   wizard: service(),
 
   createModel(transition) {
