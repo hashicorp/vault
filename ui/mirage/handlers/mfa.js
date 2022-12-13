@@ -45,6 +45,8 @@ export default function (server) {
       [mfa_constraints, methods] = generator([m('okta'), m('totp')], [m('totp')]); // 2 constraints 1 passcode/1 non-passcode 1 non-passcode
     } else if (user === 'mfa-j') {
       [mfa_constraints, methods] = generator([m('pingid')]); // use to test push failures
+    } else if (user === 'mfa-k') {
+      [mfa_constraints, methods] = generator([m('duo', true)]); // test duo passcode and prepending passcode= to user input
     }
     const numbers = (length) =>
       Math.random()
