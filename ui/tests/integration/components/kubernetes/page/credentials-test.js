@@ -12,22 +12,8 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.store.pushPayload('kubernetes/config', {
-      modelName: 'kubernetes/config',
-      backend: 'kubernetes-test',
-      ...this.server.create('kubernetes-config'),
-    });
-    this.store.pushPayload('kubernetes/role', {
-      modelName: 'kubernetes/role',
-      backend: 'kubernetes-test',
-      ...this.server.create('kubernetes-role'),
-    });
-
-    this.model = {
-      backend: 'kubernetes-test',
-      roleName: this.store.peekRecord('kubernetes/role', 'role-0').name,
-    };
+    this.backend = 'kubernetes-test';
+    this.roleName = 'role-0';
 
     this.getCreateCredentialsError = (roleName, errorType = null) => {
       let errors;
@@ -44,10 +30,9 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     };
 
     this.renderComponent = () => {
-      return render(
-        hbs`<Page::Credentials @backend={{this.model.backend}} @roleName={{this.model.roleName}} />`,
-        { owner: this.engine }
-      );
+      return render(hbs`<Page::Credentials @backend={{this.backend}} @roleName={{this.roleName}} />`, {
+        owner: this.engine,
+      });
     };
   });
 
@@ -56,7 +41,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     assert.dom('[data-test-credentials-header]').hasText('Generate credentials');
     assert
       .dom('[data-test-generate-credentials] p')
-      .hasText(`This will generate credentials using the role ${this.model.roleName}.`);
+      .hasText(`This will generate credentials using the role ${this.roleName}.`);
     assert.dom('[data-test-generate-credentials] label').hasText('Kubernetes namespace');
     assert
       .dom('[data-test-generate-credentials] .is-size-8')
@@ -72,20 +57,20 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
   test('it should show errors states when generating credentials', async function (assert) {
     assert.expect(2);
 
-    this.getCreateCredentialsError(this.model.roleName, 'noNamespace');
+    this.getCreateCredentialsError(this.roleName, 'noNamespace');
     await this.renderComponent();
     await click('[data-test-generate-credentials-button]');
 
     assert.dom('[data-test-error] .alert-banner-message-body').hasText("'kubernetes_namespace' is required");
 
-    this.model.roleName = 'role-2';
-    this.getCreateCredentialsError(this.model.roleName);
+    this.roleName = 'role-2';
+    this.getCreateCredentialsError(this.roleName);
 
     await this.renderComponent();
     await click('[data-test-generate-credentials-button]');
     assert
       .dom('[data-test-error] .alert-banner-message-body')
-      .hasText(`role '${this.model.roleName}' does not exist`);
+      .hasText(`role '${this.roleName}' does not exist`);
   });
 
   test('it should show correct credential information after generate credentials is clicked', async function (assert) {
