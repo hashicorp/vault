@@ -32,8 +32,8 @@ are required to configure the auth method:
   resources. See [Azure AD Service to Service Client Credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service).
 
 If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret.
-MSI must be [enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm)
-on the VMs hosting Vault.
+A managed identity must be [enabled](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/)
+on the resource that acquires the JWT.
 
 The following Azure [role assignments](https://learn.microsoft.com/en-us/azure/role-based-access-control/overview#role-assignments)
 must be granted to the Azure AD application in order for the auth method to access Azure
@@ -48,9 +48,11 @@ parameters are used on login.
 | Virtual Machine | [`vm_name`](/api-docs/auth/azure#vm_name) | `Microsoft.Compute/virtualMachines/*/read` |
 | Virtual Machine Scale Set ([Uniform Orchestration][vmss-uniform]) | [`vmss_name`](/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` |
 | Virtual Machine Scale Set ([Flexible Orchestration][vmss-flex]) | [`vmss_name`](/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` `Microsoft.ManagedIdentity/userAssignedIdentities/*/read` |
+| Services that ([support managed identities][managed-identities]) for Azure resources | [`resource_id`](/api-docs/auth/azure#resource_id) | `read` on the resource used to obtain the JWT |
 
 [vmss-uniform]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-uniform-orchestration
 [vmss-flex]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-flexible-orchestration
+[managed-identities]: https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/managed-identities-status
 
 ## Authentication
 
@@ -185,7 +187,7 @@ tool.
 
 There are two types of [managed identities](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview#managed-identity-types)
 in Azure: System-assigned and User-assigned. System-assigned identities are unique to
-every virtual machine in Azure. If the virtual machines using Azure auth are recreated
+every virtual machine in Azure. If the resources using Azure auth are recreated
 frequently, using system-assigned identities could result in many Vault entities being
 created. For environments with high ephemeral workloads, user-assigned identities are
 recommended.
