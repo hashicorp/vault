@@ -13,7 +13,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const certDisplayFields = ['certificate', 'commonName', 'serialNumber', 'notValidAfter', 'notValidBefore'];
 
-@withFormFields(certDisplayFields, null)
+@withFormFields(certDisplayFields)
 export default class PkiCertificateBaseModel extends Model {
   @service secretMountPath;
   get useOpenAPI() {

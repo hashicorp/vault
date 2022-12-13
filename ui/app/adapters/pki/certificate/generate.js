@@ -8,7 +8,7 @@ export default class PkiCertificateGenerateAdapter extends ApplicationAdapter {
     const { backend, serialNumber, certificate } = snapshot.record;
     // Revoke certificate requires either serial_number or certificate
     const data = serialNumber ? { serial_number: serialNumber } : { certificate };
-    return this.ajax(`${this.buildURL()}/${backend}/revoke`, 'POST', { data });
+    return this.ajax(`${this.buildURL()}/${encodePath(backend)}/revoke`, 'POST', { data });
   }
 
   urlForCreateRecord(modelName, snapshot) {

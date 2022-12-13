@@ -25,7 +25,7 @@ interface PkiCertificateGenerateModel {
   }[];
   save: () => void;
   rollbackAttributes: () => void;
-  deleteRecord: () => void;
+  unloadRecord: () => void;
   destroyRecord: () => void;
   canRevoke: boolean;
 }
@@ -81,7 +81,7 @@ export default class PkiRoleGenerate extends Component<Args> {
   }
 
   @action cancel() {
-    this.args.model.deleteRecord();
+    this.args.model.unloadRecord();
     this.transitionToRole();
   }
 }
