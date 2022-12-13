@@ -2292,7 +2292,7 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	// been set up properly before any writes can have happened.
 	//
 	// Use a small temporary worker pool to run postUnsealFuncs in parallel
-	postUnsealFuncConcurrency := runtime.NumCPU() * 2
+	postUnsealFuncConcurrency := 1 // For existing releases, don't modify the current behavior without an env override
 	if v := os.Getenv("VAULT_POSTUNSEAL_FUNC_CONCURRENCY"); v != "" {
 		pv, err := strconv.Atoi(v)
 		if err != nil || pv < 1 {
