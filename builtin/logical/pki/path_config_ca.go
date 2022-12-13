@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -21,6 +22,25 @@ secret key and certificate.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathImportIssuers,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"mapping": {
+								Type: framework.TypeMap,
+								Description: "A mapping of which keys belong to which issuers",
+							},
+							"imported_keys": {
+								Type: framework.TypeCommaStringSlice,
+								Description: "",
+							},
+							"imported_issuers": {
+								Type: framework.TypeCommaStringSlice,
+								Description: "",
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
