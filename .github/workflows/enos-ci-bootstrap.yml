@@ -33,7 +33,7 @@ jobs:
           IS_ENT: ${{ startsWith(github.event.repository.name, 'vault-enterprise' ) }}
         run: |
           if ${IS_ENT} == true; then
-            echo "aws_role=arn:aws:iam::505811019928:role/github_actions-vault-enterprise_ci" >> $GITHUB_OUTPUT
+            echo "aws_role=arn:aws:iam::505811019928:role/github_actions-vault_enterprise_ci" >> $GITHUB_OUTPUT
             echo "aws role set to 'arn:aws:iam::505811019928:role/github_actions-vault-enterprise_ci'"
           else
             echo "aws_role=arn:aws:iam::040730498200:role/github_actions-vault_ci" >> $GITHUB_OUTPUT
