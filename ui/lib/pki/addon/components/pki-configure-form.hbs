@@ -31,5 +31,15 @@
     {{! TODO: Forms }}
   {{else}}
     <EmptyState @title="Choose an option" @message="To see configuration options, choose your desired output above." />
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="button" class="button is-primary" disabled={{true}} data-test-pki-config-save>
+          Done
+        </button>
+        <LinkTo @route="overview" class="button has-left-margin-s" data-test-pki-config-cancel>
+          Cancel
+        </LinkTo>
+      </div>
+    </div>
   {{/if}}
 </div>

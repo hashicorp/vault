@@ -4,6 +4,12 @@ import { click, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 
+const SELECTORS = {
+  option: '[data-test-pki-config-option]',
+  optionByKey: (key) => `[data-test-pki-config-option="${key}"]`,
+  cancelButton: '[data-test-pki-config-cancel]',
+  saveButton: '[data-test-pki-config-save]',
+};
 module('Integration | Component | pki-configure-form', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
@@ -11,12 +17,14 @@ module('Integration | Component | pki-configure-form', function (hooks) {
   test('it renders', async function (assert) {
     await render(hbs`<PkiConfigureForm />`, { owner: this.engine });
 
-    assert.dom('[data-test-pki-config-option]').exists({ count: 3 }, 'Three configuration options are shown');
+    assert.dom(SELECTORS.option).exists({ count: 3 }, 'Three configuration options are shown');
+    assert.dom(SELECTORS.cancelButton).exists('Cancel link is shown');
+    assert.dom().hasAttribute('disabled', 'Done button is disabled');
 
-    await click('[data-test-pki-config-option="import"]');
-    assert.dom('[data-test-pki-config-option="import"]').isChecked('Selected item is checked');
+    await click(SELECTORS.optionByKey('import'));
+    assert.dom(SELECTORS.optionByKey('import')).isChecked('Selected item is checked');
 
-    await click('[data-test-pki-config-option="generate-csr"]');
-    assert.dom('[data-test-pki-config-option="generate-csr"]').isChecked('Selected item is checked');
+    await click(SELECTORS.optionByKey('generate-csr'));
+    assert.dom(SELECTORS.optionByKey('generate-csr')).isChecked('Selected item is checked');
   });
 });
