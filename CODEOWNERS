@@ -33,7 +33,15 @@
 /website/content/docs/plugin-portal.mdx   @taoism4504  @acahn
 
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
-# Changes to these files often require coordination with backend code, 
-# so stewards of the backend code are added below for notification. 
+# Changes to these files often require coordination with backend code,
+# so stewards of the backend code are added below for notification.
 /ui/app/components/auth-jwt.js         @austingebauer
 /ui/app/routes/vault/cluster/oidc-*.js @austingebauer
+
+# Release config; service account is required for automation tooling.
+/.release/                    @hashicorp/release-engineering @hashicorp/github-secure-vault-core @hashicorp/quality-team
+/.github/workflows/build.yml  @hashicorp/release-engineering @hashicorp/github-secure-vault-core @hashicorp/quality-team
+
+# Quality engineering
+/.github/  @hashicorp/quality-team
+/enos/     @hashicorp/quality-team

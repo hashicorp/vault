@@ -76,7 +76,8 @@ func (c *Sys) ListAudit() (map[string]*Audit, error) {
 
 // DEPRECATED: Use EnableAuditWithOptions instead
 func (c *Sys) EnableAudit(
-	path string, auditType string, desc string, opts map[string]string) error {
+	path string, auditType string, desc string, opts map[string]string,
+) error {
 	return c.EnableAuditWithOptions(path, &EnableAuditOptions{
 		Type:        auditType,
 		Description: desc,

@@ -417,7 +417,6 @@ func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 }
 
 // addPolicyIdentifiers adds certificate policies extension
-//
 func AddPolicyIdentifiers(data *CreationBundle, certTemplate *x509.Certificate) {
 	for _, oidstr := range data.Params.PolicyIdentifiers {
 		oid, err := StringToOid(oidstr)

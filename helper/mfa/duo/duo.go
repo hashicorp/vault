@@ -33,7 +33,8 @@ func DuoRootPaths() []string {
 // login request. If successful, the original response from the login
 // backend is returned.
 func DuoHandler(ctx context.Context, req *logical.Request, d *framework.FieldData, resp *logical.Response) (
-	*logical.Response, error) {
+	*logical.Response, error,
+) {
 	duoConfig, err := GetDuoConfig(ctx, req)
 	if err != nil || duoConfig == nil {
 		return logical.ErrorResponse("Could not load Duo configuration"), nil

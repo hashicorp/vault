@@ -1922,7 +1922,8 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 
 func (testCluster *TestCluster) setupClusterListener(
 	t testing.T, idx int, core *Core, coreConfig *CoreConfig,
-	opts *TestClusterOptions, listeners []*TestListener, handler http.Handler) {
+	opts *TestClusterOptions, listeners []*TestListener, handler http.Handler,
+) {
 	if coreConfig.ClusterAddr == "" {
 		return
 	}
@@ -2108,7 +2109,8 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 
 func (testCluster *TestCluster) getAPIClient(
 	t testing.T, opts *TestClusterOptions,
-	port int, tlsConfig *tls.Config) *api.Client {
+	port int, tlsConfig *tls.Config,
+) *api.Client {
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.TLSClientConfig = tlsConfig.Clone()
 	if err := http2.ConfigureTransport(transport); err != nil {
