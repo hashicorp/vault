@@ -18,10 +18,10 @@ cd "$DIR"
 BUILD_TAGS="${BUILD_TAGS:-"vault"}"
 
 # Get the git commit
-GIT_COMMIT="$("$SOURCE_DIR"/crt-builder.sh revision)"
+GIT_COMMIT="$("$SOURCE_DIR"/ci-helper.sh revision)"
 GIT_DIRTY="$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)"
 
-BUILD_DATE="$("$SOURCE_DIR"/crt-builder.sh date)"
+BUILD_DATE="$("$SOURCE_DIR"/ci-helper.sh date)"
 
 # If its dev mode, only build for ourself
 if [ "${VAULT_DEV_BUILD}x" != "x" ] && [ "${XC_OSARCH}x" == "x" ]; then
