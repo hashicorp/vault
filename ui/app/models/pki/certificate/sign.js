@@ -39,7 +39,7 @@ export default class PkiCertificateSignModel extends PkiCertificateBaseModel {
   customTtl;
 
   @attr('boolean', {
-    subText: 'When true, the CA chain will not include self-signed CA certificates',
+    subText: 'When checked, the CA chain will not include self-signed CA certificates',
   })
   removeRootsFromChain;
 }
