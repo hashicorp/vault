@@ -42,7 +42,7 @@ export default class CredentialsPageComponent extends Component {
   *fetchCredentials() {
     try {
       const payload = {
-        role: this.args.role.name,
+        role: this.args.roleName,
         kubernetes_namespace: this.kubernetesNamespace,
         cluster_role_binding: this.clusterRoleBinding,
         ttl: this.ttl,
@@ -50,7 +50,7 @@ export default class CredentialsPageComponent extends Component {
 
       this.credentials = yield this.store
         .adapterFor('kubernetes/role')
-        .generateCredentials(this.args.role.backend, payload);
+        .generateCredentials(this.args.backend, payload);
     } catch (error) {
       this.error = errorMessage(error);
     }
