@@ -22,6 +22,10 @@ module('Integration | Component | mount backend form', function (hooks) {
     this.onMountSuccess = sinon.spy();
   });
 
+  hooks.afterEach(function () {
+    this.server.shutdown();
+  });
+
   module('auth method', function (hooks) {
     hooks.beforeEach(function () {
       this.model = this.store.createRecord('auth-method');

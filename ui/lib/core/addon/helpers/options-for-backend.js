@@ -1,6 +1,5 @@
 import { helper as buildHelper } from '@ember/component/helper';
 import { capitalize } from '@ember/string';
-import config from 'vault/config/environment';
 
 const DEFAULT_DISPLAY = {
   searchPlaceholder: 'Filter secrets',
@@ -196,9 +195,9 @@ const SECRET_BACKENDS = {
   },
 };
 
-export function optionsForBackend(backend = '', tab) {
+export function optionsForBackend(backend, tab, isEngine) {
   let selected = SECRET_BACKENDS[backend];
-  if (backend === 'pki' && config.environment === 'development') {
+  if (backend === 'pki' && isEngine) {
     selected = PKI_ENGINE_BACKEND;
   }
 
@@ -215,6 +214,6 @@ export function optionsForBackend(backend = '', tab) {
   return backendOptions;
 }
 
-export default buildHelper(function ([backend, tab]) {
-  return optionsForBackend(backend, tab);
+export default buildHelper(function ([backend, tab, isEngine]) {
+  return optionsForBackend(backend, tab, isEngine);
 });
