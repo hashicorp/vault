@@ -1174,6 +1174,8 @@ github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221202210228-12b2fab875
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221202210228-12b2fab87559/go.mod h1:hsrm1EXNYpQwErumOLeaTY74+Tj7poOwckbR4d+0hEQ=
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221209165735-a2eed407e08d h1:U692VbDl6ww5GQsNFClJVFJDaPeuqtDt1Mwqf21KYek=
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221209165735-a2eed407e08d/go.mod h1:a2crHoMWwY6aiL8GWT8hYj7vKD64uX0EdRPbnsHF5wU=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221213220056-b0613b59f419 h1:yl6f//YTaTTGKJwyOpRe7v1DDPrzP+NErwgnef6qx7A=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221213220056-b0613b59f419/go.mod h1:a2crHoMWwY6aiL8GWT8hYj7vKD64uX0EdRPbnsHF5wU=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 h1:O/pT5C1Q3mVXMyuqg7yuAWUg/jMZR1/0QTzTRdNR6Uw=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443/go.mod h1:bEpDU35nTu0ey1EXjwNwPjI9xErAsoOCmcMb9GKvyxo=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
