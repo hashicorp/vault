@@ -5,10 +5,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-hclog"
 	"net/http"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/sdk/framework"
