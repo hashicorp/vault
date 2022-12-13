@@ -3590,3 +3590,13 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 func (c *Core) HAEnabled() bool {
 	return c.ha != nil && c.ha.HAEnabled()
 }
+
+func (c *Core) GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error) {
+	raftBackend := c.getRaftBackend()
+
+	if raftBackend == nil {
+		return nil, nil
+	}
+
+	return raftBackend.GetConfiguration(ctx)
+}

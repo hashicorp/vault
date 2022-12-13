@@ -223,8 +223,38 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 		haStatus.Nodes = haNodes
 	}
 
+	raftStatus := &meta.RaftStatus{}
+	raftConfig, err := h.wrappedCore.GetRaftConfiguration(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if raftStatus != nil {
+		raftServers := make([]*meta.RaftServer, len(raftConfig.Servers))
+
+		var voterCount uint32
+		for i, srv := range raftConfig.Servers {
+			raftServers[i] = &meta.RaftServer{
+				NodeID:          srv.NodeID,
+				Address:         srv.Address,
+				Voter:           srv.Voter,
+				Leader:          srv.Leader,
+				ProtocolVersion: srv.ProtocolVersion,
+			}
+
+			if srv.Voter {
+				voterCount++
+			}
+		}
+
+		raftStatus.RaftConfiguration = &meta.RaftConfiguration{
+			Servers: raftServers,
+		}
+	}
+
 	resp := &meta.GetClusterStatusResponse{
-		HAStatus: haStatus,
+		HAStatus:   haStatus,
+		RaftStatus: raftStatus,
 	}
 
 	return resp, nil

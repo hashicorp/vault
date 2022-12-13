@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -38,6 +39,7 @@ type WrappedCoreMeta interface {
 	HAEnabled() bool
 	HAState() consts.HAState
 	GetHAPeerNodesCached() []vault.PeerNode
+	GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error)
 }
 
 var _ WrappedCoreMeta = &vault.Core{}
