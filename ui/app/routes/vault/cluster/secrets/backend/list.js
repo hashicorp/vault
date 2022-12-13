@@ -64,7 +64,7 @@ export default Route.extend({
     const { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
     const secretEngine = this.store.peekRecord('secret-engine', backend);
     const type = secretEngine && secretEngine.get('engineType');
-    const { engineRoute } = allEngines().findBy('type', type);
+    const engineRoute = allEngines().findBy('type', type)?.engineRoute;
 
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.router.transitionTo('vault.cluster.secrets');

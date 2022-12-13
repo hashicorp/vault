@@ -5,6 +5,8 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { methods } from 'vault/helpers/mountable-auth-methods';
 
 /**
  * @module MountBackendForm
@@ -23,8 +25,6 @@ export default class MountBackendForm extends Component {
   @service wizard;
   @service flashMessages;
 
-  @tracked pathChanged = false;
-
   // validation related properties
   @tracked modelValidations = null;
   @tracked invalidFormAlert = null;
@@ -38,11 +38,14 @@ export default class MountBackendForm extends Component {
   }
 
   checkPathChange(type) {
+    if (!type) return;
     const mount = this.args.mountModel;
     const currentPath = mount.path;
+    const mountTypes =
+      this.args.mountType === 'secret' ? supportedSecretBackends() : methods().map((auth) => auth.type);
     // if the current path has not been altered by user,
     // change it here to match the new type
-    if (!currentPath || !this.pathChanged) {
+    if (!currentPath || mountTypes.includes(currentPath)) {
       mount.path = type;
     }
   }
@@ -136,16 +139,12 @@ export default class MountBackendForm extends Component {
   @action
   onKeyUp(name, value) {
     this.args.mountModel.set(name, value);
-    if (name === 'path') {
-      this.pathChanged = true;
-    }
   }
 
   @action
   onTypeChange(path, value) {
     if (path === 'type') {
       this.wizard.set('componentState', value);
-      this.pathChanged = true;
     }
   }
 

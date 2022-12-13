@@ -1,4 +1,4 @@
-import { currentRouteName, settled } from '@ember/test-helpers';
+import { currentRouteName, currentURL, settled } from '@ember/test-helpers';
 import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -116,6 +116,10 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       {
         capabilities = ["read"]
       }
+      # Allow page to load after mount
+      path "sys/internal/ui/mounts/${enginePath}" {
+        capabilities = ["read"]
+      }
     `;
     await consoleComponent.runCommands([
       // delete any previous mount with same name
@@ -137,6 +141,11 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .containsText(
         `You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.`
       );
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath}/list`,
+      'After mounting, redirects to secrets list page'
+    );
     await configPage.visit({ backend: enginePath });
     await settled();
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');

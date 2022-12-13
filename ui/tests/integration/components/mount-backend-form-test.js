@@ -69,10 +69,11 @@ module('Integration | Component | mount backend form', function (hooks) {
       assert.strictEqual(this.model.path, 'newpath', 'Updates path on model');
       await component.back();
       assert.strictEqual(this.model.type, '', 'Clears type on back');
+      assert.strictEqual(this.model.path, 'newpath', 'Path is still newPath');
       await component.selectType('aws');
       await component.next();
       assert.strictEqual(this.model.type, 'aws', 'Updates type on model');
-      assert.strictEqual(component.pathValue, 'newpath', 'updates to the value of the type');
+      assert.strictEqual(component.pathValue, 'newpath', 'keeps custom path value');
     });
 
     test('it calls mount success', async function (assert) {
@@ -129,15 +130,16 @@ module('Integration | Component | mount backend form', function (hooks) {
       await component.selectType('kv');
       await component.next();
       assert.strictEqual(this.model.type, 'kv', 'Updates type on model');
-      assert.strictEqual(component.pathValue, 'kv', 'defaults to approle (first in the list)');
+      assert.strictEqual(component.pathValue, 'kv', 'path matches mount type');
       await component.path('newpath');
       assert.strictEqual(this.model.path, 'newpath', 'Updates path on model');
       await component.back();
       assert.strictEqual(this.model.type, '', 'Clears type on back');
+      assert.strictEqual(this.model.path, 'newpath', 'path is still newpath');
       await component.selectType('ssh');
       await component.next();
       assert.strictEqual(this.model.type, 'ssh', 'Updates type on model');
-      assert.strictEqual(component.pathValue, 'newpath', 'updates to the value of the type');
+      assert.strictEqual(component.pathValue, 'newpath', 'path stays the same');
     });
 
     test('it calls mount success', async function (assert) {
