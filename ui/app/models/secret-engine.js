@@ -95,43 +95,57 @@ export default SecretEngineModel.extend({
   }),
 
   formFieldGroups: computed('engineType', function () {
+    let defaultFields = ['path'];
+    let optionFields;
     const type = this.engineType;
-    let defaultGroup;
-    // KV has specific config options it adds on the enable engine. https://www.vaultproject.io/api/secret/kv/kv-v2#configure-the-kv-engine
-    if (type === 'kv') {
-      defaultGroup = { default: ['path', 'maxVersions', 'casRequired', 'deleteVersionAfter'] };
-    } else {
-      defaultGroup = { default: ['path'] };
-    }
-    const optionsGroup = {
-      'Method Options': ['description', 'config.listingVisibility', 'local', 'sealWrap'],
-    };
-    // no ttl options for keymgmt
-    const ttl = type !== 'keymgmt' ? 'defaultLeaseTtl,maxLeaseTtl,' : '';
-    optionsGroup['Method Options'].push(
-      `config.{${ttl}auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`
-    );
+    const CORE_OPTIONS = ['description', 'config.listingVisibility', 'local', 'sealWrap'];
 
-    if (type === 'kv' || type === 'generic') {
-      optionsGroup['Method Options'].unshift('version');
+    switch (type) {
+      case 'kv':
+        defaultFields = ['path', 'maxVersions', 'casRequired', 'deleteVersionAfter'];
+        optionFields = [
+          'version',
+          ...CORE_OPTIONS,
+          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`,
+        ];
+        break;
+      case 'generic':
+        optionFields = [
+          'version',
+          ...CORE_OPTIONS,
+          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`,
+        ];
+        break;
+      case 'database':
+        // Highlight TTLs in default
+        defaultFields = ['path', 'config.{defaultLeaseTtl}', 'config.{maxLeaseTtl}'];
+        optionFields = [
+          ...CORE_OPTIONS,
+          'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+        ];
+        break;
+      case 'keymgmt':
+        // no ttl options for keymgmt
+        optionFields = [
+          ...CORE_OPTIONS,
+          'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+        ];
+        break;
+      default:
+        defaultFields = ['path'];
+        optionFields = [
+          ...CORE_OPTIONS,
+          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`,
+        ];
+        break;
     }
-    if (type === 'database') {
-      // For the Database Secret Engine we want to highlight the defaultLeaseTtl and maxLeaseTtl, removing them from the options object
-      defaultGroup.default.push('config.{defaultLeaseTtl}', 'config.{maxLeaseTtl}');
-      return [
-        defaultGroup,
-        {
-          'Method Options': [
-            'description',
-            'config.listingVisibility',
-            'local',
-            'sealWrap',
-            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-          ],
-        },
-      ];
-    }
-    return [defaultGroup, optionsGroup];
+
+    return [
+      { default: defaultFields },
+      {
+        'Method Options': optionFields,
+      },
+    ];
   }),
 
   attrs: computed('formFields', function () {
