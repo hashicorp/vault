@@ -484,7 +484,7 @@ cluster is now upgraded!
 
 #### Interaction with Raft Autopilot Automated Upgrades
 
-If `server.ha.raft` is enabled with Vault 1.11+, Autopilot has the ability to do
+If [`server.ha.raft`](/docs/platform/k8s/helm/configuration#raft) is enabled with Vault 1.11+, Autopilot has the ability to do
 [Automated Upgrades](/docs/concepts/integrated-storage/autopilot#automated-upgrades).
 If using the default `server.updateStrategyType` of `OnDelete` for the Vault StatefulSet, then
 the same upgrade procedure above will continue to work as expected,
