@@ -2350,9 +2350,11 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		return err
 	}
 
-	if err := c.updateMajorVersionFirstMount(ctx); err != nil {
+	firstMount, err := c.isMajorVersionFirstMount(ctx)
+	if err != nil {
 		return err
 	}
+	c.majorVersionFirstMount = firstMount
 
 	if err := unsealer.unseal(ctx, c.logger, c); err != nil {
 		return err
