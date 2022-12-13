@@ -30,14 +30,17 @@ type WrappedCoreHCPToken interface {
 
 var _ WrappedCoreHCPToken = &vault.Core{}
 
-type WrappedCoreListNamespacesMounts interface {
+type WrappedCoreMeta interface {
 	NamespaceByID(ctx context.Context, nsID string) (*namespace.Namespace, error)
 	ListNamespaces(includePath bool) []*namespace.Namespace
 	ListMounts() ([]*vault.MountEntry, error)
 	ListAuths() ([]*vault.MountEntry, error)
+	HAEnabled() bool
+	HAState() consts.HAState
+	GetHAPeerNodesCached() []vault.PeerNode
 }
 
-var _ WrappedCoreListNamespacesMounts = &vault.Core{}
+var _ WrappedCoreMeta = &vault.Core{}
 
 type WrappedCoreHCPLinkStatus interface {
 	WrappedCoreStandbyStates

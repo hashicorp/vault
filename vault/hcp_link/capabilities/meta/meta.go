@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	scada "github.com/hashicorp/hcp-scada-provider"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities"
@@ -23,7 +25,7 @@ import (
 type hcpLinkMetaHandler struct {
 	meta.UnimplementedHCPLinkMetaServer
 
-	wrappedCore   internal.WrappedCoreListNamespacesMounts
+	wrappedCore   internal.WrappedCoreMeta
 	scadaProvider scada.SCADAProvider
 	logger        hclog.Logger
 
@@ -188,4 +190,42 @@ func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsR
 	return &meta.ListAuthResponse{
 		Auths: auths,
 	}, nil
+}
+
+func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.GetClusterStatusRequest) (*meta.GetClusterStatusResponse, error) {
+	if h.wrappedCore.HAState() != consts.Active {
+		return nil, fmt.Errorf("node not active")
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
+	haEnabled := h.wrappedCore.HAEnabled()
+	haStatus := &meta.HAStatus{
+		Enabled: haEnabled,
+	}
+
+	if haEnabled {
+		leader := &meta.HANode{
+			Hostname: hostname,
+		}
+
+		haNodes := make([]*meta.HANode, 0)
+		haNodes = append(nodes, leader)
+		for _, peerNode := range h.wrappedCore.GetHAPeerNodesCached() {
+			haNodes = append(haNodes, &meta.HANode{
+				Hostname: peerNode.Hostname,
+			})
+		}
+
+		haStatus.Nodes = haNodes
+	}
+
+	resp := &meta.GetClusterStatusResponse{
+		HAStatus: haStatus,
+	}
+
+	return resp, nil
 }
