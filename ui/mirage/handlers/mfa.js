@@ -132,7 +132,8 @@ export default function (server) {
         // validate totp passcode
         const passcode = mfa_payload[constraintId][0];
         if (method.uses_passcode) {
-          if (passcode !== 'test') {
+          const expectedPasscode = method.type === 'duo' ? 'passcode=test' : 'test';
+          if (passcode !== expectedPasscode) {
             const error =
               passcode === 'used'
                 ? 'code already used; new code is available in 30 seconds'
