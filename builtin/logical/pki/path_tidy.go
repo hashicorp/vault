@@ -614,7 +614,22 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"missing_issuer_cert_count":             nil,
 			"current_cert_store_count":              nil,
 			"current_revoked_cert_count":            nil,
+			"internal_backend_uuid":                 nil,
 		},
+	}
+
+	resp.Data["internal_backend_uuid"] = b.backendUUID
+
+	if b.certCountEnabled.Load() {
+		resp.Data["current_cert_store_count"] = b.certCount
+		resp.Data["current_revoked_cert_count"] = b.revokedCertCount
+		if !b.certsCounted.Load() {
+			resp.AddWarning("Certificates in storage are still being counted, current counts provided may be " +
+				"inaccurate")
+		}
+		if b.certCountError != "" {
+			resp.Data["certificate_counting_error"] = b.certCountError
+		}
 	}
 
 	if b.tidyStatus.state == tidyStatusInactive {
@@ -633,7 +648,6 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
 	resp.Data["revoked_cert_deleted_count"] = b.tidyStatus.revokedCertDeletedCount
 	resp.Data["missing_issuer_cert_count"] = b.tidyStatus.missingIssuerCertCount
-	resp.Data["internal_backend_uuid"] = b.backendUUID
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
@@ -653,18 +667,6 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	case tidyStatusCancelled:
 		resp.Data["state"] = "Cancelled"
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
-	}
-
-	if b.certCountEnabled.Load() {
-		resp.Data["current_cert_store_count"] = b.certCount
-		resp.Data["current_revoked_cert_count"] = b.revokedCertCount
-		if !b.certsCounted.Load() {
-			resp.AddWarning("Certificates in storage are still being counted, current counts provided may be " +
-				"inaccurate")
-		}
-		if b.certCountError != "" {
-			resp.Data["certificate_counting_error"] = b.certCountError
-		}
 	}
 
 	return resp, nil
