@@ -212,12 +212,15 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 			Hostname: hostname,
 		}
 
-		haNodes := make([]*meta.HANode, 0)
-		haNodes = append(nodes, leader)
-		for _, peerNode := range h.wrappedCore.GetHAPeerNodesCached() {
-			haNodes = append(haNodes, &meta.HANode{
+		peers := h.wrappedCore.GetHAPeerNodesCached()
+
+		haNodes := make([]*meta.HANode, len(peers)+1)
+		haNodes[0] = leader
+
+		for i, peerNode := range peers {
+			haNodes[i+1] = &meta.HANode{
 				Hostname: peerNode.Hostname,
-			})
+			}
 		}
 
 		haStatus.Nodes = haNodes
