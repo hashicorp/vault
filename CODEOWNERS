@@ -45,3 +45,17 @@
 # Quality engineering
 /.github/  @hashicorp/quality-team
 /enos/     @hashicorp/quality-team
+
+# Cryptosec
+/builtin/logical/pki/         @hashicorp/cryptosec
+/builtin/credential/cert/     @hashicorp/cryptosec
+/builtin/logical/ssh/         @hashicorp/cryptosec
+/builtin/logical/transit/     @hashicorp/cryptosec
+/helper/random/               @hashicorp/cryptosec
+/sdk/helper/cryptoutil/       @hashicorp/cryptosec
+/sdk/helper/keysutil/         @hashicorp/cryptosec
+/shamir/                      @hashicorp/cryptosec
+/vault/barrier*               @hashicorp/cryptosec
+/vault/seal*                  @hashicorp/cryptosec
+/vault/seal/                  @hashicorp/cryptosec
+
