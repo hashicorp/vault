@@ -24,7 +24,8 @@ export default function (server) {
     return new Response(204);
   };
   const deleteRecord = (schema, req, dbKey) => {
-    const record = getRecord(schema, req, dbKey);
+    const { name } = req.params;
+    const record = schema.db[dbKey].findBy({ name });
     if (record) {
       schema.db[dbKey].remove(record.id);
     }
@@ -86,4 +87,12 @@ export default function (server) {
           },
         };
   });
+
+  server.get('/sys/internal/ui/mounts/kubernetes', () => ({
+    data: {
+      accessor: 'kubernetes_9f846a87',
+      path: 'kubernetes/',
+      type: 'kubernetes',
+    },
+  }));
 }
