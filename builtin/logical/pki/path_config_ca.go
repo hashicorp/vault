@@ -27,15 +27,15 @@ secret key and certificate.`,
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"mapping": {
-								Type: framework.TypeMap,
+								Type:        framework.TypeMap,
 								Description: "A mapping of which keys belong to which issuers",
 							},
 							"imported_keys": {
-								Type: framework.TypeCommaStringSlice,
+								Type:        framework.TypeCommaStringSlice,
 								Description: "",
 							},
 							"imported_issuers": {
-								Type: framework.TypeCommaStringSlice,
+								Type:        framework.TypeCommaStringSlice,
 								Description: "",
 							},
 						},
@@ -86,11 +86,11 @@ func pathConfigIssuers(b *backend) *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"default": {
-								Type: framework.TypeString,
+								Type:        framework.TypeString,
 								Description: `Reference (name or identifier) to the default issuer.`,
-								},
+							},
 							"default_follows_latest_issuer": {
-								Type: framework.TypeBool,
+								Type:        framework.TypeBool,
 								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
 							},
 						},
@@ -104,11 +104,11 @@ func pathConfigIssuers(b *backend) *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"default": {
-								Type: framework.TypeString,
+								Type:        framework.TypeString,
 								Description: `Reference (name or identifier) to the default issuer.`,
 							},
 							"default_follows_latest_issuer": {
-								Type: framework.TypeBool,
+								Type:        framework.TypeBool,
 								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
 							},
 						},
@@ -144,11 +144,11 @@ func pathReplaceRoot(b *backend) *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"default": {
-								Type: framework.TypeString,
+								Type:        framework.TypeString,
 								Description: `Reference (name or identifier) to the default issuer.`,
 							},
 							"default_follows_latest_issuer": {
-								Type: framework.TypeBool,
+								Type:        framework.TypeBool,
 								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
 							},
 						},
@@ -272,13 +272,13 @@ func pathConfigKeys(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathKeyDefaultWrite,
+				Callback: b.pathKeyDefaultWrite,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"default": {
-								Type: framework.TypeString,
+								Type:        framework.TypeString,
 								Description: `Reference (name or identifier) to the default issuer.`,
 							},
 						},
@@ -288,13 +288,13 @@ func pathConfigKeys(b *backend) *framework.Path {
 				ForwardPerformanceSecondary: true,
 			},
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.pathKeyDefaultRead,
+				Callback: b.pathKeyDefaultRead,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"default": {
-								Type: framework.TypeString,
+								Type:        framework.TypeString,
 								Description: `Reference (name or identifier) to the default issuer.`,
 							},
 						},
