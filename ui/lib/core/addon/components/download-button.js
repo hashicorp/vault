@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
+import errorMessage from 'vault/utils/error-message';
 /**
  * @module DownloadButton
  * DownloadButton components are an action button used to download data. Both the action text and icon are yielded.
@@ -20,38 +21,39 @@ import { inject as service } from '@ember/service';
  *      Download
  *   </DownloadButton>
  * ```
- * @param {string} data - data to download
+ * @param {string} [filename] - name of file that prefixes the ISO timestamp generated at download
+ * @param {string} [data] - data to download
+ * @param {string} [extension='txt'] - file extension, the download service uses this to determine the mimetype
  * @param {boolean} [stringify=false] - argument to stringify the data before passing to the File constructor
- * @param {string} [filename] - name of file that prefixes the ISO timestamp generated when download
- * @param {string} [mime='text/plain'] - media type to be downloaded
- * @param {string} [extension='txt'] - file extension
  */
 
 export default class DownloadButton extends Component {
   @service download;
-
-  get extension() {
-    return this.args.extension || 'txt';
-  }
-
-  get mime() {
-    return this.args.mime || 'text/plain';
-  }
+  @service flashMessages;
 
   get filename() {
-    const defaultFilename = `${new Date().toISOString()}.${this.extension}`;
-    return this.args.filename ? this.args.filename + '-' + defaultFilename : defaultFilename;
+    const timestamp = new Date().toISOString();
+    return this.args.filename ? this.args.filename + '-' + timestamp : timestamp;
   }
 
-  get data() {
+  get content() {
     if (this.args.stringify) {
       return JSON.stringify(this.args.data, null, 2);
     }
     return this.args.data;
   }
 
+  get extension() {
+    return this.args.extension || 'txt';
+  }
+
   @action
   handleDownload() {
-    this.download.download(this.filename, this.mime, this.data);
+    try {
+      this.download.miscExtension(this.filename, this.content, this.extension);
+      this.flashMessages.info(`Downloading ${this.filename}`);
+    } catch (error) {
+      this.flashMessages.danger(errorMessage(error, 'There was a problem downloading. Please try again.'));
+    }
   }
 }

@@ -20,11 +20,13 @@ const EXTENSION_TO_MIME: Extensions = {
 };
 
 export default class DownloadService extends Service {
-  download(filename: string, extension: string, content: string) {
-    // append extension to filename
+  download(filename: string, content: string, extension: string) {
+    // replace spaces with hyphens, append extension to filename
     const formattedFilename =
       `${filename?.replace(/\s+/g, '-')}.${extension}` ||
       `vault-data-${new Date().toISOString()}.${extension}`;
+
+    // map extension to MIME type or use default
     const mimetype = EXTENSION_TO_MIME[extension as keyof Extensions] || 'text/plain';
 
     // commence download
@@ -45,4 +47,15 @@ export default class DownloadService extends Service {
   // 'Namespace path,Authentication method,Total clients,Entity clients,Non-entity clients\n
   //  namespacelonglonglong4/,,191,171,20\n
   //  namespacelonglonglong4/,auth/method/uMGBU,35,20,15\n'
+  csv(filename: string, content: string) {
+    this.download(filename, content, 'csv');
+  }
+
+  pem(filename: string, content: string) {
+    this.download(filename, content, 'pem');
+  }
+
+  miscExtension(filename: string, content: string, extension: string) {
+    this.download(filename, content, extension);
+  }
 }
