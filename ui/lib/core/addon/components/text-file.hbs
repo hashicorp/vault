@@ -1,7 +1,7 @@
-{{#unless this.inputOnly}}
+{{#unless @inputOnly}}
   <div class="level is-mobile">
     <div class="level-left">
-      <label class="is-label" data-test-text-label={{true}}>
+      <label class="is-label" data-test-text-file-label>
         {{#if this.label}}
           {{this.label}}
           {{#if @helpText}}
@@ -35,7 +35,7 @@
   </div>
 {{/unless}}
 <div
-  class="field text-file box is-fullwidth is-marginless is-shadowless {{if this.inputOnly 'is-paddingless'}}"
+  class="field text-file box is-fullwidth is-marginless is-shadowless {{if @inputOnly 'is-paddingless'}}"
   data-test-component="text-file"
 >
   {{#if @file.enterAsText}}
@@ -43,13 +43,14 @@
       <textarea
         class="textarea {{unless this.showValue 'masked-font'}}"
         {{on "input" this.updateData}}
-        data-test-text-file-textarea={{true}}
+        data-test-text-file-textarea
       >{{@file.value}}</textarea>
       <button
         {{on "click" this.toggleMask}}
         type="button"
         class="{{if (eq this.value '') 'has-text-grey'}} masked-input-toggle button {{if this.displayOnly 'is-compact'}}"
         data-test-button
+        data-test-text-file-button
       >
         <Icon @name={{if this.showValue "eye" "eye-off"}} />
       </button>
@@ -61,18 +62,12 @@
     <div class="control is-expanded">
       <div class="file has-name is-fullwidth">
         <div class="file-label" aria-label="Choose a file">
-          <Input
-            id="file-input"
-            class="file-input"
-            @type="file"
-            {{on "change" this.pickedFile}}
-            data-test-text-file-input={{true}}
-          />
+          <Input id="file-input" class="file-input" @type="file" {{on "change" this.pickedFile}} data-test-text-file-input />
           <label for="file-input" class="file-cta button">
             <Icon @name="upload" class="has-light-grey-text" />
             Choose a file…
           </label>
-          <span class="file-name has-text-grey-dark" data-test-text-file-input-label={{true}}>
+          <span class="file-name has-text-grey-dark" data-test-text-file-input-label>
             {{#if @file.fileName}}
               {{@file.fileName}}
             {{else}}
@@ -85,7 +80,7 @@
               class="file-delete-button"
               aria-label="Clear file selection"
               {{on "click" this.clearFile}}
-              data-test-text-clear={{true}}
+              data-test-text-clear
             >
               <Icon @name="x-circle" />
             </button>
