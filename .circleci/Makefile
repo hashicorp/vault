@@ -55,6 +55,7 @@ $(SOURCE_DIR):
 # Make sure our .tmp dir exists.
 $(shell [ -d .tmp ] || mkdir .tmp)
 
+.PHONY: $(OUT)
 .PHONY: $(CONFIG)
 $(CONFIG): $(OUT) $(GO_VERSION_FILE)
 
