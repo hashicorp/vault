@@ -642,6 +642,8 @@ type Core struct {
 	effectiveSDKVersion string
 
 	rollbackPeriod time.Duration
+
+	pendingRemovalMountsAllowed bool
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -776,6 +778,8 @@ type CoreConfig struct {
 	EffectiveSDKVersion string
 
 	RollbackPeriod time.Duration
+
+	PendingRemovalMountsAllowed bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -928,6 +932,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		mountMigrationTracker:          &sync.Map{},
 		disableSSCTokens:               conf.DisableSSCTokens,
 		effectiveSDKVersion:            effectiveSDKVersion,
+		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1198,7 +1203,8 @@ func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	if isUpdated {
 		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime, "build date", version.BuildDate)
 	}
-	// Finally, populate the version history cache
+
+	// Finally, repopulate the version history cache
 	err = c.loadVersionHistory(ctx)
 	if err != nil {
 		return err
@@ -1221,6 +1227,14 @@ func (c *Core) RaftNodeIDHeaderEnabled() bool {
 // DisableSSCTokens determines whether to use server side consistent tokens or not.
 func (c *Core) DisableSSCTokens() bool {
 	return c.disableSSCTokens
+}
+
+// ShutdownCoreError logs a shutdown error and shuts down the Vault core.
+func (c *Core) ShutdownCoreError(err error) {
+	c.Logger().Error("shutting down core", "error", err)
+	if shutdownErr := c.ShutdownWait(); shutdownErr != nil {
+		c.Logger().Error("failed to shutdown core", "error", shutdownErr)
+	}
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
@@ -2165,9 +2179,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	}
-	if err := c.handleVersionTimeStamps(ctx); err != nil {
-		return err
-	}
 	if err := c.setupPluginCatalog(ctx); err != nil {
 		return err
 	}
@@ -2271,6 +2282,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	c.metricsCh = make(chan struct{})
 	go c.emitMetricsActiveNode(c.metricsCh)
 
+	// Establish version timestamps at the end of unseal on active nodes only.
+	if err := c.handleVersionTimeStamps(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -2307,6 +2323,12 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	_ = c.seal.SetBarrierConfig(ctx, nil)
 	if c.seal.RecoveryKeySupported() {
 		_ = c.seal.SetRecoveryConfig(ctx, nil)
+	}
+
+	// Load prior un-updated store into version history cache to compare
+	// previous state.
+	if err := c.loadVersionHistory(ctx); err != nil {
+		return err
 	}
 
 	if err := unsealer.unseal(ctx, c.logger, c); err != nil {
@@ -3049,23 +3071,34 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 // with misconfigured plugins. It should not be possible for existing builtins
 // to be misconfigured, so that is a fatal error.
 func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
+	return !c.isMountEntryBuiltin(ctx, entry, pluginType)
+}
+
+// isMountEntryBuiltin determines whether a mount entry is associated with a
+// builtin of the specified plugin type.
+func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
 	// Prevent a panic early on
 	if entry == nil || c.pluginCatalog == nil {
 		return false
 	}
 
-	// Handle aliases
-	t := entry.Type
-	if alias, ok := mountAliases[t]; ok {
-		t = alias
+	// Allow type to be determined from mount entry when not otherwise specified
+	if pluginType == consts.PluginTypeUnknown {
+		pluginType = c.builtinTypeFromMountEntry(ctx, entry)
 	}
 
-	plug, err := c.pluginCatalog.Get(ctx, t, pluginType, entry.Version)
-	if err != nil {
+	// Handle aliases
+	pluginName := entry.Type
+	if alias, ok := mountAliases[pluginName]; ok {
+		pluginName = alias
+	}
+
+	plug, err := c.pluginCatalog.Get(ctx, pluginName, pluginType, entry.Version)
+	if err != nil || plug == nil {
 		return false
 	}
 
-	return plug == nil || !plug.Builtin
+	return plug.Builtin
 }
 
 // MatchingMount returns the path of the mount that will be responsible for
