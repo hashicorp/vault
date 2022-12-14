@@ -250,13 +250,6 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 
 		for _, b := range backends {
 			expectedResult := 0
-			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeSecrets)
-			allowDeprecated := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv)
-
-			// Need to handle deprecated builtins specially
-			if (status == consts.PendingRemoval && allowDeprecated == "") || status == consts.Removed {
-				expectedResult = 2
-			}
 
 			ui, cmd := testSecretsEnableCommand(t)
 			cmd.client = client
@@ -264,6 +257,13 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			actualResult := cmd.Run([]string{
 				b,
 			})
+
+			// Need to handle deprecated builtins specially
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeSecrets)
+			if status == consts.PendingRemoval || status == consts.Removed {
+				expectedResult = 2
+			}
+
 			if actualResult != expectedResult {
 				t.Errorf("type: %s - got: %d, expected: %d - %s", b, actualResult, expectedResult, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}

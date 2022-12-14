@@ -1,0 +1,14 @@
+name: test-reusable-workflows
+
+on:
+  push:
+
+jobs:
+  call-workflow-internal:
+    uses: hashicorp/bob/.github/workflows/test-reusable.yml@test-reusable-3
+    
+  call-workflow-public:
+    uses: hashicorp/boundary/.github/workflows/enos-run.yml@main
+    
+  call-workflow-private:
+    uses: hashicorp/vault-enterprise/.github/workflows/reusable-smoke-upgrade.yml@main
