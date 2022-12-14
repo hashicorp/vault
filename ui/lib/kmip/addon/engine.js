@@ -11,6 +11,7 @@ const Eng = Engine.extend({
   dependencies: {
     services: [
       'auth',
+      'download',
       'flash-messages',
       'namespace',
       'path-help',

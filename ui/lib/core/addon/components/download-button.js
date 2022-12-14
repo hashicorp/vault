@@ -1,9 +1,11 @@
-import { action } from '@ember/object';
 import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 /**
  * @module DownloadButton
  * DownloadButton components are an action button used to download data. Both the action text and icon are yielded.
- *
+ * * NOTE: when using in an engine, remember to add the 'download' service to its dependencies (in /engine.js) and map to it in /app.js
+ * [ember-docs](https://ember-engines.com/docs/services)
  * @example
  * ```js
  *   <DownloadButton
@@ -26,6 +28,8 @@ import Component from '@glimmer/component';
  */
 
 export default class DownloadButton extends Component {
+  @service download;
+
   get extension() {
     return this.args.extension || 'txt';
   }
@@ -46,17 +50,8 @@ export default class DownloadButton extends Component {
     return this.args.data;
   }
 
-  // TODO refactor and call service instead
   @action
   handleDownload() {
-    const { document, URL } = window;
-    const downloadElement = document.createElement('a');
-    const content = new File([this.data], this.filename, { type: this.mime });
-    downloadElement.download = this.filename;
-    downloadElement.href = URL.createObjectURL(content);
-    document.body.appendChild(downloadElement);
-    downloadElement.click();
-    URL.revokeObjectURL(downloadElement.href);
-    downloadElement.remove();
+    this.download.download(this.filename, this.mime, this.data);
   }
 }

@@ -1,15 +1,14 @@
 import Service from '@ember/service';
 
 export default class DownloadService extends Service {
+  // some browsers (ex. Firefox) require the filename has an explicit extension, always include it in the filename
+
   download(filename: string, mimetype: string, content: string) {
     const { document, URL } = window;
     const downloadElement = document.createElement('a');
+    const data = new File([content], filename, { type: mimetype });
     downloadElement.download = filename;
-    downloadElement.href = URL.createObjectURL(
-      new Blob([content], {
-        type: mimetype,
-      })
-    );
+    downloadElement.href = URL.createObjectURL(data);
     document.body.appendChild(downloadElement);
     downloadElement.click();
     URL.revokeObjectURL(downloadElement.href);
@@ -22,7 +21,6 @@ export default class DownloadService extends Service {
   //  namespacelonglonglong4/,,191,171,20\n
   //  namespacelonglonglong4/,auth/method/uMGBU,35,20,15\n'
   csv(filename: string, content: string) {
-    // even though Blob type 'text/csv' is specified below, some browsers (ex. Firefox) require the filename has an explicit extension
     const formattedFilename = `${filename?.replace(/\s+/g, '-')}.csv` || 'vault-data.csv';
     this.download(formattedFilename, 'text/csv', content);
     return formattedFilename;
