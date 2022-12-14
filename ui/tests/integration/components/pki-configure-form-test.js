@@ -19,7 +19,7 @@ module('Integration | Component | pki-configure-form', function (hooks) {
 
     assert.dom(SELECTORS.option).exists({ count: 3 }, 'Three configuration options are shown');
     assert.dom(SELECTORS.cancelButton).exists('Cancel link is shown');
-    assert.dom().hasAttribute('disabled', 'Done button is disabled');
+    assert.dom(SELECTORS.saveButton).hasAttribute('disabled', 'Done button is disabled');
 
     await click(SELECTORS.optionByKey('import'));
     assert.dom(SELECTORS.optionByKey('import')).isChecked('Selected item is checked');
