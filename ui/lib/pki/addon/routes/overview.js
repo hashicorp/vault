@@ -1,6 +1,6 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import RSVP from 'rsvp';
+import { hash } from 'rsvp';
 
 export default class PkiOverviewRoute extends Route {
   @service secretMountPath;
@@ -20,7 +20,7 @@ export default class PkiOverviewRoute extends Route {
   }
 
   async model() {
-    return RSVP.hash({
+    return hash({
       hasConfig: this.hasConfig(),
       engine: this.store
         .query('secret-engine', {
