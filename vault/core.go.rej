@@ -1,9 +1,0 @@
-diff a/vault/core.go b/vault/core.go	(rejected hunks)
-@@ -890,6 +901,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
- 		clusterPeerClusterAddrsCache:   cache.New(3*clusterHeartbeatInterval, time.Second),
- 		enableMlock:                    !conf.DisableMlock,
- 		rawEnabled:                     conf.EnableRaw,
-+		introspectionEnabled:           conf.EnableIntrospection,
- 		shutdownDoneCh:                 make(chan struct{}),
- 		replicationState:               new(uint32),
- 		atomicPrimaryClusterAddrs:      new(atomic.Value),
