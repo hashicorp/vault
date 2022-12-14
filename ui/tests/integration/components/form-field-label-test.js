@@ -41,6 +41,6 @@ module('Integration | Component | form-field-label', function (hooks) {
     assert.dom('.sub-text').includesText('See our documentation for help', 'Doc link text renders');
     assert
       .dom('a')
-      .hasAttribute('href', 'https://developer.hashicorp.com/doc/path' + this.docLink, 'Doc link renders');
+      .hasAttribute('href', 'https://developer.hashicorp.com' + this.docLink, 'Doc link renders');
   });
 });
