@@ -1,12 +1,14 @@
 scenario "replication" {
   matrix {
     arch              = ["amd64", "arm64"]
+    artifact_source   = ["local", "crt", "artifactory"]
+    artifact_type     = ["bundle", "package"]
+    consul_version    = ["1.14.2", "1.13.4", "1.12.7"]
     distro            = ["ubuntu", "rhel"]
+    edition           = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     primary_backend   = ["raft", "consul"]
-    secondary_backend = ["raft", "consul"]
-    consul_version    = ["1.13.2", "1.12.5", "1.11.10"]
-    edition           = ["ent"]
     primary_seal      = ["awskms", "shamir"]
+    secondary_backend = ["raft", "consul"]
     secondary_seal    = ["awskms", "shamir"]
   }
 
@@ -19,13 +21,19 @@ scenario "replication" {
   ]
 
   locals {
-    artifact_path           = var.artifact_path
+    build_tags = {
+      "ent"              = ["ui", "enterprise", "ent"]
+      "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
+      "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
+      "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
+    }
+    bundle_path             = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
     dependencies_to_install = ["jq"]
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    install_artifactory_artifact = true
+    // install_artifactory_artifact = true
     tags = merge({
       "Project Name" : var.project_name
       "Project" : "Enos",
@@ -36,6 +44,34 @@ scenario "replication" {
       arm64 = "t4g.small"
     }
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
+    vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
+    vault_install_dir_packages = {
+      rhel   = "/bin"
+      ubuntu = "/usr/bin"
+    }
+    vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : local.vault_install_dir_packages[matrix.distro]
+  }
+
+  step "build_vault" {
+    module = "build_${matrix.artifact_source}"
+
+    variables {
+      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
+      bundle_path          = local.bundle_path
+      goarch               = matrix.arch
+      goos                 = "linux"
+      artifactory_host     = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
+      artifactory_repo     = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
+      artifactory_username = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
+      artifactory_token    = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
+      arch                 = matrix.artifact_source == "artifactory" ? matrix.arch : null
+      product_version      = var.vault_product_version
+      artifact_type        = matrix.artifact_type
+      distro               = matrix.artifact_source == "artifactory" ? matrix.distro : null
+      edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
+      instance_type        = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
+      revision             = var.vault_revision
+    }
   }
 
   step "find_azs" {
@@ -66,24 +102,6 @@ scenario "replication" {
     }
   }
 
-  step "fetch_vault_artifact" {
-    module = module.build_artifactory
-
-    variables {
-      artifactory_host      = var.artifactory_host
-      artifactory_repo      = var.artifactory_repo
-      artifactory_username  = var.artifactory_username
-      artifactory_token     = var.artifactory_token
-      arch                  = matrix.arch
-      vault_product_version = var.vault_product_version
-      artifact_type         = "bundle"
-      distro                = matrix.distro
-      edition               = matrix.edition
-      instance_type         = local.vault_instance_type
-      revision              = var.vault_revision
-    }
-  }
-
   step "create_primary_backend_cluster" {
     module     = "backend_${matrix.primary_backend}"
     depends_on = [step.create_vpc]
@@ -109,7 +127,7 @@ scenario "replication" {
     module = module.vault_cluster
     depends_on = [
       step.create_primary_backend_cluster,
-      step.fetch_vault_artifact,
+      step.build_vault,
     ]
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -124,7 +142,9 @@ scenario "replication" {
       kms_key_arn               = step.create_vpc.kms_key_arn
       storage_backend           = matrix.primary_backend
       unseal_method             = matrix.primary_seal
-      vault_artifactory_release = local.install_artifactory_artifact ? step.fetch_vault_artifact.vault_artifactory_release : null
+      vault_local_artifact_path = local.bundle_path
+      vault_install_dir         = local.vault_install_dir
+      vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       vault_environment = {
         VAULT_LOG_LEVEL = "debug"
       }
@@ -158,7 +178,7 @@ scenario "replication" {
     module = module.vault_cluster
     depends_on = [
       step.create_secondary_backend_cluster,
-      step.fetch_vault_artifact,
+      step.build_vault,
     ]
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -173,7 +193,9 @@ scenario "replication" {
       kms_key_arn               = step.create_vpc.kms_key_arn
       storage_backend           = matrix.secondary_backend
       unseal_method             = matrix.secondary_seal
-      vault_artifactory_release = local.install_artifactory_artifact ? step.fetch_vault_artifact.vault_artifactory_release : null
+      vault_local_artifact_path = local.bundle_path
+      vault_install_dir         = local.vault_install_dir
+      vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       vault_environment = {
         VAULT_LOG_LEVEL = "debug"
       }
@@ -386,7 +408,6 @@ scenario "replication" {
       common_tags             = local.tags
       consul_cluster_tag      = step.create_primary_backend_cluster.consul_cluster_tag
       dependencies_to_install = local.dependencies_to_install
-      // instance_count            = 2
       instance_type             = local.vault_instance_type
       kms_key_arn               = step.create_vpc.kms_key_arn
       storage_backend           = matrix.primary_backend
@@ -394,7 +415,9 @@ scenario "replication" {
       vault_cluster_tag         = step.create_vault_primary_cluster.vault_cluster_tag
       vault_init                = false
       vault_license             = step.read_license.license
-      vault_artifactory_release = local.install_artifactory_artifact ? step.fetch_vault_artifact.vault_artifactory_release : null
+      vault_local_artifact_path = local.bundle_path
+      vault_install_dir         = local.vault_install_dir
+      vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       vault_environment = {
         VAULT_LOG_LEVEL = "debug"
       }

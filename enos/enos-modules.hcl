@@ -162,7 +162,7 @@ module "vault_performance_replication_secondary" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_replicated_data"{
+module "vault_verify_replicated_data" {
   source = "./modules/verify_replicated_data"
 
   vault_install_dir = var.vault_install_dir
