@@ -1,18 +1,43 @@
 import Service from '@ember/service';
 
-export default class DownloadService extends Service {
-  // some browsers (ex. Firefox) require the filename has an explicit extension, always include it in the filename
+interface Extensions {
+  csv: string;
+  hcl: string;
+  sentinel: string;
+  json: string;
+  pem: string;
+  txt: string;
+}
 
-  download(filename: string, mimetype: string, content: string) {
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
+const EXTENSION_TO_MIME: Extensions = {
+  csv: 'txt/csv',
+  hcl: 'text/plain',
+  sentinel: 'text/plain',
+  json: 'application/json',
+  pem: 'application/x-pem-file',
+  txt: 'text/plain',
+};
+
+export default class DownloadService extends Service {
+  download(filename: string, extension: string, content: string) {
+    // append extension to filename
+    const formattedFilename =
+      `${filename?.replace(/\s+/g, '-')}.${extension}` ||
+      `vault-data-${new Date().toISOString()}.${extension}`;
+    const mimetype = EXTENSION_TO_MIME[extension as keyof Extensions] || 'text/plain';
+
+    // commence download
     const { document, URL } = window;
     const downloadElement = document.createElement('a');
-    const data = new File([content], filename, { type: mimetype });
-    downloadElement.download = filename;
+    const data = new File([content], formattedFilename, { type: mimetype });
+    downloadElement.download = formattedFilename;
     downloadElement.href = URL.createObjectURL(data);
     document.body.appendChild(downloadElement);
     downloadElement.click();
     URL.revokeObjectURL(downloadElement.href);
     downloadElement.remove();
+    return formattedFilename;
   }
 
   // SAMPLE CSV FORMAT ('content' argument)
@@ -20,15 +45,4 @@ export default class DownloadService extends Service {
   // 'Namespace path,Authentication method,Total clients,Entity clients,Non-entity clients\n
   //  namespacelonglonglong4/,,191,171,20\n
   //  namespacelonglonglong4/,auth/method/uMGBU,35,20,15\n'
-  csv(filename: string, content: string) {
-    const formattedFilename = `${filename?.replace(/\s+/g, '-')}.csv` || 'vault-data.csv';
-    this.download(formattedFilename, 'text/csv', content);
-    return formattedFilename;
-  }
-
-  pem(filename: string, content: string) {
-    const formattedFilename = `${filename?.replace(/\s+/g, '-')}.pem` || 'vault-cert.pem';
-    this.download(formattedFilename, 'application/x-pem-file', content);
-    return formattedFilename;
-  }
 }
