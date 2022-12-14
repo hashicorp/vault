@@ -55,7 +55,6 @@ $(SOURCE_DIR):
 # Make sure our .tmp dir exists.
 $(shell [ -d .tmp ] || mkdir .tmp)
 
-.PHONY: $(OUT)
 .PHONY: $(CONFIG)
 $(CONFIG): $(OUT) $(GO_VERSION_FILE)
 
@@ -83,6 +82,7 @@ define GEN_CONFIG
 	@mv -f $@.tmp $@
 endef
 
+.PHONY: $(OUT)
 $(OUT): $(CONFIG_SOURCE) 
 	$(GEN_CONFIG)
 	@echo "$@ updated"
