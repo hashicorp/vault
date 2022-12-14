@@ -40,6 +40,7 @@ type WrappedCoreMeta interface {
 	HAState() consts.HAState
 	GetHAPeerNodesCached() []vault.PeerNode
 	GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error)
+	GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState, error)
 }
 
 var _ WrappedCoreMeta = &vault.Core{}

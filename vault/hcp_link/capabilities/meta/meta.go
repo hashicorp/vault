@@ -255,6 +255,27 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 		}
 	}
 
+	raftAutopilotState, err := h.wrappedCore.GetRaftAutopilotState(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if raftAutopilotState != nil {
+		autopilotStatus := &meta.AutopilotStatus{
+			Healthy: raftAutopilotState.Healthy,
+		}
+
+		autopilotServers := make([]*meta.AutopilotServer, 0)
+		for _, srv := range raftAutopilotState.Servers {
+			autopilotServers = append(autopilotServers, &meta.AutopilotServer{
+				ID:      srv.ID,
+				Healthy: srv.Healthy,
+			})
+		}
+
+		raftStatus.AutopilotStatus = autopilotStatus
+	}
+
 	resp := &meta.GetClusterStatusResponse{
 		HAStatus:   haStatus,
 		RaftStatus: raftStatus,

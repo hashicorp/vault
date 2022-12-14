@@ -3600,3 +3600,12 @@ func (c *Core) GetRaftConfiguration(ctx context.Context) (*raft.RaftConfiguratio
 
 	return raftBackend.GetConfiguration(ctx)
 }
+
+func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState, error) {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		return nil, nil
+	}
+
+	return raftBackend.GetAutopilotServerState(ctx)
+}
