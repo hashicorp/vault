@@ -14,7 +14,7 @@ and expects a [JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519)
 signed by Azure Active Directory for the configured tenant.
 
 This method supports authentication for system-assigned and user-assigned
-managed identities. See [Azure Managed Service Identity (MSI)](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/overview)
+managed identities. See [Managed identities for Azure resources](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview)
 for more information about these resources.
 
 This documentation assumes the Azure method is mounted at the `/auth/azure`
@@ -40,8 +40,8 @@ must be granted to the Azure AD application in order for the auth method to acce
 APIs during authentication.
 
 ~> **Note:** The role assignments are only required when the
-[`vm_name`](/api-docs/auth/azure#vm_name) and [`vmss_name`](/api-docs/auth/azure#vmss_name)
-parameters are used on login.
+[`vm_name`](/api-docs/auth/azure#vm_name), [`vmss_name`](/api-docs/auth/azure#vmss_name),
+or [`resource_id`](/api-docs/auth/azure#resource_id) parameters are used on login.
 
 | Azure Environment | Login Parameter | Azure API Permission |
 | ----------- | --------------- | -------------------- |
@@ -70,7 +70,12 @@ $ vault write auth/azure/login \
     vm_name="test-vm"
 ```
 
-The `role` and `jwt` parameters are required. When using `bound_service_principal_ids` and `bound_group_ids` in the token roles, all the information is required in the JWT (except for _vm_name_ and _vmss_name_). When using other `bound_*` parameters, calls to Azure APIs will be made and subscription id, resource group name, and vm name/vmss_name are all required and can be obtained through instance metadata.
+The `role` and `jwt` parameters are required. When using
+`bound_service_principal_ids` and `bound_group_ids` in the token roles, all the
+information is required in the JWT (except for _vm_name_, _vmss_name_, _resource_id_). When
+using other `bound_*` parameters, calls to Azure APIs will be made and
+`subscription_id`, `resource_group_name`, and `vm_name`/`vmss_name` are all required
+and can be obtained through instance metadata.
 
 For example:
 
@@ -118,13 +123,13 @@ tool.
 
 1. Enable Azure authentication in Vault:
 
-   ```text
+   ```shell-session
    $ vault auth enable azure
    ```
 
 1. Configure the Azure auth method:
 
-   ```text
+   ```shell-session
    $ vault write auth/azure/config \
        tenant_id=7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
        resource=https://management.azure.com/ \
@@ -137,7 +142,7 @@ tool.
 
 1. Create a role:
 
-   ```text
+   ```shell-session
    $ vault write auth/azure/role/dev-role \
        policies="prod,dev" \
        bound_subscription_ids=6a1d5988-5917-4221-b224-904cd7e24a25 \
@@ -155,7 +160,7 @@ tool.
 
 1. Enable Azure authentication in Vault:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -165,7 +170,7 @@ tool.
 
 1. Configure the Azure auth method:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -175,7 +180,7 @@ tool.
 
 1. Create a role:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
