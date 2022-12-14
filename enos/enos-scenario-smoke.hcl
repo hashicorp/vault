@@ -242,7 +242,7 @@ scenario "smoke" {
   }
 
   step "verify_write_test_data" {
-    module     = module.vault_verify_write_test_data
+    module     = module.vault_verify_write_data
     depends_on = [step.create_vault_cluster]
 
     providers = {

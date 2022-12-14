@@ -107,12 +107,6 @@ module "vault_upgrade" {
   vault_instance_count = var.vault_instance_count
 }
 
-module "vault_verify_auth" {
-  source = "./modules/vault_verify_auth"
-
-  vault_install_dir = var.vault_install_dir
-}
-
 module "vault_verify_autopilot" {
   source = "./modules/vault_verify_autopilot"
 
@@ -136,14 +130,14 @@ module "vault_verify_undo_logs" {
 }
 
 module "vault_verify_replication" {
-  source = "./modules/vault-verify-replication"
+  source = "./modules/vault_verify_replication"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
 }
 
 module "vault_verify_ui" {
-  source = "./modules/vault-verify-ui"
+  source = "./modules/vault_verify_ui"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
@@ -168,7 +162,7 @@ module "vault_performance_replication_secondary" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_replicated_data" {
+module "vault_verify_replicated_data"{
   source = "./modules/verify_replicated_data"
 
   vault_install_dir = var.vault_install_dir
@@ -187,13 +181,8 @@ module "vault_verify_version" {
   vault_instance_count = var.vault_instance_count
 }
 
-<<<<<<< HEAD
-module "vault_verify_write_test_data" {
-  source = "./modules/vault-verify-write-data"
-=======
 module "vault_verify_write_data" {
   source = "./modules/vault_verify_write_data"
->>>>>>> 6b54aff1c3 (Add more steps for replication)
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
