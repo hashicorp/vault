@@ -1245,9 +1245,8 @@ func (c *Core) Shutdown() error {
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 	if c.shutdownDoneCh != nil {
-
 		close(c.shutdownDoneCh.Load().(chan struct{}))
-		c.shutdownDoneCh = nil
+		c.shutdownDoneCh.Store(make(chan struct{}))
 	}
 
 	return err
