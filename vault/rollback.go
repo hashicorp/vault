@@ -69,7 +69,7 @@ func NewRollbackManager(ctx context.Context, logger log.Logger, backendsFunc fun
 		logger:      logger,
 		backends:    backendsFunc,
 		router:      router,
-		period:      rollbackPeriod,
+		period:      core.rollbackPeriod,
 		inflight:    make(map[string]*rollbackState),
 		doneCh:      make(chan struct{}),
 		shutdownCh:  make(chan struct{}),
