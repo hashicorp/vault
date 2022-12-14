@@ -53,11 +53,13 @@ locals {
 resource "enos_remote_exec" "smoke-verify-undo-logs" {
   for_each = local.public_ips
 
-  content = templatefile("${path.module}/templates/smoke-verify-undo-logs.sh", {
+  environment = {
     vault_token                     = var.vault_root_token
-    vault_undo_logs_status          = var.vault_undo_logs_status,
-    vault_autopilot_upgrade_version = var.vault_autopilot_upgrade_version,
-  })
+    vault_undo_logs_status          = var.vault_undo_logs_status
+    vault_autopilot_upgrade_version = var.vault_autopilot_upgrade_version
+  }
+
+  scripts = [abspath("${path.module}/scripts/smoke-verify-undo-logs.sh")]
 
   transport = {
     ssh = {
