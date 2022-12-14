@@ -3,6 +3,9 @@ package vault
 import (
 	"context"
 	"errors"
+	"os"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -47,6 +50,10 @@ type RollbackManager struct {
 	quitContext  context.Context
 
 	core *Core
+
+	// First run worker pool
+	firstRun        bool
+	firstRunWorkers chan func()
 }
 
 // rollbackState is used to track the state of a single rollback attempt
@@ -60,15 +67,17 @@ type rollbackState struct {
 // NewRollbackManager is used to create a new rollback manager
 func NewRollbackManager(ctx context.Context, logger log.Logger, backendsFunc func() []*MountEntry, router *Router, core *Core) *RollbackManager {
 	r := &RollbackManager{
-		logger:      logger,
-		backends:    backendsFunc,
-		router:      router,
-		period:      core.rollbackPeriod,
-		inflight:    make(map[string]*rollbackState),
-		doneCh:      make(chan struct{}),
-		shutdownCh:  make(chan struct{}),
-		quitContext: ctx,
-		core:        core,
+		logger:          logger,
+		backends:        backendsFunc,
+		router:          router,
+		period:          core.rollbackPeriod,
+		inflight:        make(map[string]*rollbackState),
+		doneCh:          make(chan struct{}),
+		shutdownCh:      make(chan struct{}),
+		quitContext:     ctx,
+		core:            core,
+		firstRun:        true,
+		firstRunWorkers: make(chan func()),
 	}
 	return r
 }
@@ -113,7 +122,34 @@ func (m *RollbackManager) run() {
 func (m *RollbackManager) triggerRollbacks() {
 	backends := m.backends()
 
-	for _, e := range backends {
+	var workerChans []chan func()
+	var wg sync.WaitGroup
+	firstRun := m.firstRun
+	m.firstRun = false
+	if firstRun {
+		// Use a small temporary worker pool to run the very first rollbacks in parallel, as they will trigger
+		// backend initialization
+		numWorkers := runtime.NumCPU() * 2 // For existing releases, don't modify the current behavior without an env override
+		if v := os.Getenv("VAULT_INITIAL_ROLLBACK_CONCURRENCY"); v != "" {
+			pv, err := strconv.Atoi(v)
+			if err != nil || pv < 1 {
+				m.logger.Warn("invalid value for VAULT_INITIAL_ROLLBACK_CONCURRENCY, must be a positive integer", "error", err, "value", pv)
+			} else {
+				numWorkers = pv
+			}
+		}
+		workerChans = make([]chan func(), numWorkers)
+		for i := 0; i < numWorkers; i++ {
+			workerChans[i] = make(chan func())
+			go func(i int) {
+				for v := range workerChans[i] {
+					v()
+					wg.Done()
+				}
+			}(i)
+		}
+	}
+	for i, e := range backends {
 		path := e.Path
 		if e.Table == credentialTableType {
 			path = credentialRoutePrefix + path
@@ -128,13 +164,24 @@ func (m *RollbackManager) triggerRollbacks() {
 		fullPath := e.namespace.Path + path
 
 		// Start a rollback if necessary
-		m.startOrLookupRollback(ctx, fullPath, true)
+		if firstRun {
+			wg.Add(1)
+			m.startOrLookupRollback(ctx, fullPath, true, workerChans[i%len(workerChans)])
+		} else {
+			m.startOrLookupRollback(ctx, fullPath, true, nil)
+		}
+	}
+	if firstRun {
+		for i := 0; i < len(workerChans[i]); i++ {
+			close(workerChans[i])
+		}
+		wg.Wait()
 	}
 }
 
 // startOrLookupRollback is used to start an async rollback attempt.
 // This must be called with the inflightLock held.
-func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath string, grabStatelock bool) *rollbackState {
+func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath string, grabStatelock bool, workerChan chan func()) *rollbackState {
 	m.inflightLock.Lock()
 	defer m.inflightLock.Unlock()
 	rsInflight, ok := m.inflight[fullPath]
@@ -152,7 +199,13 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 	m.inflight[fullPath] = rs
 	rs.Add(1)
 	m.inflightAll.Add(1)
-	go m.attemptRollback(ctx, fullPath, rs, grabStatelock)
+	if workerChan != nil {
+		workerChan <- func() {
+			m.attemptRollback(ctx, fullPath, rs, grabStatelock)
+		}
+	} else {
+		go m.attemptRollback(ctx, fullPath, rs, grabStatelock)
+	}
 	return rs
 }
 
@@ -252,7 +305,7 @@ func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 	fullPath := ns.Path + path
 
 	// Check for an existing attempt or start one if none
-	rs := m.startOrLookupRollback(ctx, fullPath, false)
+	rs := m.startOrLookupRollback(ctx, fullPath, false, nil)
 
 	// Since we have the statelock held, tell any inflight rollback to give up
 	// trying to acquire it. This will prevent deadlocks in the case where we
