@@ -41,7 +41,7 @@ module('Integration | Component | pki key form', function (hooks) {
     assert.strictEqual(type.innerText, 'Type is required.', 'renders presence validation for type of key');
     assert.strictEqual(
       keyType.innerText,
-      'Please select a key type. ',
+      'Please select a key type.',
       'renders selection prompt for key type'
     );
     assert.strictEqual(
