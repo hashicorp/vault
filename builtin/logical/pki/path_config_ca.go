@@ -78,13 +78,42 @@ func pathConfigIssuers(b *backend) *framework.Path {
 				Default:     false,
 			},
 		},
-
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type: framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+								},
+							"default_follows_latest_issuer": {
+								Type: framework.TypeBool,
+								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+							},
+						},
+					}},
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersWrite,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type: framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+							},
+							"default_follows_latest_issuer": {
+								Type: framework.TypeBool,
+								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
