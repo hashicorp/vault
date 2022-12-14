@@ -100,8 +100,18 @@ func pathConfigIssuers(b *backend) *framework.Path {
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersWrite,
 				Responses: map[int][]framework.Response{
-					http.StatusNoContent: {{
-						Description: "No Content",
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+							},
+							"default_follows_latest_issuer": {
+								Type:        framework.TypeBool,
+								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+							},
+						},
 					}},
 				},
 				// Read more about why these flags are set in backend.go.
@@ -130,8 +140,18 @@ func pathReplaceRoot(b *backend) *framework.Path {
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersWrite,
 				Responses: map[int][]framework.Response{
-					http.StatusNoContent: {{
-						Description: "No Content",
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+							},
+							"default_follows_latest_issuer": {
+								Type:        framework.TypeBool,
+								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+							},
+						},
 					}},
 				},
 				// Read more about why these flags are set in backend.go.
@@ -254,8 +274,14 @@ func pathConfigKeys(b *backend) *framework.Path {
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathKeyDefaultWrite,
 				Responses: map[int][]framework.Response{
-					http.StatusNoContent: {{
-						Description: "No Content",
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+							},
+						},
 					}},
 				},
 				ForwardPerformanceStandby:   true,
