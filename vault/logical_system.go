@@ -1187,10 +1187,12 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Version:               pluginVersion,
 	}
 
-	// Detect and handle deprecated secrets engines
-	resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
-	if err != nil {
-		return handleError(err)
+	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets) {
+		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
+		if err != nil {
+			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
+			return handleError(fmt.Errorf("could not mount %q: %w", me.Type, err))
+		}
 	}
 
 	// Attempt mount
@@ -2616,9 +2618,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		Version:               pluginVersion,
 	}
 
-	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
-	if err != nil {
-		return handleError(err)
+	var resp *logical.Response
+	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential) {
+		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
+		if err != nil {
+			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
+			return handleError(fmt.Errorf("could not mount %q: %w", me.Type, err))
+		}
 	}
 
 	// Attempt enabling
