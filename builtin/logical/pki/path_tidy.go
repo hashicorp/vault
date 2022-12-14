@@ -717,7 +717,7 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 	if safetyBufferRaw, ok := d.GetOk("safety_buffer"); ok {
 		config.SafetyBuffer = time.Duration(safetyBufferRaw.(int)) * time.Second
 		if config.SafetyBuffer < 1*time.Second {
-			return logical.ErrorResponse(fmt.Sprintf("given safety_buffer must be greater than zero seconds; got: %v", safetyBufferRaw)), nil
+			return logical.ErrorResponse(fmt.Sprintf("given safety_buffer must be at least one second; got: %v", safetyBufferRaw)), nil
 		}
 	}
 
@@ -732,7 +732,18 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		}
 	}
 
-	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs) {
+	if expiredIssuers, ok := d.GetOk("tidy_expired_issuers"); ok {
+		config.ExpiredIssuers = expiredIssuers.(bool)
+	}
+
+	if issuerSafetyBufferRaw, ok := d.GetOk("issuer_safety_buffer"); ok {
+		config.IssuerSafetyBuffer = time.Duration(issuerSafetyBufferRaw.(int)) * time.Second
+		if config.IssuerSafetyBuffer < 1*time.Second {
+			return logical.ErrorResponse(fmt.Sprintf("given safety_buffer must be at least one second; got: %v", issuerSafetyBufferRaw)), nil
+		}
+	}
+
+	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs || config.ExpiredIssuers) {
 		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations)."), nil
 	}
 
