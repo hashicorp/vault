@@ -253,7 +253,7 @@ func logAndReturnInternalError(b *backend, err error) *logical.Response {
 }
 
 func getOcspStatus(sc *storageContext, request *logical.Request, ocspReq *ocsp.Request) (*ocspRespInfo, error) {
-	revEntryRaw, err := fetchCertBySerialBigInt(sc.Context, sc.Backend, request, revokedPath, ocspReq.SerialNumber)
+	revEntryRaw, err := fetchCertBySerialBigInt(sc, revokedPath, ocspReq.SerialNumber)
 	if err != nil {
 		return nil, err
 	}

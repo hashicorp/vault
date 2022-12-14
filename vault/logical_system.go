@@ -41,7 +41,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/sha3"
 )
@@ -1187,10 +1187,12 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Version:               pluginVersion,
 	}
 
-	// Detect and handle deprecated secrets engines
-	resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
-	if err != nil {
-		return handleError(err)
+	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets) {
+		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
+		if err != nil {
+			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
+			return handleError(fmt.Errorf("could not mount %q: %w", me.Type, err))
+		}
 	}
 
 	// Attempt mount
@@ -2616,9 +2618,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		Version:               pluginVersion,
 	}
 
-	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
-	if err != nil {
-		return handleError(err)
+	var resp *logical.Response
+	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential) {
+		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
+		if err != nil {
+			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
+			return handleError(fmt.Errorf("could not mount %q: %w", me.Type, err))
+		}
 	}
 
 	// Attempt enabling
@@ -4438,9 +4444,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	// Set up target document and convert to map[string]interface{} which is what will
 	// be received from plugin backends.
-	doc := framework.NewOASDocument()
-
-	genericMountPaths, _ := d.Get("generic_mount_paths").(bool)
+	doc := framework.NewOASDocument(version.Version)
 
 	procMountGroup := func(group, mountPrefix string) error {
 		for mount, entry := range resp.Data[group].(map[string]interface{}) {
@@ -4459,7 +4463,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
-				Data:      map[string]interface{}{"requestResponsePrefix": pluginType, "genericMountPaths": genericMountPaths},
+				Data:      map[string]interface{}{"requestResponsePrefix": pluginType},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
@@ -4513,12 +4517,16 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 					}
 				}
 
-				if genericMountPaths && mount != "sys/" && mount != "identity/" {
-					s := fmt.Sprintf("/%s{mountPath}/%s", mountPrefix, path)
-					doc.Paths[s] = obj
+				var docPath string
+				if mount == "kv/" {
+					docPath = fmt.Sprintf("/%s{secret_mount_path}/%s", mountPrefix, path)
+				} else if mount != "sys/" && mount != "identity/" {
+					docPath = fmt.Sprintf("/%s{%s_mount_path}/%s", mountPrefix, strings.TrimRight(mount, "/"), path)
 				} else {
-					doc.Paths["/"+mountPrefix+mount+path] = obj
+					docPath = fmt.Sprintf("/%s%s%s", mountPrefix, mount, path)
 				}
+
+				doc.Paths[docPath] = obj
 			}
 
 			// Merge backend schema components
@@ -5028,9 +5036,7 @@ func sanitizePath(path string) string {
 		path += "/"
 	}
 
-	if strings.HasPrefix(path, "/") {
-		path = path[1:]
-	}
+	path = strings.TrimPrefix(path, "/")
 
 	return path
 }

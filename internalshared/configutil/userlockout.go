@@ -32,6 +32,10 @@ type UserLockout struct {
 	DisableLockoutRaw      interface{}   `hcl:"disable_lockout"`
 }
 
+func GetSupportedUserLockoutsAuthMethods() []string {
+	return []string{"userpass", "approle", "ldap"}
+}
+
 func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {
 	var err error
 	result.UserLockouts = make([]*UserLockout, 0, len(list.Items))

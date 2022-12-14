@@ -52,6 +52,7 @@ export default class App extends Application {
       dependencies: {
         services: [
           'auth',
+          'download',
           'flash-messages',
           'namespace',
           'path-help',
