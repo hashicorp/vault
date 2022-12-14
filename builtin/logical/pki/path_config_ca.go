@@ -254,14 +254,8 @@ func pathConfigKeys(b *backend) *framework.Path {
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathKeyDefaultWrite,
 				Responses: map[int][]framework.Response{
-					http.StatusOK: {{
-						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"default": {
-								Type:        framework.TypeString,
-								Description: `Reference (name or identifier) to the default issuer.`,
-							},
-						},
+					http.StatusNoContent: {{
+						Description: "No Content",
 					}},
 				},
 				ForwardPerformanceStandby:   true,
