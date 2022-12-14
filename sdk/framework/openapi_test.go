@@ -685,7 +685,7 @@ func TestOpenAPI_constructRequestResponseIdentifier(t *testing.T) {
 		mount:     "auth/kerberos",
 		path:      "groups/{name}",
 		suffix:    "",
-		expected:  "UpdateKerberosGroup",
+		expected:  "WriteKerberosGroup",
 	}, {
 		name:      "mapped entry with implied operation",
 		operation: logical.UpdateOperation,
