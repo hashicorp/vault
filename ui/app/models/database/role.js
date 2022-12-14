@@ -18,8 +18,8 @@ export default Model.extend({
     models: ['database/connection'],
     selectLimit: 1,
     onlyAllowExisting: true,
-    subLabel: 'Database name',
-    subText: 'The database for which credentials will be generated.',
+    subLabel: 'Connection name',
+    subText: 'The database connection for which credentials will be generated.',
   }),
   type: attr('string', {
     label: 'Type of role',
