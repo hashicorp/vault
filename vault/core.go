@@ -309,8 +309,11 @@ type Core struct {
 	keepHALockOnStepDown *uint32
 	heldHALock           physical.Lock
 
-	// shutdownDoneCh is used to notify when Shutdown() completes
-	shutdownDoneCh chan struct{}
+	// shutdownDoneCh is used to notify when core.Shutdown() completes.
+	// core.Shutdown() is typically issued in a goroutine to allow Vault to
+	// release the stateLock. This channel is marked atomic to prevent race
+	// conditions.
+	shutdownDoneCh *atomic.Value
 
 	// unlockInfo has the keys provided to Unseal until the threshold number of parts is available, as well as the operation nonce
 	unlockInfo *unlockInformation
@@ -890,7 +893,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		clusterPeerClusterAddrsCache:   cache.New(3*clusterHeartbeatInterval, time.Second),
 		enableMlock:                    !conf.DisableMlock,
 		rawEnabled:                     conf.EnableRaw,
-		shutdownDoneCh:                 make(chan struct{}),
+		shutdownDoneCh:                 new(atomic.Value),
 		replicationState:               new(uint32),
 		atomicPrimaryClusterAddrs:      new(atomic.Value),
 		atomicPrimaryFailoverAddrs:     new(atomic.Value),
@@ -930,6 +933,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
 	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
+
+	c.shutdownDoneCh.Store(make(chan struct{}))
 
 	c.allLoggers = append(c.allLoggers, c.logger)
 
@@ -1228,9 +1233,11 @@ func (c *Core) Shutdown() error {
 
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
-	if c.shutdownDoneCh != nil {
-		close(c.shutdownDoneCh)
-		c.shutdownDoneCh = nil
+
+	doneCh := c.shutdownDoneCh.Load().(chan struct{})
+	if doneCh != nil {
+		close(doneCh)
+		c.shutdownDoneCh.Store((chan struct{})(nil))
 	}
 
 	return err
@@ -1247,7 +1254,7 @@ func (c *Core) ShutdownWait() error {
 
 // ShutdownDone returns a channel that will be closed after Shutdown completes
 func (c *Core) ShutdownDone() <-chan struct{} {
-	return c.shutdownDoneCh
+	return c.shutdownDoneCh.Load().(chan struct{})
 }
 
 // CORSConfig returns the current CORS configuration
