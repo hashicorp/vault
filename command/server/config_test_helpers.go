@@ -743,6 +743,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"disable_printable_check":             false,
 		"disable_sealwrap":                    true,
 		"raw_storage_endpoint":                true,
+		"introspection_endpoint":              false,
 		"disable_sentinel_trace":              true,
 		"enable_ui":                           true,
 		"enable_response_header_hostname":     false,
