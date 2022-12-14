@@ -1592,7 +1592,7 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 		RUNRELOADFUNCS:
-			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
+			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs, core); err != nil {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
 
@@ -2089,7 +2089,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
 			for _, core := range testCluster.Cores {
-				if err := c.Reload(core.ReloadFuncsLock, core.ReloadFuncs, nil); err != nil {
+				if err := c.Reload(core.ReloadFuncsLock, core.ReloadFuncs, nil, core.Core); err != nil {
 					c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 				}
 			}
@@ -2207,7 +2207,7 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 	return url.String(), nil
 }
 
-func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reloadutil.ReloadFunc, configPath []string) error {
+func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reloadutil.ReloadFunc, configPath []string, core *vault.Core) error {
 	lock.RLock()
 	defer lock.RUnlock()
 
@@ -2234,6 +2234,9 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			}
 		}
 	}
+
+	// Set Introspection Endpoint to enabled with new value in the config after reload
+	core.ReloadIntrospectionEndpointEnabled()
 
 	// Send a message that we reloaded. This prevents "guessing" sleep times
 	// in tests.
@@ -2628,6 +2631,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		PluginFilePermissions:          config.PluginFilePermissions,
 		EnableUI:                       config.EnableUI,
 		EnableRaw:                      config.EnableRawEndpoint,
+		EnableIntrospection:            config.EnableIntrospectionEndpoint,
 		DisableSealWrap:                config.DisableSealWrap,
 		DisablePerformanceStandby:      config.DisablePerformanceStandby,
 		DisableIndexing:                config.DisableIndexing,
@@ -2646,6 +2650,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 
 	if c.flagDev {
 		coreConfig.EnableRaw = true
+		coreConfig.EnableIntrospection = true
 		coreConfig.DevToken = c.flagDevRootTokenID
 		if c.flagDevLeasedKV {
 			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory

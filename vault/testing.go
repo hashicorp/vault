@@ -201,6 +201,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI
 	conf.EnableRaw = opts.EnableRaw
+	conf.EnableIntrospection = opts.EnableIntrospection
 	conf.Seal = opts.Seal
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks

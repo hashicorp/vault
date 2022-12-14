@@ -452,6 +452,9 @@ func testLoadConfigFile(t *testing.T) {
 		EnableRawEndpoint:    true,
 		EnableRawEndpointRaw: true,
 
+		EnableIntrospectionEndpoint:    true,
+		EnableIntrospectionEndpointRaw: true,
+
 		DisableSealWrap:    true,
 		DisableSealWrapRaw: true,
 

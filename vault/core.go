@@ -121,6 +121,10 @@ var (
 	// in an HA setting
 	ErrHANotEnabled = errors.New("Vault is not configured for highly-available mode")
 
+	// ErrIntrospectionNotEnabled is returned if "introspection_endpoint" is not
+	// enabled in the configuration file
+	ErrIntrospectionNotEnabled = errors.New("The Vault configuration must set \"introspection_endpoint\" to true to enable this endpoint")
+
 	// manualStepDownSleepPeriod is how long to sleep after a user-initiated
 	// step down of the active node, to prevent instantly regrabbing the lock.
 	// It's var not const so that tests can manipulate it.
@@ -512,6 +516,10 @@ type Core struct {
 	// rawEnabled indicates whether the Raw endpoint is enabled
 	rawEnabled bool
 
+	// inspectableEnabled indicates whether the Inspect endpoint is enabled
+	introspectionEnabled     bool
+	introspectionEnabledLock sync.Mutex
+
 	// pluginDirectory is the location vault will look for plugin binaries
 	pluginDirectory string
 
@@ -732,6 +740,9 @@ type CoreConfig struct {
 
 	// Enable the raw endpoint
 	EnableRaw bool
+
+	// Enable the introspection endpoint
+	EnableIntrospection bool
 
 	PluginDirectory string
 
@@ -3397,6 +3408,16 @@ func (c *Core) ReloadLogRequestsLevel() {
 	case infoLevel != "":
 		c.logger.Warn("invalid log_requests_level", "level", infoLevel)
 	}
+}
+
+func (c *Core) ReloadIntrospectionEndpointEnabled() {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return
+	}
+	c.introspectionEnabledLock.Lock()
+	defer c.introspectionEnabledLock.Unlock()
+	c.introspectionEnabled = conf.(*server.Config).EnableIntrospectionEndpoint
 }
 
 type PeerNode struct {
