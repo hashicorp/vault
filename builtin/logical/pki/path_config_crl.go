@@ -135,8 +135,48 @@ the NextUpdate field); defaults to 12 hours`,
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCRLWrite,
 				Responses: map[int][]framework.Response{
-					http.StatusNoContent: {{
-						Description: "No Content",
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"expiry": {
+								Type: framework.TypeString,
+								Description: `The amount of time the generated CRL should be
+valid; defaults to 72 hours`,
+								Default: "72h",
+							},
+							"disable": {
+								Type:        framework.TypeBool,
+								Description: `If set to true, disables generating the CRL entirely.`,
+							},
+							"ocsp_disable": {
+								Type:        framework.TypeBool,
+								Description: `If set to true, ocsp unauthorized responses will be returned.`,
+							},
+							"ocsp_expiry": {
+								Type: framework.TypeString,
+								Description: `The amount of time an OCSP response will be valid (controls 
+the NextUpdate field); defaults to 12 hours`,
+								Default: "1h",
+							},
+							"auto_rebuild": {
+								Type:        framework.TypeBool,
+								Description: `If set to true, enables automatic rebuilding of the CRL`,
+							},
+							"auto_rebuild_grace_period": {
+								Type:        framework.TypeString,
+								Description: `The time before the CRL expires to automatically rebuild it, when enabled. Must be shorter than the CRL expiry. Defaults to 12h.`,
+								Default:     "12h",
+							},
+							"enable_delta": {
+								Type:        framework.TypeBool,
+								Description: `Whether to enable delta CRLs between authoritative CRL rebuilds`,
+							},
+							"delta_rebuild_interval": {
+								Type:        framework.TypeString,
+								Description: `The time between delta CRL rebuilds if a new revocation has occurred. Must be shorter than the CRL expiry. Defaults to 15m.`,
+								Default:     "15m",
+							},
+						},
 					}},
 				},
 				// Read more about why these flags are set in backend.go.
