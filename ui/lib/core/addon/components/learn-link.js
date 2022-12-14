@@ -13,6 +13,7 @@ import ExternalLink from './external-link';
  *
  */
 
+// TODO update host to 'https://developer.hashicorp.com' once updated paths are established
 export default class LearnLinkComponent extends ExternalLink {
   host = 'https://learn.hashicorp.com';
 
