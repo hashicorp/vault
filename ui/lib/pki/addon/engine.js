@@ -13,7 +13,7 @@ export default class PkiEngine extends Engine {
   dependencies = {
     services: [
       'auth',
-      'download-file',
+      'download',
       'flash-messages',
       'namespace',
       'path-help',

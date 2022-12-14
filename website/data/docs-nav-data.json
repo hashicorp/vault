@@ -214,6 +214,10 @@
           {
             "title": "TCP",
             "path": "configuration/listener/tcp"
+          },
+          {
+            "title": "Unix",
+            "path": "configuration/listener/unix"
           }
         ]
       },

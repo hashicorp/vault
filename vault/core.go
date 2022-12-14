@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -310,8 +311,11 @@ type Core struct {
 	keepHALockOnStepDown *uint32
 	heldHALock           physical.Lock
 
-	// shutdownDoneCh is used to notify when Shutdown() completes
-	shutdownDoneCh chan struct{}
+	// shutdownDoneCh is used to notify when core.Shutdown() completes.
+	// core.Shutdown() is typically issued in a goroutine to allow Vault to
+	// release the stateLock. This channel is marked atomic to prevent race
+	// conditions.
+	shutdownDoneCh *atomic.Value
 
 	// unlockInfo has the keys provided to Unseal until the threshold number of parts is available, as well as the operation nonce
 	unlockInfo *unlockInformation
@@ -899,7 +903,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		clusterPeerClusterAddrsCache:   cache.New(3*clusterHeartbeatInterval, time.Second),
 		enableMlock:                    !conf.DisableMlock,
 		rawEnabled:                     conf.EnableRaw,
-		shutdownDoneCh:                 make(chan struct{}),
+		shutdownDoneCh:                 new(atomic.Value),
 		replicationState:               new(uint32),
 		atomicPrimaryClusterAddrs:      new(atomic.Value),
 		atomicPrimaryFailoverAddrs:     new(atomic.Value),
@@ -940,6 +944,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
 	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
+
+	c.shutdownDoneCh.Store(make(chan struct{}))
 
 	c.allLoggers = append(c.allLoggers, c.logger)
 
@@ -1238,9 +1244,11 @@ func (c *Core) Shutdown() error {
 
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
-	if c.shutdownDoneCh != nil {
-		close(c.shutdownDoneCh)
-		c.shutdownDoneCh = nil
+
+	doneCh := c.shutdownDoneCh.Load().(chan struct{})
+	if doneCh != nil {
+		close(doneCh)
+		c.shutdownDoneCh.Store((chan struct{})(nil))
 	}
 
 	return err
@@ -1257,7 +1265,7 @@ func (c *Core) ShutdownWait() error {
 
 // ShutdownDone returns a channel that will be closed after Shutdown completes
 func (c *Core) ShutdownDone() <-chan struct{} {
-	return c.shutdownDoneCh
+	return c.shutdownDoneCh.Load().(chan struct{})
 }
 
 // CORSConfig returns the current CORS configuration
@@ -2335,8 +2343,42 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	// This is intentionally the last block in this function. We want to allow
 	// writes just before allowing client requests, to ensure everything has
 	// been set up properly before any writes can have happened.
-	for _, v := range c.postUnsealFuncs {
-		v()
+	//
+	// Use a small temporary worker pool to run postUnsealFuncs in parallel
+	postUnsealFuncConcurrency := runtime.NumCPU() * 2
+	if v := os.Getenv("VAULT_POSTUNSEAL_FUNC_CONCURRENCY"); v != "" {
+		pv, err := strconv.Atoi(v)
+		if err != nil || pv < 1 {
+			c.logger.Warn("invalid value for VAULT_POSTUNSEAL_FUNC_CURRENCY, must be a positive integer", "error", err, "value", pv)
+		} else {
+			postUnsealFuncConcurrency = pv
+		}
+	}
+	if postUnsealFuncConcurrency <= 1 {
+		// Out of paranoia, keep the old logic for parallism=1
+		for _, v := range c.postUnsealFuncs {
+			v()
+		}
+	} else {
+		workerChans := make([]chan func(), postUnsealFuncConcurrency)
+		var wg sync.WaitGroup
+		for i := 0; i < postUnsealFuncConcurrency; i++ {
+			workerChans[i] = make(chan func())
+			go func(i int) {
+				for v := range workerChans[i] {
+					v()
+					wg.Done()
+				}
+			}(i)
+		}
+		for i, v := range c.postUnsealFuncs {
+			wg.Add(1)
+			workerChans[i%postUnsealFuncConcurrency] <- v
+		}
+		for i := 0; i < postUnsealFuncConcurrency; i++ {
+			close(workerChans[i])
+		}
+		wg.Wait()
 	}
 
 	if atomic.LoadUint32(c.sealMigrationDone) == 1 {

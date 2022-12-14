@@ -175,5 +175,5 @@ var HCPLinkMeta_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "vault/hcp_link/capabilities/meta/meta.proto",
+	Metadata: "vault/hcp_link/proto/meta/meta.proto",
 }

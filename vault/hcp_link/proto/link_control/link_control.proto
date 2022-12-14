@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/hashicorp/vault/vault/hcp_link/capabilities/link_control";
+option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/link_control";
 
 package link_control;
 

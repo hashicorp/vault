@@ -101,6 +101,12 @@ module('Acceptance | pki workflow', function (hooks) {
         path "${this.mountPath}/roles/*" {
           capabilities = ["read", "update"]
         },
+        path "${this.mountPath}/issue/*" {
+          capabilities = ["update"]
+        },
+        path "${this.mountPath}/sign/*" {
+          capabilities = ["update"]
+        },
       `;
       this.pkiRoleReader = await tokenWithPolicy('pki-reader', pki_reader_policy);
       this.pkiRoleEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
@@ -173,11 +179,33 @@ module('Acceptance | pki workflow', function (hooks) {
       await click('.linked-block');
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(SELECTORS.deleteRoleButton).doesNotExist('Delete role button is not shown');
-      assert.dom(SELECTORS.generateCertLink).doesNotExist('Generate cert link is not shown');
-      assert.dom(SELECTORS.signCertLink).doesNotExist('Sign cert link is not shown');
+      assert.dom(SELECTORS.generateCertLink).exists('Generate cert link is shown');
+      assert.dom(SELECTORS.signCertLink).exists('Sign cert link is shown');
       assert.dom(SELECTORS.editRoleLink).exists('Edit link is shown');
       await click(SELECTORS.editRoleLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/edit`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/roles/some-role/edit`,
+        'Links to edit view'
+      );
+      await click(SELECTORS.roleForm.roleCancelButton);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`,
+        'Cancel from edit goes to details'
+      );
+      await click(SELECTORS.generateCertLink);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/roles/some-role/generate`,
+        'Generate cert button goes to generate page'
+      );
+      await click(SELECTORS.generateCertForm.cancelButton);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`,
+        'Cancel from generate goes to details'
+      );
     });
 
     test('create role happy path', async function (assert) {

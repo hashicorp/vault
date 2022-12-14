@@ -101,5 +101,5 @@ var HCPLinkControl_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "vault/hcp_link/capabilities/link_control/link_control.proto",
+	Metadata: "vault/hcp_link/proto/link_control/link_control.proto",
 }
