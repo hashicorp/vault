@@ -14,6 +14,9 @@
         {{else}}
           File
         {{/if}}
+        {{#if @subText}}
+          <p class="sub-text" data-test-text-file-subtext>{{@subText}}</p>
+        {{/if}}
       </label>
     </div>
     <div class="level-right">

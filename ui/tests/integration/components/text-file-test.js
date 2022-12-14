@@ -9,6 +9,7 @@ const SELECTORS = {
   toggle: '[data-test-text-toggle]',
   textarea: '[data-test-text-file-textarea]',
   fileUpload: '[data-test-text-file-input]',
+  subText: '[data-test-text-file-subtext]',
 };
 module('Integration | Component | text-file', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,14 +22,19 @@ module('Integration | Component | text-file', function (hooks) {
 
   test('it renders with or without label', async function (assert) {
     this.set('inputOnly', false);
+    this.set('subText', 'Some description here');
 
     await render(
-      hbs`<TextFile @file={{this.file}} @onChange={{this.onChange}} @inputOnly={{this.inputOnly}} />`
+      hbs`<TextFile @file={{this.file}} @onChange={{this.onChange}} @inputOnly={{this.inputOnly}} @subText={{this.subText}} />`
     );
 
     assert.dom(SELECTORS.label).hasText('File', 'renders default label');
     assert.dom(SELECTORS.toggle).exists({ count: 1 }, 'toggle exists');
     assert.dom(SELECTORS.fileUpload).exists({ count: 1 }, 'File input shown');
+    assert.dom(SELECTORS.subText).hasText('Some description here');
+
+    this.set('subText', '');
+    assert.dom(SELECTORS.subText).doesNotExist();
 
     this.set('inputOnly', true);
 
