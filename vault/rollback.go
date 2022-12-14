@@ -177,8 +177,8 @@ func (m *RollbackManager) triggerRollbacks() {
 		}
 	}
 	if firstRun {
-		for i := 0; i < len(workerChans[i]); i++ {
-			close(workerChans[i])
+		for _, workerChan := range workerChans {
+			close(workerChan)
 		}
 		wg.Wait()
 	}
@@ -188,12 +188,11 @@ func (m *RollbackManager) triggerRollbacks() {
 // This must be called with the inflightLock held.
 func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath string, grabStatelock bool, workerChan chan func()) *rollbackState {
 	m.inflightLock.Lock()
-	defer m.inflightLock.Unlock()
 	rsInflight, ok := m.inflight[fullPath]
 	if ok {
+		defer m.inflightLock.Unlock()
 		return rsInflight
 	}
-
 	cancelCtx, cancelFunc := context.WithCancel(context.Background())
 	rs := &rollbackState{
 		cancelLockGrabCtx:       cancelCtx,
@@ -204,11 +203,14 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 	m.inflight[fullPath] = rs
 	rs.Add(1)
 	m.inflightAll.Add(1)
+
 	if workerChan != nil {
+		m.inflightLock.Unlock()
 		workerChan <- func() {
 			m.attemptRollback(ctx, fullPath, rs, grabStatelock)
 		}
 	} else {
+		defer m.inflightLock.Unlock()
 		go m.attemptRollback(ctx, fullPath, rs, grabStatelock)
 	}
 	return rs
