@@ -36,7 +36,6 @@ locals {
 resource "enos_remote_exec" "wait_till_sealed" {
   for_each = {
     for idx, follower in local.followers : idx => follower
-    if var.vault_seal_type == "shamir"
   }
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
@@ -52,8 +51,23 @@ resource "enos_remote_exec" "wait_till_sealed" {
   }
 }
 
-resource "enos_remote_exec" "unseal_followers" {
+resource "enos_remote_exec" "restart_followers" {
   depends_on = [enos_remote_exec.wait_till_sealed]
+  for_each = {
+    for idx, follower in local.followers : idx => follower
+  }
+
+  inline = ["sudo systemctl restart vault"]
+
+  transport = {
+    ssh = {
+      host = element(var.follower_public_ips, each.key)
+    }
+  }
+}
+
+resource "enos_remote_exec" "unseal_followers" {
+  depends_on = [enos_remote_exec.restart_followers]
   for_each = {
     for idx, follower in local.followers : idx => follower
     if var.vault_seal_type == "shamir"

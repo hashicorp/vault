@@ -404,10 +404,10 @@ scenario "replication" {
     }
 
     variables {
-      ami_id                  = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags             = local.tags
-      consul_cluster_tag      = step.create_primary_backend_cluster.consul_cluster_tag
-      dependencies_to_install = local.dependencies_to_install
+      ami_id                    = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      common_tags               = local.tags
+      consul_cluster_tag        = step.create_primary_backend_cluster.consul_cluster_tag
+      dependencies_to_install   = local.dependencies_to_install
       instance_type             = local.vault_instance_type
       kms_key_arn               = step.create_vpc.kms_key_arn
       storage_backend           = matrix.primary_backend
@@ -423,7 +423,7 @@ scenario "replication" {
       }
       vault_node_prefix         = "newprimary_node"
       vault_root_token          = step.create_vault_primary_cluster.vault_root_token
-      vault_unseal_when_no_init = true
+      vault_unseal_when_no_init = matrix.primary_seal == "shamir"
       vault_unseal_keys         = matrix.primary_seal == "shamir" ? step.create_vault_primary_cluster.vault_unseal_keys_hex : null
       vpc_id                    = step.create_vpc.vpc_id
     }

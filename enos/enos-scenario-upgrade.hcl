@@ -224,7 +224,6 @@ scenario "upgrade" {
     variables {
       vault_instances   = step.create_vault_cluster.vault_instances
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_cluster.vault_root_token
     }
   }
 
