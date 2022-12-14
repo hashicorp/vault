@@ -33,7 +33,7 @@ are required to configure the auth method:
 
 If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret.
 A managed identity must be [enabled](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/)
-on the resource that acquires the JWT.
+on the resource that acquires the access token.
 
 The following Azure [role assignments](https://learn.microsoft.com/en-us/azure/role-based-access-control/overview#role-assignments)
 must be granted to the Azure AD application in order for the auth method to access Azure
