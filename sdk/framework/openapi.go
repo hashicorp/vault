@@ -1115,17 +1115,25 @@ var knownPathMappings = map[knownPathKey]knownPathValue{
 // ugly string, the function uses a custom lookup table to construct part of
 // the string instead.
 func constructRequestResponseIdentifier(operation logical.Operation, mount, path, suffix string) string {
+	// For most request names "write" seems to be more applicable in place of "update"
+	var operationStr string
+	if operation == logical.UpdateOperation {
+		operationStr = "write"
+	} else {
+		operationStr = string(operation)
+	}
+
 	var parts []string
 
 	// Append either the known mapping or operation + mount + path split by non-word characters
 	if mapping, ok := knownPathMappings[knownPathKey{mount: mount, path: path}]; ok {
 		// Certain names have operations implied in the name, e.g. Seal/Unseal
 		if !mapping.operationImplied {
-			parts = append(parts, nonWordRe.Split(strings.ToLower(string(operation)), -1)...)
+			parts = append(parts, nonWordRe.Split(strings.ToLower(operationStr), -1)...)
 		}
 		parts = append(parts, mapping.name)
 	} else {
-		parts = append(parts, nonWordRe.Split(strings.ToLower(string(operation)), -1)...)
+		parts = append(parts, nonWordRe.Split(strings.ToLower(operationStr), -1)...)
 		parts = append(parts, nonWordRe.Split(strings.ToLower(mount), -1)...)
 		parts = append(parts, nonWordRe.Split(strings.ToLower(path), -1)...)
 	}

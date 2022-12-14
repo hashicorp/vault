@@ -530,7 +530,7 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 		return nil, err
 	}
 
-	// If specified in the request, the type will be used as part of the
+	// If specified in the request, the mount path will be used as part of the
 	// request/response body names and operation id's in the OpenAPI document.
 	defaultMountPath := req.GetString("defaultMountPath")
 
