@@ -26,7 +26,7 @@
       <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role.details" role.name}} as |Item|>
         <Item.content>
           <Icon @name="user" />
-          {{role.name}}
+          <span data-test-role={{role.name}}>{{role.name}}</span>
         </Item.content>
         <Item.menu as |Menu|>
           {{#if role.rolesPath.isLoading}}
