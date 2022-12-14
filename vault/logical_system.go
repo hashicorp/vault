@@ -4450,7 +4450,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
-				Data:      map[string]interface{}{"requestResponsePrefix": strings.Trim(mountPrefix+mount, "/")},
+				Data:      map[string]interface{}{"defaultMountPath": strings.Trim(mountPrefix+mount, "/")},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
