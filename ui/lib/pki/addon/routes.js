@@ -3,6 +3,7 @@ import buildRoutes from 'ember-engines/routes';
 export default buildRoutes(function () {
   this.route('overview');
   this.route('configuration', function () {
+    this.route('index', { path: '/' });
     this.route('tidy');
     this.route('create');
     this.route('edit');
