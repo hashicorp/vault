@@ -650,6 +650,66 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 	}
 }
 
+func TestOpenAPI_constructRequestResponseIdentifier(t *testing.T) {
+	tests := []struct {
+		name      string
+		operation logical.Operation
+		mount     string
+		path      string
+		suffix    string
+		expected  string
+	}{{
+		name:      "empty",
+		operation: logical.Operation(""),
+		mount:     "",
+		path:      "",
+		suffix:    "",
+		expected:  "",
+	}, {
+		name:      "simple",
+		operation: logical.ReadOperation,
+		mount:     "secret",
+		path:      "path/to/thing",
+		suffix:    "request",
+		expected:  "ReadSecretPathToThingRequest",
+	}, {
+		name:      "missing elements",
+		operation: logical.ReadOperation,
+		mount:     "",
+		path:      "path/to/thing",
+		suffix:    "",
+		expected:  "ReadPathToThing",
+	}, {
+		name:      "mapped entry",
+		operation: logical.UpdateOperation,
+		mount:     "auth/kerberos",
+		path:      "groups/{name}",
+		suffix:    "",
+		expected:  "UpdateKerberosGroup",
+	}, {
+		name:      "mapped entry with implied operation",
+		operation: logical.UpdateOperation,
+		mount:     "sys",
+		path:      "unseal",
+		suffix:    "response",
+		expected:  "UnsealResponse",
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := constructRequestResponseIdentifier(
+				test.operation,
+				test.mount,
+				test.path,
+				test.suffix,
+			)
+			if actual != test.expected {
+				t.Fatalf("expected: %s; got: %s", test.expected, actual)
+			}
+		})
+	}
+}
+
 func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) {
 	t.Helper()
 
