@@ -914,6 +914,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		clusterPeerClusterAddrsCache:   cache.New(3*clusterHeartbeatInterval, time.Second),
 		enableMlock:                    !conf.DisableMlock,
 		rawEnabled:                     conf.EnableRaw,
+		introspectionEnabled:           conf.EnableIntrospection,
 		shutdownDoneCh:                 new(atomic.Value),
 		replicationState:               new(uint32),
 		atomicPrimaryClusterAddrs:      new(atomic.Value),

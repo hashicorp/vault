@@ -59,11 +59,14 @@ func TestInvalidInspectRouterPath(t *testing.T) {
 	}
 	core, _, rootToken := TestCoreUnsealedWithConfig(t, coreConfig)
 	rootCtx := namespace.RootContext(nil)
-	_, err := core.HandleRequest(rootCtx, &logical.Request{
+	resp, err := core.HandleRequest(rootCtx, &logical.Request{
 		ClientToken: rootToken,
 		Operation:   logical.ReadOperation,
 		Path:        "sys/internal/inspect/router/random",
 	})
+	if resp.IsError() {
+		t.Fatalf(resp.Error().Error())
+	}
 	if !strings.Contains(err.Error(), logical.ErrUnsupportedPath.Error()) {
 		t.Fatal("expected unsupported path error")
 	}
