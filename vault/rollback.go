@@ -52,8 +52,7 @@ type RollbackManager struct {
 	core *Core
 
 	// First run worker pool
-	firstRun        bool
-	firstRunWorkers chan func()
+	firstRun bool
 }
 
 // rollbackState is used to track the state of a single rollback attempt
@@ -67,17 +66,16 @@ type rollbackState struct {
 // NewRollbackManager is used to create a new rollback manager
 func NewRollbackManager(ctx context.Context, logger log.Logger, backendsFunc func() []*MountEntry, router *Router, core *Core) *RollbackManager {
 	r := &RollbackManager{
-		logger:          logger,
-		backends:        backendsFunc,
-		router:          router,
-		period:          core.rollbackPeriod,
-		inflight:        make(map[string]*rollbackState),
-		doneCh:          make(chan struct{}),
-		shutdownCh:      make(chan struct{}),
-		quitContext:     ctx,
-		core:            core,
-		firstRun:        true,
-		firstRunWorkers: make(chan func()),
+		logger:      logger,
+		backends:    backendsFunc,
+		router:      router,
+		period:      rollbackPeriod,
+		inflight:    make(map[string]*rollbackState),
+		doneCh:      make(chan struct{}),
+		shutdownCh:  make(chan struct{}),
+		quitContext: ctx,
+		core:        core,
+		firstRun:    true,
 	}
 	return r
 }
