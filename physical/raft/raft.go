@@ -612,7 +612,7 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	b.l.RLock()
 	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
-	fsmStats := b.fsm.db.Stats()
+	fsmStats := b.fsm.Stats()
 	stats := b.raft.Stats()
 	b.l.RUnlock()
 	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
