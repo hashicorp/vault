@@ -58,8 +58,7 @@ type RollbackManager struct {
 	core *Core
 
 	// First run worker pool
-	firstRun        bool
-	firstRunWorkers chan func()
+	firstRun bool
 }
 
 // rollbackState is used to track the state of a single rollback attempt
