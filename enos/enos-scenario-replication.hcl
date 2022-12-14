@@ -304,7 +304,6 @@ scenario "replication" {
   }
 
   step "unseal_secondary_followers" {
-    // skip_step  = matrix.primary_seal != "shamir"
     module = module.vault_unseal_nodes
     depends_on = [
       step.create_vault_primary_cluster,

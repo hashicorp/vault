@@ -28,34 +28,66 @@ variable "vault_seal_type" {
 
 variable "vault_unseal_keys" {}
 
-# variable "vault_unseal_keys" {
-#   type        = list(string)
-#   description = "Vault cluster unseal keys"
-#   default     = null
-# }
-
 locals {
   followers      = toset([for idx in range(var.vault_instance_count - 1) : tostring(idx)])
   vault_bin_path = "${var.vault_install_dir}/vault"
-  # unseal_keys    = flatten(var.vault_unseal_keys)
 }
 
-# # wait for 120s before unsealing the nodes
-# resource "time_sleep" "wait_120_seconds" {
-#   create_duration = "120s"
-# }
+resource "enos_remote_exec" "wait_till_sealed" {
+  for_each = {
+    for idx, follower in local.followers : idx => follower
+    if var.vault_seal_type == "shamir"
+  }
+  environment = {
+    VAULT_ADDR        = "http://127.0.0.1:8200"
+    vault_install_dir = var.vault_install_dir
+  }
 
-resource "enos_vault_unseal" "node" {
-  # depends_on = [time_sleep.wait_120_seconds]
+  scripts = ["${path.module}/scripts/wait-till-sealed.sh"]
+
+  transport = {
+    ssh = {
+      host = element(var.follower_public_ips, each.key)
+    }
+  }
+}
+
+resource "enos_remote_exec" "unseal_followers" {
+  depends_on = [enos_remote_exec.wait_till_sealed]
   for_each = {
     for idx, follower in local.followers : idx => follower
     if var.vault_seal_type == "shamir"
   }
 
-  bin_path    = local.vault_bin_path
-  vault_addr  = "http://localhost:8200"
-  seal_type   = var.vault_seal_type
-  unseal_keys = var.vault_unseal_keys
+  environment = {
+    VAULT_ADDR        = "http://127.0.0.1:8200"
+    vault_install_dir = var.vault_install_dir
+    unseal_keys       = join(",", var.vault_unseal_keys)
+  }
+
+  scripts = ["${path.module}/scripts/unseal-node.sh"]
+
+  transport = {
+    ssh = {
+      host = element(var.follower_public_ips, each.key)
+    }
+  }
+}
+
+resource "enos_remote_exec" "unseal_followers_again" {
+  depends_on = [enos_remote_exec.unseal_followers]
+  for_each = {
+    for idx, follower in local.followers : idx => follower
+    if var.vault_seal_type == "shamir"
+  }
+
+  environment = {
+    VAULT_ADDR        = "http://127.0.0.1:8200"
+    vault_install_dir = var.vault_install_dir
+    unseal_keys       = join(",", var.vault_unseal_keys)
+  }
+
+  scripts = ["${path.module}/scripts/unseal-node.sh"]
 
   transport = {
     ssh = {

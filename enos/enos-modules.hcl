@@ -90,7 +90,7 @@ module "vault_cluster" {
 module "vault_cluster_ips" {
   source = "./modules/vault_cluster_ips"
 
-  vault_install_dir    = var.vault_install_dir
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_unseal_nodes" {
