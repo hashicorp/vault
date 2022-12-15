@@ -12,7 +12,7 @@ export default class PkiRoleSignRoute extends Route {
     return this.pathHelp.getNewModel('pki/certificate/sign', this.secretMountPath.currentPath);
   }
 
-  async model() {
+  model() {
     const { role } = this.paramsFor('roles/role');
     return this.store.createRecord('pki/certificate/sign', {
       role,

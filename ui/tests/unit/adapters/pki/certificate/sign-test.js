@@ -45,8 +45,7 @@ module('Unit | Adapter | pki/certificate/sign', function (hooks) {
       };
     });
 
-    const model = await this.store.createRecord('pki/certificate/sign', generateData);
-    await model.save();
+    await this.store.createRecord('pki/certificate/sign', generateData).save();
   });
 
   test('it should make request to correct endpoint on delete', async function (assert) {
@@ -61,7 +60,6 @@ module('Unit | Adapter | pki/certificate/sign', function (hooks) {
       return { data: {} };
     });
 
-    const model = await this.store.peekRecord('pki/certificate/sign', this.data.serial_number);
-    await model.destroyRecord();
+    await this.store.peekRecord('pki/certificate/sign', this.data.serial_number).destroyRecord();
   });
 });
