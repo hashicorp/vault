@@ -12,7 +12,7 @@ on:
       - release/**
 
 jobs:
-  # checks that a changelog entry is present for a PR
+  # checks that a milestone entry is present for a PR
   milestone-check:
     # If there  a `pr/no-milestone` label we ignore this check
     if: "!contains(github.event.pull_request.labels.*.name, 'pr/no-milestone')"
