@@ -11,5 +11,5 @@ fail() {
 
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
-$binpath login -method=userpass username=tester password=changeme
+$binpath login -method=userpass username=user1 password=passuser1
 $binpath kv get secret/test

@@ -18,7 +18,7 @@ variable "vault_instance_count" {
 
 variable "follower_public_ips" {
   type        = list(string)
-  description = "Vault primary cluster follower Public IP addresses"
+  description = "Vault cluster follower Public IP addresses"
 }
 
 variable "vault_seal_type" {

@@ -137,6 +137,41 @@ scenario "autopilot" {
     module    = module.get_local_metadata
   }
 
+  step "get_vault_cluster_ips" {
+    module     = module.vault_cluster_ips
+    depends_on = [step.create_vault_cluster]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.vault_root_token
+    }
+  }
+
+  step "verify_write_test_data" {
+    module = module.vault_verify_write_data
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_vault_cluster_ips
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
+      leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.vault_root_token
+    }
+  }
+
   step "create_autopilot_upgrade_storageconfig" {
     module = module.autopilot_upgrade_storageconfig
 
@@ -150,9 +185,10 @@ scenario "autopilot" {
   step "upgrade_vault_cluster_with_autopilot" {
     module = module.vault_cluster
     depends_on = [
-      step.create_vault_cluster,
       step.build_vault,
+      step.create_vault_cluster,
       step.create_autopilot_upgrade_storageconfig,
+      step.verify_write_test_data
     ]
 
     providers = {
@@ -183,6 +219,27 @@ scenario "autopilot" {
     }
   }
 
+  step "get_updated_vault_cluster_ips" {
+    module = module.vault_cluster_ips
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_vault_cluster_ips,
+      step.upgrade_vault_cluster_with_autopilot
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances       = step.create_vault_primary_cluster.vault_instances
+      vault_install_dir     = local.vault_install_dir
+      added_vault_instances = step.upgrade_vault_cluster_with_autopilot.vault_instances
+      vault_root_token      = step.create_vault_primary_cluster.vault_root_token
+      node_public_ip        = step.get_vault_cluster_ips.leader_public_ip
+    }
+  }
+
   step "verify_vault_unsealed" {
     module = module.vault_verify_unsealed
     depends_on = [
@@ -197,6 +254,24 @@ scenario "autopilot" {
     variables {
       vault_install_dir = local.vault_install_dir
       vault_instances   = step.create_vault_cluster.vault_instances
+    }
+  }
+
+  step "verify_read_test_data" {
+    module = module.vault_verify_read_data
+    depends_on = [
+      step.get_updated_vault_cluster_ips,
+      step.verify_write_test_data,
+      step.verify_vault_unsealed
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      node_public_ips   = step.get_vault_cluster_ips.follower_public_ips
+      vault_install_dir = local.vault_install_dir
     }
   }
 

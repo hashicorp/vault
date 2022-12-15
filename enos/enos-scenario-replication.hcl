@@ -215,7 +215,8 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances = step.create_vault_primary_cluster.vault_instances
+      vault_instances   = step.create_vault_primary_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
     }
   }
 
@@ -230,8 +231,8 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances = step.create_vault_secondary_cluster.vault_instances
-      // vault_root_token = step.create_vault_secondary_cluster.vault_root_token
+      vault_instances   = step.create_vault_secondary_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
     }
   }
 
@@ -244,8 +245,9 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances  = step.create_vault_primary_cluster.vault_instances
-      vault_root_token = step.create_vault_primary_cluster.vault_root_token
+      vault_instances   = step.create_vault_primary_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_primary_cluster.vault_root_token
     }
   }
 
@@ -258,8 +260,9 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances  = step.create_vault_secondary_cluster.vault_instances
-      vault_root_token = step.create_vault_secondary_cluster.vault_root_token
+      vault_instances   = step.create_vault_secondary_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_secondary_cluster.vault_root_token
     }
   }
 
@@ -273,10 +276,11 @@ scenario "replication" {
     }
 
     variables {
-      primary_leader_public_ip  = step.get_primary_cluster_ips.leader_public_ip
-      primary_leader_private_ip = step.get_primary_cluster_ips.leader_private_ip
-      vault_instances           = step.create_vault_primary_cluster.vault_instances
-      vault_root_token          = step.create_vault_primary_cluster.vault_root_token
+      leader_public_ip  = step.get_primary_cluster_ips.leader_public_ip
+      leader_private_ip = step.get_primary_cluster_ips.leader_private_ip
+      vault_instances   = step.create_vault_primary_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_primary_cluster.vault_root_token
     }
   }
 
@@ -291,6 +295,7 @@ scenario "replication" {
     variables {
       primary_leader_public_ip  = step.get_primary_cluster_ips.leader_public_ip
       primary_leader_private_ip = step.get_primary_cluster_ips.leader_private_ip
+      vault_install_dir         = local.vault_install_dir
       vault_root_token          = step.create_vault_primary_cluster.vault_root_token
     }
   }
@@ -305,6 +310,7 @@ scenario "replication" {
 
     variables {
       primary_leader_public_ip = step.get_primary_cluster_ips.leader_public_ip
+      vault_install_dir        = local.vault_install_dir
       vault_root_token         = step.create_vault_primary_cluster.vault_root_token
     }
   }
@@ -320,6 +326,7 @@ scenario "replication" {
     variables {
       secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
       secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
+      vault_install_dir           = local.vault_install_dir
       vault_root_token            = step.create_vault_secondary_cluster.vault_root_token
       wrapping_token              = step.generate_secondary_token.secondary_token
     }
@@ -340,8 +347,9 @@ scenario "replication" {
 
     variables {
       follower_public_ips = step.get_secondary_cluster_ips.follower_public_ips
-      vault_unseal_keys   = matrix.primary_seal == "shamir" ? step.create_vault_primary_cluster.vault_unseal_keys_hex : null
-      vault_seal_type     = matrix.primary_seal
+      vault_install_dir   = local.vault_install_dir
+      vault_unseal_keys   = matrix.primary_seal == "shamir" ? step.create_vault_primary_cluster.vault_unseal_keys_hex : step.create_vault_primary_cluster.vault_recovery_keys_hex
+      vault_seal_type     = matrix.primary_seal == "shamir" ? matrix.primary_seal : matrix.secondary_seal
     }
   }
 
@@ -356,7 +364,8 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances = step.create_vault_secondary_cluster.vault_instances
+      vault_instances   = step.create_vault_secondary_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
     }
   }
 
@@ -373,11 +382,12 @@ scenario "replication" {
       primary_leader_private_ip   = step.get_primary_cluster_ips.leader_private_ip
       secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
       secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
+      vault_install_dir           = local.vault_install_dir
     }
   }
 
   step "verify_replicated_data" {
-    module     = module.vault_verify_replicated_data
+    module     = module.vault_verify_read_data
     depends_on = [step.verify_performance_replication]
 
     providers = {
@@ -385,8 +395,8 @@ scenario "replication" {
     }
 
     variables {
-      secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
-      secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
+      node_public_ips   = step.get_secondary_cluster_ips.secondary_follower_public_ips
+      vault_install_dir = local.vault_install_dir
     }
   }
 
@@ -438,7 +448,8 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances = step.add_primary_cluster_nodes.vault_instances
+      vault_instances   = step.add_primary_cluster_nodes.vault_instances
+      vault_install_dir = local.vault_install_dir
     }
   }
 
@@ -456,8 +467,9 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances  = step.add_primary_cluster_nodes.vault_instances
-      vault_root_token = step.create_vault_primary_cluster.vault_root_token
+      vault_instances   = step.add_primary_cluster_nodes.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_primary_cluster.vault_root_token
     }
   }
 
@@ -507,6 +519,7 @@ scenario "replication" {
 
     variables {
       vault_instances       = step.create_vault_primary_cluster.vault_instances
+      vault_install_dir     = local.vault_install_dir
       added_vault_instances = step.add_primary_cluster_nodes.vault_instances
       vault_root_token      = step.create_vault_primary_cluster.vault_root_token
       node_public_ip        = step.get_primary_cluster_ips.follower_public_ip_2
@@ -526,6 +539,7 @@ scenario "replication" {
       primary_leader_private_ip   = step.get_updated_primary_cluster_ips.leader_private_ip
       secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
       secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
+      vault_install_dir           = local.vault_install_dir
     }
   }
 

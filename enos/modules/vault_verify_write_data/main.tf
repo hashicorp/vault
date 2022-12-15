@@ -16,14 +16,14 @@ variable "vault_instance_count" {
   description = "How many Vault instances are in the cluster"
 }
 
-variable "primary_leader_public_ip" {
+variable "leader_public_ip" {
   type        = string
-  description = "Vault primary cluster leader Public IP address"
+  description = "Vault cluster leader Public IP address"
 }
 
-variable "primary_leader_private_ip" {
+variable "leader_private_ip" {
   type        = string
-  description = "Vault primary cluster leader Private IP address"
+  description = "Vault cluster leader Private IP address"
 }
 
 variable "vault_instances" {
@@ -61,7 +61,7 @@ resource "enos_remote_exec" "smoke-enable-secrets-kv" {
 
   transport = {
     ssh = {
-      host = var.primary_leader_public_ip
+      host = var.leader_public_ip
     }
   }
 }
