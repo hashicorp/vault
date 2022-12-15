@@ -1,23 +1,21 @@
 <Toolbar>
   <ToolbarActions>
-    {{#if @key.keyPath.isFulfilled}}
-      {{#if @key.canDelete}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{this.deleteKey}}
-          @confirmTitle="Delete key?"
-          @confirmButtonText="Delete"
-          data-test-pki-key-delete
-        >
-          Delete
-        </ConfirmAction>
-        <div class="toolbar-separator"></div>
-      {{/if}}
-      {{#if @key.canEdit}}
-        <ToolbarLink @route="keys.key.edit" @model={{@key.keyId}}>
-          Edit key
-        </ToolbarLink>
-      {{/if}}
+    {{#if @canDelete}}
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{this.deleteKey}}
+        @confirmTitle="Delete key?"
+        @confirmButtonText="Delete"
+        data-test-pki-key-delete
+      >
+        Delete
+      </ConfirmAction>
+      <div class="toolbar-separator"></div>
+    {{/if}}
+    {{#if @canEdit}}
+      <ToolbarLink @route="keys.key.edit" @model={{@key.keyId}}>
+        Edit key
+      </ToolbarLink>
     {{/if}}
   </ToolbarActions>
 </Toolbar>
