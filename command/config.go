@@ -37,8 +37,8 @@ func Config() (*DefaultConfig, error) {
 // empty, then the default path will be used, or the environment variable
 // if set.
 //
-// LoadConfig just calls into config.LoadConfigFile for backwards compatibility
-// purposes. Use config.LoadConfigFile instead.
+// LoadConfig just calls into config.LoadConfig for backwards compatibility
+// purposes. Use config.LoadConfig instead.
 func LoadConfig(path string) (*DefaultConfig, error) {
 	conf, err := config.LoadConfig(path)
 	return (*DefaultConfig)(conf), err
