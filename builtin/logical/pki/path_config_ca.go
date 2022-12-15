@@ -28,15 +28,15 @@ secret key and certificate.`,
 						Fields: map[string]*framework.FieldSchema{
 							"mapping": {
 								Type:        framework.TypeMap,
-								Description: "A mapping of which keys belong to which issuers",
+								Description: "A mapping of issuer_id to key_id for all issuers included in this request",
 							},
 							"imported_keys": {
 								Type:        framework.TypeCommaStringSlice,
-								Description: "",
+								Description: "Net-new keys imported as a part of this request",
 							},
 							"imported_issuers": {
 								Type:        framework.TypeCommaStringSlice,
-								Description: "",
+								Description: "Net-new issuers imported as a part of this request",
 							},
 						},
 					}},
