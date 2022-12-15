@@ -555,7 +555,7 @@ func (b *RaftBackend) Close() error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	if err := b.fsm.db.Close(); err != nil {
+	if err := b.fsm.Close(); err != nil {
 		return err
 	}
 
