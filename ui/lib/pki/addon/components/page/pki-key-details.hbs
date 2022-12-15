@@ -10,6 +10,12 @@
       Delete
     </ConfirmAction>
     <div class="toolbar-separator"></div>
+    {{#if @key.privateKey}}
+      <DownloadButton class="toolbar-link" @filename={{this.model.name}} @data={{@key.privateKey}} @extension="pem">
+        Download private key
+        <Chevron @isButton={{true}} />
+      </DownloadButton>
+    {{/if}}
     <ToolbarLink @route="keys.key.edit" @model={{@key.model.name}}>
       Edit key
     </ToolbarLink>
