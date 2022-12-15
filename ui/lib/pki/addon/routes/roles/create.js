@@ -8,7 +8,9 @@ export default class PkiRolesCreateRoute extends PkiRolesIndexRoute {
   @service secretMountPath;
 
   model() {
-    return this.store.createRecord('pki/role');
+    return this.store.createRecord('pki/role', {
+      backend: this.secretMountPath.currentPath,
+    });
   }
 
   setupController(controller, resolvedModel) {

@@ -11,9 +11,7 @@ module('Integration | Component | pki-not-valid-after-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
-    this.secretMountPath.currentPath = 'pki-test';
-    this.model = this.store.createRecord('pki/role');
+    this.model = this.store.createRecord('pki/role', { backend: 'pki' });
     this.attr = {
       helpText: '',
       options: {
@@ -91,7 +89,7 @@ module('Integration | Component | pki-not-valid-after-form', function (hooks) {
     assert.strictEqual(this.model.notAfter, notAfterExpected, 'notAfter gets populated from local cache');
   });
   test('Form renders properly for edit when TTL present', async function (assert) {
-    this.model = this.store.createRecord('pki/role', { ttl: 6000 });
+    this.model = this.store.createRecord('pki/role', { backend: 'pki', ttl: 6000 });
     await render(
       hbs`
       <div class="has-top-margin-xxl">
@@ -113,7 +111,7 @@ module('Integration | Component | pki-not-valid-after-form', function (hooks) {
   });
   test('Form renders properly for edit when notAfter present', async function (assert) {
     const utcDate = '1994-11-05T00:00:00.000Z';
-    this.model = this.store.createRecord('pki/role', { notAfter: utcDate });
+    this.model = this.store.createRecord('pki/role', { backend: 'pki', notAfter: utcDate });
     await render(
       hbs`
       <div class="has-top-margin-xxl">

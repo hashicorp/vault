@@ -11,9 +11,7 @@ module('Integration | Component | pki key parameters', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
-    this.secretMountPath.currentPath = 'pki-test';
-    this.model = this.store.createRecord('pki/role');
+    this.model = this.store.createRecord('pki/role', { backend: 'pki' });
     [this.fields] = Object.values(this.model.formFieldGroups.find((g) => g['Key parameters']));
   });
 
