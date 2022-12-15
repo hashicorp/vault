@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
+	"github.com/hashicorp/vault/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -55,7 +56,8 @@ type PluginCatalog struct {
 	externalPlugins map[externalPluginsKey]*externalPlugin
 	mlockPlugins    bool
 
-	lock sync.RWMutex
+	lock    sync.RWMutex
+	wrapper pluginutil.RunnerUtil
 }
 
 // Only plugins running with identical PluginRunner config can be multiplexed,
@@ -168,6 +170,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		directory:       c.pluginDirectory,
 		logger:          c.logger,
 		mlockPlugins:    c.enableMlock,
+		wrapper:         logical.StaticSystemView{VersionString: version.GetVersion().Version},
 	}
 
 	// Run upgrade if untyped plugins exist
@@ -461,6 +464,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 		Logger:          log.NewNullLogger(),
 		IsMetadataMode:  false,
 		AutoMTLS:        true,
+		Wrapper:         c.wrapper,
 	}
 
 	var client logical.Backend
@@ -500,7 +504,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 		config.AutoMTLS = false
 		config.IsMetadataMode = true
 		// attempt to run as a v4 backend plugin
-		client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
+		client, err = backendplugin.NewPluginClient(ctx, c.wrapper, pluginRunner, log.NewNullLogger(), true)
 		if err != nil {
 			merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin: %w", err))
 			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", merr)
@@ -550,6 +554,7 @@ func (c *PluginCatalog) getBackendRunningVersion(ctx context.Context, pluginRunn
 		Logger:          log.NewNullLogger(),
 		IsMetadataMode:  false,
 		AutoMTLS:        true,
+		Wrapper:         c.wrapper,
 	}
 
 	var client logical.Backend
@@ -590,7 +595,7 @@ func (c *PluginCatalog) getBackendRunningVersion(ctx context.Context, pluginRunn
 	config.AutoMTLS = false
 	config.IsMetadataMode = true
 	// attempt to run as a v4 backend plugin
-	client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
+	client, err = backendplugin.NewPluginClient(ctx, c.wrapper, pluginRunner, log.NewNullLogger(), true)
 	if err != nil {
 		merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin: %w", err))
 		c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", merr)
@@ -621,6 +626,7 @@ func (c *PluginCatalog) getDatabaseRunningVersion(ctx context.Context, pluginRun
 		Logger:          log.Default(),
 		IsMetadataMode:  true,
 		AutoMTLS:        true,
+		Wrapper:         c.wrapper,
 	}
 
 	// Attempt to run as database V5+ multiplexed plugin
@@ -651,7 +657,7 @@ func (c *PluginCatalog) getDatabaseRunningVersion(ctx context.Context, pluginRun
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
 
 	c.logger.Debug("attempting to load database plugin as v4", "name", pluginRunner.Name)
-	v4Client, err := v4.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
+	v4Client, err := v4.NewPluginClient(ctx, c.wrapper, pluginRunner, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		defer func() {
@@ -683,6 +689,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 		Logger:          log.NewNullLogger(),
 		IsMetadataMode:  true,
 		AutoMTLS:        true,
+		Wrapper:         c.wrapper,
 	}
 
 	// Attempt to run as database V5+ multiplexed plugin
@@ -704,7 +711,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
 
 	c.logger.Debug("attempting to load database plugin as v4", "name", pluginRunner.Name)
-	v4Client, err := v4.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
+	v4Client, err := v4.NewPluginClient(ctx, c.wrapper, pluginRunner, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		err = v4Client.Close()
@@ -833,6 +840,14 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 
 	builtinVersion := versions.GetBuiltinVersion(pluginType, name)
 	if version == "" || version == builtinVersion {
+		if version == builtinVersion {
+			// Don't return the builtin if it's shadowed by an unversioned plugin.
+			unversioned, err := c.get(ctx, name, pluginType, "")
+			if err == nil && unversioned != nil && !unversioned.Builtin {
+				return nil, nil
+			}
+		}
+
 		// Look for builtin plugins
 		if factory, ok := c.builtinRegistry.Get(name, pluginType); ok {
 			return &pluginutil.PluginRunner{

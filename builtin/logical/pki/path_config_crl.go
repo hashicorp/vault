@@ -216,7 +216,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	if oldDisable != config.Disable || (oldAutoRebuild && !config.AutoRebuild) {
 		// It wasn't disabled but now it is (or equivalently, we were set to
 		// auto-rebuild and we aren't now), so rotate the CRL.
-		crlErr := b.crlBuilder.rebuild(ctx, b, req, true)
+		crlErr := b.crlBuilder.rebuild(sc, true)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:
@@ -227,7 +227,18 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		}
 	}
 
-	return nil, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"expiry":                    config.Expiry,
+			"disable":                   config.Disable,
+			"ocsp_disable":              config.OcspDisable,
+			"ocsp_expiry":               config.OcspExpiry,
+			"auto_rebuild":              config.AutoRebuild,
+			"auto_rebuild_grace_period": config.AutoRebuildGracePeriod,
+			"enable_delta":              config.EnableDelta,
+			"delta_rebuild_interval":    config.DeltaRebuildInterval,
+		},
+	}, nil
 }
 
 const pathConfigCRLHelpSyn = `

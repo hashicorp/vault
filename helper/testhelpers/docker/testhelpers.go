@@ -492,6 +492,10 @@ func PathContentsFromBytes(data []byte) PathContents {
 	}
 }
 
+func PathContentsFromString(data string) PathContents {
+	return PathContentsFromBytes([]byte(data))
+}
+
 type BuildContext map[string]PathContents
 
 func NewBuildContext() BuildContext {
@@ -681,4 +685,31 @@ func (d *Runner) CopyFrom(container string, source string) (BuildContext, *types
 	}
 
 	return result, &stat, nil
+}
+
+func (d *Runner) GetNetworkAndAddresses(container string) (map[string]string, error) {
+	response, err := d.DockerAPI.ContainerInspect(context.Background(), container)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch container inspection data: %v", err)
+	}
+
+	if response.NetworkSettings == nil || len(response.NetworkSettings.Networks) == 0 {
+		return nil, fmt.Errorf("container (%v) had no associated network settings: %v", container, response)
+	}
+
+	ret := make(map[string]string)
+	ns := response.NetworkSettings.Networks
+	for network, data := range ns {
+		if data == nil {
+			continue
+		}
+
+		ret[network] = data.IPAddress
+	}
+
+	if len(ret) == 0 {
+		return nil, fmt.Errorf("no valid network data for container (%v): %v", container, response)
+	}
+
+	return ret, nil
 }

@@ -17,7 +17,7 @@
 <MessageError @model={{this.config}} @errors={{this.errors}} />
 <form {{action "save" this.section on="submit"}} class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
   {{#if (eq this.section "crl")}}
-    <TtlPicker2
+    <TtlPicker
       data-test-input="expiry"
       @onChange={{action "handleCrlTtl"}}
       @label={{if (get this.config "disable") "CRL building disabled" "CRL building enabled"}}

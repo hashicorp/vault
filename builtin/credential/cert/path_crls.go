@@ -16,6 +16,28 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+func pathListCRLs(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "crls/?$",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathCRLsList,
+			},
+		},
+		HelpSynopsis:    pathCRLsHelpSyn,
+		HelpDescription: pathCRLsHelpDesc,
+	}
+}
+
+func (b *backend) pathCRLsList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List(ctx, "crls/")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list CRLs: %w", err)
+	}
+
+	return logical.ListResponse(entries), nil
+}
+
 func pathCRLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "crls/" + framework.GenericNameRegex("name"),
@@ -288,7 +310,7 @@ Manage Certificate Revocation Lists checked during authentication.
 `
 
 const pathCRLsHelpDesc = `
-This endpoint allows you to create, read, update, and delete the Certificate
+This endpoint allows you to list, create, read, update, and delete the Certificate
 Revocation Lists checked during authentication, and/or CRL Distribution Point 
 URLs.
 

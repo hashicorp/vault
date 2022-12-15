@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,8 +34,10 @@ import (
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -127,6 +130,9 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 		EnableUI:        false,
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -195,6 +201,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI
 	conf.EnableRaw = opts.EnableRaw
+	conf.EnableIntrospection = opts.EnableIntrospection
 	conf.Seal = opts.Seal
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
@@ -601,9 +608,9 @@ func TestRunTestPlugin(t testing.T, c *Core, pluginType consts.PluginType, plugi
 }
 
 func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName string) pluginutil.PluginClientConfig {
+	dsv := TestDynamicSystemView(c, nil)
 	switch pluginType {
 	case consts.PluginTypeCredential, consts.PluginTypeSecrets:
-		dsv := TestDynamicSystemView(c, nil)
 		return pluginutil.PluginClientConfig{
 			Name:            pluginName,
 			PluginType:      pluginType,
@@ -623,6 +630,7 @@ func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName st
 			Logger:          log.NewNullLogger(),
 			AutoMTLS:        true,
 			IsMetadataMode:  false,
+			Wrapper:         dsv,
 		}
 	}
 	return pluginutil.PluginClientConfig{}
@@ -900,9 +908,14 @@ type TestCluster struct {
 	base              *CoreConfig
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
+	opts              *TestClusterOptions
 }
 
 func (c *TestCluster) Start() {
+}
+
+func (c *TestCluster) start(t testing.T) {
+	t.Helper()
 	for i, core := range c.Cores {
 		if core.Server != nil {
 			for _, ln := range core.Listeners {
@@ -913,6 +926,54 @@ func (c *TestCluster) Start() {
 	}
 	if c.SetupFunc != nil {
 		c.SetupFunc()
+	}
+
+	if c.opts != nil && c.opts.SkipInit {
+		// SkipInit implies that vault may not be ready to service requests, or that
+		// we're restarting a cluster from an existing storage.
+		return
+	}
+
+	activeCore := -1
+WAITACTIVE:
+	for i := 0; i < 60; i++ {
+		for i, core := range c.Cores {
+			if standby, _ := core.Core.Standby(); !standby {
+				activeCore = i
+				break WAITACTIVE
+			}
+		}
+
+		time.Sleep(time.Second)
+	}
+	if activeCore == -1 {
+		t.Fatalf("no core became active")
+	}
+
+	switch {
+	case c.opts == nil:
+	case c.opts.NoDefaultQuotas:
+	case c.opts.HandlerFunc == nil:
+	// If no HandlerFunc is provided that means that we can't actually do
+	// regular vault requests.
+	case reflect.TypeOf(c.opts.HandlerFunc).PkgPath() != "github.com/hashicorp/vault/http":
+	case reflect.TypeOf(c.opts.HandlerFunc).Name() != "Handler":
+	default:
+		cli := c.Cores[activeCore].Client
+		_, err := cli.Logical().Write("sys/quotas/rate-limit/rl-NewTestCluster", map[string]interface{}{
+			"rate": 1000000,
+		})
+		if err != nil {
+			t.Fatalf("error setting up global rate limit quota: %v", err)
+		}
+		if constants.IsEnterprise {
+			_, err = cli.Logical().Write("sys/quotas/lease-count/lc-NewTestCluster", map[string]interface{}{
+				"max_leases": 1000000,
+			})
+			if err != nil {
+				t.Fatalf("error setting up global lease count quota: %v", err)
+			}
+		}
 	}
 }
 
@@ -1145,10 +1206,14 @@ type PhysicalBackendBundle struct {
 	Cleanup   func()
 }
 
+type HandlerHandler interface {
+	Handler(*HandlerProperties) http.Handler
+}
+
 type TestClusterOptions struct {
 	KeepStandbysSealed       bool
 	SkipInit                 bool
-	HandlerFunc              func(*HandlerProperties) http.Handler
+	HandlerFunc              HandlerHandler
 	DefaultHandlerProperties HandlerProperties
 
 	// BaseListenAddress is used to explicitly assign ports in sequence to the
@@ -1221,6 +1286,8 @@ type TestClusterOptions struct {
 	RedundancyZoneMap      map[int]string
 	KVVersion              string
 	EffectiveSDKVersionMap map[int]string
+
+	NoDefaultQuotas bool
 }
 
 var DefaultNumCores = 3
@@ -1635,18 +1702,15 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 
 		coreConfig.ClusterCipherSuites = base.ClusterCipherSuites
-
 		coreConfig.DisableCache = base.DisableCache
-
 		coreConfig.DevToken = base.DevToken
 		coreConfig.RecoveryMode = base.RecoveryMode
-
 		coreConfig.ActivityLogConfig = base.ActivityLogConfig
 		coreConfig.EnableResponseHeaderHostname = base.EnableResponseHeaderHostname
 		coreConfig.EnableResponseHeaderRaftNodeID = base.EnableResponseHeaderRaftNodeID
-
 		coreConfig.RollbackPeriod = base.RollbackPeriod
-
+		coreConfig.PendingRemovalMountsAllowed = base.PendingRemovalMountsAllowed
+		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -1801,6 +1865,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 	}
 
+	testCluster.opts = opts
+	testCluster.start(t)
 	return &testCluster
 }
 
@@ -1997,7 +2063,7 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		if props.ListenerConfig != nil && props.ListenerConfig.MaxRequestDuration == 0 {
 			props.ListenerConfig.MaxRequestDuration = DefaultMaxRequestDuration
 		}
-		handler = opts.HandlerFunc(&props)
+		handler = opts.HandlerFunc.Handler(&props)
 	}
 
 	// Set this in case the Seal was manually set before the core was
@@ -2242,51 +2308,68 @@ func toFunc(f logical.Factory) func() (interface{}, error) {
 
 func NewMockBuiltinRegistry() *mockBuiltinRegistry {
 	return &mockBuiltinRegistry{
-		forTesting: map[string]consts.PluginType{
-			"mysql-database-plugin":      consts.PluginTypeDatabase,
-			"postgresql-database-plugin": consts.PluginTypeDatabase,
-			"approle":                    consts.PluginTypeCredential,
-			"aws":                        consts.PluginTypeCredential,
+		forTesting: map[string]mockBackend{
+			"mysql-database-plugin":      {PluginType: consts.PluginTypeDatabase},
+			"postgresql-database-plugin": {PluginType: consts.PluginTypeDatabase},
+			"approle":                    {PluginType: consts.PluginTypeCredential},
+			"pending-removal-test-plugin": {
+				PluginType:        consts.PluginTypeCredential,
+				DeprecationStatus: consts.PendingRemoval,
+			},
+			"aws":    {PluginType: consts.PluginTypeCredential},
+			"consul": {PluginType: consts.PluginTypeSecrets},
 		},
 	}
 }
 
-type mockBuiltinRegistry struct {
-	forTesting map[string]consts.PluginType
+type mockBackend struct {
+	consts.PluginType
+	consts.DeprecationStatus
 }
 
-// Get only supports getting database plugins, and approle
+type mockBuiltinRegistry struct {
+	forTesting map[string]mockBackend
+}
+
 func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
-	testPluginType, ok := m.forTesting[name]
+	testBackend, ok := m.forTesting[name]
 	if !ok {
 		return nil, false
 	}
+	testPluginType := testBackend.PluginType
 	if pluginType != testPluginType {
 		return nil, false
 	}
 
-	if name == "approle" {
+	switch name {
+	case "approle", "pending-removal-test-plugin":
 		return toFunc(approle.Factory), true
-	}
-
-	if name == "aws" {
+	case "aws":
 		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 			b := new(framework.Backend)
 			b.Setup(ctx, config)
 			b.BackendType = logical.TypeCredential
 			return b, nil
 		}), true
-	}
-
-	if name == "postgresql-database-plugin" {
+	case "postgresql-database-plugin":
 		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 			b := new(framework.Backend)
 			b.Setup(ctx, config)
 			b.BackendType = logical.TypeLogical
 			return b, nil
 		}), true
+	case "mysql-database-plugin":
+		return dbMysql.New(dbMysql.DefaultUserNameTemplate), true
+	case "consul":
+		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+			b := new(framework.Backend)
+			b.Setup(ctx, config)
+			b.BackendType = logical.TypeLogical
+			return b, nil
+		}), true
+	default:
+		return nil, false
 	}
-	return dbMysql.New(dbMysql.DefaultUserNameTemplate), true
 }
 
 // Keys only supports getting a realistic list of the keys for database plugins,
@@ -2319,6 +2402,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		}
 	case consts.PluginTypeCredential:
 		return []string{
+			"pending-removal-test-plugin",
 			"approle",
 		}
 	}
@@ -2336,7 +2420,7 @@ func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType
 
 func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool) {
 	if m.Contains(name, pluginType) {
-		return consts.Supported, true
+		return m.forTesting[name].DeprecationStatus, true
 	}
 
 	return consts.Unknown, false

@@ -298,6 +298,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLoggersRead,
+					Summary:  "Read the log level for all existing loggers.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersWrite,
 					Summary:  "Modify the log level for all existing loggers.",
@@ -322,6 +326,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameRead,
+					Summary:  "Read the log level for a single logger.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameWrite,
 					Summary:  "Modify the log level of a single logger.",
@@ -1063,6 +1071,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-entities"][1]),
 		},
+	}
+}
+
+func (b *SystemBackend) introspectionPaths() []*framework.Path {
+	return []*framework.Path{
 		{
 			Pattern: "internal/inspect/router/" + framework.GenericNameRegex("tag"),
 			Fields: map[string]*framework.FieldSchema{

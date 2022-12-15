@@ -7,7 +7,11 @@
     @instructions='Click on "Delete" to remove the policy that you created.'
   >
     <p>
-      You can delete your test policy by clicking the "..." icon to the right of the policy name.
+      {{#if (eq @currentRouteName "vault.cluster.policies.index")}}
+        You can delete your test policy by clicking the "..." icon to the right of the policy name.
+      {{else}}
+        You can delete your test policy by clicking "Delete" in the toolbar.
+      {{/if}}
     </p>
   </WizardSection>
 </WizardContent>

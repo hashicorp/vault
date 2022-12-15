@@ -42,6 +42,11 @@
     opacity: 0.6;
     box-shadow: none;
   }
+
+  &.has-fixed-width {
+    width: 368px;
+    max-width: 368px;
+  }
 }
 .radio-card:first-child {
   margin-left: 0;
@@ -49,9 +54,14 @@
 .radio-card:last-child {
   margin-right: 0;
 }
-
+.radio-card-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 .radio-card-row {
   display: flex;
+  flex: 1;
   padding: $spacing-m;
 }
 .radio-card-icon {

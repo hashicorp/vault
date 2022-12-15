@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/meta";
+
+package meta;
+
+message ListNamespacesRequest {}
+
+message ListNamespacesResponse {
+  repeated string Paths = 1;
+}
+
+message ListMountsRequest {}
+
+message Mount {
+  string Path = 1;
+  string Type = 2;
+  string Description = 3;
+}
+
+message ListMountsResponse {
+  repeated Mount Mounts = 1;
+}
+
+message ListAuthsRequest {}
+
+message Auth {
+  string Path = 1;
+  string Type = 2;
+  string Description = 3;
+}
+
+message ListAuthResponse {
+  repeated Auth Auths = 1;
+}
+
+service HCPLinkMeta {
+  // ListNamespaces will be used to recursively list all namespaces
+  rpc ListNamespaces(ListNamespacesRequest) returns (ListNamespacesResponse);
+
+  // ListMounts will be used to recursively list all mounts in all namespaces
+  rpc ListMounts(ListMountsRequest) returns (ListMountsResponse);
+
+  // ListAuths will be used to recursively list all auths in all namespaces
+  rpc ListAuths(ListAuthsRequest) returns (ListAuthResponse);
+}

@@ -118,9 +118,25 @@ func init() {
 	})
 }
 
-// Handler returns an http.Handler for the API. This can be used on
+type HandlerAnchor struct{}
+
+func (h HandlerAnchor) Handler(props *vault.HandlerProperties) http.Handler {
+	return handler(props)
+}
+
+var Handler vault.HandlerHandler = HandlerAnchor{}
+
+type HandlerFunc func(props *vault.HandlerProperties) http.Handler
+
+func (h HandlerFunc) Handler(props *vault.HandlerProperties) http.Handler {
+	return h(props)
+}
+
+var _ vault.HandlerHandler = HandlerFunc(func(props *vault.HandlerProperties) http.Handler { return nil })
+
+// handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
-func Handler(props *vault.HandlerProperties) http.Handler {
+func handler(props *vault.HandlerProperties) http.Handler {
 	core := props.Core
 
 	// Create the muxer to handle the actual endpoints
