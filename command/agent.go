@@ -994,6 +994,10 @@ func (c *AgentCommand) Run(args []string) int {
 // on the precedence (env var overrides file config, cli overrides env var).
 // It mutates the config object supplied.
 func (c *AgentCommand) updateConfig(f *FlagSets, config *agentConfig.Config) {
+	if config.Vault == nil {
+		config.Vault = &agentConfig.Vault{}
+	}
+
 	f.updateLogConfig(config.SharedConfig)
 
 	f.Visit(func(fl *flag.Flag) {
