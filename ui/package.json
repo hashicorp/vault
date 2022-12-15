@@ -27,7 +27,6 @@
     "start:mirage": "start () { MIRAGE_DEV_HANDLER=$1 yarn run start; }; start",
     "test": "npm-run-all lint:js:quiet lint:hbs:quiet && node scripts/start-vault.js",
     "test:oss": "yarn run test -f='!enterprise'",
-    "test:browserstack": "export CI=true; node scripts/start-vault.js --browserstack",
     "test:quick": "node scripts/start-vault.js",
     "test:quick-oss": "yarn test:quick -f='!enterprise'",
     "build:storybook": "build-storybook -s ../http/web_ui && sb extract && cp storybook-static/stories.json ../http/web_ui/stories.json",
