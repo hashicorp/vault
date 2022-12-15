@@ -1,10 +1,10 @@
 import { parseCertificate } from 'vault/helpers/parse-pki-cert';
 import ApplicationSerializer from '../../application';
 
-export default class PkiCertificateGenerateSerializer extends ApplicationSerializer {
+export default class PkiCertificateSignSerializer extends ApplicationSerializer {
   primaryKey = 'serial_number';
   attrs = {
-    role: { serialize: false },
+    type: { serialize: false },
   };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
