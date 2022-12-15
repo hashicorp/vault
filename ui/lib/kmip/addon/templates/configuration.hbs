@@ -4,9 +4,9 @@
     {{#if this.model}}
       <DownloadButton
         class="toolbar-link"
-        @extension="pem"
         @filename={{concat this.model.ca.id "-ca"}}
         @data={{this.model.ca.caPem}}
+        @extension="pem"
       >
         Download CA cert
         <Chevron @isButton={{true}} />
