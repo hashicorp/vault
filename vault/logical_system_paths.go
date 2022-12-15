@@ -1,11 +1,18 @@
 package vault
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+var responseNoContent = map[int][]framework.Response{
+	http.StatusNoContent: {{
+		Description: "No Content",
+	}},
+}
 
 func (b *SystemBackend) configPaths() []*framework.Path {
 	return []*framework.Path{
@@ -2069,8 +2076,8 @@ func (b *SystemBackend) lockerUserPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleUnlockUser,
-					Summary:  "Unlocks the user with given mount_accessor and alias_identifier",
+					Callback:  b.handleUnlockUser,
+					Responses: responseNoContent,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
