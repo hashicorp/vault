@@ -20,10 +20,10 @@ module('Unit | Adapter | pki/certificate/generate', function (hooks) {
   test('it should make request to correct endpoint on create', async function (assert) {
     assert.expect(1);
     const generateData = {
-      name: 'my-role',
+      role: 'my-role',
       common_name: 'example.com',
     };
-    this.server.post(`${this.backend}/issue/${generateData.name}`, () => {
+    this.server.post(`${this.backend}/issue/${generateData.role}`, () => {
       assert.ok(true, 'request made to correct endpoint on create');
       return {
         data: {

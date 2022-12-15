@@ -53,7 +53,12 @@
           </select>
         </div>
         {{#if this.validationError}}
-          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+          <AlertInline
+            @type="danger"
+            @message={{this.validationError}}
+            @paddingTop={{true}}
+            data-test-field-validation={{@attr.name}}
+          />
         {{/if}}
       </div>
     {{/if}}
