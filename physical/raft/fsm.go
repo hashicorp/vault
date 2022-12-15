@@ -235,7 +235,6 @@ func (f *FSM) openDBFile(dbPath string) error {
 	}
 
 	f.db = boltDB
-
 	return nil
 }
 
