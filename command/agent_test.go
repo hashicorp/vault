@@ -2254,7 +2254,7 @@ cache {}
 func TestAgent_LogFile_CliOverridesConfig(t *testing.T) {
 	// Create basic config
 	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
-	cfg, err := agentConfig.LoadConfig(configFile.Name())
+	cfg, err := agentConfig.LoadConfigFile(configFile.Name())
 	if err != nil {
 		t.Fatal("Cannot load config to test update/merge", err)
 	}
@@ -2282,7 +2282,7 @@ func TestAgent_LogFile_CliOverridesConfig(t *testing.T) {
 func TestAgent_LogFile_Config(t *testing.T) {
 	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
 
-	cfg, err := agentConfig.LoadConfig(configFile.Name())
+	cfg, err := agentConfig.LoadConfigFile(configFile.Name())
 	if err != nil {
 		t.Fatal("Cannot load config to test update/merge", err)
 	}
