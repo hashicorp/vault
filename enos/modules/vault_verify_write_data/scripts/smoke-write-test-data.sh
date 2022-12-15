@@ -32,19 +32,4 @@ testvalue=${test_value}
 
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
-retry 5 "$binpath" status > /dev/null 2>&1
-
-# Create user policy
-$binpath policy write reguser -<<EOF
-path "*" {
-  capabilities = ["read", "list"]
-}
-EOF
-
-# Enable the userpass auth method
-$binpath auth enable userpass
-
-# Create new user and attach superuser policy
-$binpath write auth/userpass/users/user1 password="passuser1" policies="reguser"
-
 retry 5 $binpath kv put secret/test $testkey=$testvalue

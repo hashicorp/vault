@@ -165,7 +165,8 @@ module "vault_performance_replication_secondary" {
 module "vault_verify_read_data" {
   source = "./modules/vault_verify_read_data"
 
-  vault_install_dir = var.vault_install_dir
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_verify_performance_replication" {

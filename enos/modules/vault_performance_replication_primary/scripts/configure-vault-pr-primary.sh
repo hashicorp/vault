@@ -18,9 +18,6 @@ path "*" {
 }
 EOF
 
-# Enable the userpass auth method
-$binpath auth enable userpass
-
 # Create new user and attach superuser policy
 $binpath write auth/userpass/users/tester password="changeme" policies="superuser"
 

@@ -285,8 +285,11 @@ scenario "replication" {
   }
 
   step "configure_performance_replication_primary" {
-    module     = module.vault_performance_replication_primary
-    depends_on = [step.get_primary_cluster_ips]
+    module = module.vault_performance_replication_primary
+    depends_on = [
+      step.get_primary_cluster_ips,
+      step.verify_vault_primary_write_data
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -387,15 +390,19 @@ scenario "replication" {
   }
 
   step "verify_replicated_data" {
-    module     = module.vault_verify_read_data
-    depends_on = [step.verify_performance_replication]
+    module = module.vault_verify_read_data
+    depends_on = [
+      step.verify_performance_replication,
+      step.get_secondary_cluster_ips,
+      step.verify_vault_primary_write_data
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      node_public_ips   = step.get_secondary_cluster_ips.secondary_follower_public_ips
+      node_public_ips   = step.get_secondary_cluster_ips.follower_public_ips
       vault_install_dir = local.vault_install_dir
     }
   }

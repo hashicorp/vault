@@ -22,8 +22,7 @@ variable "node_public_ips" {
 }
 
 locals {
-  instance_count = length(node_public_ips) || (var.instance_count - 1)
-  followers      = toset([for idx in range(local.instance_count) : tostring(idx)])
+  followers      = toset([for idx in range(var.vault_instance_count - 1) : tostring(idx)])
   vault_bin_path = "${var.vault_install_dir}/vault"
 }
 
@@ -40,7 +39,7 @@ resource "enos_remote_exec" "verify_kv_on_node" {
 
   transport = {
     ssh = {
-      host = element(var.follower_public_ips, each.key)
+      host = element(var.node_public_ips, each.key)
     }
   }
 }
