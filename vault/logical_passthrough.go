@@ -40,8 +40,8 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 		}
 	} else {
 		b.generateLeases = true
+		b.revoke = revoke
 	}
-	b.revoke = revoke
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(passthroughHelp),
 
