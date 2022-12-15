@@ -26,6 +26,15 @@ var debugAllowSHA1 bool
 // TODO: remove when Vault <=1.11 is no longer supported
 func PatchSha1() {
 	patchSha1.Do(func() {
+		// for Go 1.19.4 and later
+		godebug := os.Getenv("GODEBUG")
+		if godebug != "" {
+			godebug += ","
+		}
+		godebug += "x509sha1=1"
+		os.Setenv("GODEBUG", godebug)
+
+		// for Go 1.19.3 and earlier, patch the variable
 		patchBefore, err := goversion.NewSemver(sha1PatchVersionsBefore)
 		if err != nil {
 			panic(err)
