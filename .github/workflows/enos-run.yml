@@ -46,7 +46,7 @@ on:
         default: '"ubuntu-latest"'
       ssh-key-name:
         type: string
-        default: enos-ci-ssh-key
+        default: vault-ci-ssh-key
       # Which edition of Vault we're using. e.g. "oss", "ent", "ent.hsm.fips1402"
       vault-edition:
         required: true
@@ -113,10 +113,10 @@ jobs:
           terraform_wrapper: false
       - uses: aws-actions/configure-aws-credentials@v1-node16
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
           aws-region: ${{ matrix.aws_region }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
       - uses: hashicorp/action-setup-enos@v1
@@ -125,7 +125,7 @@ jobs:
       - name: Prepare scenario dependencies
         run: |
           mkdir -p ./enos/support/terraform-plugin-cache
-          echo "${{ secrets.ENOS_CI_SSH_KEY }}" > ./enos/support/private_key.pem
+          echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > ./enos/support/private_key.pem
           chmod 600 ./enos/support/private_key.pem
       - if: contains(inputs.matrix-file-name, 'github')
         uses: actions/download-artifact@v3

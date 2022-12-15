@@ -188,6 +188,7 @@ jobs:
       matrix-test-group: ${{ needs.product-metadata.outputs.matrix-test-group }}
       vault-edition: oss
       vault-revision: ${{ needs.product-metadata.outputs.vault-revision }}
+      ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
     secrets: inherit
 
   test-docker-k8s:
