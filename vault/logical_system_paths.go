@@ -1071,6 +1071,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-entities"][1]),
 		},
+	}
+}
+
+func (b *SystemBackend) introspectionPaths() []*framework.Path {
+	return []*framework.Path{
 		{
 			Pattern: "internal/inspect/router/" + framework.GenericNameRegex("tag"),
 			Fields: map[string]*framework.FieldSchema{
