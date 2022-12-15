@@ -10,12 +10,16 @@
 />
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @route="keys.import" @type="download">
-      Import
-    </ToolbarLink>
-    <ToolbarLink @route="keys.create" @type="add">
-      Generate
-    </ToolbarLink>
+    {{#if this.model.canImportKey}}
+      <ToolbarLink @route="keys.import" @type="download">
+        Import
+      </ToolbarLink>
+    {{/if}}
+    {{#if this.model.canGenerateKey}}
+      <ToolbarLink @route="keys.create" @type="add">
+        Generate
+      </ToolbarLink>
+    {{/if}}
   </ToolbarActions>
 </Toolbar>
 <p class="has-padding">Below is information about the private keys used by the issuers to sign certificates. While
@@ -44,12 +48,12 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo @route="keys.key.details" @model={{pkiKey.keyId}}>
+                    <LinkTo @route="keys.key.details" @model={{pkiKey.keyId}} @disabled={{eq pkiKey.canRead false}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo @route="keys.key.edit" @model={{pkiKey.keyId}}>
+                    <LinkTo @route="keys.key.edit" @model={{pkiKey.keyId}} @disabled={{eq pkiKey.canEdit false}}>
                       Edit
                     </LinkTo>
                   </li>

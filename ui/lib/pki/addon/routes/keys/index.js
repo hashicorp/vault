@@ -15,7 +15,13 @@ export default class PkiKeysIndexRoute extends Route {
     return this.store
       .query('pki/key', { backend: this.secretMountPath.currentPath })
       .then((keyModel) => {
-        return { keyModel, parentModel: this.modelFor('keys') };
+        const { canGenerateKey, canImportKey } = keyModel.firstObject;
+        return {
+          keyModel,
+          parentModel: this.modelFor('keys'),
+          canGenerateKey,
+          canImportKey,
+        };
       })
       .catch((err) => {
         if (err.httpStatus === 404) {
