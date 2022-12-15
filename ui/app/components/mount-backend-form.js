@@ -1,4 +1,3 @@
-import Ember from 'ember';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
@@ -67,23 +66,7 @@ export default class MountBackendForm extends Component {
     if (!this.checkModelValidity(mountModel)) {
       return;
     }
-    let capabilities = null;
-    try {
-      capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
-    } catch (err) {
-      if (Ember.testing) {
-        // TODO: smells like we need to fix a test
-        //captures mount-backend-form component test
-        yield mountModel.save();
-        let mountType = this.mountType;
-        mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
-        this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
-        yield this.args.onMountSuccess(type, path);
-        return;
-      } else {
-        throw err;
-      }
-    }
+    const capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
 
     const changedAttrKeys = Object.keys(mountModel.changedAttributes());
     const updatesConfig =
