@@ -30,4 +30,3 @@ jobs:
         uses: ./actions/pr-checks
         with:
           token: ${{secrets.GITHUB_TOKEN}}
-          configPath: pr-checks
