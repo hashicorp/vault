@@ -2386,25 +2386,22 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 			v()
 		}
 	} else {
-		workerChans := make([]chan func(), postUnsealFuncConcurrency)
+		jobs := make(chan func())
 		var wg sync.WaitGroup
 		for i := 0; i < postUnsealFuncConcurrency; i++ {
-			workerChans[i] = make(chan func())
-			go func(i int) {
-				for v := range workerChans[i] {
+			go func() {
+				for v := range jobs {
 					v()
 					wg.Done()
 				}
-			}(i)
+			}()
 		}
-		for i, v := range c.postUnsealFuncs {
+		for _, v := range c.postUnsealFuncs {
 			wg.Add(1)
-			workerChans[i%postUnsealFuncConcurrency] <- v
-		}
-		for i := 0; i < postUnsealFuncConcurrency; i++ {
-			close(workerChans[i])
+			jobs <- v
 		}
 		wg.Wait()
+		close(jobs)
 	}
 
 	if atomic.LoadUint32(c.sealMigrationDone) == 1 {
