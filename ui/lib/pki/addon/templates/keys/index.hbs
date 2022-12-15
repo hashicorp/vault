@@ -11,9 +11,11 @@
 {{#if this.model.hasConfig}}
   <Page::PkiKeyList
     @keyModels={{this.model.keyModels}}
+    @mountPoint={{this.mountPoint}}
     @canImportKey={{this.model.keyModels.firstObject.canImportKey}}
     @canGenerateKey={{this.model.keyModels.firstObject.canGenerateKey}}
-    @mountPoint={{this.mountPoint}}
+    @canRead={{this.model.keyModels.firstObject.canRead}}
+    @canEdit={{this.model.keyModels.firstObject.canEdit}}
   />
 {{else}}
   <Toolbar />

@@ -39,12 +39,12 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo @route="keys.key.details" @model={{pkiKey.keyId}} @disabled={{eq pkiKey.canRead false}}>
+                    <LinkTo @route="keys.key.details" @model={{pkiKey.keyId}} @disabled={{unless @canRead}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo @route="keys.key.edit" @model={{pkiKey.keyId}} @disabled={{eq pkiKey.canEdit false}}>
+                    <LinkTo @route="keys.key.edit" @model={{pkiKey.keyId}} @disabled={{unless @canEdit}}>
                       Edit
                     </LinkTo>
                   </li>
