@@ -18,7 +18,7 @@
 
 {{#if @keyModels.length}}
   {{#each @keyModels as |pkiKey|}}
-    <LinkedBlock class="list-item-row" @params={{array "keys.key.details" pkiKey.keyId}} @linkPrefix={{this.mountPoint}}>
+    <LinkedBlock class="list-item-row" @params={{array "keys.key.details" pkiKey.keyId}} @linkPrefix={{@mountPoint}}>
       <div class="level is-mobile">
         <div class="level-left">
           <div>

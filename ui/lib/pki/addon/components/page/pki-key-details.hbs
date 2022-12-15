@@ -13,7 +13,7 @@
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if @canEdit}}
-      <ToolbarLink @route="keys.key.edit" @model={{@key.keyId}}>
+      <ToolbarLink @route="keys.key.edit" @model={{@key.keyId}} data-test-pki-key-edit>
         Edit key
       </ToolbarLink>
     {{/if}}
