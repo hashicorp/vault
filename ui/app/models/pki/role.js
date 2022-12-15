@@ -1,4 +1,5 @@
 import Model, { attr } from '@ember-data/model';
+import { inject as service } from '@ember/service';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
@@ -68,6 +69,8 @@ const fieldGroups = [
 @withFormFields(null, fieldGroups)
 @withModelValidations(validations)
 export default class PkiRoleModel extends Model {
+  @service secretMountPath;
+
   get useOpenAPI() {
     // must be a getter so it can be accessed in path-help.js
     return true;
@@ -76,7 +79,9 @@ export default class PkiRoleModel extends Model {
     return `/v1/${backend}/roles/example?help=1`;
   }
 
-  @attr('string', { readOnly: true }) backend;
+  get backend() {
+    return this.secretMountPath.currentPath;
+  }
 
   /* Overriding OpenApi default options */
   @attr('string', {
@@ -108,7 +113,7 @@ export default class PkiRoleModel extends Model {
     detailsLabel: 'Issued certificate backdating',
     helperTextDisabled: 'Vault will use the default value, 30s',
     helperTextEnabled:
-      'Also called the notBefore property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
+      'Also called the not_before_duration property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
     editType: 'ttl',
     defaultValue: '30s',
   })

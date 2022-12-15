@@ -11,8 +11,9 @@ module('Integration | Component | pki-key-usage', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
+    this.secretMountPath.currentPath = 'pki-test';
     this.model = this.store.createRecord('pki/role');
-    this.model.backend = 'pki';
   });
 
   test('it should render the component', async function (assert) {
