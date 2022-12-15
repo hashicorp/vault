@@ -201,6 +201,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI
 	conf.EnableRaw = opts.EnableRaw
+	conf.EnableIntrospection = opts.EnableIntrospection
 	conf.Seal = opts.Seal
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
@@ -1701,20 +1702,15 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 
 		coreConfig.ClusterCipherSuites = base.ClusterCipherSuites
-
 		coreConfig.DisableCache = base.DisableCache
-
 		coreConfig.DevToken = base.DevToken
 		coreConfig.RecoveryMode = base.RecoveryMode
-
 		coreConfig.ActivityLogConfig = base.ActivityLogConfig
 		coreConfig.EnableResponseHeaderHostname = base.EnableResponseHeaderHostname
 		coreConfig.EnableResponseHeaderRaftNodeID = base.EnableResponseHeaderRaftNodeID
-
 		coreConfig.RollbackPeriod = base.RollbackPeriod
-
 		coreConfig.PendingRemovalMountsAllowed = base.PendingRemovalMountsAllowed
-
+		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {

@@ -7,7 +7,7 @@ const generateFromRole = [
     default: ['commonName'],
   },
   {
-    Options: [
+    'Subject Alternative Name (SAN) Options': [
       'altNames',
       'ipSans',
       'uriSans',
@@ -25,5 +25,5 @@ export default class PkiCertificateGenerateModel extends PkiCertificateBaseModel
   getHelpUrl(backend) {
     return `/v1/${backend}/issue/example?help=1`;
   }
-  @attr('string') name; // associated role
+  @attr('string') role;
 }

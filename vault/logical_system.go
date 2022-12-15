@@ -191,11 +191,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
 	}
-
 	if backend := core.getRaftBackend(); backend != nil {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
@@ -4308,17 +4308,22 @@ func (b *SystemBackend) pathInternalCountersEntities(ctx context.Context, req *l
 }
 
 func (b *SystemBackend) pathInternalInspectRouter(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	tag := d.Get("tag").(string)
-	inspectableRouter, err := b.Core.router.GetRecords(tag)
-	if err != nil {
-		return nil, err
+	b.Core.introspectionEnabledLock.Lock()
+	defer b.Core.introspectionEnabledLock.Unlock()
+	if b.Core.introspectionEnabled {
+		tag := d.Get("tag").(string)
+		inspectableRouter, err := b.Core.router.GetRecords(tag)
+		if err != nil {
+			return nil, err
+		}
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				tag: inspectableRouter,
+			},
+		}
+		return resp, nil
 	}
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			tag: inspectableRouter,
-		},
-	}
-	return resp, nil
+	return logical.ErrorResponse(ErrIntrospectionNotEnabled.Error()), nil
 }
 
 func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

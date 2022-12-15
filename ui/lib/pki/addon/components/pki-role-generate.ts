@@ -12,6 +12,7 @@ import DownloadService from 'vault/services/download';
 interface Args {
   onSuccess: CallableFunction;
   model: PkiCertificateGenerateModel;
+  type: string;
 }
 
 interface PkiCertificateGenerateModel {
@@ -46,6 +47,10 @@ export default class PkiRoleGenerate extends Component<Args> {
     this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.role.details');
   }
 
+  get verb() {
+    return this.args.type === 'sign' ? 'sign' : 'generate';
+  }
+
   @task
   *save(evt: Event) {
     evt.preventDefault();
@@ -55,7 +60,7 @@ export default class PkiRoleGenerate extends Component<Args> {
       yield model.save();
       onSuccess();
     } catch (err) {
-      this.errorBanner = errorMessage(err, 'Could not generate certificate. See Vault logs for details.');
+      this.errorBanner = errorMessage(err, `Could not ${this.verb} certificate. See Vault logs for details.`);
     }
   }
 

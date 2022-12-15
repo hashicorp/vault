@@ -49,8 +49,20 @@
   <form {{on "submit" (perform this.save)}} data-test-pki-generate-cert-form>
     <div class="box is-bottomless is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorBanner}} />
-      <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
-      <FormFieldGroupsLoop @model={{@model}} @mode="create" @groupName="formFieldGroups" />
+      <NamespaceReminder @mode="create" @noun="certificate" />
+      {{#let (get @model.formFieldGroups "0") as |defaultGroup|}}
+        {{#each defaultGroup.default as |attr|}}
+          <FormField @model={{@model}} @attr={{attr}}>
+            <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+          </FormField>
+        {{/each}}
+      {{/let}}
+      <FormFieldGroups
+        @model={{@model}}
+        @mode="create"
+        @renderGroup="Subject Alternative Name (SAN) Options"
+        @groupName="formFieldGroups"
+      />
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
@@ -60,7 +72,7 @@
           disabled={{this.save.isRunning}}
           data-test-pki-generate-button
         >
-          Generate
+          {{capitalize this.verb}}
         </button>
         <button
           type="button"

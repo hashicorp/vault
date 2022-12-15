@@ -1,19 +1,45 @@
 import Service from '@ember/service';
 
+interface Extensions {
+  csv: string;
+  hcl: string;
+  sentinel: string;
+  json: string;
+  pem: string;
+  txt: string;
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
+const EXTENSION_TO_MIME: Extensions = {
+  csv: 'txt/csv',
+  hcl: 'text/plain',
+  sentinel: 'text/plain',
+  json: 'application/json',
+  pem: 'application/x-pem-file',
+  txt: 'text/plain',
+};
+
 export default class DownloadService extends Service {
-  download(filename: string, mimetype: string, content: string) {
+  download(filename: string, content: string, extension: string) {
+    // replace spaces with hyphens, append extension to filename
+    const formattedFilename =
+      `${filename?.replace(/\s+/g, '-')}.${extension}` ||
+      `vault-data-${new Date().toISOString()}.${extension}`;
+
+    // map extension to MIME type or use default
+    const mimetype = EXTENSION_TO_MIME[extension as keyof Extensions] || 'text/plain';
+
+    // commence download
     const { document, URL } = window;
     const downloadElement = document.createElement('a');
-    downloadElement.download = filename;
-    downloadElement.href = URL.createObjectURL(
-      new Blob([content], {
-        type: mimetype,
-      })
-    );
+    const data = new File([content], formattedFilename, { type: mimetype });
+    downloadElement.download = formattedFilename;
+    downloadElement.href = URL.createObjectURL(data);
     document.body.appendChild(downloadElement);
     downloadElement.click();
     URL.revokeObjectURL(downloadElement.href);
     downloadElement.remove();
+    return formattedFilename;
   }
 
   // SAMPLE CSV FORMAT ('content' argument)
@@ -22,15 +48,14 @@ export default class DownloadService extends Service {
   //  namespacelonglonglong4/,,191,171,20\n
   //  namespacelonglonglong4/,auth/method/uMGBU,35,20,15\n'
   csv(filename: string, content: string) {
-    // even though Blob type 'text/csv' is specified below, some browsers (ex. Firefox) require the filename has an explicit extension
-    const formattedFilename = `${filename?.replace(/\s+/g, '-')}.csv` || 'vault-data.csv';
-    this.download(formattedFilename, 'text/csv', content);
-    return formattedFilename;
+    this.download(filename, content, 'csv');
   }
 
   pem(filename: string, content: string) {
-    const formattedFilename = `${filename?.replace(/\s+/g, '-')}.pem` || 'vault-cert.pem';
-    this.download(formattedFilename, 'application/x-pem-file', content);
-    return formattedFilename;
+    this.download(filename, content, 'pem');
+  }
+
+  miscExtension(filename: string, content: string, extension: string) {
+    this.download(filename, content, extension);
   }
 }

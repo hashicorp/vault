@@ -1,7 +1,7 @@
 export const SELECTORS = {
   form: '[data-test-pki-generate-cert-form]',
   commonNameField: '[data-test-input="commonName"]',
-  optionsToggle: '[data-test-toggle-group="Options"]',
+  optionsToggle: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
   generateButton: '[data-test-pki-generate-button]',
   cancelButton: '[data-test-pki-generate-cancel]',
   downloadButton: '[data-test-pki-cert-download-button]',
