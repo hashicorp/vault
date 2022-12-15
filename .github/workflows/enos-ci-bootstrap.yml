@@ -1,4 +1,4 @@
-name: enos-ci-bootstrap
+name: test-ci-bootstrap
 
 on:
   workflow_dispatch:
@@ -27,25 +27,13 @@ jobs:
       - uses: actions/checkout@v3
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
-      - name: Prepare for Terraform execution
-        id: prepare_for_terraform
-        env:
-          IS_ENT: ${{ startsWith(github.event.repository.name, 'vault-enterprise' ) }}
-        run: |
-          if ${IS_ENT} == true; then
-            echo "aws_role=arn:aws:iam::505811019928:role/github_actions-vault_enterprise_ci" >> $GITHUB_OUTPUT
-            echo "aws role set to 'arn:aws:iam::505811019928:role/github_actions-vault_enterprise_ci'"
-          else
-            echo "aws_role=arn:aws:iam::040730498200:role/github_actions-vault_ci" >> $GITHUB_OUTPUT
-            echo "aws role set to 'arn:aws:iam::040730498200:role/github_actions-vault_ci'"
-          fi
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
           aws-region: us-east-1
-          role-to-assume: ${{ steps.prepare_for_terraform.outputs.aws_role }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
       - name: Init Terraform
