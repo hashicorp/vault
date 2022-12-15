@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, findAll } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/keys/form';
@@ -37,18 +37,15 @@ module('Integration | Component | pki key form', function (hooks) {
     assert.dom(SELECTORS.keyBitsInput).exists('renders key bits input');
 
     await click(SELECTORS.keyCreateButton);
-    const [type, keyType, formErrorCount] = findAll('[data-test-inline-error-message]');
-    assert.strictEqual(type.innerText, 'Type is required.', 'renders presence validation for type of key');
-    assert.strictEqual(
-      keyType.innerText,
-      'Please select a key type.',
-      'renders selection prompt for key type'
-    );
-    assert.strictEqual(
-      formErrorCount.innerText,
-      'There are 2 errors with this form. ',
-      'renders correct form error count'
-    );
+    assert
+      .dom(SELECTORS.fieldErrorByName('type'))
+      .hasTextContaining('Type is required.', 'renders presence validation for type of key');
+    assert
+      .dom(SELECTORS.fieldErrorByName('keyType'))
+      .hasTextContaining('Please select a key type.', 'renders selection prompt for key type');
+    assert
+      .dom(SELECTORS.validationError)
+      .hasTextContaining('There are 2 errors with this form.', 'renders correct form error count');
   });
 
   test('it generates a key type=exported', async function (assert) {

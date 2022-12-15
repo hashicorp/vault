@@ -49,7 +49,7 @@
   <form {{on "submit" (perform this.save)}} data-test-pki-generate-cert-form>
     <div class="box is-bottomless is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorBanner}} />
-      <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="certificate" />
+      <NamespaceReminder @mode="create" @noun="certificate" />
       {{#let (get @model.formFieldGroups "0") as |defaultGroup|}}
         {{#each defaultGroup.default as |attr|}}
           <FormField @model={{@model}} @attr={{attr}}>
