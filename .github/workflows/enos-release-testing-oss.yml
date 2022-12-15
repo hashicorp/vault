@@ -43,7 +43,8 @@ jobs:
           - matrix-file-name: enos_release_testing_oss-artifactory-oss-linux-arm64-zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
     with:
-      matrix-file-name: ${{ matrix.test-name }}
+      build-artifact-name: ${{ matrix.build-artifact-name }}
+      matrix-file-name: ${{ matrix.matrix-file-name }}
       matrix-test-group: ${{ needs.metadata.outputs.matrix-test-group }}
       vault-edition: oss
       vault-revision: ${{ needs.product-metadata.outputs.vault-revision }}
