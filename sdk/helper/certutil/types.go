@@ -770,6 +770,7 @@ type CreationParameters struct {
 	Subject                       pkix.Name
 	DNSNames                      []string
 	EmailAddresses                []string
+	UserId                        string
 	IPAddresses                   []net.IP
 	URIs                          []*url.URL
 	OtherSANs                     map[string][]string

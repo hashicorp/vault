@@ -642,6 +642,30 @@ func parseOtherSANs(others []string) (map[string][]string, error) {
 	return result, nil
 }
 
+// Returns bool stating whether UserId is Valid
+func isValidateUserId(data *inputBundle, userId string) bool {
+	allowedList := data.role.AllowedUserIDs
+
+	if len(allowedList) > 0 {
+
+		if strutil.StrListContainsCaseInsensitive(allowedList, userId) {
+			return true
+		}
+
+		for _, rolePattern := range data.role.AllowedUserIDs {
+			if rolePattern == "" {
+				continue
+			}
+
+			if strings.Contains(rolePattern, "*") && glob.Glob(rolePattern, userId) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func validateSerialNumber(data *inputBundle, serialNumber string) string {
 	valid := false
 	if len(data.role.AllowedSerialNumbers) > 0 {
@@ -1391,6 +1415,31 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		}
 	}
 
+	userId := ""
+	{
+		ridUserID := data.apiData.Get("serial_number").(string)
+
+		// only take userID from CSR if one was not supplied via API
+		if ridUserID == "" && csr != nil {
+			for _, extension := range csr.Extensions {
+				if extension.Id.Equal(asn1.ObjectIdentifier{0, 9, 2342, 19200300, 100, 1, 1}) {
+					ridUserID = string(extension.Value)
+				}
+			}
+		}
+
+		// Check for bad userIDs
+		if ridUserID != "" {
+			isValidUserID := isValidateUserId(data, ridUserID)
+			if !isValidUserID {
+				return nil, nil, errutil.UserError{Err: fmt.Sprintf(
+					"user id %s not allowed by this role", ridUserID)}
+			}
+		}
+
+		userId = ridUserID
+	}
+
 	creation := &certutil.CreationBundle{
 		Params: &certutil.CreationParameters{
 			Subject:                       subject,
@@ -1398,6 +1447,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			EmailAddresses:                strutil.RemoveDuplicates(emailAddresses, false),
 			IPAddresses:                   ipAddresses,
 			URIs:                          URIs,
+			UserId:                        userId,
 			OtherSANs:                     otherSANs,
 			KeyType:                       data.role.KeyType,
 			KeyBits:                       data.role.KeyBits,

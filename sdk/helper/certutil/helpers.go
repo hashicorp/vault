@@ -516,6 +516,22 @@ func AddPolicyIdentifiers(data *CreationBundle, certTemplate *x509.Certificate) 
 	}
 }
 
+func AddUserId(data *CreationBundle, certTemplate *x509.Certificate) error {
+	if data.Params.UserId != "" {
+		userId, err := asn1.Marshal(data.Params.UserId)
+		if err != nil {
+			return err
+		}
+		userIdExt := pkix.Extension{
+			Id:       oidExtensionPilotAttributeUserId,
+			Value:    userId,
+			Critical: false,
+		}
+		certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, userIdExt)
+	}
+	return nil
+}
+
 // AddExtKeyUsageOids adds custom extended key usage OIDs to certificate
 func AddExtKeyUsageOids(data *CreationBundle, certTemplate *x509.Certificate) {
 	for _, oidstr := range data.Params.ExtKeyUsageOIDs {
@@ -915,6 +931,8 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 
 	AddExtKeyUsageOids(data, certTemplate)
 
+	AddUserId(data, certTemplate)
+
 	certTemplate.IssuingCertificateURL = data.Params.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = data.Params.URLs.CRLDistributionPoints
 	certTemplate.OCSPServer = data.Params.URLs.OCSPServers
@@ -1034,8 +1052,9 @@ func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x
 }
 
 var (
-	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
-	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
+	oidExtensionBasicConstraints     = []int{2, 5, 29, 19}
+	oidExtensionSubjectAltName       = []int{2, 5, 29, 17}
+	oidExtensionPilotAttributeUserId = []int{0, 9, 2342, 19200300, 100, 1, 1}
 )
 
 // CreateCSR creates a CSR with the default rand.Reader to
@@ -1095,6 +1114,19 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 			Critical: true,
 		}
 		csrTemplate.ExtraExtensions = append(csrTemplate.ExtraExtensions, ext)
+	}
+
+	if data.Params.UserId != "" {
+		userId, err := asn1.Marshal(data.Params.UserId)
+		if err != nil {
+			return nil, errutil.InternalError{Err: errwrap.Wrapf("Error Marshaling User ID Extension Value", err).Error()}
+		}
+		userIdExt := pkix.Extension{
+			Id:       oidExtensionPilotAttributeUserId,
+			Value:    userId,
+			Critical: false,
+		}
+		csrTemplate.ExtraExtensions = append(csrTemplate.ExtraExtensions, userIdExt)
 	}
 
 	switch data.Params.KeyType {
@@ -1232,6 +1264,8 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 	AddKeyUsages(data, certTemplate)
 
 	AddExtKeyUsageOids(data, certTemplate)
+
+	AddUserId(data, certTemplate)
 
 	var certBytes []byte
 

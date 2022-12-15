@@ -180,6 +180,11 @@ Any valid URI is accepted, these values support globbing.`,
 				Description: `If set, an array of allowed serial numbers to put in Subject. These values support globbing.`,
 			},
 
+			"allowed_user_ids": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: `If set, an array of allowed user-ids to put in user system login name specified here: https://www.rfc-editor.org/rfc/rfc1274#section-9.3.1`,
+			},
+
 			"server_flag": {
 				Type:    framework.TypeBool,
 				Default: true,

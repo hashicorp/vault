@@ -58,6 +58,7 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData) (exporte
 		AllowedURISANs:            []string{"*"},
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
+		AllowedUserIDs:            []string{"*"},
 		OU:                        data.Get("ou").([]string),
 		Organization:              data.Get("organization").([]string),
 		Country:                   data.Get("country").([]string),
