@@ -72,7 +72,7 @@ $ vault write auth/azure/login \
 
 The `role` and `jwt` parameters are required. When using
 `bound_service_principal_ids` and `bound_group_ids` in the token roles, all the
-information is required in the JWT (except for _vm_name_, _vmss_name_, _resource_id_). When
+information is required in the JWT (except for `vm_name`, `vmss_name`, `resource_id`). When
 using other `bound_*` parameters, calls to Azure APIs will be made and
 `subscription_id`, `resource_group_name`, and `vm_name`/`vmss_name` are all required
 and can be obtained through instance metadata.
@@ -196,6 +196,15 @@ every virtual machine in Azure. If the resources using Azure auth are recreated
 frequently, using system-assigned identities could result in many Vault entities being
 created. For environments with high ephemeral workloads, user-assigned identities are
 recommended.
+
+
+### Limitations
+
+The TTL of the access token returned by Azure AD for a managed identity is
+24hrs and is not configurable. See ([limitations of using managed identities][id-limitations])
+for more info.
+
+[id-limitations]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-uniform-orchestration
 
 ## Azure Debug Logs
 
