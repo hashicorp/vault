@@ -654,6 +654,7 @@ type Core struct {
 	rollbackPeriod time.Duration
 
 	pendingRemovalMountsAllowed bool
+	expirationRevokeRetryBase   time.Duration
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -790,6 +791,8 @@ type CoreConfig struct {
 	RollbackPeriod time.Duration
 
 	PendingRemovalMountsAllowed bool
+
+	ExpirationRevokeRetryBase time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -944,6 +947,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		effectiveSDKVersion:            effectiveSDKVersion,
 		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
+		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
