@@ -1,3 +1,0 @@
-```release-note:change
-sys/internal/inspect: Turns of this endpoint by default. A SIGHUP can now be used to reload the configs and turns this endpoint on.
-```
