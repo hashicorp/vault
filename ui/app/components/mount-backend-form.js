@@ -121,7 +121,7 @@ export default class MountBackendForm extends Component {
 
   @action
   onKeyUp(name, value) {
-    this.args.mountModel.set(name, value);
+    this.args.mountModel[name] = value;
   }
 
   @action
@@ -133,15 +133,13 @@ export default class MountBackendForm extends Component {
 
   @action
   setMountType(value) {
-    this.args.mountModel.set('type', value);
+    this.args.mountModel.type = value;
     this.checkPathChange(value);
-    if (value === '') {
-      // resets wizard
-      if (this.wizard.featureState === 'idle') {
-        this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.args.mountModel.type);
-      }
-    } else {
+    if (value) {
       this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.args.mountModel.type);
+    } else if (this.wizard.featureState === 'idle') {
+      // resets wizard
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.args.mountModel.type);
     }
   }
 }
