@@ -2,7 +2,8 @@ import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
-import apiStub from 'vault/tests/helpers/noop-all-api-requests';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
 import hbs from 'htmlbars-inline-precompile';
 
 import { create } from 'ember-cli-page-object';
@@ -14,11 +15,14 @@ const component = create(mountBackendForm);
 
 module('Integration | Component | mount backend form', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.owner.lookup('service:flash-messages').registerTypes(['success', 'danger']);
     this.store = this.owner.lookup('service:store');
-    this.server = apiStub();
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
+    this.server.post('/sys/auth/foo', noopStub());
+    this.server.post('/sys/mounts/foo', noopStub());
     this.onMountSuccess = sinon.spy();
   });
 
@@ -78,7 +82,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     test('it calls mount success', async function (assert) {
       assert.expect(2);
-      this.server.post('/v1/sys/auth/foo', () => {
+      this.server.post('/sys/auth/foo', () => {
         assert.ok(true, 'it calls enable on an auth method');
         return [204, { 'Content-Type': 'application/json' }];
       });
@@ -87,7 +91,6 @@ module('Integration | Component | mount backend form', function (hooks) {
       await render(
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
-
       await component.mount('approle', 'foo');
 
       later(() => cancelTimers(), 50);
@@ -144,7 +147,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     test('it calls mount success', async function (assert) {
       assert.expect(2);
-      this.server.post('/v1/sys/mounts/foo', () => {
+      this.server.post('/sys/mounts/foo', () => {
         assert.ok(true, 'it calls enable on an secrets engine');
         return [204, { 'Content-Type': 'application/json' }];
       });
