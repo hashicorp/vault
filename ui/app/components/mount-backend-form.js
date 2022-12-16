@@ -64,7 +64,7 @@ export default class MountBackendForm extends Component {
         this.flashMessages.warning(
           'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
         );
-        // remove the config data from the model otherwise it will save it even if the network request failed.
+        // remove the config data from the model otherwise it will persist in the store even though network request failed.
         [
           this.args.mountModel.maxVersions,
           this.args.mountModel.casRequired,
