@@ -600,6 +600,12 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditTable,
 					Summary:  "List the enabled audit devices.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							// this response has dynamic keys
+							Description: "OK",
+						}},
+					},
 				},
 			},
 
@@ -638,10 +644,20 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAudit,
 					Summary:  "Enable a new audit device at the supplied path.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDisableAudit,
 					Summary:  "Disable the audit device at the given path.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 
