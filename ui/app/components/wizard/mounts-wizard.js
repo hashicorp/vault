@@ -36,7 +36,7 @@ export default Component.extend({
   }),
   mountName: computed('currentMachine', 'mountSubtype', function () {
     if (this.currentMachine === 'secrets') {
-      var secret = mountableEngines().find((engine) => {
+      const secret = mountableEngines().find((engine) => {
         return engine.type === this.mountSubtype;
       });
       if (secret) {
