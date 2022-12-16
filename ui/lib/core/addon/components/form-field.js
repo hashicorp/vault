@@ -116,7 +116,7 @@ export default class FormFieldComponent extends Component {
   }
 
   @action
-  setFile(_, keyFile) {
+  setFile(keyFile) {
     const path = this.valuePath;
     const { value } = keyFile;
     this.args.model.set(path, value);
