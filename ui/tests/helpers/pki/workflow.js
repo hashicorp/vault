@@ -1,4 +1,4 @@
-import { SELECTORS as ROLEFORM } from './roles/form';
+import { SELECTORS as ROLEFORM } from './pki-role-form';
 import { SELECTORS as GENERATECERT } from './pki-role-generate';
 export const SELECTORS = {
   breadcrumbContainer: '[data-test-breadcrumbs]',
