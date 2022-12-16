@@ -5,8 +5,6 @@ import (
 	"errors"
 	"math/rand"
 	"os"
-	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -136,7 +134,7 @@ func (m *RollbackManager) triggerRollbacks() {
 	if firstRun {
 		// Use a small temporary worker pool to run the very first rollbacks in parallel, as they will trigger
 		// backend initialization
-		numWorkers := runtime.NumCPU() * 4 // For existing releases, don't modify the current behavior without an env override
+		numWorkers := 1 // For existing releases, don't modify the current behavior without an env override
 		if v := os.Getenv("VAULT_INITIAL_ROLLBACK_CONCURRENCY"); v != "" {
 			pv, err := strconv.Atoi(v)
 			if err != nil || pv < 1 {
@@ -145,26 +143,30 @@ func (m *RollbackManager) triggerRollbacks() {
 				numWorkers = pv
 			}
 		}
-		jobs = make(chan func())
-		// Start 'em
-		for i := 0; i < numWorkers; i++ {
-			go func() {
-				for v := range jobs {
-					v()
-					wg.Done()
-				}
-			}()
+		if numWorkers <= 1 {
+			// Use the old style
+			firstRun = false
+		} else {
+			jobs = make(chan func())
+			// Start 'em
+			for i := 0; i < numWorkers; i++ {
+				go func() {
+					for v := range jobs {
+						v()
+						wg.Done()
+					}
+				}()
+			}
 		}
-
-		// Randomize the jobs on first run to allow progress on migrations, etc to be made if there are restarts/reunseals
-		// This is safe as the backendsFunc returns a fresh slice each time
-		sort.Slice(backends, func(i, j int) bool {
-			return strings.Compare(backends[i].UUID, backends[j].UUID) < 0
-		})
 	}
 
-	midpoint := rand.Intn(len(backends))
-	for _, e := range append(backends[midpoint:], backends[:midpoint]...) {
+	targets := backends
+	if firstRun {
+		midpoint := rand.Intn(len(backends))
+		targets = append(backends[midpoint:], backends[:midpoint]...)
+	}
+
+	for _, e := range targets {
 		path := e.Path
 		if e.Table == credentialTableType {
 			path = credentialRoutePrefix + path
@@ -193,7 +195,6 @@ func (m *RollbackManager) triggerRollbacks() {
 }
 
 // startOrLookupRollback is used to start an async rollback attempt.
-// This must be called with the inflightLock held.
 func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath string, grabStatelock bool, workerChan chan func()) *rollbackState {
 	m.inflightLock.Lock()
 	rsInflight, ok := m.inflight[fullPath]
@@ -212,13 +213,12 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 	rs.Add(1)
 	m.inflightAll.Add(1)
 
+	m.inflightLock.Unlock()
 	if workerChan != nil {
-		m.inflightLock.Unlock()
 		workerChan <- func() {
 			m.attemptRollback(ctx, fullPath, rs, grabStatelock)
 		}
 	} else {
-		defer m.inflightLock.Unlock()
 		go m.attemptRollback(ctx, fullPath, rs, grabStatelock)
 	}
 	return rs
