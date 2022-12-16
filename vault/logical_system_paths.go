@@ -1737,6 +1737,65 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleReadAuth,
 					Summary:  "Read the configuration of the auth engine at the given path.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"type": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"description": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"accessor": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"local": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"seal_wrap": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"external_entropy_access": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"options": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+								"uuid": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"plugin_version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"running_plugin_version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"running_sha256": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"deprecation_status": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"config": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAuth,
@@ -1744,10 +1803,20 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Description: `After enabling, the auth method can be accessed and configured via the auth path specified as part of the URL. This auth path will be nested under the auth prefix.
 
 For example, enable the "foo" auth method will make it accessible at /auth/foo.`,
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDisableAuth,
 					Summary:  "Disable the auth method at the given auth path",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["auth"][0]),
