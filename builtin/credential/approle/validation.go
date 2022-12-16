@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
@@ -77,6 +78,14 @@ func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, roleBoundCIDRList []st
 		// If there are no CIDR blocks on the role, then the subset
 		// requirement would be satisfied
 		if len(roleBoundCIDRList) != 0 {
+			// Address blocks with /32 mask do not get stored with the CIDR mask
+			// Check if there are any /32 addresses and append CIDR mask
+			for i, block := range roleBoundCIDRList {
+				if !strings.Contains(block, "/") {
+					roleBoundCIDRList[i] = fmt.Sprint(block, "/32")
+				}
+			}
+
 			subset, err := cidrutil.SubsetBlocks(roleBoundCIDRList, secretIDCIDRs)
 			if !subset || err != nil {
 				return fmt.Errorf(
