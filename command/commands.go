@@ -526,6 +526,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"pki verify-sign": func() (cli.Command, error) {
+			return &PKIVerifySignCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"plugin": func() (cli.Command, error) {
 			return &PluginCommand{
 				BaseCommand: getBaseCommand(),
