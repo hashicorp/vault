@@ -127,6 +127,9 @@ This will result in a Vault binary that has the UI built-in - though in
 a non-dev setup it will still need to be enabled via the `ui` config or
 setting `VAULT_UI` environment variable.
 
+## Useful Tips
+### Template Helpers
+  - `log`: log information from templates
 ## Further Reading / Useful Links
 
 * [ember.js](https://emberjs.com/)
