@@ -7,7 +7,6 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
-import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator';
 
 const consoleComponent = create(consoleClass);
 
@@ -82,9 +81,33 @@ module('Acceptance | pki workflow', function (hooks) {
       allow_subdomains=true \
       max_ttl="720h"`,
       ]);
-      const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
-      const pki_reader_policy = readerPolicy(this.mountPath, 'roles');
-      const pki_editor_policy = updatePolicy(this.mountPath, 'roles');
+      const pki_admin_policy = `
+          path "${this.mountPath}/*" {
+            capabilities = ["create", "read", "update", "delete", "list"]
+          },
+        `;
+      const pki_reader_policy = `
+        path "${this.mountPath}/roles" {
+          capabilities = ["read", "list"]
+        },
+        path "${this.mountPath}/roles/*" {
+          capabilities = ["read", "list"]
+        },
+      `;
+      const pki_editor_policy = `
+        path "${this.mountPath}/roles" {
+          capabilities = ["read", "list"]
+        },
+        path "${this.mountPath}/roles/*" {
+          capabilities = ["read", "update"]
+        },
+        path "${this.mountPath}/issue/*" {
+          capabilities = ["update"]
+        },
+        path "${this.mountPath}/sign/*" {
+          capabilities = ["update"]
+        },
+      `;
       this.pkiRoleReader = await tokenWithPolicy('pki-reader', pki_reader_policy);
       this.pkiRoleEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
       this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
@@ -205,145 +228,6 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/${roleName}/details`);
       assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
       assert.dom(SELECTORS.pageTitle).hasText(`PKI Role ${roleName}`);
-    });
-  });
-
-  module('keys', function (hooks) {
-    hooks.beforeEach(async function () {
-      await authPage.login();
-      // Setup key-specific items
-      await runCommands([
-        `write ${this.mountPath}/keys/generate/exported \
-      key_type="ec" \
-      key_bits="256" \
-      key_name="test-key"`,
-      ]);
-      const pki_admin_policy = adminPolicy(this.mountPath, 'keys');
-      const pki_reader_policy = readerPolicy(this.mountPath, 'keys', true);
-      const pki_editor_policy = updatePolicy(this.mountPath, 'keys');
-      this.pkiRoleReader = await tokenWithPolicy('pki-reader', pki_reader_policy);
-      this.pkiRoleEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
-      this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
-      this.pkiRoleReader = await tokenWithPolicy('pki-reader', pki_reader_policy);
-      this.pkiRoleEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
-      this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
-      await logout.visit();
-    });
-
-    test('shows correct items if user has all permissions', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.dom(SELECTORS.rolesTab).exists('Roles tab is present');
-      await click(SELECTORS.rolesTab);
-      assert.dom(SELECTORS.createRoleLink).exists({ count: 1 }, 'Create role link is rendered');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys`);
-      assert.dom('.linked-block').exists({ count: 1 }, 'One role is in list');
-      await click('.linked-block');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/some-role/details`);
-
-      assert.dom(SELECTORS.generateCertLink).exists('Generate cert link is shown');
-      await click(SELECTORS.generateCertLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/some-role/generate`);
-
-      // Go back to details and test all the links
-      await visit(`/vault/secrets/${this.mountPath}/pki/keys/some-role/details`);
-      assert.dom(SELECTORS.signCertLink).exists('Sign cert link is shown');
-      await click(SELECTORS.signCertLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/some-role/sign`);
-
-      await visit(`/vault/secrets/${this.mountPath}/pki/keys/some-role/details`);
-      assert.dom(SELECTORS.editRoleLink).exists('Edit link is shown');
-      await click(SELECTORS.editRoleLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/some-role/edit`);
-
-      await visit(`/vault/secrets/${this.mountPath}/pki/keys/some-key/details`);
-      assert.dom(SELECTORS.deleteRoleButton).exists('Delete key button is shown');
-      await click(`${SELECTORS.deleteRoleButton} [data-test-confirm-action-trigger]`);
-      await click(`[data-test-confirm-button]`);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/keys`,
-        'redirects to keys list after deletion'
-      );
-    });
-
-    test('it does not show toolbar items the user does not have permission to see', async function (assert) {
-      await authPage.login(this.pkiRoleReader);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.dom(SELECTORS.keysTab).exists('Roles tab is present');
-      await click(SELECTORS.keysTab);
-      assert.dom(SELECTORS.createRoleLink).exists({ count: 1 }, 'Create key link is rendered');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys`);
-      assert.dom('.linked-block').exists({ count: 1 }, 'One key is in list');
-      await click('.linked-block');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/some-key/details`);
-      assert.dom(SELECTORS.deleteRoleButton).doesNotExist('Delete key button is not shown');
-      assert.dom(SELECTORS.generateCertLink).doesNotExist('Generate cert link is not shown');
-      assert.dom(SELECTORS.signCertLink).doesNotExist('Sign cert link is not shown');
-      assert.dom(SELECTORS.editRoleLink).doesNotExist('Edit link is not shown');
-    });
-
-    test('it shows correct toolbar items for the user policy', async function (assert) {
-      await authPage.login(this.pkiRoleEditor);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.dom(SELECTORS.keysTab).exists('Roles tab is present');
-      await click(SELECTORS.keysTab);
-      assert.dom(SELECTORS.createRoleLink).exists({ count: 1 }, 'Create key link is rendered');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys`);
-      assert.dom('.linked-block').exists({ count: 1 }, 'One key is in list');
-      await click('.linked-block');
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/some-key/details`);
-      assert.dom(SELECTORS.deleteRoleButton).doesNotExist('Delete key button is not shown');
-      assert.dom(SELECTORS.generateCertLink).exists('Generate cert link is shown');
-      assert.dom(SELECTORS.signCertLink).exists('Sign cert link is shown');
-      assert.dom(SELECTORS.editRoleLink).exists('Edit link is shown');
-      await click(SELECTORS.editRoleLink);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/keys/some-key/edit`,
-        'Links to edit view'
-      );
-      await click(SELECTORS.keyForm.keyCancelButton);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/keys/some-key/details`,
-        'Cancel from edit goes to details'
-      );
-      await click(SELECTORS.generateCertLink);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/keys/some-key/generate`,
-        'Generate cert button goes to generate page'
-      );
-      await click(SELECTORS.generateCertForm.cancelButton);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/keys/some-key/details`,
-        'Cancel from generate goes to details'
-      );
-    });
-
-    test('create key happy path', async function (assert) {
-      const keyName = 'another-key';
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.dom(SELECTORS.keysTab).exists('Roles tab is present');
-      await click(SELECTORS.keysTab);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys`);
-      await click(SELECTORS.createRoleLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/create`);
-      assert.dom(SELECTORS.breadcrumbContainer).exists({ count: 1 }, 'breadcrumbs are rendered');
-      assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
-      assert.dom(SELECTORS.pageTitle).hasText('Create a PKI key');
-
-      await fillIn(SELECTORS.keyForm.keyName, keyName);
-      await click(SELECTORS.keyForm.keyCreateButton);
-
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyName}/details`);
-      assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
-      assert.dom(SELECTORS.pageTitle).hasText(`PKI Role ${keyName}`);
     });
   });
 });
