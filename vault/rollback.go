@@ -3,8 +3,10 @@ package vault
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"os"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -108,6 +110,7 @@ func (m *RollbackManager) Stop() {
 func (m *RollbackManager) run() {
 	m.logger.Info("starting rollback manager")
 	tick := time.NewTicker(m.period)
+	m.triggerRollbacks()
 	defer tick.Stop()
 	defer close(m.doneCh)
 	for {
@@ -126,7 +129,7 @@ func (m *RollbackManager) run() {
 func (m *RollbackManager) triggerRollbacks() {
 	backends := m.backends()
 
-	var workerChans []chan func()
+	var jobs chan func()
 	var wg sync.WaitGroup
 	firstRun := m.firstRun
 	m.firstRun = false
@@ -142,18 +145,26 @@ func (m *RollbackManager) triggerRollbacks() {
 				numWorkers = pv
 			}
 		}
-		workerChans = make([]chan func(), numWorkers)
+		jobs = make(chan func())
+		// Start 'em
 		for i := 0; i < numWorkers; i++ {
-			workerChans[i] = make(chan func())
-			go func(i int) {
-				for v := range workerChans[i] {
+			go func() {
+				for v := range jobs {
 					v()
 					wg.Done()
 				}
-			}(i)
+			}()
 		}
+
+		// Randomize the jobs on first run to allow progress on migrations, etc to be made if there are restarts/reunseals
+		// This is safe as the backendsFunc returns a fresh slice each time
+		sort.Slice(backends, func(i, j int) bool {
+			return strings.Compare(backends[i].UUID, backends[j].UUID) < 0
+		})
 	}
-	for i, e := range backends {
+
+	midpoint := rand.Intn(len(backends))
+	for _, e := range append(backends[midpoint:], backends[:midpoint]...) {
 		path := e.Path
 		if e.Table == credentialTableType {
 			path = credentialRoutePrefix + path
@@ -170,15 +181,13 @@ func (m *RollbackManager) triggerRollbacks() {
 		// Start a rollback if necessary
 		if firstRun {
 			wg.Add(1)
-			m.startOrLookupRollback(ctx, fullPath, true, workerChans[i%len(workerChans)])
+			m.startOrLookupRollback(ctx, fullPath, true, jobs)
 		} else {
 			m.startOrLookupRollback(ctx, fullPath, true, nil)
 		}
 	}
 	if firstRun {
-		for _, workerChan := range workerChans {
-			close(workerChan)
-		}
+		close(jobs)
 		wg.Wait()
 	}
 }
