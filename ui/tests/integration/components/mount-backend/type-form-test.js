@@ -60,8 +60,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
     });
 
     test('it renders correct items for enterprise secrets', async function (assert) {
-      await render(hbs`<MountBackend::TypeForm @setMountType={{this.setType}} />`);
-
+      await render(hbs`<MountBackend::TypeForm @mountType="secret" @setMountType={{this.setType}} />`);
       assert
         .dom('[data-test-mount-type]')
         .exists({ count: allSecretTypes.length }, 'Renders all secret engines');
