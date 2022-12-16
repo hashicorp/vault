@@ -79,25 +79,6 @@ jobs:
         path: ui/test-results
     - store_test_results:
         path: ui/test-results
-  test-ui-browserstack:
-    docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
-    resource_class: xlarge
-    steps:
-    - checkout
-    - restore_cache:
-        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
-        name: Restore yarn cache
-    - attach_workspace:
-        at: .
-    - run:
-        command: |
-          # Add ./bin to the PATH so vault binary can be found.
-          export PATH="${PWD}"/bin:${PATH}
-          make test-ui-browserstack
-        name: Run Browserstack Tests
   build-go-dev:
     machine:
       image: ubuntu-2004:2022.10.1
@@ -1231,13 +1212,6 @@ workflows:
         requires:
         - pre-flight-checks
     - test-ui:
-        requires:
-        - install-ui-dependencies
-        - build-go-dev
-    - test-ui-browserstack:
-        filters:
-          branches:
-            ignore: /pull\/[0-9]+/
         requires:
         - install-ui-dependencies
         - build-go-dev
