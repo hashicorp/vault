@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -101,6 +102,25 @@ secret-key (optional) and certificates.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathImportIssuers,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"mapping": {
+								Type:        framework.TypeMap,
+								Description: "A mapping of issuer_id to key_id for all issuers included in this request",
+							},
+							"imported_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Net-new keys imported as a part of this request",
+							},
+							"imported_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Net-new issuers imported as a part of this request",
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
