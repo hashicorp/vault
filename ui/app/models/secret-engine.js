@@ -97,10 +97,9 @@ export default SecretEngineModel.extend({
   formFieldGroups: computed('engineType', function () {
     let defaultFields = ['path'];
     let optionFields;
-    const type = this.engineType;
     const CORE_OPTIONS = ['description', 'config.listingVisibility', 'local', 'sealWrap'];
 
-    switch (type) {
+    switch (this.engineType) {
       case 'kv':
         defaultFields = ['path', 'maxVersions', 'casRequired', 'deleteVersionAfter'];
         optionFields = [
