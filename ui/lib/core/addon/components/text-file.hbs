@@ -55,7 +55,9 @@
         <Icon @name={{if this.showValue "eye" "eye-off"}} />
       </button>
     </div>
-    <p class="help has-text-grey">Enter the value as text</p>
+    <p class="help has-text-grey">
+      {{this.textareaHelpText}}
+    </p>
   {{else}}
     <div class="control is-expanded">
       <div class="file has-name is-fullwidth">
@@ -86,6 +88,8 @@
         </div>
       </div>
     </div>
-    <p class="help has-text-grey">Select a file from your computer</p>
+    <p class="help has-text-grey">
+      {{this.fileHelpText}}
+    </p>
   {{/if}}
 </div>

@@ -16,26 +16,30 @@ import { guidFor } from '@ember/object/internals';
  *  @label={{"string"}}
  * />
  *
- * @param {object} file - Object in the shape of:
+ * @param file {object} - * Object in the shape of:
  * {
  *   value: 'file contents here',
  *   fileName: 'nameOfFile.txt',
  *   enterAsText: boolean ability to enter as text
  * }
- * @param {Function|action} [onChange=Function.prototype] - A function to call when the value of the input changes.
- * @param {bool} [inputOnly] - When true, only the file input will be rendered
- * @param {string} [helpText] - Text underneath label.
- * @param {string} [label=null]  - Text to use as the label for the file input. If none, a default of 'File' is rendered
+ * @param [onChange=Function.prototype] {Function|action} - A function to call when the value of the input changes.
+ * @param [inputOnly] {bool} - When true, only the file input will be rendered
+ * @param [helpText] {string} - Text underneath label.
+ * @param [label=null] {string} - Text to use as the label for the file input. If null, a default will be rendered.
  */
 
 export default class TextFileComponent extends Component {
-  fileHelpText = '';
-  textareaHelpText = '';
+  fileHelpText = 'Select a file from your computer';
+  textareaHelpText = 'Enter the value as text';
   elementId = guidFor(this);
   index = '';
 
   @tracked file = null;
   @tracked showValue = false;
+
+  get label() {
+    return this.args.label || null;
+  }
 
   readFile(file) {
     const reader = new FileReader();
