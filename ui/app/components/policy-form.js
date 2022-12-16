@@ -50,11 +50,11 @@ export default class PolicyFormComponent extends Component {
   }
 
   @action
-  setPolicyFromFile(index, fileInfo) {
-    const { value, fileName } = fileInfo;
+  setPolicyFromFile(fileInfo) {
+    const { value, filename } = fileInfo;
     this.args.model.policy = value;
     if (!this.args.model.name) {
-      const trimmedFileName = trimRight(fileName, ['.json', '.txt', '.hcl', '.policy']);
+      const trimmedFileName = trimRight(filename, ['.json', '.txt', '.hcl', '.policy']);
       this.args.model.name = trimmedFileName.toLowerCase();
     }
     this.showFileUpload = false;

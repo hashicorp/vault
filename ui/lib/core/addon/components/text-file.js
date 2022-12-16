@@ -9,37 +9,30 @@ import { guidFor } from '@ember/object/internals';
  *
  * @example
  * <TextFile
- *  @inputOnly={{true}}
+ *  @uploadOnly={{true}}
  *  @helpText="help text"
  *  @file={{object}}
  *  @onChange={{action "someOnChangeFunction"}}
  *  @label={{"string"}}
  * />
  *
- * @param file {object} - * Object in the shape of:
+ * @param {object} file - * Object in the shape of:
  * {
  *   value: 'file contents here',
- *   fileName: 'nameOfFile.txt',
+ *   filename: 'nameOfFile.txt',
  *   enterAsText: boolean ability to enter as text
  * }
- * @param [onChange=Function.prototype] {Function|action} - A function to call when the value of the input changes.
- * @param [inputOnly] {bool} - When true, only the file input will be rendered
- * @param [helpText] {string} - Text underneath label.
- * @param [label=null] {string} - Text to use as the label for the file input. If null, a default will be rendered.
+ * @param {function} onChange - A function to call when the value of the input changes.
+ * @param {bool} [inputOnly] - When true, only the file input will be rendered
+ * @param {string} [helpText] - Text underneath label.
+ * @param {string} [label=null]  - Text to use as the label for the file input. If none, default of 'File' is rendered
  */
 
 export default class TextFileComponent extends Component {
-  fileHelpText = 'Select a file from your computer';
-  textareaHelpText = 'Enter the value as text';
   elementId = guidFor(this);
-  index = '';
 
   @tracked file = null;
   @tracked showValue = false;
-
-  get label() {
-    return this.args.label || null;
-  }
 
   readFile(file) {
     const reader = new FileReader();
@@ -48,7 +41,7 @@ export default class TextFileComponent extends Component {
   }
 
   setFile(contents, filename) {
-    this.args.onChange(this.index, { value: contents, fileName: filename });
+    this.args.onChange({ value: contents, fileName: filename });
   }
 
   @action
@@ -67,11 +60,11 @@ export default class TextFileComponent extends Component {
     e.preventDefault();
     const file = this.args.file;
     set(file, 'value', e.target.value);
-    this.args.onChange(this.index, file);
+    this.args.onChange(file);
   }
   @action
   clearFile() {
-    this.args.onChange(this.index, { value: '' });
+    this.args.onChange({ value: '' });
   }
   @action
   toggleMask() {

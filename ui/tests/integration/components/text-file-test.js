@@ -23,7 +23,7 @@ module('Integration | Component | text-file', function (hooks) {
     this.set('inputOnly', false);
 
     await render(
-      hbs`<TextFile @file={{this.file}} @onChange={{this.onChange}} @inputOnly={{this.inputOnly}} />`
+      hbs`<TextFile @file={{this.file}} @onChange={{this.onChange}} @uploadOnly={{this.inputOnly}} />`
     );
 
     assert.dom(SELECTORS.label).hasText('File', 'renders default label');

@@ -1,18 +1,14 @@
-{{#unless @inputOnly}}
+{{#unless @uploadOnly}}
   <div class="level is-mobile">
     <div class="level-left">
       <label class="is-label" data-test-text-file-label>
-        {{#if this.label}}
-          {{this.label}}
-          {{#if @helpText}}
-            <InfoTooltip>
-              <span data-test-help-text>
-                {{@helpText}}
-              </span>
-            </InfoTooltip>
-          {{/if}}
-        {{else}}
-          File
+        {{or @label "File"}}
+        {{#if @helpText}}
+          <InfoTooltip>
+            <span data-test-help-text>
+              {{@helpText}}
+            </span>
+          </InfoTooltip>
         {{/if}}
       </label>
     </div>
@@ -34,10 +30,7 @@
     </div>
   </div>
 {{/unless}}
-<div
-  class="field text-file box is-fullwidth is-marginless is-shadowless {{if @inputOnly 'is-paddingless'}}"
-  data-test-component="text-file"
->
+<div class="field text-file box is-fullwidth is-marginless is-shadowless is-paddingless" data-test-component="text-file">
   {{#if @file.enterAsText}}
     <div class="control has-icon-right">
       <textarea
@@ -55,9 +48,7 @@
         <Icon @name={{if this.showValue "eye" "eye-off"}} />
       </button>
     </div>
-    <p class="help has-text-grey">
-      {{this.textareaHelpText}}
-    </p>
+    <p class="help has-text-grey">Enter the value as text</p>
   {{else}}
     <div class="control is-expanded">
       <div class="file has-name is-fullwidth">
@@ -68,13 +59,13 @@
             Choose a file…
           </label>
           <span class="file-name has-text-grey-dark" data-test-text-file-input-label>
-            {{#if @file.fileName}}
-              {{@file.fileName}}
+            {{#if @file.filename}}
+              {{@file.filename}}
             {{else}}
               No file chosen
             {{/if}}
           </span>
-          {{#if @file.fileName}}
+          {{#if @file.filename}}
             <button
               type="button"
               class="file-delete-button"
@@ -88,8 +79,6 @@
         </div>
       </div>
     </div>
-    <p class="help has-text-grey">
-      {{this.fileHelpText}}
-    </p>
+    <p class="help has-text-grey">Select a file from your computer</p>
   {{/if}}
 </div>
