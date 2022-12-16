@@ -56,6 +56,30 @@ export default class MountBackendForm extends Component {
     return isValid;
   }
 
+  async showWarningsForKvv2() {
+    try {
+      const capabilities = await this.store.findRecord('capabilities', `${this.args.mountModel.path}/config`);
+      if (!capabilities?.canUpdate) {
+        // config error is not thrown from secret-engine adapter, so handling here
+        this.flashMessages.warning(
+          'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
+        );
+        // remove the config data from the model otherwise it will save it even if the network request failed.
+        [
+          this.args.mountModel.maxVersions,
+          this.args.mountModel.casRequired,
+          this.args.mountModel.deleteVersionAfter,
+        ] = [0, false, 0];
+      }
+    } catch (e) {
+      // Show different warning if we're not sure the config saved
+      this.flashMessages.warning(
+        'You may not have access to the config endpoint. The secret engine was mounted, but the configuration settings may not be saved.'
+      );
+    }
+    return;
+  }
+
   @task
   @waitFor
   *mountBackend(event) {
@@ -66,7 +90,6 @@ export default class MountBackendForm extends Component {
     if (!this.checkModelValidity(mountModel)) {
       return;
     }
-    const capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
 
     const changedAttrKeys = Object.keys(mountModel.changedAttributes());
     const updatesConfig =
@@ -96,19 +119,8 @@ export default class MountBackendForm extends Component {
       }
       return;
     }
-    // mountModel must be after the save
-    if (mountModel.isV2KV && updatesConfig && !capabilities.get('canUpdate')) {
-      // config error is not thrown from secret-engine adapter, so handling here
-      this.flashMessages.warning(
-        'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
-      );
-      // TODO: Move this logic to custom mount component for KV
-      // remove the config data from the model otherwise it will save it even if the network request failed.
-      [
-        this.args.mountModel.maxVersions,
-        this.args.mountModel.casRequired,
-        this.args.mountModel.deleteVersionAfter,
-      ] = [0, false, 0];
+    if (mountModel.isV2KV && updatesConfig) {
+      yield this.showWarningsForKvv2();
     }
     this.flashMessages.success(
       `Successfully mounted the ${type} ${
