@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	bolt "go.etcd.io/bbolt"
+	"go.uber.org/atomic"
 )
 
 const (
@@ -181,6 +182,7 @@ type RaftBackend struct {
 	nonVoter bool
 
 	effectiveSDKVersion string
+	metricEncryptErrors *atomic.Uint64
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -515,6 +517,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		redundancyZone:             conf["autopilot_redundancy_zone"],
 		nonVoter:                   nonVoter,
 		upgradeVersion:             upgradeVersion,
+		metricEncryptErrors:        atomic.NewUint64(0),
 	}, nil
 }
 
@@ -629,6 +632,7 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 			sink.SetGaugeWithLabels([]string{"raft_storage", "stats", key}, float32(n), labels)
 		}
 	}
+	sink.SetGauge([]string{"raft", "snapshot", "seal_errors"}, float32(b.metricEncryptErrors.Load()))
 }
 
 func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
@@ -1371,15 +1375,17 @@ func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 		return errors.New("raft storage is sealed")
 	}
 
+	logger := b.logger.Named("snapshot")
 	// If we have access to the seal create a sealer object
 	var s snapshot.Sealer
 	if access != nil {
 		s = &sealer{
-			access: access,
+			access:        access,
+			encryptErrors: b.metricEncryptErrors,
 		}
 	}
 
-	return snapshot.Write(b.logger.Named("snapshot"), b.raft, s, out)
+	return snapshot.Write(logger, b.raft, s, out)
 }
 
 // WriteSnapshotToTemp reads a snapshot archive off the provided reader,
@@ -1400,7 +1406,8 @@ func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access)
 	var s snapshot.Sealer
 	if access != nil {
 		s = &sealer{
-			access: access,
+			access:        access,
+			encryptErrors: b.metricEncryptErrors,
 		}
 	}
 
@@ -1873,7 +1880,8 @@ func (l *RaftLock) Value() (bool, string, error) {
 // sealer implements the snapshot.Sealer interface and is used in the snapshot
 // process for encrypting/decrypting the SHASUM file in snapshot archives.
 type sealer struct {
-	access *seal.Access
+	access        *seal.Access
+	encryptErrors *atomic.Uint64
 }
 
 // Seal encrypts the data with using the seal access object.
@@ -1883,6 +1891,7 @@ func (s sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
 	}
 	eblob, err := s.access.Encrypt(ctx, pt, nil)
 	if err != nil {
+		s.encryptErrors.Add(1)
 		return nil, err
 	}
 

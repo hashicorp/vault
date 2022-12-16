@@ -402,6 +402,11 @@ func (b *SystemBackend) handleStorageRaftSnapshotRead() framework.OperationFunc 
 
 		err := raftStorage.SnapshotHTTP(req.ResponseWriter, b.Core.seal.GetAccess())
 		if err != nil {
+			// We log this error because it may not be visible to caller; if the
+			// error occurred after we started streaming the snapshot, e.g.
+			// due to a failure to get the seal to encrypt the sums file, there's
+			// no obvious way in HTTP to report the error.
+			b.logger.Error("error writing user snapshot", "error", err)
 			return nil, err
 		}
 
