@@ -110,7 +110,7 @@ func (m *RollbackManager) Stop() {
 func (m *RollbackManager) run() {
 	m.logger.Info("starting rollback manager")
 	tick := time.NewTicker(m.period)
-	m.triggerRollbacks()
+
 	defer tick.Stop()
 	defer close(m.doneCh)
 	for {
@@ -136,7 +136,7 @@ func (m *RollbackManager) triggerRollbacks() {
 	if firstRun {
 		// Use a small temporary worker pool to run the very first rollbacks in parallel, as they will trigger
 		// backend initialization
-		numWorkers := runtime.NumCPU() * 2 // For existing releases, don't modify the current behavior without an env override
+		numWorkers := runtime.NumCPU() * 4 // For existing releases, don't modify the current behavior without an env override
 		if v := os.Getenv("VAULT_INITIAL_ROLLBACK_CONCURRENCY"); v != "" {
 			pv, err := strconv.Atoi(v)
 			if err != nil || pv < 1 {
