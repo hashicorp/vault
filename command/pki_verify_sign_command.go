@@ -72,7 +72,13 @@ func (c *PKIVerifySignCommand) Run(args []string) int {
 	issuer := sanitizePath(args[0])
 	issued := sanitizePath(args[1])
 
-	err, results := verifySignBetween(c.client, issuer, issued)
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to obtain client: %w", err))
+		return 1
+	}
+
+	err, results := verifySignBetween(client, issuer, issued)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to run verification: %v", err))
 		return pkiRetUsage
@@ -104,7 +110,11 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 	if err != nil {
 		return fmt.Errorf("error: unable to fetch issuer %v: %w", issuerPath, err), nil
 	}
-	caChain := issuedCertResp.Data["ca_chain"].(string)
+	caChainRaw := issuedCertResp.Data["ca_chain"].([]interface{})
+	caChain := make([]string, len(caChainRaw))
+	for i, cert := range caChainRaw {
+		caChain[i] = cert.(string)
+	}
 	issuedCertPem := issuedCertResp.Data["certificate"].(string)
 	issuedCertBundle, err := certutil.ParsePEMBundle(issuedCertPem)
 	if err != nil {
@@ -129,12 +139,26 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 		}
 	}
 
+	path_match := false
+	for _, cert := range caChain {
+		if cert == issuerCertPem { // TODO: Check Trimming
+			path_match = true
+			break
+		}
+	}
+
+	signatureMatch := false
+	err = issuedCertBundle.Certificate.CheckSignatureFrom(issuerCertBundle.Certificate)
+	if err == nil {
+		signatureMatch = true
+	}
+	
 	result := map[string]bool{
 		"subject_match":   parentIssuerName.String() == issuerName.String(), // TODO: No Equals Defined on Name, Check This
-		"path_match":      strings.Contains(caChain, issuerCertPem),         // TODO: Check Trimming
-		"trust_match":     trust,                                            // TODO: Refactor into a reasonable function
+		"path_match":      path_match,
+		"trust_match":     trust, // TODO: Refactor into a reasonable function
 		"key_id_match":    isKeyIDEqual(parentKeyId, issuerKeyId),
-		"signature_match": false, // TODO: Checking the Signature Has to Be Done Per-Algorithm
+		"signature_match": signatureMatch, // TODO: Checking the Signature Has to Be Done Per-Algorithm
 	}
 
 	return nil, result
