@@ -198,7 +198,7 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 	m.inflightLock.Lock()
 	rsInflight, ok := m.inflight[fullPath]
 	if ok {
-		defer m.inflightLock.Unlock()
+		m.inflightLock.Unlock()
 		return rsInflight
 	}
 	cancelCtx, cancelFunc := context.WithCancel(context.Background())
