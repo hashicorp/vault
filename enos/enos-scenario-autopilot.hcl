@@ -49,7 +49,6 @@ scenario "autopilot" {
       ubuntu = "/usr/bin"
     }
     vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : local.vault_install_dir_packages[matrix.distro]
-
   }
 
   step "build_vault" {

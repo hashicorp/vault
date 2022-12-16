@@ -1,10 +1,6 @@
 #!/bin/bash
 
-token="${vault_token}"
 undo_logs_status="${vault_undo_logs_status}"
-
-export VAULT_ADDR="http://localhost:8200"
-export VAULT_TOKEN="$token"
 
 function fail() {
 	echo "$1" 1>&2
