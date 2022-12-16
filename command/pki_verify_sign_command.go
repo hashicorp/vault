@@ -5,12 +5,13 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/ryanuber/columnize"
-	"strconv"
-	"strings"
 )
 
 type PKIVerifySignCommand struct {
