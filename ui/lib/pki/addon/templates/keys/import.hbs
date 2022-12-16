@@ -9,9 +9,4 @@
   </p.levelLeft>
 </PageHeader>
 
-<p class="has-padding">
-  Use this form to import a single pem encoded rsa, ec, or ed25519 key.
-  <DocLink @path="/vault/api-docs/secret/pki#import-key">
-    Learn more here.
-  </DocLink>
-</p>
+<PkiKeyImport @model={{this.model}} />

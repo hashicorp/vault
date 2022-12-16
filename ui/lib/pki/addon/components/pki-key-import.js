@@ -12,7 +12,7 @@ import errorMessage from 'vault/utils/error-message';
  *
  * @example
  * ```js
- * <PkiKeyImport @model={{this.model}}/>
+ * <PkiKeyImport @model={{this.model}} />
  * ```
  *
  * @param {Object} model - pki/key model.
@@ -27,10 +27,6 @@ export default class PkiKeyImport extends Component {
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked modelValidations;
-
-  get keyNameOptions() {
-    return this.args.model.default.find((attr) => attr === 'keyName');
-  }
 
   @task
   *submitForm(event) {
@@ -49,6 +45,11 @@ export default class PkiKeyImport extends Component {
       this.errorBanner = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
+  }
+
+  @action
+  onFileUpload() {
+    // do something
   }
 
   @action
