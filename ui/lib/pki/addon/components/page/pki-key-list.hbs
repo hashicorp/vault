@@ -1,12 +1,12 @@
 <Toolbar>
   <ToolbarActions>
     {{#if @canImportKey}}
-      <ToolbarLink @route="keys.import" @type="download">
+      <ToolbarLink @route="keys.import" @type="download" data-test-pki-key-import>
         Import
       </ToolbarLink>
     {{/if}}
     {{#if @canGenerateKey}}
-      <ToolbarLink @route="keys.create" @type="add">
+      <ToolbarLink @route="keys.create" @type="add" data-test-pki-key-generate>
         Generate
       </ToolbarLink>
     {{/if}}
@@ -23,12 +23,12 @@
         <div class="level-left">
           <div>
             <Icon @name="certificate" class="has-text-grey-light" />
-            <span class="has-text-weight-semibold is-underline">
+            <span class="has-text-weight-semibold is-underline" data-test-key-id>
               {{pkiKey.id}}
             </span>
             <div class="is-flex-row has-left-margin-l has-top-margin-xs">
               {{#if pkiKey.keyName}}
-                <span class="tag has-text-grey-dark">{{pkiKey.keyName}}</span>
+                <span class="tag has-text-grey-dark" data-test-key-name>{{pkiKey.keyName}}</span>
               {{/if}}
             </div>
           </div>
@@ -39,12 +39,22 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo @route="keys.key.details" @model={{pkiKey.keyId}} @disabled={{unless @canRead}}>
+                    <LinkTo
+                      @route="keys.key.details"
+                      @model={{pkiKey.keyId}}
+                      @disabled={{not @canRead}}
+                      data-test-key-menu-link="details"
+                    >
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo @route="keys.key.edit" @model={{pkiKey.keyId}} @disabled={{unless @canEdit}}>
+                    <LinkTo
+                      @route="keys.key.edit"
+                      @model={{pkiKey.keyId}}
+                      @disabled={{not @canEdit}}
+                      data-test-key-menu-link="edit"
+                    >
                       Edit
                     </LinkTo>
                   </li>
