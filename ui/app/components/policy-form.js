@@ -50,7 +50,7 @@ export default class PolicyFormComponent extends Component {
   }
 
   @action
-  setPolicyFromFile(index, fileInfo) {
+  setPolicyFromFile(fileInfo) {
     const { value, fileName } = fileInfo;
     this.args.model.policy = value;
     if (!this.args.model.name) {
