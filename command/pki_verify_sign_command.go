@@ -76,7 +76,7 @@ func (c *PKIVerifySignCommand) Run(args []string) int {
 
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to obtain client: %w", err))
+		c.UI.Error(fmt.Sprintf("Failed to obtain client: %v", err))
 		return 1
 	}
 
