@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import { set, action } from '@ember/object';
+import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { guidFor } from '@ember/object/internals';
 
@@ -36,16 +36,16 @@ export default class TextFileComponent extends Component {
 
   readFile(file) {
     const reader = new FileReader();
-    reader.onload = () => this.setFile(reader.result, file.name);
+    reader.onload = () => this.handleChange(reader.result, file.name);
     reader.readAsText(file);
   }
 
-  setFile(contents, filename) {
-    this.args.onChange({ value: contents, fileName: filename });
+  handleChange(contents, filename) {
+    this.args.onChange({ value: contents, filename });
   }
 
   @action
-  pickedFile(e) {
+  handleFileUpload(e) {
     e.preventDefault();
     const { files } = e.target;
     if (!files.length) {
@@ -55,17 +55,20 @@ export default class TextFileComponent extends Component {
       this.readFile(files[i]);
     }
   }
+
   @action
-  updateData(e) {
+  handleTextInput(e) {
     e.preventDefault();
     const file = this.args.file;
-    set(file, 'value', e.target.value);
+    file.value = e.target.value;
     this.args.onChange(file);
   }
+
   @action
   clearFile() {
     this.args.onChange({ value: '' });
   }
+
   @action
   toggleMask() {
     this.showValue = !this.showValue;
