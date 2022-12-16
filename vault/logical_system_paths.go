@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -1519,8 +1520,17 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "auth$",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.handleAuthTable,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleAuthTable,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// response keys are dynamic
+							Fields: map[string]*framework.FieldSchema{},
+						}},
+					},
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["auth-table"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["auth-table"][1]),
@@ -1586,11 +1596,91 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Callback:    b.handleAuthTuneRead,
 					Summary:     "Reads the given auth path's configuration.",
 					Description: "This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"description": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"default_lease_ttl": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"max_lease_ttl": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"force_no_cache": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"external_entropy_access": {
+									Type:     framework.TypeBool,
+									Required: false,
+								},
+								"token_type": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"audit_non_hmac_request_keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"audit_non_hmac_response_keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"passthrough_request_headers": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"allowed_response_headers": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"allowed_managed_keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"user_lockout_counter_reset_duration": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"user_lockout_threshold": {
+									Type:     framework.TypeInt64, // uint64
+									Required: false,
+								},
+								"user_lockout_duration": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"user_lockout_disable": {
+									Type:     framework.TypeBool,
+									Required: false,
+								},
+								"options": {
+									Type:     framework.TypeMap,
+									Required: false,
+								},
+								"plugin_version": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:    b.handleAuthTuneWrite,
 					Summary:     "Tune configuration parameters for a given auth path.",
 					Description: "This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["auth_tune"][0]),
