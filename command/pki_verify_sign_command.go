@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bytes"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
@@ -102,7 +103,6 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 	if err != nil {
 		return err, nil
 	}
-	issuerName := issuerCertBundle.Certificate.Subject
 	issuerKeyId := issuerCertBundle.Certificate.SubjectKeyId
 
 	// Fetch and Parse the Potential Issued Cert
@@ -120,29 +120,34 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 	if err != nil {
 		return err, nil
 	}
-	parentIssuerName := issuerCertBundle.Certificate.Issuer
 	parentKeyId := issuerCertBundle.Certificate.AuthorityKeyId
 
 	// Check the Chain-Match
-	rootCertPool := x509.NewCertPool() // TODO: Check if it matters to use Root Only Here (There's also an Intermediate Cert Pool)
+	rootCertPool := x509.NewCertPool()
 	rootCertPool.AddCert(issuerCertBundle.Certificate)
 	checkTrustPathOptions := x509.VerifyOptions{
 		Roots: rootCertPool,
 	}
-	trusts, err := issuedCertBundle.Certificate.Verify(checkTrustPathOptions)
 	trust := false
-	for _, chain := range trusts {
-		for _, cert := range chain {
-			if issuedCertBundle.Certificate.Equal(cert) {
-				trust = true
+	trusts, err := issuedCertBundle.Certificate.Verify(checkTrustPathOptions)
+	if err != nil && !strings.Contains(err.Error(), "certificate signed by unknown authority") {
+		return err, nil
+	} else if err == nil {
+		for _, chain := range trusts {
+			// Output of this Should Only Have One Trust with Chain of Length Two (Child followed by Parent)
+			for _, cert := range chain {
+				if issuedCertBundle.Certificate.Equal(cert) {
+					trust = true
+					break
+				}
 			}
 		}
 	}
 
-	path_match := false
+	pathMatch := false
 	for _, cert := range caChain {
-		if cert == issuerCertPem { // TODO: Check Trimming
-			path_match = true
+		if strings.TrimSpace(cert) == strings.TrimSpace(issuerCertPem) { // TODO: Decode into ASN1 to Check
+			pathMatch = true
 			break
 		}
 	}
@@ -152,30 +157,17 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 	if err == nil {
 		signatureMatch = true
 	}
-	
+
 	result := map[string]bool{
-		"subject_match":   parentIssuerName.String() == issuerName.String(), // TODO: No Equals Defined on Name, Check This
-		"path_match":      path_match,
+		// This comparison isn't strictly correct, despite a standard ordering these are sets
+		"subject_match":   bytes.Equal(issuerCertBundle.Certificate.RawSubject, issuedCertBundle.Certificate.RawIssuer),
+		"path_match":      pathMatch,
 		"trust_match":     trust, // TODO: Refactor into a reasonable function
-		"key_id_match":    isKeyIDEqual(parentKeyId, issuerKeyId),
-		"signature_match": signatureMatch, // TODO: Checking the Signature Has to Be Done Per-Algorithm
+		"key_id_match":    bytes.Equal(parentKeyId, issuerKeyId),
+		"signature_match": signatureMatch,
 	}
 
 	return nil, result
-}
-
-func isKeyIDEqual(first, second []byte) bool {
-	// TODO: Check if Trimming Makes Sense Here - Eg. Could this Be Padded?
-	// TODO: There has to be a library that does this
-	if len(first) != len(second) {
-		return false
-	}
-	for i, byteOfFirst := range first {
-		if byteOfFirst != second[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func (c *PKIVerifySignCommand) outputResults(results map[string]bool) error {
