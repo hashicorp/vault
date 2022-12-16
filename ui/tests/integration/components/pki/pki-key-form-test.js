@@ -3,7 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/keys/form';
+import { SELECTORS } from 'vault/tests/helpers/pki/pki-key-form';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Integration | Component | pki key form', function (hooks) {

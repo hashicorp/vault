@@ -1,5 +1,6 @@
 import Model, { attr } from '@ember-data/model';
 import { inject as service } from '@ember/service';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
@@ -39,5 +40,30 @@ export default class PkiKeyModel extends Model {
 
   get backend() {
     return this.secretMountPath.currentPath;
+  }
+
+  /* CAPABILITIES
+   * Default to show UI elements unless we know they can't access the given path
+   */
+
+  @lazyCapabilities(apiPath`${'backend'}/key/${'key_id'}`, 'backend', 'key_id') keyPath;
+  get canRead() {
+    return this.keyPath.get('canRead') !== false;
+  }
+  get canEdit() {
+    return this.keyPath.get('canUpdate') !== false;
+  }
+  get canDelete() {
+    return this.keyPath.get('canDelete') !== false;
+  }
+
+  @lazyCapabilities(apiPath`${'backend'}/keys/generate`, 'backend') generatePath;
+  get canGenerateKey() {
+    return this.generatePath.get('canUpdate') !== false;
+  }
+
+  @lazyCapabilities(apiPath`${'backend'}/keys/import`, 'backend') importPath;
+  get canImportKey() {
+    return this.importPath.get('canUpdate') !== false;
   }
 }
