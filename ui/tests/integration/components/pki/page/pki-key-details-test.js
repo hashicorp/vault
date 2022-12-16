@@ -4,7 +4,7 @@ import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/keys/page-details';
+import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-key-details';
 
 module('Integration | Component | pki key details page', function (hooks) {
   setupRenderingTest(hooks);
@@ -27,14 +27,18 @@ module('Integration | Component | pki key details page', function (hooks) {
   });
 
   test('it renders the page component and deletes a key', async function (assert) {
-    assert.expect(6);
+    assert.expect(7);
     this.server.delete(`${this.backend}/key/${this.model.keyId}`, () => {
       assert.ok(true, 'confirming delete fires off destroyRecord()');
     });
 
     await render(
       hbs`
-        <Page::PkiKeyDetails @key={{this.model}} />
+        <Page::PkiKeyDetails
+          @key={{this.model}} 
+          @canDelete={{true}}
+          @canEdit={{true}} 
+        />
       `,
       { owner: this.engine }
     );
@@ -43,8 +47,27 @@ module('Integration | Component | pki key details page', function (hooks) {
     assert.dom(SELECTORS.keyNameValue).hasText('test-key', 'key name renders');
     assert.dom(SELECTORS.keyTypeValue).hasText('ec', 'key type renders');
     assert.dom(SELECTORS.keyBitsValue).doesNotExist('does not render empty value');
+    assert.dom(SELECTORS.keyEditLink).exists('renders edit link');
     assert.dom(SELECTORS.keyDeleteButton).exists('renders delete button');
     await click(SELECTORS.keyDeleteButton);
     await click(SELECTORS.confirmDelete);
+  });
+
+  test('it does not render actions when capabilities are false', async function (assert) {
+    assert.expect(2);
+
+    await render(
+      hbs`
+        <Page::PkiKeyDetails
+          @key={{this.model}} 
+          @canDelete={{false}}
+          @canEdit={{false}} 
+        />
+      `,
+      { owner: this.engine }
+    );
+
+    assert.dom(SELECTORS.keyDeleteButton).doesNotExist('does not render delete button if no permission');
+    assert.dom(SELECTORS.keyEditLink).doesNotExist('does not render edit button if no permission');
   });
 });
