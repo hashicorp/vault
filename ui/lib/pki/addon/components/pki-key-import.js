@@ -24,6 +24,7 @@ export default class PkiKeyImport extends Component {
   @service store;
   @service flashMessages;
 
+  @tracked file = { value: '', enterAsText: false };
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked modelValidations;
