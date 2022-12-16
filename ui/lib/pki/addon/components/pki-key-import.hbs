@@ -1,0 +1,19 @@
+<form {{on "submit" this.submitForm}} data-test-pki-key-import-form>
+  <FormField data-test-field="keyName" @attr={{this.keyNameOptions}} @model={{@model}} />
+  <TextFile
+    @subText="Upload a PEM bundle or certificate"
+    @file={{this.file}}
+    @onChange={{this.onFileUploaded}}
+    @label="PEM Bundle"
+  />
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button type="submit" class="button is-primary" data-test-pki-key-import>
+        Import key
+      </button>
+      <LinkTo @route="overview" class="button has-left-margin-s" data-test-pki-key-cancel>
+        Cancel
+      </LinkTo>
+    </div>
+  </div>
+</form>
