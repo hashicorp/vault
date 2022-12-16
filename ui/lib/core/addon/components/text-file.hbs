@@ -2,13 +2,17 @@
   <div class="level is-mobile">
     <div class="level-left">
       <label class="is-label" data-test-text-file-label>
-        {{or @label "File"}}
-        {{#if @helpText}}
-          <InfoTooltip>
-            <span data-test-help-text>
-              {{@helpText}}
-            </span>
-          </InfoTooltip>
+        {{#if this.label}}
+          {{this.label}}
+          {{#if @helpText}}
+            <InfoTooltip>
+              <span data-test-help-text>
+                {{@helpText}}
+              </span>
+            </InfoTooltip>
+          {{/if}}
+        {{else}}
+          File
         {{/if}}
       </label>
     </div>
@@ -30,7 +34,10 @@
     </div>
   </div>
 {{/unless}}
-<div class="field text-file box is-fullwidth is-marginless is-shadowless is-paddingless" data-test-component="text-file">
+<div
+  class="field text-file box is-fullwidth is-marginless is-shadowless {{if @inputOnly 'is-paddingless'}}"
+  data-test-component="text-file"
+>
   {{#if @file.enterAsText}}
     <div class="control has-icon-right">
       <textarea
