@@ -47,13 +47,7 @@ module('Integration | Component | pki key details page', function (hooks) {
     assert.dom(SELECTORS.keyNameValue).hasText('test-key', 'key name renders');
     assert.dom(SELECTORS.keyTypeValue).hasText('ec', 'key type renders');
     assert.dom(SELECTORS.keyBitsValue).doesNotExist('does not render empty value');
-    assert
-      .dom(SELECTORS.keyEditLink)
-      .hasAttribute(
-        'href',
-        `/ui/vault/secrets/${this.backend}/pki/keys/${this.model.keyId}/edit`,
-        'renders edit link with correct href'
-      );
+    assert.dom(SELECTORS.keyEditLink).exists('renders edit link');
     assert.dom(SELECTORS.keyDeleteButton).exists('renders delete button');
     await click(SELECTORS.keyDeleteButton);
     await click(SELECTORS.confirmDelete);
