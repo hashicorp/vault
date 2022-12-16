@@ -1,0 +1,3 @@
+```release-note:improvement
+core: upgrade github.com/containerd/containerd and github.com/docker/distribution
+```
