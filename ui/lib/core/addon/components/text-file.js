@@ -1,38 +1,30 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { guidFor } from '@ember/object/internals';
 
 /**
  * @module TextFile
- * `TextFile` components are file upload components where you can either toggle to upload a file or enter text.
+ * `TextFile` components render a file upload input with the option to toggle a "Enter as text" button
+ *  that changes the input into a textarea
  *
  * @example
  * <TextFile
- *  @uploadOnly={{true}}
+ *  @hideTextAreaToggle={{true}}
  *  @helpText="help text"
- *  @file={{object}}
- *  @onChange={{action "someOnChangeFunction"}}
- *  @label={{"string"}}
+ *  @onChange={{this.handleChange}}
+ *  @label="PEM Bundle"
  * />
  *
- * @param {object} file - * Object in the shape of:
- * {
- *   value: 'file contents here',
- *   filename: 'nameOfFile.txt',
- *   enterAsText: boolean ability to enter as text
- * }
- * @param {function} onChange - A function to call when the value of the input changes.
- * @param {bool} [inputOnly] - When true, only the file input will be rendered
+ * @param {function} onChange - Callback function to call when the value of the input changes, returns an object in the shape of { value: fileContents, filename: 'some-file.txt' }
+ * @param {bool} [hideTextAreaToggle=false] - When true, renders a static file upload input and removes the option to toggle and input plain text
  * @param {string} [helpText] - Text underneath label.
  * @param {string} [label=null]  - Text to use as the label for the file input. If none, default of 'File' is rendered
  */
 
 export default class TextFileComponent extends Component {
-  elementId = guidFor(this);
-
   @tracked file = null;
   @tracked showValue = false;
+  @tracked showTextInput = false;
 
   readFile(file) {
     const reader = new FileReader();

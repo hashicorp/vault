@@ -20,17 +20,17 @@ module('Integration | Component | text-file', function (hooks) {
   });
 
   test('it renders with or without label', async function (assert) {
-    this.set('inputOnly', false);
+    this.set('hideTextAreaToggle', false);
 
     await render(
-      hbs`<TextFile @file={{this.file}} @onChange={{this.onChange}} @uploadOnly={{this.inputOnly}} />`
+      hbs`<TextFile @file={{this.file}} @onChange={{this.onChange}} @hideTextAreaToggle={{this.hideTextAreaToggle}} />`
     );
 
     assert.dom(SELECTORS.label).hasText('File', 'renders default label');
     assert.dom(SELECTORS.toggle).exists({ count: 1 }, 'toggle exists');
     assert.dom(SELECTORS.fileUpload).exists({ count: 1 }, 'File input shown');
 
-    this.set('inputOnly', true);
+    this.set('hideTextAreaToggle', true);
 
     assert.dom(SELECTORS.label).doesNotExist('Label no longer rendered');
     assert.dom(SELECTORS.toggle).doesNotExist('toggle no longer rendered');

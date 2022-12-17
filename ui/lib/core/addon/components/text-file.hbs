@@ -1,4 +1,4 @@
-{{#unless @uploadOnly}}
+{{#unless @hideTextAreaToggle}}
   <div class="level is-mobile">
     <div class="level-left">
       <label class="is-label" data-test-text-file-label>
@@ -14,16 +14,15 @@
     </div>
     <div class="level-right">
       <div class="control is-flex">
-        <input
+        <Input
           data-test-text-toggle
-          id={{concat "useText-" this.elementId}}
-          type="checkbox"
-          name={{concat "useText-" this.elementId}}
+          id="text-area-toggle"
           class="switch is-rounded is-success is-small"
-          checked={{@file.enterAsText}}
-          {{on "change" (toggle "enterAsText" @file)}}
+          @type="checkbox"
+          @checked={{this.showTextInput}}
+          {{on "change" (fn (mut this.showTextInput) (not this.showTextInput))}}
         />
-        <label for={{concat "useText-" this.elementId}}>
+        <label for="text-area-toggle">
           Enter as text
         </label>
       </div>
@@ -31,20 +30,22 @@
   </div>
 {{/unless}}
 <div class="field text-file box is-fullwidth is-marginless is-shadowless is-paddingless" data-test-component="text-file">
-  {{#if @file.enterAsText}}
+  {{#if this.showTextInput}}
     <div class="control has-icon-right">
       <textarea
         class="textarea {{unless this.showValue 'masked-font'}}"
         {{on "input" this.handleTextInput}}
         data-test-text-file-textarea
-      >{{@file.value}}</textarea>
+      >
+        {{@file.value}}
+      </textarea>
       <button
         {{on "click" this.toggleMask}}
         type="button"
-        class="{{if (eq this.value '') 'has-text-grey'}} masked-input-toggle button {{if this.displayOnly 'is-compact'}}"
+        class="{{if (eq this.value '') 'has-text-grey'}} masked-input-toggle button is-compact"
         data-test-button="toggle-masked"
       >
-        <Icon @name={{if this.showValue "eye" "eye-off"}} />
+        <Icon @name={{if this.showValue "eye" "eye-off"}} @stretched={{true}} />
       </button>
     </div>
     <p class="help has-text-grey">Enter the value as text</p>
