@@ -67,6 +67,13 @@ module('Integration | Component | text-file', function (hooks) {
     assert
       .dom('[data-test-field-validation="text-file"]')
       .hasText('There was a problem uploading. Please try again.');
-    assert.ok(this.onChange.notCalled, 'onChange is not called');
+    assert.propEqual(
+      this.onChange.lastCall.args[0],
+      {
+        filename: '',
+        value: '',
+      },
+      'parent callback function is called with cleared out values'
+    );
   });
 });

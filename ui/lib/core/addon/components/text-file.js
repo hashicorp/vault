@@ -29,12 +29,12 @@ export default class TextFileComponent extends Component {
   @tracked showTextArea = false;
 
   async readFile(file) {
-    this.filename = file.name;
     try {
       this.content = await file.text();
+      this.filename = file.name;
       this.handleChange();
     } catch (error) {
-      this.content = '';
+      this.clearFile();
       this.uploadError = 'There was a problem uploading. Please try again.';
     }
   }
@@ -58,11 +58,11 @@ export default class TextFileComponent extends Component {
   clearFile() {
     this.content = '';
     this.filename = '';
-    this.uploadError = '';
     this.handleChange();
   }
 
   handleChange() {
     this.args.onChange({ value: this.content, filename: this.filename });
+    this.uploadError = '';
   }
 }
