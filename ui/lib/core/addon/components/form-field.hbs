@@ -126,10 +126,10 @@
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}
     <TextFile
-      @helpText={{@attr.options.helpText}}
-      @file={{this.file}}
-      @onChange={{this.setFile}}
       @label={{this.labelString}}
+      @helpText={{@attr.options.helpText}}
+      @onChange={{this.setFile}}
+      @validationError={{this.validationError}}
     />
   {{else if (eq @attr.options.editType "ttl")}}
     {{! TTL Picker }}

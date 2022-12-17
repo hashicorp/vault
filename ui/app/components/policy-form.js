@@ -25,7 +25,6 @@ export default class PolicyFormComponent extends Component {
   @service flashMessages;
 
   @tracked errorBanner = '';
-  @tracked file = null;
   @tracked showFileUpload = false;
 
   @task

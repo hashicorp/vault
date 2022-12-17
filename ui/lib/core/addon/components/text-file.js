@@ -18,51 +18,51 @@ import { tracked } from '@glimmer/tracking';
  * @param {function} onChange - Callback function to call when the value of the input changes, returns an object in the shape of { value: fileContents, filename: 'some-file.txt' }
  * @param {bool} [hideTextAreaToggle=false] - When true, renders a static file upload input and removes the option to toggle and input plain text
  * @param {string} [helpText] - Text underneath label.
- * @param {string} [label=null]  - Text to use as the label for the file input. If none, default of 'File' is rendered
+ * @param {string} [label='File']  - Text to use as the label for the file input. If none, default of 'File' is rendered
  */
 
 export default class TextFileComponent extends Component {
-  @tracked file = null;
+  @tracked content = '';
+  @tracked filename = '';
+  @tracked uploadError = '';
   @tracked showValue = false;
-  @tracked showTextInput = false;
+  @tracked showTextArea = false;
 
-  readFile(file) {
-    const reader = new FileReader();
-    reader.onload = () => this.handleChange(reader.result, file.name);
-    reader.readAsText(file);
-  }
-
-  handleChange(contents, filename) {
-    this.args.onChange({ value: contents, filename });
+  async readFile(file) {
+    this.filename = file.name;
+    try {
+      this.content = await file.text();
+      this.handleChange();
+    } catch (error) {
+      this.content = '';
+      this.uploadError = 'There was a problem uploading. Please try again.';
+    }
   }
 
   @action
   handleFileUpload(e) {
     e.preventDefault();
     const { files } = e.target;
-    if (!files.length) {
-      return;
-    }
-    for (let i = 0, len = files.length; i < len; i++) {
-      this.readFile(files[i]);
-    }
+    if (!files.length) return;
+    this.readFile(files[0]);
   }
 
   @action
   handleTextInput(e) {
     e.preventDefault();
-    const file = this.args.file;
-    file.value = e.target.value;
-    this.args.onChange(file);
+    this.content = e.target.value;
+    this.handleChange();
   }
 
   @action
   clearFile() {
-    this.args.onChange({ value: '' });
+    this.content = '';
+    this.filename = '';
+    this.uploadError = '';
+    this.handleChange();
   }
 
-  @action
-  toggleMask() {
-    this.showValue = !this.showValue;
+  handleChange() {
+    this.args.onChange({ value: this.content, filename: this.filename });
   }
 }

@@ -56,7 +56,6 @@ export default class FormFieldComponent extends Component {
     'ttl',
   ];
   @tracked showInput = false;
-  @tracked file = { value: '' }; // used by the pgp-file component when an attr is editType of 'file'
 
   constructor() {
     super(...arguments);

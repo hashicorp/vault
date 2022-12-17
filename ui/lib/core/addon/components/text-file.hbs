@@ -19,8 +19,8 @@
           id="text-area-toggle"
           class="switch is-rounded is-success is-small"
           @type="checkbox"
-          @checked={{this.showTextInput}}
-          {{on "change" (fn (mut this.showTextInput) (not this.showTextInput))}}
+          @checked={{this.showTextArea}}
+          {{on "change" (fn (mut this.showTextArea) (not this.showTextArea))}}
         />
         <label for="text-area-toggle">
           Enter as text
@@ -30,20 +30,20 @@
   </div>
 {{/unless}}
 <div class="field text-file box is-fullwidth is-marginless is-shadowless is-paddingless" data-test-component="text-file">
-  {{#if this.showTextInput}}
+  {{#if this.showTextArea}}
     <div class="control has-icon-right">
       <textarea
-        class="textarea {{unless this.showValue 'masked-font'}}"
+        class="textarea {{if (and (not this.showValue) this.content) 'masked-font'}}"
         {{on "input" this.handleTextInput}}
         data-test-text-file-textarea
       >
-        {{@file.value}}
+        {{this.content}}
       </textarea>
       <button
-        {{on "click" this.toggleMask}}
         type="button"
-        class="{{if (eq this.value '') 'has-text-grey'}} masked-input-toggle button is-compact"
+        class="masked-input-toggle button is-compact"
         data-test-button="toggle-masked"
+        {{on "click" (fn (mut this.showValue) (not this.showValue))}}
       >
         <Icon @name={{if this.showValue "eye" "eye-off"}} @stretched={{true}} />
       </button>
@@ -65,13 +65,13 @@
             Choose a file…
           </label>
           <span class="file-name has-text-grey-dark" data-test-text-file-input-label>
-            {{#if @file.filename}}
-              {{@file.filename}}
+            {{#if this.filename}}
+              {{this.filename}}
             {{else}}
               No file chosen
             {{/if}}
           </span>
-          {{#if @file.filename}}
+          {{#if this.filename}}
             <button
               type="button"
               class="file-delete-button"
@@ -86,5 +86,13 @@
       </div>
     </div>
     <p class="help has-text-grey">Select a file from your computer</p>
+    {{#if (or @validationError this.uploadError)}}
+      <AlertInline
+        @type="danger"
+        @message={{or @validationError this.uploadError}}
+        @paddingTop={{true}}
+        data-test-field-validation="text-file"
+      />
+    {{/if}}
   {{/if}}
 </div>
