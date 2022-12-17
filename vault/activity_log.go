@@ -1590,8 +1590,27 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			return nil, err
 		}
 
-		// Add the current month's namespace data the precomputed query namespaces
-		byNamespaceResponse = append(byNamespaceResponse, byNamespaceResponseCurrent...)
+		// Create a mapping of namespace id to slice index, so that we can efficiently update our results without
+		// having to traverse the entire namespace response slice every time.
+		nsrMap := make(map[string]int)
+		for i, nr := range byNamespaceResponse {
+			nsrMap[nr.NamespaceID] = i
+		}
+
+		// Rather than blindly appending, which will create duplicates, check our existing counts against the current
+		// month counts, and append or update as necessary.
+		for _, nrc := range byNamespaceResponseCurrent {
+			if ndx, ok := nsrMap[nrc.NamespaceID]; ok {
+				existingRecord := byNamespaceResponse[ndx]
+				existingRecord.Counts.EntityClients += nrc.Counts.EntityClients
+				existingRecord.Counts.Clients += nrc.Counts.Clients
+				existingRecord.Counts.DistinctEntities += nrc.Counts.DistinctEntities
+				existingRecord.Counts.NonEntityClients += nrc.Counts.NonEntityClients
+				existingRecord.Counts.NonEntityTokens += nrc.Counts.NonEntityTokens
+			} else {
+				byNamespaceResponse = append(byNamespaceResponse, nrc)
+			}
+		}
 	}
 
 	// Sort clients within each namespace
