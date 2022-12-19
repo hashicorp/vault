@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-
+import { guidFor } from '@ember/object/internals';
 /**
  * @module TextFile
  * `TextFile` components render a file upload input with the option to toggle a "Enter as text" button
@@ -27,6 +27,7 @@ export default class TextFileComponent extends Component {
   @tracked uploadError = '';
   @tracked showValue = false;
   @tracked showTextArea = false;
+  elementId = guidFor(this);
 
   async readFile(file) {
     try {

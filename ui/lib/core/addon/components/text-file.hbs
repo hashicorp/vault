@@ -1,7 +1,7 @@
 {{#unless @hideTextAreaToggle}}
   <div class="level is-mobile">
     <div class="level-left">
-      <label class="is-label" data-test-text-file-label>
+      <label for="input-{{this.elementId}}" class="is-label" data-test-text-file-label>
         {{or @label "File"}}
         {{#if @helpText}}
           <InfoTooltip>
@@ -16,13 +16,13 @@
       <div class="control is-flex">
         <Input
           data-test-text-toggle
-          id="text-area-toggle"
+          id="use-text-{{this.elementId}}"
           class="switch is-rounded is-success is-small"
           @type="checkbox"
           @checked={{this.showTextArea}}
           {{on "change" (fn (mut this.showTextArea) (not this.showTextArea))}}
         />
-        <label for="text-area-toggle">
+        <label for="use-text-{{this.elementId}}">
           Enter as text
         </label>
       </div>
@@ -33,6 +33,7 @@
   {{#if this.showTextArea}}
     <div class="control has-icon-right">
       <textarea
+        id="input-{{this.elementId}}"
         class="textarea {{if (and (not this.showValue) this.content) 'masked-font'}}"
         {{on "input" this.handleTextInput}}
         data-test-text-file-textarea
@@ -54,13 +55,13 @@
       <div class="file has-name is-fullwidth">
         <div class="file-label" aria-label="Choose a file">
           <Input
-            id="file-input"
+            id="file-input-{{this.elementId}}"
             class="file-input"
             @type="file"
             {{on "change" this.handleFileUpload}}
             data-test-text-file-input
           />
-          <label for="file-input" class="file-cta button">
+          <label for="file-input-{{this.elementId}}" class="file-cta button">
             <Icon @name="upload" class="has-light-grey-text" />
             Choose a file…
           </label>
