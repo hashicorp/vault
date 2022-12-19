@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -1117,8 +1118,17 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleCapabilitiesAccessor,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleCapabilitiesAccessor,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// response keys are dynamic
+							Fields: map[string]*framework.FieldSchema{},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_accessor"][0]),
@@ -1144,8 +1154,17 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleCapabilities,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleCapabilities,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// response keys are dynamic
+							Fields: map[string]*framework.FieldSchema{},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities"][0]),
@@ -1171,8 +1190,17 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleCapabilities,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleCapabilities,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// response keys are dynamic
+							Fields: map[string]*framework.FieldSchema{},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_self"][0]),
