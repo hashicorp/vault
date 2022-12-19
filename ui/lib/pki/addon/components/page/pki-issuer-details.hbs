@@ -1,0 +1,73 @@
+<Toolbar>
+  <ToolbarActions>
+    {{#if @canRotate}}
+      <ToolbarLink @route="issuers.generate-root" @type="rotate-cw" @issuer={{@issuer.id}} data-test-pki-issuer-cross-sign>
+        Rotate this root
+      </ToolbarLink>
+    {{/if}}
+    {{#if @canCrossSign}}
+      <ToolbarLink
+        @route="issuers.issuer.cross-sign"
+        @type="pen-tool"
+        @issuer={{@issuer.id}}
+        data-test-pki-issuer-cross-sign
+      >
+        Cross-sign Issuer
+      </ToolbarLink>
+    {{/if}}
+    {{#if @canSignIntermediate}}
+      <ToolbarLink @route="issuers.issuer.sign" @type="pen-tool" @issuer={{@issuer.id}} data-test-pki-issuer-sign-int>
+        Sign Intermediate
+      </ToolbarLink>
+    {{/if}}
+    <DownloadButton
+      class="toolbar-link"
+      @filename={{@issuer.id}}
+      @data={{@issuer.certificate}}
+      @extension="pem"
+      data-test-issuer-download
+    >
+      Download
+      <Chevron @direction="down" @isButton={{true}} />
+    </DownloadButton>
+    {{#if @canConfigure}}
+      <ToolbarLink @route="issuers.issuer.edit" @issuer={{@issuer.id}} data-test-pki-issuer-configure>
+        Configure
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+<main class="box is-fullwidth is-sideless is-paddingless is-marginless" data-test-issuer-details>
+
+  {{! <p>This is your default issuer certificate. You will see it in your list of Issuers. You may also want to configure its
+    usage and other behaviours.
+  </p> }}
+  {{yield}}
+
+  {{#each @issuer.formFields as |attr|}}
+    {{#if (eq attr.options.displayType "masked")}}
+      <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
+        <MaskedInput
+          @name={{or attr.options.label (humanize (dasherize attr.name))}}
+          @value={{get @issuer attr.name}}
+          @displayOnly={{true}}
+          @allowCopy={{true}}
+        />
+      </InfoTableRow>
+    {{else if (eq attr.name "keyId")}}
+      <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
+        <LinkTo @route="keys.key" @model={{get @issuer attr.name}}>{{get @issuer attr.name}}</LinkTo>
+      </InfoTableRow>
+    {{else}}
+      <InfoTableRow
+        @label={{or attr.options.label (humanize (dasherize attr.name))}}
+        @value={{get @issuer attr.name}}
+        @formatDate={{if (eq attr.type "date") "MMM d yyyy HH:mm:ss a zzzz"}}
+        @alwaysRender={{true}}
+      />
+    {{/if}}
+
+  {{/each}}
+
+</main>

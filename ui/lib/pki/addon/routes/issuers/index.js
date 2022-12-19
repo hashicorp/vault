@@ -12,8 +12,6 @@ export default class PkiIssuersIndexRoute extends Route {
   }
 
   model() {
-    // the pathHelp service is needed for adding openAPI to the model
-    this.pathHelp.getNewModel('pki/issuer', 'pki');
     return this.store
       .query('pki/issuer', { backend: this.secretMountPath.currentPath })
       .then((issuersModel) => {

@@ -1,6 +1,8 @@
-import Model, { attr } from '@ember-data/model';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { attr } from '@ember-data/model';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import { withFormFields } from 'vault/decorators/model-form-fields';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import PkiCertificateBaseModel from './certificate/base';
 
 const validations = {
   name: [
@@ -13,39 +15,47 @@ const validations = {
 };
 
 @withModelValidations(validations)
-export default class PkiIssuerModel extends Model {
-  @attr('string', { readOnly: true }) backend;
-  @attr('string', {
-    label: 'Issuer name',
-    fieldValue: 'id',
-  })
-  name;
-
-  get useOpenAPI() {
-    return true;
-  }
+@withFormFields([
+  'certificate',
+  'caChain',
+  'commonName',
+  'issuerName',
+  'notValidBefore',
+  'serialNumber',
+  'keyId',
+  'notValidAfter',
+  'notValidBefore',
+])
+export default class PkiIssuerModel extends PkiCertificateBaseModel {
   getHelpUrl(backend) {
     return `/v1/${backend}/issuer/example?help=1`;
   }
+  @attr('string', { displayType: 'masked' }) certificate;
+  @attr('string', { displayType: 'masked', label: 'CA Chain' }) caChain;
+  @attr('date', {
+    label: 'Issue date',
+  })
+  notValidBefore;
 
-  @attr('boolean') isDefault;
-  @attr('string') issuerName;
+  @attr('string', {
+    label: 'Default key ID',
+  })
+  keyId;
 
-  // Form Fields not hidden in toggle options
-  _attributeMeta = null;
-  get formFields() {
-    if (!this._attributeMeta) {
-      this._attributeMeta = expandAttributeMeta(this, [
-        'name',
-        'leafNotAfterBehavior',
-        'usage',
-        'manualChain',
-        'issuingCertifications',
-        'crlDistributionPoints',
-        'ocspServers',
-        'deltaCrlUrls', // new endpoint, mentioned in RFC, but need to confirm it's there.
-      ]);
-    }
-    return this._attributeMeta;
+  @lazyCapabilities(apiPath`${'backend'}/issuer`) issuerPath;
+  get canRotateIssuer() {
+    return true;
+  }
+
+  get canCrossSign() {
+    return true;
+  }
+
+  get canSignIntermediate() {
+    return true;
+  }
+
+  get canConfigure() {
+    return true;
   }
 }
