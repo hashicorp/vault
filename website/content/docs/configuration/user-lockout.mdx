@@ -21,7 +21,6 @@ Supported user_lockout stanza names are all, userpass, ldap and approle.
 The configurations for a specific auth method takes precedence over the configurations specified 
 for all auth methods using "all" user_lockout stanza name in the config file.
 
-
 ## Configuration
 
 User lockouts configuration is done through the Vault configuration file using
@@ -59,4 +58,3 @@ The following options are available on all telemetry configurations.
 - `lockout_duration` `(string: "")` - Specifies the duration for which an user will be locked out.
 - `lockout_counter_reset` `(string: "")` - Specifies the duration after which the lockout counter is reset with no failed login attempts.
 - `disable_lockout` `(bool: false)` - Disables the user lockout feature if set to true.
- 
