@@ -30,6 +30,53 @@ func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCAGenerateRoot,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"expiration": {
+								Type:        framework.TypeString,
+								Description: `The expiration of the given.`,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `The requested Subject's named serial number.`,
+							},
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `The generated self-signed CA certificate.`,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `The issuing certificate authority.`,
+							},
+							"issuer_id": {
+								Type:        framework.TypeString,
+								Description: `The ID of the issuer`,
+							},
+							"issuer_name": {
+								Type:        framework.TypeString,
+								Description: `The name of the issuer.`,
+							},
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `The ID of the key.`,
+							},
+							"key_name": {
+								Type:        framework.TypeString,
+								Description: `The key name if given.`,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `The private key if exported was specified.`,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `The private key type either rsa, ed25519, or ec.`,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -61,6 +108,25 @@ func buildPathGenerateIntermediate(b *backend, pattern string) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathGenerateIntermediate,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"csr": {
+								Type:        framework.TypeString,
+								Description: `Certificate signing request.`,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `Generated private key.`,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `Specifies the format used for marshaling the private key.`,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -374,6 +440,73 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathRevokeIssuer,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"issuer_id": {
+								Type:        framework.TypeString,
+								Description: `ID of the issuer`,
+							},
+							"issuer_name": {
+								Type:        framework.TypeString,
+								Description: `Name of the issuer`,
+							},
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `ID of the Key`,
+							},
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: ``,
+							},
+							"manual_chain": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: ``,
+							},
+							"ca_chain": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: ``,
+							},
+							"leaf_not_after_behavior": {
+								Type:        framework.TypeString,
+								Description: ``,
+							},
+							"usage": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: ``,
+							},
+							"revocation_signature_algorithm": {
+								Type:        framework.TypeString,
+								Description: ``,
+							},
+							"revoked": {
+								Type:        framework.TypeBool,
+								Description: `Whether the issuer was revoked`,
+							},
+							"issuing_certificates": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: ``,
+							},
+							"crl_distribution_points": {
+								Type:        framework.TypeStringSlice,
+								Description: ``,
+							},
+							"ocsp_servers": {
+								Type:        framework.TypeStringSlice,
+								Description: ``,
+							},
+							"revocation_time": {
+								Type:        framework.TypeString,
+								Description: `Time of revocation`,
+							},
+							"revocation_time_rfc3339": {
+								Type:        framework.TypeString,
+								Description: `RFC formatted time of revocation`,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
