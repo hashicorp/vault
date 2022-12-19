@@ -1,3 +1,4 @@
+# This module unseals the replication secondary follower nodes
 terraform {
   required_providers {
     enos = {
@@ -33,6 +34,8 @@ locals {
   vault_bin_path = "${var.vault_install_dir}/vault"
 }
 
+# After replication is enabled the secondary follower nodes are expected to be sealed,
+# so we wait for the secondary follower nodes to update the seal status
 resource "enos_remote_exec" "wait_till_sealed" {
   for_each = {
     for idx, follower in local.followers : idx => follower
@@ -51,6 +54,9 @@ resource "enos_remote_exec" "wait_till_sealed" {
   }
 }
 
+# The follower nodes on secondary replication cluster incorrectly report
+# unseal progress 2/3 (Issue: https://hashicorp.atlassian.net/browse/VAULT-12309),
+# so we restart the followers to clear the status and to autounseal incase of awskms seal type
 resource "enos_remote_exec" "restart_followers" {
   depends_on = [enos_remote_exec.wait_till_sealed]
   for_each = {
@@ -66,6 +72,9 @@ resource "enos_remote_exec" "restart_followers" {
   }
 }
 
+# We cannot use the vault_unseal resouce due to the known issue
+# (https://hashicorp.atlassian.net/browse/VAULT-12311). We use a custom
+# script to allow retry for unsealing the secondary followers
 resource "enos_remote_exec" "unseal_followers" {
   depends_on = [enos_remote_exec.restart_followers]
   for_each = {
@@ -88,6 +97,9 @@ resource "enos_remote_exec" "unseal_followers" {
   }
 }
 
+# This is a second attempt needed to unseal the secondary followers
+# using a custom script due to get past the known issue
+# (https://hashicorp.atlassian.net/browse/VAULT-12311)
 resource "enos_remote_exec" "unseal_followers_again" {
   depends_on = [enos_remote_exec.unseal_followers]
   for_each = {
