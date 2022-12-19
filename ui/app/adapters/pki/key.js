@@ -2,6 +2,15 @@ import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 export default class PkiKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
+
+  createRecord(store, type, snapshot) {
+    const { record } = snapshot;
+    const url = this.getUrl(record.backend) + '/generate/' + record.type;
+    return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
+      return resp;
+    });
+  }
+
   getUrl(backend, id) {
     const url = `${this.buildURL()}/${encodePath(backend)}`;
     if (id) {

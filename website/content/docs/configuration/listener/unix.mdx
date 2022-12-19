@@ -1,0 +1,69 @@
+---
+layout: docs
+page_title: Unix - Listeners - Configuration
+description: |-
+  The Unix listener configures Vault to listen on the specified Unix domain socket.
+---
+
+# `unix` Listener
+
+The Unix listener configures Vault to listen on the specified Unix domain socket.
+
+```hcl
+listener "unix" {
+  address = "/run/vault.sock"
+}
+```
+
+The `listener` stanza may be specified more than once to make Vault listen on
+multiple sockets.
+
+## `unix` Listener Parameters
+- `address` `(string: "/run/vault.sock", <required>)` – Specifies the address to bind the Unix socket.
+
+- `socket_mode` `(string: "", <optional>)` – Changes the access
+  permissions and the special mode flags of the Unix socket.
+
+- `socket_user` `(string: "", <optional>)` – Changes the user owner of the Unix socket.
+
+- `socket_group` `(string: "", <optional>)` – Changes the group owner of the Unix socket.
+
+
+## `unix` Listener Examples
+
+### Listening on Multiple Sockets
+
+This example shows Vault listening on a specified socket, as well as the default.
+
+```hcl
+listener "unix" {}
+
+listener "unix" {
+  address = "/var/run/vault.sock"
+}
+```
+
+### Listening on Multiple Interfaces
+
+This example shows Vault listening on TCP localhost, as well as Unix socket.
+
+```hcl
+listener "unix" {
+  address = "/var/run/vault.sock"
+}
+
+listener "tcp" {
+  address = "127.0.0.1:8200"
+}
+```
+
+### Configuring Permissions
+This example shows changing access permissions and ownership of the Unix socket.
+```hcl
+listener "unix" {
+  address = "/var/run/vault.sock"
+  socket_mode = "644"
+  socket_user = "1000"
+  socket_group = "1000"
+}
+```

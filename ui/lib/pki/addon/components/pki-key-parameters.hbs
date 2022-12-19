@@ -1,17 +1,39 @@
 {{#each @fields as |attr|}}
   {{#if (eq attr.name "keyBits")}}
     <div class="field">
-      <FormFieldLabel for={{attr.name}} @label={{attr.options.label}} />
+      <FormFieldLabel for={{attr.name}} @label={{attr.options.label}} @subText={{attr.options.subText}} />
       <div class="control is-expanded">
-        <div class="select is-fullwidth">
-          <select name={{attr.name}} id={{attr.name}} onchange={{this.onKeyBitsChange}} data-test-input={{attr.name}}>
-            {{#each this.keyBitOptions as |val|}}
-              <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{val}}>
-                {{val}}
-              </option>
-            {{/each}}
-          </select>
-        </div>
+        <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
+          <T.Trigger tabindex="-1">
+            <div class="select is-fullwidth">
+              <select
+                id={{attr.name}}
+                name={{attr.name}}
+                data-test-input={{attr.name}}
+                disabled={{unless @model.keyType true}}
+                {{on "change" this.onKeyBitsChange}}
+              >
+                {{#if (and attr.options.noDefault (not @model.keyType))}}
+                  <option value="">
+                    Select one
+                  </option>
+                {{/if}}
+                {{#each this.keyBitOptions as |val|}}
+                  <option selected={{eq (get @model "keyBits") val}} value={{val}}>
+                    {{val}}
+                  </option>
+                {{/each}}
+              </select>
+            </div>
+          </T.Trigger>
+          {{#unless @model.keyType}}
+            <T.Content @defaultClass="tool-tip smaller-font">
+              <div class="box">
+                Choose a key type before specifying bit length.
+              </div>
+            </T.Content>
+          {{/unless}}
+        </ToolTip>
       </div>
     </div>
   {{else}}
@@ -21,7 +43,7 @@
       @model={{@model}}
       @modelValidations={{@modelValidations}}
       @showHelpText={{false}}
-      @onChange={{this.onSignatureBitsOrKeyTypeChange}}
+      @onChange={{this.handleSelection}}
     />
   {{/if}}
 {{/each}}

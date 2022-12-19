@@ -280,7 +280,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		goto reply
 	}
 
-	certEntry, funcErr = fetchCertBySerial(ctx, b, req, req.Path, serial)
+	certEntry, funcErr = fetchCertBySerial(sc, req.Path, serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:
@@ -308,7 +308,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		certificate = []byte(strings.TrimSpace(string(pem.EncodeToMemory(&block))))
 	}
 
-	revokedEntry, funcErr = fetchCertBySerial(ctx, b, req, "revoked/", serial)
+	revokedEntry, funcErr = fetchCertBySerial(sc, "revoked/", serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:

@@ -14,6 +14,7 @@ import (
 func TestPki_FetchCertBySerial(t *testing.T) {
 	t.Parallel()
 	b, storage := CreateBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, storage)
 
 	cases := map[string]struct {
 		Req    *logical.Request
@@ -47,7 +48,7 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 			t.Fatalf("error writing to storage on %s colon-based storage path: %s", name, err)
 		}
 
-		certEntry, err := fetchCertBySerial(context.Background(), b, tc.Req, tc.Prefix, tc.Serial)
+		certEntry, err := fetchCertBySerial(sc, tc.Prefix, tc.Serial)
 		if err != nil {
 			t.Fatalf("error on %s for colon-based storage path: %s", name, err)
 		}
@@ -82,7 +83,7 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 			t.Fatalf("error writing to storage on %s hyphen-based storage path: %s", name, err)
 		}
 
-		certEntry, err := fetchCertBySerial(context.Background(), b, tc.Req, tc.Prefix, tc.Serial)
+		certEntry, err := fetchCertBySerial(sc, tc.Prefix, tc.Serial)
 		if err != nil || certEntry == nil {
 			t.Fatalf("error on %s for hyphen-based storage path: err: %v, entry: %v", name, err, certEntry)
 		}
