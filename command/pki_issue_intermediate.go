@@ -3,12 +3,13 @@ package command
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/api"
-	"github.com/posener/complete"
 	"io"
 	"os"
 	paths "path"
 	"strings"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/posener/complete"
 )
 
 type PKIIssueCACommand struct {
@@ -162,7 +163,7 @@ func importIssuerWithName(client *api.Client, mount string, bundle string, name 
 	}
 	if name != "" && name != "default" {
 		issuerUUID := ""
-		for issuerId, _ := range mapping {
+		for issuerId := range mapping {
 			issuerUUID = issuerId
 		}
 		nameReq := map[string]interface{}{
