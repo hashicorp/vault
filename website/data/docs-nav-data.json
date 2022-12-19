@@ -194,6 +194,10 @@
       {
         "title": "Duration String Format",
         "path": "concepts/duration-format"
+      },
+      {
+        "title": "User Lockout",
+        "path": "concepts/user-lockout"
       }
     ]
   },
@@ -396,6 +400,10 @@
       {
         "title": "<code>ui</code>",
         "path": "configuration/ui"
+      },
+      {
+        "title": "<code>user_lockout</code>",
+        "path": "configuration/user-lockout"
       },
       {
         "title": "<code>Log Completed Requests</code>",

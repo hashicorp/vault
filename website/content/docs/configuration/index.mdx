@@ -58,6 +58,10 @@ to specify where the configuration is.
 - `listener` `([Listener][listener]: <required>)` – Configures how
   Vault is listening for API requests.
 
+- `user_lockout` `([UserLockout][user-lockout]: nil)` –
+  Configures the user-lockout behaviour for failed logins. For more information, please see the
+  [user lockout configuration documentation](/docs/configuration/user-lockout). 
+
 - `seal` `([Seal][seal]: nil)` – Configures the seal type to use for
   auto-unsealing, as well as for
   [seal wrapping][sealwrap] as an additional layer of data protection.
