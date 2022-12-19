@@ -13,7 +13,7 @@ description: |-
 
 The `user_lockout` stanza specifies various configurations for user lockout 
 behaviour for failed logins in vault. They can be configured for all supported auth methods
-(userpass, ldap and approle) using name "all" user_lockout stanza name or for a specific auth method 
+(userpass, ldap and approle) using "all" user_lockout stanza name or for a specific auth method 
 using the auth method name in stanza. 
 
 Supported user_lockout stanza names are all, userpass, ldap and approle.
@@ -37,7 +37,7 @@ For example:
 ```hcl
 user_lockout "all" {
   lockout_duration = "10m"
-  lockout_counter_reset = "5m"
+  lockout_counter_reset = "10m"
 }
 
 user_lockout "userpass" {
@@ -49,6 +49,13 @@ user_lockout "ldap" {
  disable_lockout = "true"
 }
 ```
+
+Here, user lockout feature will be disabled for ldap auth methods. Userpass auth methods will have lockout threshold of 25, 
+lockout duration of 5 minutes, lockout counter reset of 10 minutes. Approle auth methods will have a lockout threshold of 
+5 (considers default as this value is not configured), lockout duration of 10 minutes and lockout counter reset of 10 minutes.
+
+The user lockout configuration for the auth method at a given path can be tuned using auth tune. Please see [auth tune command](/docs/commands/auth/tune)
+or [auth tune api](/api-docs/system/auth#tune-auth-method) for more details. 
 
 ## `user_lockout` Parameters
 
