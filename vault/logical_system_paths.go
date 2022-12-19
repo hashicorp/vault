@@ -2058,7 +2058,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 	}
 }
 
-func (b *SystemBackend) lockerUserPaths() []*framework.Path {
+func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "lockedusers/(?P<mount_accessor>.+?)/unlock/(?P<alias_identifier>.+)",
