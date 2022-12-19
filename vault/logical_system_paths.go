@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -32,15 +33,44 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Callback:    b.handleCORSRead,
 					Summary:     "Return the current CORS settings.",
 					Description: "",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"enabled": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"allowed_origins": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"allowed_headers": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:    b.handleCORSUpdate,
 					Summary:     "Configure the CORS settings.",
 					Description: "",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleCORSDelete,
 					Summary:  "Remove any CORS settings.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 
@@ -55,6 +85,13 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Callback:    b.handleConfigStateSanitized,
 					Summary:     "Return a sanitized version of the Vault server configuration.",
 					Description: "The sanitized output strips configuration values in the storage, HA storage, and seals stanzas, which may contain sensitive values such as API tokens. It also removes any token or secret fields in other stanzas, such as the circonus_api_token from telemetry.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// response has dynamic keys
+							Fields: map[string]*framework.FieldSchema{},
+						}},
+					},
 				},
 			},
 		},
@@ -72,6 +109,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Callback:    b.handleConfigReload,
 					Summary:     "Reload the given subsystem",
 					Description: "",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 		},
@@ -98,14 +140,42 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersRead,
 					Summary:  "Return the given UI header's configuration",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"value": {
+									Type:        framework.TypeString,
+									Required:    false,
+									Description: "returns the first header value when `multivalue` request parameter is false",
+								},
+								"values": {
+									Type:        framework.TypeCommaStringSlice,
+									Required:    false,
+									Description: "returns all header values when `multivalue` request parameter is true",
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersUpdate,
 					Summary:  "Configure the values to be returned for the UI header.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							// returns 200 with null `data`
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersDelete,
 					Summary:  "Remove a UI header.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 
@@ -120,6 +190,17 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersList,
 					Summary:  "Return a list of configured UI headers.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeCommaStringSlice,
+									Description: "Lists of configured UI headers. Omitted if list is empty",
+									Required:    false,
+								},
+							},
+						}},
+					},
 				},
 			},
 
