@@ -3,10 +3,11 @@ package command
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ghodss/yaml"
-	"github.com/ryanuber/columnize"
 	"strconv"
 	"strings"
+
+	"github.com/ghodss/yaml"
+	"github.com/ryanuber/columnize"
 )
 
 type PKIListChildrenCommand struct {
@@ -85,7 +86,6 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 	})
 
 	return set
-
 }
 
 func (c *PKIListChildrenCommand) Run(args []string) int {
@@ -152,7 +152,7 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 		}
 	}
 
-	var childrenMatches = make(map[string]bool)
+	childrenMatches := make(map[string]bool)
 
 	constraintMap := map[string]bool{
 		// This comparison isn't strictly correct, despite a standard ordering these are sets
