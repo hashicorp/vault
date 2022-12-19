@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -34,6 +35,33 @@ func buildPathIssue(b *backend, pattern string) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.metricsWrap("issue", roleRequired, b.pathIssue),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing Certificate Authority`,
+							},
+							"ca_chain": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: `Certificate Chain`,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `Serial Number`,
+							},
+							"expiration": {
+								Type:        framework.TypeString,
+								Description: `Time of expiration`,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -62,6 +90,33 @@ func buildPathSign(b *backend, pattern string) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.metricsWrap("sign", roleRequired, b.pathSign),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing Certificate Authority`,
+							},
+							"ca_chain": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: `Certificate Chain`,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `Serial Number`,
+							},
+							"expiration": {
+								Type:        framework.TypeString,
+								Description: `Time of expiration`,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -98,6 +153,33 @@ func buildPathIssuerSignVerbatim(b *backend, pattern string) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.metricsWrap("sign-verbatim", roleOptional, b.pathSignVerbatim),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing Certificate Authority`,
+							},
+							"ca_chain": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: `Certificate Chain`,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `Serial Number`,
+							},
+							"expiration": {
+								Type:        framework.TypeString,
+								Description: `Time of expiration`,
+							},
+						},
+					}},
+				},
 			},
 		},
 
