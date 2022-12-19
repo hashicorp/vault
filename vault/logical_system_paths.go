@@ -219,13 +219,112 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Summary: "Read the configuration and progress of the current root generation attempt.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"started": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"required": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"complete": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"encoded_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"encoded_root_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"pgp_fingerprint": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp_length": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Summary:     "Initializes a new root generation attempt.",
 					Description: "Only a single root generation attempt can take place at a time. One (and only one) of otp or pgp_key are required.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"started": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"required": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"complete": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"encoded_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"encoded_root_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"pgp_fingerprint": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp_length": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Summary: "Cancels any in-progress root generation attempt.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 
@@ -248,6 +347,53 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Summary:     "Enter a single unseal key share to progress the root generation attempt.",
 					Description: "If the threshold number of unseal key shares is reached, Vault will complete the root generation and issue the new token. Otherwise, this API must be called multiple times until that threshold is met. The attempt nonce must be provided with each call.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"started": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"required": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"complete": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"encoded_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"encoded_root_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"pgp_fingerprint": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp_length": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
