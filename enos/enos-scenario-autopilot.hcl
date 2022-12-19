@@ -232,6 +232,7 @@ scenario "autopilot" {
 
     variables {
       vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_autopilot_upgrade_status  = "await-server-removal"
       vault_install_dir               = local.vault_install_dir
       vault_instances                 = step.create_vault_cluster.vault_instances
       vault_root_token                = step.create_vault_cluster.vault_root_token
