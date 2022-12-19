@@ -963,15 +963,12 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 					Default:     false,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.pathInternalOpenAPI,
-				logical.UpdateOperation: b.pathInternalOpenAPI,
-			},
-		},
-		{
-			Pattern: "internal/specs/openapi",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalOpenAPI,
+					Summary:  "Generate an OpenAPI 3 document of all mounted paths.",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.pathInternalOpenAPI,
 					Summary:  "Generate an OpenAPI 3 document of all mounted paths.",
 				},
