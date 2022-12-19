@@ -9,14 +9,14 @@ import { guidFor } from '@ember/object/internals';
  *
  * @example
  * <TextFile
- *  @hideTextAreaToggle={{true}}
+ *  @uploadOnly={{true}}
  *  @helpText="help text"
  *  @onChange={{this.handleChange}}
  *  @label="PEM Bundle"
  * />
  *
  * @param {function} onChange - Callback function to call when the value of the input changes, returns an object in the shape of { value: fileContents, filename: 'some-file.txt' }
- * @param {bool} [hideTextAreaToggle=false] - When true, renders a static file upload input and removes the option to toggle and input plain text
+ * @param {bool} [uploadOnly=false] - When true, renders a static file upload input and removes the option to toggle and input plain text
  * @param {string} [helpText] - Text underneath label.
  * @param {string} [label='File']  - Text to use as the label for the file input. If none, default of 'File' is rendered
  */

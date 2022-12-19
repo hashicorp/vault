@@ -38,7 +38,7 @@
           </ToolbarActions>
         </Toolbar>
         {{#if this.showFileUpload}}
-          <TextFile @hideTextAreaToggle={{true}} @onChange={{this.setPolicyFromFile}} />
+          <TextFile @uploadOnly={{true}} @onChange={{this.setPolicyFromFile}} />
         {{else}}
           <JsonEditor
             @title="Policy"

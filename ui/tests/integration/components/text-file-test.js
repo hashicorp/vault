@@ -27,8 +27,8 @@ module('Integration | Component | text-file', function (hooks) {
     assert.dom(SELECTORS.fileUpload).exists({ count: 1 }, 'File input shown');
   });
 
-  test('it renders without toggle and option for text input when hideTextAreaToggle=true', async function (assert) {
-    await render(hbs`<TextFile @onChange={{this.onChange}} @hideTextAreaToggle={{true}} />`);
+  test('it renders without toggle and option for text input when uploadOnly=true', async function (assert) {
+    await render(hbs`<TextFile @onChange={{this.onChange}} @uploadOnly={{true}} />`);
 
     assert.dom(SELECTORS.label).doesNotExist('Label no longer rendered');
     assert.dom(SELECTORS.toggle).doesNotExist('toggle no longer rendered');
