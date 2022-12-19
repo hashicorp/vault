@@ -65,11 +65,7 @@
             Choose a file…
           </label>
           <span class="file-name has-text-grey-dark" data-test-text-file-input-label>
-            {{#if this.filename}}
-              {{this.filename}}
-            {{else}}
-              No file chosen
-            {{/if}}
+            {{or this.filename "No file chosen"}}
           </span>
           {{#if this.filename}}
             <button
