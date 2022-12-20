@@ -7,7 +7,7 @@ type knownPathKey struct {
 	path  string
 }
 
-// requestResponseParts describes what the building parts of a request/response name
+// requestResponseParts describes the building parts of a request/response name
 //
 // In general, the name will be constructed as follows:
 //
