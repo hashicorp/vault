@@ -1,7 +1,7 @@
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
-    <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI key" />
+    <NamespaceReminder @mode={{if @model.isNew "generate" "update"}} @noun="PKI key" />
     {{#if @model.isNew}}
       {{#each @model.formFieldGroups as |fieldGroup|}}
         {{#each-in fieldGroup as |group fields|}}
