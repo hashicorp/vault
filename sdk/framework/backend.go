@@ -532,7 +532,7 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 
 	// If specified in the request, the mount path will be used as part of the
 	// request/response body names and operation id's in the OpenAPI document.
-	defaultMountPath := req.GetString("defaultMountPath")
+	mountPathWithPrefix := req.GetString("mount_path_with_prefix")
 
 	// Build OpenAPI response for the entire backend
 	vaultVersion := "unknown"
@@ -545,7 +545,7 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	}
 
 	doc := NewOASDocument(vaultVersion)
-	if err := documentPaths(b, defaultMountPath, doc); err != nil {
+	if err := documentPaths(b, mountPathWithPrefix, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
 

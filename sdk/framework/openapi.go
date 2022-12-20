@@ -2,6 +2,7 @@ package framework
 
 import (
 	"fmt"
+	pathutil "path"
 	"reflect"
 	"regexp"
 	"sort"
@@ -215,9 +216,9 @@ var (
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
-func documentPaths(backend *Backend, defaultMountPath string, doc *OASDocument) error {
+func documentPaths(backend *Backend, mountPathWithPrefix string, doc *OASDocument) error {
 	for _, p := range backend.Paths {
-		if err := documentPath(p, backend.SpecialPaths(), defaultMountPath, backend.BackendType, doc); err != nil {
+		if err := documentPath(p, backend.SpecialPaths(), mountPathWithPrefix, backend.BackendType, doc); err != nil {
 			return err
 		}
 	}
@@ -226,7 +227,7 @@ func documentPaths(backend *Backend, defaultMountPath string, doc *OASDocument) 
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, specialPaths *logical.Paths, defaultMountPath string, backendType logical.BackendType, doc *OASDocument) error {
+func documentPath(p *Path, specialPaths *logical.Paths, mountPathWithPrefix string, backendType logical.BackendType, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
 
@@ -265,7 +266,11 @@ func documentPath(p *Path, specialPaths *logical.Paths, defaultMountPath string,
 		// Body fields will be added to individual operations.
 		pathFields, bodyFields := splitFields(p.Fields, path)
 
-		if defaultMountPath != "sys" && defaultMountPath != "identity" {
+		if mountPathWithPrefix != "sys" && mountPathWithPrefix != "identity" {
+			defaultMountPath := pathutil.Base(mountPathWithPrefix)
+			if defaultMountPath == "kv" {
+				defaultMountPath = "secret"
+			}
 			p := OASParameter{
 				Name:        fmt.Sprintf("%s_mount_path", defaultMountPath),
 				Description: "Path where the backend was mounted; the endpoint path will be offset by the mount path",
@@ -340,7 +345,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, defaultMountPath string,
 
 			op := NewOASOperation()
 
-			operationID := constructRequestResponseIdentifier(opType, defaultMountPath, path)
+			operationID := constructRequestResponseIdentifier(opType, mountPathWithPrefix, path)
 
 			op.Summary = props.Summary
 			op.Description = props.Description

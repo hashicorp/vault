@@ -311,7 +311,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 		// If specified in the request, the mount path will be used as part of the
 		// request/response body names and operation id's in the OpenAPI document.
 		var defaultMountPath string
-		if v, ok := req.Data["defaultMountPath"]; ok {
+		if v, ok := req.Data["mount_path_with_prefix"]; ok {
 			defaultMountPath = v.(string)
 		}
 
