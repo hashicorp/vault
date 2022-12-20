@@ -50,7 +50,7 @@
       {{#if this.isSummaryDashboard}}
         <ul>
           <li class="is-active">
-            {{link-to-external "Summary" "replication"}}
+            <LinkToExternal @route="replication">Summary</LinkToExternal>
           </li>
         </ul>
       {{else}}

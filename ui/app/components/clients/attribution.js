@@ -37,7 +37,7 @@ import { inject as service } from '@ember/service';
 
 export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
-  @service downloadCsv;
+  @service download;
 
   get hasCsvData() {
     return this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
@@ -75,7 +75,7 @@ export default class Attribution extends Component {
   }
 
   get chartText() {
-    let dateText = this.isDateRange ? 'date range' : 'month';
+    const dateText = this.isDateRange ? 'date range' : 'month';
     switch (this.isSingleNamespace) {
       case true:
         return {
@@ -108,14 +108,14 @@ export default class Attribution extends Component {
   destructureCountsToArray(object) {
     // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, clients: 191}
     // to get integers for CSV file
-    let { clients, entity_clients, non_entity_clients } = object;
+    const { clients, entity_clients, non_entity_clients } = object;
     return [clients, entity_clients, non_entity_clients];
   }
 
   constructCsvRow(namespaceColumn, mountColumn = null, totalColumns, newColumns = null) {
     // if namespaceColumn is a string, then we're at mount level attribution, otherwise it is an object
     // if constructing a namespace row, mountColumn=null so the column is blank, otherwise it is an object
-    let otherColumns = newColumns ? [...totalColumns, ...newColumns] : [...totalColumns];
+    const otherColumns = newColumns ? [...totalColumns, ...newColumns] : [...totalColumns];
     return [
       `${typeof namespaceColumn === 'string' ? namespaceColumn : namespaceColumn.label}`,
       `${mountColumn ? mountColumn.label : ''}`,
@@ -126,30 +126,30 @@ export default class Attribution extends Component {
   generateCsvData() {
     const totalAttribution = this.args.totalClientAttribution;
     const newAttribution = this.barChartNewClients ? this.args.newClientAttribution : null;
-    let csvData = [],
-      csvHeader = [
-        'Namespace path',
-        'Authentication method',
-        'Total clients',
-        'Entity clients',
-        'Non-entity clients',
-      ];
+    const csvData = [];
+    const csvHeader = [
+      'Namespace path',
+      'Authentication method',
+      'Total clients',
+      'Entity clients',
+      'Non-entity clients',
+    ];
 
     if (newAttribution) {
-      csvHeader = [...csvHeader, 'Total new clients, New entity clients, New non-entity clients'];
+      csvHeader.push('Total new clients, New entity clients, New non-entity clients');
     }
 
     totalAttribution.forEach((totalClientsObject) => {
-      let namespace = this.isSingleNamespace ? this.args.selectedNamespace : totalClientsObject;
-      let mount = this.isSingleNamespace ? totalClientsObject : null;
+      const namespace = this.isSingleNamespace ? this.args.selectedNamespace : totalClientsObject;
+      const mount = this.isSingleNamespace ? totalClientsObject : null;
 
       // find new client data for namespace/mount object we're iterating over
-      let newClientsObject = newAttribution
+      const newClientsObject = newAttribution
         ? newAttribution.find((d) => d.label === totalClientsObject.label)
         : null;
 
-      let totalClients = this.destructureCountsToArray(totalClientsObject);
-      let newClients = newClientsObject ? this.destructureCountsToArray(newClientsObject) : null;
+      const totalClients = this.destructureCountsToArray(totalClientsObject);
+      const newClients = newClientsObject ? this.destructureCountsToArray(newClientsObject) : null;
 
       csvData.push(this.constructCsvRow(namespace, mount, totalClients, newClients));
       // constructCsvRow returns an array that corresponds to a row in the csv file:
@@ -158,11 +158,11 @@ export default class Attribution extends Component {
       // only iterate through mounts if NOT viewing a single namespace
       if (!this.isSingleNamespace && namespace.mounts) {
         namespace.mounts.forEach((mount) => {
-          let newMountData = newAttribution
+          const newMountData = newAttribution
             ? newClientsObject?.mounts.find((m) => m.label === mount.label)
             : null;
-          let mountTotalClients = this.destructureCountsToArray(mount);
-          let mountNewClients = newMountData ? this.destructureCountsToArray(newMountData) : null;
+          const mountTotalClients = this.destructureCountsToArray(mount);
+          const mountNewClients = newMountData ? this.destructureCountsToArray(newMountData) : null;
           csvData.push(this.constructCsvRow(namespace, mount, mountTotalClients, mountNewClients));
         });
       }
@@ -174,8 +174,8 @@ export default class Attribution extends Component {
   }
 
   get getCsvFileName() {
-    let endRange = this.isDateRange ? `-${this.args.endTimeDisplay}` : '';
-    let csvDateRange = this.args.startTimeDisplay + endRange;
+    const endRange = this.isDateRange ? `-${this.args.endTimeDisplay}` : '';
+    const csvDateRange = this.args.startTimeDisplay + endRange;
     return this.isSingleNamespace
       ? `clients_by_auth_method_${csvDateRange}`
       : `clients_by_namespace_${csvDateRange}`;
@@ -184,8 +184,8 @@ export default class Attribution extends Component {
   // ACTIONS
   @action
   exportChartData(filename) {
-    let contents = this.generateCsvData();
-    this.downloadCsv.download(filename, contents);
+    const contents = this.generateCsvData();
+    this.download.csv(filename, contents);
     this.showCSVDownloadModal = false;
   }
 }

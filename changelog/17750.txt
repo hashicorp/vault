@@ -1,0 +1,3 @@
+```release-note:improvement
+cli/pki: Add health-check subcommand to evaluate the health of a PKI instance.
+```

@@ -1,5 +1,5 @@
-import { currentRouteName, settled } from '@ember/test-helpers';
-import { module, test } from 'qunit';
+import { currentRouteName, currentURL, settled } from '@ember/test-helpers';
+import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
@@ -8,6 +8,7 @@ import authPage from 'vault/tests/pages/auth';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
+import { allEngines } from 'vault/helpers/mountable-secret-engines';
 
 const consoleComponent = create(consoleClass);
 
@@ -100,7 +101,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   });
 
   test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
-    let enginePath = `kv-noUpdate-${new Date().getTime()}`;
+    const enginePath = `kv-noUpdate-${new Date().getTime()}`;
     const V2_POLICY = `
       path "${enginePath}/*" {
         capabilities = ["list","create","read","sudo","delete"]
@@ -115,6 +116,10 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       {
         capabilities = ["read"]
       }
+      # Allow page to load after mount
+      path "sys/internal/ui/mounts/${enginePath}" {
+        capabilities = ["read"]
+      }
     `;
     await consoleComponent.runCommands([
       // delete any previous mount with same name
@@ -123,7 +128,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
     await settled();
-    let userToken = consoleComponent.lastLogOutput;
+    const userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
     // create the engine
@@ -136,8 +141,29 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .containsText(
         `You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.`
       );
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath}/list`,
+      'After mounting, redirects to secrets list page'
+    );
     await configPage.visit({ backend: enginePath });
     await settled();
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
+  });
+  // TODO JR: enable once kubernetes routes are defined
+  skip('it should transition to engine route on success if defined in mount config', async function (assert) {
+    await consoleComponent.runCommands([
+      // delete any previous mount with same name
+      `delete sys/mounts/kmip`,
+    ]);
+    await mountSecrets.visit();
+    await mountSecrets.selectType('kubernetes');
+    await mountSecrets.next().path('kubernetes').submit();
+    const { engineRoute } = allEngines().findBy('type', 'kubernetes');
+    assert.strictEqual(
+      currentRouteName(),
+      `vault.cluster.secrets.backend.${engineRoute}`,
+      'Transitions to engine route on mount success'
+    );
   });
 });

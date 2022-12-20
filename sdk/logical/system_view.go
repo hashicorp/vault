@@ -83,6 +83,9 @@ type SystemView interface {
 	// PluginEnv returns Vault environment information used by plugins
 	PluginEnv(context.Context) (*PluginEnvironment, error)
 
+	// VaultVersion returns the version string for the currently running Vault.
+	VaultVersion(context.Context) (string, error)
+
 	// GeneratePasswordFromPolicy generates a password from the policy referenced.
 	// If the policy does not exist, this will return an error.
 	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
@@ -113,9 +116,9 @@ type StaticSystemView struct {
 	EntityVal           *Entity
 	GroupsVal           []*Group
 	Features            license.Features
-	VaultVersion        string
 	PluginEnvironment   *PluginEnvironment
 	PasswordPolicies    map[string]PasswordGenerator
+	VersionString       string
 }
 
 type noopAuditor struct{}
@@ -202,6 +205,10 @@ func (d StaticSystemView) HasFeature(feature license.Features) bool {
 
 func (d StaticSystemView) PluginEnv(_ context.Context) (*PluginEnvironment, error) {
 	return d.PluginEnvironment, nil
+}
+
+func (d StaticSystemView) VaultVersion(_ context.Context) (string, error) {
+	return d.VersionString, nil
 }
 
 func (d StaticSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {

@@ -109,13 +109,13 @@ flags](/docs/commands) included on all commands.
 ### HSM and KMS Options
 
 - `-recovery-pgp-keys` `(string: "...")` - Behaves like `-pgp-keys`, but for the
-  recovery key shares. This is only used with Auto Unseal seals (HSM, KMS and Transit seals).
+  recovery key shares. This is only available with [Auto Unseal](/docs/concepts/seal#auto-unseal) seals (HSM, KMS and Transit seals).
 
 - `-recovery-shares` `(int: 5)` - Number of key shares to split the recovery key
-  into. This is only used with Auto Unseal seals (HSM, KMS and Transit seals).
+  into. This is only available with [Auto Unseal](/docs/concepts/seal#auto-unseal) seals (HSM, KMS and Transit seals).
 
 - `-recovery-threshold` `(int: 3)` - Number of key shares required to
-  reconstruct the recovery key. This is only used with Auto Unseal seals (HSM, KMS and Transit seals).
+  reconstruct the recovery key. This is only available with [Auto Unseal](/docs/concepts/seal#auto-unseal) seals (HSM, KMS and Transit seals).
 
 - `-stored-shares` `(int: 0)` - Number of unseal keys to store on an HSM. This
   must be equal to `-key-shares`.

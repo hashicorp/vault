@@ -192,7 +192,7 @@ func TestTidyCancellation(t *testing.T) {
 
 	numLeaves := 100
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root, a role, and a bunch of leaves.
 	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -263,4 +263,144 @@ func TestTidyCancellation(t *testing.T) {
 	if howMany+3 <= nowMany {
 		t.Fatalf("expected to only process at most 3 more certificates, but processed (%v >>> %v) certs", nowMany, howMany)
 	}
+}
+
+func TestTidyIssuers(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+
+	// Create a root that expires quickly and one valid for longer.
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root1 example.com",
+		"issuer_name": "root-expired",
+		"ttl":         "1s",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root2 example.com",
+		"issuer_name": "root-valid",
+		"ttl":         "60m",
+		"key_type":    "rsa",
+	})
+	require.NoError(t, err)
+
+	// Sleep long enough to expire the root.
+	time.Sleep(2 * time.Second)
+
+	// First tidy run shouldn't remove anything; too long of safety buffer.
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_expired_issuers": true,
+		"issuer_safety_buffer": "60m",
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+
+	// Expired issuer should exist.
+	resp, err := CBRead(b, s, "issuer/root-expired")
+	requireSuccessNonNilResponse(t, resp, err, "expired should still be present")
+	resp, err = CBRead(b, s, "issuer/root-valid")
+	requireSuccessNonNilResponse(t, resp, err, "valid should still be present")
+
+	// Second tidy run with shorter safety buffer shouldn't remove the
+	// expired one, as it should be the default issuer.
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_expired_issuers": true,
+		"issuer_safety_buffer": "1s",
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+
+	// Expired issuer should still exist.
+	resp, err = CBRead(b, s, "issuer/root-expired")
+	requireSuccessNonNilResponse(t, resp, err, "expired should still be present")
+	resp, err = CBRead(b, s, "issuer/root-valid")
+	requireSuccessNonNilResponse(t, resp, err, "valid should still be present")
+
+	// Update the default issuer.
+	_, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
+		"default": "root-valid",
+	})
+	require.NoError(t, err)
+
+	// Third tidy run should remove the expired one.
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_expired_issuers": true,
+		"issuer_safety_buffer": "1s",
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+
+	// Valid issuer should exist still; other should be removed.
+	resp, err = CBRead(b, s, "issuer/root-expired")
+	require.Error(t, err)
+	require.Nil(t, resp)
+	resp, err = CBRead(b, s, "issuer/root-valid")
+	requireSuccessNonNilResponse(t, resp, err, "valid should still be present")
+
+	// Finally, one more tidy should cause no changes.
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_expired_issuers": true,
+		"issuer_safety_buffer": "1s",
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+
+	// Valid issuer should exist still; other should be removed.
+	resp, err = CBRead(b, s, "issuer/root-expired")
+	require.Error(t, err)
+	require.Nil(t, resp)
+	resp, err = CBRead(b, s, "issuer/root-valid")
+	requireSuccessNonNilResponse(t, resp, err, "valid should still be present")
+
+	// Ensure we have safety buffer and expired issuers set correctly.
+	statusResp, err := CBRead(b, s, "tidy-status")
+	require.NoError(t, err)
+	require.NotNil(t, statusResp)
+	require.NotNil(t, statusResp.Data)
+	require.Equal(t, statusResp.Data["issuer_safety_buffer"], 1)
+	require.Equal(t, statusResp.Data["tidy_expired_issuers"], true)
+}
+
+func TestTidyIssuerConfig(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+
+	// Ensure the default auto-tidy config matches expectations
+	resp, err := CBRead(b, s, "config/auto-tidy")
+	requireSuccessNonNilResponse(t, resp, err)
+
+	jsonBlob, err := json.Marshal(&defaultTidyConfig)
+	require.NoError(t, err)
+	var defaultConfigMap map[string]interface{}
+	err = json.Unmarshal(jsonBlob, &defaultConfigMap)
+	require.NoError(t, err)
+
+	// Coerce defaults to API response types.
+	defaultConfigMap["interval_duration"] = int(time.Duration(defaultConfigMap["interval_duration"].(float64)) / time.Second)
+	defaultConfigMap["issuer_safety_buffer"] = int(time.Duration(defaultConfigMap["issuer_safety_buffer"].(float64)) / time.Second)
+	defaultConfigMap["safety_buffer"] = int(time.Duration(defaultConfigMap["safety_buffer"].(float64)) / time.Second)
+	defaultConfigMap["pause_duration"] = time.Duration(defaultConfigMap["pause_duration"].(float64)).String()
+
+	require.Equal(t, defaultConfigMap, resp.Data)
+
+	// Ensure setting issuer-tidy related fields stick.
+	resp, err = CBWrite(b, s, "config/auto-tidy", map[string]interface{}{
+		"tidy_expired_issuers": true,
+		"issuer_safety_buffer": "5s",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	require.Equal(t, true, resp.Data["tidy_expired_issuers"])
+	require.Equal(t, 5, resp.Data["issuer_safety_buffer"])
 }

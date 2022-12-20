@@ -214,7 +214,7 @@ $ curl \
 - `key_bits` `(string: <required if allow_generate_key is true>)`: The size in bits for an RSA key.
    This field is required when `key_type` is `RSA`. Supported values are `2048`, `3072`, and `4096`.
 
-- `key_type` `(string: <required>)`: The type of key to use. At this time only supported value is `RSA`.
+- `key_type` `(string: <required>)`: The type of key to use. At this time only supported value is `RSA-HSM`.
 
 #### GCP Cloud KMS Parameters
 - `type` `(string: "gcpckms")` - To select an GCP Cloud KMS backend, the type parameter must be set to `gcpckms`.

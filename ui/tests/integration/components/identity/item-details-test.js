@@ -18,7 +18,7 @@ module('Integration | Component | identity/item details', function (hooks) {
   });
 
   test('it renders the disabled warning', async function (assert) {
-    let model = EmberObject.create({
+    const model = EmberObject.create({
       save() {
         return resolve();
       },
@@ -35,7 +35,7 @@ module('Integration | Component | identity/item details', function (hooks) {
   });
 
   test('it does not render the button if canEdit is false', async function (assert) {
-    let model = EmberObject.create({
+    const model = EmberObject.create({
       disabled: true,
     });
 
@@ -46,7 +46,7 @@ module('Integration | Component | identity/item details', function (hooks) {
   });
 
   test('it does not render the banner when item is enabled', async function (assert) {
-    let model = EmberObject.create();
+    const model = EmberObject.create();
     this.set('model', model);
 
     await render(hbs`{{identity/item-details model=this.model}}`);

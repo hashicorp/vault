@@ -6,13 +6,13 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-let response = {
+const response = {
   progress: 1,
   required: 3,
   complete: false,
 };
 
-let adapter = {
+const adapter = {
   foo() {
     return resolve(response);
   },

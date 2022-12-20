@@ -10,11 +10,11 @@ export default JSONSerializer.extend({
 
   normalizeItems(payload) {
     if (payload.data && payload.data.keys && Array.isArray(payload.data.keys)) {
-      let models = payload.data.keys.map((key) => {
+      const models = payload.data.keys.map((key) => {
         if (typeof key !== 'string') {
           return key;
         }
-        let pk = this.primaryKey || 'id';
+        const pk = this.primaryKey || 'id';
         let model = { [pk]: key };
         // if we've added _requestQuery in the adapter, we want
         // attach it to the individual models

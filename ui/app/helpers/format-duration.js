@@ -12,7 +12,7 @@ export function duration([time], { nullable = false }) {
   }
 
   // time must be in seconds
-  let duration = Number.parseInt(time, 10);
+  const duration = Number.parseInt(time, 10);
   if (isNaN(duration)) {
     return time;
   }

@@ -1,0 +1,3 @@
+```release-note:improvement
+audit: Include stack trace when audit logging recovers from a panic.
+```

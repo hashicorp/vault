@@ -42,9 +42,20 @@ import { dasherize } from 'vault/helpers/dasherize';
  */
 
 export default class FormFieldComponent extends Component {
-  @tracked showInput = false;
-  @tracked file = { value: '' }; // used by the pgp-file component when an attr is editType of 'file'
   emptyData = '{\n}';
+  shouldHideLabel = [
+    'boolean',
+    'file',
+    'json',
+    'kv',
+    'mountAccessor',
+    'optionalText',
+    'regex',
+    'searchSelect',
+    'stringArray',
+    'ttl',
+  ];
+  @tracked showInput = false;
 
   constructor() {
     super(...arguments);
@@ -52,6 +63,15 @@ export default class FormFieldComponent extends Component {
     const valuePath = attr.options?.fieldValue || attr.name;
     const modelValue = model[valuePath];
     this.showInput = !!modelValue;
+  }
+
+  get hideLabel() {
+    const { type, options } = this.args.attr;
+    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
+      return true;
+    }
+    // falsey values render a <FormFieldLabel>
+    return this.shouldHideLabel.includes(options?.editType);
   }
 
   get disabled() {
@@ -95,12 +115,11 @@ export default class FormFieldComponent extends Component {
   }
 
   @action
-  setFile(_, keyFile) {
+  setFile(keyFile) {
     const path = this.valuePath;
     const { value } = keyFile;
     this.args.model.set(path, value);
     this.onChange(path, value);
-    this.file = keyFile;
   }
   @action
   setAndBroadcast(value) {
@@ -109,20 +128,20 @@ export default class FormFieldComponent extends Component {
   }
   @action
   setAndBroadcastBool(trueVal, falseVal, event) {
-    let valueToSet = event.target.checked === true ? trueVal : falseVal;
+    const valueToSet = event.target.checked === true ? trueVal : falseVal;
     this.setAndBroadcast(valueToSet);
   }
   @action
   setAndBroadcastTtl(value) {
     const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
-    let valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
+    const valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
     this.setAndBroadcast(`${valueToSet}`);
   }
   @action
   codemirrorUpdated(isString, value, codemirror) {
     codemirror.performLint();
     const hasErrors = codemirror.state.lint.marked.length > 0;
-    let valToSet = isString ? value : JSON.parse(value);
+    const valToSet = isString ? value : JSON.parse(value);
 
     if (!hasErrors) {
       this.args.model.set(this.valuePath, valToSet);

@@ -466,6 +466,19 @@
         "path": "system/internal-counters"
       },
       {
+        "title": "<code>/sys/internal/inspect</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "system/inspect"
+          },
+          {
+            "title": "<code>/sys/internal/inspect/router</code>",
+            "path": "system/inspect/router"
+          }
+        ]
+      },
+      {
         "title": "<code>/sys/internal/specs/openapi</code>",
         "path": "system/internal-specs-openapi"
       },

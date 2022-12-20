@@ -9,7 +9,7 @@ const ModelExport = Model.extend({
   idPrefix: 'role/',
   // the id prefixed with `role/` so we can use it as the *secret param for the secret show route
   idForNav: computed('id', 'idPrefix', function () {
-    let modelId = this.id || '';
+    const modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
@@ -31,7 +31,7 @@ const ModelExport = Model.extend({
   }),
 
   attrs: computed('transformations', function () {
-    let keys = ['name', 'transformations'];
+    const keys = ['name', 'transformations'];
     return expandAttributeMeta(this, keys);
   }),
 
