@@ -84,7 +84,6 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 	intermediateMount := sanitizePath(args[1])
 
 	return pkiIssue(*c.BaseCommand, parentIssuer, intermediateMount, c.flagNewIssuerName, c.flagKeyStorageSource, data)
-
 }
 
 func pkiIssue(c BaseCommand, parentIssuerPath string, childMountPath string, newIssuerName string, keyStorageSource string, data map[string]interface{}) int {
