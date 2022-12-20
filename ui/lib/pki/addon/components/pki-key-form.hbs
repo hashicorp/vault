@@ -22,17 +22,11 @@
       {{/each}}
     {{else}}
       {{! only key name is edit-able }}
-      {{#let (find-by "name" "keyName" @model.formFields) as |attr|}}
-        <FormField
-          data-test-field={{attr}}
-          @attr={{attr}}
-          @model={{@model}}
-          @modelValidations={{this.modelValidations}}
-          @showHelpText={{false}}
-        />
+      {{#let (find-by "name" "keyName" @model.formFields) as |keyName|}}
+        <FormField data-test-field={{keyName}} @attr={{keyName}} @model={{@model}} @showHelpText={{false}} />
       {{/let}}
-      {{#let (find-by "name" "keyType" @model.formFields) as |attr|}}
-        <ReadonlyFormField @attr={{attr}} @value={{@model.keyType}} />
+      {{#let (find-by "name" "keyType" @model.formFields) as |keyType|}}
+        <ReadonlyFormField @attr={{keyType}} @value={{@model.keyType}} />
       {{/let}}
     {{/if}}
   </div>
