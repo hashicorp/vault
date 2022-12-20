@@ -1,3 +1,0 @@
-```release-note:improvement
-website: Add documentation about user lockout concept, configuration using config file and tune auth, api and telemetry. 
-```

@@ -367,7 +367,12 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 {
   "default_lease_ttl": 1800,
   "max_lease_ttl": 86400,
-  "audit_non_hmac_request_keys": ["client_nonce"]
+  "audit_non_hmac_request_keys": ["client_nonce"],
+  "user_lockout_config":{
+    "lockout_threshold":"20",
+    "lockout_duration":"5m",
+    "lockout_counter_reset":"5m"
+  }
 }
 ```
 

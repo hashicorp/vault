@@ -519,6 +519,10 @@
         "path": "system/license"
       },
       {
+        "title": "<code>/sys/locked-users</code>",
+        "path": "system/user-lockout"
+      },
+      {
         "title": "<code>/sys/loggers</code>",
         "path": "system/loggers"
       },
@@ -713,10 +717,6 @@
       {
         "title": "<code>/sys/wrapping/unwrap</code>",
         "path": "system/wrapping-unwrap"
-      },
-      {
-        "title": "<code>/sys/locked-users</code>",
-        "path": "system/user-lockout"
       },
       {
         "title": "<code>/sys/wrapping/wrap</code>",
