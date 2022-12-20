@@ -1,7 +1,7 @@
 <Toolbar>
   <ToolbarActions>
     {{#if @canRotate}}
-      <ToolbarLink @route="issuers.generate-root" @type="rotate-cw" @issuer={{@issuer.id}} data-test-pki-issuer-cross-sign>
+      <ToolbarLink @route="issuers.generate-root" @type="rotate-cw" @issuer={{@issuer.id}} data-test-pki-issuer-rotate-root>
         Rotate this root
       </ToolbarLink>
     {{/if}}
@@ -38,16 +38,15 @@
   </ToolbarActions>
 </Toolbar>
 
-<main class="box is-fullwidth is-sideless is-paddingless is-marginless" data-test-issuer-details>
-
-  {{! <p>This is your default issuer certificate. You will see it in your list of Issuers. You may also want to configure its
-    usage and other behaviours.
-  </p> }}
-  {{yield}}
-
+<main data-test-issuer-details>
   {{#each @issuer.formFieldGroups as |fieldGroup|}}
     {{#each-in fieldGroup as |group fields|}}
-      {{#if (or (eq group "default") (eq group "Options"))}}
+      <div class="box is-sideless is-fullwidth is-shadowless" data-test-details-group={{group}}>
+        {{#if (not-eq group "default")}}
+          <h2 class="title is-5 has-margin-top" data-test-group-title>
+            {{group}}
+          </h2>
+        {{/if}}
         {{#each fields as |attr|}}
           {{#if (eq attr.options.displayType "masked")}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
@@ -71,20 +70,7 @@
             />
           {{/if}}
         {{/each}}
-      {{else}}
-        <div class="box is-sideless is-fullwidth is-marginless">
-          <h2 class="title is-5">
-            {{group}}
-          </h2>
-          {{#each fields as |attr|}}
-            <InfoTableRow
-              @alwaysRender={{true}}
-              @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-              @value={{get @issuer attr.name}}
-            />
-          {{/each}}
-        </div>
-      {{/if}}
+      </div>
     {{/each-in}}
   {{/each}}
 
