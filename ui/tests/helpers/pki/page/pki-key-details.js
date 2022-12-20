@@ -1,6 +1,4 @@
 export const SELECTORS = {
-  breadcrumbContainer: '[data-test-breadcrumbs]',
-  breadcrumbs: '[data-test-breadcrumbs] li',
   title: '[data-test-key-details-title]',
   keyIdValue: '[data-test-value-div="Key ID"]',
   keyNameValue: '[data-test-value-div="Key name"]',
