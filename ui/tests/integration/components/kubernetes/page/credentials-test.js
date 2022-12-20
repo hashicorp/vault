@@ -28,11 +28,19 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
         return new Response(400, {}, { errors });
       });
     };
-
+    this.breadcrumbs = [
+      { label: this.backend, route: 'overview' },
+      { label: 'roles', route: 'roles' },
+      { label: this.roleName, route: 'roles.role.details' },
+      { label: 'credentials' },
+    ];
     this.renderComponent = () => {
-      return render(hbs`<Page::Credentials @backend={{this.backend}} @roleName={{this.roleName}} />`, {
-        owner: this.engine,
-      });
+      return render(
+        hbs`<Page::Credentials @backend={{this.backend}} @roleName={{this.roleName}} @breadcrumbs={{this.breadcrumbs}}/>`,
+        {
+          owner: this.engine,
+        }
+      );
     };
   });
 

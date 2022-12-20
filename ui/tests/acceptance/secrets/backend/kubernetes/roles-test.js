@@ -46,10 +46,10 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     assert.expect(2);
     await this.visitRoles();
     await click('[data-test-list-item-link]');
-    await click('[data-test-crumb="roles"] a');
+    await click('[data-test-breadcrumbs] li:nth-child(2) a');
     this.validateRoute(assert, 'roles.index', 'Transitions to roles route on breadcrumb click');
     await click('[data-test-list-item-link]');
-    await click('[data-test-crumb="overview"] a');
+    await click('[data-test-breadcrumbs] li:nth-child(1) a');
     this.validateRoute(assert, 'overview', 'Transitions to overview route on breadcrumb click');
   });
 
@@ -68,7 +68,8 @@ module('Acceptance | kubernetes | roles', function (hooks) {
           `roles.role.${action}`,
           `Transitions to ${action} route on menu action click`
         );
-        const selector = action === 'details' ? '[data-test-crumb="roles"] a' : '[data-test-cancel]';
+        const selector =
+          action === 'details' ? '[data-test-breadcrumbs] li:nth-child(2) a' : '[data-test-cancel]';
         await click(selector);
       }
     }
@@ -84,7 +85,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await fillIn('[data-test-input="allowedKubernetesNamespaces"]', '*');
     await click('[data-test-save]');
     this.validateRoute(assert, 'roles.role.details', 'Transitions to details route on save success');
-    await click('[data-test-crumb="roles"] a');
+    await click('[data-test-breadcrumbs] li:nth-child(2) a');
     assert.dom('[data-test-role="new-test-role"]').exists('New role renders in list');
   });
 
@@ -94,7 +95,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await click('[data-test-list-item-link]');
     await click('[data-test-generate-credentials]');
     this.validateRoute(assert, 'roles.role.credentials', 'Transitions to credentials route');
-    await click('[data-test-crumb="details"] a');
+    await click('[data-test-breadcrumbs] li:nth-child(3) a');
     await click('[data-test-edit]');
     this.validateRoute(assert, 'roles.role.edit', 'Transitions to edit route');
     await click('[data-test-cancel]');

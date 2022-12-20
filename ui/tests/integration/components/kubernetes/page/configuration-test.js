@@ -36,10 +36,18 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
       this.config = this.store.peekRecord('kubernetes/config', 'kubernetes-test');
     };
 
+    this.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.backend.id },
+    ];
+
     this.renderComponent = () => {
-      return render(hbs`<Page::Configuration @backend={{this.backend}} @config={{this.config}} />`, {
-        owner: this.engine,
-      });
+      return render(
+        hbs`<Page::Configuration @backend={{this.backend}} @config={{this.config}} @breadcrumbs={{this.breadcrumbs}} />`,
+        {
+          owner: this.engine,
+        }
+      );
     };
   });
 

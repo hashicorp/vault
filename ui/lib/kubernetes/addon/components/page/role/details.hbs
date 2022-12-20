@@ -1,21 +1,6 @@
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb" aria-label="breadcrumbs" data-test-breadcrumbs>
-      <ul>
-        <li data-test-crumb="overview">
-          <span class="sep">/</span>
-          <LinkTo @route="overview">{{@model.backend}}</LinkTo>
-        </li>
-        <li data-test-crumb="roles">
-          <span class="sep">/</span>
-          <LinkTo @route="roles">roles</LinkTo>
-        </li>
-        <li>
-          <span class="sep">/</span>
-          <span data-test-crumb="role">{{@model.name}}</span>
-        </li>
-      </ul>
-    </nav>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-header-title>

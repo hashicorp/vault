@@ -34,10 +34,14 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
     this.config = this.store.peekRecord('kubernetes/config', 'kubernetes-test');
     this.roles = this.store.peekAll('kubernetes/role');
     this.filterValue = '';
+    this.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.backend.id },
+    ];
 
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Roles @config={{this.config}} @backend={{this.backend}} @roles={{this.roles}} @filterValue={{this.filterValue}} />`,
+        hbs`<Page::Roles @config={{this.config}} @backend={{this.backend}} @roles={{this.roles}} @filterValue={{this.filterValue}} @breadcrumbs={{this.breadcrumbs}} />`,
         { owner: this.engine }
       );
     };

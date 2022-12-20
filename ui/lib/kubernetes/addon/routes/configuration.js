@@ -7,4 +7,13 @@ export default class KubernetesConfigureRoute extends FetchConfigRoute {
       config: this.configModel,
     };
   }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+
+    controller.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: resolvedModel.backend.id },
+    ];
+  }
 }
