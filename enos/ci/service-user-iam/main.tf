@@ -80,6 +80,7 @@ data "aws_iam_policy_document" "iam_policy_document" {
       "ec2:DescribeInstanceTypes",
       "ec2:DescribeInstanceCreditSpecifications",
       "ec2:DescribeImages",
+      "ec2:DescribeRegions",
       "ec2:DescribeTags",
       "ec2:DescribeVpcClassicLink",
       "ec2:DescribeVpcClassicLinkDnsSupport",
@@ -139,6 +140,13 @@ data "aws_iam_policy_document" "iam_policy_document" {
       "kms:ListAliases",
       "kms:CreateAlias",
       "kms:DeleteAlias",
+      "servicequotas:ListServiceQuotas",
+      "ec2:DescribeInternetGateways",
+      "ec2:DescribeNatGateways",
+      "ec2:DescribeVpnGateways",
+      "iam:ListAccountAliases",
+      "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeTargetGroups"
     ]
     resources = ["*"]
   }
