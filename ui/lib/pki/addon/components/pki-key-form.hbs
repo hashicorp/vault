@@ -21,7 +21,7 @@
         {{/each-in}}
       {{/each}}
     {{else}}
-      {{! only keyName is edit-able }}
+      {{! only key name is edit-able }}
       {{#let (find-by "name" "keyName" @model.formFields) as |attr|}}
         <FormField
           data-test-field={{attr}}
@@ -31,7 +31,9 @@
           @showHelpText={{false}}
         />
       {{/let}}
-      <ReadonlyFormField @label="Key type" @value={{@model.keyType}} />
+      {{#let (find-by "name" "keyType" @model.formFields) as |attr|}}
+        <ReadonlyFormField @attr={{attr}} @value={{@model.keyType}} />
+      {{/let}}
     {{/if}}
   </div>
   <div class="has-top-padding-s">

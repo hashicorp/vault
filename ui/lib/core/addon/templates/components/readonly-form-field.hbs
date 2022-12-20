@@ -1,5 +1,5 @@
 <label for={{@attr.name}} class="is-label" data-test-readonly-label>
-  {{or @label this.labelString}}
+  {{this.labelString}}
   {{#if @attr.options.helpText}}
     <InfoTooltip>
       <span data-test-help-text>
