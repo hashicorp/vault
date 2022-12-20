@@ -5,6 +5,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 import trimRight from 'vault/utils/trim-right';
+import { waitFor } from '@ember/test-waiters';
 
 // TODO: convert to typescript after https://github.com/hashicorp/vault/pull/18387 is merged
 /**
@@ -30,16 +31,17 @@ export default class PkiKeyImport extends Component {
   @tracked modelValidations;
 
   @task
+  @waitFor
   *submitForm(event) {
     event.preventDefault();
     try {
       const { keyName } = this.args.model;
       yield this.args.model.save({ adapterOptions: { import: true } });
-      this.flashMessages.success(`Successfully imported key ${keyName}.`);
+      this.flashMessages.success(`Successfully imported key ${keyName}`);
       this.args.onSave();
     } catch (error) {
       this.errorBanner = errorMessage(error);
-      this.invalidFormAlert = 'There was an error importing key.';
+      this.invalidFormAlert = 'There was a problem importing key.';
     }
   }
 
@@ -54,8 +56,7 @@ export default class PkiKeyImport extends Component {
 
   @action
   cancel() {
-    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.model[method]();
+    this.args.model.unloadRecord();
     this.args.onCancel();
   }
 }

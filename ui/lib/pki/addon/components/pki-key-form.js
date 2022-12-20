@@ -47,11 +47,6 @@ export default class PkiKeyForm extends Component {
   }
 
   @action
-  onFileUpload() {
-    // do something
-  }
-
-  @action
   cancel() {
     const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
     this.args.model[method]();
