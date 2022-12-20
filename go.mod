@@ -165,7 +165,7 @@ require (
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.7.1
-	github.com/shirou/gopsutil v3.21.5+incompatible
+	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/stretchr/testify v1.8.0
 	go.etcd.io/bbolt v1.3.6
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0
@@ -219,7 +219,6 @@ require (
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/Microsoft/hcsshim v0.9.0 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/apache/arrow/go/arrow v0.0.0-20210818145353-234c94e4ce64 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.8.0 // indirect
@@ -265,7 +264,7 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.1 // indirect
 	github.com/go-ldap/ldif v0.0.0-20200320164324-fd88d9b715b3 // indirect
 	github.com/go-logr/logr v1.2.0 // indirect
-	github.com/go-ole/go-ole v1.2.5 // indirect
+	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
@@ -369,6 +368,7 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	github.com/yuin/gopher-lua v0.0.0-20210529063254-f4c35e4016d9 // indirect
+	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.opentelemetry.io/otel/metric v0.20.0 // indirect
