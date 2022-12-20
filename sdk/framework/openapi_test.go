@@ -688,7 +688,7 @@ func TestOpenAPI_constructRequestResponseIdentifier(t *testing.T) {
 		path:      "unseal",
 		expected:  "Unseal",
 	}, {
-		name:      "mapped entry with operation and suffix",
+		name:      "mapped entry with operation, prefix, and suffix",
 		operation: logical.UpdateOperation,
 		mount:     "gcp",
 		path:      "roleset/{name}/rotate",
