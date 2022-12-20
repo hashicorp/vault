@@ -4,6 +4,7 @@ import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
+import trimRight from 'vault/utils/trim-right';
 
 // TODO: convert to typescript after https://github.com/hashicorp/vault/pull/18387 is merged
 /**
@@ -24,7 +25,6 @@ export default class PkiKeyImport extends Component {
   @service store;
   @service flashMessages;
 
-  @tracked file = { value: '', enterAsText: false };
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked modelValidations;
@@ -33,24 +33,23 @@ export default class PkiKeyImport extends Component {
   *submitForm(event) {
     event.preventDefault();
     try {
-      const { isValid, state, invalidFormMessage } = this.args.model.validate();
-      this.modelValidations = isValid ? null : state;
-      this.invalidFormAlert = invalidFormMessage;
-      if (isValid) {
-        const { keyName } = this.args.model;
-        yield this.args.model.save();
-        this.flashMessages.success(`Successfully imported key ${keyName}.`);
-        this.args.onSave();
-      }
+      const { keyName } = this.args.model;
+      yield this.args.model.save({ adapterOptions: { import: true } });
+      this.flashMessages.success(`Successfully imported key ${keyName}.`);
+      this.args.onSave();
     } catch (error) {
       this.errorBanner = errorMessage(error);
-      this.invalidFormAlert = 'There was an error submitting this form.';
+      this.invalidFormAlert = 'There was an error importing key.';
     }
   }
 
   @action
-  onFileUpload() {
-    // do something
+  onFileUploaded({ value, filename }) {
+    this.args.model.pemBundle = value;
+    if (!this.args.model.keyName) {
+      const trimmedFileName = trimRight(filename, ['.json', '.pem']);
+      this.args.model.keyName = trimmedFileName;
+    }
   }
 
   @action

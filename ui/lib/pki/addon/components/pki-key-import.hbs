@@ -7,27 +7,16 @@
         Learn more here.
       </DocLink>
     </p>
-    <FormFieldLabel
-      for="keyName"
-      @label="Name"
-      @subText="Optional, human-readable name for this key. The name must be unique across all keys and cannot be 'default'."
-      data-test-pki-key-name-label
-    />
-    <Input
-      spellcheck="false"
-      class="field input"
-      id="keyName"
-      @type="text"
-      @value={{@model.keyName}}
-      data-test-pki-key-name-input
-    />
-    <TextFile
-      @subText="Upload a PEM bundle or certificate"
-      @file={{this.file}}
-      @onChange={{this.onFileUploaded}}
-      @label="PEM Bundle"
-      data-test-pki-text-file-input
-    />
+    {{#let (find-by "name" "keyName" @model.formFields) as |attr|}}
+      <FormField
+        data-test-field={{attr}}
+        @attr={{attr}}
+        @model={{@model}}
+        @modelValidations={{this.modelValidations}}
+        @showHelpText={{false}}
+      />
+    {{/let}}
+    <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" data-test-pki-key-file />
   </div>
   <div class="has-top-padding-s">
     <button

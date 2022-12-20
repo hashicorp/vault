@@ -4,8 +4,13 @@ export default class PkiKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   createRecord(store, type, snapshot) {
-    const { record } = snapshot;
-    const url = this.getUrl(record.backend) + '/generate/' + record.type;
+    const { record, adapterOptions } = snapshot;
+    let url = this.getUrl(record.backend);
+    if (adapterOptions.import) {
+      url = url + '/import';
+    } else {
+      url = url + '/generate/' + record.type;
+    }
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
       return resp;
     });
