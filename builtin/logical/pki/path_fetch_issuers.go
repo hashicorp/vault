@@ -137,10 +137,10 @@ for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 	fields["enable_aia_url_templating"] = &framework.FieldSchema{
 		Type: framework.TypeBool,
 		Description: `Whether or not to enabling templating of the
-above AIA fields. When templating is enabled the special values '{{issuer_id}}'
-and '{{cluster_path}}' are available, but the addresses are not checked for
-URL validity until issuance time. This requires /config/cluster's path to be
-set on all PR Secondary clusters.`,
+above AIA fields. When templating is enabled the special values '{{issuer_id}}',
+'{{cluster_path}}', '{{cluster_aia_path}}' are available, but the addresses are
+not checked for URL validity until issuance time. This requires /config/cluster's
+path to be set on all PR Secondary clusters.`,
 		Default: false,
 	}
 
