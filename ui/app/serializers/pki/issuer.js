@@ -14,4 +14,19 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
     }
     return super.normalizeResponse(...arguments);
   }
+
+  // rehydrate each issuers model so all model attributes are accessible from the LIST response
+  normalizeItems(payload) {
+    if (payload.data) {
+      if (payload.data?.keys && Array.isArray(payload.data.keys)) {
+        return payload.data.keys.map((issuerRef) => ({
+          issuer_id: issuerRef,
+          ...payload.data.key_info[issuerRef],
+        }));
+      }
+      Object.assign(payload, payload.data);
+      delete payload.data;
+    }
+    return payload;
+  }
 }

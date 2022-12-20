@@ -15,16 +15,21 @@ const validations = {
 };
 
 @withModelValidations(validations)
-@withFormFields([
-  'certificate',
-  'caChain',
-  'commonName',
-  'issuerName',
-  'notValidBefore',
-  'serialNumber',
-  'keyId',
-  'notValidAfter',
-  'notValidBefore',
+@withFormFields(null, [
+  {
+    default: [
+      'certificate',
+      'caChain',
+      'commonName',
+      'issuerName',
+      'notValidBefore',
+      'serialNumber',
+      'keyId',
+      'allowedUriSans',
+      'notValidAfter',
+    ],
+  },
+  { 'Issuer URLs': ['issuingCertificates', 'crlDistributionPoints', 'ocspServers'] },
 ])
 export default class PkiIssuerModel extends PkiCertificateBaseModel {
   getHelpUrl(backend) {
@@ -41,6 +46,11 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
     label: 'Default key ID',
   })
   keyId;
+
+  @attr({
+    label: 'Subject Alternative Names',
+  })
+  allowedUriSans;
 
   @lazyCapabilities(apiPath`${'backend'}/issuer`) issuerPath;
   get canRotateIssuer() {

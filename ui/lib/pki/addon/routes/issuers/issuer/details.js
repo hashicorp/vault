@@ -11,13 +11,13 @@ export default class PkiIssuerDetailsRoute extends PkiIssuersIndexRoute {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    const { id, commonName } = resolvedModel;
+    const { id } = resolvedModel;
     const backend = this.secretMountPath.currentPath || 'pki';
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: backend, route: 'overview' },
       { label: 'issuers', route: 'issuers.index' },
-      { label: commonName || id },
+      { label: id },
     ];
   }
 }
