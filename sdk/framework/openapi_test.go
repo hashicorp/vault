@@ -656,43 +656,43 @@ func TestOpenAPI_constructRequestResponseIdentifier(t *testing.T) {
 		operation logical.Operation
 		mount     string
 		path      string
-		suffix    string
 		expected  string
 	}{{
 		name:      "empty",
 		operation: logical.Operation(""),
 		mount:     "",
 		path:      "",
-		suffix:    "",
 		expected:  "",
 	}, {
 		name:      "simple",
 		operation: logical.ReadOperation,
 		mount:     "secret",
 		path:      "path/to/thing",
-		suffix:    "request",
-		expected:  "ReadSecretPathToThingRequest",
+		expected:  "SecretReadPathToThing",
 	}, {
 		name:      "missing elements",
 		operation: logical.ReadOperation,
 		mount:     "",
 		path:      "path/to/thing",
-		suffix:    "",
 		expected:  "ReadPathToThing",
 	}, {
 		name:      "mapped entry",
 		operation: logical.UpdateOperation,
 		mount:     "auth/kerberos",
 		path:      "groups/{name}",
-		suffix:    "",
-		expected:  "WriteKerberosGroup",
+		expected:  "KerberosWriteGroup",
 	}, {
-		name:      "mapped entry with implied operation",
+		name:      "mapped entry with operation",
 		operation: logical.UpdateOperation,
 		mount:     "sys",
 		path:      "unseal",
-		suffix:    "response",
-		expected:  "UnsealResponse",
+		expected:  "Unseal",
+	}, {
+		name:      "mapped entry with operation and suffix",
+		operation: logical.UpdateOperation,
+		mount:     "gcp",
+		path:      "roleset/{name}/rotate",
+		expected:  "GoogleCloudRotateRoleset",
 	}}
 
 	for _, test := range tests {
@@ -701,7 +701,6 @@ func TestOpenAPI_constructRequestResponseIdentifier(t *testing.T) {
 				test.operation,
 				test.mount,
 				test.path,
-				test.suffix,
 			)
 			if actual != test.expected {
 				t.Fatalf("expected: %s; got: %s", test.expected, actual)

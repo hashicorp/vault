@@ -1,20 +1,31 @@
 package framework
 
+// knownPathKey consists of an openapi path and its asociated mount path
+// (including mount path prefix)
 type knownPathKey struct {
 	mount string
 	path  string
 }
 
-type knownPathValue struct {
+// requestResponseParts describes what the building parts of a request/response name
+//
+// In general, the name will be constructed as follows:
+//
+//	 operation id:  [prefix][operation][suffix]
+//	 request name:  [prefix][operation][suffix]Request
+//	response name:  [prefix][operation][suffix]Response
+//
+// Note: if operation is specified, it will overwrite the operation associated
+// with the request, which could lead to some collisions
+type requestResponseParts struct {
 	prefix    string
-	operation string // will overwrite the operation in the name
+	operation string
 	suffix    string
 }
 
-// When constructing a request or response name from a mount + path, certain
-// paths result in very long names or names with duplicate parts. For such paths,
-// we use custom path mappings instead to generate request/response names.
-var knownPathMappings = map[knownPathKey]knownPathValue{
+// knownPathMappings is used by constructRequestResponseIdentifier to generate
+// more human-readable request/response names in OpenAPI spec
+var knownPathMappings = map[knownPathKey]requestResponseParts{
 	{mount: "auth/alicloud", path: "login"}:                                            {prefix: "AliCloud", operation: "Login"},
 	{mount: "auth/alicloud", path: "role"}:                                             {prefix: "AliCloud", suffix: "AuthRoles"},
 	{mount: "auth/alicloud", path: "role/{role}"}:                                      {prefix: "AliCloud", suffix: "AuthRole"},

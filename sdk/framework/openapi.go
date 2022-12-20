@@ -340,10 +340,12 @@ func documentPath(p *Path, specialPaths *logical.Paths, defaultMountPath string,
 
 			op := NewOASOperation()
 
+			operationID := constructRequestResponseIdentifier(opType, defaultMountPath, path)
+
 			op.Summary = props.Summary
 			op.Description = props.Description
 			op.Deprecated = props.Deprecated
-			op.OperationID = constructRequestResponseIdentifier(opType, defaultMountPath, path, "")
+			op.OperationID = operationID
 
 			// Add any fields not present in the path as body parameters for POST.
 			if opType == logical.CreateOperation || opType == logical.UpdateOperation {
@@ -391,7 +393,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, defaultMountPath string,
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					requestName := constructRequestResponseIdentifier(opType, defaultMountPath, path, "request")
+					requestName := operationID + "Request"
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
 						Required: true,
@@ -498,7 +500,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, defaultMountPath string,
 					}
 
 					if len(resp.Fields) != 0 {
-						responseName := constructRequestResponseIdentifier(opType, defaultMountPath, path, "response")
+						responseName := operationID + "Response"
 						doc.Components.Schemas[responseName] = responseSchema
 						content = OASContent{
 							"application/json": &OASMediaTypeObject{
@@ -531,17 +533,18 @@ func documentPath(p *Path, specialPaths *logical.Paths, defaultMountPath string,
 }
 
 // constructRequestResponseIdentifier joins the given inputs into a title case
-// string, e.g. 'UpdateNomadConfigLeaseRequest'. This function is used to
-// generate:
+// string to be used for request/response names & operation identifiers.
 //
-//   - OpenAPI operation ID
-//   - OpenAPI request names
-//   - OpenAPI response names
+// For many mount + path combinations, which would otherwise result in
+// difficult-to-read names, the function uses a custom lookup table to
+// construct the name instead.
 //
-// For certain prefix + path combinations, which would otherwise result in an
-// ugly string, the function uses a custom lookup table to construct part of
-// the string instead.
-func constructRequestResponseIdentifier(operation logical.Operation, mount, path, suffix string) string {
+// Examples of generated names:
+//   - WriteSecret
+//   - ReadSecret
+//   - GoogleCloudLogin
+//   - GoogleCloudWriteRole
+func constructRequestResponseIdentifier(operation logical.Operation, mount, path string) string {
 	// For most request names "write" seems to be more applicable in place of "update"
 	var operationStr string
 	if operation == logical.UpdateOperation {
@@ -552,20 +555,25 @@ func constructRequestResponseIdentifier(operation logical.Operation, mount, path
 
 	var parts []string
 
-	// Append either the known mapping or operation + mount + path split by non-word characters
 	if mapping, ok := knownPathMappings[knownPathKey{mount: mount, path: path}]; ok {
-		// Certain names have operations implied in the name, e.g. Seal/Unseal
-		if !mapping.operationImplied {
+		// If the mapping exists, construct a [prefix][operation][suffix] name
+		if mapping.prefix != "" {
+			parts = append(parts, mapping.prefix)
+		}
+		if mapping.operation != "" {
+			parts = append(parts, mapping.operation)
+		} else {
 			parts = append(parts, nonWordRe.Split(strings.ToLower(operationStr), -1)...)
 		}
-		parts = append(parts, mapping.name)
+		if mapping.suffix != "" {
+			parts = append(parts, mapping.suffix)
+		}
 	} else {
-		parts = append(parts, nonWordRe.Split(strings.ToLower(operationStr), -1)...)
+		// Fall back to [mount][operation][path] split by non-word characters
 		parts = append(parts, nonWordRe.Split(strings.ToLower(mount), -1)...)
+		parts = append(parts, nonWordRe.Split(strings.ToLower(operationStr), -1)...)
 		parts = append(parts, nonWordRe.Split(strings.ToLower(path), -1)...)
 	}
-
-	parts = append(parts, suffix)
 
 	// Title case everything & join the result into a string
 	title := cases.Title(language.English, cases.NoLower)
