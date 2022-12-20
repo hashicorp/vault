@@ -31,17 +31,16 @@ export default class PkiKeyForm extends Component {
   *save(event) {
     event.preventDefault();
     try {
+      const { isNew, keyName } = this.args.model;
       const { isValid, state, invalidFormMessage } = this.args.model.validate();
-      if (this.args.model.isNew) {
+      if (isNew) {
         this.modelValidations = isValid ? null : state;
         this.invalidFormAlert = invalidFormMessage;
       }
-      if (isValid || !this.args.model.isNew) {
-        const { isNew, keyName } = this.args.model;
-        yield this.args.model.save();
-        this.flashMessages.success(`Successfully ${isNew ? 'generated' : 'updated'} the key ${keyName}.`);
-        this.args.onSave();
-      }
+      if (!isValid && isNew) return;
+      yield this.args.model.save();
+      this.flashMessages.success(`Successfully ${isNew ? 'generated' : 'updated'} the key ${keyName}.`);
+      this.args.onSave();
     } catch (error) {
       this.errorBanner = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
