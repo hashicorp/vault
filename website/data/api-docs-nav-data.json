@@ -715,7 +715,7 @@
         "path": "system/wrapping-unwrap"
       },
       {
-        "title": "<code>/sys/lockedusers</code>",
+        "title": "<code>/sys/locked-users</code>",
         "path": "system/user-lockout"
       },
       {

@@ -1,12 +1,12 @@
 ---
 layout: api
-page_title: /sys/lockedusers - HTTP API
-description: The `/sys/lockedusers` endpoint is used to manage locked users in Vault.
+page_title: /sys/locked-users - HTTP API
+description: The `/sys/locked-users` endpoint is used to manage locked users in Vault.
 ---
 
-# `/sys/lockedusers`
+# `/sys/locked-users`
 
-The `/sys/lockedusers` endpoint is used to list and unlock locked users in Vault. 
+The `/sys/locked-users` endpoint is used to list and unlock locked users in Vault. 
 
 Please visit [user lockout](/docs/concepts/user-lockout) concepts page for more details about the feature. 
 
@@ -25,7 +25,7 @@ This endpoint was added in Vault 1.13.
 
 | Method | Path             |
 | :----- | :--------------- |
-| `GET` | `/sys/lockedusers` |
+| `GET` | `/sys/locked-users` |
 
 ### Parameters
 
@@ -39,7 +39,7 @@ the response will include locked users in all child namespaces of the namespace 
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    http://127.0.0.1:8200/v1/sys/lockedusers
+    http://127.0.0.1:8200/v1/sys/locked-users
 ```
 
 ### Sample Response
@@ -188,7 +188,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --data @payload.json \
     --request GET \
-    http://127.0.0.1:8200/v1/sys/lockedusers
+    http://127.0.0.1:8200/v1/sys/locked-users
 ```
 
 ## Unlock User
@@ -201,7 +201,7 @@ This endpoint was added in Vault 1.13.
 
 | Method | Path             |
 | :----- | :--------------- |
-| `POST` | `/sys/lockedusers/:mount_accessor/unlock/:alias-identifier` |
+| `POST` | `/sys/locked-users/:mount_accessor/unlock/:alias-identifier` |
 
 ### Parameters
 
@@ -218,5 +218,5 @@ should be a valid username`
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    http://127.0.0.1:8200/v1/sys/lockedusers/auth_userpass_af8d1d32/unlock/bsmith
+    http://127.0.0.1:8200/v1/sys/locked-users/auth_userpass_af8d1d32/unlock/bsmith
 ```
