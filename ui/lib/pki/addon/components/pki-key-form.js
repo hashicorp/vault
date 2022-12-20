@@ -32,9 +32,11 @@ export default class PkiKeyForm extends Component {
     event.preventDefault();
     try {
       const { isValid, state, invalidFormMessage } = this.args.model.validate();
-      this.modelValidations = isValid ? null : state;
-      this.invalidFormAlert = invalidFormMessage;
-      if (isValid) {
+      if (this.args.model.isNew) {
+        this.modelValidations = isValid ? null : state;
+        this.invalidFormAlert = invalidFormMessage;
+      }
+      if (isValid || !this.args.model.isNew) {
         const { isNew, keyName } = this.args.model;
         yield this.args.model.save();
         this.flashMessages.success(`Successfully ${isNew ? 'generated' : 'updated'} the key ${keyName}.`);

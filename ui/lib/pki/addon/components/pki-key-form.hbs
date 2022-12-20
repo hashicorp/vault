@@ -2,23 +2,37 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI key" />
-    {{#each @model.formFieldGroups as |fieldGroup|}}
-      {{#each-in fieldGroup as |group fields|}}
-        {{#if (eq group "Key parameters")}}
-          <PkiKeyParameters @model={{@model}} @fields={{fields}} @modelValidations={{this.modelValidations}} />
-        {{else}}
-          {{#each fields as |attr|}}
-            <FormField
-              data-test-field={{attr}}
-              @attr={{attr}}
-              @model={{@model}}
-              @modelValidations={{this.modelValidations}}
-              @showHelpText={{false}}
-            />
-          {{/each}}
-        {{/if}}
-      {{/each-in}}
-    {{/each}}
+    {{#if @model.isNew}}
+      {{#each @model.formFieldGroups as |fieldGroup|}}
+        {{#each-in fieldGroup as |group fields|}}
+          {{#if (eq group "Key parameters")}}
+            <PkiKeyParameters @model={{@model}} @fields={{fields}} @modelValidations={{this.modelValidations}} />
+          {{else}}
+            {{#each fields as |attr|}}
+              <FormField
+                data-test-field={{attr}}
+                @attr={{attr}}
+                @model={{@model}}
+                @modelValidations={{this.modelValidations}}
+                @showHelpText={{false}}
+              />
+            {{/each}}
+          {{/if}}
+        {{/each-in}}
+      {{/each}}
+    {{else}}
+      {{! only keyName is edit-able }}
+      {{#let (find-by "name" "keyName" @model.formFields) as |attr|}}
+        <FormField
+          data-test-field={{attr}}
+          @attr={{attr}}
+          @model={{@model}}
+          @modelValidations={{this.modelValidations}}
+          @showHelpText={{false}}
+        />
+      {{/let}}
+      <ReadonlyFormField @label="Key type" @value={{@model.keyType}} />
+    {{/if}}
   </div>
   <div class="has-top-padding-s">
     <button
@@ -27,7 +41,7 @@
       disabled={{this.save.isRunning}}
       data-test-pki-key-save
     >
-      {{if @model.isNew "Create" "Update"}}
+      {{if @model.isNew "Generate key" "Edit key"}}
     </button>
     <button
       type="button"
