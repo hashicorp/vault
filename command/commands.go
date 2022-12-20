@@ -536,6 +536,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"pki reissue": func() (cli.Command, error) {
+			return &PKIReIssueCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"pki list-intermediates": func() (cli.Command, error) {
 			return &PKIListChildrenCommand{
 				BaseCommand: getBaseCommand(),

@@ -80,6 +80,14 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 		return 1
 	}
 
+	parentIssuer := sanitizePath(args[0]) // /pki/issuer/default
+	intermediateMount := sanitizePath(args[1])
+
+	return pkiIssue(*c.BaseCommand, parentIssuer, intermediateMount, c.flagNewIssuerName, c.flagKeyStorageSource, data)
+
+}
+
+func pkiIssue(c BaseCommand, parentIssuerPath string, childMountPath string, newIssuerName string, keyStorageSource string, data map[string]interface{}) int {
 	// Check We Have a Client
 	client, err := c.Client()
 	if err != nil {
@@ -88,53 +96,51 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 	}
 
 	// Sanity Check the Parent Issuer
-	parentMountIssuer := sanitizePath(args[0]) // /pki/issuer/default
-	_, parentIssuerName := paths.Split(parentMountIssuer)
-	if !strings.Contains(parentMountIssuer, "/issuer/") {
-		c.UI.Error(fmt.Sprintf("Parent Issuer %v is Not a PKI Issuer Path of the format /mount/issuer/issuer-ref", parentMountIssuer))
+	_, parentIssuerName := paths.Split(parentIssuerPath)
+	if !strings.Contains(parentIssuerPath, "/issuer/") {
+		c.UI.Error(fmt.Sprintf("Parent Issuer %v is Not a PKI Issuer Path of the format /mount/issuer/issuer-ref", parentIssuerPath))
 	}
-	_, err = client.Logical().Read(parentMountIssuer + "/json")
+	_, err = client.Logical().Read(parentIssuerPath + "/json")
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Unable to access parent issuer %v: %v", parentMountIssuer, err))
+		c.UI.Error(fmt.Sprintf("Unable to access parent issuer %v: %v", parentIssuerPath, err))
 	}
 
 	// Set-up Failure State (Immediately Before First Write Call)
-	intermediateMount := sanitizePath(args[1])
 	failureState := inCaseOfFailure{
-		intermediateMount: intermediateMount,
-		parentMount:       strings.Split(parentMountIssuer, "/issuer/")[0],
-		parentIssuer:      parentMountIssuer,
-		newName:           c.flagNewIssuerName,
+		intermediateMount: childMountPath,
+		parentMount:       strings.Split(parentIssuerPath, "/issuer/")[0],
+		parentIssuer:      parentIssuerPath,
+		newName:           newIssuerName,
 	}
 
 	// Generate Certificate Signing Request
-	csrResp, err := client.Logical().Write(intermediateMount+"/intermediate/generate/"+c.flagKeyStorageSource, data)
+	csrResp, err := client.Logical().Write(childMountPath+"/intermediate/generate/"+keyStorageSource, data)
 	if err != nil {
 		if strings.Contains(err.Error(), "no handler for route") { // Mount Given Does Not Exist
-			c.UI.Error(fmt.Sprintf("Given Intermediate Mount %v Does Not Exist: %v", intermediateMount, err))
+			c.UI.Error(fmt.Sprintf("Given Intermediate Mount %v Does Not Exist: %v", childMountPath, err))
 		} else if strings.Contains(err.Error(), "unsupported path") { // Expected if Not a PKI Mount
-			c.UI.Error(fmt.Sprintf("Given Intermeidate Mount %v Is Not a PKI Mount: %v", intermediateMount, err))
+			c.UI.Error(fmt.Sprintf("Given Intermeidate Mount %v Is Not a PKI Mount: %v", childMountPath, err))
 		} else {
-			c.UI.Error(fmt.Sprintf("Failled to Generate Intermediate CSR on %v: %v", intermediateMount, err))
+			c.UI.Error(fmt.Sprintf("Failled to Generate Intermediate CSR on %v: %v", childMountPath, err))
 		}
 		return 1
 	}
 	// Parse CSR Response, Also Verifies that this is a PKI Mount
-	// (eg. calling the above call on cubbyhole/ won't return an error response)
+	// (e.g. calling the above call on cubbyhole/ won't return an error response)
 	csrPemRaw, present := csrResp.Data["csr"]
 	if !present {
-		c.UI.Error(fmt.Sprintf("Failed to Generate Intermediate CSR on %v, got response: %v", intermediateMount, csrResp))
+		c.UI.Error(fmt.Sprintf("Failed to Generate Intermediate CSR on %v, got response: %v", childMountPath, csrResp))
 		return 1
 	}
 	keyIdRaw, present := csrResp.Data["key_id"]
-	if !present && c.flagKeyStorageSource == "internal" {
-		c.UI.Error(fmt.Sprintf("Failed to Generate Key on %v, got response: %v", intermediateMount, csrResp))
+	if !present && keyStorageSource == "internal" {
+		c.UI.Error(fmt.Sprintf("Failed to Generate Key on %v, got response: %v", childMountPath, csrResp))
 		return 1
 	}
 
 	// If that all Parses, then we've successfully generated a CSR!  Save It (and the Key-ID)
 	failureState.csrGenerated = true
-	if c.flagKeyStorageSource == "internal" {
+	if keyStorageSource == "internal" {
 		failureState.createdKeyId = keyIdRaw.(string)
 	}
 	csr := csrPemRaw.(string)
@@ -142,7 +148,7 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 	data["csr"] = csr
 
 	// Next, Sign the CSR
-	rootResp, err := client.Logical().Write(parentMountIssuer+"/sign-intermediate", data)
+	rootResp, err := client.Logical().Write(parentIssuerPath+"/sign-intermediate", data)
 	if err != nil {
 		c.UI.Error(failureState.generateFailureMessage())
 		c.UI.Error(fmt.Sprintf("Error Signing Intermiate On %v", err))
@@ -162,7 +168,7 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 
 	// Next Import Certificate
 	certificate := rootResp.Data["certificate"].(string)
-	issuerId, err := importIssuerWithName(client, intermediateMount, certificate, c.flagNewIssuerName)
+	issuerId, err := importIssuerWithName(client, childMountPath, certificate, newIssuerName)
 	failureState.certIssuerId = issuerId
 	if err != nil {
 		if strings.Contains(err.Error(), "error naming issuer") {
@@ -172,7 +178,7 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 			return 1
 		} else {
 			c.UI.Error(failureState.generateFailureMessage())
-			c.UI.Error(fmt.Sprintf("Error Importing Into %v Newly Created Issuer %v: %v", intermediateMount, certificate, err))
+			c.UI.Error(fmt.Sprintf("Error Importing Into %v Newly Created Issuer %v: %v", childMountPath, certificate, err))
 			return 1
 		}
 	}
@@ -180,13 +186,13 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 
 	// Then Import Issuing Certificate
 	issuingCa := rootResp.Data["issuing_ca"].(string)
-	_, err = importIssuerWithName(client, intermediateMount, issuingCa, parentIssuerName)
+	_, err = importIssuerWithName(client, childMountPath, issuingCa, parentIssuerName)
 	if err != nil {
 		if strings.Contains(err.Error(), "error naming issuer") {
-			c.UI.Warn(fmt.Sprintf("Unable to Set Name on Parent Cert from %v Imported Into %v with serial %v, err: %v", parentIssuerName, intermediateMount, serialNumber, err))
+			c.UI.Warn(fmt.Sprintf("Unable to Set Name on Parent Cert from %v Imported Into %v with serial %v, err: %v", parentIssuerName, childMountPath, serialNumber, err))
 		} else {
 			c.UI.Error(failureState.generateFailureMessage())
-			c.UI.Error(fmt.Sprintf("Error Importing Into %v Newly Created Issuer %v: %v", intermediateMount, certificate, err))
+			c.UI.Error(fmt.Sprintf("Error Importing Into %v Newly Created Issuer %v: %v", childMountPath, certificate, err))
 			return 1
 		}
 	}
@@ -196,10 +202,10 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 		importData := map[string]interface{}{
 			"pem_bundle": caChainPemBundle,
 		}
-		_, err := client.Logical().Write(intermediateMount+"/issuers/import/cert", importData)
+		_, err := client.Logical().Write(childMountPath+"/issuers/import/cert", importData)
 		if err != nil {
 			c.UI.Error(failureState.generateFailureMessage())
-			c.UI.Error(fmt.Sprintf("Error Importing CaChain into %v: %v", intermediateMount, err))
+			c.UI.Error(fmt.Sprintf("Error Importing CaChain into %v: %v", childMountPath, err))
 			return 1
 		}
 	}
