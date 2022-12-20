@@ -310,9 +310,9 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 
 		// If specified in the request, the mount path will be used as part of the
 		// request/response body names and operation id's in the OpenAPI document.
-		var defaultMountPath string
+		var mountPathWithPrefix string
 		if v, ok := req.Data["mount_path_with_prefix"]; ok {
-			defaultMountPath = v.(string)
+			mountPathWithPrefix = v.(string)
 		}
 
 		// Build OpenAPI response for this path
@@ -329,7 +329,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			}
 		}
 		doc := NewOASDocument(vaultVersion)
-		if err := documentPath(p, b.SpecialPaths(), defaultMountPath, b.BackendType, doc); err != nil {
+		if err := documentPath(p, b.SpecialPaths(), mountPathWithPrefix, b.BackendType, doc); err != nil {
 			b.Logger().Warn("error generating OpenAPI", "error", err)
 		}
 
