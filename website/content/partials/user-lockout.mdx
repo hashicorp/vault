@@ -1,6 +1,6 @@
 If a user provides bad credentials several times in quick succession, 
 Vault will stop trying to validate their credentials for a while, instead returning immediately 
-with a permission denied error. We will call this behavior as "user lockout". The time for which 
+with a permission denied error. We call this behavior "user lockout". The time for which 
 an user will be locked out is called “lockout duration”. The user will be able to login after the lockout 
 duration has passed. The number of failed login attempts after which the user is locked out is called 
 “lockout threshold”. The lockout threshold counter is reset to zero after a few minutes without login attempts, 
