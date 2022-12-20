@@ -8,13 +8,7 @@
       </DocLink>
     </p>
     {{#let (find-by "name" "keyName" @model.formFields) as |attr|}}
-      <FormField
-        data-test-field={{attr}}
-        @attr={{attr}}
-        @model={{@model}}
-        @modelValidations={{this.modelValidations}}
-        @showHelpText={{false}}
-      />
+      <FormField data-test-field={{attr}} @attr={{attr}} @model={{@model}} @showHelpText={{false}} />
     {{/let}}
     <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" data-test-pki-key-file />
   </div>

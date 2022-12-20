@@ -23,12 +23,10 @@ import { waitFor } from '@ember/test-waiters';
  */
 
 export default class PkiKeyImport extends Component {
-  @service store;
   @service flashMessages;
 
   @tracked errorBanner;
   @tracked invalidFormAlert;
-  @tracked modelValidations;
 
   @task
   @waitFor

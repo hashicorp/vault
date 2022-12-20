@@ -20,7 +20,6 @@ import errorMessage from 'vault/utils/error-message';
  */
 
 export default class PkiKeyForm extends Component {
-  @service store;
   @service flashMessages;
 
   @tracked errorBanner;
