@@ -47,18 +47,20 @@ func TestBuiltinPluginsWork(t *testing.T) {
 			continue
 		}
 
-		if err := client.Sys().EnableAuthWithOptions(authType, &api.EnableAuthOptions{
-			Type: authType,
-		}); err != nil {
-			t.Fatal(err)
-		}
+		t.Run("Auth Method "+authType, func(t *testing.T) {
+			if err := client.Sys().EnableAuthWithOptions(authType, &api.EnableAuthOptions{
+				Type: authType,
+			}); err != nil {
+				t.Fatal(err)
+			}
 
-		if _, err := client.Logical().ReadWithData(
-			"auth/"+authType,
-			map[string][]string{"help": {"1"}},
-		); err != nil {
-			t.Fatal(err)
-		}
+			if _, err := client.Logical().ReadWithData(
+				"auth/"+authType,
+				map[string][]string{"help": {"1"}},
+			); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 
 	for _, secretsType := range Registry.Keys(consts.PluginTypeSecrets) {
@@ -67,17 +69,19 @@ func TestBuiltinPluginsWork(t *testing.T) {
 			continue
 		}
 
-		if err := client.Sys().Mount(secretsType, &api.MountInput{
-			Type: secretsType,
-		}); err != nil {
-			t.Fatal(err)
-		}
+		t.Run("Secrets Engine "+secretsType, func(t *testing.T) {
+			if err := client.Sys().Mount(secretsType, &api.MountInput{
+				Type: secretsType,
+			}); err != nil {
+				t.Fatal(err)
+			}
 
-		if _, err := client.Logical().ReadWithData(
-			secretsType,
-			map[string][]string{"help": {"1"}},
-		); err != nil {
-			t.Fatal(err)
-		}
+			if _, err := client.Logical().ReadWithData(
+				secretsType,
+				map[string][]string{"help": {"1"}},
+			); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
