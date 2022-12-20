@@ -39,10 +39,13 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
     this.backend = this.store.peekRecord('secret-engine', 'kubernetes-test');
     this.config = this.store.peekRecord('kubernetes/config', 'kubernetes-test');
     this.roles = this.store.peekAll('kubernetes/role');
-
+    this.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.backend.id },
+    ];
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Overview @config={{this.config}} @backend={{this.backend}} @roles={{this.roles}} />`,
+        hbs`<Page::Overview @config={{this.config}} @backend={{this.backend}} @roles={{this.roles}} @breadcrumbs={{this.breadcrumbs}} />`,
         { owner: this.engine }
       );
     };

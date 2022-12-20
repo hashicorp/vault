@@ -38,7 +38,14 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
         ...data,
       });
       this.model = store.peekRecord('kubernetes/role', data.name);
-      return render(hbs`<Page::Role::Details @model={{this.model}} />`, { owner: this.engine });
+      this.breadcrumbs = [
+        { label: this.model.backend, route: 'overview' },
+        { label: 'roles', route: 'roles' },
+        { label: this.model.name },
+      ];
+      return render(hbs`<Page::Role::Details @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+        owner: this.engine,
+      });
     };
 
     this.assertFilteredFields = (hiddenIndices, assert) => {
@@ -71,9 +78,13 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
   test('it should render header with role name and breadcrumbs', async function (assert) {
     await this.renderComponent();
     assert.dom('[data-test-header-title]').hasText(this.model.name, 'Role name renders in header');
-    assert.dom('[data-test-crumb="overview"] a').hasText(this.model.backend, 'Overview breadcrumb renders');
-    assert.dom('[data-test-crumb="roles"] a').hasText('roles', 'Roles breadcrumb renders');
-    assert.dom('[data-test-crumb="role"]').hasText(this.model.name, 'Role breadcrumb renders');
+    assert
+      .dom('[data-test-breadcrumbs] li:nth-child(1)')
+      .containsText(this.model.backend, 'Overview breadcrumb renders');
+    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('roles', 'Roles breadcrumb renders');
+    assert
+      .dom('[data-test-breadcrumbs] li:nth-child(3)')
+      .containsText(this.model.name, 'Role breadcrumb renders');
   });
 
   test('it should render toolbar actions', async function (assert) {

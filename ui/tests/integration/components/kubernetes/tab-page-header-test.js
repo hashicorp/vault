@@ -22,16 +22,24 @@ module('Integration | Component | kubernetes | TabPageHeader', function (hooks) 
     });
     this.model = this.store.peekRecord('secret-engine', 'kubernetes-test');
     this.mount = this.model.path.slice(0, -1);
+    this.breadcrumbs = [{ label: 'secrets', route: 'secrets', linkExternal: true }, { label: this.mount }];
   });
 
   test('it should render breadcrumbs', async function (assert) {
-    await render(hbs`<TabPageHeader @model={{this.model}} />`, { owner: this.engine });
-    assert.dom('[data-test-crumb="secrets"] a').hasText('secrets', 'Secrets breadcrumb renders');
-    assert.dom('[data-test-crumb="path"]').hasText(this.mount, 'Mount path breadcrumb renders');
+    await render(hbs`<TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
+    assert.dom('[data-test-breadcrumbs] li:nth-child(1) a').hasText('secrets', 'Secrets breadcrumb renders');
+
+    assert
+      .dom('[data-test-breadcrumbs] li:nth-child(2)')
+      .containsText(this.mount, 'Mount path breadcrumb renders');
   });
 
   test('it should render title', async function (assert) {
-    await render(hbs`<TabPageHeader @model={{this.model}} />`, { owner: this.engine });
+    await render(hbs`<TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
     assert
       .dom('[data-test-header-title] svg')
       .hasClass('flight-icon-kubernetes', 'Correct icon renders in title');
@@ -39,7 +47,9 @@ module('Integration | Component | kubernetes | TabPageHeader', function (hooks) 
   });
 
   test('it should render tabs', async function (assert) {
-    await render(hbs`<TabPageHeader @model={{this.model}} />`, { owner: this.engine });
+    await render(hbs`<TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
     assert.dom('[data-test-tab="overview"]').hasText('Overview', 'Overview tab renders');
     assert.dom('[data-test-tab="roles"]').hasText('Roles', 'Roles tab renders');
     assert.dom('[data-test-tab="config"]').hasText('Configuration', 'Configuration tab renders');
@@ -47,7 +57,7 @@ module('Integration | Component | kubernetes | TabPageHeader', function (hooks) 
 
   test('it should render filter for roles', async function (assert) {
     await render(
-      hbs`<TabPageHeader @model={{this.model}} @filterRoles={{true}} @rolesFilterValue="test" />`,
+      hbs`<TabPageHeader @model={{this.model}} @filterRoles={{true}} @rolesFilterValue="test" @breadcrumbs={{this.breadcrumbs}} />`,
       { owner: this.engine }
     );
     assert.dom('[data-test-nav-input] input').hasValue('test', 'Filter renders with provided value');
@@ -56,7 +66,7 @@ module('Integration | Component | kubernetes | TabPageHeader', function (hooks) 
   test('it should yield block for toolbar actions', async function (assert) {
     await render(
       hbs`
-      <TabPageHeader @model={{this.model}}>
+      <TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}}>
         <span data-test-yield>It yields!</span>
       </TabPageHeader>
     `,
