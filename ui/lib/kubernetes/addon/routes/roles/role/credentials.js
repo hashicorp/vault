@@ -9,4 +9,15 @@ export default class KubernetesRoleCredentialsRoute extends Route {
       backend: this.secretMountPath.get(),
     };
   }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+
+    controller.breadcrumbs = [
+      { label: resolvedModel.backend, route: 'overview' },
+      { label: 'roles', route: 'roles' },
+      { label: resolvedModel.roleName, route: 'roles.role.details' },
+      { label: 'credentials' },
+    ];
+  }
 }
