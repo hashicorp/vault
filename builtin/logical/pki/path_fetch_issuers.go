@@ -841,6 +841,8 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 			Data: map[string]interface{}{
 				"certificate": string(certificate),
 				"ca_chain":    issuer.CAChain,
+				"issuer_id":   issuer.ID,
+				"issuer_name": issuer.Name,
 			},
 		}, nil
 	}
