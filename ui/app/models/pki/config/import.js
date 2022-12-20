@@ -5,7 +5,6 @@ export default class PkiConfigImportModel extends Model {
   @service secretMountPath;
 
   @attr('string') pemBundle;
-  @attr('string') certificate;
   @attr() importedIssuers;
   @attr() importedKeys;
 
