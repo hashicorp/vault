@@ -1106,6 +1106,17 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: pathInternalUINamespacesRead(b),
 					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeCommaStringSlice,
+									Description: "field is only returned if there are one or more namespaces",
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-namespaces"][0]),
@@ -1117,6 +1128,29 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIResultantACL,
 					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "empty response returned if no client token",
+							Fields:      nil,
+						}},
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"root": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"exact_paths": {
+									Type:     framework.TypeMap,
+									Required: false,
+								},
+								"glob_paths": {
+									Type:     framework.TypeMap,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
@@ -1128,6 +1162,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersRequests,
 					Summary:  "Backwards compatibility is not guaranteed for this API",
+					// callback only returns errors
+					Responses: nil,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
@@ -1139,6 +1175,17 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersTokens,
 					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"counters": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
@@ -1150,6 +1197,17 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersEntities,
 					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"counters": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
