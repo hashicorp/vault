@@ -100,6 +100,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				revokedPath,
 				deltaWALPath,
 				legacyCRLPath,
+				clusterConfigPath,
 				"crls/",
 				"certs/",
 			},
@@ -127,6 +128,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathConfigCA(&b),
 			pathConfigCRL(&b),
 			pathConfigURLs(&b),
+			pathConfigCluster(&b),
 			pathSignVerbatim(&b),
 			pathSign(&b),
 			pathIssue(&b),
@@ -481,7 +483,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		}
 
 		// Then attempt to rebuild the CRLs if required.
-		if err := b.crlBuilder.rebuildIfForced(ctx, b, request); err != nil {
+		if err := b.crlBuilder.rebuildIfForced(sc); err != nil {
 			return err
 		}
 

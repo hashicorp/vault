@@ -1,11 +1,12 @@
 scenario "autopilot" {
   matrix {
-    arch            = ["amd64", "arm64"]
-    artifact_source = ["local", "crt", "artifactory"]
-    artifact_type   = ["bundle", "package"]
-    distro          = ["ubuntu", "rhel"]
-    edition         = ["ent"]
-    seal            = ["awskms", "shamir"]
+    arch             = ["amd64", "arm64"]
+    artifact_source  = ["local", "crt", "artifactory"]
+    artifact_type    = ["bundle", "package"]
+    distro           = ["ubuntu", "rhel"]
+    edition          = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    seal             = ["awskms", "shamir"]
+    undo_logs_status = ["0", "1"]
   }
 
   terraform_cli = terraform_cli.default
@@ -18,7 +19,10 @@ scenario "autopilot" {
 
   locals {
     build_tags = {
-      "ent" = ["enterprise", "ent"]
+      "ent"              = ["ui", "enterprise", "ent"]
+      "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
+      "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
+      "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
     }
     bundle_path             = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
     dependencies_to_install = ["jq"]
@@ -35,6 +39,9 @@ scenario "autopilot" {
       amd64 = "t3a.small"
       arm64 = "t4g.small"
     }
+
+    enable_undo_logs = matrix.undo_logs_status == "1" && semverconstraint(var.vault_product_version, ">=1.12.0-0") ? true : false
+
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
     vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
     vault_install_dir_packages = {
@@ -172,22 +179,7 @@ scenario "autopilot" {
       vault_unseal_when_no_init   = matrix.seal == "shamir"
       vault_unseal_keys           = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
       vpc_id                      = step.create_vpc.vpc_id
-    }
-  }
-
-  step "verify_autopilot_upgraded_vault_cluster" {
-    module     = module.vault_verify_autopilot
-    depends_on = [step.upgrade_vault_cluster_with_autopilot]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_install_dir               = local.vault_install_dir
-      vault_instances                 = step.create_vault_cluster.vault_instances
-      vault_root_token                = step.create_vault_cluster.vault_root_token
+      vault_environment           = { "VAULT_REPLICATION_USE_UNDO_LOGS" : local.enable_undo_logs }
     }
   }
 
@@ -212,8 +204,8 @@ scenario "autopilot" {
   step "verify_raft_auto_join_voter" {
     module = module.vault_verify_raft_auto_join_voter
     depends_on = [
-      step.create_vault_cluster,
       step.upgrade_vault_cluster_with_autopilot,
+      step.verify_vault_unsealed
     ]
 
     providers = {
@@ -224,6 +216,47 @@ scenario "autopilot" {
       vault_install_dir = local.vault_install_dir
       vault_instances   = step.create_vault_cluster.vault_instances
       vault_root_token  = step.create_vault_cluster.vault_root_token
+    }
+  }
+
+  step "verify_autopilot_upgraded_vault_cluster" {
+    module = module.vault_verify_autopilot
+    depends_on = [
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_vault_unsealed
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_autopilot_upgrade_status  = "await-server-removal"
+      vault_install_dir               = local.vault_install_dir
+      vault_instances                 = step.create_vault_cluster.vault_instances
+      vault_root_token                = step.create_vault_cluster.vault_root_token
+    }
+  }
+
+  step "verify_undo_logs_status" {
+    skip_step = semverconstraint(var.vault_product_version, "<1.12.0-0")
+    module    = module.vault_verify_undo_logs
+    depends_on = [
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_vault_unsealed
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir               = local.vault_install_dir
+      vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_undo_logs_status          = matrix.undo_logs_status
+      vault_instances                 = step.upgrade_vault_cluster_with_autopilot.vault_instances
+      vault_root_token                = step.create_vault_cluster.vault_root_token
     }
   }
 

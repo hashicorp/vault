@@ -39,6 +39,10 @@ type batchResponseSignItem struct {
 	// For batch processing to successfully mimic previous handling for simple 'input',
 	// both output values are needed - though 'err' should never be serialized.
 	err error
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" mapstructure:"reference"`
 }
 
 // BatchRequestVerifyItem represents a request item for batch processing.
@@ -59,6 +63,10 @@ type batchResponseVerifyItem struct {
 	// For batch processing to successfully mimic previous handling for simple 'input',
 	// both output values are needed - though 'err' should never be serialized.
 	err error
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" mapstructure:"reference"`
 }
 
 const defaultHashAlgorithm = "sha2-256"
@@ -420,6 +428,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}
@@ -636,6 +648,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}

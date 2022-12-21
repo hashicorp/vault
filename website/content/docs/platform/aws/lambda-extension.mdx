@@ -268,6 +268,10 @@ synchronously refresh its own token before proxying requests if the token is
 expired (including a grace window), and it will attempt to renew its token if the
 token is nearly expired but renewable.
 
+~> **Note**: The Vault Lambda Extension is currently incompatible with
+[AWS SnapStart](https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html).
+This is because AWS SnapStart does not support the Lambda Extensions API.
+
 ## Performance impact
 
 AWS Lambda pricing is based on [number of invocations, time of execution and memory

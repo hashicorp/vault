@@ -182,6 +182,10 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			batchResponseItems[i].Reference = batchInputItems[i].Reference
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": batchResponseItems,
 		}

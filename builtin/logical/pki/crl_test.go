@@ -89,7 +89,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 				"auto_rebuild":              tc.autoRebuild,
 				"auto_rebuild_grace_period": tc.autoRebuildGracePeriod,
 			})
-			requireSuccessNilResponse(t, resp, err)
+			requireSuccessNonNilResponse(t, resp, err)
 
 			resp, err = CBRead(b, s, "config/crl")
 			requireSuccessNonNilResponse(t, resp, err)
@@ -404,18 +404,17 @@ func TestCrlRebuilder(t *testing.T) {
 	_, _, err := sc.writeCaBundle(bundle, "", "")
 	require.NoError(t, err)
 
-	req := &logical.Request{Storage: s}
 	cb := newCRLBuilder(true /* can rebuild and write CRLs */)
 
 	// Force an initial build
-	err = cb.rebuild(ctx, b, req, true)
+	err = cb.rebuild(sc, true)
 	require.NoError(t, err, "Failed to rebuild CRL")
 
 	resp := requestCrlFromBackend(t, s, b)
 	crl1 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 
 	// We shouldn't rebuild within this call.
-	err = cb.rebuildIfForced(ctx, b, req)
+	err = cb.rebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
 	resp = requestCrlFromBackend(t, s, b)
 	crl2 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
@@ -432,7 +431,7 @@ func TestCrlRebuilder(t *testing.T) {
 
 	// This should rebuild the CRL
 	cb.requestRebuildIfActiveNode(b)
-	err = cb.rebuildIfForced(ctx, b, req)
+	err = cb.rebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
 	resp = requestCrlFromBackend(t, s, b)
 	crl3 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))

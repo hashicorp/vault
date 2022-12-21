@@ -99,6 +99,13 @@ module "vault_verify_raft_auto_join_voter" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_verify_undo_logs" {
+  source = "./modules/vault_verify_undo_logs"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
 module "vault_verify_replication" {
   source = "./modules/vault-verify-replication"
 
