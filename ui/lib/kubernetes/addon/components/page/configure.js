@@ -6,6 +6,12 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
 
+/**
+ * @module Configure
+ * ConfigurePage component is a child component to configure kubernetes secrets engine.
+ *
+ * @param {object} model - config model that contains kubernetes configuration
+ */
 export default class ConfigurePageComponent extends Component {
   @service router;
   @service store;

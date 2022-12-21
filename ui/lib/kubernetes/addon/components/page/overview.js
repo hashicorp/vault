@@ -3,6 +3,16 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
+/**
+ * @module Overview
+ * OverviewPage component is a child component to overview kubernetes secrets engine.
+ *
+ * @param {object} config - config model that contains kubernetes configuration
+ * @param {object} backend - backend model that contains kubernetes configuration
+ * @param {array} roles - array of roles
+ * @param {array} breadcrumbs - breadcrumbs as an array of objects that contain label and route
+ */
+
 export default class OverviewPageComponent extends Component {
   @service router;
 
