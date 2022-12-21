@@ -320,9 +320,24 @@ func documentPath(p *Path, specialPaths *logical.Paths, mountPathWithPrefix stri
 			return strings.ToLower(pi.Parameters[i].Name) < strings.ToLower(pi.Parameters[j].Name)
 		})
 
+		uniqueOperationIdentifiers := make(map[string]struct{})
+
 		// Process each supported operation by building up an Operation object
 		// with descriptions, properties and examples from the framework.Path data.
 		for opType, opHandler := range operations {
+			operationID := constructRequestResponseIdentifier(opType, mountPathWithPrefix, path)
+
+			// Certain paths contain duplicate operation ID's for identical operations.
+			// For example, the following all map to the same operation:
+			//      PUT /v1/gcpkms/keys/deregister/:key
+			//     POST /v1/gcpkms/keys/deregister/:key
+			//   DELETE /v1/gcpkms/keys/deregister/:key
+			if _, ok := uniqueOperationIdentifiers[operationID]; ok {
+				continue
+			} else {
+				uniqueOperationIdentifiers[operationID] = struct{}{}
+			}
+
 			props := opHandler.Properties()
 			if props.Unpublished {
 				continue
@@ -343,8 +358,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, mountPathWithPrefix stri
 			}
 
 			op := NewOASOperation()
-
-			operationID := constructRequestResponseIdentifier(opType, mountPathWithPrefix, path)
 
 			op.Summary = props.Summary
 			op.Description = props.Description

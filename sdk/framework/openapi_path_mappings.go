@@ -120,7 +120,7 @@ var knownPathMappings = map[knownPathKey]requestResponseParts{
 	{mount: "auth/kerberos", path: "config/ldap"}:                                      {prefix: "Kerberos", suffix: "LDAPConfig"},
 	{mount: "auth/kerberos", path: "groups"}:                                           {prefix: "Kerberos", suffix: "Groups"},
 	{mount: "auth/kerberos", path: "groups/{name}"}:                                    {prefix: "Kerberos", suffix: "Group"},
-	{mount: "auth/kerberos", path: "login"}:                                            {prefix: "Kerberos", suffix: "Login"},
+	{mount: "auth/kerberos", path: "login"}:                                            {prefix: "Kerberos", operation: "Login"},
 	{mount: "auth/kubernetes", path: "config"}:                                         {prefix: "Kubernetes", suffix: "AuthConfig"},
 	{mount: "auth/kubernetes", path: "login"}:                                          {prefix: "Kubernetes", operation: "Login"},
 	{mount: "auth/kubernetes", path: "role"}:                                           {prefix: "Kubernetes", suffix: "AuthRoles"},
