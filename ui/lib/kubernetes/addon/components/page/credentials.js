@@ -7,6 +7,15 @@ import { waitFor } from '@ember/test-waiters';
 import { add } from 'date-fns';
 import errorMessage from 'vault/utils/error-message';
 
+/**
+ * @module Credentials
+ * CredentialsPage component is a child component to show the generate and view
+ * credentials form.
+ *
+ * @param {string} roleName - role name as a string
+ * @param {string} backend - backend as a string
+ * @param {array} breadcrumbs - breadcrumbs as an array of objects that contain label and route
+ */
 export default class CredentialsPageComponent extends Component {
   @service store;
   @service router;

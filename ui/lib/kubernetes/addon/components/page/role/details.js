@@ -3,6 +3,14 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 
+/**
+ * @module RoleDetailsPage
+ * RoleDetailsPage component is a child component for create and edit role pages.
+ *
+ * @param {object} model - role model that contains role record and backend
+ * @param {array} breadcrumbs - breadcrumbs as an array of objects that contain label and route
+ */
+
 export default class RoleDetailsPageComponent extends Component {
   @service router;
   @service flashMessages;

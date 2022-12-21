@@ -4,7 +4,16 @@ import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
 
-export default class ConfigurePageComponent extends Component {
+/**
+ * @module Roles
+ * RolesPage component is a child component to show list of roles
+ *
+ * @param {array} roles - array of roles
+ * @param {object} config - config model that contains kubernetes configuration
+ * @param {array} pageFilter - array of filtered roles
+ * @param {array} breadcrumbs - breadcrumbs as an array of objects that contain label and route
+ */
+export default class RolesPageComponent extends Component {
   @service flashMessages;
 
   get mountPoint() {

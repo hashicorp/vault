@@ -8,6 +8,13 @@ import { getRules } from '../../../utils/generated-role-rules';
 import { htmlSafe } from '@ember/template';
 import errorMessage from 'vault/utils/error-message';
 
+/**
+ * @module CreateAndEditRolePage
+ * CreateAndEditRolePage component is a child component for create and edit role pages.
+ *
+ * @param {object} model - role model that contains role record and backend
+ */
+
 export default class CreateAndEditRolePageComponent extends Component {
   @service router;
   @service flashMessages;
