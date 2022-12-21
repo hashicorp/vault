@@ -386,16 +386,18 @@ func parseHashFn(hashFn string) (hash.Hash, error) {
 	}
 }
 
+// checkKeyFieldsSet: Checks which key fields are set. If both are set, an error is returned
 func checkKeyFieldsSet(d *framework.FieldData) (bool, error) {
-	isCiphertextSet := true
-	if !isFieldSet("ciphertext", d) {
-		isCiphertextSet = false
-		if !isFieldSet("public_key", d) {
-			return isCiphertextSet, errors.New("one of the following fields, ciphertext or public_key, has to be set")
-		}
-	}
+	ciphertextSet := isFieldSet("ciphertext", d)
+	publicKeySet := isFieldSet("publicKey", d)
 
-	return isCiphertextSet, nil
+	if ciphertextSet && publicKeySet {
+		return false, errors.New("only one of the following fields, ciphertext and public_key, can be set")
+	} else if ciphertextSet {
+		return true, nil
+	} else {
+		return false, nil
+	}
 }
 
 func isFieldSet(fieldName string, d *framework.FieldData) bool {
