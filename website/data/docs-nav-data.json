@@ -549,6 +549,10 @@
           {
             "title": "Overview",
             "path": "commands/pki"
+          },
+          {
+            "title": "<code>health-check</code>",
+            "path": "commands/pki/health-check"
           }
         ]
       },
