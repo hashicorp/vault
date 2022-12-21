@@ -26,6 +26,7 @@ type tidyConfig struct {
 	RevokedCerts       bool          `json:"tidy_revoked_certs"`
 	IssuerAssocs       bool          `json:"tidy_revoked_cert_issuer_associations"`
 	ExpiredIssuers     bool          `json:"tidy_expired_issuers"`
+	BackupBundle       bool          `json:"tidy_move_legacy_ca_bundle"`
 	SafetyBuffer       time.Duration `json:"safety_buffer"`
 	IssuerSafetyBuffer time.Duration `json:"issuer_safety_buffer"`
 	PauseDuration      time.Duration `json:"pause_duration"`
@@ -38,6 +39,7 @@ var defaultTidyConfig = tidyConfig{
 	RevokedCerts:       false,
 	IssuerAssocs:       false,
 	ExpiredIssuers:     false,
+	BackupBundle:       false,
 	SafetyBuffer:       72 * time.Hour,
 	IssuerSafetyBuffer: 365 * 24 * time.Hour,
 	PauseDuration:      0 * time.Second,
@@ -122,6 +124,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool) || d.Get("tidy_revocation_list").(bool)
 	tidyRevokedAssocs := d.Get("tidy_revoked_cert_issuer_associations").(bool)
 	tidyExpiredIssuers := d.Get("tidy_expired_issuers").(bool)
+	tidyBackupBundle := d.Get("tidy_move_legacy_ca_bundle").(bool)
 	issuerSafetyBuffer := d.Get("issuer_safety_buffer").(int)
 	pauseDurationStr := d.Get("pause_duration").(string)
 	pauseDuration := 0 * time.Second
@@ -157,6 +160,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		RevokedCerts:       tidyRevokedCerts,
 		IssuerAssocs:       tidyRevokedAssocs,
 		ExpiredIssuers:     tidyExpiredIssuers,
+		BackupBundle:       tidyBackupBundle,
 		SafetyBuffer:       bufferDuration,
 		IssuerSafetyBuffer: issuerBufferDuration,
 		PauseDuration:      pauseDuration,
@@ -184,8 +188,8 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	b.startTidyOperation(req, config)
 
 	resp := &logical.Response{}
-	if !tidyCertStore && !tidyRevokedCerts && !tidyRevokedAssocs && !tidyExpiredIssuers {
-		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true or tidy_revoked_cert_issuer_associations=true or tidy_expired_issuers=true to start a tidy operation.")
+	if !tidyCertStore && !tidyRevokedCerts && !tidyRevokedAssocs && !tidyExpiredIssuers && !tidyBackupBundle {
+		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true or tidy_revoked_cert_issuer_associations=true or tidy_expired_issuers=true or tidy_move_legacy_ca_bundle=true to start a tidy operation.")
 	} else {
 		resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
 	}
@@ -225,6 +229,12 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 
 			if config.ExpiredIssuers {
 				if err := b.doTidyExpiredIssuers(ctx, req, logger, config); err != nil {
+					return err
+				}
+			}
+
+			if config.BackupBundle {
+				if err := b.doTidyMoveCABundle(ctx, req, logger, config); err != nil {
 					return err
 				}
 			}
@@ -565,6 +575,68 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 	return nil
 }
 
+func (b *backend) doTidyMoveCABundle(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		b.Logger().Debug("skipping moving the legacy CA bundle as we're not on the primary or secondary with a local mount")
+		return nil
+	}
+
+	// Short-circuit to avoid moving the legacy bundle from under a legacy
+	// mount.
+	if b.useLegacyBundleCaStorage() {
+		return nil
+	}
+
+	// If we've already run, exit.
+	_, bundle, err := getLegacyCertBundle(ctx, req.Storage)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the legacy CA bundle: %w", err)
+	}
+
+	if bundle == nil {
+		b.Logger().Debug("No legacy CA bundle available; nothing to do.")
+		return nil
+	}
+
+	log, err := getLegacyBundleMigrationLog(ctx, req.Storage)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the legacy bundle migration log: %w", err)
+	}
+
+	if log == nil {
+		return fmt.Errorf("refusing to tidy with an empty legacy migration log but present CA bundle: %w", err)
+	}
+
+	now := time.Now()
+	afterBuffer := now.Add(-1 * config.IssuerSafetyBuffer)
+
+	if log.Created.After(afterBuffer) {
+		b.Logger().Debug("Migration was created too recently to remove the legacy bundle; refusing to move legacy CA bundle to backup location.")
+		return nil
+	}
+
+	// Do the write before the delete.
+	entry, err := logical.StorageEntryJSON(legacyCertBundleBackupPath, bundle)
+	if err != nil {
+		return fmt.Errorf("failed to create new backup storage entry: %w", err)
+	}
+
+	err = req.Storage.Put(ctx, entry)
+	if err != nil {
+		return fmt.Errorf("failed to write new backup legacy CA bundle: %w", err)
+	}
+
+	err = req.Storage.Delete(ctx, legacyCertBundlePath)
+	if err != nil {
+		return fmt.Errorf("failed to remove old legacy CA bundle path: %w", err)
+	}
+
+	b.Logger().Info("legacy CA bundle successfully moved to backup location")
+
+	return nil
+}
+
 func (b *backend) pathTidyCancelWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if atomic.LoadUint32(b.tidyCASGuard) == 0 {
 		resp := &logical.Response{}
@@ -600,6 +672,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"tidy_revoked_certs":                    nil,
 			"tidy_revoked_cert_issuer_associations": nil,
 			"tidy_expired_issuers":                  nil,
+			"tidy_move_legacy_ca_bundle":            nil,
 			"pause_duration":                        nil,
 			"state":                                 "Inactive",
 			"error":                                 nil,
@@ -624,6 +697,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["tidy_revoked_certs"] = b.tidyStatus.tidyRevokedCerts
 	resp.Data["tidy_revoked_cert_issuer_associations"] = b.tidyStatus.tidyRevokedAssocs
 	resp.Data["tidy_expired_issuers"] = b.tidyStatus.tidyExpiredIssuers
+	resp.Data["tidy_move_legacy_ca_bundle"] = b.tidyStatus.tidyBackupBundle
 	resp.Data["pause_duration"] = b.tidyStatus.pauseDuration
 	resp.Data["time_started"] = b.tidyStatus.timeStarted
 	resp.Data["message"] = b.tidyStatus.message
@@ -677,6 +751,7 @@ func (b *backend) pathConfigAutoTidyRead(ctx context.Context, req *logical.Reque
 			"tidy_revoked_certs":                    config.RevokedCerts,
 			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
 			"tidy_expired_issuers":                  config.ExpiredIssuers,
+			"tidy_move_legacy_ca_bundle":            config.BackupBundle,
 			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
 			"issuer_safety_buffer":                  int(config.IssuerSafetyBuffer / time.Second),
 			"pause_duration":                        config.PauseDuration.String(),
@@ -743,8 +818,12 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		}
 	}
 
-	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs || config.ExpiredIssuers) {
-		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations)."), nil
+	if backupBundle, ok := d.GetOk("tidy_move_legacy_ca_bundle"); ok {
+		config.BackupBundle = backupBundle.(bool)
+	}
+
+	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs || config.ExpiredIssuers || config.BackupBundle) {
+		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_move_legacy_ca_bundle)."), nil
 	}
 
 	if err := sc.writeAutoTidyConfig(config); err != nil {
@@ -759,6 +838,7 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 			"tidy_revoked_certs":                    config.RevokedCerts,
 			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
 			"tidy_expired_issuers":                  config.ExpiredIssuers,
+			"tidy_move_legacy_ca_bundle":            config.BackupBundle,
 			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
 			"issuer_safety_buffer":                  int(config.IssuerSafetyBuffer / time.Second),
 			"pause_duration":                        config.PauseDuration.String(),
@@ -777,6 +857,7 @@ func (b *backend) tidyStatusStart(config *tidyConfig) {
 		tidyRevokedCerts:   config.RevokedCerts,
 		tidyRevokedAssocs:  config.IssuerAssocs,
 		tidyExpiredIssuers: config.ExpiredIssuers,
+		tidyBackupBundle:   config.BackupBundle,
 		pauseDuration:      config.PauseDuration.String(),
 
 		state:       tidyStatusStarted,
@@ -905,6 +986,9 @@ The result includes the following fields:
 * 'cert_store_deleted_count': The number of certificate storage entries deleted
 * 'revoked_cert_deleted_count': The number of revoked certificate entries deleted
 * 'missing_issuer_cert_count': The number of revoked certificates which were missing a valid issuer reference
+* 'tidy_expired_issuers': the value of this parameter when initiating the tidy operation
+* 'issuer_safety_buffer': the value of this parameter when initiating the tidy operation
+* 'tidy_move_legacy_ca_bundle': the value of this parameter when initiating the tidy operation
 `
 
 const pathConfigAutoTidySyn = `
