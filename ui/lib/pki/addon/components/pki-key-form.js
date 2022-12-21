@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module PkiKeyForm
@@ -20,7 +21,6 @@ import errorMessage from 'vault/utils/error-message';
  */
 
 export default class PkiKeyForm extends Component {
-  @service store;
   @service flashMessages;
 
   @tracked errorBanner;
@@ -28,6 +28,7 @@ export default class PkiKeyForm extends Component {
   @tracked modelValidations;
 
   @task
+  @waitFor
   *save(event) {
     event.preventDefault();
     try {
