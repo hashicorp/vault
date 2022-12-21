@@ -200,7 +200,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		// copies and hashing of data only to elide it later. In the raw case, we need to do it here.
 		if elideListResponseData && resp.Data != nil {
 			// Copy the data map before making changes, but we only need to go one level deep in this case
-			respData := make(map[string]interface{}, len(resp.Data))
+			respData = make(map[string]interface{}, len(resp.Data))
 			for k, v := range resp.Data {
 				respData[k] = v
 			}
