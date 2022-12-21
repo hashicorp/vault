@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -983,6 +984,17 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					// callback is absent because this is an unauthenticated method
 					Summary: "Lists enabled feature flags.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"feature_flags": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-feature-flags"][0]),
@@ -994,6 +1006,23 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIMountsRead,
 					Summary:  "Lists all enabled and visible auth and secrets mounts.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"secret": {
+									Description: "secret mounts",
+									Type:        framework.TypeMap,
+									Required:    true,
+								},
+								"auth": {
+									Description: "auth mounts",
+									Type:        framework.TypeMap,
+									Required:    true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
@@ -1011,6 +1040,61 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIMountRead,
 					Summary:  "Return information about the given mount.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"type": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"description": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"accessor": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"local": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"seal_wrap": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"external_entropy_access": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"options": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+								"uuid": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"plugin_version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"running_plugin_version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"running_sha256": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"path": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
