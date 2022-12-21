@@ -3,6 +3,7 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 export default class PkiKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
+
   _baseUrl(backend, id) {
     const url = `${this.buildURL()}/${encodePath(backend)}`;
     if (id) {
@@ -23,7 +24,14 @@ export default class PkiKeyAdapter extends ApplicationAdapter {
       return resp;
     });
   }
-
+    
+  updateRecord(store, type, snapshot) {
+    const { record } = snapshot;
+    const { key_name } = this.serialize(snapshot);
+    const url = this._baseUrl(record.backend, record.id);
+    return this.ajax(url, 'POST', { data: { key_name } });
+  }
+    
   query(store, type, query) {
     const { backend } = query;
     return this.ajax(this._baseUrl(backend), 'GET', { data: { list: true } });
