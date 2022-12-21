@@ -176,6 +176,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.mountPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.authPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.lockedUserPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.leasePaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.policyPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.wrappingPaths()...)
@@ -191,11 +192,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
 	}
-
 	if backend := core.getRaftBackend(); backend != nil {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
@@ -1187,10 +1188,12 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Version:               pluginVersion,
 	}
 
-	// Detect and handle deprecated secrets engines
-	resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
-	if err != nil {
-		return handleError(err)
+	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets) {
+		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
+		if err != nil {
+			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
+			return handleError(fmt.Errorf("could not mount %q: %w", me.Type, err))
+		}
 	}
 
 	// Attempt mount
@@ -2202,6 +2205,57 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	return resp, nil
 }
 
+// handleUnlockUser is used to unlock user with given mount_accessor and alias_identifier if locked
+func (b *SystemBackend) handleUnlockUser(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	mountAccessor := data.Get("mount_accessor").(string)
+	if mountAccessor == "" {
+		return logical.ErrorResponse(
+				"missing mount_accessor"),
+			logical.ErrInvalidRequest
+	}
+
+	aliasName := data.Get("alias_identifier").(string)
+	if aliasName == "" {
+		return logical.ErrorResponse(
+				"missing alias_identifier"),
+			logical.ErrInvalidRequest
+	}
+
+	if err := unlockUser(ctx, b.Core, mountAccessor, aliasName); err != nil {
+		b.Backend.Logger().Error("unlock user failed", "mount accessor", mountAccessor, "alias identifier", aliasName, "error", err)
+		return handleError(err)
+	}
+
+	return nil, nil
+}
+
+// unlockUser deletes the entry for locked user from storage and userFailedLoginInfo map
+func unlockUser(ctx context.Context, core *Core, mountAccessor string, aliasName string) error {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	lockedUserStoragePath := coreLockedUsersPath + ns.ID + "/" + mountAccessor + "/" + aliasName
+
+	// remove entry for locked user from storage
+	if err := core.barrier.Delete(ctx, lockedUserStoragePath); err != nil {
+		return err
+	}
+
+	loginUserInfoKey := FailedLoginUser{
+		aliasName:     aliasName,
+		mountAccessor: mountAccessor,
+	}
+
+	// remove entry for locked user from userFailedLoginInfo map
+	if err := updateUserFailedLoginInfo(ctx, core, loginUserInfoKey, nil, true); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // handleLease is use to view the metadata for a given LeaseID
 func (b *SystemBackend) handleLeaseLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	leaseID := data.Get("lease_id").(string)
@@ -2616,9 +2670,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		Version:               pluginVersion,
 	}
 
-	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
-	if err != nil {
-		return handleError(err)
+	var resp *logical.Response
+	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential) {
+		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
+		if err != nil {
+			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
+			return handleError(fmt.Errorf("could not mount %q: %w", me.Type, err))
+		}
 	}
 
 	// Attempt enabling
@@ -4302,17 +4360,22 @@ func (b *SystemBackend) pathInternalCountersEntities(ctx context.Context, req *l
 }
 
 func (b *SystemBackend) pathInternalInspectRouter(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	tag := d.Get("tag").(string)
-	inspectableRouter, err := b.Core.router.GetRecords(tag)
-	if err != nil {
-		return nil, err
+	b.Core.introspectionEnabledLock.Lock()
+	defer b.Core.introspectionEnabledLock.Unlock()
+	if b.Core.introspectionEnabled {
+		tag := d.Get("tag").(string)
+		inspectableRouter, err := b.Core.router.GetRecords(tag)
+		if err != nil {
+			return nil, err
+		}
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				tag: inspectableRouter,
+			},
+		}
+		return resp, nil
 	}
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			tag: inspectableRouter,
-		},
-	}
-	return resp, nil
+	return logical.ErrorResponse(ErrIntrospectionNotEnabled.Error()), nil
 }
 
 func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -5287,6 +5350,27 @@ the auth path.`,
 		"Tune backend configuration parameters for this mount.",
 		`Read and write the 'default-lease-ttl' and 'max-lease-ttl' values of
 the mount.`,
+	},
+
+	"unlock_user": {
+		"Unlock the locked user with given mount_accessor and alias_identifier.",
+		`
+This path responds to the following HTTP methods.
+    POST sys/lockedusers/:mount_accessor/unlock/:alias_identifier
+		Unlocks the user with given mount_accessor and alias_identifier
+		if locked.`,
+	},
+
+	"mount_accessor": {
+		"MountAccessor is the identifier of the mount entry to which the user belongs",
+		"",
+	},
+
+	"alias_identifier": {
+		`It is the name of the alias (user). For example, if the alias belongs to userpass backend, 
+	   the name should be a valid username within userpass auth method. If the alias belongs
+	    to an approle auth method, the name should be a valid RoleID`,
+		"",
 	},
 
 	"renew": {
