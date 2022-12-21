@@ -2,7 +2,6 @@ package framework
 
 import (
 	"fmt"
-	pathutil "path"
 	"reflect"
 	"regexp"
 	"sort"
@@ -267,7 +266,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, mountPathWithPrefix stri
 		pathFields, bodyFields := splitFields(p.Fields, path)
 
 		if mountPathWithPrefix != "sys" && mountPathWithPrefix != "identity" {
-			defaultMountPath := pathutil.Base(mountPathWithPrefix)
+			defaultMountPath := mountPathWithPrefix[strings.LastIndex(mountPathWithPrefix, "/")+1:]
 			if defaultMountPath == "kv" {
 				defaultMountPath = "secret"
 			}
