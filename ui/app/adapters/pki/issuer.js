@@ -52,4 +52,9 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     const { backend, id } = query;
     return this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
   }
+
+  queryRecord(store, type, query) {
+    const { backend, id } = query;
+    return this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
+  }
 }

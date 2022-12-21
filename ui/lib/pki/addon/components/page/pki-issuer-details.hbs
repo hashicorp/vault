@@ -20,16 +20,32 @@
         Sign Intermediate
       </ToolbarLink>
     {{/if}}
-    <DownloadButton
-      class="toolbar-link"
-      @filename={{@issuer.id}}
-      @data={{@issuer.certificate}}
-      @extension="pem"
-      data-test-issuer-download
-    >
-      Download
-      <Chevron @direction="down" @isButton={{true}} />
-    </DownloadButton>
+    <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+      <D.Trigger class={{concat "toolbar-link" (if D.isOpen " is-active")}} @htmlTag="button" data-test-issuer-download>
+        Download
+        <Chevron @direction="down" @isButton={{true}} />
+      </D.Trigger>
+      <D.Content @defaultClass="popup-menu-content">
+        <nav class="box menu" aria-label="download options">
+          <ul class="menu-list">
+            <li class="action">
+              <button
+                type="button"
+                class="link link-plain has-text-weight-semibold is-ghost"
+                {{on "click" (fn this.downloadCert D "pem")}}
+              >PEM</button>
+            </li>
+            <li class="action">
+              <button
+                type="button"
+                class="link link-plain has-text-weight-semibold is-ghost"
+                {{on "click" (fn this.downloadCert D "der")}}
+              >DER</button>
+            </li>
+          </ul>
+        </nav>
+      </D.Content>
+    </BasicDropdown>
     {{#if @canConfigure}}
       <ToolbarLink @route="issuers.issuer.edit" @issuer={{@issuer.id}} data-test-pki-issuer-configure>
         Configure
