@@ -34,7 +34,7 @@ URLs and providing the {{cluster_aia_path}} template parameter and will not
 be used for other purposes. As such, unlike path above, this could safely
 be an insecure transit mechanism (like HTTP without TLS).
 
-For example: http://cdn.example.com:8200/pr1/pki`,
+For example: http://cdn.example.com/pr1/pki`,
 			},
 		},
 
