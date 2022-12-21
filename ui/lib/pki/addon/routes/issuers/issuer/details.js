@@ -1,23 +1,9 @@
-import PkiIssuersIndexRoute from '../index';
+import PkiIssuerIndexRoute from './index';
 
-export default class PkiIssuerDetailsRoute extends PkiIssuersIndexRoute {
-  model() {
-    const { issuer_ref } = this.paramsFor('issuers/issuer');
-    return this.store.queryRecord('pki/issuer', {
-      backend: this.secretMountPath.currentPath,
-      id: issuer_ref,
-    });
-  }
-
+export default class PkiIssuerDetailsRoute extends PkiIssuerIndexRoute {
+  // Details route gets issuer data from PkiIssuerIndexRoute
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    const { id } = resolvedModel;
-    const backend = this.secretMountPath.currentPath || 'pki';
-    controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: backend, route: 'overview' },
-      { label: 'issuers', route: 'issuers.index' },
-      { label: id },
-    ];
+    controller.breadcrumbs.push({ label: resolvedModel.id });
   }
 }

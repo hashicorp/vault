@@ -1,20 +1,8 @@
+import PkiCertificateBaseModel from './certificate/base';
 import { attr } from '@ember-data/model';
-import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import PkiCertificateBaseModel from './certificate/base';
 
-const validations = {
-  name: [
-    { type: 'presence', message: 'Name is required.' },
-    {
-      type: 'containsWhiteSpace',
-      message: 'Name cannot contain whitespace.',
-    },
-  ],
-};
-
-@withModelValidations(validations)
 @withFormFields(null, [
   {
     default: [
@@ -25,16 +13,18 @@ const validations = {
       'notValidBefore',
       'serialNumber',
       'keyId',
-      'allowedUriSans',
+      'uriSans',
       'notValidAfter',
     ],
   },
-  { 'Issuer URLs': ['issuingCertificates', 'crlDistributionPoints', 'ocspServers'] },
+  { 'Issuer URLs': ['issuingCertificates', 'crlDistributionPoints', 'ocspServers', 'deltaCrlUrls'] },
 ])
 export default class PkiIssuerModel extends PkiCertificateBaseModel {
   getHelpUrl(backend) {
     return `/v1/${backend}/issuer/example?help=1`;
   }
+
+  @attr('string') issuerId;
   @attr('string', { displayType: 'masked' }) certificate;
   @attr('string', { displayType: 'masked', label: 'CA Chain' }) caChain;
   @attr('date', {
@@ -50,22 +40,28 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   @attr({
     label: 'Subject Alternative Names',
   })
-  allowedUriSans;
+  uriSans;
 
-  @lazyCapabilities(apiPath`${'backend'}/issuer`) issuerPath;
+  @lazyCapabilities(apiPath`${'backend'}/issuer/${'issuerId'}`) issuerPath;
+  @lazyCapabilities(apiPath`${'backend'}/root/rotate/exported`) rotateExported;
+  @lazyCapabilities(apiPath`${'backend'}/root/rotate/internal`) rotateInternal;
+  @lazyCapabilities(apiPath`${'backend'}/root/rotate/existing`) rotateExisting;
+  @lazyCapabilities(apiPath`${'backend'}/intermediate/cross-sign`) crossSignPath;
+  @lazyCapabilities(apiPath`${'backend'}/issuer/${'issuerId'}/sign-intermediate`) signIntermediate;
   get canRotateIssuer() {
-    return true;
+    return (
+      this.rotateExported.get('canUpdate') !== false ||
+      this.rotateExisting.get('canUpdate') !== false ||
+      this.rotateInternal.get('canUpdate') !== false
+    );
   }
-
   get canCrossSign() {
-    return true;
+    return this.crossSignPath.get('canUpdate') !== false;
   }
-
   get canSignIntermediate() {
-    return true;
+    return this.signIntermediate.get('canUpdate') !== false;
   }
-
   get canConfigure() {
-    return true;
+    return this.issuerPath.get('canUpdate') !== false;
   }
 }

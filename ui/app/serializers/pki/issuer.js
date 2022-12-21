@@ -19,9 +19,9 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
   normalizeItems(payload) {
     if (payload.data) {
       if (payload.data?.keys && Array.isArray(payload.data.keys)) {
-        return payload.data.keys.map((issuerRef) => ({
-          issuer_id: issuerRef,
-          ...payload.data.key_info[issuerRef],
+        return payload.data.keys.map((issuer_id) => ({
+          issuer_id,
+          ...payload.data.key_info[issuer_id],
         }));
       }
       Object.assign(payload, payload.data);
