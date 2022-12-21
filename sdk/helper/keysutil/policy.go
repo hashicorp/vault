@@ -1987,7 +1987,8 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 	switch parsedPrivateKey.(type) {
 	case *ecdsa.PrivateKey:
 		ecdsaKey := parsedPrivateKey.(*ecdsa.PrivateKey)
-		publicKey, err := x509.ParsePKIXPublicKey([]byte(keyEntry.FormattedPublicKey))
+		pemBlock, _ := pem.Decode([]byte(keyEntry.FormattedPublicKey))
+		publicKey, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
 		if err != nil {
 			return fmt.Errorf("failed to parse key entry public key: %v", err)
 		}
