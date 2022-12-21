@@ -31,12 +31,14 @@ variable "vault_root_token" {
 
 variable "vault_autopilot_upgrade_version" {
   type        = string
-  description = "The Vault upgraded version"
+  description = "The vault version to which autopilot upgraded Vault"
+  default     = null
 }
 
-variable "vault_autopilot_upgrade_status" {
+variable "vault_undo_logs_status" {
   type        = string
-  description = "The autopilot upgrade expected status"
+  description = "An integer either 0 or 1 which indicates whether undo_logs are disabled or enabled"
+  default     = null
 }
 
 locals {
@@ -48,15 +50,17 @@ locals {
   }
 }
 
-resource "enos_remote_exec" "smoke-verify-autopilot" {
+resource "enos_remote_exec" "smoke-verify-undo-logs" {
   for_each = local.public_ips
 
-  content = templatefile("${path.module}/templates/smoke-verify-autopilot.sh", {
-    vault_install_dir               = var.vault_install_dir
-    vault_token                     = var.vault_root_token
-    vault_autopilot_upgrade_status  = var.vault_autopilot_upgrade_status,
-    vault_autopilot_upgrade_version = var.vault_autopilot_upgrade_version,
-  })
+  environment = {
+    VAULT_TOKEN                     = var.vault_root_token
+    VAULT_ADDR                      = "http://localhost:8200"
+    vault_undo_logs_status          = var.vault_undo_logs_status
+    vault_autopilot_upgrade_version = var.vault_autopilot_upgrade_version
+  }
+
+  scripts = [abspath("${path.module}/scripts/smoke-verify-undo-logs.sh")]
 
   transport = {
     ssh = {
