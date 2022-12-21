@@ -183,22 +183,6 @@ scenario "autopilot" {
     }
   }
 
-  step "verify_autopilot_upgraded_vault_cluster" {
-    module     = module.vault_verify_autopilot
-    depends_on = [step.upgrade_vault_cluster_with_autopilot]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_install_dir               = local.vault_install_dir
-      vault_instances                 = step.create_vault_cluster.vault_instances
-      vault_root_token                = step.create_vault_cluster.vault_root_token
-    }
-  }
-
   step "verify_vault_unsealed" {
     module = module.vault_verify_unsealed
     depends_on = [
@@ -220,8 +204,8 @@ scenario "autopilot" {
   step "verify_raft_auto_join_voter" {
     module = module.vault_verify_raft_auto_join_voter
     depends_on = [
-      step.create_vault_cluster,
       step.upgrade_vault_cluster_with_autopilot,
+      step.verify_vault_unsealed
     ]
 
     providers = {
@@ -235,11 +219,11 @@ scenario "autopilot" {
     }
   }
 
-  step "verify_undo_logs_status" {
-    skip_step = semverconstraint(var.vault_product_version, "<1.12.0-0")
-    module    = module.vault_verify_undo_logs
+  step "verify_autopilot_upgraded_vault_cluster" {
+    module = module.vault_verify_autopilot
     depends_on = [
       step.upgrade_vault_cluster_with_autopilot,
+      step.verify_vault_unsealed
     ]
 
     providers = {
@@ -247,6 +231,28 @@ scenario "autopilot" {
     }
 
     variables {
+      vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_autopilot_upgrade_status  = "await-server-removal"
+      vault_install_dir               = local.vault_install_dir
+      vault_instances                 = step.create_vault_cluster.vault_instances
+      vault_root_token                = step.create_vault_cluster.vault_root_token
+    }
+  }
+
+  step "verify_undo_logs_status" {
+    skip_step = semverconstraint(var.vault_product_version, "<1.12.0-0")
+    module    = module.vault_verify_undo_logs
+    depends_on = [
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_vault_unsealed
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir               = local.vault_install_dir
       vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_undo_logs_status          = matrix.undo_logs_status
       vault_instances                 = step.upgrade_vault_cluster_with_autopilot.vault_instances
