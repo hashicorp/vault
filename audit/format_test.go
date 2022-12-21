@@ -112,11 +112,13 @@ func TestElideListResponses(t *testing.T) {
 	}
 
 	tests := []test{
-		{"nil data",
+		{
+			"nil data",
 			nil,
 			nil,
 		},
-		{"Normal list (keys only)",
+		{
+			"Normal list (keys only)",
 			map[string]interface{}{
 				"keys": []string{"foo", "bar", "baz"},
 			},
@@ -124,7 +126,8 @@ func TestElideListResponses(t *testing.T) {
 				"keys": 3,
 			},
 		},
-		{"Enhanced list (has key_info)",
+		{
+			"Enhanced list (has key_info)",
 			map[string]interface{}{
 				"keys": []string{"foo", "bar", "baz", "quux"},
 				"key_info": map[string]interface{}{
@@ -139,7 +142,8 @@ func TestElideListResponses(t *testing.T) {
 				"key_info": 4,
 			},
 		},
-		{"Unconventional other values in a list response are not touched",
+		{
+			"Unconventional other values in a list response are not touched",
 			map[string]interface{}{
 				"keys":           []string{"foo", "bar"},
 				"something_else": "baz",
@@ -149,7 +153,8 @@ func TestElideListResponses(t *testing.T) {
 				"something_else": "baz",
 			},
 		},
-		{"Conventional values in a list response are not elided if their data types are unconventional",
+		{
+			"Conventional values in a list response are not elided if their data types are unconventional",
 			map[string]interface{}{
 				"keys": map[string]interface{}{
 					"You wouldn't expect keys to be a map": nil,
@@ -170,8 +175,12 @@ func TestElideListResponses(t *testing.T) {
 	}
 	oneInterestingTestCase := tests[2]
 
-	formatResponse := func(t *testing.T, config FormatterConfig, operation logical.Operation, inputData map[string]interface {
-	}) {
+	formatResponse := func(
+		t *testing.T,
+		config FormatterConfig,
+		operation logical.Operation,
+		inputData map[string]interface{},
+	) {
 		err := formatter.FormatResponse(ctx, io.Discard, config, &logical.LogInput{
 			Request:  &logical.Request{Operation: operation},
 			Response: &logical.Response{Data: inputData},
