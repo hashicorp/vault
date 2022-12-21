@@ -526,6 +526,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"pki": func() (cli.Command, error) {
+			return &PKICommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki health-check": func() (cli.Command, error) {
+			return &PKIHealthCheckCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"plugin": func() (cli.Command, error) {
 			return &PluginCommand{
 				BaseCommand: getBaseCommand(),
@@ -795,11 +805,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 			return &MonitorCommand{
 				BaseCommand: getBaseCommand(),
 				ShutdownCh:  MakeShutdownCh(),
-			}, nil
-		},
-		"pki health-check": func() (cli.Command, error) {
-			return &PKIHealthCheckCommand{
-				BaseCommand: getBaseCommand(),
 			}, nil
 		},
 	}
