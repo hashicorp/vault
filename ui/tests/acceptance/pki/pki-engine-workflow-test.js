@@ -256,7 +256,7 @@ module('Acceptance | pki workflow', function (hooks) {
         .exists({ count: 9 }, 'Renders 9 info table items under default group');
       assert
         .dom(`${SELECTORS.issuerDetails.urlsGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 3 }, 'Renders 3 info table items under URLs group');
+        .exists({ count: 4 }, 'Renders 4 info table items under URLs group');
       assert.dom(SELECTORS.issuerDetails.groupTitle).exists({ count: 1 }, 'only 1 group title rendered');
     });
   });
