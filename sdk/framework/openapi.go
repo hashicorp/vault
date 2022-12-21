@@ -565,16 +565,18 @@ func constructRequestResponseIdentifier(operation logical.Operation, mount, path
 		if mapping.prefix != "" {
 			parts = append(parts, mapping.prefix)
 		}
+
 		if mapping.operation != "" {
 			parts = append(parts, mapping.operation)
 		} else {
 			parts = append(parts, nonWordRe.Split(strings.ToLower(operationStr), -1)...)
 		}
+
 		if mapping.suffix != "" {
 			parts = append(parts, mapping.suffix)
 		}
 	} else {
-		// Fall back to [mount][operation][path] split by non-word characters
+		// Else, fall back to [mount][operation][path] split by non-word characters
 		parts = append(parts, nonWordRe.Split(strings.ToLower(mount), -1)...)
 		parts = append(parts, nonWordRe.Split(strings.ToLower(operationStr), -1)...)
 		parts = append(parts, nonWordRe.Split(strings.ToLower(path), -1)...)
