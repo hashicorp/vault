@@ -230,4 +230,34 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.pageTitle).hasText(`PKI Role ${roleName}`);
     });
   });
+
+  module('issuers', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.login();
+      // Configure engine with a default issuer
+      await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
+      await logout.visit();
+    });
+    test('details view renders correct number of info items', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.dom(SELECTORS.issuersTab).exists('Issuers tab is present');
+      await click(SELECTORS.issuersTab);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
+      assert.dom('.linked-block').exists({ count: 1 }, 'One issuer is in list');
+      await click('.linked-block');
+      assert.ok(
+        currentURL().match(`/vault/secrets/${this.mountPath}/pki/issuers/.+/details`),
+        `/vault/secrets/${this.mountPath}/pki/issuers/my-issuer/details`
+      );
+      assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
+      assert
+        .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.row}`)
+        .exists({ count: 9 }, 'Renders 9 info table items under default group');
+      assert
+        .dom(`${SELECTORS.issuerDetails.urlsGroup} ${SELECTORS.issuerDetails.row}`)
+        .exists({ count: 4 }, 'Renders 4 info table items under URLs group');
+      assert.dom(SELECTORS.issuerDetails.groupTitle).exists({ count: 1 }, 'only 1 group title rendered');
+    });
+  });
 });
