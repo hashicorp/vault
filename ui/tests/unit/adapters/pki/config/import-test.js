@@ -19,8 +19,8 @@ module('Unit | Adapter | pki/config/import', function (hooks) {
   });
 
   test('it should make request to correct endpoint on create', async function (assert) {
-    assert.expect(4);
-    this.server.post(`${this.backend}/config/ca`, (url, { requestBody }) => {
+    assert.expect(2);
+    this.server.post(`${this.backend}/issuers/import/bundle`, (url, { requestBody }) => {
       assert.ok(true, `request made to correct endpoint ${url}`);
       assert.deepEqual(
         JSON.parse(requestBody),
@@ -31,27 +31,10 @@ module('Unit | Adapter | pki/config/import', function (hooks) {
         data: {},
       };
     });
-    this.server.post(`${this.backend}/intermediate/set-signed`, (url, { requestBody }) => {
-      assert.ok(true, `request made to correct endpoint ${url}`);
-      assert.deepEqual(
-        JSON.parse(requestBody),
-        { certificate: 'zyxwvut' },
-        'has correct payload for intermediate'
-      );
-      return {
-        data: {},
-      };
-    });
 
     await this.store
       .createRecord('pki/config/import', {
         pemBundle: 'abcdefg',
-      })
-      .save();
-
-    await this.store
-      .createRecord('pki/config/import', {
-        certificate: 'zyxwvut',
       })
       .save();
   });
