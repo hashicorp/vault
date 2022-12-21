@@ -9,10 +9,22 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
+
 <Page::PkiIssuerDetails
   @issuer={{this.model}}
+  @pem={{this.pem}}
+  @der={{this.der}}
   @canRotate={{this.model.canRotateIssuer}}
   @canCrossSign={{this.model.canCrossSign}}
   @canSignIntermediate={{this.model.canSignIntermediate}}
   @canConfigure={{this.model.canConfigure}}
 />
+{{!-- <Page::PkiIssuerDetails
+  @issuer={{this.model.issuer}}
+  @der={{this.model.der}}
+  @pem={{this.model.pem}}
+  @canRotate={{this.model.issuer.canRotateIssuer}}
+  @canCrossSign={{this.model.issuer.canCrossSign}}
+  @canSignIntermediate={{this.model.issuer.canSignIntermediate}}
+  @canConfigure={{this.model.issuer.canConfigure}}
+/> --}}

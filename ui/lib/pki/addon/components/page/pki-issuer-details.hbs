@@ -29,19 +29,27 @@
         <nav class="box menu" aria-label="download options">
           <ul class="menu-list">
             <li class="action">
-              <button
-                type="button"
+              <DownloadButton
                 class="link link-plain has-text-weight-semibold is-ghost"
-                {{on "click" (fn this.downloadCert D "pem")}}
-              >PEM</button>
+                @filename={{@issuer.id}}
+                @data={{or @pem @issuer.certificate}}
+                @extension="pem"
+              >
+                PEM
+              </DownloadButton>
             </li>
-            <li class="action">
-              <button
-                type="button"
-                class="link link-plain has-text-weight-semibold is-ghost"
-                {{on "click" (fn this.downloadCert D "der")}}
-              >DER</button>
-            </li>
+            {{#if @der}}
+              <li class="action">
+                <DownloadButton
+                  class="link link-plain has-text-weight-semibold is-ghost"
+                  @filename={{@issuer.id}}
+                  @data={{@der}}
+                  @extension="der"
+                >
+                  DER
+                </DownloadButton>
+              </li>
+            {{/if}}
           </ul>
         </nav>
       </D.Content>
