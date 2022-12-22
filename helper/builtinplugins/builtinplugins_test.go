@@ -4,10 +4,14 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
+	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -34,6 +38,9 @@ func TestBuiltinPluginsWork(t *testing.T) {
 				// As far as I can tell, nothing at all relies upon the definition of "kv" in builtinplugins.Registry,
 				// as it always gets resolved via the logicalBackends map and the pluginCatalog is never queried.
 				"kv": logicalKv.Factory,
+				// Semi-similarly, "database" is added in command.logicalBackends and not at all in
+				// builtinplugins.Registry, so we need to add it here to be able to test it!
+				"database": logicalDb.Factory,
 			},
 			Logger:                      logging.NewVaultLogger(hclog.Trace),
 			PendingRemovalMountsAllowed: true,
@@ -51,17 +58,23 @@ func TestBuiltinPluginsWork(t *testing.T) {
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 
-	for _, authType := range Registry.Keys(consts.PluginTypeCredential) {
-		deprecationStatus, ok := Registry.DeprecationStatus(authType, consts.PluginTypeCredential)
-		if !ok || deprecationStatus == consts.Removed {
+	for _, authType := range append(
+		builtinplugins.Registry.Keys(consts.PluginTypeCredential),
+		"token",
+	) {
+		deprecationStatus, _ := builtinplugins.Registry.DeprecationStatus(authType, consts.PluginTypeCredential)
+		if deprecationStatus == consts.Removed {
 			continue
 		}
 
 		t.Run("Auth Method "+authType, func(t *testing.T) {
-			if err := client.Sys().EnableAuthWithOptions(authType, &api.EnableAuthOptions{
-				Type: authType,
-			}); err != nil {
-				t.Fatal(err)
+			// This builtin backend is automatically mounted and should not be mounted again
+			if authType != "token" {
+				if err := client.Sys().EnableAuthWithOptions(authType, &api.EnableAuthOptions{
+					Type: authType,
+				}); err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			if _, err := client.Logical().ReadWithData(
@@ -73,17 +86,31 @@ func TestBuiltinPluginsWork(t *testing.T) {
 		})
 	}
 
-	for _, secretsType := range Registry.Keys(consts.PluginTypeSecrets) {
-		deprecationStatus, ok := Registry.DeprecationStatus(secretsType, consts.PluginTypeSecrets)
-		if !ok || deprecationStatus == consts.Removed {
+	for _, secretsType := range append(
+		builtinplugins.Registry.Keys(consts.PluginTypeSecrets),
+		"database",
+		"cubbyhole",
+		"identity",
+		"sys",
+	) {
+		deprecationStatus, _ := builtinplugins.Registry.DeprecationStatus(secretsType, consts.PluginTypeSecrets)
+		if deprecationStatus == consts.Removed {
 			continue
 		}
 
 		t.Run("Secrets Engine "+secretsType, func(t *testing.T) {
-			if err := client.Sys().Mount(secretsType, &api.MountInput{
-				Type: secretsType,
-			}); err != nil {
-				t.Fatal(err)
+			switch secretsType {
+			// These three builtin backends are automatically mounted and should not be mounted again
+			case "cubbyhole":
+			case "identity":
+			case "sys":
+
+			default:
+				if err := client.Sys().Mount(secretsType, &api.MountInput{
+					Type: secretsType,
+				}); err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			if _, err := client.Logical().ReadWithData(
