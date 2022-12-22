@@ -24,8 +24,18 @@ func TestBuiltinPluginsWork(t *testing.T) {
 	cluster := vault.NewTestCluster(
 		t,
 		&vault.CoreConfig{
+			BuiltinRegistry: builtinplugins.Registry,
+			LogicalBackends: map[string]logical.Factory{
+				// This needs to be here for madly overcomplicated reasons, otherwise we end up mounting a KV v1 even
+				// when we try to explicitly mount a KV v2...
+				//
+				// vault.NewCore hardcodes "kv" to vault.PassthroughBackendFactory if no explicit entry is configured,
+				// and this hardcoding is re-overridden in command.logicalBackends to point back to the real KV plugin.
+				// As far as I can tell, nothing at all relies upon the definition of "kv" in builtinplugins.Registry,
+				// as it always gets resolved via the logicalBackends map and the pluginCatalog is never queried.
+				"kv": logicalKv.Factory,
+			},
 			Logger:                      logging.NewVaultLogger(hclog.Trace),
-			BuiltinRegistry:             Registry,
 			PendingRemovalMountsAllowed: true,
 		},
 		&vault.TestClusterOptions{
@@ -84,4 +94,22 @@ func TestBuiltinPluginsWork(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Secrets Engine kv v2", func(t *testing.T) {
+		if err := client.Sys().Mount("kv-v2", &api.MountInput{
+			Type: "kv",
+			Options: map[string]string{
+				"version": "2",
+			},
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := client.Logical().ReadWithData(
+			"kv-v2",
+			map[string][]string{"help": {"1"}},
+		); err != nil {
+			t.Fatal(err)
+		}
+	})
 }
