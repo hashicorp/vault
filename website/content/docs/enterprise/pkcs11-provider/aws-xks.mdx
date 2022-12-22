@@ -29,7 +29,7 @@ There are 3 parts to this setup:
 1. Vault PKCS#11 setup to tell the PKCS#11 provider (`libvault-pkcs11.so`) how to talk to the Vault KMIP Secrets Engine. (There is nothing specific to XKS in this setup.)
 1. XKS Proxy setup.
 
-~> **Important**: XKS has a strict 200 ms latency requirement.
+~> **Important**: XKS has a strict 250 ms latency requirement.
 In order to serve requests with this latency, we recommend hosting Vault and the XKS proxy as close as possible
 to the desired KMS region.
 
