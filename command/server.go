@@ -2377,9 +2377,17 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		var seal vault.Seal
 		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 		c.allLoggers = append(c.allLoggers, sealLogger)
-		defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(),
-		})
+
+		var defaultSeal vault.Seal
+		if configSeal.Recovery {
+			defaultSeal = vault.NewRecoverySeal(&vaultseal.Access{
+				Wrapper: aeadwrapper.NewShamirWrapper(),
+			})
+		} else {
+			defaultSeal = vault.NewDefaultSeal(&vaultseal.Access{
+				Wrapper: aeadwrapper.NewShamirWrapper(),
+			})
+		}
 		var sealInfoKeys []string
 		sealInfoMap := map[string]string{}
 		wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)

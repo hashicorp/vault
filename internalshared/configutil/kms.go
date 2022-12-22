@@ -51,6 +51,7 @@ type KMS struct {
 	Purpose []string `hcl:"-"`
 
 	Disabled bool
+	Recovery bool
 	Config   map[string]string
 }
 
@@ -98,6 +99,14 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			}
 			delete(m, "disabled")
 		}
+		var recovery bool
+		if v, ok := m["recovery"]; ok {
+			recovery, err = parseutil.ParseBool(v)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
+			delete(m, "recovery")
+		}
 
 		strMap := make(map[string]string, len(m))
 		for k, v := range m {
@@ -112,6 +121,7 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			Type:     strings.ToLower(key),
 			Purpose:  purpose,
 			Disabled: disabled,
+			Recovery: recovery,
 		}
 		if len(strMap) > 0 {
 			seal.Config = strMap

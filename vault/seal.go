@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/hashicorp/go-multierror"
+
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 
@@ -42,6 +44,9 @@ const (
 
 	// StoredBarrierKeysPath is the path used for storing HSM-encrypted unseal keys
 	StoredBarrierKeysPath = "core/hsm/barrier-unseal-keys"
+
+	// StoredBarrierRecoveryKeysPath is the path to alternate barrier keys encrypted by the recovery split
+	StoredBarrierRecoveryKeysPath = "core/hsm/barrier-unseal-recovery-keys"
 
 	// hsmStoredIVPath is the path to the initialization vector for stored keys
 	hsmStoredIVPath = "core/hsm/iv"
@@ -76,9 +81,19 @@ type Seal interface {
 }
 
 type defaultSeal struct {
-	access *seal.Access
-	config atomic.Value
-	core   *Core
+	access   *seal.Access
+	config   atomic.Value
+	core     *Core
+	recovery bool
+}
+
+func NewRecoverySeal(lowLevel *seal.Access) Seal {
+	ret := &defaultSeal{
+		access:   lowLevel,
+		recovery: true,
+	}
+	ret.config.Store((*SealConfig)(nil))
+	return ret
 }
 
 func NewDefaultSeal(lowLevel *seal.Access) Seal {
@@ -141,7 +156,13 @@ func (d *defaultSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 	if d.LegacySeal() {
 		return fmt.Errorf("stored keys are not supported")
 	}
-	return writeStoredKeys(ctx, d.core.physical, d.access, keys)
+	var path string
+	if d.recovery {
+		path = StoredBarrierRecoveryKeysPath
+	} else {
+		path = StoredBarrierKeysPath
+	}
+	return writeStoredKeys(ctx, d.core.physical, d.access, keys, path)
 }
 
 func (d *defaultSeal) LegacySeal() bool {
@@ -156,7 +177,13 @@ func (d *defaultSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
 	if d.LegacySeal() {
 		return nil, fmt.Errorf("stored keys are not supported")
 	}
-	keys, err := readStoredKeys(ctx, d.core.physical, d.access)
+	var path string
+	if d.recovery {
+		path = StoredBarrierRecoveryKeysPath
+	} else {
+		path = StoredBarrierKeysPath
+	}
+	keys, err := readStoredKeys(ctx, d.core.physical, d.access, path)
 	return keys, err
 }
 
@@ -429,7 +456,7 @@ func (e *ErrDecrypt) Is(target error) bool {
 	return ok || errors.Is(e.Err, target)
 }
 
-func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access, keys [][]byte) error {
+func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access, keys [][]byte, path string) error {
 	if keys == nil {
 		return fmt.Errorf("keys were nil")
 	}
@@ -455,7 +482,7 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *s
 
 	// Store the seal configuration.
 	pe := &physical.Entry{
-		Key:   StoredBarrierKeysPath,
+		Key:   path,
 		Value: value,
 	}
 
@@ -466,8 +493,8 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *s
 	return nil
 }
 
-func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access) ([][]byte, error) {
-	pe, err := storage.Get(ctx, StoredBarrierKeysPath)
+func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access, path string) ([][]byte, error) {
+	pe, err := storage.Get(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch stored keys: %w", err)
 	}
@@ -478,17 +505,30 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *se
 		return nil, nil
 	}
 
-	blobInfo := &wrapping.BlobInfo{}
-	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
-		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
+	// Read as a multi-blob first
+	blobInfos := &wrapping.MultiBlobInfo{}
+	if err := proto.Unmarshal(pe.Value, blobInfos); err != nil {
+		blobInfo := &wrapping.BlobInfo{}
+
+		if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
+			return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
+		}
+		blobInfos.BlobInfos = []*wrapping.BlobInfo{blobInfo}
 	}
 
-	pt, err := encryptor.Decrypt(ctx, blobInfo, nil)
-	if err != nil {
-		if strings.Contains(err.Error(), "message authentication failed") {
-			return nil, &ErrInvalidKey{Reason: fmt.Sprintf("failed to decrypt keys from storage: %v", err)}
+	var pt []byte
+	for _, blobInfo := range blobInfos.BlobInfos {
+		pt, err = encryptor.Decrypt(ctx, blobInfo, nil)
+		if err != nil {
+			if strings.Contains(err.Error(), "message authentication failed") {
+				err = multierror.Append(err, &ErrInvalidKey{Reason: fmt.Sprintf("failed to decrypt keys from storage: %v", err)})
+			} else {
+				err = multierror.Append(err, &ErrDecrypt{Err: fmt.Errorf("failed to decrypt keys from storage: %w", err)})
+			}
 		}
-		return nil, &ErrDecrypt{Err: fmt.Errorf("failed to decrypt keys from storage: %w", err)}
+	}
+	if len(pt) == 0 {
+		return nil, err
 	}
 
 	// Decode the barrier entry

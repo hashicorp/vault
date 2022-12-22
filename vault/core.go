@@ -1382,7 +1382,7 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 	if migrate && c.isRaftUnseal() {
 		return fmt.Errorf("can't perform a seal migration while joining a raft cluster")
 	}
-	if !migrate && c.migrationInfo != nil {
+	if false && !migrate && c.migrationInfo != nil {
 		done, err := c.sealMigrated(ctx)
 		if err != nil {
 			return fmt.Errorf("error checking to see if seal is migrated: %w", err)
