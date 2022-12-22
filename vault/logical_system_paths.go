@@ -304,9 +304,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{
-								// TODO need to understand how we can find out all loggers
-							},
+							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary: "Read the log level for all existing loggers.",
@@ -314,7 +312,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersWrite,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 						}},
 					},
@@ -323,7 +321,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleLoggersDelete,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 						}},
 					},
@@ -350,9 +348,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{
-								// TODO need to understand how we can find out all loggers
-							},
+							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary: "Read the log level for a single logger.",
@@ -360,7 +356,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameWrite,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 						}},
 					},
@@ -369,7 +365,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameDelete,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 						}},
 					},
@@ -929,7 +925,6 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								// TODO set the dynamic plugin types
 								"detailed": {
 									Type: framework.TypeMap,
 								},
@@ -1418,7 +1413,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleRenew,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -1454,7 +1449,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleRevoke,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -1481,7 +1476,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleRevokeForce,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -1514,7 +1509,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleRevokePrefix,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -1534,7 +1529,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleTidyLeases,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -2027,7 +2022,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesSet(PolicyTypeACL),
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -2037,7 +2032,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesDelete(PolicyTypeACL),
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -2117,7 +2112,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesSet(PolicyTypeACL),
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -2127,7 +2122,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesDelete(PolicyTypeACL),
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -2210,7 +2205,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordSet,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -2220,7 +2215,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordGet,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"policy": {
@@ -2234,7 +2229,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordDelete,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -2469,16 +2464,12 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleMountTuneWrite,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 				},
-			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.handleMountTuneRead,
-				logical.UpdateOperation: b.handleMountTuneWrite,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["mount_tune"][0]),
@@ -2597,7 +2588,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleMount,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
@@ -2632,9 +2623,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{
-								// TODO not sure how to handle the dynamic key of entry.Path
-							},
+							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 				},
