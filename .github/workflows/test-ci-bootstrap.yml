@@ -7,13 +7,13 @@ on:
       - main
     paths:
       - enos/ci/**
-      - .github/workflows/enos-ci-bootstrap.yml
+      - .github/workflows/test-ci-bootstrap.yml
   push:
     branches:
       - main
     paths:
       - enos/ci/**
-      - .github/workflows/enos-ci-bootstrap.yml
+      - .github/workflows/test-ci-bootstrap.yml
 
 jobs:
   bootstrap-ci:
