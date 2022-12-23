@@ -1633,7 +1633,7 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 									Required: false,
 								},
 								"listing_visibility": {
-									Type:     framework.String,
+									Type:     framework.TypeString,
 									Required: false,
 								},
 								"passthrough_request_headers": {
