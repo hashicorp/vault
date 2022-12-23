@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"io"
 	"strings"
 
@@ -209,14 +210,19 @@ func (m *MongoDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest
 		db = "admin"
 	}
 
+	// Set the write concern. The default is majority.
+	writeConcern := writeconcern.New(writeconcern.WMajority())
 	opts, err := m.getWriteConcern()
 	if err != nil {
 		return dbplugin.DeleteUserResponse{}, err
 	}
+	if opts != nil {
+		writeConcern = opts.WriteConcern
+	}
 
 	dropUserCmd := &dropUserCommand{
 		Username:     req.Username,
-		WriteConcern: opts.WriteConcern,
+		WriteConcern: writeConcern,
 	}
 
 	err = m.runCommandWithRetry(ctx, db, dropUserCmd)
