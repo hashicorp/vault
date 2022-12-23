@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
@@ -210,9 +209,14 @@ func (m *MongoDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest
 		db = "admin"
 	}
 
+	opts, err := m.getWriteConcern()
+	if err != nil {
+		return dbplugin.DeleteUserResponse{}, err
+	}
+
 	dropUserCmd := &dropUserCommand{
 		Username:     req.Username,
-		WriteConcern: writeconcern.New(writeconcern.WMajority()),
+		WriteConcern: opts.WriteConcern,
 	}
 
 	err = m.runCommandWithRetry(ctx, db, dropUserCmd)
