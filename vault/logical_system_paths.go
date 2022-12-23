@@ -1632,6 +1632,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 									Type:     framework.TypeCommaStringSlice,
 									Required: false,
 								},
+								"listing_visibility": {
+									Type:     framework.String,
+									Required: false,
+								},
 								"passthrough_request_headers": {
 									Type:     framework.TypeCommaStringSlice,
 									Required: false,
