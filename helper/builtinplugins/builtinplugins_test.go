@@ -7,7 +7,6 @@ import (
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
-	"github.com/hashicorp/vault/helper/builtinplugins"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -28,7 +27,7 @@ func TestBuiltinPluginsWork(t *testing.T) {
 	cluster := vault.NewTestCluster(
 		t,
 		&vault.CoreConfig{
-			BuiltinRegistry: builtinplugins.Registry,
+			BuiltinRegistry: Registry,
 			LogicalBackends: map[string]logical.Factory{
 				// This needs to be here for madly overcomplicated reasons, otherwise we end up mounting a KV v1 even
 				// when we try to explicitly mount a KV v2...
@@ -59,10 +58,10 @@ func TestBuiltinPluginsWork(t *testing.T) {
 	client := cores[0].Client
 
 	for _, authType := range append(
-		builtinplugins.Registry.Keys(consts.PluginTypeCredential),
+		Registry.Keys(consts.PluginTypeCredential),
 		"token",
 	) {
-		deprecationStatus, _ := builtinplugins.Registry.DeprecationStatus(authType, consts.PluginTypeCredential)
+		deprecationStatus, _ := Registry.DeprecationStatus(authType, consts.PluginTypeCredential)
 		if deprecationStatus == consts.Removed {
 			continue
 		}
@@ -87,13 +86,13 @@ func TestBuiltinPluginsWork(t *testing.T) {
 	}
 
 	for _, secretsType := range append(
-		builtinplugins.Registry.Keys(consts.PluginTypeSecrets),
+		Registry.Keys(consts.PluginTypeSecrets),
 		"database",
 		"cubbyhole",
 		"identity",
 		"sys",
 	) {
-		deprecationStatus, _ := builtinplugins.Registry.DeprecationStatus(secretsType, consts.PluginTypeSecrets)
+		deprecationStatus, _ := Registry.DeprecationStatus(secretsType, consts.PluginTypeSecrets)
 		if deprecationStatus == consts.Removed {
 			continue
 		}
