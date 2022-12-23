@@ -54,8 +54,7 @@ jobs:
 
   save-metadata:
     runs-on: linux
-    needs: [test]
-    if: ${{ startsWith(github.event.action, 'enos-release-testing-oss') || failure() }}
+    needs: test
     steps:
       - name: Persist metadata
         uses: hashicorp/actions-persist-metadata@v1
