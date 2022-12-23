@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"io"
 	"strings"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
