@@ -18,75 +18,6 @@ import (
 )
 
 func TestOpenAPI_Regex(t *testing.T) {
-	t.Run("Required", func(t *testing.T) {
-		tests := []struct {
-			input    string
-			captures []string
-		}{
-			{`/foo/bar/(?P<val>.*)`, []string{"val"}},
-			{`/foo/bar/` + GenericNameRegex("val"), []string{"val"}},
-			{`/foo/bar/` + GenericNameRegex("first") + "/b/" + GenericNameRegex("second"), []string{"first", "second"}},
-			{`/foo/bar`, []string{}},
-		}
-
-		for _, test := range tests {
-			result := reqdRe.FindAllStringSubmatch(test.input, -1)
-			if len(result) != len(test.captures) {
-				t.Fatalf("Capture error (%s): expected %d matches, actual: %d", test.input, len(test.captures), len(result))
-			}
-
-			for i := 0; i < len(result); i++ {
-				if result[i][1] != test.captures[i] {
-					t.Fatalf("Capture error (%s): expected %s, actual: %s", test.input, test.captures[i], result[i][1])
-				}
-			}
-		}
-	})
-	t.Run("Optional", func(t *testing.T) {
-		input := "foo/(maybe/)?bar"
-		expStart := len("foo/")
-		expEnd := len(input) - len("bar")
-
-		match := optRe.FindStringIndex(input)
-		if diff := deep.Equal(match, []int{expStart, expEnd}); diff != nil {
-			t.Fatal(diff)
-		}
-
-		input = "/foo/maybe/bar"
-		match = optRe.FindStringIndex(input)
-		if match != nil {
-			t.Fatalf("Expected nil match (%s), got %+v", input, match)
-		}
-	})
-	t.Run("Alternation", func(t *testing.T) {
-		input := `(raw/?$|raw/(?P<path>.+))`
-
-		matches := altRe.FindAllStringSubmatch(input, -1)
-		exp1 := "raw/?$"
-		exp2 := "raw/(?P<path>.+)"
-		if matches[0][1] != exp1 || matches[0][2] != exp2 {
-			t.Fatalf("Capture error. Expected %s and %s, got %v", exp1, exp2, matches[0][1:])
-		}
-
-		input = `/foo/bar/` + GenericNameRegex("val")
-
-		matches = altRe.FindAllStringSubmatch(input, -1)
-		if matches != nil {
-			t.Fatalf("Expected nil match (%s), got %+v", input, matches)
-		}
-	})
-	t.Run("Alternation Fields", func(t *testing.T) {
-		input := `/foo/bar/(?P<type>auth|database|secret)/(?P<blah>a|b)`
-
-		act := altFieldsGroupRe.ReplaceAllStringFunc(input, func(s string) string {
-			return altFieldsRe.ReplaceAllString(s, ".+")
-		})
-
-		exp := "/foo/bar/(?P<type>.+)/(?P<blah>.+)"
-		if act != exp {
-			t.Fatalf("Replace error. Expected %s, got %v", exp, act)
-		}
-	})
 	t.Run("Path fields", func(t *testing.T) {
 		input := `/foo/bar/{inner}/baz/{outer}`
 
@@ -111,21 +42,6 @@ func TestOpenAPI_Regex(t *testing.T) {
 			regex  *regexp.Regexp
 			output string
 		}{
-			{
-				input:  `ab?cde^fg(hi?j$k`,
-				regex:  cleanCharsRe,
-				output: "abcdefghijk",
-			},
-			{
-				input:  `abcde/?`,
-				regex:  cleanSuffixRe,
-				output: "abcde",
-			},
-			{
-				input:  `abcde/?$`,
-				regex:  cleanSuffixRe,
-				output: "abcde",
-			},
 			{
 				input:  `abcde`,
 				regex:  wsRe,
