@@ -1,11 +1,11 @@
 import { create } from 'ember-cli-page-object';
-import { module, skip, test } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { click, currentURL, fillIn, find, visit } from '@ember/test-helpers';
+import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/pki/policy-generator';
 
@@ -316,27 +316,45 @@ module('Acceptance | pki workflow', function (hooks) {
       );
     });
 
-    // TODO CMB: these skipped tests aren't behaving as expected, need to return to!
-    skip('it does not show toolbar items the user does not have permission to see', async function (assert) {
+    test('it hide corrects actions for user with read policy', async function (assert) {
       await authPage.login(this.pkiKeyReader);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.keysTab);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys`);
+      await isSettled();
       assert.dom(SELECTORS.keyPages.importKey).doesNotExist();
       assert.dom(SELECTORS.keyPages.generateKey).doesNotExist();
       assert.dom('.linked-block').exists({ count: 1 }, 'One key is in list');
       const keyId = find(SELECTORS.keyPages.keyId).innerText;
-      await click('.linked-block');
+      await click(SELECTORS.keyPages.popupMenuTrigger);
+      assert.dom(SELECTORS.keyPages.popupMenuEdit).hasClass('disabled', 'popup menu edit link is disabled');
+      await click(SELECTORS.keyPages.popupMenuDetails);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
       assert.dom(SELECTORS.keyPages.keyDeleteButton).doesNotExist('Delete key button is not shown');
       assert.dom(SELECTORS.keyPages.keyEditLink).doesNotExist('Edit key button does not render');
     });
 
-    skip('it shows correct toolbar items for the user policy', async function (assert) {
+    test('it shows correct toolbar items for the user with update policy', async function (assert) {
       await authPage.login(this.pkiKeyEditor);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.keysTab);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys`);
+      await isSettled();
+      assert.dom(SELECTORS.keyPages.importKey).exists('import action exists');
+      assert.dom(SELECTORS.keyPages.generateKey).exists('generate action exists');
+      assert.dom('.linked-block').exists({ count: 1 }, 'One key is in list');
+      const keyId = find(SELECTORS.keyPages.keyId).innerText;
+      await click(SELECTORS.keyPages.popupMenuTrigger);
+      assert
+        .dom(SELECTORS.keyPages.popupMenuEdit)
+        .doesNotHaveClass('disabled', 'popup menu edit link is not disabled');
+      await click('.linked-block');
+      assert.dom(SELECTORS.keyPages.keyDeleteButton).doesNotExist('Delete key button is not shown');
+      await click(SELECTORS.keyPages.keyEditLink);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/edit`);
+      assert.dom(SELECTORS.keyPages.title).hasText('Edit key');
+      await click(SELECTORS.keyForm.keyCancelButton);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
     });
   });
 

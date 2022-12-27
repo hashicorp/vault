@@ -1,17 +1,15 @@
 import { singularize } from 'ember-inflector';
 
-export const adminPolicy = (mountPath, intMount) => {
+export const adminPolicy = (mountPath) => {
   return `
     path "${mountPath}/*" {
       capabilities = ["create", "read", "update", "delete", "list"]
     },
-    path "${intMount}/*" {
-      capabilities = ["create", "read", "update", "delete", "list"]
-    },
   `;
 };
+
+// keys require singularized paths for GET
 export const readerPolicy = (mountPath, resource) => {
-  // keys require singularized paths for GET
   return `
     path "${mountPath}/${resource}" {
       capabilities = ["read", "list"]
@@ -35,7 +33,7 @@ export const updatePolicy = (mountPath, resource) => {
     path "${mountPath}/${resource}/*" {
       capabilities = ["read", "update"]
     },
-    path "${mountPath}/${singularize(resource)}" {
+    path "${mountPath}/${singularize(resource)}/*" {
       capabilities = ["read", "update"]
     },    
     path "${mountPath}/issue/*" {
