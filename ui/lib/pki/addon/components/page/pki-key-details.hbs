@@ -13,7 +13,7 @@
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if @key.privateKey}}
-      <DownloadButton class="toolbar-link" @filename={{this.model.name}} @data={{@key.privateKey}} @extension="pem">
+      <DownloadButton class="toolbar-link" @filename={{@key.keyName}} @data={{@key.privateKey}} @extension="pem">
         Download private key
         <Chevron @isButton={{true}} />
       </DownloadButton>
