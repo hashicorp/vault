@@ -2,6 +2,7 @@ import { SELECTORS as ROLEFORM } from './pki-role-form';
 import { SELECTORS as GENERATECERT } from './pki-role-generate';
 import { SELECTORS as KEYFORM } from './pki-key-form';
 import { SELECTORS as KEYPAGES } from './page/pki-keys';
+import { SELECTORS as ISSUERDETAILS } from './pki-issuer-details';
 
 export const SELECTORS = {
   breadcrumbContainer: '[data-test-breadcrumbs]',
@@ -35,5 +36,10 @@ export const SELECTORS = {
   },
   keyPages: {
     ...KEYPAGES,
+  },
+  // ISSUERS
+  issuerDetails: {
+    title: '[data-test-pki-issuer-page-title]',
+    ...ISSUERDETAILS,
   },
 };
