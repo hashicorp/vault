@@ -302,8 +302,9 @@
           autocomplete="off"
           spellcheck="false"
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-          onchange={{this.onChangeWithEvent}}
-          onkeyup={{this.handleKeyUp}}
+          {{on "input" this.onChangeWithEvent}}
+          {{on "change" this.onChangeWithEvent}}
+          {{on "keyUp" this.handleKeyUp}}
           class="input {{if this.validationError 'has-error-border'}} has-bottom-margin-m"
           maxLength={{@attr.options.characterLimit}}
         />
