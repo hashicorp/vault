@@ -304,7 +304,7 @@
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
           {{on "input" this.onChangeWithEvent}}
           {{on "change" this.onChangeWithEvent}}
-          {{on "keyUp" this.handleKeyUp}}
+          {{on "keyup" this.handleKeyUp}}
           class="input {{if this.validationError 'has-error-border'}} has-bottom-margin-m"
           maxLength={{@attr.options.characterLimit}}
         />
