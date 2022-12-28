@@ -66,11 +66,16 @@ func sortCharset(chars string) string {
 	return string(r)
 }
 
-// StringGenerator generats random strings from the provided charset & adhering to a set of rules. The set of rules
+// StringGenerator generates random strings from the provided charset & adhering to a set of rules. The set of rules
 // are things like CharsetRule which requires a certain number of characters from a sub-charset.
 type StringGenerator struct {
 	// Length of the string to generate.
 	Length int `mapstructure:"length" json:"length"`
+
+	// Prefix will be prepended to the generated random string. It is not included in the configured length.
+	// It is intended to be used to make the generated string identifiable as a secret, so that detection of passwords
+	// leaked to logging or version control systems can be automated.
+	Prefix string `mapstructure:"prefix" json:"prefix"`
 
 	// Rules the generated strings must adhere to.
 	Rules serializableRules `mapstructure:"-" json:"rule"` // This is "rule" in JSON so it matches the HCL property type
@@ -128,7 +133,7 @@ func (g *StringGenerator) generate(rng io.Reader) (str string, err error) {
 	}
 
 	// Passed all rules
-	return string(candidate), nil
+	return g.Prefix + string(candidate), nil
 }
 
 const (

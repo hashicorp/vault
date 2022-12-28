@@ -66,10 +66,7 @@ func (p PolicyParser) ParsePolicy(raw string) (sg StringGenerator, err error) {
 		return sg, fmt.Errorf("unable to parse rules: %w", err)
 	}
 
-	gen = StringGenerator{
-		Length: gen.Length,
-		Rules:  rules,
-	}
+	gen.Rules = rules
 
 	err = gen.validateConfig()
 	if err != nil {
