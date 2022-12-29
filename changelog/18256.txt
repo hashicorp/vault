@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/token: Allow per-role configurable `token_ttl` and `token_max_ttl`
+```
