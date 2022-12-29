@@ -1,0 +1,3 @@
+```release-note:improvement
+Password Policies: Add `prefix` attribute, adding a fixed prefix to generated passwords, to enable secret scanning
+```
