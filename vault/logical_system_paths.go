@@ -114,7 +114,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "config/ui/headers/$",
+			Pattern: "config/ui/headers/?$",
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
@@ -542,7 +542,7 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["ha-status"][1]),
 		},
 		{
-			Pattern: "version-history/$",
+			Pattern: "version-history/?$",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleVersionHistoryList,

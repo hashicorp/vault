@@ -14,7 +14,7 @@ import (
 func (b *SystemBackend) pprofPaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "pprof/$",
+			Pattern: "pprof/?$",
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{

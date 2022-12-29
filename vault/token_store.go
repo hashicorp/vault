@@ -148,7 +148,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "accessors/$",
+			Pattern: "accessors/?$",
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: ts.tokenStoreAccessorList,
