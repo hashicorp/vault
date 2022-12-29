@@ -54,7 +54,7 @@ type Path struct {
 	// exposed as fields that should map to a schema in Fields. If a named
 	// capture is not a field in the Fields map, then it will be ignored.
 	//
-	// The pattern will automatically have a ^ prepending and a $ appended before
+	// The pattern will automatically have a ^ prepended and a $ appended before
 	// use, if these are not already present, so these may be omitted for clarity.
 	//
 	// If a ListOperation is being defined, the pattern must end with /? to match
