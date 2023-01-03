@@ -4,8 +4,8 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 export default class KubernetesConfigAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  getURL(backend) {
-    return `${this.buildURL()}/${encodePath(backend)}/config`;
+  getURL(backend, path = 'config') {
+    return `${this.buildURL()}/${encodePath(backend)}/${path}`;
   }
   urlForUpdateRecord(name, modelName, snapshot) {
     return this.getURL(snapshot.attr('backend'));
@@ -33,7 +33,6 @@ export default class KubernetesConfigAdapter extends ApplicationAdapter {
     return this.ajax(url, 'POST', { data }).then(() => data);
   }
   checkConfigVars(backend) {
-    // this endpoint has yet to be created so this url is a mock for now and wired up in the mirage handler
-    return this.ajax(`${this.getURL(backend)}/vars`, 'GET');
+    return this.ajax(`${this.getURL(backend, 'check')}`, 'GET');
   }
 }

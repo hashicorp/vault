@@ -4,7 +4,6 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, waitUntil, find, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { configVarUri } from '../../../../../mirage/handlers/kubernetes';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
 
@@ -58,7 +57,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     assert.expect(8);
 
     let status = 404;
-    this.server.get(configVarUri, () => {
+    this.server.get('/:path/check', () => {
       assert.ok(
         waitUntil(() => find('[data-test-config] button').disabled),
         'Button is disabled while request is in flight'

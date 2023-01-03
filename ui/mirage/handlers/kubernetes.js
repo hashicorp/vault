@@ -1,9 +1,5 @@
 import { Response } from 'miragejs';
 
-// yet to be defined endpoint
-// exporting to use in tests in case it changes
-export const configVarUri = '/:path/config/vars';
-
 export default function (server) {
   const getRecord = (schema, req, dbKey) => {
     const { path, name } = req.params;
@@ -41,10 +37,16 @@ export default function (server) {
   server.delete('/:path/config', (schema, req) => {
     return deleteRecord(schema, req, 'kubernetesConfigs');
   });
-  // to be defined endpoint for checking for environment variables necessary for inferred config
-  server.get(configVarUri, () => {
+  // endpoint for checking for environment variables necessary for inferred config
+  server.get('/:path/check', () => {
+    const response = {};
     const status = Math.random() > 0.5 ? 204 : 404;
-    return new Response(status, {});
+    if (status === 404) {
+      response.errors = [
+        'Missing environment variables: KUBERNETES_SERVICE_HOST, KUBERNETES_SERVICE_PORT_HTTPS',
+      ];
+    }
+    return new Response(status, response);
   });
   server.get('/:path/roles', (schema) => {
     return {
