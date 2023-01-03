@@ -42,6 +42,7 @@ type WrappedCoreMeta interface {
 	GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error)
 	GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState, error)
 	StorageType() string
+	ClusterID() string
 }
 
 var _ WrappedCoreMeta = &vault.Core{}

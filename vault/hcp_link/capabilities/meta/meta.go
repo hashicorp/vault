@@ -290,6 +290,7 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 	}
 
 	resp := &meta.GetClusterStatusResponse{
+		ClusterID:   h.wrappedCore.ClusterID(),
 		HAStatus:    haStatus,
 		RaftStatus:  raftStatus,
 		StorageType: h.wrappedCore.StorageType(),
