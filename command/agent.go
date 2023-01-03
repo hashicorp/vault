@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	ctconfig "github.com/hashicorp/consul-template/config"
+
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 
 	systemd "github.com/coreos/go-systemd/daemon"
@@ -186,32 +188,30 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Validation
-	if len(c.flagConfigs) != 1 {
-		c.UI.Error("Must specify exactly one config path using -config")
+	if len(c.flagConfigs) < 1 {
+		c.UI.Error("Must specify exactly at least one config path using -config")
 		return 1
 	}
 
-	// Load the configuration file
-	config, err := agentConfig.LoadConfig(c.flagConfigs[0])
+	config := agentConfig.NewConfig()
+
+	for _, configPath := range c.flagConfigs {
+		configFromPath, err := agentConfig.LoadConfig(configPath)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", configPath, err))
+			return 1
+		}
+		config = config.Merge(configFromPath)
+	}
+
+	err := config.ValidateConfig()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", c.flagConfigs[0], err))
+		c.UI.Error(fmt.Sprintf("Error loading configuration: %s", err))
 		return 1
 	}
 
-	// Ensure at least one config was found.
-	if config == nil {
-		c.UI.Output(wrapAtLength(
-			"No configuration read. Please provide the configuration with the " +
-				"-config flag."))
-		return 1
-	}
-
-	if config.AutoAuth == nil && config.Cache == nil {
-		c.UI.Error("No auto_auth or cache block found in config file")
-		return 1
-	}
 	if config.AutoAuth == nil {
-		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
+		c.UI.Info("No auto_auth block found in config, not starting automatic authentication feature")
 	}
 
 	c.updateConfig(f, config)
@@ -417,7 +417,12 @@ func (c *AgentCommand) Run(args []string) int {
 	// confuse the issue of retries for auth failures which have their own
 	// config and are handled a bit differently.
 	if os.Getenv(api.EnvVaultMaxRetries) == "" {
-		client.SetMaxRetries(config.Vault.Retry.NumRetries)
+		client.SetMaxRetries(ctconfig.DefaultRetryAttempts)
+		if config.Vault != nil {
+			if config.Vault.Retry != nil {
+				client.SetMaxRetries(config.Vault.Retry.NumRetries)
+			}
+		}
 	}
 
 	enforceConsistency := cache.EnforceConsistencyNever
@@ -977,6 +982,10 @@ func (c *AgentCommand) Run(args []string) int {
 // on the precedence (env var overrides file config, cli overrides env var).
 // It mutates the config object supplied.
 func (c *AgentCommand) updateConfig(f *FlagSets, config *agentConfig.Config) {
+	if config.Vault == nil {
+		config.Vault = &agentConfig.Vault{}
+	}
+
 	f.updateLogConfig(config.SharedConfig)
 
 	f.Visit(func(fl *flag.Flag) {
