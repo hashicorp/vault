@@ -60,14 +60,20 @@ export default class DateDropdown extends Component {
       year: this.selectedYear,
       dateType: this.args.dateType,
     });
-    this.selectedMonth = null;
-    this.selectedYear = null;
+    this.resetDropdown();
   }
 
   @action
   handleCancel() {
+    this.args.handleCancel();
+    this.resetDropdown();
+  }
+
+  resetDropdown() {
+    this.maxMonthIdx = 11;
+    this.disabledYear = null;
     this.selectedMonth = null;
     this.selectedYear = null;
-    this.args.handleCancel();
+    this.invalidDate = null;
   }
 }
