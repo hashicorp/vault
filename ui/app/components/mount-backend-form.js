@@ -3,10 +3,9 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { methods } from 'vault/helpers/mountable-auth-methods';
-import { mountableEngines, allEngines } from 'vault/helpers/mountable-secret-engines';
 import { waitFor } from '@ember/test-waiters';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { methods } from 'vault/helpers/mountable-auth-methods';
 
 /**
  * @module MountBackendForm
@@ -20,8 +19,6 @@ import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends
  *
  */
 
-const METHODS = methods();
-
 export default class MountBackendForm extends Component {
   @service store;
   @service wizard;
@@ -32,23 +29,6 @@ export default class MountBackendForm extends Component {
   @tracked invalidFormAlert = null;
 
   @tracked errorMessage = '';
-
-  constructor() {
-    super(...arguments);
-    const type = this.args.mountType || 'auth';
-    const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
-    const model = this.store.createRecord(modelType);
-    model.set('config', this.store.createRecord('mount-config'));
-    this.mountModel = model;
-  }
-
-  get mountTypes() {
-    return this.mountType === 'secret' ? this.engines : METHODS;
-  }
-
-  get engines() {
-    return this.version.isEnterprise ? allEngines() : mountableEngines();
-  }
 
   willDestroy() {
     // if unsaved, we want to unload so it doesn't show up in the auth mount list
