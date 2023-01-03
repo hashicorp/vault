@@ -15,7 +15,7 @@
         />
       {{else if this.redirect_uri}}
         <VaultLogoSpinner />
-        <a href={{this.redirect_uri}}>Click here to redirect back to app</a>
+        <a href={{this.redirect_uri}} data-test-oidc-redirect>Click here to redirect back to app</a>
       {{else}}
         <VaultLogoSpinner />
       {{/if}}
