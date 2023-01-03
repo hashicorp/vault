@@ -1,5 +1,7 @@
 import { SELECTORS as ROLEFORM } from './pki-role-form';
 import { SELECTORS as GENERATECERT } from './pki-role-generate';
+import { SELECTORS as ISSUERDETAILS } from './pki-issuer-details';
+
 export const SELECTORS = {
   breadcrumbContainer: '[data-test-breadcrumbs]',
   breadcrumbs: '[data-test-breadcrumbs] li',
@@ -22,5 +24,9 @@ export const SELECTORS = {
   },
   generateCertForm: {
     ...GENERATECERT,
+  },
+  issuerDetails: {
+    title: '[data-test-pki-issuer-page-title]',
+    ...ISSUERDETAILS,
   },
 };
