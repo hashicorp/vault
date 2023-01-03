@@ -191,7 +191,6 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	// Only prepare ha-related statements if we need them
 	if haEnabled {
 		statements["get_lock"] = "SELECT current_leader FROM " + dbLockTable + " WHERE node_job = ?"
-		statements["used_lock"] = "SELECT IS_USED_LOCK(?)"
 	}
 
 	for name, query := range statements {
@@ -365,7 +364,6 @@ func (m *MySQLBackend) prepare(name, query string) error {
 // Put is used to insert or update an entry.
 func (m *MySQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"mysql", "put"}, time.Now())
-
 	m.permitPool.Acquire()
 	defer m.permitPool.Release()
 
@@ -402,7 +400,6 @@ func (m *MySQLBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 // Delete is used to permanently delete an entry
 func (m *MySQLBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"mysql", "delete"}, time.Now())
-
 	m.permitPool.Acquire()
 	defer m.permitPool.Release()
 
@@ -577,7 +574,7 @@ func (i *MySQLHALock) Unlock() error {
 // hasLock will check if a lock is held by checking the current lock id against our known ID.
 func (i *MySQLHALock) hasLock(key string) error {
 	var result sql.NullInt64
-	err := i.in.statements["used_lock"].QueryRow(key).Scan(&result)
+	err := i.lock.lockConn.QueryRowContext(context.Background(), "SELECT IS_USED_LOCK(?)", key).Scan(&result)
 	if err == sql.ErrNoRows || !result.Valid {
 		// This is not an error to us since it just means the lock isn't held
 		return nil
@@ -621,6 +618,7 @@ func (i *MySQLHALock) Value() (bool, string, error) {
 type MySQLLock struct {
 	parentConn *MySQLBackend
 	in         *sql.DB
+	lockConn   *sql.Conn
 	logger     log.Logger
 	statements map[string]*sql.Stmt
 	key        string
@@ -645,7 +643,14 @@ var (
 func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock, error) {
 	// Create a new MySQL connection so we can close this and have no effect on
 	// the rest of the MySQL backend and any cleanup that might need to be done.
+
 	conn, _ := NewMySQLClient(in.conf, in.logger)
+
+	// grab a connection which will be used for GET_LOCK
+	c, err := conn.Conn(context.Background())
+	if err != nil {
+		return nil, err
+	}
 
 	m := &MySQLLock{
 		parentConn: in,
@@ -654,6 +659,7 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock
 		statements: make(map[string]*sql.Stmt),
 		key:        key,
 		value:      value,
+		lockConn:   c,
 	}
 
 	statements := map[string]string{
@@ -698,7 +704,8 @@ func (i *MySQLLock) Lock() error {
 
 	// Lock timeout math.MaxInt32 instead of -1 solves compatibility issues with
 	// different MySQL flavours i.e. MariaDB
-	rows, err := i.in.Query("SELECT GET_LOCK(?, ?), IS_USED_LOCK(?)", i.key, math.MaxInt32, i.key)
+	rows, err := i.lockConn.QueryContext(context.Background(),
+		"SELECT GET_LOCK(?, ?), IS_USED_LOCK(?)", i.key, math.MaxInt32, i.key)
 	if err != nil {
 		return err
 	}
@@ -745,6 +752,9 @@ func (i *MySQLLock) Lock() error {
 // likely does exist. Closing the connection however ensures we don't ever get into a
 // state where we try to release the lock and it hangs it is also much less code.
 func (i *MySQLLock) Unlock() error {
+	// release the grabbed connection first
+	i.lockConn.Close()
+
 	err := i.in.Close()
 	if err != nil {
 		return ErrUnlockFailed

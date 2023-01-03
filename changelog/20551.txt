@@ -1,0 +1,3 @@
+```release-note:feature
+storage/mysql: Use same session for GET_LOCK(lock) and IS_USED_LOCK(check lock)
+```
