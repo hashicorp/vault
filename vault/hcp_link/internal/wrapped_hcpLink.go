@@ -41,6 +41,7 @@ type WrappedCoreMeta interface {
 	GetHAPeerNodesCached() []vault.PeerNode
 	GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error)
 	GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState, error)
+	StorageType() string
 }
 
 var _ WrappedCoreMeta = &vault.Core{}
