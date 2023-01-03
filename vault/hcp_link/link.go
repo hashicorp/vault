@@ -222,6 +222,8 @@ func (h *HCPLinkVault) start() error {
 // API. In addition, it checks replication status of Vault and sets that in
 // Scada provider metadata status
 func (h *HCPLinkVault) reportStatus() {
+	var currentNodeStatus string
+
 	ticker := time.NewTicker(SetLinkStatusCadence)
 	defer ticker.Stop()
 	for {
@@ -249,7 +251,11 @@ func (h *HCPLinkVault) reportStatus() {
 				nodeStatus = activeStatus
 			}
 
-			h.linkConfig.SCADAProvider.UpdateMeta(map[string]string{metaDataNodeStatus: nodeStatus})
+			// Only update SCADA session metadata if status has changed
+			if currentNodeStatus != nodeStatus {
+				currentNodeStatus = nodeStatus
+				h.linkConfig.SCADAProvider.UpdateMeta(map[string]string{metaDataNodeStatus: currentNodeStatus})
+			}
 		}
 	}
 }
