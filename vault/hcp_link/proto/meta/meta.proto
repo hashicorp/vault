@@ -87,6 +87,7 @@ message GetClusterStatusResponse {
   string ClusterID = 1;
   HAStatus HAStatus = 2;
   RaftStatus RaftStatus = 3;
+  string StorageType = 4;
 }
 
 service HCPLinkMeta {
