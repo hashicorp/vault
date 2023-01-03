@@ -89,16 +89,19 @@ set on all PR Secondary clusters.`,
 								Type: framework.TypeCommaStringSlice,
 								Description: `Comma-separated list of URLs to be used
 for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
+								Required: true,
 							},
 							"crl_distribution_points": {
 								Type: framework.TypeCommaStringSlice,
 								Description: `Comma-separated list of URLs to be used
 for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
+								Required: true,
 							},
 							"ocsp_servers": {
 								Type: framework.TypeCommaStringSlice,
 								Description: `Comma-separated list of URLs to be used
 for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
+								Required: true,
 							},
 							"enable_templating": {
 								Type: framework.TypeBool,
@@ -107,7 +110,7 @@ above AIA fields. When templating is enabled the special values '{{issuer_id}}'
 and '{{cluster_path}}' are available, but the addresses are not checked for
 URI validity until issuance time. This requires /config/cluster's path to be
 set on all PR Secondary clusters.`,
-								Default: false,
+								Required: true,
 							},
 						},
 					}},

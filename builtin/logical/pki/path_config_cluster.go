@@ -71,6 +71,7 @@ point to another PR cluster. It may point to any node in the PR replica,
 including standby nodes, and need not always point to the active node.
 
 For example: https://pr1.vault.example.com:8200/v1/pki`,
+								Required: true,
 							},
 						},
 					}},

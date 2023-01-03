@@ -94,39 +94,43 @@ the NextUpdate field); defaults to 12 hours`,
 								Type: framework.TypeString,
 								Description: `The amount of time the generated CRL should be
 valid; defaults to 72 hours`,
-								Default: "72h",
+								Required: true,
 							},
 							"disable": {
 								Type:        framework.TypeBool,
 								Description: `If set to true, disables generating the CRL entirely.`,
+								Required: true,
 							},
 							"ocsp_disable": {
 								Type:        framework.TypeBool,
 								Description: `If set to true, ocsp unauthorized responses will be returned.`,
+								Required: true,
 							},
 							"ocsp_expiry": {
 								Type: framework.TypeString,
 								Description: `The amount of time an OCSP response will be valid (controls 
 the NextUpdate field); defaults to 12 hours`,
-								Default: "1h",
+								Required: true,
 							},
 							"auto_rebuild": {
 								Type:        framework.TypeBool,
 								Description: `If set to true, enables automatic rebuilding of the CRL`,
+								Required: true,
 							},
 							"auto_rebuild_grace_period": {
 								Type:        framework.TypeString,
 								Description: `The time before the CRL expires to automatically rebuild it, when enabled. Must be shorter than the CRL expiry. Defaults to 12h.`,
-								Default:     "12h",
+								Required: true,
 							},
 							"enable_delta": {
 								Type:        framework.TypeBool,
 								Description: `Whether to enable delta CRLs between authoritative CRL rebuilds`,
+								Required: true,
 							},
 							"delta_rebuild_interval": {
 								Type:        framework.TypeString,
 								Description: `The time between delta CRL rebuilds if a new revocation has occurred. Must be shorter than the CRL expiry. Defaults to 15m.`,
-								Default:     "15m",
+								Required: true,
 							},
 						},
 					}},
