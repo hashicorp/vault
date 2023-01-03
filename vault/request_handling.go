@@ -790,7 +790,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	}
 
 	if walState.LocalIndex != 0 || walState.ReplicatedIndex != 0 {
-		walState.ClusterID = c.clusterID.Load()
+		walState.ClusterID = c.ClusterID()
 		if walState.LocalIndex == 0 {
 			if c.perfStandby {
 				walState.LocalIndex = LastRemoteWAL(c)
@@ -2337,7 +2337,7 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 		return plainToken.Random, nil
 	}
 
-	requiredWalState := &logical.WALState{ClusterID: c.clusterID.Load(), LocalIndex: plainToken.LocalIndex, ReplicatedIndex: 0}
+	requiredWalState := &logical.WALState{ClusterID: c.ClusterID(), LocalIndex: plainToken.LocalIndex, ReplicatedIndex: 0}
 	if c.HasWALState(requiredWalState, isPerfStandby) {
 		return plainToken.Random, nil
 	}
