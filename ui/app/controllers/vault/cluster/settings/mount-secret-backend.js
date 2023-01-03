@@ -14,11 +14,14 @@ export default class MountSecretBackendController extends Controller {
   onMountSuccess(type, path) {
     let transition;
     if (SUPPORTED_BACKENDS.includes(type)) {
-      const { engineRoute, routeQueryParams } = allEngines().findBy('type', type);
-      if (engineRoute) {
-        transition = this.router.transitionTo(`vault.cluster.secrets.backend.${engineRoute}`, path);
+      const engineInfo = allEngines().findBy('type', type);
+      if (engineInfo?.engineRoute) {
+        transition = this.router.transitionTo(
+          `vault.cluster.secrets.backend.${engineInfo.engineRoute}`,
+          path
+        );
       } else {
-        const queryParams = routeQueryParams || {};
+        const queryParams = engineInfo?.routeQueryParams || {};
         transition = this.router.transitionTo('vault.cluster.secrets.backend.index', path, { queryParams });
       }
     } else {

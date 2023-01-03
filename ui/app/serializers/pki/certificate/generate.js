@@ -3,13 +3,9 @@ import ApplicationSerializer from '../../application';
 
 export default class PkiCertificateGenerateSerializer extends ApplicationSerializer {
   primaryKey = 'serial_number';
-
-  serialize() {
-    const json = super.serialize(...arguments);
-    // role name is part of the URL, remove from payload
-    delete json.name;
-    return json;
-  }
+  attrs = {
+    role: { serialize: false },
+  };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (requestType === 'createRecord' && payload.data.certificate) {

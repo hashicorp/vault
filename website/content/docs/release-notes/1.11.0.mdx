@@ -104,17 +104,9 @@ Previously, KMIP did not support certain operations such as import, decrypt, enc
 
 ## Known issues
 
-If any version of Consul attempts to use Vault 1.11.0 or later as Consul’s Connect CA provider, the intermediate CA will become unable to issue the leaf certificates needed by:
+When you use Vault 1.11.0+ as a Consul's Connect CA, you may encounter an issue generating the leaf certificates ([GH-15525](https://github.com/hashicorp/consul/pull/15525)). Upgrade your [Consul version that includes the fix](https://support.hashicorp.com/hc/en-us/articles/11308460105491#01GMC24E6PPGXMRX8DMT4HZYTW) to avoid running into this problem. 
 
-- Service mesh: Services in the mesh to communicate with mTLS
-- All use cases: Consul client agents if using [auto-encrypt](/consul/docs/agent/config/config-files#auto_encrypt) or [auto-config](/consul/docs/agent/config/config-files#auto_config), and using [TLS to communicate with Consul server agents](/consul/docs/agent/config/config-files#tls-configuration-reference)
- 
-You are using the Vault CA provider if either of the following configurations exists:
-
-- The Consul server agent configuration option [connect.ca_provider](/consul/docs/agent/config/config-files#connect_ca_provider) is set to “vault”, or
-- The Consul on Kubernetes Helm Chart [global.secretsBackend.vault.connectCA](/consul/docs/k8s/helm#v-global-secretsbackend-vault-connectca) value is configured.
-
--> **NOTE:** Refer to the [Knowledge Base article](https://support.hashicorp.com/hc/en-us/articles/11308460105491) for more information about the underlying cause and recommended workaround.
+-> Refer to this [Knowledge Base article](https://support.hashicorp.com/hc/en-us/articles/11308460105491) for more details.
 
 ## Feature Deprecations and EOL
 
