@@ -130,7 +130,7 @@ setting `VAULT_UI` environment variable.
 ## Useful Tips
 ### Template Helpers
   - `log`: log information from templates
-## Further Reading / Useful Links
+## Further Reading / Useful Links *
 
 * [ember.js](https://emberjs.com/)
 * [ember-cli](https://cli.emberjs.com/release/)
