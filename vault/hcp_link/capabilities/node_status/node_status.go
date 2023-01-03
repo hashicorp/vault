@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/hcp-link/pkg/nodestatus"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/vault/hcp_link/internal"
 	"github.com/hashicorp/vault/vault/hcp_link/proto/node_status"
 	"github.com/shirou/gopsutil/v3/host"
@@ -38,6 +39,11 @@ func (c *NodeStatusReporter) GetNodeStatus(ctx context.Context) (nodestatus.Node
 		return status, err
 	}
 
+	logLevel, err := logging.ParseLogLevel(c.NodeStatusGetter.LogLevel())
+	if err != nil {
+		return status, err
+	}
+
 	raftStatus := &node_status.RaftStatus{}
 	if sealStatus.StorageType == "raft" {
 		raftStatus.IsVoter = c.NodeStatusGetter.IsRaftVoter()
@@ -63,15 +69,13 @@ func (c *NodeStatusReporter) GetNodeStatus(ctx context.Context) (nodestatus.Node
 		ListenerAddresses:      listenerAddresses,
 		OperatingSystem:        hostInfo.OS,
 		OperatingSystemVersion: hostInfo.PlatformVersion,
-		LogLevel:               c.NodeStatusGetter.LogLevel(),
+		LogLevel:               node_status.LogLevel(logLevel),
 		ActiveTime:             timestamppb.New(c.NodeStatusGetter.ActiveTime()),
 		RaftStatus:             raftStatus,
 	}
 
-	ns := nodestatus.NodeStatus{
-		StatusVersion: uint32(Version),
-		Status:        protoRes,
-	}
+	status.StatusVersion = uint32(Version)
+	status.Status = protoRes
 
-	return ns, nil
+	return status, nil
 }
