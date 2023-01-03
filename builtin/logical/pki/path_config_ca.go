@@ -91,10 +91,12 @@ func pathConfigIssuers(b *backend) *framework.Path {
 							"default": {
 								Type:        framework.TypeString,
 								Description: `Reference (name or identifier) to the default issuer.`,
+								Required: true,
 							},
 							"default_follows_latest_issuer": {
 								Type:        framework.TypeBool,
 								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+								Required: true,
 							},
 						},
 					}},
@@ -149,10 +151,12 @@ func pathReplaceRoot(b *backend) *framework.Path {
 							"default": {
 								Type:        framework.TypeString,
 								Description: `Reference (name or identifier) to the default issuer.`,
+								Required: true,
 							},
 							"default_follows_latest_issuer": {
 								Type:        framework.TypeBool,
 								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+								Required: true,
 							},
 						},
 					}},
@@ -283,6 +287,7 @@ func pathConfigKeys(b *backend) *framework.Path {
 							"default": {
 								Type:        framework.TypeString,
 								Description: `Reference (name or identifier) to the default issuer.`,
+								Required: true,
 							},
 						},
 					}},
