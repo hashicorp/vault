@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	lru "github.com/hashicorp/golang-lru"
@@ -743,18 +743,6 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 	}
 
 	return nil
-}
-
-type TemplateError struct {
-	Err error
-}
-
-func (t *TemplateError) WrappedErrors() []error {
-	return []error{t.Err}
-}
-
-func (t *TemplateError) Error() string {
-	return t.Err.Error()
 }
 
 // ACL is used to return an ACL which is built using the
