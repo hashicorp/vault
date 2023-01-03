@@ -6,12 +6,18 @@ import (
 	"net"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 )
 
-func StartListener(lnConfig *configutil.Listener) (net.Listener, *tls.Config, error) {
+type CertConfig struct { // TODO: PW: Nicer name
+	Config     *tls.Config
+	ReloadFunc reloadutil.ReloadFunc
+}
+
+func StartListener(lnConfig *configutil.Listener) (net.Listener, *CertConfig, error) {
 	addr := lnConfig.Address
 
 	var ln net.Listener
@@ -56,7 +62,7 @@ func StartListener(lnConfig *configutil.Listener) (net.Listener, *tls.Config, er
 	}
 
 	props := map[string]string{"addr": ln.Addr().String()}
-	tlsConf, _, err := listenerutil.TLSConfig(lnConfig, props, nil)
+	tlsConf, reloadFunc, err := listenerutil.TLSConfig(lnConfig, props, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -64,5 +70,10 @@ func StartListener(lnConfig *configutil.Listener) (net.Listener, *tls.Config, er
 		ln = tls.NewListener(ln, tlsConf)
 	}
 
-	return ln, tlsConf, nil
+	cfg := &CertConfig{
+		Config:     tlsConf,
+		ReloadFunc: reloadFunc,
+	}
+
+	return ln, cfg, nil
 }
