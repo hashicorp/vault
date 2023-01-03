@@ -1,7 +1,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { lastDayOfMonth, subMonths, format, fromUnixTime } from 'date-fns';
+import { lastDayOfMonth, subMonths, format, fromUnixTime, addMonths } from 'date-fns';
 import { parseAPITimestamp, ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 
 module('Unit | Adapter | clients activity', function (hooks) {
@@ -34,8 +34,9 @@ module('Unit | Adapter | clients activity', function (hooks) {
 
   test('it formats start_time if only end_time is a timestamp string', async function (assert) {
     assert.expect(2);
-    const month = this.startDate.getMonth() + 2;
-    const year = this.startDate.getFullYear();
+    const twoMonthsAhead = addMonths(this.startDate, 2);
+    const month = twoMonthsAhead.getMonth();
+    const year = twoMonthsAhead.getFullYear();
     const queryParams = {
       start_time: {
         monthIdx: month,
@@ -62,8 +63,9 @@ module('Unit | Adapter | clients activity', function (hooks) {
 
   test('it formats end_time only if only start_time is a timestamp string', async function (assert) {
     assert.expect(2);
-    const month = this.endDate.getMonth() - 2;
-    const year = this.endDate.getFullYear();
+    const twoMothsAgo = subMonths(this.endDate, 2);
+    const month = twoMothsAgo.getMonth() - 2;
+    const year = twoMothsAgo.getFullYear();
     const dayOfMonth = format(lastDayOfMonth(new Date(year, month, 10)), 'dd');
     const queryParams = {
       start_time: {
@@ -91,10 +93,12 @@ module('Unit | Adapter | clients activity', function (hooks) {
 
   test('it formats both params if neither are a timestamp', async function (assert) {
     assert.expect(2);
-    const startMonth = this.startDate.getMonth() + 2;
-    const startYear = this.startDate.getFullYear();
-    const endMonth = this.endDate.getMonth() - 2;
-    const endYear = this.endDate.getFullYear();
+    const startDate = subMonths(this.startDate, 2);
+    const endDate = addMonths(this.endDate, 2);
+    const startMonth = startDate.getMonth() + 2;
+    const startYear = startDate.getFullYear();
+    const endMonth = endDate.getMonth() - 2;
+    const endYear = endDate.getFullYear();
     const endDay = format(lastDayOfMonth(new Date(endYear, endMonth, 10)), 'dd');
     const queryParams = {
       start_time: {

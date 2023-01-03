@@ -165,13 +165,14 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
       `line chart plots 6 points to match query`
     );
 
-    // query custom end month
+    // query three months ago
+    const customEndDate = subMonths(CURRENT_DATE, 3);
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
-    if (parseInt(find('[data-test-display-year]').innerText) < CURRENT_DATE.getFullYear()) {
-      await click('[data-test-next-year]');
+    if (parseInt(find('[data-test-display-year]').innerText) !== customEndDate.getFullYear()) {
+      await click('[data-test-previous-year]');
     }
-    await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LAST_MONTH.getMonth() - 2]}]`));
+    await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[customEndDate.getMonth()]}]`));
 
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert.dom(SELECTORS.monthlyUsageBlock).exists('Shows monthly usage block');
@@ -188,11 +189,11 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
       .dom(xAxisLabels[xAxisLabels.length - 1])
       .hasText(`${format(subMonths(LAST_MONTH, 2), 'M/yy')}`, 'x-axis labels end with queried end month');
 
-    // query for single, historical month
+    // query for single, historical month (upgrade month)
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
-    if (parseInt(find('[data-test-display-year]').innerText) < CURRENT_DATE.getFullYear()) {
-      await click('[data-test-next-year]');
+    if (parseInt(find('[data-test-display-year]').innerText) !== UPGRADE_DATE.getFullYear()) {
+      await click('[data-test-previous-year]');
     }
     await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]}]`));
 
