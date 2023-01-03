@@ -316,6 +316,10 @@ func (c *Config) ValidateConfig() error {
 		}
 	}
 
+	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
+		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
 	return nil
 }
 

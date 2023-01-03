@@ -204,24 +204,12 @@ func (c *AgentCommand) Run(args []string) int {
 		config = config.Merge(configFromPath)
 	}
 
-	// Ensure at least one config was found.
-	if config == agentConfig.NewConfig() {
-		c.UI.Output(wrapAtLength(
-			"No configuration read. Please provide the configuration with the " +
-				"-config flag."))
-		return 1
-	}
-
 	err := config.ValidateConfig()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error loading configuration: %s", err))
 		return 1
 	}
 
-	if config.AutoAuth == nil && config.Cache == nil && len(config.Listeners) == 0 {
-		c.UI.Error("No auto_auth, cache, or listener block found in config")
-		return 1
-	}
 	if config.AutoAuth == nil {
 		c.UI.Info("No auto_auth block found in config, not starting automatic authentication feature")
 	}
