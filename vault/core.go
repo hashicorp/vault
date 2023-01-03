@@ -3567,7 +3567,7 @@ func (c *Core) ListenerAddresses() ([]string, error) {
 	}
 
 	listeners := conf.(*server.Config).Listeners
-	if lns == nil {
+	if listeners == nil {
 		return nil, fmt.Errorf("no listener configured")
 	}
 
