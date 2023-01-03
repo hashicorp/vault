@@ -7,7 +7,7 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
-import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/pki/policy-generator';
+import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
 
 const consoleComponent = create(consoleClass);
 

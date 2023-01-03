@@ -161,9 +161,9 @@ module('Integration | Component | pki key form', function (hooks) {
 
     await fillIn(SELECTORS.keyNameInput, 'new-name');
     await click(SELECTORS.keyCancelButton);
-    assert.strictEqual(this.model.keyName, 'test-key', 'Model attributes rolled back on cancel');
+    assert.strictEqual(this.model.keyName, 'test-key', 'Model name rolled back on cancel');
     await fillIn(SELECTORS.keyNameInput, 'new-name');
     await click(SELECTORS.keyCreateButton);
-    assert.strictEqual(this.model.keyName, 'new-name', 'Model attributes rolled back on cancel');
+    assert.strictEqual(this.model.keyName, 'new-name', 'Model name correctly save on create');
   });
 });
