@@ -650,7 +650,7 @@ func TestLoadConfigFile_Bad_AgentCache_ForceAutoAuthNoMethod(t *testing.T) {
 		t.Fatalf("LoadConfigFile should not return an error for this config, err: %v", err)
 	}
 	if config == nil {
-		t.Fatal("config was nll")
+		t.Fatal("config was nil")
 	}
 	err = config.ValidateConfig()
 	if err == nil {
@@ -678,7 +678,7 @@ func TestLoadConfigFile_Bad_AutoAuth_Nosinks_Nocache_Notemplates(t *testing.T) {
 		t.Fatalf("LoadConfigFile should not return an error for this config, err: %v", err)
 	}
 	if config == nil {
-		t.Fatal("config was nll")
+		t.Fatal("config was nil")
 	}
 	err = config.ValidateConfig()
 	if err == nil {
@@ -689,7 +689,7 @@ func TestLoadConfigFile_Bad_AutoAuth_Nosinks_Nocache_Notemplates(t *testing.T) {
 func TestLoadConfigFile_Bad_AutoAuth_Both_Wrapping_Types(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-method-wrapping-and-sink-wrapping.hcl")
 	if err == nil {
-		t.Fatalf("LoadConfigFile should not return an error for this config")
+		t.Fatalf("LoadConfigFile should return an error for this config")
 	}
 }
 
@@ -699,7 +699,7 @@ func TestLoadConfigFile_Bad_AgentCache_AutoAuth_Method_wrapping(t *testing.T) {
 		t.Fatalf("LoadConfigFile should not return an error for this config, err: %v", err)
 	}
 	if config == nil {
-		t.Fatal("config was nll")
+		t.Fatal("config was nil")
 	}
 	err = config.ValidateConfig()
 	if err == nil {
@@ -713,7 +713,7 @@ func TestLoadConfigFile_Bad_APIProxy_And_Cache_Same_Config(t *testing.T) {
 		t.Fatalf("LoadConfigFile should not return an error for this config, err: %v", err)
 	}
 	if config == nil {
-		t.Fatal("config was nll")
+		t.Fatal("config was nil")
 	}
 	err = config.ValidateConfig()
 	if err == nil {
