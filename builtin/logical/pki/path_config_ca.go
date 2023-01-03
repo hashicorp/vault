@@ -29,14 +29,17 @@ secret key and certificate.`,
 							"mapping": {
 								Type:        framework.TypeMap,
 								Description: "A mapping of issuer_id to key_id for all issuers included in this request",
+								Required: true,
 							},
 							"imported_keys": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: "Net-new keys imported as a part of this request",
+								Required: true,
 							},
 							"imported_issuers": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: "Net-new issuers imported as a part of this request",
+								Required: true,
 							},
 						},
 					}},
