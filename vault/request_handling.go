@@ -2049,6 +2049,7 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*
 			Type:         mConfig.Type,
 			ID:           methodID,
 			UsesPasscode: mConfig.Type == mfaMethodTypeTOTP || duoUsePasscode,
+			Name:         mConfig.Name,
 		}
 		mfaAny.Any = append(mfaAny.Any, mfaMethod)
 	}

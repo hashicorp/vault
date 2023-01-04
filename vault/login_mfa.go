@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -270,6 +271,11 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 
 	methodID := d.Get("method_id").(string)
 
+	methodName, err := i.mfaBackend.sanitizeMethodNameSameNamespace(ns, d.Get("method_name").(string))
+	if err != nil {
+		return nil, err
+	}
+
 	b := i.mfaBackend
 	b.mfaLock.Lock()
 	defer b.mfaLock.Unlock()
@@ -286,6 +292,19 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 		}
 	}
 
+	// check if an MFA method configuration exists with that method name
+	if mConfig == nil && methodName != "" {
+		mConfig, err = b.MemDBMFAConfigByName(ctx, methodName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Updating the method config name
+	if mConfig != nil && methodName != "" && mConfig.Name != methodName {
+		mConfig.Name = methodName
+	}
+
 	if mConfig == nil {
 		configID, err := uuid.GenerateUUID()
 		if err != nil {
@@ -295,6 +314,7 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 			ID:          configID,
 			Type:        methodType,
 			NamespaceID: ns.ID,
+			Name:        methodName,
 		}
 	}
 
@@ -647,6 +667,87 @@ func (b *LoginMFABackend) loginMFAMethodExistenceCheck(eConfig *mfa.MFAEnforceme
 	return aggErr.ErrorOrNil()
 }
 
+// sanitizeMethodNameSameNamespace returns the name without the namespace.
+// The method name could contain the namespace path.
+// If the namespace is specified in the name, check if the namespace
+// matches the request namespace. If so, trim the namespace path and
+// return the name. If it does not match the request namespace,
+// return an error. If the namespace path is not included in the name,
+// nothing happens.
+func (b *LoginMFABackend) sanitizeMethodNameSameNamespace(ns *namespace.Namespace, name string) (string, error) {
+	if name == "" {
+		return "", nil
+	}
+
+	if ns == nil {
+		return "", fmt.Errorf("namespace cannot be nil")
+	}
+
+	if !strings.Contains(name, "/") {
+		return name, nil
+	}
+
+	// method name
+	methodName := path.Base(name)
+	// namespace path in method name
+	methodNamespacePath := strings.TrimSuffix(name, methodName)
+
+	if ns.Path != methodNamespacePath {
+		return "", fmt.Errorf("invalid underlying namespace %s for method name %s", methodNamespacePath, methodName)
+	}
+
+	return methodName, nil
+}
+
+// sanitizeMFACredsWithLoginEnforcementMethodIDs updates the MFACred map
+// looping through the matched login enforcement configurations, and
+// replacing MFA method names with MFA method IDs
+func (b *LoginMFABackend) sanitizeMFACredsWithLoginEnforcementMethodIDs(ctx context.Context, mfaCredsMap logical.MFACreds, mfaMethodIDs []string) (logical.MFACreds, error) {
+	sanitizedMfaCreds := make(logical.MFACreds, 0)
+	var multiError *multierror.Error
+	for _, methodID := range mfaMethodIDs {
+		val, ok := mfaCredsMap[methodID]
+		if ok {
+			sanitizedMfaCreds[methodID] = val
+			continue
+		}
+		mConfig, err := b.MemDBMFAConfigByID(methodID)
+		if err != nil {
+			return nil, err
+		}
+		// method name in the MFACredsMap could be just the method full name,
+		// i.e., namespace path+name, or just the name without namespace.
+		// let's check for both cases.
+		val, ok = mfaCredsMap[mConfig.Name]
+		if ok {
+			sanitizedMfaCreds[mConfig.ID] = val
+		} else {
+			configNS, err := NamespaceByID(ctx, mConfig.NamespaceID, b.Core)
+			if err != nil {
+				return nil, err
+			}
+			if configNS != nil {
+				val, ok = mfaCredsMap[configNS.Path+mConfig.Name]
+				if ok {
+					sanitizedMfaCreds[mConfig.ID] = val
+				} else {
+					multiError = multierror.Append(multiError, fmt.Errorf("failed to find MFA credentials associated with an MFA method ID %v, method name %v", methodID, mConfig.Name))
+				}
+			} else {
+				multiError = multierror.Append(multiError, fmt.Errorf("failed to find the namespace associated with an MFA method"))
+			}
+		}
+	}
+
+	// we don't need to find every MFA method identifiers in the MFA header
+	// So, don't return errors if that is the case.
+	if len(sanitizedMfaCreds) > 0 {
+		return sanitizedMfaCreds, nil
+	}
+
+	return sanitizedMfaCreds, multiError
+}
+
 func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logical.Request, d *framework.FieldData) (retResp *logical.Response, retErr error) {
 	// mfaReqID is the ID of the login request
 	mfaReqID := d.Get("mfa_request_id").(string)
@@ -655,13 +756,13 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 	}
 
 	// a map of methodID to passcode
-	methodIDToPasscodeInterface := d.Get("mfa_payload")
-	if methodIDToPasscodeInterface == nil {
+	mfaPayload := d.Get("mfa_payload")
+	if mfaPayload == nil {
 		return logical.ErrorResponse("missing mfa payload"), nil
 	}
 
 	var mfaCreds logical.MFACreds
-	err := mapstructure.Decode(methodIDToPasscodeInterface, &mfaCreds)
+	err := mapstructure.Decode(mfaPayload, &mfaCreds)
 	if err != nil {
 		return logical.ErrorResponse("invalid mfa payload"), nil
 	}
@@ -1574,11 +1675,19 @@ func parseOktaConfig(mConfig *mfa.Config, d *framework.FieldData) error {
 }
 
 func (c *Core) validateLoginMFA(ctx context.Context, eConfig *mfa.MFAEnforcementConfig, entity *identity.Entity, requestConnRemoteAddr string, mfaCredsMap logical.MFACreds) error {
+	sanitizedMfaCreds, err := c.loginMFABackend.sanitizeMFACredsWithLoginEnforcementMethodIDs(ctx, mfaCredsMap, eConfig.MFAMethodIDs)
+	if err != nil {
+		return fmt.Errorf("failed to sanitize MFA creds, %w", err)
+	}
+	if len(sanitizedMfaCreds) == 0 && len(eConfig.MFAMethodIDs) > 0 {
+		return fmt.Errorf("login MFA validation failed for methodID: %v", eConfig.MFAMethodIDs)
+	}
+
 	var retErr error
 	for _, methodID := range eConfig.MFAMethodIDs {
 		// as configID is the same as methodID, and methodID is unique, we can
 		// use it to retrieve the MFACreds
-		mfaCreds, ok := mfaCredsMap[methodID]
+		mfaCreds, ok := sanitizedMfaCreds[methodID]
 		if !ok || mfaCreds == nil {
 			continue
 		}
@@ -2340,6 +2449,21 @@ func loginMFAConfigTableSchema() *memdb.TableSchema {
 					Field: "Type",
 				},
 			},
+			"name": {
+				Name:         "name",
+				Unique:       true,
+				AllowMissing: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{
+							Field: "NamespaceID",
+						},
+						&memdb.StringFieldIndex{
+							Field: "Name",
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -2485,6 +2609,47 @@ func (b *LoginMFABackend) MemDBMFAConfigByID(mConfigID string) (*mfa.Config, err
 	txn := b.db.Txn(false)
 
 	return b.MemDBMFAConfigByIDInTxn(txn, mConfigID)
+}
+
+func (b *LoginMFABackend) MemDBMFAConfigByNameInTxn(ctx context.Context, txn *memdb.Txn, mConfigName string) (*mfa.Config, error) {
+	if mConfigName == "" {
+		return nil, fmt.Errorf("missing config name")
+	}
+
+	if txn == nil {
+		return nil, fmt.Errorf("txn is nil")
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	mConfigRaw, err := txn.First(b.methodTable, "name", ns.ID, mConfigName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch MFA config from memdb using name: %w", err)
+	}
+
+	if mConfigRaw == nil {
+		return nil, nil
+	}
+
+	mConfig, ok := mConfigRaw.(*mfa.Config)
+	if !ok {
+		return nil, fmt.Errorf("failed to declare the type of fetched MFA config")
+	}
+
+	return mConfig.Clone()
+}
+
+func (b *LoginMFABackend) MemDBMFAConfigByName(ctx context.Context, name string) (*mfa.Config, error) {
+	if name == "" {
+		return nil, fmt.Errorf("missing config name")
+	}
+
+	txn := b.db.Txn(false)
+
+	return b.MemDBMFAConfigByNameInTxn(ctx, txn, name)
 }
 
 func (b *LoginMFABackend) MemDBMFALoginEnforcementConfigByNameAndNamespace(name, namespaceId string) (*mfa.MFAEnforcementConfig, error) {

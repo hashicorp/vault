@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-// TestLoginMFA_Method_CRUD tests creating/reading/updating/deleting a method config for all of the MFA providers
+// TestLoginMFA_Method_CRUD tests creating/reading/updating/deleting a method config for all the MFA providers
 func TestLoginMFA_Method_CRUD(t *testing.T) {
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -64,6 +64,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				"key_size":                uint(10),
 				"qr_size":                 100,
 				"max_validation_attempts": 1,
+				"method_name":             "totp",
 			},
 			"issuer",
 			"zCorp",
@@ -78,6 +79,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				"secret_key":      "lol-secret",
 				"integration_key": "integration-key",
 				"api_hostname":    "some-hostname",
+				"method_name":     "duo",
 			},
 			"api_hostname",
 			"api-updated.duosecurity.com",
@@ -92,6 +94,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				"base_url":       "example.com",
 				"org_name":       "my-org",
 				"api_token":      "lol-token",
+				"method_name":    "okta",
 			},
 			"org_name",
 			"dev-62954466-updated",
@@ -104,6 +107,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 			map[string]interface{}{
 				"mount_accessor":       mountAccessor,
 				"settings_file_base64": "I0F1dG8tR2VuZXJhdGVkIGZyb20gUGluZ09uZSwgZG93bmxvYWRlZCBieSBpZD1bU1NPXSBlbWFpbD1baGFtaWRAaGFzaGljb3JwLmNvbV0KI1dlZCBEZWMgMTUgMTM6MDg6NDQgTVNUIDIwMjEKdXNlX2Jhc2U2NF9rZXk9YlhrdGMyVmpjbVYwTFd0bGVRPT0KdXNlX3NpZ25hdHVyZT10cnVlCnRva2VuPWxvbC10b2tlbgppZHBfdXJsPWh0dHBzOi8vaWRweG55bDNtLnBpbmdpZGVudGl0eS5jb20vcGluZ2lkCm9yZ19hbGlhcz1sb2wtb3JnLWFsaWFzCmFkbWluX3VybD1odHRwczovL2lkcHhueWwzbS5waW5naWRlbnRpdHkuY29tL3BpbmdpZAphdXRoZW50aWNhdG9yX3VybD1odHRwczovL2F1dGhlbnRpY2F0b3IucGluZ29uZS5jb20vcGluZ2lkL3BwbQ==",
+				"method_name":          "pingid",
 			},
 			"settings_file_base64",
 			"I0F1dG8tR2VuZXJhdGVkIGZyb20gUGluZ09uZSwgZG93bmxvYWRlZCBieSBpZD1bU1NPXSBlbWFpbD1baGFtaWRAaGFzaGljb3JwLmNvbV0KI1dlZCBEZWMgMTUgMTM6MDg6NDQgTVNUIDIwMjEKdXNlX2Jhc2U2NF9rZXk9YlhrdGMyVmpjbVYwTFd0bGVRPT0KdXNlX3NpZ25hdHVyZT10cnVlCnRva2VuPWxvbC10b2tlbgppZHBfdXJsPWh0dHBzOi8vaWRweG55bDNtLnBpbmdpZGVudGl0eS5jb20vcGluZ2lkL3VwZGF0ZWQKb3JnX2FsaWFzPWxvbC1vcmctYWxpYXMKYWRtaW5fdXJsPWh0dHBzOi8vaWRweG55bDNtLnBpbmdpZGVudGl0eS5jb20vcGluZ2lkCmF1dGhlbnRpY2F0b3JfdXJsPWh0dHBzOi8vYXV0aGVudGljYXRvci5waW5nb25lLmNvbS9waW5naWQvcHBt",
@@ -144,6 +148,10 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 
 			if resp.Data["namespace_path"] != "" {
 				t.Fatalf("namespace path was not empty, it was %s", resp.Data["namespace_path"])
+			}
+
+			if resp.Data["name"] != tc.methodName {
+				t.Fatalf("method name %s was not the expected one %s", resp.Data["method_name"], tc.methodName)
 			}
 
 			// listing should show it
@@ -193,6 +201,13 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 			}
 			if resp.Data["id"] != methodId {
 				t.Fatal("expected response id to match existing method id but it didn't")
+			}
+
+			// update the name with an invalid namespace prefix should fail
+			tc.configData["method_name"] = "ns1/foo"
+			_, err = client.Logical().Write(myNewPath, tc.configData)
+			if err == nil || !strings.Contains(err.Error(), "invalid underlying namespace ns1/ for method name foo") {
+				t.Fatal(err)
 			}
 
 			// delete with invalid path should fail

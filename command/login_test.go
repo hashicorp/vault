@@ -1,8 +1,11 @@
 package command
 
 import (
+	"context"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mitchellh/cli"
 
@@ -437,36 +440,41 @@ func TestLoginCommand_Run(t *testing.T) {
 
 		ui, cmd := testLoginCommand(t)
 
-		userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client)
+		userclient, entityID, methodID, methodName := testhelpers.SetupLoginMFATOTP(t, client)
 		cmd.client = userclient
 
 		enginePath := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
-		totpCode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath)
 
-		// login command bails early for test clients, so we have to explicitly set this
-		cmd.client.SetMFACreds([]string{methodID + ":" + totpCode})
-		code := cmd.Run([]string{
-			"-method", "userpass",
-			"username=testuser1",
-			"password=testpassword",
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
+		runCommand := func(methodIdentifier string) {
+			totpCode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath)
 
-		tokenHelper, err := cmd.TokenHelper()
-		if err != nil {
-			t.Fatal(err)
+			// login command bails early for test clients, so we have to explicitly set this
+			cmd.client.SetMFACreds([]string{methodIdentifier + ":" + totpCode})
+			code := cmd.Run([]string{
+				"-method", "userpass",
+				"username=testuser1",
+				"password=testpassword",
+			})
+			if exp := 0; code != exp {
+				t.Errorf("expected %d to be %d", code, exp)
+			}
+
+			tokenHelper, err := cmd.TokenHelper()
+			if err != nil {
+				t.Fatal(err)
+			}
+			storedToken, err := tokenHelper.Get()
+			if err != nil {
+				t.Fatal(err)
+			}
+			output = ui.OutputWriter.String() + ui.ErrorWriter.String()
+			t.Logf("\n%+v", output)
+			if !strings.Contains(output, storedToken) {
+				t.Fatalf("expected stored token: %q, got: %q", storedToken, output)
+			}
 		}
-		storedToken, err := tokenHelper.Get()
-		if err != nil {
-			t.Fatal(err)
-		}
-		output = ui.OutputWriter.String() + ui.ErrorWriter.String()
-		t.Logf("\n%+v", output)
-		if !strings.Contains(output, storedToken) {
-			t.Fatalf("expected stored token: %q, got: %q", storedToken, output)
-		}
+		runCommand(methodID)
+		runCommand(methodName)
 	})
 
 	t.Run("login_mfa_two_phase", func(t *testing.T) {
@@ -477,7 +485,7 @@ func TestLoginCommand_Run(t *testing.T) {
 
 		ui, cmd := testLoginCommand(t)
 
-		userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client)
+		userclient, entityID, methodID, _ := testhelpers.SetupLoginMFATOTP(t, client)
 		cmd.client = userclient
 
 		_ = testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
@@ -512,6 +520,65 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+	})
+
+	t.Run("login_mfa_two_phase_non_interactive_method_name", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testLoginCommand(t)
+
+		userclient, entityID, methodID, methodName := testhelpers.SetupLoginMFATOTP(t, client)
+		cmd.client = userclient
+
+		engineName := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
+
+		// clear the MFA creds just to be sure
+		cmd.client.SetMFACreds([]string{})
+
+		code := cmd.Run([]string{
+			"-method", "userpass",
+			"-non-interactive",
+			"username=testuser1",
+			"password=testpassword",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		output = ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+		reqIdReg, err := regexp.Compile(`mfa_request_id\s+(?P<name>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?\s+mfa_constraint.*`)
+		if err != nil {
+			t.Fatalf("failed to compile regex")
+		}
+
+		reqIDRaw := reqIdReg.FindAllStringSubmatch(output, -1)
+		mfaReqID := reqIDRaw[0][1]
+
+		validateFunc := func(methodIdentifier string) {
+			// the time required for the totp engine to generate a new code
+			time.Sleep(22 * time.Second)
+			totpPasscode1 := testhelpers.GetTOTPCodeFromEngine(t, client, engineName)
+
+			secret, err := cmd.client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
+				"mfa_request_id": mfaReqID,
+				"mfa_payload": map[string][]string{
+					methodIdentifier: {totpPasscode1},
+				},
+			})
+			if err != nil {
+				t.Fatalf("mfa validation failed: %v", err)
+			}
+
+			if secret.Auth == nil || secret.Auth.ClientToken == "" {
+				t.Fatalf("mfa validation did not return a client token")
+			}
+		}
+
+		validateFunc(methodName)
 	})
 
 	t.Run("communication_failure", func(t *testing.T) {
