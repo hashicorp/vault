@@ -219,7 +219,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
 	}
 
-	key, resp, err := b.extractKeyFromFields(ctx, req, d, &polReq)
+	key, resp, err := b.extractKeyFromFields(ctx, req, d, polReq.KeyType, isCiphertextSet)
 	if err != nil {
 		return resp, err
 	}
@@ -272,7 +272,7 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		versionToUpdate = version.(int)
 	}
 
-	key, resp, err := b.extractKeyFromFields(ctx, req, d, &polReq)
+	key, resp, err := b.extractKeyFromFields(ctx, req, d, p.Type, isCiphertextSet)
 	if err != nil {
 		return resp, err
 	}
@@ -339,9 +339,9 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 	return importKey, nil
 }
 
-func (b *backend) extractKeyFromFields(ctx context.Context, req *logical.Request, d *framework.FieldData, polReq *keysutil.PolicyRequest) ([]byte, *logical.Response, error) {
+func (b *backend) extractKeyFromFields(ctx context.Context, req *logical.Request, d *framework.FieldData, keyType keysutil.KeyType, isPrivateKey bool) ([]byte, *logical.Response, error) {
 	var key []byte
-	if polReq.IsPrivateKey {
+	if isPrivateKey {
 		hashFnStr := d.Get("hash_function").(string)
 		hashFn, err := parseHashFn(hashFnStr)
 		if err != nil {
@@ -360,7 +360,7 @@ func (b *backend) extractKeyFromFields(ctx context.Context, req *logical.Request
 		}
 	} else {
 		publicKeyString := d.Get("public_key").(string)
-		if !polReq.KeyType.ImportPublicKeySupported() {
+		if !keyType.ImportPublicKeySupported() {
 			return key, nil, errors.New("provided type does not support public_key import")
 		}
 		key = []byte(publicKeyString)
