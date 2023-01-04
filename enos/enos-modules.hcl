@@ -57,8 +57,8 @@ module "read_license" {
   source = "./modules/read_license"
 }
 
-module "remove_node" {
-  source = "./modules/remove_node"
+module "shutdown_node" {
+  source = "./modules/shutdown_node"
 }
 
 module "vault_agent" {
@@ -87,8 +87,8 @@ module "vault_cluster" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_cluster_ips" {
-  source = "./modules/vault_cluster_ips"
+module "vault_get_cluster_ips" {
+  source = "./modules/vault_get_cluster_ips"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -150,14 +150,14 @@ module "vault_verify_unsealed" {
   vault_instance_count = var.vault_instance_count
 }
 
-module "vault_performance_replication_primary" {
-  source = "./modules/vault_performance_replication_primary"
+module "vault_setup_perf_primary" {
+  source = "./modules/vault_setup_perf_primary"
 
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_performance_replication_secondary" {
-  source = "./modules/vault_performance_replication_secondary"
+module "vault_setup_perf_secondary" {
+  source = "./modules/vault_setup_perf_secondary"
 
   vault_install_dir = var.vault_install_dir
 }

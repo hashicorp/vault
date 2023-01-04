@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-binpath=${vault_install_dir}/vault
+binpath=${VAULT_INSTALL_DIR}/vault
 
 function fail() {
 	echo "$1" 1>&2

@@ -19,7 +19,7 @@ path "*" {
 EOF
 
 # The userpass auth method is enabled with the `vault_verify_write_data`,
-# so we don not enable here.
+# so we do not enable here.
 # Create new user and attach superuser policy
 $binpath write auth/userpass/users/tester password="changeme" policies="superuser"
 

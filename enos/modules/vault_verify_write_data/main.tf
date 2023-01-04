@@ -49,12 +49,15 @@ locals {
   }
 }
 
+# We use this module to verify write data in all Enos scenarios.  Since we cannot use
+# Vault token to authenticate to secondary clusters in replication scenario we add a regular user
+# here to keep the authentication method and module verification consistent between all scenarios
 resource "enos_remote_exec" "smoke-enable-secrets-kv" {
   # Only enable the secrets engine on the leader node
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
     VAULT_TOKEN       = var.vault_root_token
-    vault_install_dir = var.vault_install_dir
+    VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
   scripts = ["${path.module}/scripts/smoke-enable-secrets-kv.sh"]
@@ -74,9 +77,9 @@ resource "enos_remote_exec" "smoke-write-test-data" {
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
     VAULT_TOKEN       = var.vault_root_token
-    vault_install_dir = var.vault_install_dir
-    test_key          = "smoke${each.key}"
-    test_value        = "fire"
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    TEST_KEY          = "smoke${each.key}"
+    TEST_VALUE        = "fire"
   }
 
   scripts = ["${path.module}/scripts/smoke-write-test-data.sh"]

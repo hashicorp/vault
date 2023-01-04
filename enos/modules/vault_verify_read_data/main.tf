@@ -32,7 +32,7 @@ resource "enos_remote_exec" "verify_kv_on_node" {
   }
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
-    vault_install_dir = var.vault_install_dir
+    VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
   scripts = ["${path.module}/scripts/verify-data.sh"]

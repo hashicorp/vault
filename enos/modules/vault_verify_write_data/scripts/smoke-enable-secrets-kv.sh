@@ -26,7 +26,7 @@ function fail {
 	exit 1
 }
 
-binpath=${vault_install_dir}/vault
+binpath=${VAULT_INSTALL_DIR}/vault
 
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
@@ -42,7 +42,7 @@ EOF
 # Enable the userpass auth method
 $binpath auth enable userpass > /dev/null 2>&1
 
-# Create new user and attach superuser policy
+# Create new user and attach reguser policy
 $binpath write auth/userpass/users/testuser password="passuser1" policies="reguser"
 
 $binpath secrets enable -path="secret" kv

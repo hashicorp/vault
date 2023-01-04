@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-binpath=${vault_install_dir}/vault
+binpath=${VAULT_INSTALL_DIR}/vault
 
-IFS="," read -a keys <<< ${unseal_keys}
+IFS="," read -a keys <<< ${UNSEAL_KEYS}
 
 function fail() {
 	echo "$1" 1>&2

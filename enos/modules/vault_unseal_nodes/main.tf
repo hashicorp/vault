@@ -36,16 +36,16 @@ locals {
 
 # After replication is enabled the secondary follower nodes are expected to be sealed,
 # so we wait for the secondary follower nodes to update the seal status
-resource "enos_remote_exec" "wait_till_sealed" {
+resource "enos_remote_exec" "wait_until_sealed" {
   for_each = {
     for idx, follower in local.followers : idx => follower
   }
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
-    vault_install_dir = var.vault_install_dir
+    VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = ["${path.module}/scripts/wait-till-sealed.sh"]
+  scripts = ["${path.module}/scripts/wait-until-sealed.sh"]
 
   transport = {
     ssh = {
@@ -58,7 +58,7 @@ resource "enos_remote_exec" "wait_till_sealed" {
 # unseal progress 2/3 (Issue: https://hashicorp.atlassian.net/browse/VAULT-12309),
 # so we restart the followers to clear the status and to autounseal incase of awskms seal type
 resource "enos_remote_exec" "restart_followers" {
-  depends_on = [enos_remote_exec.wait_till_sealed]
+  depends_on = [enos_remote_exec.wait_until_sealed]
   for_each = {
     for idx, follower in local.followers : idx => follower
   }
@@ -84,8 +84,8 @@ resource "enos_remote_exec" "unseal_followers" {
 
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
-    vault_install_dir = var.vault_install_dir
-    unseal_keys       = join(",", var.vault_unseal_keys)
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    UNSEAL_KEYS       = join(",", var.vault_unseal_keys)
   }
 
   scripts = ["${path.module}/scripts/unseal-node.sh"]
@@ -109,8 +109,8 @@ resource "enos_remote_exec" "unseal_followers_again" {
 
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
-    vault_install_dir = var.vault_install_dir
-    unseal_keys       = join(",", var.vault_unseal_keys)
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    UNSEAL_KEYS       = join(",", var.vault_unseal_keys)
   }
 
   scripts = ["${path.module}/scripts/unseal-node.sh"]

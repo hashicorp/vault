@@ -26,9 +26,9 @@ function fail {
 	exit 1
 }
 
-binpath=${vault_install_dir}/vault
-testkey=${test_key}
-testvalue=${test_value}
+binpath=${VAULT_INSTALL_DIR}/vault
+testkey=${TEST_KEY}
+testvalue=${TEST_VALUE}
 
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 

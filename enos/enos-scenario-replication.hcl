@@ -1,3 +1,6 @@
+// The replication scenario configures performance replication between two Vault clusters and verifies
+// known_primary_cluster_addrs are updated on secondary Vault cluster with the IP addresses of replaced
+// nodes on primary Vault cluster
 scenario "replication" {
   matrix {
     arch              = ["amd64", "arm64"]
@@ -134,9 +137,13 @@ scenario "replication" {
     }
 
     variables {
-      ami_id                    = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags               = local.tags
-      consul_cluster_tag        = step.create_primary_backend_cluster.consul_cluster_tag
+      ami_id             = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      common_tags        = local.tags
+      consul_cluster_tag = step.create_primary_backend_cluster.consul_cluster_tag
+      consul_release = matrix.primary_backend == "consul" ? {
+        edition = var.backend_edition
+        version = matrix.consul_version
+      } : null
       dependencies_to_install   = local.dependencies_to_install
       instance_type             = local.vault_instance_type
       kms_key_arn               = step.create_vpc.kms_key_arn
@@ -185,9 +192,13 @@ scenario "replication" {
     }
 
     variables {
-      ami_id                    = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags               = local.tags
-      consul_cluster_tag        = step.create_secondary_backend_cluster.consul_cluster_tag
+      ami_id             = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      common_tags        = local.tags
+      consul_cluster_tag = step.create_secondary_backend_cluster.consul_cluster_tag
+      consul_release = matrix.secondary_backend == "consul" ? {
+        edition = var.backend_edition
+        version = matrix.consul_version
+      } : null
       dependencies_to_install   = local.dependencies_to_install
       instance_type             = local.vault_instance_type
       kms_key_arn               = step.create_vpc.kms_key_arn
@@ -237,7 +248,7 @@ scenario "replication" {
   }
 
   step "get_primary_cluster_ips" {
-    module     = module.vault_cluster_ips
+    module     = module.vault_get_cluster_ips
     depends_on = [step.verify_vault_primary_unsealed]
 
     providers = {
@@ -252,7 +263,7 @@ scenario "replication" {
   }
 
   step "get_secondary_cluster_ips" {
-    module     = module.vault_cluster_ips
+    module     = module.vault_get_cluster_ips
     depends_on = [step.verify_vault_secondary_unsealed]
 
     providers = {
@@ -285,7 +296,7 @@ scenario "replication" {
   }
 
   step "configure_performance_replication_primary" {
-    module = module.vault_performance_replication_primary
+    module = module.vault_setup_perf_primary
     depends_on = [
       step.get_primary_cluster_ips,
       step.verify_vault_primary_write_data
@@ -319,7 +330,7 @@ scenario "replication" {
   }
 
   step "configure_performance_replication_secondary" {
-    module     = module.vault_performance_replication_secondary
+    module     = module.vault_setup_perf_secondary
     depends_on = [step.generate_secondary_token]
 
     providers = {
@@ -421,9 +432,13 @@ scenario "replication" {
     }
 
     variables {
-      ami_id                    = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags               = local.tags
-      consul_cluster_tag        = step.create_primary_backend_cluster.consul_cluster_tag
+      ami_id             = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      common_tags        = local.tags
+      consul_cluster_tag = step.create_primary_backend_cluster.consul_cluster_tag
+      consul_release = matrix.primary_backend == "consul" ? {
+        edition = var.backend_edition
+        version = matrix.consul_version
+      } : null
       dependencies_to_install   = local.dependencies_to_install
       instance_type             = local.vault_instance_type
       kms_key_arn               = step.create_vpc.kms_key_arn
@@ -481,7 +496,7 @@ scenario "replication" {
   }
 
   step "remove_primary_follower_1" {
-    module = module.remove_node
+    module = module.shutdown_node
     depends_on = [
       step.get_primary_cluster_ips,
       step.verify_add_node_unsealed
@@ -497,7 +512,7 @@ scenario "replication" {
   }
 
   step "remove_primary_leader" {
-    module = module.remove_node
+    module = module.shutdown_node
     depends_on = [
       step.get_primary_cluster_ips,
       step.remove_primary_follower_1
@@ -513,7 +528,7 @@ scenario "replication" {
   }
 
   step "get_updated_primary_cluster_ips" {
-    module = module.vault_cluster_ips
+    module = module.vault_get_cluster_ips
     depends_on = [
       step.add_primary_cluster_nodes,
       step.remove_primary_follower_1,

@@ -2,8 +2,8 @@
 
 set -e
 
-binpath=${vault_install_dir}/vault
-instance_ips=${vault_instance_private_ips}
+binpath=${VAULT_INSTALL_DIR}/vault
+instance_ips=${VAULT_INSTANCE_PRIVATE_IPS}
 
 function fail() {
 	echo "$1" 1>&2

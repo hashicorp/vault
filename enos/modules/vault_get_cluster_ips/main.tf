@@ -1,8 +1,5 @@
 terraform {
   required_providers {
-    aws = {
-      source = "hashicorp/aws"
-    }
     enos = {
       source = "app.terraform.io/hashicorp-qti/enos"
     }
@@ -73,8 +70,8 @@ resource "enos_remote_exec" "get_leader_private_ip" {
   environment = {
     VAULT_ADDR                 = "http://127.0.0.1:8200"
     VAULT_TOKEN                = var.vault_root_token
-    vault_install_dir          = var.vault_install_dir
-    vault_instance_private_ips = jsonencode(local.instance_private_ips)
+    VAULT_INSTALL_DIR          = var.vault_install_dir
+    VAULT_INSTANCE_PRIVATE_IPS = jsonencode(local.instance_private_ips)
   }
 
   scripts = ["${path.module}/scripts/get-leader-private-ip.sh"]

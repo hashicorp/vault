@@ -2,7 +2,7 @@
 
 set -e
 
-binpath=${vault_install_dir}/vault
+binpath=${VAULT_INSTALL_DIR}/vault
 
 fail() {
   echo "$1" 2>&1
@@ -33,7 +33,7 @@ check_pr_status() {
   cluster_state=$($binpath read -format=json sys/replication/performance/status | jq -r '.data.state')
 
   if [[ "$cluster_state" == 'idle' ]]; then
-    fail "expected cluster state to be not idle, got $($binpath read -format=json sys/replication/performance/status | jq -r '.data.state')"
+    fail "expected cluster state to be not idle"
   fi
 }
 

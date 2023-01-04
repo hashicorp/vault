@@ -37,16 +37,6 @@ variable "secondary_leader_private_ip" {
   description = "Vault secondary cluster leader Private IP address"
 }
 
-# variable "primary_vault_root_token" {
-#   type        = string
-#   description = "The vault root token of primary cluster"
-# }
-
-# variable "secondary_vault_root_token" {
-#   type        = string
-#   description = "The vault root token of secondary cluster"
-# }
-
 variable "wrapping_token" {
   type        = string
   description = "The wrapping token created on primary cluster"
@@ -61,7 +51,7 @@ locals {
 resource "enos_remote_exec" "verify_replication_on_primary" {
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
-    vault_install_dir = var.vault_install_dir
+    VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
   scripts = ["${path.module}/scripts/verify-performance-replication.sh"]
