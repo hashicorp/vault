@@ -292,9 +292,9 @@ Here is the list of supported and unsupported PKCS#11 functions:
   - [ ]  `C_DecryptDigestUpdate`
   - [ ]  `C_SignEncryptUpdate`
   - [ ]  `C_DecryptVerifyUpdate`
-- Random Number Generation
-  - [ ]  `C_SeedRandom`
-  - [ ]  `C_GenerateRandom`
+- Random Number Generation (see note below)
+  - [X]  `C_SeedRandom`
+  - [X]  `C_GenerateRandom`
 
 ## Limitations and Notes
 
@@ -306,3 +306,5 @@ Due to the nature of Vault, the KMIP Secrets Engine, and PKCS#11, there are some
   This is because nearly all PKCS#11 API calls are translated 1-1 to KMIP calls, aside from some object attribute calls (which can be locally cached).
   Multiple sessions can be safely used simultaneously though, and a single Vault server node has been tested as supporting thousands of ongoing sessions.
 - The object attribute cache is valid only for a single object per session, and will be cleared when another object's attributes are queried.
+- The random number generator function, `C_GenerateRandom`, is currently implemented in software in the library by calling out to Go's [`crypto/rand`](https://pkg.go.dev/crypto/rand) package,
+  and does **not** call Vault.
