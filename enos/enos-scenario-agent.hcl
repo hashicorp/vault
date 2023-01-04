@@ -3,7 +3,7 @@ scenario "agent" {
     arch            = ["amd64", "arm64"]
     artifact_source = ["local", "crt", "artifactory"]
     distro          = ["ubuntu", "rhel"]
-    edition         = ["oss", "ent"]
+    edition         = ["oss", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
   }
 
   terraform_cli = terraform_cli.default
@@ -16,8 +16,11 @@ scenario "agent" {
 
   locals {
     build_tags = {
-      "oss" = ["ui"]
-      "ent" = ["enterprise", "ent"]
+      "oss"              = ["ui"]
+      "ent"              = ["ui", "enterprise", "ent"]
+      "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
+      "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
+      "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
     }
     bundle_path             = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
     dependencies_to_install = ["jq"]
@@ -81,7 +84,7 @@ scenario "agent" {
     module = module.create_vpc
 
     variables {
-      ami_architectures  = [matrix.arch]
+      ami_architectures  = distinct([matrix.arch, "amd64"])
       availability_zones = step.find_azs.availability_zones
       common_tags        = local.tags
     }
@@ -105,7 +108,7 @@ scenario "agent" {
     }
 
     variables {
-      ami_id        = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      ami_id        = step.create_vpc.ami_ids["ubuntu"]["amd64"]
       common_tags   = local.tags
       instance_type = var.backend_instance_type
       kms_key_arn   = step.create_vpc.kms_key_arn

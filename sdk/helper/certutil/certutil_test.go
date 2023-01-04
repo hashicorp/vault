@@ -26,7 +26,7 @@ import (
 
 // Tests converting back and forth between a CertBundle and a ParsedCertBundle.
 //
-// Also tests the GetSubjKeyID, GetHexFormatted, and
+// Also tests the GetSubjKeyID, GetHexFormatted, ParseHexFormatted and
 // ParsedCertBundle.getSigner functions.
 func TestCertBundleConversion(t *testing.T) {
 	cbuts := []*CertBundle{
@@ -243,6 +243,10 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 
 	if cb.SerialNumber != GetHexFormatted(pcbut.Certificate.SerialNumber.Bytes(), ":") {
 		return fmt.Errorf("bundle serial number does not match")
+	}
+
+	if !bytes.Equal(pcbut.Certificate.SerialNumber.Bytes(), ParseHexFormatted(cb.SerialNumber, ":")) {
+		return fmt.Errorf("failed re-parsing hex formatted number %s", cb.SerialNumber)
 	}
 
 	switch {

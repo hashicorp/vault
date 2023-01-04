@@ -1,6 +1,7 @@
 package command
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -217,6 +218,10 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 				if f.Name() == "plugin" {
 					continue
 				}
+				if _, err := os.Stat("../builtin/logical/" + f.Name() + "/backend.go"); errors.Is(err, os.ErrNotExist) {
+					// Skip ext test packages (fake plugins without backends).
+					continue
+				}
 				backends = append(backends, f.Name())
 			}
 		}
@@ -245,13 +250,6 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 
 		for _, b := range backends {
 			expectedResult := 0
-			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeSecrets)
-			allowDeprecated := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv)
-
-			// Need to handle deprecated builtins specially
-			if (status == consts.PendingRemoval && allowDeprecated == "") || status == consts.Removed {
-				expectedResult = 2
-			}
 
 			ui, cmd := testSecretsEnableCommand(t)
 			cmd.client = client
@@ -259,6 +257,13 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			actualResult := cmd.Run([]string{
 				b,
 			})
+
+			// Need to handle deprecated builtins specially
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeSecrets)
+			if status == consts.PendingRemoval || status == consts.Removed {
+				expectedResult = 2
+			}
+
 			if actualResult != expectedResult {
 				t.Errorf("type: %s - got: %d, expected: %d - %s", b, actualResult, expectedResult, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}

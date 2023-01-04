@@ -17,7 +17,7 @@ import (
 
 func TestPKI_PathManageKeys_GenerateInternalKeys(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	tests := []struct {
 		name           string
@@ -83,7 +83,7 @@ func TestPKI_PathManageKeys_GenerateInternalKeys(t *testing.T) {
 func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
 	t.Parallel()
 	// We tested a lot of the logic above within the internal test, so just make sure we honor the exported contract
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -115,7 +115,7 @@ func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
 
 func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	bundle1, err := certutil.CreateKeyBundle("ec", 224, rand.Reader)
 	require.NoError(t, err, "failed generating an ec key bundle")
@@ -248,7 +248,7 @@ func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 
 func TestPKI_PathManageKeys_DeleteDefaultKeyWarns(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -276,7 +276,7 @@ func TestPKI_PathManageKeys_DeleteDefaultKeyWarns(t *testing.T) {
 
 func TestPKI_PathManageKeys_DeleteUsedKeyFails(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -303,7 +303,7 @@ func TestPKI_PathManageKeys_DeleteUsedKeyFails(t *testing.T) {
 
 func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -356,7 +356,7 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 
 func TestPKI_PathManageKeys_ImportKeyBundleBadData(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -390,7 +390,7 @@ func TestPKI_PathManageKeys_ImportKeyBundleBadData(t *testing.T) {
 
 func TestPKI_PathManageKeys_ImportKeyRejectsMultipleKeys(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	bundle1, err := certutil.CreateKeyBundle("ec", 224, rand.Reader)
 	require.NoError(t, err, "failed generating an ec key bundle")

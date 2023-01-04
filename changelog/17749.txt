@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add inline policy creation when creating an identity entity or group
+```

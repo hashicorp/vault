@@ -13,14 +13,15 @@ export default class PkiEngine extends Engine {
   dependencies = {
     services: [
       'auth',
+      'download',
       'flash-messages',
       'namespace',
       'path-help',
       'router',
+      'secret-mount-path',
       'store',
       'version',
       'wizard',
-      'secret-mount-path',
     ],
     externalRoutes: ['secrets'],
   };

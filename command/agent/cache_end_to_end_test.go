@@ -315,7 +315,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
 	// Passing a non-nil inmemsink tells the agent to use the auto-auth token
-	mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, true))
+	mux.Handle("/", cache.ProxyHandler(ctx, cacheLogger, leaseCache, inmemSink, true))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,

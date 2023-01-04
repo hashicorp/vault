@@ -12,6 +12,17 @@
   "paths": {
     "/foo": {
       "description": "Synopsis",
+      "parameters": [
+        {
+          "name": "secret_mount_path",
+          "description": "Path where the backend was mounted; the endpoint path will be offset by the mount path",
+          "in": "path",
+          "schema": {
+            "type": "string",
+            "default": "secret"
+          }
+        }
+      ],
       "x-vault-unauthenticated": true,
       "delete": {
         "operationId": "deleteFoo",
@@ -34,11 +45,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "example": {
-                    "data": {
-                      "amount": 42
-                    }
-                  }
+                  "$ref": "#/components/schemas/KvFooResponse"
                 }
               }
             }
@@ -49,6 +56,19 @@
   },
   "components": {
     "schemas": {
+      "KvFooResponse": {
+        "type": "object",
+        "properties": {
+          "field_a": {
+            "type": "string",
+            "description": "field_a description"
+          },
+          "field_b": {
+            "type": "boolean",
+            "description": "field_b description"
+          }
+        }
+      }
     }
   }
 }

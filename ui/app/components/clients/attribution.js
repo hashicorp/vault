@@ -41,7 +41,7 @@ import { format, isSameMonth } from 'date-fns';
 
 export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
-  @service downloadCsv;
+  @service download;
 
   get formattedStartDate() {
     if (!this.args.startTimestamp) return null;
@@ -197,7 +197,7 @@ export default class Attribution extends Component {
   @action
   exportChartData(filename) {
     const contents = this.generateCsvData();
-    this.downloadCsv.download(filename, contents);
+    this.download.csv(filename, contents);
     this.showCSVDownloadModal = false;
   }
 }

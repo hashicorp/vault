@@ -34,11 +34,8 @@ export default IdentityModel.extend({
     editType: 'kv',
   }),
   policies: attr({
-    label: 'Policies',
-    editType: 'searchSelect',
+    editType: 'yield',
     isSectionHeader: true,
-    fallbackComponent: 'string-list',
-    models: ['policy/acl', 'policy/rgp'],
   }),
   memberGroupIds: attr({
     label: 'Member Group IDs',
@@ -73,7 +70,8 @@ export default IdentityModel.extend({
       return numEntities + numGroups > 0;
     }
   ),
-
+  policyPath: lazyCapabilities(apiPath`sys/policies`),
+  canCreatePolicies: alias('policyPath.canCreate'),
   alias: belongsTo('identity/group-alias', { async: false, readOnly: true }),
   updatePath: identityCapabilities(),
   canDelete: alias('updatePath.canDelete'),

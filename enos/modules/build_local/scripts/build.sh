@@ -8,5 +8,5 @@ export CGO_ENABLED=0
 
 root_dir="$(git rev-parse --show-toplevel)"
 pushd "$root_dir" > /dev/null
-make crt-build-ui crt-build crt-bundle
+make ci-build-ui ci-build ci-bundle
 popd > /dev/null

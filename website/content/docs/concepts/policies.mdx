@@ -442,8 +442,8 @@ constrain requests, using the following options:
     }
     ```
 
-- `denied_parameters` - Blacklists a list of parameter and values. Any values
-  specified here take precedence over `allowed_parameters`.
+- `denied_parameters` - A list of keys and values that are not permitted on the given 
+  path. Any values specified here take precedence over `allowed_parameters`.
 
   - Setting a parameter with a value of the empty list denies any changes to
     that parameter.
@@ -451,11 +451,12 @@ constrain requests, using the following options:
     ```ruby
     # This allows the user to update the userpass auth method's user
     # configurations (e.g., "password") but cannot update the "token_policies"
-    # parameter value.
+    # and "policies" parameter values.
     path "auth/userpass/users/*" {
       capabilities = ["update"]
       denied_parameters = {
         "token_policies" = []
+        "policies" = []
       }
     }
     ```

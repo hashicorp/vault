@@ -15,7 +15,7 @@ func Test_migrateStorageEmptyStorage(t *testing.T) {
 	t.Parallel()
 	startTime := time.Now()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Reset the version the helper above set to 1.
@@ -64,7 +64,7 @@ func Test_migrateStorageOnlyKey(t *testing.T) {
 	t.Parallel()
 	startTime := time.Now()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Reset the version the helper above set to 1.
@@ -146,7 +146,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	t.Parallel()
 	startTime := time.Now()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Reset the version the helper above set to 1.
@@ -252,7 +252,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 func TestMigration_OnceChainRebuild(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Create a legacy CA bundle that we'll migrate to the new layout. We call
@@ -362,7 +362,7 @@ func TestMigration_OnceChainRebuild(t *testing.T) {
 func TestExpectedOpsWork_PreMigration(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	// Reset the version the helper above set to 1.
 	b.pkiStorageVersion.Store(0)
 	require.True(t, b.useLegacyBundleCaStorage(), "pre migration we should have been told to use legacy storage.")
@@ -385,7 +385,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		MountPoint: "pki/",
 	})
 	require.NoError(t, err, "error from creating role")
-	require.Nil(t, resp, "got non-nil response object from creating role")
+	require.NotNil(t, resp, "got nil response object from creating role")
 
 	// List roles
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -471,7 +471,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		MountPoint: "pki/",
 	})
 	require.NoError(t, err, "error setting CRL config")
-	require.Nil(t, resp, "got non-nil response setting CRL config")
+	require.NotNil(t, resp, "got nil response setting CRL config")
 
 	// Set URL config
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -483,8 +483,7 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 		},
 		MountPoint: "pki/",
 	})
-	require.NoError(t, err, "error setting URL config")
-	require.Nil(t, resp, "got non-nil response setting URL config")
+	requireSuccessNonNilResponse(t, resp, err)
 
 	// Make sure we can fetch the old values...
 	for _, path := range []string{"ca/pem", "ca_chain", "cert/" + serialNum, "cert/ca", "cert/crl", "cert/ca_chain", "config/crl", "config/urls"} {

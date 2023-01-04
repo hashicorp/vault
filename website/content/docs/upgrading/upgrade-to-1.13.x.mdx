@@ -1,0 +1,26 @@
+---
+layout: docs
+page_title: Upgrading to Vault 1.13.x - Guides
+description: |-
+  This page contains the list of deprecations and important or breaking changes
+  for Vault 1.13.x. Please read it carefully.
+---
+
+~> Note: these are **draft** notes for a future version of Vault. They should not be considered
+official guidance until the release has been completed.
+
+# Overview
+
+This page contains the list of deprecations and important or breaking changes
+for Vault 1.13.x compared to 1.12. Please read it carefully.
+
+## Changes
+
+@include 'consul-dataplane-upgrade-note.mdx'
+
+### AliCloud Auth Role Parameter
+
+The AliCloud auth plugin will now require the `role` parameter on login. This
+has always been documented as a required field but the requirement will now be
+enforced.
+
