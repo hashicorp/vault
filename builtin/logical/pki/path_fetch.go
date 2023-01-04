@@ -177,7 +177,7 @@ func pathFetchListCerts(b *backend) *framework.Path {
 						Fields: map[string]*framework.FieldSchema{
 							"keys": {
 								Type:        framework.TypeStringSlice,
-								Description: `A list of certificates by serial number`,
+								Description: `A list of keys`,
 								Required:    true,
 							},
 						},
