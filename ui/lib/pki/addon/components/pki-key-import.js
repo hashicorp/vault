@@ -35,7 +35,7 @@ export default class PkiKeyImport extends Component {
     try {
       const { keyName } = this.args.model;
       yield this.args.model.save({ adapterOptions: { import: true } });
-      this.flashMessages.success(`Successfully imported key ${keyName}`);
+      this.flashMessages.success(`Successfully imported key${keyName ? ` ${keyName}.` : '.'}`);
       this.args.onSave();
     } catch (error) {
       this.errorBanner = errorMessage(error);
