@@ -5,8 +5,8 @@ export default class PkiConfigImportModel extends Model {
   @service secretMountPath;
 
   @attr('string') pemBundle;
-  @attr() importedIssuers;
-  @attr() importedKeys;
+  @attr importedIssuers;
+  @attr importedKeys;
 
   get backend() {
     return this.secretMountPath.currentPath;

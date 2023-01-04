@@ -59,8 +59,8 @@
             </InfoTableRow>
           {{else if (eq attr.name "keyId")}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
-              {{#if (gt @issuer.keyId 0)}}
-                <LinkTo @route="keys.key" @model={{get @issuer attr.name}}>{{get @issuer attr.name}}</LinkTo>
+              {{#if @issuer.keyId}}
+                <LinkTo @route="keys.key" @model={{@issuer.keyId}}>{{@issuer.keyId}}</LinkTo>
               {{else}}
                 <Icon @name="minus" />
               {{/if}}

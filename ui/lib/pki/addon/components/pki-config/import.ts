@@ -53,6 +53,7 @@ export default class PkiConfigImportComponent extends Component<Record<string, n
     this.configModel
       .save()
       .then(() => {
+        this.flashMessages.success('Successfully imported the certificate.');
         this.router.transitionTo('vault.cluster.secrets.backend.pki.issuers.index');
       })
       .catch((e) => {
