@@ -12,6 +12,8 @@ export default class PkiOverviewRoute extends Route {
   }
 
   hasConfig() {
+    // When the engine is configured, it creates a default issuer.
+    // If the issuers list is empty, we know it hasn't been configured
     const endpoint = `${this.win.origin}/v1/${this.secretMountPath.currentPath}/issuers?list=true`;
     return this.auth
       .ajax(endpoint, 'GET', {})

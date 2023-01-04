@@ -27,7 +27,9 @@
       </div>
     {{/each}}
   </div>
-  {{#if this.configType}}
+  {{#if (eq this.configType "import")}}
+    <PkiConfig::Import />
+  {{else if this.configType}}
     {{! TODO: Forms }}
   {{else}}
     <EmptyState @title="Choose an option" @message="To see configuration options, choose your desired output above." />
