@@ -4497,6 +4497,8 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 
+	context := d.Get("context").(string)
+
 	// Set up target document and convert to map[string]interface{} which is what will
 	// be received from plugin backends.
 	doc := framework.NewOASDocument(version.Version)
@@ -4595,6 +4597,9 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	if err := procMountGroup("auth", "auth/"); err != nil {
 		return nil, err
 	}
+
+	// for backward compatibility with plugins built against older vault sdk
+	doc.CreateOperationIDs(context)
 
 	buf, err := json.Marshal(doc)
 	if err != nil {

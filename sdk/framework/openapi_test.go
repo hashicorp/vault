@@ -536,6 +536,7 @@ func TestOpenAPI_OperationID(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		doc.CreateOperationIDs(context)
 
 		tests := []struct {
 			path string
@@ -716,6 +717,7 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	if err := documentPath(path, sp, "kv", logical.TypeLogical, doc); err != nil {
 		t.Fatal(err)
 	}
+	doc.CreateOperationIDs("")
 
 	docJSON, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {

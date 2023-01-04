@@ -816,3 +816,74 @@ func cleanResponse(resp *logical.Response) *cleanedResponse {
 		Headers:  resp.Headers,
 	}
 }
+
+// CreateOperationIDs generates unique operationIds for all paths/methods.
+// The transform will convert path/method into camelcase. e.g.:
+//
+// /sys/tools/random/{urlbytes} -> postSysToolsRandomUrlbytes
+//
+// In the unlikely case of a duplicate ids, a numeric suffix is added:
+//
+//	postSysToolsRandomUrlbytes_2
+//
+// An optional user-provided suffix ("context") may also be appended.
+//
+// Deprecated: constructRequestResponseIdentifier populates operationId now;
+// This function is here for backwards compatibility with older plugins
+func (d *OASDocument) CreateOperationIDs(context string) {
+	// title caser
+	title := cases.Title(language.English)
+
+	opIDCount := make(map[string]int)
+	var paths []string
+
+	// traverse paths in a stable order to ensure stable output
+	for path := range d.Paths {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	for _, path := range paths {
+		pi := d.Paths[path]
+		for _, method := range []string{"get", "post", "delete"} {
+			var oasOperation *OASOperation
+			switch method {
+			case "get":
+				oasOperation = pi.Get
+			case "post":
+				oasOperation = pi.Post
+			case "delete":
+				oasOperation = pi.Delete
+			}
+
+			if oasOperation == nil {
+				continue
+			}
+
+			if oasOperation.OperationID != "" {
+				continue
+			}
+
+			// Discard "_mount_path" from any {thing_mount_path} parameters
+			path = strings.Replace(path, "_mount_path", "", 1)
+
+			// Space-split on non-words, title case everything, recombine
+			opID := nonWordRe.ReplaceAllString(strings.ToLower(path), " ")
+			opID = title.String(opID)
+			opID = method + strings.ReplaceAll(opID, " ", "")
+
+			// deduplicate operationIds. This is a safeguard, since generated IDs should
+			// already be unique given our current path naming conventions.
+			opIDCount[opID]++
+			if opIDCount[opID] > 1 {
+				opID = fmt.Sprintf("%s_%d", opID, opIDCount[opID])
+			}
+
+			if context != "" {
+				opID += "_" + context
+			}
+
+			oasOperation.OperationID = opID
+		}
+	}
+}
