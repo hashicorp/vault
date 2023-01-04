@@ -821,7 +821,8 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"error": {
-								Type: framework.TypeString,
+								Required: false,
+								Type:     framework.TypeString,
 							},
 						},
 					}},
@@ -847,28 +848,35 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 							"name": {
 								Type:        framework.TypeString,
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_name"][0]),
+								Required:    true,
 							},
 							"sha256": {
 								Type:        framework.TypeString,
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
+								Required:    true,
 							},
 							"command": {
 								Type:        framework.TypeString,
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
+								Required:    true,
 							},
 							"args": {
 								Type:        framework.TypeStringSlice,
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_args"][0]),
+								Required:    true,
 							},
 							"version": {
 								Type:        framework.TypeString,
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+								Required:    true,
 							},
 							"builtin": {
-								Type: framework.TypeBool,
+								Type:     framework.TypeBool,
+								Required: true,
 							},
 							"deprecation_status": {
-								Type: framework.TypeBool,
+								Type:     framework.TypeBool,
+								Required: false,
 							},
 						},
 					}},
@@ -904,6 +912,7 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 								"keys": {
 									Type:        framework.TypeStringSlice,
 									Description: "List of plugin names in the catalog",
+									Required:    true,
 								},
 							},
 						}},
@@ -926,7 +935,8 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"detailed": {
-									Type: framework.TypeMap,
+									Type:     framework.TypeMap,
+									Required: false,
 								},
 							},
 						}},
@@ -967,7 +977,8 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"reload_id": {
-								Type: framework.TypeString,
+								Type:     framework.TypeString,
+								Required: true,
 							},
 						},
 					}},
@@ -975,10 +986,12 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"reload_id": {
-								Type: framework.TypeString,
+								Type:     framework.TypeString,
+								Required: true,
 							},
 							logical.HTTPRawBody: {
-								Type: framework.TypeString,
+								Type:     framework.TypeString,
+								Required: true,
 							},
 						},
 					}},
@@ -1329,6 +1342,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 								"keys": {
 									Type:        framework.TypeCommaStringSlice,
 									Description: "A list of lease ids",
+									Required:    true,
 								},
 							},
 						}},
@@ -1360,26 +1374,32 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 								"id": {
 									Type:        framework.TypeString,
 									Description: "Lease id",
+									Required:    true,
 								},
 								"issue_time": {
 									Type:        framework.TypeTime,
 									Description: "Timestamp for the lease's issue time",
+									Required:    true,
 								},
 								"renewable": {
 									Type:        framework.TypeBool,
 									Description: "True if the lease is able to be renewed",
+									Required:    true,
 								},
 								"expire_time": {
 									Type:        framework.TypeTime,
 									Description: "Optional lease expiry time ",
+									Required:    false,
 								},
 								"last_renewal": {
 									Type:        framework.TypeTime,
 									Description: "Optional Timestamp of the last time the lease was renewed",
+									Required:    false,
 								},
 								"ttl": {
 									Type:        framework.TypeInt,
 									Description: "Time to Live set for the lease, returns 0 if unset",
+									Required:    true,
 								},
 							},
 						}},
@@ -1567,10 +1587,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 								"lease_count": {
 									Type:        framework.TypeInt,
 									Description: "Number of matching leases",
+									Required:    true,
 								},
 								"counts": {
 									Type:        framework.TypeInt,
 									Description: "Number of matching leases per mount",
+									Required:    true,
 								},
 							},
 						}},
@@ -1613,10 +1635,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 								"lease_count": {
 									Type:        framework.TypeInt,
 									Description: "Number of matching leases",
+									Required:    true,
 								},
 								"counts": {
 									Type:        framework.TypeInt,
 									Description: "Number of matching leases per mount",
+									Required:    true,
 								},
 							},
 						}},
@@ -1699,13 +1723,16 @@ func (b *SystemBackend) metricsPath() *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							logical.HTTPContentType: {
-								Type: framework.TypeString,
+								Type:     framework.TypeString,
+								Required: true,
 							},
 							logical.HTTPRawBody: {
-								Type: framework.TypeString,
+								Type:     framework.TypeString,
+								Required: true,
 							},
 							logical.HTTPStatusCode: {
-								Type: framework.TypeInt,
+								Type:     framework.TypeInt,
+								Required: true,
 							},
 						},
 					}},
@@ -1942,13 +1969,16 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"policies": {
-									Type: framework.TypeStringSlice,
+									Type:     framework.TypeStringSlice,
+									Required: false,
 								},
 								"keys": {
-									Type: framework.TypeStringSlice,
+									Type:     framework.TypeStringSlice,
+									Required: true,
 								},
 								"keys_info": {
-									Type: framework.TypeMap,
+									Type:     framework.TypeMap,
+									Required: false,
 								},
 							},
 						}},
@@ -1961,13 +1991,16 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"policies": {
-									Type: framework.TypeStringSlice,
+									Type:     framework.TypeStringSlice,
+									Required: false,
 								},
 								"keys": {
-									Type: framework.TypeStringSlice,
+									Type:     framework.TypeStringSlice,
+									Required: true,
 								},
 								"keys_info": {
-									Type: framework.TypeMap,
+									Type:     framework.TypeMap,
+									Required: false,
 								},
 							},
 						}},
@@ -2006,13 +2039,16 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"policies": {
-									Type: framework.TypeStringSlice,
+									Type:     framework.TypeStringSlice,
+									Required: false,
 								},
 								"keys": {
-									Type: framework.TypeStringSlice,
+									Type:     framework.TypeStringSlice,
+									Required: true,
 								},
 								"keys_info": {
-									Type: framework.TypeMap,
+									Type:     framework.TypeMap,
+									Required: false,
 								},
 							},
 						}},
@@ -2056,13 +2092,16 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"policies": {
-									Type: framework.TypeStringSlice,
+									Type:     framework.TypeStringSlice,
+									Required: false,
 								},
 								"keys": {
-									Type: framework.TypeStringSlice,
+									Type:     framework.TypeStringSlice,
+									Required: true,
 								},
 								"keys_info": {
-									Type: framework.TypeMap,
+									Type:     framework.TypeMap,
+									Required: false,
 								},
 							},
 						}},
@@ -2096,13 +2135,16 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"name": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: false,
 								},
 								"rules": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: false,
 								},
 								"policy": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: false,
 								},
 							},
 						}},
@@ -2174,7 +2216,8 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"password": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: true,
 								},
 							},
 						}},
@@ -2219,7 +2262,8 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"policy": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: true,
 								},
 							},
 						}},
@@ -2394,68 +2438,87 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 								"max_lease_ttl": {
 									Type:        framework.TypeString,
 									Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
+									Required:    true,
 								},
 								"description": {
 									Type:        framework.TypeString,
 									Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
+									Required:    true,
 								},
 								"default_lease_ttl": {
 									Type:        framework.TypeString,
 									Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
+									Required:    true,
 								},
 								"force_no_cache": {
-									Type: framework.TypeBool,
+									Type:     framework.TypeBool,
+									Required: true,
 								},
 								"token_type": {
 									Type:        framework.TypeString,
 									Description: strings.TrimSpace(sysHelp["token_type"][0]),
+									Required:    false,
 								},
 								"allowed_managed_keys": {
 									Type:        framework.TypeCommaStringSlice,
 									Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
+									Required:    false,
 								},
 								"allowed_response_headers": {
 									Type:        framework.TypeCommaStringSlice,
 									Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
+									Required:    false,
 								},
 								"allowed_request_headers": {
 									Type:        framework.TypeCommaStringSlice,
 									Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
+									Required:    false,
 								},
 								"options": {
 									Type:        framework.TypeKVPairs,
 									Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
+									Required:    false,
 								},
 								"plugin_version": {
 									Type:        framework.TypeString,
 									Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+									Required:    false,
 								},
 								"external_entropy_access": {
-									Type: framework.TypeBool,
+									Type:     framework.TypeBool,
+									Required: false,
 								},
 								"audit_non_hmac_request_keys": {
-									Type: framework.TypeCommaStringSlice,
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
 								},
 								"audit_non_hmac_response_keys": {
-									Type: framework.TypeCommaStringSlice,
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
 								},
 								"listing_visibility": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: false,
 								},
 								"passthrough_request_headers": {
-									Type: framework.TypeCommaStringSlice,
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
 								},
 								"user_lockout_counter_reset_duration": {
-									Type: framework.TypeInt64,
+									Type:     framework.TypeInt64,
+									Required: false,
 								},
 								"user_lockout_threshold": {
-									Type: framework.TypeInt64, // TODO this is actuall a Uint64 do we need a new type?
+									Type:     framework.TypeInt64, // TODO this is actuall a Uint64 do we need a new type?
+									Required: false,
 								},
 								"user_lockout_duration": {
-									Type: framework.TypeInt64,
+									Type:     framework.TypeInt64,
+									Required: false,
 								},
 								"user_lockout_disable": {
-									Type: framework.TypeBool,
+									Type:     framework.TypeBool,
+									Required: false,
 								},
 							},
 						}},
@@ -2535,50 +2598,63 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 								"type": {
 									Type:        framework.TypeString,
 									Description: strings.TrimSpace(sysHelp["mount_type"][0]),
+									Required:    true,
 								},
 								"description": {
 									Type:        framework.TypeString,
 									Description: strings.TrimSpace(sysHelp["mount_desc"][0]),
+									Required:    true,
 								},
 								"accessor": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: true,
 								},
 								"local": {
 									Type:        framework.TypeBool,
 									Default:     false,
 									Description: strings.TrimSpace(sysHelp["mount_local"][0]),
+									Required:    true,
 								},
 								"seal_wrap": {
 									Type:        framework.TypeBool,
 									Default:     false,
 									Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
+									Required:    true,
 								},
 								"external_entropy_access": {
-									Type: framework.TypeBool,
+									Type:     framework.TypeBool,
+									Required: true,
 								},
 								"options": {
 									Type:        framework.TypeKVPairs,
 									Description: strings.TrimSpace(sysHelp["mount_options"][0]),
+									Required:    true,
 								},
 								"plugin_version": {
 									Type:        framework.TypeString,
 									Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+									Required:    true,
 								},
 								"uuid": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: true,
 								},
 								"running_plugin_version": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: true,
 								},
 								"running_sha256": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: true,
 								},
 								"config": {
 									Type:        framework.TypeMap,
 									Description: strings.TrimSpace(sysHelp["mount_config"][0]),
+									Required:    true,
 								},
 								"deprecation_status": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: false,
 								},
 							},
 						}},
@@ -2602,7 +2678,8 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"error": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: false,
 								},
 							},
 						}},

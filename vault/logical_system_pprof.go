@@ -171,7 +171,8 @@ render pages.`,
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"error": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: false,
 								},
 							},
 						}},
@@ -217,7 +218,8 @@ render pages.`,
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"error": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: false,
 								},
 							},
 						}},

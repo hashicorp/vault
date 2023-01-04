@@ -89,7 +89,8 @@ func (b *SystemBackend) loginMFAPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"error": {
-									Type: framework.TypeString,
+									Type:     framework.TypeString,
+									Required: false,
 								},
 							},
 						}},
