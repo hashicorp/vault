@@ -203,13 +203,6 @@ export default class Dashboard extends Component {
     }
   }
 
-  get byMonthNewClients() {
-    if (this.byMonthActivityData) {
-      return this.byMonthActivityData?.map((m) => m.new_clients);
-    }
-    return null;
-  }
-
   get hasAttributionData() {
     if (this.selectedAuthMethod) return false;
     if (this.selectedNamespace) {
