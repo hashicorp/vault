@@ -21,7 +21,7 @@
 {{#if this.model.hasConfig}}
   {{! TODO show overview items }}
 {{else}}
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
+  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
     <LinkTo @route="configuration.create" @model={{this.model.engine}}>
       Configure PKI
     </LinkTo>
