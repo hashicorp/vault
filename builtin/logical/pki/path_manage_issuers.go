@@ -37,42 +37,47 @@ func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
 							"expiration": {
 								Type:        framework.TypeString,
 								Description: `The expiration of the given.`,
+								Required: true,
 							},
 							"serial_number": {
 								Type:        framework.TypeString,
 								Description: `The requested Subject's named serial number.`,
+								Required: true,
 							},
 							"certificate": {
 								Type:        framework.TypeString,
 								Description: `The generated self-signed CA certificate.`,
+								Required: true,
 							},
 							"issuing_ca": {
 								Type:        framework.TypeString,
 								Description: `The issuing certificate authority.`,
+								Required: true,
 							},
 							"issuer_id": {
 								Type:        framework.TypeString,
 								Description: `The ID of the issuer`,
+								Required: true,
 							},
 							"issuer_name": {
 								Type:        framework.TypeString,
 								Description: `The name of the issuer.`,
+								Required: true,
 							},
 							"key_id": {
 								Type:        framework.TypeString,
 								Description: `The ID of the key.`,
+								Required: false,
 							},
 							"key_name": {
 								Type:        framework.TypeString,
 								Description: `The key name if given.`,
+								Required: false,
 							},
 							"private_key": {
 								Type:        framework.TypeString,
 								Description: `The private key if exported was specified.`,
-							},
-							"private_key_type": {
-								Type:        framework.TypeString,
-								Description: `The private key type either rsa, ed25519, or ec.`,
+								Required: false,
 							},
 						},
 					}},
@@ -115,14 +120,17 @@ func buildPathGenerateIntermediate(b *backend, pattern string) *framework.Path {
 							"csr": {
 								Type:        framework.TypeString,
 								Description: `Certificate signing request.`,
+								Required: true,
 							},
 							"private_key": {
 								Type:        framework.TypeString,
 								Description: `Generated private key.`,
+								Required: false,
 							},
 							"private_key_type": {
 								Type:        framework.TypeString,
 								Description: `Specifies the format used for marshaling the private key.`,
+								Required: false,
 							},
 						},
 					}},
@@ -175,14 +183,17 @@ secret-key (optional) and certificates.`,
 							"mapping": {
 								Type:        framework.TypeMap,
 								Description: "A mapping of issuer_id to key_id for all issuers included in this request",
+								Required: true,
 							},
 							"imported_keys": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: "Net-new keys imported as a part of this request",
+								Required: true,
 							},
 							"imported_issuers": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: "Net-new issuers imported as a part of this request",
+								Required: true,
 							},
 						},
 					}},
@@ -447,62 +458,77 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 							"issuer_id": {
 								Type:        framework.TypeString,
 								Description: `ID of the issuer`,
+								Required: true,
 							},
 							"issuer_name": {
 								Type:        framework.TypeString,
 								Description: `Name of the issuer`,
+								Required: true,
 							},
 							"key_id": {
 								Type:        framework.TypeString,
 								Description: `ID of the Key`,
+								Required: true,
 							},
 							"certificate": {
 								Type:        framework.TypeString,
 								Description: ``,
+								Required: true,
 							},
 							"manual_chain": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: ``,
+								Required: true,
 							},
 							"ca_chain": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: ``,
+								Required: true,
 							},
 							"leaf_not_after_behavior": {
 								Type:        framework.TypeString,
 								Description: ``,
+								Required: true,
 							},
 							"usage": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: ``,
+								Required: true,
 							},
 							"revocation_signature_algorithm": {
 								Type:        framework.TypeString,
 								Description: ``,
+								Required: true,
 							},
 							"revoked": {
 								Type:        framework.TypeBool,
 								Description: `Whether the issuer was revoked`,
+								Required: true,
 							},
 							"issuing_certificates": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: ``,
+								Required: true,
 							},
 							"crl_distribution_points": {
 								Type:        framework.TypeStringSlice,
 								Description: ``,
+								Required: true,
 							},
 							"ocsp_servers": {
 								Type:        framework.TypeStringSlice,
 								Description: ``,
+								Required: true,
 							},
 							"revocation_time": {
 								Type:        framework.TypeString,
 								Description: `Time of revocation`,
+								Required: false,
 							},
 							"revocation_time_rfc3339": {
 								Type:        framework.TypeString,
 								Description: `RFC formatted time of revocation`,
+								Required: false,
 							},
 						},
 					}},

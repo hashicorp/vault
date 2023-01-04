@@ -42,22 +42,27 @@ func buildPathIssue(b *backend, pattern string) *framework.Path {
 							"certificate": {
 								Type:        framework.TypeString,
 								Description: `Certificate`,
+								Required: false,
 							},
 							"issuing_ca": {
 								Type:        framework.TypeString,
 								Description: `Issuing Certificate Authority`,
+								Required: false,
 							},
 							"ca_chain": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: `Certificate Chain`,
+								Required: false,
 							},
 							"serial_number": {
 								Type:        framework.TypeString,
 								Description: `Serial Number`,
+								Required: false,
 							},
 							"expiration": {
 								Type:        framework.TypeString,
 								Description: `Time of expiration`,
+								Required: false,
 							},
 						},
 					}},
@@ -160,22 +165,37 @@ func buildPathIssuerSignVerbatim(b *backend, pattern string) *framework.Path {
 							"certificate": {
 								Type:        framework.TypeString,
 								Description: `Certificate`,
+								Required: true,
 							},
 							"issuing_ca": {
 								Type:        framework.TypeString,
 								Description: `Issuing Certificate Authority`,
+								Required: true,
 							},
 							"ca_chain": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: `Certificate Chain`,
+								Required: false,
 							},
 							"serial_number": {
 								Type:        framework.TypeString,
 								Description: `Serial Number`,
+								Required: false,
 							},
 							"expiration": {
 								Type:        framework.TypeString,
 								Description: `Time of expiration`,
+								Required: false,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `Private key`,
+								Required: false,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `Private key type`,
+								Required: false,
 							},
 						},
 					}},

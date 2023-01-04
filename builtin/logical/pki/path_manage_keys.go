@@ -63,15 +63,23 @@ is required. Ignored for other types.`,
 							"key_id": {
 								Type:        framework.TypeString,
 								Description: `ID assigned to this key.`,
+								Required: true,
 							},
 							"key_name": {
 								Type:        framework.TypeString,
 								Description: `Name assigned to this key.`,
+								Required: true,
 							},
 							"key_type": {
 								Type:        framework.TypeString,
 								Description: `The type of key to use; defaults to RSA. "rsa"
 								"ec" and "ed25519" are the only valid values.`,
+								Required: true,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `The private key string`,
+								Required: false,
 							},
 						},
 					}},
@@ -192,15 +200,18 @@ func pathImportKey(b *backend) *framework.Path {
 							"key_id": {
 								Type:        framework.TypeString,
 								Description: `ID assigned to this key.`,
+								Required: true,
 							},
 							"key_name": {
 								Type:        framework.TypeString,
 								Description: `Name assigned to this key.`,
+								Required: true,
 							},
 							"key_type": {
 								Type:        framework.TypeString,
 								Description: `The type of key to use; defaults to RSA. "rsa"
 								"ec" and "ed25519" are the only valid values.`,
+								Required: true,
 							},
 						},
 					}},
