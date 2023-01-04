@@ -127,7 +127,7 @@
   <button
     type="submit"
     form="role"
-    class="button is-primary"
+    class="button is-primary {{if this.save.isRunning 'is-loading'}}"
     disabled={{or (not @model.generationPreference) this.save.isRunning}}
     data-test-save
   >
