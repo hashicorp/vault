@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/sdk/version"
+	"github.com/sasha-s/go-deadlock"
 )
 
 // invalidKey is used to test Unseal
@@ -2833,5 +2834,22 @@ func TestCore_ServiceRegistration(t *testing.T) {
 		notifyInitCount:   1,
 	}); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestDetectedDeadlock(t *testing.T) {
+	testCore, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: "statelock"})
+	InduceDeadlock(t, testCore, 1)
+}
+
+func TestDefaultDeadlock(t *testing.T) {
+	testCore, _, _ := TestCoreUnsealed(t)
+	InduceDeadlock(t, testCore, 0)
+}
+
+func RestoreDeadlockOpts() func() {
+	opts := deadlock.Opts
+	return func() {
+		deadlock.Opts = opts
 	}
 }

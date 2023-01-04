@@ -3529,20 +3529,3 @@ func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
 		t.Fatalf("expected 1 deadlock, detected %d", deadlocks)
 	}
 }
-
-func TestDetectedDeadlock(t *testing.T) {
-	testCore, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: "statelock"})
-	InduceDeadlock(t, testCore, 1)
-}
-
-func TestDefaultDeadlock(t *testing.T) {
-	testCore, _, _ := TestCoreUnsealed(t)
-	InduceDeadlock(t, testCore, 0)
-}
-
-func RestoreDeadlockOpts() func() {
-	opts := deadlock.Opts
-	return func() {
-		deadlock.Opts = opts
-	}
-}
