@@ -557,8 +557,8 @@ func documentPath(p *Path, specialPaths *logical.Paths, mountPathWithPrefix stri
 // construct the name instead.
 //
 // Examples of generated names:
-//   - WriteSecret
-//   - ReadSecret
+//   - KVv2Write
+//   - KVv2Read
 //   - GoogleCloudLogin
 //   - GoogleCloudWriteRole
 func constructRequestResponseIdentifier(operation logical.Operation, mount, path string) string {
