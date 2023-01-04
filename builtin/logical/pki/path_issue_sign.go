@@ -64,6 +64,16 @@ func buildPathIssue(b *backend, pattern string) *framework.Path {
 								Description: `Time of expiration`,
 								Required: false,
 							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `Private key`,
+								Required: false,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `Private key type`,
+								Required: false,
+							},
 						},
 					}},
 				},
@@ -102,22 +112,37 @@ func buildPathSign(b *backend, pattern string) *framework.Path {
 							"certificate": {
 								Type:        framework.TypeString,
 								Description: `Certificate`,
+								Required: true,
 							},
 							"issuing_ca": {
 								Type:        framework.TypeString,
 								Description: `Issuing Certificate Authority`,
+								Required: true,
 							},
 							"ca_chain": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: `Certificate Chain`,
+								Required: false,
 							},
 							"serial_number": {
 								Type:        framework.TypeString,
 								Description: `Serial Number`,
+								Required: true,
 							},
 							"expiration": {
 								Type:        framework.TypeString,
 								Description: `Time of expiration`,
+								Required: true,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `Private key`,
+								Required: false,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `Private key type`,
+								Required: false,
 							},
 						},
 					}},
