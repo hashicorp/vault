@@ -5145,6 +5145,17 @@ This path responds to the following HTTP methods.
         Clears the CORS configuration and disables acceptance of CORS requests.
 		`,
 	},
+	"config/group-policy-application": {
+		"Configures how policies in groups should be applied, accepting 'within_namespace_hierarchy' (default) and 'any'," +
+			"which will allow policies to grant permissions in groups outside of those sharing a namespace hierarchy.",
+		`
+This path responds to the following HTTP methods.
+    GET /
+        Returns the current group policy application mode.
+    POST /
+        Sets the current group_policy_application_mode to either 'within_namespace_hierarchy' or 'any'.
+        `,
+	},
 	"config/ui/headers": {
 		"Configures response headers that should be returned from the UI.",
 		`
