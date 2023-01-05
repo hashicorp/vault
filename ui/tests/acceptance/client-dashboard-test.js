@@ -339,7 +339,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
         `Warning Vault was upgraded to 1.10.1 on ${format(
           UPGRADE_DATE,
           'MMM d, yyyy'
-        )}. We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data below. Learn more here.`
+        )}. We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data. Learn more here.`
       );
   });
 
