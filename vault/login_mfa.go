@@ -1743,7 +1743,7 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 		}
 	}
 
-	passcode, err := parseMfaFactor(mfaCreds)
+	mfaFactor, err := parseMfaFactor(mfaCreds)
 	if err != nil {
 		return err
 	}
@@ -1759,17 +1759,13 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 			return fmt.Errorf("MFA secret for method name %q not present in entity %q", mConfig.Name, entity.ID)
 		}
 
-		if passcode == "" {
-			return fmt.Errorf("MFA credentials not supplied")
-		}
-
-		return c.validateTOTP(ctx, passcode, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
+		return c.validateTOTP(ctx, mfaFactor, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
 
 	case mfaMethodTypeOkta:
 		return c.validateOkta(ctx, mConfig, finalUsername)
 
 	case mfaMethodTypeDuo:
-		return c.validateDuo(ctx, passcode, mConfig, finalUsername, reqConnectionRemoteAddress)
+		return c.validateDuo(ctx, mfaFactor, mConfig, finalUsername, reqConnectionRemoteAddress)
 
 	case mfaMethodTypePingID:
 		return c.validatePingID(ctx, mConfig, finalUsername)
@@ -1878,41 +1874,51 @@ func formatUsername(format string, alias *identity.Alias, entity *identity.Entit
 	return username
 }
 
-func parseMfaFactor(creds []string) (string, error) {
-	var passcode string
+type MFAFactor struct {
+	passcode string
+}
+
+func parseMfaFactor(creds []string) (*MFAFactor, error) {
+	mfaFactor := &MFAFactor{}
 	var err *multierror.Error
+
 	for _, cred := range creds {
 		switch {
 		case cred == "": // for the case of push notification
 			continue
 		case strings.HasPrefix(cred, "passcode="):
 			splits := strings.SplitN(cred, "=", 2)
-			passcode = splits[1]
+			mfaFactor.passcode = splits[1]
 		case strings.Contains(cred, "="):
 			err = multierror.Append(err, fmt.Errorf("found an invalid MFA cred: %v", cred))
 		default:
 			// a non-empty cred that does not match the above
 			// means it is a passcode
-			passcode = cred
+			mfaFactor.passcode = cred
 		}
 
-		if passcode != "" {
+		// currently, we only support passcode. Although we probably gain
+		// very little improvement in performance, it is still make sense
+		// to break the for loop
+		if mfaFactor.passcode != "" {
 			break
 		}
 	}
 
-	if passcode != "" {
-		return passcode, nil
+	if mfaFactor.passcode != "" {
+		return mfaFactor, nil
 	}
 
-	return "", err
+	return mfaFactor, err
 }
 
-func (c *Core) validateDuo(ctx context.Context, passcode string, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {
+func (c *Core) validateDuo(ctx context.Context, mfaFactor *MFAFactor, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {
 	duoConfig := mConfig.GetDuoConfig()
 	if duoConfig == nil {
 		return fmt.Errorf("failed to get Duo configuration for method %q", mConfig.Name)
 	}
+
+	passcode := mfaFactor.passcode
 
 	client := duoapi.NewDuoApi(
 		duoConfig.IntegrationKey,
@@ -2360,10 +2366,11 @@ func (c *Core) validatePingID(ctx context.Context, mConfig *mfa.Config, username
 	return nil
 }
 
-func (c *Core) validateTOTP(ctx context.Context, passcode string, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
-	if passcode == "" {
-		return fmt.Errorf("invalid passcode")
+func (c *Core) validateTOTP(ctx context.Context, mfaFactor *MFAFactor, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
+	if mfaFactor.passcode == "" {
+		return fmt.Errorf("MFA credentials not supplied")
 	}
+	passcode := mfaFactor.passcode
 
 	totpSecret := entityMethodSecret.GetTOTPSecret()
 	if totpSecret == nil {
