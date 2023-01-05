@@ -35,6 +35,14 @@ export default class PkiOverviewRoute extends Route {
     }
   }
 
+  async fetchAllCertificates() {
+    try {
+      return await this.store.query('pki/certificate', { backend: this.secretMountPath.currentPath });
+    } catch (e) {
+      return e.httpStatus;
+    }
+  }
+
   fetchEngine() {
     return this.store
       .query('secret-engine', {
@@ -53,6 +61,7 @@ export default class PkiOverviewRoute extends Route {
       engine: this.fetchEngine(),
       roles: this.fetchAllRoles(),
       issuers: this.fetchAllIssuers(),
+      certificates: this.fetchAllCertificates(),
     });
   }
 
@@ -68,6 +77,9 @@ export default class PkiOverviewRoute extends Route {
     });
     controller.issuers = resolvedModel.issuers.map((issuer) => {
       return { name: issuer.id, id: issuer.id };
+    });
+    controller.certificates = resolvedModel.certificates.map((certificate) => {
+      return { name: certificate.id, id: certificate.id };
     });
     controller.breadcrumbs = [{ label: 'secrets', route: 'secrets', linkExternal: true }, { label: backend }];
   }
