@@ -633,13 +633,13 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 		mount:              "sys",
 		path:               "unseal",
 		expected:           "Unseal",
-		expectedUpdateOnly: true,
+		expectedUpdateOnly: false,
 	}, {
 		name:               "mapped entry with operation, prefix, and suffix",
 		operation:          logical.UpdateOperation,
-		mount:              "gcp",
-		path:               "roleset/{name}/rotate",
-		expected:           "GoogleCloudRotateRoleset",
+		mount:              "gcpkms",
+		path:               "keys/deregister/{key}",
+		expected:           "GoogleCloudKMSDeregisterKey",
 		expectedUpdateOnly: true,
 	}}
 
