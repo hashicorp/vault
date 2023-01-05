@@ -101,6 +101,12 @@ module('Acceptance | pki workflow', function (hooks) {
         path "${this.mountPath}/roles/*" {
           capabilities = ["read", "update"]
         },
+        path "${this.mountPath}/issue/*" {
+          capabilities = ["update"]
+        },
+        path "${this.mountPath}/sign/*" {
+          capabilities = ["update"]
+        },
       `;
       this.pkiRoleReader = await tokenWithPolicy('pki-reader', pki_reader_policy);
       this.pkiRoleEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
@@ -173,11 +179,33 @@ module('Acceptance | pki workflow', function (hooks) {
       await click('.linked-block');
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(SELECTORS.deleteRoleButton).doesNotExist('Delete role button is not shown');
-      assert.dom(SELECTORS.generateCertLink).doesNotExist('Generate cert link is not shown');
-      assert.dom(SELECTORS.signCertLink).doesNotExist('Sign cert link is not shown');
+      assert.dom(SELECTORS.generateCertLink).exists('Generate cert link is shown');
+      assert.dom(SELECTORS.signCertLink).exists('Sign cert link is shown');
       assert.dom(SELECTORS.editRoleLink).exists('Edit link is shown');
       await click(SELECTORS.editRoleLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/some-role/edit`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/roles/some-role/edit`,
+        'Links to edit view'
+      );
+      await click(SELECTORS.roleForm.roleCancelButton);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`,
+        'Cancel from edit goes to details'
+      );
+      await click(SELECTORS.generateCertLink);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/roles/some-role/generate`,
+        'Generate cert button goes to generate page'
+      );
+      await click(SELECTORS.generateCertForm.cancelButton);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/roles/some-role/details`,
+        'Cancel from generate goes to details'
+      );
     });
 
     test('create role happy path', async function (assert) {
@@ -200,6 +228,36 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/${roleName}/details`);
       assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
       assert.dom(SELECTORS.pageTitle).hasText(`PKI Role ${roleName}`);
+    });
+  });
+
+  module('issuers', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.login();
+      // Configure engine with a default issuer
+      await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
+      await logout.visit();
+    });
+    test('details view renders correct number of info items', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.dom(SELECTORS.issuersTab).exists('Issuers tab is present');
+      await click(SELECTORS.issuersTab);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
+      assert.dom('.linked-block').exists({ count: 1 }, 'One issuer is in list');
+      await click('.linked-block');
+      assert.ok(
+        currentURL().match(`/vault/secrets/${this.mountPath}/pki/issuers/.+/details`),
+        `/vault/secrets/${this.mountPath}/pki/issuers/my-issuer/details`
+      );
+      assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
+      assert
+        .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.row}`)
+        .exists({ count: 9 }, 'Renders 9 info table items under default group');
+      assert
+        .dom(`${SELECTORS.issuerDetails.urlsGroup} ${SELECTORS.issuerDetails.row}`)
+        .exists({ count: 4 }, 'Renders 4 info table items under URLs group');
+      assert.dom(SELECTORS.issuerDetails.groupTitle).exists({ count: 1 }, 'only 1 group title rendered');
     });
   });
 });

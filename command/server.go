@@ -1105,16 +1105,6 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if allowPendingRemoval := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allowPendingRemoval != "" {
-		var err error
-		vault.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
-		if err != nil {
-			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
-				consts.VaultAllowPendingRemovalMountsEnv + " env var: " +
-				"defaulting to false."))
-		}
-	}
-
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -1225,6 +1215,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if c.flagDevFourCluster {
 		return enableFourClusterDev(c, &coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+	}
+
+	if allowPendingRemoval := os.Getenv(consts.EnvVaultAllowPendingRemovalMounts); allowPendingRemoval != "" {
+		var err error
+		coreConfig.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				consts.EnvVaultAllowPendingRemovalMounts + " env var: " +
+				"defaulting to false."))
+		}
 	}
 
 	// Initialize the separate HA storage backend, if it exists
@@ -1377,6 +1377,17 @@ func (c *ServerCommand) Run(args []string) int {
 		info["fips"] = fipsStatus
 	}
 
+	if config.HCPLinkConf != nil {
+		infoKeys = append(infoKeys, "HCP organization")
+		info["HCP organization"] = config.HCPLinkConf.Resource.Organization
+
+		infoKeys = append(infoKeys, "HCP project")
+		info["HCP project"] = config.HCPLinkConf.Resource.Project
+
+		infoKeys = append(infoKeys, "HCP resource ID")
+		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
+	}
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1446,12 +1457,12 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	hcpLogger := c.logger.Named("hcpLink")
+	hcpLogger := c.logger.Named("hcp-connectivity")
 	hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, core, hcpLogger)
 	if err != nil {
-		c.logger.Error("failed to start HCP Link", "error", err)
+		c.logger.Error("failed to establish HCP connection", "error", err)
 	} else if hcpLink != nil {
-		c.logger.Trace("started HCP link")
+		c.logger.Trace("established HCP connection")
 	}
 
 	if c.flagTestServerConfig {
@@ -1581,7 +1592,7 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 		RUNRELOADFUNCS:
-			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
+			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs, core); err != nil {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
 
@@ -2078,7 +2089,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
 			for _, core := range testCluster.Cores {
-				if err := c.Reload(core.ReloadFuncsLock, core.ReloadFuncs, nil); err != nil {
+				if err := c.Reload(core.ReloadFuncsLock, core.ReloadFuncs, nil, core.Core); err != nil {
 					c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 				}
 			}
@@ -2196,7 +2207,7 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 	return url.String(), nil
 }
 
-func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reloadutil.ReloadFunc, configPath []string) error {
+func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reloadutil.ReloadFunc, configPath []string, core *vault.Core) error {
 	lock.RLock()
 	defer lock.RUnlock()
 
@@ -2223,6 +2234,9 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			}
 		}
 	}
+
+	// Set Introspection Endpoint to enabled with new value in the config after reload
+	core.ReloadIntrospectionEndpointEnabled()
 
 	// Send a message that we reloaded. This prevents "guessing" sleep times
 	// in tests.
@@ -2617,6 +2631,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		PluginFilePermissions:          config.PluginFilePermissions,
 		EnableUI:                       config.EnableUI,
 		EnableRaw:                      config.EnableRawEndpoint,
+		EnableIntrospection:            config.EnableIntrospectionEndpoint,
 		DisableSealWrap:                config.DisableSealWrap,
 		DisablePerformanceStandby:      config.DisablePerformanceStandby,
 		DisableIndexing:                config.DisableIndexing,
@@ -2635,6 +2650,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 
 	if c.flagDev {
 		coreConfig.EnableRaw = true
+		coreConfig.EnableIntrospection = true
 		coreConfig.DevToken = c.flagDevRootTokenID
 		if c.flagDevLeasedKV {
 			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory

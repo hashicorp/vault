@@ -13,7 +13,7 @@ import ExternalLink from './external-link';
  *
  */
 export default class DocLinkComponent extends ExternalLink {
-  host = 'https://www.vaultproject.io';
+  host = 'https://developer.hashicorp.com';
 
   get href() {
     return `${this.host}${this.args.path}`;
