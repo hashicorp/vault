@@ -271,7 +271,6 @@ func ExerciseBackend(t testing.TB, b Backend) {
 		t.Fatalf("failed to remove deep nest: %v", err)
 	}
 
-
 	keys, err = b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("listing of root failed after delete of deep nest: %v", err)
