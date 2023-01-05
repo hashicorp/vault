@@ -521,7 +521,7 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 								Required: true,
 							},
 							"revocation_time": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt64,
 								Description: `Time of revocation`,
 								Required: false,
 							},
