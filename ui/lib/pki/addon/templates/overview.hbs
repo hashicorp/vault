@@ -22,7 +22,7 @@
   {{! TODO show overview items }}
   <div class="selectable-card-container has-grid has-two-col-grid has-top-margin-l">
     {{#if this.canViewIssuers}}
-      <Page::SelectableCard
+      <SelectableCard
         @cardTitle="Issuer"
         @total={{if (eq this.model.issuers 404) 0 this.model.issuers.length}}
         @subText="The total number of issuers in this PKI mount. Includes both root and intermediate certificates."
@@ -32,7 +32,7 @@
       />
     {{/if}}
     {{#if this.canViewRoles}}
-      <Page::SelectableCard
+      <SelectableCard
         @cardTitle="Roles"
         @total={{if (eq this.model.roles 404) 0 this.model.roles.length}}
         @subText="The total number of roles in this PKI mount that have been created to generate certificates."
@@ -41,7 +41,7 @@
         @type="role"
       />
     {{/if}}
-    <Page::SelectableCardForm
+    <SelectableCardForm
       @title="Issue certificate"
       @subText="Quickly issue a certificate by typing the role name."
       @placeholder="Type to find a role..."
@@ -50,7 +50,7 @@
       @navigateToPage={{this.navigateToIssueCertificate}}
       @type="role"
     />
-    <Page::SelectableCardForm
+    <SelectableCardForm
       @title="View certificate"
       @subText="Quickly view a certificate by typing its serial number."
       @placeholder="33:a3:..."
