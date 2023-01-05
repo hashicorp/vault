@@ -320,22 +320,13 @@ func documentPath(p *Path, specialPaths *logical.Paths, mountPathWithPrefix stri
 			return strings.ToLower(pi.Parameters[i].Name) < strings.ToLower(pi.Parameters[j].Name)
 		})
 
-		uniqueOperationIdentifiers := make(map[string]struct{})
-
 		// Process each supported operation by building up an Operation object
 		// with descriptions, properties and examples from the framework.Path data.
 		for opType, opHandler := range operations {
-			operationID := constructRequestResponseIdentifier(opType, mountPathWithPrefix, path)
+			operationID, updateOperationOnly := constructOperationID(opType, mountPathWithPrefix, path)
 
-			// Certain paths contain duplicate operation ID's for identical operations.
-			// For example, the following all map to the same operation:
-			//      PUT /v1/gcpkms/keys/deregister/:key
-			//     POST /v1/gcpkms/keys/deregister/:key
-			//   DELETE /v1/gcpkms/keys/deregister/:key
-			if _, ok := uniqueOperationIdentifiers[operationID]; ok {
+			if updateOperationOnly && opType != logical.UpdateOperation {
 				continue
-			} else {
-				uniqueOperationIdentifiers[operationID] = struct{}{}
 			}
 
 			props := opHandler.Properties()
@@ -549,19 +540,29 @@ func documentPath(p *Path, specialPaths *logical.Paths, mountPathWithPrefix stri
 	return nil
 }
 
-// constructRequestResponseIdentifier joins the given inputs into a title case
-// string to be used for request/response names & operation identifiers.
+// constructOperationID joins the given inputs into a title case operationID,
+// which is also used as a root for request and response names.
 //
 // For many mount + path combinations, which would otherwise result in
 // difficult-to-read names, the function uses a custom lookup table to
 // construct the name instead.
 //
-// Examples of generated names:
+// Examples of generated operation ID's:
 //   - KVv2Write
 //   - KVv2Read
 //   - GoogleCloudLogin
 //   - GoogleCloudWriteRole
-func constructRequestResponseIdentifier(operation logical.Operation, mount, path string) string {
+//
+// The function also returns "update operation only" indicator, it is set to
+// true if the operation ID should result in a single update (POST) operation
+// for this path. For example, the following 3 operations, will be collapsed
+// into a single operation "Deregister" and will be mapped into a single
+// update (POST) operation:
+//
+//	   PUT /v1/gcpkms/keys/deregister/:key
+//	  POST /v1/gcpkms/keys/deregister/:key
+//	DELETE /v1/gcpkms/keys/deregister/:key
+func constructOperationID(operation logical.Operation, mount, path string) (string, bool) {
 	// For most request names "write" seems to be more applicable in place of "update"
 	var operationStr string
 	if operation == logical.UpdateOperation {
@@ -569,6 +570,8 @@ func constructRequestResponseIdentifier(operation logical.Operation, mount, path
 	} else {
 		operationStr = string(operation)
 	}
+
+	updateOperationOnly := false
 
 	var parts []string
 
@@ -578,7 +581,9 @@ func constructRequestResponseIdentifier(operation logical.Operation, mount, path
 			parts = append(parts, mapping.prefix)
 		}
 
+		// If the operation was specified in the mapping, we assume it's unique
 		if mapping.operation != "" {
+			updateOperationOnly = true
 			parts = append(parts, mapping.operation)
 		} else {
 			parts = append(parts, nonWordRe.Split(strings.ToLower(operationStr), -1)...)
@@ -601,7 +606,7 @@ func constructRequestResponseIdentifier(operation logical.Operation, mount, path
 		parts[i] = title.String(s)
 	}
 
-	return strings.Join(parts, "")
+	return strings.Join(parts, ""), updateOperationOnly
 }
 
 func specialPathMatch(path string, specialPaths []string) bool {
@@ -828,7 +833,7 @@ func cleanResponse(resp *logical.Response) *cleanedResponse {
 //
 // An optional user-provided suffix ("context") may also be appended.
 //
-// Deprecated: constructRequestResponseIdentifier populates operationId now;
+// Deprecated: operationID's are now populated using constructOperationID();
 // This function is here for backwards compatibility with older plugins
 func (d *OASDocument) CreateOperationIDs(context string) {
 	// title caser
