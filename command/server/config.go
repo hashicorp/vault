@@ -97,6 +97,8 @@ type Config struct {
 	LogRequestsLevel    string      `hcl:"-"`
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
 
+	DetectDeadlocks string `hcl:"detect_deadlocks"`
+
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 
@@ -387,6 +389,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.LogRequestsLevel = c.LogRequestsLevel
 	if c2.LogRequestsLevel != "" {
 		result.LogRequestsLevel = c2.LogRequestsLevel
+	}
+
+	result.DetectDeadlocks = c.DetectDeadlocks
+	if c2.DetectDeadlocks != "" {
+		result.DetectDeadlocks = c2.DetectDeadlocks
 	}
 
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
@@ -1025,6 +1032,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
 
 		"log_requests_level": c.LogRequestsLevel,
+
+		"detect_deadlocks": c.DetectDeadlocks,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
