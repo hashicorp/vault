@@ -491,7 +491,7 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 								Required: true,
 							},
 							"usage": {
-								Type:        framework.TypeCommaStringSlice,
+								Type:        framework.TypeString,
 								Description: ``,
 								Required: true,
 							},
