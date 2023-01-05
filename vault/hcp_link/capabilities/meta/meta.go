@@ -262,7 +262,7 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 		}
 
 		if voterCount > 7 {
-			quorumWarnings = append(quorumWarnings, "Warning: Very large cluster detected.")
+			quorumWarnings = append(quorumWarnings, "Very large cluster detected.")
 		}
 
 		raftStatus.QuorumWarnings = quorumWarnings
