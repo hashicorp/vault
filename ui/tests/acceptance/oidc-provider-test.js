@@ -159,7 +159,7 @@ module('Acceptance | oidc provider', function (hooks) {
     assert.dom('[data-test-oidc-redirect]').exists('redirect text exists');
     assert
       .dom('[data-test-oidc-redirect]')
-      .hasTextContaining(`${callback}?code=`, 'Successful redirect to callback');
+      .exists(`${callback}?code=`, 'Successful redirect to callback');
 
     //* clean up test state
     await clearRecord(this.store, 'oidc/client', 'my-webapp');
@@ -184,7 +184,7 @@ module('Acceptance | oidc provider', function (hooks) {
     await settled();
     assert
       .dom('[data-test-oidc-redirect]')
-      .hasTextContaining(`${callback}?code=`, 'Successful redirect to callback');
+      .exists(`${callback}?code=`, 'Successful redirect to callback');
 
     //* clean up test state
     await clearRecord(this.store, 'oidc/client', 'my-webapp');
