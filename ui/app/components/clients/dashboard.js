@@ -25,14 +25,16 @@ export default class Dashboard extends Component {
     end: {}, // updates when user queries end dates via calendar widget
   };
 
-  // SEARCH SELECT
+  // SEARCH SELECT FILTERS
+  get namespaceArray() {
+    return this.getActivityResponse.byNamespace
+      ? this.getActivityResponse.byNamespace.map((namespace) => ({
+          name: namespace.label,
+          id: namespace.label,
+        }))
+      : [];
+  }
   @tracked selectedNamespace = null;
-  @tracked namespaceArray = this.getActivityResponse.byNamespace
-    ? this.getActivityResponse.byNamespace.map((namespace) => ({
-        name: namespace.label,
-        id: namespace.label,
-      }))
-    : [];
   @tracked selectedAuthMethod = null;
   @tracked authMethodOptions = [];
 
@@ -320,6 +322,11 @@ export default class Dashboard extends Component {
         getStorage().setItem('vault:ui-inputted-start-date', this.startMonthTimestamp);
       }
       this.queriedActivityResponse = response;
+
+      // reset search-select filters
+      this.selectedNamespace = null;
+      this.selectedAuthMethod = null;
+      this.authMethodOptions = [];
     } catch (e) {
       this.errorObject = e;
       return e;
