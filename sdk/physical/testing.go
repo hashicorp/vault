@@ -231,6 +231,47 @@ func ExerciseBackend(t testing.TB, b Backend) {
 		t.Fatalf("failed to remove deep nest: %v", err)
 	}
 
+	// When the a folder and key exist with the same name the parent folder should not be deleted
+	e = &Entry{Key: "foo/nested1/shared-name/value1", Value: []byte("baz")}
+	err = b.Put(context.Background(), e)
+	if err != nil {
+		t.Fatalf("deep nest: %v", err)
+	}
+
+	e = &Entry{Key: "foo/nested1/shared-name", Value: []byte("baz")}
+	err = b.Put(context.Background(), e)
+	if err != nil {
+		t.Fatalf("deep nest: %v", err)
+	}
+
+	err = b.Delete(context.Background(), "foo/nested1/shared-name/value1")
+	if err != nil {
+		t.Fatalf("failed to remove deep nest: %v", err)
+	}
+
+	keys, err = b.List(context.Background(), "")
+	if err != nil {
+		t.Fatalf("listing of root failed after deletion: %v", err)
+	}
+	if len(keys) == 0 {
+		t.Errorf("root is returning empty after deleting a single nested value, expected nested1/: %v", keys)
+		keys, err = b.List(context.Background(), "foo/nested1")
+		if err != nil {
+			t.Fatalf("listing of expected nested path 'foo/nested1' failed: %v", err)
+		}
+		// prove that the root should not be empty and that foo/nested1 exists
+		if len(keys) == 0 || keys[0] != "shared-name" {
+			t.Fatalf("  listing from nested1/ is empty or contains incorrect keys, got: %v", keys)
+		}
+	}
+
+	// cleanup left over deleting parent folder bug test value
+	err = b.Delete(context.Background(), "foo/nested1/shared-name")
+	if err != nil {
+		t.Fatalf("failed to remove deep nest: %v", err)
+	}
+
+
 	keys, err = b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("listing of root failed after delete of deep nest: %v", err)

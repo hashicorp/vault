@@ -352,7 +352,7 @@ func (d *DynamoDBBackend) Delete(ctx context.Context, key string) error {
 			excluded = append(excluded, recordKeyForVaultKey(key))
 		} else {
 			// The previous path doesn't count as a child, since if we're still looping, we've found no children
-			excluded = append(excluded, recordKeyForVaultKey(prefixes[index-1]))
+			excluded = append(excluded, fmt.Sprintf("%s/", recordKeyForVaultKey(prefixes[index-1])))
 		}
 
 		hasChildren, err := d.hasChildren(prefix, excluded)
@@ -459,23 +459,16 @@ func (d *DynamoDBBackend) hasChildren(prefix string, exclude []string) (bool, er
 	if err != nil {
 		return false, err
 	}
-	var childrenExist bool
 	for _, item := range out.Items {
 		for _, excluded := range exclude {
-			// Check if we've found an item we didn't expect to. Look for "folder" pointer keys (trailing slash)
-			// and regular value keys (no trailing slash)
-			if *item["Key"].S != excluded && *item["Key"].S != fmt.Sprintf("%s/", excluded) {
-				childrenExist = true
-				break
+			// If the key doesn't match then there are other children
+			if *item["Key"].S != excluded {
+				return true, nil
 			}
-		}
-		if childrenExist {
-			// We only need to find ONE child we didn't expect to.
-			break
 		}
 	}
 
-	return childrenExist, nil
+	return false, nil
 }
 
 // LockWith is used for mutual exclusion based on the given key.
