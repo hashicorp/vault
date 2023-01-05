@@ -34,7 +34,9 @@
   right: 1rem;
   z-index: 10;
 }
-
+.is-flex-half {
+  flex: 50%;
+}
 .has-background-transition {
   transition: background-color $easing $speed;
 }
