@@ -80,6 +80,18 @@ const (
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
 	coreKeyringCanaryPath = "core/canary-keyring"
 
+	// coreGroupPolicyApplicationPath is used to store the behaviour for
+	// how policies should be applied
+	coreGroupPolicyApplicationPath = "core/group-policy-application-mode"
+
+	// groupPolicyApplicationModeWithinNamespaceHierarchy is a configuration option for group
+	// policy application modes, which allows only in-namespace-hierarchy policy application
+	groupPolicyApplicationModeWithinNamespaceHierarchy = "within_namespace_hierarchy"
+
+	// groupPolicyApplicationModeAny is a configuration option for group
+	// policy application modes, which allows policy application irrespective of namespaces
+	groupPolicyApplicationModeAny = "any"
+
 	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
 
 	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
@@ -3625,6 +3637,44 @@ func (c *Core) ListAuths() ([]*MountEntry, error) {
 	}
 
 	return entries, nil
+}
+
+type GroupPolicyApplicationMode struct {
+	GroupPolicyApplicationMode string `json:"group_policy_application_mode"`
+}
+
+func (c *Core) GetGroupPolicyApplicationMode(ctx context.Context) (string, error) {
+	se, err := c.barrier.Get(ctx, coreGroupPolicyApplicationPath)
+	if err != nil {
+		return "", err
+	}
+	if se == nil {
+		return groupPolicyApplicationModeWithinNamespaceHierarchy, nil
+	}
+
+	var modeStruct GroupPolicyApplicationMode
+
+	err = jsonutil.DecodeJSON(se.Value, &modeStruct)
+	if err != nil {
+		return "", err
+	}
+	mode := modeStruct.GroupPolicyApplicationMode
+	if mode == "" {
+		mode = groupPolicyApplicationModeWithinNamespaceHierarchy
+	}
+
+	return mode, nil
+}
+
+func (c *Core) SetGroupPolicyApplicationMode(ctx context.Context, mode string) error {
+	json, err := jsonutil.EncodeJSON(&GroupPolicyApplicationMode{GroupPolicyApplicationMode: mode})
+	if err != nil {
+		return err
+	}
+	return c.barrier.Put(ctx, &logical.StorageEntry{
+		Key:   coreGroupPolicyApplicationPath,
+		Value: json,
+	})
 }
 
 type HCPLinkStatus struct {
