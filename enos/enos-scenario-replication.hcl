@@ -151,11 +151,8 @@ scenario "replication" {
       vault_local_artifact_path = local.bundle_path
       vault_install_dir         = local.vault_install_dir
       vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      vault_environment = {
-        VAULT_LOG_LEVEL = "debug"
-      }
-      vault_license = step.read_license.license
-      vpc_id        = step.create_vpc.vpc_id
+      vault_license             = step.read_license.license
+      vpc_id                    = step.create_vpc.vpc_id
     }
   }
 
@@ -206,11 +203,8 @@ scenario "replication" {
       vault_local_artifact_path = local.bundle_path
       vault_install_dir         = local.vault_install_dir
       vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      vault_environment = {
-        VAULT_LOG_LEVEL = "debug"
-      }
-      vault_license = step.read_license.license
-      vpc_id        = step.create_vpc.vpc_id
+      vault_license             = step.read_license.license
+      vpc_id                    = step.create_vpc.vpc_id
     }
   }
 
@@ -449,9 +443,6 @@ scenario "replication" {
       vault_local_artifact_path = local.bundle_path
       vault_install_dir         = local.vault_install_dir
       vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      vault_environment = {
-        VAULT_LOG_LEVEL = "debug"
-      }
       vault_node_prefix         = "newprimary_node"
       vault_root_token          = step.create_vault_primary_cluster.vault_root_token
       vault_unseal_when_no_init = matrix.primary_seal == "shamir"
