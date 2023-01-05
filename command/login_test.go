@@ -438,15 +438,15 @@ func TestLoginCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testLoginCommand(t)
-
 		userclient, entityID, methodID, methodName := testhelpers.SetupLoginMFATOTP(t, client)
-		cmd.client = userclient
 
 		enginePath := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
 
 		runCommand := func(methodIdentifier string) {
+			time.Sleep(21 * time.Second)
 			totpCode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath)
+			ui, cmd := testLoginCommand(t)
+			cmd.client = userclient
 
 			// login command bails early for test clients, so we have to explicitly set this
 			cmd.client.SetMFACreds([]string{methodIdentifier + ":" + totpCode})
@@ -561,7 +561,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		validateFunc := func(methodIdentifier string) {
 			// the time required for the totp engine to generate a new code
 			time.Sleep(22 * time.Second)
-			totpPasscode1 := testhelpers.GetTOTPCodeFromEngine(t, client, engineName)
+			totpPasscode1 := "passcode=" + testhelpers.GetTOTPCodeFromEngine(t, client, engineName)
 
 			secret, err := cmd.client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
 				"mfa_request_id": mfaReqID,

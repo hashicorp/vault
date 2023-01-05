@@ -1743,6 +1743,11 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 		}
 	}
 
+	passcode, err := parseMfaFactor(mfaCreds)
+	if err != nil {
+		return err
+	}
+
 	switch mConfig.Type {
 	case mfaMethodTypeTOTP:
 		// Get the MFA secret data required to validate the supplied credentials
@@ -1754,17 +1759,17 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 			return fmt.Errorf("MFA secret for method name %q not present in entity %q", mConfig.Name, entity.ID)
 		}
 
-		if mfaCreds == nil {
+		if passcode == "" {
 			return fmt.Errorf("MFA credentials not supplied")
 		}
 
-		return c.validateTOTP(ctx, mfaCreds, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
+		return c.validateTOTP(ctx, passcode, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
 
 	case mfaMethodTypeOkta:
 		return c.validateOkta(ctx, mConfig, finalUsername)
 
 	case mfaMethodTypeDuo:
-		return c.validateDuo(ctx, mfaCreds, mConfig, finalUsername, reqConnectionRemoteAddress)
+		return c.validateDuo(ctx, passcode, mConfig, finalUsername, reqConnectionRemoteAddress)
 
 	case mfaMethodTypePingID:
 		return c.validatePingID(ctx, mConfig, finalUsername)
@@ -1873,23 +1878,40 @@ func formatUsername(format string, alias *identity.Alias, entity *identity.Entit
 	return username
 }
 
-func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {
+func parseMfaFactor(creds []string) (string, error) {
+	var passcode string
+	var err *multierror.Error
+	for _, cred := range creds {
+		switch {
+		case cred == "": // for the case of push notification
+			continue
+		case strings.HasPrefix(cred, "passcode="):
+			splits := strings.SplitN(cred, "=", 2)
+			passcode = splits[1]
+		case strings.Contains(cred, "="):
+			err = multierror.Append(err, fmt.Errorf("found an invalid MFA cred: %v", cred))
+		default:
+			// a non-empty cred that does not match the above
+			// means it is a passcode
+			passcode = cred
+		}
+
+		if passcode != "" {
+			break
+		}
+	}
+
+	if passcode != "" {
+		return passcode, nil
+	}
+
+	return "", err
+}
+
+func (c *Core) validateDuo(ctx context.Context, passcode string, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {
 	duoConfig := mConfig.GetDuoConfig()
 	if duoConfig == nil {
 		return fmt.Errorf("failed to get Duo configuration for method %q", mConfig.Name)
-	}
-
-	passcode := ""
-	for _, cred := range creds {
-		if strings.HasPrefix(cred, "passcode") {
-			splits := strings.SplitN(cred, "=", 2)
-			if len(splits) != 2 {
-				return fmt.Errorf("invalid credential %q", cred)
-			}
-			if splits[0] == "passcode" {
-				passcode = splits[1]
-			}
-		}
 	}
 
 	client := duoapi.NewDuoApi(
@@ -2338,13 +2360,9 @@ func (c *Core) validatePingID(ctx context.Context, mConfig *mfa.Config, username
 	return nil
 }
 
-func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
-	if len(creds) == 0 {
-		return fmt.Errorf("missing TOTP passcode")
-	}
-
-	if len(creds) > 1 {
-		return fmt.Errorf("more than one TOTP passcode supplied")
+func (c *Core) validateTOTP(ctx context.Context, passcode string, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
+	if passcode == "" {
+		return fmt.Errorf("invalid passcode")
 	}
 
 	totpSecret := entityMethodSecret.GetTOTPSecret()
@@ -2352,7 +2370,7 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 		return fmt.Errorf("entity does not contain the TOTP secret")
 	}
 
-	usedName := fmt.Sprintf("%s_%s", configID, creds[0])
+	usedName := fmt.Sprintf("%s_%s", configID, passcode)
 
 	_, ok := usedCodes.Get(usedName)
 	if ok {
@@ -2399,7 +2417,7 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 		Algorithm: otplib.Algorithm(int(totpSecret.Algorithm)),
 	}
 
-	valid, err := totplib.ValidateCustom(creds[0], key, time.Now(), validateOpts)
+	valid, err := totplib.ValidateCustom(passcode, key, time.Now(), validateOpts)
 	if err != nil && err != otplib.ErrValidateInputInvalidLength {
 		return errwrap.Wrapf("failed to validate TOTP passcode: {{err}}", err)
 	}
