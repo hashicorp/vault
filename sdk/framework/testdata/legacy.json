@@ -33,7 +33,7 @@
         }
       ],
       "get": {
-        "operationId": "getLookupId",
+        "operationId": "KvReadLookupId",
         "summary": "Synopsis",
         "tags": ["secrets"],
         "responses": {
@@ -43,7 +43,7 @@
         }
       },
       "post": {
-        "operationId": "postLookupId",
+        "operationId": "KvWriteLookupId",
         "summary": "Synopsis",
         "tags": ["secrets"],
         "requestBody": {
@@ -51,7 +51,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KvLookupRequest"
+                "$ref": "#/components/schemas/KvWriteLookupIdRequest"
               }
             }
           }
@@ -66,7 +66,7 @@
   },
   "components": {
     "schemas": {
-      "KvLookupRequest": {
+      "KvWriteLookupIdRequest": {
         "type": "object",
         "properties": {
           "token": {

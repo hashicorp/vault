@@ -503,66 +503,6 @@ func TestOpenAPI_Paths(t *testing.T) {
 	})
 }
 
-func TestOpenAPI_OperationID(t *testing.T) {
-	path1 := &Path{
-		Pattern: "foo/" + GenericNameRegex("id"),
-		Fields: map[string]*FieldSchema{
-			"id": {Type: TypeString},
-		},
-		Operations: map[logical.Operation]OperationHandler{
-			logical.ReadOperation:   &PathOperation{},
-			logical.UpdateOperation: &PathOperation{},
-			logical.DeleteOperation: &PathOperation{},
-		},
-	}
-
-	path2 := &Path{
-		Pattern: "Foo/" + GenericNameRegex("id"),
-		Fields: map[string]*FieldSchema{
-			"id": {Type: TypeString},
-		},
-		Operations: map[logical.Operation]OperationHandler{
-			logical.ReadOperation: &PathOperation{},
-		},
-	}
-
-	for _, context := range []string{"", "bar"} {
-		doc := NewOASDocument("version")
-		err := documentPath(path1, nil, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = documentPath(path2, nil, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		doc.CreateOperationIDs(context)
-
-		tests := []struct {
-			path string
-			op   string
-			opID string
-		}{
-			{"/Foo/{id}", "get", "getFooId"},
-			{"/foo/{id}", "get", "getFooId_2"},
-			{"/foo/{id}", "post", "postFooId"},
-			{"/foo/{id}", "delete", "deleteFooId"},
-		}
-
-		for _, test := range tests {
-			actual := getPathOp(doc.Paths[test.path], test.op).OperationID
-			expected := test.opID
-			if context != "" {
-				expected += "_" + context
-			}
-
-			if actual != expected {
-				t.Fatalf("expected %v, got %v", expected, actual)
-			}
-		}
-	}
-}
-
 func TestOpenAPI_CustomDecoder(t *testing.T) {
 	p := &Path{
 		Pattern:      "foo",
@@ -651,60 +591,78 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 	}
 }
 
-func TestOpenAPI_constructRequestResponseIdentifier(t *testing.T) {
+func TestOpenAPI_constructOperationID(t *testing.T) {
 	tests := []struct {
-		name      string
-		operation logical.Operation
-		mount     string
-		path      string
-		expected  string
+		name               string
+		operation          logical.Operation
+		mount              string
+		path               string
+		expected           string
+		expectedUpdateOnly bool
 	}{{
-		name:      "empty",
-		operation: logical.Operation(""),
-		mount:     "",
-		path:      "",
-		expected:  "",
+		name:               "empty",
+		operation:          logical.Operation(""),
+		mount:              "",
+		path:               "",
+		expected:           "",
+		expectedUpdateOnly: false,
 	}, {
-		name:      "simple",
-		operation: logical.ReadOperation,
-		mount:     "secret",
-		path:      "path/to/thing",
-		expected:  "SecretReadPathToThing",
+		name:               "simple",
+		operation:          logical.ReadOperation,
+		mount:              "secret",
+		path:               "path/to/thing",
+		expected:           "SecretReadPathToThing",
+		expectedUpdateOnly: false,
 	}, {
-		name:      "missing elements",
-		operation: logical.ReadOperation,
-		mount:     "",
-		path:      "path/to/thing",
-		expected:  "ReadPathToThing",
+		name:               "missing elements",
+		operation:          logical.ReadOperation,
+		mount:              "",
+		path:               "path/to/thing",
+		expected:           "ReadPathToThing",
+		expectedUpdateOnly: false,
 	}, {
-		name:      "mapped entry",
-		operation: logical.UpdateOperation,
-		mount:     "auth/kerberos",
-		path:      "groups/{name}",
-		expected:  "KerberosWriteGroup",
+		name:               "mapped entry",
+		operation:          logical.UpdateOperation,
+		mount:              "auth/kerberos",
+		path:               "groups/{name}",
+		expected:           "KerberosWriteGroup",
+		expectedUpdateOnly: false,
 	}, {
-		name:      "mapped entry with operation",
-		operation: logical.UpdateOperation,
-		mount:     "sys",
-		path:      "unseal",
-		expected:  "Unseal",
+		name:               "mapped entry with operation",
+		operation:          logical.UpdateOperation,
+		mount:              "sys",
+		path:               "unseal",
+		expected:           "Unseal",
+		expectedUpdateOnly: true,
 	}, {
-		name:      "mapped entry with operation, prefix, and suffix",
-		operation: logical.UpdateOperation,
-		mount:     "gcp",
-		path:      "roleset/{name}/rotate",
-		expected:  "GoogleCloudRotateRoleset",
+		name:               "mapped entry with operation, prefix, and suffix",
+		operation:          logical.UpdateOperation,
+		mount:              "gcp",
+		path:               "roleset/{name}/rotate",
+		expected:           "GoogleCloudRotateRoleset",
+		expectedUpdateOnly: true,
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actual := constructRequestResponseIdentifier(
+			actual, actualUpdateOnly := constructOperationID(
 				test.operation,
 				test.mount,
 				test.path,
 			)
 			if actual != test.expected {
-				t.Fatalf("expected: %s; got: %s", test.expected, actual)
+				t.Fatalf(
+					"expected operation id: %s; got: %s",
+					test.expected,
+					actual,
+				)
+			}
+			if actualUpdateOnly != test.expectedUpdateOnly {
+				t.Fatalf(
+					"expected update only: %t; got: %t",
+					test.expectedUpdateOnly,
+					actualUpdateOnly,
+				)
 			}
 		})
 	}
@@ -723,8 +681,6 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	t.Log(string(docJSON))
 
 	// Compare json by first decoding, then comparing with a deep equality check.
 	var expected, actual interface{}

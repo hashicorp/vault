@@ -45,7 +45,7 @@
         }
       ],
       "get": {
-        "operationId": "getFooId",
+        "operationId": "KvListFooId",
         "tags": ["secrets"],
         "summary": "List Summary",
         "description": "List Description",

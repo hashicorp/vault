@@ -46,7 +46,7 @@
         }
       ],
       "get": {
-        "operationId": "getFooId",
+        "operationId": "KvReadFooId",
         "tags": ["secrets"],
         "summary": "My Summary",
         "description": "My Description",
@@ -67,7 +67,7 @@
         ]
       },
       "post": {
-        "operationId": "postFooId",
+        "operationId": "KvWriteFooId",
         "tags": ["secrets"],
         "summary": "Update Summary",
         "description": "Update Description",
@@ -76,7 +76,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KvFooRequest"
+                "$ref": "#/components/schemas/KvWriteFooIdRequest"
               }
             }
           }
@@ -91,7 +91,7 @@
   },
   "components": {
     "schemas": {
-      "KvFooRequest": {
+      "KvWriteFooIdRequest": {
         "type": "object",
         "required": ["age"],
         "properties": {
