@@ -232,7 +232,7 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 		return nil, err
 	}
 
-	if raftStatus != nil {
+	if raftConfig != nil {
 		raftServers := make([]*meta.RaftServer, len(raftConfig.Servers))
 
 		var voterCount uint32
