@@ -199,33 +199,22 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
-	cfg := agentConfig.NewConfig()
-
-	for _, configPath := range c.flagConfigs {
-		configFromPath, err := agentConfig.LoadConfig(configPath)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", configPath, err))
-			return 1
-		}
-		cfg = cfg.Merge(configFromPath)
-	}
-
-	err := cfg.ValidateConfig()
+	cfg, err := c.loadConfig(c.flagConfigs)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error loading configuration: %s", err))
+		c.outputErrors(err)
 		return 1
 	}
 
 	if cfg.AutoAuth == nil {
-		c.UI.Info("No auto_auth block found in config, not starting automatic authentication feature")
+		c.UI.Info("No auto_auth block found in config, the automatic authentication feature will not be started")
 	}
 
 	c.updateConfig(f, cfg) // This only needs to happen on start-up to aggregate config from flags and env vars
 	c.config = cfg
 
-	l, err := c.newLogger(c.config)
+	l, err := c.newLogger()
 	if err != nil {
-		c.UI.Error(err.Error())
+		c.outputErrors(err)
 		return 1
 	}
 	c.logger = l
@@ -681,7 +670,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	for i, lnConfig := range c.config.Listeners {
 		var ln net.Listener
-		var tlsConf *cache.CertConfig // TODO: PW: Some nil checks probaly needed further down for safey
+		var tlsConf *cache.CertConfig
 
 		if lnConfig.Type == listenerutil.BufConnType {
 			inProcListener := bufconn.Listen(1024 * 1024)
@@ -695,7 +684,8 @@ func (c *AgentCommand) Run(args []string) int {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
 				return 1
 			}
-			if tlsConf != nil && tlsConf.ReloadFunc != nil {
+
+			if tlsConf.ReloadFunc != nil {
 				// Track the reload func so we can reload later if needed.
 				// NOTE: If we plan to reload entire listeners at some point it won't be enough to just
 				// throw the reload func into a slice and call it later.
@@ -784,13 +774,18 @@ func (c *AgentCommand) Run(args []string) int {
 
 	var g run.Group
 
-	// TODO: PW: Perhaps an errgroup would be better to handle errors returned?
 	g.Add(func() error {
 		for {
 			select {
 			case <-c.SighupCh:
 				c.UI.Output("==> Vault agent config reload triggered")
-				return c.reloadConfig(c.flagConfigs[0]) // TODO: PW: path extracted + where are we returning errors?
+				err := c.reloadConfig(c.flagConfigs)
+				if err != nil {
+					c.outputErrors(err)
+				}
+			case <-ctx.Done():
+				c.notifySystemd(systemd.SdNotifyStopping)
+				return nil
 			}
 		}
 	}, func(error) {})
@@ -823,6 +818,7 @@ func (c *AgentCommand) Run(args []string) int {
 		enableTokenCh := len(c.config.Templates) > 0
 
 		// Auth Handler is going to set its own retry values, so we want to
+		// work on a copy of the client to not affect other subsystems.
 		// work on a copy of the client to not affect other subsystems.
 		ahClient, err := c.client.CloneWithHeaders()
 		if err != nil {
@@ -1204,32 +1200,36 @@ func (c *AgentCommand) handleQuit(enabled bool) http.Handler {
 	})
 }
 
-// newLogger creates a logger based on parsed config.
-func (c *AgentCommand) newLogger(config *agentConfig.Config) (log.InterceptLogger, error) {
+// newLogger creates a logger based on parsed config field on the Agent Command struct.
+func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
+	if c.config == nil {
+		return nil, fmt.Errorf("cannot create logger, no config")
+	}
+
 	var error error
 
 	// Parse all the log related config
-	logLevel, err := logging.ParseLogLevel(config.LogLevel)
+	logLevel, err := logging.ParseLogLevel(c.config.LogLevel)
 	if err != nil {
 		error = multierror.Append(error, err)
 	}
 
-	logFormat, err := logging.ParseLogFormat(config.LogFormat)
+	logFormat, err := logging.ParseLogFormat(c.config.LogFormat)
 	if err != nil {
 		error = multierror.Append(error, err)
 	}
 
-	logRotateDuration, err := parseutil.ParseDurationSecond(config.LogRotateDuration)
+	logRotateDuration, err := parseutil.ParseDurationSecond(c.config.LogRotateDuration)
 	if err != nil {
 		error = multierror.Append(error, err)
 	}
 
-	logRotateBytes, err := parseutil.ParseInt(config.LogRotateBytes)
+	logRotateBytes, err := parseutil.ParseInt(c.config.LogRotateBytes)
 	if err != nil {
 		error = multierror.Append(error, err)
 	}
 
-	logRotateMaxFiles, err := parseutil.ParseInt(config.LogRotateMaxFiles)
+	logRotateMaxFiles, err := parseutil.ParseInt(c.config.LogRotateMaxFiles)
 	if err != nil {
 		error = multierror.Append(error, err)
 	}
@@ -1242,7 +1242,7 @@ func (c *AgentCommand) newLogger(config *agentConfig.Config) (log.InterceptLogge
 		Name:              "vault-agent",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
-		LogFilePath:       config.LogFile,
+		LogFilePath:       c.config.LogFile,
 		LogRotateDuration: logRotateDuration,
 		LogRotateBytes:    int(logRotateBytes),
 		LogRotateMaxFiles: int(logRotateMaxFiles),
@@ -1256,30 +1256,50 @@ func (c *AgentCommand) newLogger(config *agentConfig.Config) (log.InterceptLogge
 	return l, nil
 }
 
-// loadConfig attempts to generate a config struct from file(s) specified.
-func (c *AgentCommand) loadConfig(path string) (*agentConfig.Config, error) {
-	// TODO: PW: Violet's multiconfig should probably be handled here?
-	config, err := agentConfig.LoadConfig(path)
-	if err != nil {
-		return nil, fmt.Errorf("error loading configuration from %s: %w", path, err)
+// loadConfig attempts to generate an Agent config from the file(s) specified.
+func (c *AgentCommand) loadConfig(paths []string) (*agentConfig.Config, error) {
+	var errors error
+	cfg := agentConfig.NewConfig()
+
+	for _, configPath := range paths {
+		configFromPath, err := agentConfig.LoadConfig(configPath)
+		if err != nil {
+			errors = multierror.Append(fmt.Errorf("error loading configuration from %s: %w", configPath, err), errors)
+		} else {
+			cfg = cfg.Merge(configFromPath)
+		}
 	}
 
-	return config, nil
+	if errors != nil {
+		return nil, errors
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		return nil, fmt.Errorf("error validating configuration: %w", err)
+	}
+
+	return cfg, nil
 }
 
 // reloadConfig will attempt to reload the config from file(s) and adjust certain
 // config values without requiring a restart of the Vault Agent.
-// If config is retrieved without error it is stored in the config struct
-// attached to the AgentCommand.
-// Currently only reloading log level and TLS certs are supported.
-func (c *AgentCommand) reloadConfig(path string) error {
+// If config is retrieved without error it is stored in the config field of the AgentCommand.
+// This operation is not atomic and could result in updated config but partially applied config settings.
+// The error returned from this func may be a multierror.
+// Currently only reloading the following are supported:
+// * log level
+// * TLS certs are supported
+func (c *AgentCommand) reloadConfig(paths []string) error {
 	// Notify systemd that the server is reloading
 	c.notifySystemd(systemd.SdNotifyReloading)
 	defer c.notifySystemd(systemd.SdNotifyReady)
 
+	var errors error
+
 	// Reload the config
-	cfg, err := c.loadConfig(path)
+	cfg, err := c.loadConfig(paths)
 	if err != nil {
+		// Returning single error as we won't continue with bad config and won't 'commit' it.
 		return err
 	}
 	c.config = cfg
@@ -1287,16 +1307,16 @@ func (c *AgentCommand) reloadConfig(path string) error {
 	// Update the log level
 	err = c.reloadLogLevel()
 	if err != nil {
-		return err
+		errors = multierror.Append(err, errors)
 	}
 
-	// Update any certs using reload funcs we were tracking
+	// Update certs
 	err = c.reloadCerts()
 	if err != nil {
-		return err
+		errors = multierror.Append(err, errors)
 	}
 
-	return nil
+	return errors
 }
 
 // reloadLogLevel will attempt to update the log level for the logger attached
@@ -1318,7 +1338,7 @@ func (c *AgentCommand) reloadLogLevel() error {
 // This function returns a multierror type so that every func can report an error
 // if it encounters one.
 func (c *AgentCommand) reloadCerts() error {
-	var error error
+	var errors error
 
 	c.tlsReloadFuncsLock.RLock()
 	defer c.tlsReloadFuncsLock.RUnlock()
@@ -1326,9 +1346,22 @@ func (c *AgentCommand) reloadCerts() error {
 	for _, reloadFunc := range c.tlsReloadFuncs {
 		err := reloadFunc()
 		if err != nil {
-			error = multierror.Append(error, err)
+			errors = multierror.Append(errors, err)
 		}
 	}
 
-	return error
+	return errors
+}
+
+// outputErrors will take an error or multierror and handle outputting each to the UI
+func (c *AgentCommand) outputErrors(err error) {
+	if err != nil {
+		if me, ok := err.(*multierror.Error); ok {
+			for _, err := range me.Errors {
+				c.UI.Error(err.Error())
+			}
+		} else {
+			c.UI.Error(err.Error())
+		}
+	}
 }

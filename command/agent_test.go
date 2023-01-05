@@ -35,6 +35,21 @@ import (
 const (
 	BasicHclConfig = `
 log_file = "/foo/bar/juan.log"
+log_level="warn"
+vault {
+	address = "http://127.0.0.1:8200"
+	retry {
+		num_retries = 5
+	}
+}
+
+listener "tcp" {
+	address = "127.0.0.1:8100"
+	tls_disable = true
+}`
+	BasicHclConfig2 = `
+log_file = "/foo/bar/juan.log"
+log_level="debug"
 vault {
 	address = "http://127.0.0.1:8200"
 	retry {
@@ -2116,6 +2131,58 @@ func TestAgent_LogFile_Config(t *testing.T) {
 	cmd.updateConfig(f, cfg)
 
 	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "actual config check")
+}
+
+// TODO: PW: Add more tests for log file, as this needs to be fixed properly! (int not string)
+
+//	func Test_Config_ReloadCerts(t *testing.T) {
+//		cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+//		x := func() error { return fmt.Errorf("this is an error") }
+//		// Set up some reload funcs
+//		cmd.tlsReloadFuncs = append(cmd.tlsReloadFuncs, x)
+//
+//		err := cmd.reloadCerts()
+//		assert.Error(t, err)
+//	}
+
+func Test_Config_NewLogger_Default(t *testing.T) {
+	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+	cmd.config = agentConfig.NewConfig()
+	logger, err := cmd.newLogger()
+
+	assert.NoError(t, err)
+	assert.NotNil(t, logger)
+	assert.Equal(t, hclog.Info.String(), logger.GetLevel().String())
+}
+
+func Test_Config_Reload_Config(t *testing.T) {
+	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+	var err error
+
+	// Load an initial config
+	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
+	cmd.config, err = agentConfig.LoadConfigFile(configFile.Name())
+	if err != nil {
+		t.Fatal("Cannot load config to test update/merge", err)
+	}
+
+	// Tweak the loaded config to make sure we can put log files in a temp dir
+	// and systemd log attempts work fine, this would usually happen during Run.
+	cmd.config.LogFile = t.TempDir() + "/juan.log"
+	cmd.logWriter = os.Stdout
+	cmd.logger, err = cmd.newLogger()
+	if err != nil {
+		t.Fatal("logger required for systemd log messages", err)
+	}
+
+	// Sanity check
+	assert.Equal(t, "warn", cmd.config.LogLevel)
+
+	// Load a new config
+	configFile = populateTempFile(t, "agent-config.hcl", BasicHclConfig2)
+	err = cmd.reloadConfig([]string{configFile.Name()})
+	assert.NoError(t, err)
+	assert.Equal(t, "debug", cmd.config.LogLevel)
 }
 
 // Get a randomly assigned port and then free it again before returning it.
