@@ -36,7 +36,6 @@ scenario "replication" {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    // install_artifactory_artifact = true
     tags = merge({
       "Project Name" : var.project_name
       "Project" : "Enos",

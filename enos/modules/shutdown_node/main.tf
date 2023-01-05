@@ -12,8 +12,6 @@ variable "node_public_ip" {
 }
 
 resource "enos_remote_exec" "shutdown_node" {
-
-  # inline = ["sudo halt -f -n --force --no-wall |at now + 1 minute; exit 0"]
   inline = ["sudo shutdown -H --no-wall; exit 0"]
 
   transport = {

@@ -169,7 +169,7 @@ scenario "upgrade" {
     }
   }
 
-  step "get_vault_get_cluster_ips" {
+  step "get_vault_cluster_ips" {
     module     = module.vault_get_cluster_ips
     depends_on = [step.create_vault_cluster]
 
@@ -188,7 +188,7 @@ scenario "upgrade" {
     module = module.vault_verify_write_data
     depends_on = [
       step.create_vault_cluster,
-      step.get_vault_get_cluster_ips
+      step.get_vault_cluster_ips
     ]
 
     providers = {
@@ -196,8 +196,8 @@ scenario "upgrade" {
     }
 
     variables {
-      leader_public_ip  = step.get_vault_get_cluster_ips.leader_public_ip
-      leader_private_ip = step.get_vault_get_cluster_ips.leader_private_ip
+      leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
+      leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
       vault_instances   = step.create_vault_cluster.vault_instances
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.vault_root_token
@@ -249,7 +249,7 @@ scenario "upgrade" {
     }
   }
 
-  step "get_updated_vault_get_cluster_ips" {
+  step "get_updated_vault_cluster_ips" {
     module = module.vault_get_cluster_ips
     depends_on = [
       step.create_vault_cluster,
@@ -271,7 +271,7 @@ scenario "upgrade" {
     module = module.vault_verify_unsealed
     depends_on = [
       step.create_vault_cluster,
-      step.get_updated_vault_get_cluster_ips,
+      step.get_updated_vault_cluster_ips,
       step.upgrade_vault,
     ]
 
@@ -288,7 +288,7 @@ scenario "upgrade" {
   step "verify_read_test_data" {
     module = module.vault_verify_read_data
     depends_on = [
-      step.get_updated_vault_get_cluster_ips,
+      step.get_updated_vault_cluster_ips,
       step.verify_write_test_data,
       step.verify_vault_unsealed
     ]
@@ -298,7 +298,7 @@ scenario "upgrade" {
     }
 
     variables {
-      node_public_ips   = step.get_updated_vault_get_cluster_ips.follower_public_ips
+      node_public_ips   = step.get_updated_vault_cluster_ips.follower_public_ips
       vault_install_dir = local.vault_install_dir
     }
   }
