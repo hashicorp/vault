@@ -267,9 +267,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, mountPathWithPrefix stri
 
 		if mountPathWithPrefix != "sys" && mountPathWithPrefix != "identity" {
 			defaultMountPath := mountPathWithPrefix[strings.LastIndex(mountPathWithPrefix, "/")+1:]
-			if defaultMountPath == "kv" {
-				defaultMountPath = "secret"
-			}
 			p := OASParameter{
 				Name:        fmt.Sprintf("%s_mount_path", defaultMountPath),
 				Description: "Path where the backend was mounted; the endpoint path will be offset by the mount path",
