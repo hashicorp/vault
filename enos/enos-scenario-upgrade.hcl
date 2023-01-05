@@ -9,12 +9,11 @@ scenario "upgrade" {
     edition         = ["oss", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     seal            = ["awskms", "shamir"]
 
-    # Packages are not offered for the oss edition
+    # Packages are not offered for the oss, ent.fips1402, and ent.hsm.fips1402 editions
     exclude {
-      edition       = ["oss"]
+      edition       = ["oss", "ent.fips1402", "ent.hsm.fips1402"]
       artifact_type = ["package"]
     }
-
   }
 
   terraform_cli = terraform_cli.default
