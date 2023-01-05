@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -25,6 +26,18 @@ func pathListCertsRevoked(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListRevokedCertsHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `List of Keys`,
+								Required: true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -56,6 +69,23 @@ signed by an issuer in this mount.`,
 				// If this needs to write, the entire request will be forwarded to the
 				// active node of the current performance cluster, but we don't want to
 				// forward invalid revoke requests there.
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"revocation_time": {
+								Type:        framework.TypeInt,
+								Description: `Revocation Time`,
+								Required: true,
+							},
+							"revocation_time_rfc3339": {
+								Type:        framework.TypeInt,
+								Description: `Revocation Time`,
+								Required: false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -92,6 +122,23 @@ be in PEM format.`,
 				// If this needs to write, the entire request will be forwarded to the
 				// active node of the current performance cluster, but we don't want to
 				// forward invalid revoke requests there.
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"revocation_time": {
+								Type:        framework.TypeInt,
+								Description: `Revocation Time`,
+								Required: true,
+							},
+							"revocation_time_rfc3339": {
+								Type:        framework.TypeInt,
+								Description: `Revocation Time`,
+								Required: false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -111,6 +158,18 @@ func pathRotateCRL(b *backend) *framework.Path {
 				// so this request should be forwarded when it is first seen, not
 				// when it is ready to write.
 				ForwardPerformanceStandby: true,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"success": {
+								Type:        framework.TypeBool,
+								Description: `Whether rotation was successful`,
+								Required: true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -130,6 +189,18 @@ func pathRotateDeltaCRL(b *backend) *framework.Path {
 				// so this request should be forwarded when it is first seen, not
 				// when it is ready to write.
 				ForwardPerformanceStandby: true,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"success": {
+								Type:        framework.TypeBool,
+								Description: `Whether rotation was successful`,
+								Required: true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
