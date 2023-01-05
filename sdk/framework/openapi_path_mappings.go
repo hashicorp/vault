@@ -18,9 +18,10 @@ type knownPathKey struct {
 // Note: if operation is specified, it will overwrite the operation associated
 // with the request, which could lead to some collisions
 type requestResponseParts struct {
-	prefix    string
-	operation string
-	suffix    string
+	prefix              string
+	operation           string
+	suffix              string
+	updateOperationOnly bool
 }
 
 // knownPathMappings is used by constructRequestResponseIdentifier to generate
@@ -120,7 +121,7 @@ var knownPathMappings = map[knownPathKey]requestResponseParts{
 	{mount: "auth/kerberos", path: "config/ldap"}:                                      {prefix: "Kerberos", suffix: "LDAPConfig"},
 	{mount: "auth/kerberos", path: "groups"}:                                           {prefix: "Kerberos", suffix: "Groups"},
 	{mount: "auth/kerberos", path: "groups/{name}"}:                                    {prefix: "Kerberos", suffix: "Group"},
-	{mount: "auth/kerberos", path: "login"}:                                            {prefix: "Kerberos", operation: "Login"},
+	{mount: "auth/kerberos", path: "login"}:                                            {prefix: "Kerberos", operation: "Login", updateOperationOnly: true},
 	{mount: "auth/kubernetes", path: "config"}:                                         {prefix: "Kubernetes", suffix: "AuthConfig"},
 	{mount: "auth/kubernetes", path: "login"}:                                          {prefix: "Kubernetes", operation: "Login"},
 	{mount: "auth/kubernetes", path: "role"}:                                           {prefix: "Kubernetes", suffix: "AuthRoles"},
@@ -187,7 +188,7 @@ var knownPathMappings = map[knownPathKey]requestResponseParts{
 	{mount: "ad", path: "roles"}:                                                       {prefix: "ActiveDirectory", suffix: "Roles"},
 	{mount: "ad", path: "roles/{name}"}:                                                {prefix: "ActiveDirectory", suffix: "Role"},
 	{mount: "ad", path: "rotate-role/{name}"}:                                          {prefix: "ActiveDirectory", suffix: "Role", operation: "Rotate"},
-	{mount: "ad", path: "rotate-root"}:                                                 {prefix: "ActiveDirectory", suffix: "Root", operation: "Rotate"},
+	{mount: "ad", path: "rotate-root"}:                                                 {prefix: "ActiveDirectory", suffix: "Root", operation: "Rotate", updateOperationOnly: true},
 	{mount: "alicloud", path: "config"}:                                                {prefix: "AliCloud", suffix: "Config"},
 	{mount: "alicloud", path: "creds/{name}"}:                                          {prefix: "AliCloud", suffix: "Credentials"},
 	{mount: "alicloud", path: "role"}:                                                  {prefix: "AliCloud", suffix: "Roles"},
@@ -229,10 +230,10 @@ var knownPathMappings = map[knownPathKey]requestResponseParts{
 	{mount: "gcpkms", path: "encrypt/{key}"}:                                           {prefix: "GoogleCloudKMS", operation: "Encrypt"},
 	{mount: "gcpkms", path: "keys"}:                                                    {prefix: "GoogleCloudKMS", suffix: "Keys"},
 	{mount: "gcpkms", path: "keys/config/{key}"}:                                       {prefix: "GoogleCloudKMS", suffix: "KeyConfig"},
-	{mount: "gcpkms", path: "keys/deregister/{key}"}:                                   {prefix: "GoogleCloudKMS", suffix: "Key", operation: "Deregister"},
-	{mount: "gcpkms", path: "keys/register/{key}"}:                                     {prefix: "GoogleCloudKMS", suffix: "Key", operation: "Register"},
-	{mount: "gcpkms", path: "keys/rotate/{key}"}:                                       {prefix: "GoogleCloudKMS", suffix: "Key", operation: "Rotate"},
-	{mount: "gcpkms", path: "keys/trim/{key}"}:                                         {prefix: "GoogleCloudKMS", suffix: "Key", operation: "Trim"},
+	{mount: "gcpkms", path: "keys/deregister/{key}"}:                                   {prefix: "GoogleCloudKMS", suffix: "Key", updateOperationOnly: true, operation: "Deregister"},
+	{mount: "gcpkms", path: "keys/register/{key}"}:                                     {prefix: "GoogleCloudKMS", suffix: "Key", updateOperationOnly: true, operation: "Register"},
+	{mount: "gcpkms", path: "keys/rotate/{key}"}:                                       {prefix: "GoogleCloudKMS", suffix: "Key", updateOperationOnly: true, operation: "Rotate"},
+	{mount: "gcpkms", path: "keys/trim/{key}"}:                                         {prefix: "GoogleCloudKMS", suffix: "Key", updateOperationOnly: true, operation: "Trim"},
 	{mount: "gcpkms", path: "keys/{key}"}:                                              {prefix: "GoogleCloudKMS", suffix: "Key"},
 	{mount: "gcpkms", path: "pubkey/{key}"}:                                            {prefix: "GoogleCloudKMS", suffix: "Pubkey"},
 	{mount: "gcpkms", path: "reencrypt/{key}"}:                                         {prefix: "GoogleCloudKMS", operation: "Reencrypt"},

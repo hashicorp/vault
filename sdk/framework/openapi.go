@@ -581,9 +581,7 @@ func constructOperationID(operation logical.Operation, mount, path string) (stri
 			parts = append(parts, mapping.prefix)
 		}
 
-		// If the operation was specified in the mapping, we assume it's unique
 		if mapping.operation != "" {
-			updateOperationOnly = true
 			parts = append(parts, mapping.operation)
 		} else {
 			parts = append(parts, nonWordRe.Split(strings.ToLower(operationStr), -1)...)
@@ -592,6 +590,8 @@ func constructOperationID(operation logical.Operation, mount, path string) (stri
 		if mapping.suffix != "" {
 			parts = append(parts, mapping.suffix)
 		}
+
+		updateOperationOnly = mapping.updateOperationOnly
 	} else {
 		// Else, fall back to [mount][operation][path] split by non-word characters
 		parts = append(parts, nonWordRe.Split(strings.ToLower(mount), -1)...)
