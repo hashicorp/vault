@@ -131,7 +131,7 @@ func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *meta.ListN
 func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMountsRequest) (*meta.ListMountsResponse, error) {
 	mountEntries, err := h.wrappedCore.ListMounts()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to list secret mounts: %w", err)
 	}
 
 	var mounts []*meta.Mount
@@ -142,7 +142,7 @@ func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMount
 		if nsID != namespace.RootNamespaceID {
 			ns, err := h.wrappedCore.NamespaceByID(ctx, entry.NamespaceID)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("unable to get namespace associated with secret mount: %w", err)
 			}
 
 			path = ns.Path + path
@@ -163,7 +163,7 @@ func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMount
 func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsRequest) (*meta.ListAuthResponse, error) {
 	authEntries, err := h.wrappedCore.ListAuths()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to list auth mounts: %w", err)
 	}
 
 	var auths []*meta.Auth
@@ -174,7 +174,7 @@ func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsR
 		if nsID != namespace.RootNamespaceID {
 			ns, err := h.wrappedCore.NamespaceByID(ctx, entry.NamespaceID)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("unable to get namespace associated with auth mount: %w", err)
 			}
 
 			path = ns.Path + path
@@ -199,7 +199,7 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to fetch hostname: %w", err)
 	}
 
 	haEnabled := h.wrappedCore.HAEnabled()
@@ -229,7 +229,7 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 	raftStatus := &meta.RaftStatus{}
 	raftConfig, err := h.wrappedCore.GetRaftConfiguration(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get Raft configuration: %w", err)
 	}
 
 	if raftConfig != nil {
@@ -270,7 +270,7 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 
 	raftAutopilotState, err := h.wrappedCore.GetRaftAutopilotState(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get Raft Autopilot state: %w", err)
 	}
 
 	if raftAutopilotState != nil {
