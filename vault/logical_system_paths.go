@@ -1557,6 +1557,13 @@ func (b *SystemBackend) inFlightRequestPath() *framework.Path {
 				Callback:    b.handleInFlightRequestData,
 				Summary:     strings.TrimSpace(sysHelp["in-flight-req"][0]),
 				Description: strings.TrimSpace(sysHelp["in-flight-req"][1]),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						// dynamic fields
+						Fields: map[string]*framework.FieldSchema{},
+					}},
+				},
 			},
 		},
 	}
