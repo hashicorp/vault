@@ -512,6 +512,55 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleLeaderStatus,
 					Summary:  "Returns the high availability status and current leader instance of Vault.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// returns `vault.LeaderResponse` struct
+							Fields: map[string]*framework.FieldSchema{
+								"ha_enabled": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"is_self": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"active_time": {
+									Type: framework.TypeTime,
+									// active_time has 'omitempty' tag, but its not a pointer so never "empty"
+									Required: true,
+								},
+								"leader_address": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"leader_cluster_address": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"performance_standby": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"performance_standby_last_remote_wal": {
+									Type:     framework.TypeInt64,
+									Required: true,
+								},
+								"last_wal": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"raft_committed_index": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"raft_applied_index": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 			},
 
