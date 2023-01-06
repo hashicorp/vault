@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
@@ -371,7 +372,6 @@ func (c *AgentCommand) Run(args []string) int {
 	// confuse the issue of retries for auth failures which have their own
 	// config and are handled a bit differently.
 	if os.Getenv(api.EnvVaultMaxRetries) == "" {
-		client.SetMaxRetries(c.config.Vault.Retry.NumRetries)
 		client.SetMaxRetries(ctconfig.DefaultRetryAttempts)
 		if c.config.Vault != nil {
 			if c.config.Vault.Retry != nil {
@@ -670,7 +670,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	for i, lnConfig := range c.config.Listeners {
 		var ln net.Listener
-		var tlsConf *cache.CertConfig
+		var tlsCfg *tls.Config
 
 		if lnConfig.Type == listenerutil.BufConnType {
 			inProcListener := bufconn.Listen(1024 * 1024)
@@ -679,18 +679,19 @@ func (c *AgentCommand) Run(args []string) int {
 			}
 			ln = inProcListener
 		} else {
-			ln, tlsConf, err = cache.StartListener(lnConfig)
+			lnBundle, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
 				return 1
 			}
 
-			if tlsConf.ReloadFunc != nil {
-				// Track the reload func so we can reload later if needed.
-				// NOTE: If we plan to reload entire listeners at some point it won't be enough to just
-				// throw the reload func into a slice and call it later.
-				c.tlsReloadFuncs = append(c.tlsReloadFuncs, tlsConf.ReloadFunc)
-			}
+			tlsCfg = lnBundle.TLSConfig
+			ln = lnBundle.Listener
+
+			// Track the reload func so we can reload later if needed.
+			// NOTE: If we plan to reload entire listeners at some point it won't be enough to just
+			// throw the reload func into a slice and call it later.
+			c.tlsReloadFuncs = append(c.tlsReloadFuncs, lnBundle.TLSReloadFunc)
 		}
 
 		listeners = append(listeners, ln)
@@ -735,7 +736,7 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 
 		scheme := "https://"
-		if tlsConf.Config == nil {
+		if tlsCfg == nil {
 			scheme = "http://"
 		}
 		if ln.Addr().Network() == "unix" {
@@ -748,7 +749,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		server := &http.Server{
 			Addr:              ln.Addr().String(),
-			TLSConfig:         tlsConf.Config,
+			TLSConfig:         tlsCfg,
 			Handler:           mux,
 			ReadHeaderTimeout: 10 * time.Second,
 			ReadTimeout:       30 * time.Second,
@@ -788,7 +789,9 @@ func (c *AgentCommand) Run(args []string) int {
 				return nil
 			}
 		}
-	}, func(error) {})
+	}, func(error) {
+		cancelFunc()
+	})
 
 	// This run group watches for signal termination
 	g.Add(func() error {

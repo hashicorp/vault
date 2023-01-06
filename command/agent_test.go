@@ -1527,7 +1527,6 @@ vault {
 %s
 %s
 `, serverClient.Address(), retryConf, cacheConfig, listenConfig)
-
 			configPath := makeTempFile(t, "config.hcl", config)
 			defer os.Remove(configPath)
 
@@ -2133,19 +2132,7 @@ func TestAgent_LogFile_Config(t *testing.T) {
 	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "actual config check")
 }
 
-// TODO: PW: Add more tests for log file, as this needs to be fixed properly! (int not string)
-
-//	func Test_Config_ReloadCerts(t *testing.T) {
-//		cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
-//		x := func() error { return fmt.Errorf("this is an error") }
-//		// Set up some reload funcs
-//		cmd.tlsReloadFuncs = append(cmd.tlsReloadFuncs, x)
-//
-//		err := cmd.reloadCerts()
-//		assert.Error(t, err)
-//	}
-
-func Test_Config_NewLogger_Default(t *testing.T) {
+func TestAgent_Config_NewLogger_Default(t *testing.T) {
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
 	cmd.config = agentConfig.NewConfig()
 	logger, err := cmd.newLogger()
@@ -2155,7 +2142,7 @@ func Test_Config_NewLogger_Default(t *testing.T) {
 	assert.Equal(t, hclog.Info.String(), logger.GetLevel().String())
 }
 
-func Test_Config_Reload_Config(t *testing.T) {
+func TestAgent_Config_ReloadLogLevel(t *testing.T) {
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
 	var err error
 
@@ -2166,7 +2153,7 @@ func Test_Config_Reload_Config(t *testing.T) {
 		t.Fatal("Cannot load config to test update/merge", err)
 	}
 
-	// Tweak the loaded config to make sure we can put log files in a temp dir
+	// Tweak the loaded config to make sure we can put log files into a temp dir
 	// and systemd log attempts work fine, this would usually happen during Run.
 	cmd.config.LogFile = t.TempDir() + "/juan.log"
 	cmd.logWriter = os.Stdout
