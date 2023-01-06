@@ -80,7 +80,7 @@ message AutopilotStatus {
 message RaftStatus {
   RaftConfiguration RaftConfiguration = 1;
   AutopilotStatus AutopilotStatus = 2;
-  repeated string QuorumWarnings = 3;
+  string QuorumWarning = 3;
 }
 
 message GetClusterStatusResponse {
