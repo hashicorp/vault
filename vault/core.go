@@ -264,7 +264,8 @@ type Core struct {
 	underlyingPhysical physical.Backend
 
 	// seal is our seal, for seal configuration information
-	seal Seal
+	seal         Seal
+	recoverySeal Seal
 
 	// raftJoinDoneCh is used by the raft retry join routine to inform unseal process
 	// that the join is complete
@@ -1036,6 +1037,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 			Wrapper: wrapper,
 		})
 	}
+
 	c.seal.SetCore(c)
 	return c, nil
 }

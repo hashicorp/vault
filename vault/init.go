@@ -398,6 +398,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 				c.logger.Error("failed to store recovery keys", "error", err)
 				return nil, fmt.Errorf("failed to store keys: %w", err)
 			}
+			c.recoverySeal = recoverySeal
 		}
 	}
 
