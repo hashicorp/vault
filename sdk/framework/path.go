@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -233,6 +234,47 @@ type Response struct {
 	MediaType   string                  // media type of the response, defaulting to "application/json" if empty
 	Fields      map[string]*FieldSchema // the fields present in this response, used to generate openapi response
 	Example     *logical.Response       // example response data
+}
+
+// ValidateResponseData validates whether the given response data object
+// conforms to the response schema (Fields). It ensures that every required
+// field defined in the schema is present in the response data map and is of
+// the correct type. In "strict" mode, the function also ensures that the data
+// map does not have any fields that are not defined within the schema.
+func (r *Response) ValidateResponseData(data map[string]interface{}, strict bool) error {
+	for field, s := range r.Fields {
+		if !s.Required {
+			continue
+		}
+
+		if _, ok := data[field]; !ok {
+			return fmt.Errorf("missing required field %q", field)
+		}
+
+		if reflect.TypeOf(data[field]) != reflect.TypeOf(s.Type.Zero()) {
+			return fmt.Errorf(
+				"invalid type for field %q, expected %v, got %v",
+				field,
+				reflect.TypeOf(s.Type.Zero()),
+				reflect.TypeOf(data[field]),
+			)
+		}
+	}
+
+	if !strict {
+		return nil // early return
+	}
+
+	for field := range data {
+		if _, ok := r.Fields[field]; !ok {
+			return fmt.Errorf(
+				"field %q not found in response schema",
+				field,
+			)
+		}
+	}
+
+	return nil
 }
 
 // PathOperation is a concrete implementation of OperationHandler.
