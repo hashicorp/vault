@@ -37,7 +37,7 @@ type WrappedCoreMeta interface {
 	ListMounts() ([]*vault.MountEntry, error)
 	ListAuths() ([]*vault.MountEntry, error)
 	HAEnabled() bool
-	HAState() consts.HAState
+	HAStateWithLock() consts.HAState
 	GetHAPeerNodesCached() []vault.PeerNode
 	GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error)
 	GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState, error)

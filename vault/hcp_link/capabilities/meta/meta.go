@@ -193,7 +193,7 @@ func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsR
 }
 
 func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.GetClusterStatusRequest) (*meta.GetClusterStatusResponse, error) {
-	if h.wrappedCore.HAState() != consts.Active {
+	if h.wrappedCore.HAStateWithLock() != consts.Active {
 		return nil, fmt.Errorf("node not active")
 	}
 
