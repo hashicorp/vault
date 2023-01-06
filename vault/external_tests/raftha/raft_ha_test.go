@@ -146,6 +146,11 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 	}
 }
 
+// In this test, we're going to create a raft HA cluster and store a test secret in a KVv2
+// We're going to simulate an outage and destroy the cluster but we'll keep the storage backend.
+// We'll recreate a new cluster with the same storage backend and ensure that we can recover using
+// sys/storage/raft/bootstrap with `reset_tls_keyring` set to true. We'll check that the new cluster
+// is functional and no data was lost: we can get the test secret from the KVv2.
 func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBundle, logger hclog.Logger) {
 	t.Log("Simulating cluster recovery with raft as HABackend but not storage")
 	var conf vault.CoreConfig
