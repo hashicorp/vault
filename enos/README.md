@@ -120,11 +120,13 @@ cluster is at the desired version, along with additional verifications.
 
 ## Autopilot
 The [`autopilot` scenario](./enos-scenario-autopilot.hcl) creates a Vault cluster using
-the version specified in `vault_upgrade_initial_release`. Next, it creates additional
-nodes with the candiate version of Vault as determined by the `builder` variant.
+the version specified in `vault_upgrade_initial_release`. It writes test data to the Vault cluster. Next, it creates additional nodes with the candiate version of Vault as determined by the `vault_product_version` variable set.
 The module uses AWS auto-join to handle discovery and unseals with auto-unseal
 or Shamir depending on the `seal` variant. After the new nodes have joined and been
-unsealed, it waits for Autopilot to upgrade the new nodes and demote the old nodes.
+unsealed, it verifies reading stored data on the new nodes. Autopilot upgrade verification checks the upgrade status is "await-server-removal" and the target version is set to the version of upgraded nodes. This test also verifies the undo_logs status for Vault versions 1.13.x
+
+## Replication
+The [`replication` scenario](./enos-scenario-replication.hcl) creates two Vault clusters.  It writes data on the primary cluster, then enables performance replication between them and verifies reading stored data from secondary cluster. It also verifies initial replication status between both clusters, then replaces the leader node and one standby node on the primary Vault cluster. This scenario verifies the performance replication status on both clusters to have their connection_status as "connected" and that the secondary cluster has known_primaries cluster addresses updated to the active nodes IP addresses of the primary Vault cluster. This scenario currently works around issues VAULT-12311 and VAULT-12309.  The scenario fails when the primary storage backend is Consul due to issue VAULT-12332
 
 # Variants
 Both scenarios support a matrix of variants. In order to achieve broad coverage while
