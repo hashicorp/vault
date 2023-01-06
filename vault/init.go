@@ -243,7 +243,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// HA backend.
 	raftBackend := c.getRaftBackend()
 	if raftBackend != nil {
-		err := c.RaftBootstrap(ctx, true)
+		err := c.RaftBootstrap(ctx, true, false)
 		if err != nil {
 			c.logger.Error("failed to bootstrap raft", "error", err)
 			return nil, err
@@ -408,7 +408,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	if raftBackend != nil {
-		if _, err := c.raftCreateTLSKeyring(ctx); err != nil {
+		if _, err := c.raftCreateTLSKeyring(ctx, false); err != nil {
 			c.logger.Error("failed to create raft TLS keyring", "error", err)
 			return nil, err
 		}

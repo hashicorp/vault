@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
+	"strconv"
 
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/physical/raft"
@@ -21,7 +23,30 @@ func handleSysRaftBootstrap(core *vault.Core) http.Handler {
 				respondError(w, http.StatusBadRequest, errors.New("node must be unsealed to bootstrap"))
 			}
 
-			if err := core.RaftBootstrap(context.Background(), false); err != nil {
+			// Parse the request
+			var req map[string]interface{}
+			if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
+				respondError(w, http.StatusBadRequest, err)
+				return
+			}
+
+			resetTLSKeyring := req["reset_tls_keyring"]
+			// It defaults to false if not set.
+			if resetTLSKeyring == nil {
+				resetTLSKeyring = false
+			}
+			// Convert it to bool if needed because vault client sends it as string even if its a boolean but vault API sends it as bool.
+			if reflect.TypeOf(resetTLSKeyring) == reflect.TypeOf("string") {
+				var err error
+				resetTLSKeyring, err = strconv.ParseBool(resetTLSKeyring.(string))
+				if err != nil {
+					respondError(w, http.StatusInternalServerError, err)
+					return
+				}
+			}
+			resetTLSKeyringBool := resetTLSKeyring.(bool)
+
+			if err := core.RaftBootstrap(context.Background(), false, resetTLSKeyringBool); err != nil {
 				respondError(w, http.StatusInternalServerError, err)
 				return
 			}
