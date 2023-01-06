@@ -599,6 +599,77 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleSealStatus,
 					Summary:  "Check the seal status of a Vault.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							// unseal returns `vault.SealStatusResponse` struct
+							Fields: map[string]*framework.FieldSchema{
+								"type": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"initialized": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"sealed": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"t": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"n": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"build_date": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"migration": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"cluster_name": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"cluster_id": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"recovery_seal": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"storage_type": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"hcp_link_status": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"hcp_link_resource_ID": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 			},
 
