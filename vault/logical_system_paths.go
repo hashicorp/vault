@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -902,8 +903,21 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathHashWrite,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathHashWrite,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"sum": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["hash"][0]),
