@@ -1366,7 +1366,6 @@ func (tl *TestLogger) StopLogging() {
 // logger and will be the basis for each core's logger.  If no opts.Logger is
 // given, one will be generated based on t.Name() for the cluster logger, and if
 // no base.Logger is given will also be used as the basis for each core's logger.
-
 func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
 	base.DetectDeadlocks = TestDeadlockDetection
 
