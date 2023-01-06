@@ -254,18 +254,21 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 			Servers: raftServers,
 		}
 
-		quorumWarnings := make([]string, 0)
-		if voterCount == 0 {
-			quorumWarnings = append(quorumWarnings, "Only one server node found. Vault is not running in high availability mode.")
+		evenVoterMessage := "Vault should have access to an odd number of voter nodes."
+		largeClusterMessage := "Very large cluster detected."
+		var quorumWarning string
+
+		if voterCount == 1 {
+			quorumWarning = "Only one server node found. Vault is not running in high availability mode."
+		} else if voterCount%2 == 0 && voterCount > 7 {
+			quorumWarning = evenVoterMessage + " " + largeClusterMessage
 		} else if voterCount%2 == 0 {
-			quorumWarnings = append(quorumWarnings, "Vault should have access to an odd number of voter nodes.")
+			quorumWarning = evenVoterMessage
+		} else if voterCount > 7 {
+			quorumWarning = largeClusterMessage
 		}
 
-		if voterCount > 7 {
-			quorumWarnings = append(quorumWarnings, "Very large cluster detected.")
-		}
-
-		raftStatus.QuorumWarnings = quorumWarnings
+		raftStatus.QuorumWarning = quorumWarning
 	}
 
 	raftAutopilotState, err := h.wrappedCore.GetRaftAutopilotState(ctx)
