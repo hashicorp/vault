@@ -585,6 +585,17 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleHAStatus,
 					Summary:  "Check the HA status of a Vault cluster",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nodes": {
+									Type:     framework.TypeSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
