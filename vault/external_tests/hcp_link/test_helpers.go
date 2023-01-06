@@ -81,8 +81,8 @@ func TestClusterWithHCPLinkEnabled(t *testing.T, cluster *vault.TestCluster, ena
 		t.Skip("HCP client secret not found in env")
 	}
 
-	if _, ok := os.LookupEnv("HCP_API_HOST"); !ok {
-		t.Skip("failed to find HCP_API_HOST in the environment")
+	if _, ok := os.LookupEnv("HCP_API_ADDRESS"); !ok {
+		t.Skip("failed to find HCP_API_ADDRESS in the environment")
 	}
 	if _, ok := os.LookupEnv("HCP_SCADA_ADDRESS"); !ok {
 		t.Skip("failed to find HCP_SCADA_ADDRESS in the environment")
