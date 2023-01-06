@@ -1570,6 +1570,37 @@ func (b *SystemBackend) hostInfoPath() *framework.Path {
 				Callback:    b.handleHostInfo,
 				Summary:     strings.TrimSpace(sysHelp["host-info"][0]),
 				Description: strings.TrimSpace(sysHelp["host-info"][1]),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"timestamp": {
+								Type:     framework.TypeTime,
+								Required: true,
+							},
+							"cpu": {
+								Type:     framework.TypeSlice,
+								Required: false,
+							},
+							"cpu_times": {
+								Type:     framework.TypeSlice,
+								Required: false,
+							},
+							"disk": {
+								Type:     framework.TypeSlice,
+								Required: false,
+							},
+							"host": {
+								Type:     framework.TypeMap,
+								Required: false,
+							},
+							"memory": {
+								Type:     framework.TypeMap,
+								Required: false,
+							},
+						},
+					}},
+				},
 			},
 		},
 		HelpSynopsis:    strings.TrimSpace(sysHelp["host-info"][0]),
