@@ -144,16 +144,16 @@ export default class Dashboard extends Component {
     const activityStart = parseAPITimestamp(this.getActivityResponse.startTime);
     const activityEnd = parseAPITimestamp(this.getActivityResponse.endTime);
     // filter and return all upgrades that happened within date range of queried activity
-    return upgradeVersionHistory.filter(({ timestampInstalled }) => {
+    const upgradesWithinData = upgradeVersionHistory.filter(({ timestampInstalled }) => {
       const upgradeDate = parseAPITimestamp(timestampInstalled);
       return isAfter(upgradeDate, activityStart) && isBefore(upgradeDate, activityEnd);
     });
+    return upgradesWithinData.length === 0 ? null : upgradesWithinData;
   }
 
   get upgradeVersionAndDate() {
-    if (!this.upgradeDuringActivity || this.upgradeDuringActivity.length === 0) {
-      return null;
-    }
+    if (!this.upgradeDuringActivity) return null;
+
     if (this.upgradeDuringActivity.length === 2) {
       const [firstUpgrade, secondUpgrade] = this.upgradeDuringActivity;
       const firstDate = parseAPITimestamp(firstUpgrade.timestampInstalled, 'MMM d, yyyy');
@@ -169,9 +169,7 @@ export default class Dashboard extends Component {
   }
 
   get upgradeExplanation() {
-    if (!this.upgradeDuringActivity || this.upgradeDuringActivity.length === 0) {
-      return null;
-    }
+    if (!this.upgradeDuringActivity) return null;
     if (this.upgradeDuringActivity.length === 1) {
       const version = this.upgradeDuringActivity[0].version;
       if (version.match('1.9')) {
