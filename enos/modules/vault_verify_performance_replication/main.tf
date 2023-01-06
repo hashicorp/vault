@@ -97,10 +97,42 @@ output "known_primary_cluster_addrs" {
 }
 
 output "secondary_replication_status" {
-  value = jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout)
+  value = local.secondary_replication_status
 
   precondition {
-    condition     = jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout).data.mode == "secondary" && jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout).data.state != "idle"
+    condition     = local.secondary_replication_status.data.mode == "secondary" && local.secondary_replication_status.data.state != "idle"
     error_message = "Vault secondary cluster mode must be \"secondary\" and state must not be \"idle\"."
+  }
+}
+
+output "primary_replication_data_secondaries" {
+  value = local.primary_replication_status.data.secondaries
+
+  # The secondaries connection_status should be "connected"
+  precondition {
+    condition     = local.primary_replication_status.data.secondaries[0].connection_status == "connected"
+    error_message = "connection status to primaries must be \"connected\"."
+  }
+
+  # The secondaries cluster address must have the secondary leader address
+  precondition {
+    condition     = local.primary_replication_status.data.secondaries[0].cluster_address == "https://${var.secondary_leader_private_ip}:8201"
+    error_message = "Vault secondaries cluster_address must be with ${var.secondary_leader_private_ip}."
+  }
+}
+
+output "secondary_replication_data_primaries" {
+  value = local.secondary_replication_status.data.primaries
+
+  # The primaries connection_status should be "connected"
+  precondition {
+    condition     = local.secondary_replication_status.data.primaries[0].connection_status == "connected"
+    error_message = "connection status to primaries must be \"connected\"."
+  }
+
+  # The primaries cluster address must have the primary leader address
+  precondition {
+    condition     = local.secondary_replication_status.data.primaries[0].cluster_address == "https://${var.primary_leader_private_ip}:8201"
+    error_message = "Vault primaries cluster_address must be ${var.primary_leader_private_ip}."
   }
 }

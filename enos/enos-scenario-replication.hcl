@@ -345,6 +345,8 @@ scenario "replication" {
     }
   }
 
+  // After replication is enabled, the secondary cluster followers need to be unsealed
+  // Secondary unseal keys are passed using the guide https://developer.hashicorp.com/vault/docs/enterprise/replication#seals
   step "unseal_secondary_followers" {
     module = module.vault_unseal_nodes
     depends_on = [
@@ -561,11 +563,6 @@ scenario "replication" {
     }
   }
 
-  output "vault_primary_cluster_instance_ids" {
-    description = "The Vault primary cluster instance IDs"
-    value       = step.create_vault_primary_cluster.instance_ids
-  }
-
   output "vault_primary_cluster_pub_ips" {
     description = "The Vault primary cluster public IPs"
     value       = step.create_vault_primary_cluster.instance_public_ips
@@ -586,11 +583,6 @@ scenario "replication" {
     value       = step.add_primary_cluster_nodes.instance_private_ips
   }
 
-  output "vault_primary_cluster_key_id" {
-    description = "The Vault primary cluster Key ID"
-    value       = step.create_vault_primary_cluster.key_id
-  }
-
   output "vault_primary_cluster_root_token" {
     description = "The Vault primary cluster root token"
     value       = step.create_vault_primary_cluster.vault_root_token
@@ -606,16 +598,6 @@ scenario "replication" {
     value       = step.create_vault_primary_cluster.vault_unseal_keys_hex
   }
 
-  output "vault_primary_cluster_tag" {
-    description = "The Vault primary cluster tag"
-    value       = step.create_vault_primary_cluster.vault_cluster_tag
-  }
-
-  output "vault_secondary_cluster_instance_ids" {
-    description = "The Vault secondary cluster instance IDs"
-    value       = step.create_vault_secondary_cluster.instance_ids
-  }
-
   output "vault_secondary_cluster_pub_ips" {
     description = "The Vault secondary cluster public IPs"
     value       = step.create_vault_secondary_cluster.instance_public_ips
@@ -624,31 +606,6 @@ scenario "replication" {
   output "vault_secondary_cluster_priv_ips" {
     description = "The Vault secondary cluster private IPs"
     value       = step.create_vault_secondary_cluster.instance_private_ips
-  }
-
-  output "vault_secondary_cluster_tag" {
-    description = "The Vault secondary cluster tag"
-    value       = step.create_vault_secondary_cluster.vault_cluster_tag
-  }
-
-  output "vault_secondary_cluster_key_id" {
-    description = "The Vault secondary cluster Key ID"
-    value       = step.create_vault_secondary_cluster.key_id
-  }
-
-  output "vault_secondary_cluster_root_token" {
-    description = "The Vault secondary cluster root token"
-    value       = step.create_vault_secondary_cluster.vault_root_token
-  }
-
-  output "vault_secondary_cluster_unseal_keys_b64" {
-    description = "The Vault secondary cluster unseal keys"
-    value       = step.create_vault_secondary_cluster.vault_unseal_keys_b64
-  }
-
-  output "vault_secondary_cluster_unseal_keys_hex" {
-    description = "The Vault secondary cluster unseal keys hex"
-    value       = step.create_vault_secondary_cluster.vault_unseal_keys_hex
   }
 
   output "vault_primary_performance_replication_status" {
@@ -671,8 +628,33 @@ scenario "replication" {
     value       = step.verify_updated_performance_replication.primary_replication_status
   }
 
+  output "vault_updated_replication_known_primary_cluster_addrs" {
+    description = "The Vault secondary cluster performance replication status"
+    value       = step.verify_updated_performance_replication.known_primary_cluster_addrs
+  }
+
   output "verify_secondary_updated_performance_replication_status" {
     description = "The Vault updated secondary cluster performance replication status"
     value       = step.verify_updated_performance_replication.secondary_replication_status
+  }
+
+  output "primary_replication_data_secondaries" {
+    description = "The Vault primary cluster secondaries connection status"
+    value       = step.verify_performance_replication.primary_replication_data_secondaries
+  }
+
+  output "secondary_replication_data_primaries" {
+    description = "The Vault  secondary cluster primaries connection status"
+    value       = step.verify_performance_replication.secondary_replication_data_primaries
+  }
+
+  output "primary_updated_replication_data_secondaries" {
+    description = "The Vault updated primary cluster secondaries connection status"
+    value       = step.verify_updated_performance_replication.primary_replication_data_secondaries
+  }
+
+  output "secondary_updated_replication_data_primaries" {
+    description = "The Vault updated secondary cluster primaries connection status"
+    value       = step.verify_updated_performance_replication.secondary_replication_data_primaries
   }
 }

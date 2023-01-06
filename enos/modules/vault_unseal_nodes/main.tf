@@ -77,6 +77,7 @@ resource "enos_remote_exec" "restart_followers" {
 # script to allow retry for unsealing the secondary followers
 resource "enos_remote_exec" "unseal_followers" {
   depends_on = [enos_remote_exec.restart_followers]
+  # The unseal keys are required only for seal_type shamir
   for_each = {
     for idx, follower in local.followers : idx => follower
     if var.vault_seal_type == "shamir"
