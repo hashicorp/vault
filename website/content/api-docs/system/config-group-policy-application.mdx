@@ -1,0 +1,78 @@
+---
+layout: api
+page_title: /sys/config/group-policy-application - HTTP API
+description: The '/sys/config/group-policy-application' endpoint is used to configure the global mode for group policy application.
+---
+
+# `/sys/config/group-policy-application`
+
+The `sys/config/group-policy-application` endpoint can be used to configure the
+mode of policy application for identity groups in Vault.
+Currently, it only supports two modes, `within_namespace_hierarchy` (default), which
+restricts policy application to only policies from groups from parent namespaces, and
+`any` which does not restrict policy application, and policies will apply from any namespace,
+irrespective of namespace hierarchy.
+
+Note that this configuration will be replicated between primary and secondaries, that
+is to say, primaries cannot have a different policy application mode to secondaries.
+
+## `Get Group Policy Application Information`
+
+~> **Enterprise Only** – This endpoint requires Vault Enterprise.
+
+This endpoint returns the current group policy application mode, which will be
+either `within_namespace_hierarchy` or `any`.
+
+
+| Method | Path                          |
+| :----- | :---------------------------- |
+| `GET`  | `/sys/config/group-policy-application` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+  --header "X-Vault-Token: ..." \
+    'http://127.0.0.1:8200/v1/sys/config/group-policy-application'
+```
+
+### Sample Response
+
+```json
+{
+   "group_policy_application_mode": "within_namespace_hierarchy"
+}
+```
+
+## `Set Group Policy Application Information`
+
+~> **Enterprise Only** – This endpoint requires Vault Enterprise.
+
+This endpoint allows you to modify the current group policy application mode, which can be
+either `within_namespace_hierarchy` or `any`. `within_namespace_hierarchy`
+restricts policy application to only policies from groups from parent namespaces, and
+`any` does not restrict policy application in any way, and policies will apply from any namespace,
+irrespective of namespace hierarchy.
+
+
+| Method | Path                          |
+| :----- | :---------------------------- |
+| `POST`, `PUT`  | `/sys/config/group-policy-application` |
+
+### Sample Payload
+
+```json
+{
+   "group_policy_application_mode": "any"
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+  --request POST \
+  --header "X-Vault-Token: ..." \
+  --data @payload.json \
+  'http://127.0.0.1:8200/v1/sys/config/group-policy-application'
+```
