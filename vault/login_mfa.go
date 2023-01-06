@@ -1750,7 +1750,7 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 		}
 	}
 
-	mfaFactor, err := parseMfaFactor(mfaCreds)
+	mfaFactors, err := parseMfaFactors(mfaCreds)
 	if err != nil {
 		return err
 	}
@@ -1766,13 +1766,13 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 			return fmt.Errorf("MFA secret for method name %q not present in entity %q", mConfig.Name, entity.ID)
 		}
 
-		return c.validateTOTP(ctx, mfaFactor, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
+		return c.validateTOTP(ctx, mfaFactors, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
 
 	case mfaMethodTypeOkta:
 		return c.validateOkta(ctx, mConfig, finalUsername)
 
 	case mfaMethodTypeDuo:
-		return c.validateDuo(ctx, mfaFactor, mConfig, finalUsername, reqConnectionRemoteAddress)
+		return c.validateDuo(ctx, mfaFactors, mConfig, finalUsername, reqConnectionRemoteAddress)
 
 	case mfaMethodTypePingID:
 		return c.validatePingID(ctx, mConfig, finalUsername)
@@ -1885,7 +1885,7 @@ type MFAFactor struct {
 	passcode string
 }
 
-func parseMfaFactor(creds []string) (*MFAFactor, error) {
+func parseMfaFactors(creds []string) (*MFAFactor, error) {
 	mfaFactor := &MFAFactor{}
 	var err *multierror.Error
 
@@ -1905,13 +1905,14 @@ func parseMfaFactor(creds []string) (*MFAFactor, error) {
 		}
 
 		// currently, we only support passcode. Although we probably gain
-		// very little improvement in performance, it is still make sense
+		// very little improvement in performance, it still makes sense
 		// to break the for loop
 		if mfaFactor.passcode != "" {
 			break
 		}
 	}
 
+	// don't return an error unless all entries were invalid
 	if mfaFactor.passcode != "" {
 		return mfaFactor, nil
 	}
@@ -1919,13 +1920,13 @@ func parseMfaFactor(creds []string) (*MFAFactor, error) {
 	return mfaFactor, err
 }
 
-func (c *Core) validateDuo(ctx context.Context, mfaFactor *MFAFactor, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {
+func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {
 	duoConfig := mConfig.GetDuoConfig()
 	if duoConfig == nil {
 		return fmt.Errorf("failed to get Duo configuration for method %q", mConfig.Name)
 	}
 
-	passcode := mfaFactor.passcode
+	passcode := mfaFactors.passcode
 
 	client := duoapi.NewDuoApi(
 		duoConfig.IntegrationKey,
@@ -2373,11 +2374,11 @@ func (c *Core) validatePingID(ctx context.Context, mConfig *mfa.Config, username
 	return nil
 }
 
-func (c *Core) validateTOTP(ctx context.Context, mfaFactor *MFAFactor, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
-	if mfaFactor.passcode == "" {
+func (c *Core) validateTOTP(ctx context.Context, mfaFactors *MFAFactor, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
+	if mfaFactors.passcode == "" {
 		return fmt.Errorf("MFA credentials not supplied")
 	}
-	passcode := mfaFactor.passcode
+	passcode := mfaFactors.passcode
 
 	totpSecret := entityMethodSecret.GetTOTPSecret()
 	if totpSecret == nil {
