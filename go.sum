@@ -1173,6 +1173,16 @@ github.com/hashicorp/vault-testing-stepwise v0.1.2 h1:3obC/ziAPGnsz2IQxr5e4Ayb7t
 github.com/hashicorp/vault-testing-stepwise v0.1.2/go.mod h1:TeU6B+5NqxUjto+Zey+QQEH1iywuHn0ciHZNYh4q3uI=
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221209165735-a2eed407e08d h1:U692VbDl6ww5GQsNFClJVFJDaPeuqtDt1Mwqf21KYek=
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221209165735-a2eed407e08d/go.mod h1:a2crHoMWwY6aiL8GWT8hYj7vKD64uX0EdRPbnsHF5wU=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221213220056-b0613b59f419 h1:yl6f//YTaTTGKJwyOpRe7v1DDPrzP+NErwgnef6qx7A=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20221213220056-b0613b59f419/go.mod h1:a2crHoMWwY6aiL8GWT8hYj7vKD64uX0EdRPbnsHF5wU=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230103211812-c28545e74f94 h1:Rx4Q2/mOPqJuanzwZYttDkWjdibPv3UpvsvKmOkl6h4=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230103211812-c28545e74f94/go.mod h1:a2crHoMWwY6aiL8GWT8hYj7vKD64uX0EdRPbnsHF5wU=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230105183308-048241517ffb h1:PgXcBszV61BvxD0wZzm4QCz9btgTWX74NO4be6S2afU=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230105183308-048241517ffb/go.mod h1:a2crHoMWwY6aiL8GWT8hYj7vKD64uX0EdRPbnsHF5wU=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230106184443-96cfe11e7051 h1:cMQoRbIUMhbM0NsmP6hH3S3ZmAPVgic3g3L8Z55rXCI=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230106184443-96cfe11e7051/go.mod h1:a2crHoMWwY6aiL8GWT8hYj7vKD64uX0EdRPbnsHF5wU=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230106203127-9eaf26716342 h1:9cMwZnaAV/lKs8EZsvBF00wPt350wD3sg/xqWGeN4gM=
+github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230106203127-9eaf26716342/go.mod h1:a2crHoMWwY6aiL8GWT8hYj7vKD64uX0EdRPbnsHF5wU=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 h1:O/pT5C1Q3mVXMyuqg7yuAWUg/jMZR1/0QTzTRdNR6Uw=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443/go.mod h1:bEpDU35nTu0ey1EXjwNwPjI9xErAsoOCmcMb9GKvyxo=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=

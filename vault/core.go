@@ -688,6 +688,13 @@ func (c *Core) HAState() consts.HAState {
 	}
 }
 
+func (c *Core) HAStateWithLock() consts.HAState {
+	c.stateLock.RLock()
+	c.stateLock.RUnlock()
+
+	return c.HAState()
+}
+
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
 	entCoreConfig
@@ -3698,4 +3705,27 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 	resourceID := c.hcpLinkStatus.ResourceIDOnHCP
 
 	return status, resourceID
+}
+
+func (c *Core) HAEnabled() bool {
+	return c.ha != nil && c.ha.HAEnabled()
+}
+
+func (c *Core) GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error) {
+	raftBackend := c.getRaftBackend()
+
+	if raftBackend == nil {
+		return nil, nil
+	}
+
+	return raftBackend.GetConfiguration(ctx)
+}
+
+func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState, error) {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		return nil, nil
+	}
+
+	return raftBackend.GetAutopilotServerState(ctx)
 }
