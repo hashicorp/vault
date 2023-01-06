@@ -293,10 +293,17 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 	}
 
 	// check if an MFA method configuration exists with that method name
-	if mConfig == nil && methodName != "" {
-		mConfig, err = b.MemDBMFAConfigByName(ctx, methodName)
+	if methodName != "" {
+		namedMfaConfig, err := b.MemDBMFAConfigByName(ctx, methodName)
 		if err != nil {
 			return nil, err
+		}
+		if mConfig == nil {
+			mConfig = namedMfaConfig
+		} else {
+			if mConfig.ID != namedMfaConfig.ID {
+				return nil, fmt.Errorf("a login MFA method configuration with the method name %s already exists", methodName)
+			}
 		}
 	}
 

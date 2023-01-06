@@ -130,7 +130,33 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				t.Fatal("method id is empty")
 			}
 
+			// creating an MFA config with the same name should not return a new method ID
+			resp, err = client.Logical().Write(myPath, tc.configData)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if methodId != resp.Data["method_id"] {
+				t.Fatal("trying to create a new MFA config with the same name should not result in a new MFA config")
+			}
+
+			// create a new MFA config name
+			originalName := tc.configData["method_name"]
+			tc.configData["method_name"] = "newName"
+			resp, err = client.Logical().Write(myPath, tc.configData)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			myNewPath := fmt.Sprintf("%s/%s", myPath, methodId)
+
+			// Updating an existing MFA config with another config's name
+			resp, err = client.Logical().Write(myNewPath, tc.configData)
+			if err == nil {
+				t.Fatalf("expected a failure for configuring an MFA method with an existing MFA method name, %v", err)
+			}
+
+			// reverting the original method name
+			tc.configData["method_name"] = originalName
 
 			// read it back
 			resp, err = client.Logical().Read(myNewPath)
@@ -159,7 +185,14 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if resp.Data["keys"].([]interface{})[0] != methodId {
+
+			var foundID bool
+			for _, id := range resp.Data["keys"].([]interface{}) {
+				if id.(string) == methodId {
+					foundID = true
+				}
+			}
+			if !foundID {
 				t.Fatalf("expected %q in the list of method ids but it wasn't there", methodId)
 			}
 
