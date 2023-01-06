@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -716,9 +717,33 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleKeyRotationConfigRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"max_operations": {
+									Type:     framework.TypeInt64,
+									Required: true,
+								},
+								"enabled": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"interval": {
+									Type:     framework.TypeDurationSecond,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                    b.handleKeyRotationConfigUpdate,
+					Callback: b.handleKeyRotationConfigUpdate,
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 					ForwardPerformanceSecondary: true,
 					ForwardPerformanceStandby:   true,
 				},
@@ -731,8 +756,15 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 		{
 			Pattern: "rotate$",
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleRotate,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleRotate,
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["rotate"][0]),
