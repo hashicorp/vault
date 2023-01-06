@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -547,6 +548,21 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleVersionHistoryList,
 					Summary:  "Returns map of historical version change entries",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: true,
+								},
+								"key_info": {
+									Type:     framework.TypeKVPairs,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
