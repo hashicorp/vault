@@ -1,6 +1,7 @@
 package quotas
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -245,6 +246,40 @@ func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
 	numSuccess, numFail, _ = testRPS(reqFunc, 5*time.Second)
 	require.NotZero(t, numSuccess)
 	require.Zero(t, numFail)
+}
+
+func TestQuotas_RateLimitQuota_DefaultExemptPaths(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	_, err := client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
+		"rate": 1,
+	})
+	require.NoError(t, err)
+
+	req := client.NewRequest("GET", "/v1/sys/health")
+	resp, err := client.RawRequestWithContext(context.Background(), req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Body)
+	require.Equal(t, 200, resp.StatusCode)
+
+	// The second sys/health call should not fail as /v1/sys/health is
+	// part of the default exempt paths
+	req = client.NewRequest("GET", "/v1/sys/health")
+	resp, err = client.RawRequestWithContext(context.Background(), req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Body)
+	// If the response is not 200, then we are being rate limited
+	require.Equal(t, 200, resp.StatusCode)
 }
 
 func TestQuotas_RateLimitQuota_Mount(t *testing.T) {

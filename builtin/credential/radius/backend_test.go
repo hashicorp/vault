@@ -3,6 +3,7 @@ package radius
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"strconv"
@@ -13,6 +14,8 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/docker/docker/api/types"
 )
 
 const (
@@ -32,26 +35,93 @@ func prepareRadiusTestContainer(t *testing.T) (func(), string, int) {
 		return func() {}, os.Getenv(envRadiusRadiusHost), port
 	}
 
+	radiusdOptions := []string{"radiusd", "-f", "-l", "stdout", "-X"}
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo:     "jumanjiman/radiusd",
 		ImageTag:      "latest",
 		ContainerName: "radiusd",
-		Cmd:           []string{"-f", "-l", "stdout"},
-		Ports:         []string{"1812/udp"},
+		// Switch the entry point for this operation; we want to sleep
+		// instead of exec'ing radiusd, as we first need to write a new
+		// client configuration. radiusd's SIGHUP handler does not reload
+		// this config file, hence we choose to manually start radiusd
+		// below.
+		Entrypoint: []string{"sleep", "3600"},
+		Ports:      []string{"1812/udp"},
+		LogConsumer: func(s string) {
+			if t.Failed() {
+				t.Logf("container logs: %s", s)
+			}
+		},
 	})
 	if err != nil {
 		t.Fatalf("Could not start docker radiusd: %s", err)
 	}
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
-		// There's no straightfoward way to check the state, but the server starts
-		// up quick so a 2 second sleep should be enough.
-		time.Sleep(2 * time.Second)
 		return docker.NewServiceHostPort(host, port), nil
 	})
 	if err != nil {
 		t.Fatalf("Could not start docker radiusd: %s", err)
 	}
+
+	// Now allow any client to connect to this radiusd instance by writing our
+	// own clients.conf file.
+	//
+	// This is necessary because we lack control over the container's network
+	// IPs. We might be running in Circle CI (with variable IPs per new
+	// network) or in Podman (which uses an entirely different set of default
+	// ranges than Docker).
+	//
+	// See also: https://freeradius.org/radiusd/man/clients.conf.html
+	ctx := context.Background()
+	clientsConfig := `client 0.0.0.0/1 {
+ ipaddr = 0.0.0.0/1
+ secret = testing123
+ shortname = all-clients-first
+}
+
+client 128.0.0.0/1 {
+ ipaddr = 128.0.0.0/1
+ secret = testing123
+ shortname = all-clients-second
+}`
+	ret, err := runner.DockerAPI.ContainerExecCreate(ctx, svc.Container.ID, types.ExecConfig{
+		User:         "0",
+		AttachStderr: true,
+		AttachStdout: true,
+		// Hack: write this via echo, since it exists in the container.
+		Cmd: []string{"sh", "-c", "echo '" + clientsConfig + "' > /etc/raddb/clients.conf"},
+	})
+	if err != nil {
+		t.Fatalf("Failed to update radiusd client config: error creating command: %v", err)
+	}
+	resp, err := runner.DockerAPI.ContainerExecAttach(ctx, ret.ID, types.ExecStartCheck{})
+	if err != nil {
+		t.Fatalf("Failed to update radiusd client config: error attaching command: %v", err)
+	}
+	read, err := io.ReadAll(resp.Reader)
+	t.Logf("Command Output (%v):\n%v", err, string(read))
+
+	ret, err = runner.DockerAPI.ContainerExecCreate(ctx, svc.Container.ID, types.ExecConfig{
+		User:         "0",
+		AttachStderr: true,
+		AttachStdout: true,
+		// As noted above, we need to start radiusd manually now.
+		Cmd: radiusdOptions,
+	})
+	if err != nil {
+		t.Fatalf("Failed to start radiusd service: error creating command: %v", err)
+	}
+	err = runner.DockerAPI.ContainerExecStart(ctx, ret.ID, types.ExecStartCheck{})
+	if err != nil {
+		t.Fatalf("Failed to start radiusd service: error starting command: %v", err)
+	}
+
+	// Give radiusd time to start...
+	//
+	// There's no straightfoward way to check the state, but the server starts
+	// up quick so a 2 second sleep should be enough.
+	time.Sleep(2 * time.Second)
 
 	pieces := strings.Split(svc.Config.Address(), ":")
 	port, _ := strconv.Atoi(pieces[1])
@@ -269,7 +339,8 @@ func testStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 }
 
 func testStepUpdateUser(
-	t *testing.T, name string, policies string) logicaltest.TestStep {
+	t *testing.T, name string, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "users/" + name,
