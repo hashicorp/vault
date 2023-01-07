@@ -1858,3 +1858,191 @@ func testTransit_AEAD(t *testing.T, keyType string) {
 		t.Fatalf("bad expected error: err: %v\nresp: %#v", err, resp)
 	}
 }
+
+// NOTE: Test logical.teststep (Allows checks)
+func TestTransit_ReadPublicKeyImported(t *testing.T) {
+	testTransit_ReadPublicKeyImported(t, "rsa-2048")
+	testTransit_ReadPublicKeyImported(t, "ecdsa-p256")
+}
+
+func testTransit_ReadPublicKeyImported(t *testing.T, keyType string) {
+	generateKeys(t)
+	b, s := createBackendWithStorage(t)
+	keyID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("failed to generate key ID: %s", err)
+	}
+
+	// Get key
+	privateKey := getKey(t, keyType)
+	publicKeyBytes, err := getPublicKey(privateKey, keyType)
+	if err != nil {
+		t.Fatalf("failed to extract the public key: %s", err)
+	}
+
+	// Import key
+	importReq := &logical.Request{
+		Storage:   s,
+		Operation: logical.UpdateOperation,
+		Path:      fmt.Sprintf("keys/%s/import", keyID),
+		Data: map[string]interface{}{
+			"public_key": publicKeyBytes,
+			"type":       keyType,
+		},
+	}
+	importResp, err := b.HandleRequest(context.Background(), importReq)
+	if err != nil || (importResp != nil && importResp.IsError()) {
+		t.Fatalf("failed to import public key: %s", err)
+	}
+
+	readReq := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "keys/" + keyID,
+		Storage:   s,
+	}
+
+	readResp, err := b.HandleRequest(context.Background(), readReq)
+	if err != nil || (readResp != nil && readResp.IsError()) {
+		t.Fatalf("failed to read key: %s", err)
+	}
+}
+
+func TestTransit_SignWithImportedPublicKey(t *testing.T) {
+	testTransit_SignWithImportedPublicKey(t, "rsa-2048")
+	testTransit_SignWithImportedPublicKey(t, "ecdsa-p256")
+}
+
+func testTransit_SignWithImportedPublicKey(t *testing.T, keyType string) {
+	generateKeys(t)
+	b, s := createBackendWithStorage(t)
+	keyID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("failed to generate key ID: %s", err)
+	}
+
+	// Get key
+	privateKey := getKey(t, keyType)
+	publicKeyBytes, err := getPublicKey(privateKey, keyType)
+	if err != nil {
+		t.Fatalf("failed to extract the public key: %s", err)
+	}
+
+	// Import key
+	req := &logical.Request{
+		Storage:   s,
+		Operation: logical.UpdateOperation,
+		Path:      fmt.Sprintf("keys/%s/import", keyID),
+		Data: map[string]interface{}{
+			"public_key": publicKeyBytes,
+			"type":       keyType,
+		},
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("failed to import public key: %s", err)
+	}
+
+	signReq := &logical.Request{
+		Path:      "sign/" + keyID,
+		Operation: logical.UpdateOperation,
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": base64.StdEncoding.EncodeToString([]byte(testPlaintext)),
+		},
+	}
+
+	_, err = b.HandleRequest(context.Background(), signReq)
+	if err == nil {
+		t.Fatalf("expected error, should have failed to sign input: %s", err)
+	}
+}
+
+func TestTransit_VerifyWithImportedPublicKey(t *testing.T) {
+	generateKeys(t)
+	keyType := "rsa-2048"
+	b, s := createBackendWithStorage(t)
+	keyID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("failed to generate key ID: %s", err)
+	}
+
+	// Get key
+	privateKey := getKey(t, keyType)
+	publicKeyBytes, err := getPublicKey(privateKey, keyType)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Retrieve public wrapping key
+	wrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || wrappingKey == nil {
+		t.Fatalf("failed to retrieve public wrapping key: %s", err)
+	}
+
+	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
+	pubWrappingKey := &privWrappingKey.PublicKey
+
+	// generate ciphertext
+	importBlob := wrapTargetKeyForImport(t, pubWrappingKey, privateKey, keyType, "SHA256")
+
+	// Import private key
+	importReq := &logical.Request{
+		Storage:   s,
+		Operation: logical.UpdateOperation,
+		Path:      fmt.Sprintf("keys/%s/import", keyID),
+		Data: map[string]interface{}{
+			"ciphertext": importBlob,
+			"type":       keyType,
+		},
+	}
+	_, err = b.HandleRequest(context.Background(), importReq)
+	if err != nil {
+		t.Fatalf("failed to import key: %s", err)
+	}
+
+	signReq := &logical.Request{
+		Storage:   s,
+		Path:      "sign/" + keyID,
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"plaintext": base64.StdEncoding.EncodeToString([]byte(testPlaintext)),
+		},
+	}
+
+	signResp, err := b.HandleRequest(context.Background(), signReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signature := signResp.Data["signature"].(string)
+
+	// Import new key as public key
+	importPubReq := &logical.Request{
+		Storage:   s,
+		Operation: logical.UpdateOperation,
+		Path:      fmt.Sprintf("keys/%s/import", "public-key-rsa"),
+		Data: map[string]interface{}{
+			"public_key": publicKeyBytes,
+			"type":       keyType,
+		},
+	}
+	_, err = b.HandleRequest(context.Background(), importPubReq)
+	if err != nil {
+		t.Fatalf("failed to import key: %s", err)
+	}
+
+	verifyReq := &logical.Request{
+		Path:      "verify/public-key-rsa",
+		Operation: logical.UpdateOperation,
+		Storage:   s,
+		Data: map[string]interface{}{
+			"input":     base64.StdEncoding.EncodeToString([]byte(testPlaintext)),
+			"signature": signature,
+		},
+	}
+
+	verifyResp, err := b.HandleRequest(context.Background(), verifyReq)
+	if err == nil || (verifyResp == nil && !verifyResp.IsError()) {
+		t.Fatalf("expected error, should have failed to verify signature: %s | %#v", err, verifyResp)
+	}
+}

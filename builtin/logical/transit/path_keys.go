@@ -2,6 +2,7 @@ package transit
 
 import (
 	"context"
+	"crypto"
 	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/base64"
@@ -358,9 +359,15 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 					key.Name = "rsa-4096"
 				}
 
+				var publicKey crypto.PublicKey
+				publicKey = v.RSAPublicKey
+				if !v.IsPublicKeyImported() {
+					publicKey = v.RSAKey.Public()
+				}
+
 				// Encode the RSA public key in PEM format to return over the
 				// API
-				derBytes, err := x509.MarshalPKIXPublicKey(v.RSAKey.Public())
+				derBytes, err := x509.MarshalPKIXPublicKey(publicKey)
 				if err != nil {
 					return nil, fmt.Errorf("error marshaling RSA public key: %w", err)
 				}

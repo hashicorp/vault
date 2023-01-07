@@ -231,7 +231,7 @@ type KeyEntry struct {
 	DeprecatedCreationTime int64 `json:"creation_time"`
 }
 
-func (ke *KeyEntry) isPublicKeyImported() bool {
+func (ke *KeyEntry) IsPublicKeyImported() bool {
 	var publicKeyImported bool
 	if ke.RSAKey == nil && ke.RSAPublicKey != nil {
 		publicKeyImported = true
@@ -1062,6 +1062,11 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 		return nil, err
 	}
 
+	// Before signing, check if key has its private part, if not return error
+	if keyParams.IsPublicKeyImported() {
+		return nil, errutil.UserError{Err: "requested version for signing does not contain a private part"}
+	}
+
 	hashAlgorithm := options.HashAlgorithm
 	marshaling := options.Marshaling
 	saltLength := options.SaltLength
@@ -1265,6 +1270,7 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 	}
 
 	switch p.Type {
+	// NOTE: Also going to be fail here
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		var curve elliptic.Curve
 		switch p.Type {
@@ -1332,8 +1338,6 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 			return false, err
 		}
 
-		key := keyEntry.RSAKey
-
 		algo, ok := CryptoHashMap[hashAlgorithm]
 		if !ok {
 			return false, errutil.InternalError{Err: "unsupported hash algorithm"}
@@ -1345,12 +1349,21 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 
 		switch sigAlgorithm {
 		case "pss":
+			if keyEntry.IsPublicKeyImported() {
+				return false, errutil.UserError{Err: "selected key does not a private part"}
+			}
+			key := keyEntry.RSAKey
 			if !p.validRSAPSSSaltLength(key, algo, saltLength) {
 				return false, errutil.UserError{Err: fmt.Sprintf("requested salt length %d is invalid", saltLength)}
 			}
 			err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, &rsa.PSSOptions{SaltLength: saltLength})
 		case "pkcs1v15":
-			err = rsa.VerifyPKCS1v15(&key.PublicKey, algo, input, sigBytes)
+			var publicKey *rsa.PublicKey
+			publicKey = keyEntry.RSAPublicKey
+			if !keyEntry.IsPublicKeyImported() {
+				publicKey = &keyEntry.RSAKey.PublicKey
+			}
+			err = rsa.VerifyPKCS1v15(publicKey, algo, input, sigBytes)
 		default:
 			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
@@ -1969,7 +1982,7 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 		return errors.New("provided type does not support importing key versions")
 	}
 
-	publicKeyImported := keyEntry.isPublicKeyImported()
+	publicKeyImported := keyEntry.IsPublicKeyImported()
 	if publicKeyImported && !isPrivateKey {
 		return errors.New("cannot add a public key to a key version that already has a public key set")
 	}
