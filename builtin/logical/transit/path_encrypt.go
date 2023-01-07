@@ -152,6 +152,14 @@ plaintext. On successful decryption, both the ciphertext and the associated
 data are attested not to have been tampered with.
 				`,
 			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be encrypted in a single batch. When this parameter
+is set, if the parameters 'plaintext', 'context' and 'nonce' are also set, they
+will be ignored. Any batch output will preserve the order of the batch input.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
