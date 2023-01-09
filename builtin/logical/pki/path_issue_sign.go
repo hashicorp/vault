@@ -42,12 +42,12 @@ func buildPathIssue(b *backend, pattern string) *framework.Path {
 							"certificate": {
 								Type:        framework.TypeString,
 								Description: `Certificate`,
-								Required:    false,
+								Required:    true,
 							},
 							"issuing_ca": {
 								Type:        framework.TypeString,
 								Description: `Issuing Certificate Authority`,
-								Required:    false,
+								Required:    true,
 							},
 							"ca_chain": {
 								Type:        framework.TypeCommaStringSlice,
