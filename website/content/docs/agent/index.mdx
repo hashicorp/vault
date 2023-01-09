@@ -361,6 +361,12 @@ To run Vault Agent:
    $ vault agent -h
    ```
 
+As with Vault, the `-config` flag can be used in three different ways:
+
+- Use the flag once to name the path to a single specific configuration file.
+- Use the flag multiple times to name multiple configuration files, which will be composed at runtime.
+- Use the flag to name a directory of configuration files, the contents of which will be composed at runtime.
+
 ## Example Configuration
 
 An example configuration, with very contrived values, follows:

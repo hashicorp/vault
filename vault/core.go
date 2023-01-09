@@ -80,6 +80,18 @@ const (
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
 	coreKeyringCanaryPath = "core/canary-keyring"
 
+	// coreGroupPolicyApplicationPath is used to store the behaviour for
+	// how policies should be applied
+	coreGroupPolicyApplicationPath = "core/group-policy-application-mode"
+
+	// groupPolicyApplicationModeWithinNamespaceHierarchy is a configuration option for group
+	// policy application modes, which allows only in-namespace-hierarchy policy application
+	groupPolicyApplicationModeWithinNamespaceHierarchy = "within_namespace_hierarchy"
+
+	// groupPolicyApplicationModeAny is a configuration option for group
+	// policy application modes, which allows policy application irrespective of namespaces
+	groupPolicyApplicationModeAny = "any"
+
 	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
 
 	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
@@ -120,6 +132,10 @@ var (
 	// ErrHANotEnabled is returned if the operation only makes sense
 	// in an HA setting
 	ErrHANotEnabled = errors.New("Vault is not configured for highly-available mode")
+
+	// ErrIntrospectionNotEnabled is returned if "introspection_endpoint" is not
+	// enabled in the configuration file
+	ErrIntrospectionNotEnabled = errors.New("The Vault configuration must set \"introspection_endpoint\" to true to enable this endpoint")
 
 	// manualStepDownSleepPeriod is how long to sleep after a user-initiated
 	// step down of the active node, to prevent instantly regrabbing the lock.
@@ -512,6 +528,10 @@ type Core struct {
 	// rawEnabled indicates whether the Raw endpoint is enabled
 	rawEnabled bool
 
+	// inspectableEnabled indicates whether the Inspect endpoint is enabled
+	introspectionEnabled     bool
+	introspectionEnabledLock sync.Mutex
+
 	// pluginDirectory is the location vault will look for plugin binaries
 	pluginDirectory string
 
@@ -654,6 +674,7 @@ type Core struct {
 	rollbackPeriod time.Duration
 
 	pendingRemovalMountsAllowed bool
+	expirationRevokeRetryBase   time.Duration
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -665,6 +686,13 @@ func (c *Core) HAState() consts.HAState {
 	default:
 		return consts.Active
 	}
+}
+
+func (c *Core) HAStateWithLock() consts.HAState {
+	c.stateLock.RLock()
+	c.stateLock.RUnlock()
+
+	return c.HAState()
 }
 
 // CoreConfig is used to parameterize a core
@@ -735,6 +763,9 @@ type CoreConfig struct {
 	// Enable the raw endpoint
 	EnableRaw bool
 
+	// Enable the introspection endpoint
+	EnableIntrospection bool
+
 	PluginDirectory string
 
 	PluginFileUid int
@@ -790,6 +821,8 @@ type CoreConfig struct {
 	RollbackPeriod time.Duration
 
 	PendingRemovalMountsAllowed bool
+
+	ExpirationRevokeRetryBase time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -907,6 +940,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		clusterPeerClusterAddrsCache:   cache.New(3*clusterHeartbeatInterval, time.Second),
 		enableMlock:                    !conf.DisableMlock,
 		rawEnabled:                     conf.EnableRaw,
+		introspectionEnabled:           conf.EnableIntrospection,
 		shutdownDoneCh:                 new(atomic.Value),
 		replicationState:               new(uint32),
 		atomicPrimaryClusterAddrs:      new(atomic.Value),
@@ -944,6 +978,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		effectiveSDKVersion:            effectiveSDKVersion,
 		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
+		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -2382,25 +2417,22 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 			v()
 		}
 	} else {
-		workerChans := make([]chan func(), postUnsealFuncConcurrency)
+		jobs := make(chan func())
 		var wg sync.WaitGroup
 		for i := 0; i < postUnsealFuncConcurrency; i++ {
-			workerChans[i] = make(chan func())
-			go func(i int) {
-				for v := range workerChans[i] {
+			go func() {
+				for v := range jobs {
 					v()
 					wg.Done()
 				}
-			}(i)
+			}()
 		}
-		for i, v := range c.postUnsealFuncs {
+		for _, v := range c.postUnsealFuncs {
 			wg.Add(1)
-			workerChans[i%postUnsealFuncConcurrency] <- v
-		}
-		for i := 0; i < postUnsealFuncConcurrency; i++ {
-			close(workerChans[i])
+			jobs <- v
 		}
 		wg.Wait()
+		close(jobs)
 	}
 
 	if atomic.LoadUint32(c.sealMigrationDone) == 1 {
@@ -3050,6 +3082,11 @@ func (c *Core) LogFormat() string {
 	return conf.(*server.Config).LogFormat
 }
 
+// LogLevel returns the log level provided by level provided by config, CLI flag, or env
+func (c *Core) LogLevel() string {
+	return c.logLevel
+}
+
 // MetricsHelper returns the global metrics helper which allows external
 // packages to access Vault's internal metrics.
 func (c *Core) MetricsHelper() *metricsutil.MetricsHelper {
@@ -3432,6 +3469,16 @@ func (c *Core) ReloadLogRequestsLevel() {
 	}
 }
 
+func (c *Core) ReloadIntrospectionEndpointEnabled() {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return
+	}
+	c.introspectionEnabledLock.Lock()
+	defer c.introspectionEnabledLock.Unlock()
+	c.introspectionEnabled = conf.(*server.Config).EnableIntrospectionEndpoint
+}
+
 type PeerNode struct {
 	Hostname       string    `json:"hostname"`
 	APIAddress     string    `json:"api_address"`
@@ -3604,6 +3651,44 @@ func (c *Core) ListAuths() ([]*MountEntry, error) {
 	return entries, nil
 }
 
+type GroupPolicyApplicationMode struct {
+	GroupPolicyApplicationMode string `json:"group_policy_application_mode"`
+}
+
+func (c *Core) GetGroupPolicyApplicationMode(ctx context.Context) (string, error) {
+	se, err := c.barrier.Get(ctx, coreGroupPolicyApplicationPath)
+	if err != nil {
+		return "", err
+	}
+	if se == nil {
+		return groupPolicyApplicationModeWithinNamespaceHierarchy, nil
+	}
+
+	var modeStruct GroupPolicyApplicationMode
+
+	err = jsonutil.DecodeJSON(se.Value, &modeStruct)
+	if err != nil {
+		return "", err
+	}
+	mode := modeStruct.GroupPolicyApplicationMode
+	if mode == "" {
+		mode = groupPolicyApplicationModeWithinNamespaceHierarchy
+	}
+
+	return mode, nil
+}
+
+func (c *Core) SetGroupPolicyApplicationMode(ctx context.Context, mode string) error {
+	json, err := jsonutil.EncodeJSON(&GroupPolicyApplicationMode{GroupPolicyApplicationMode: mode})
+	if err != nil {
+		return err
+	}
+	return c.barrier.Put(ctx, &logical.StorageEntry{
+		Key:   coreGroupPolicyApplicationPath,
+		Value: json,
+	})
+}
+
 type HCPLinkStatus struct {
 	lock             sync.RWMutex
 	ConnectionStatus string `json:"hcp_link_status,omitempty"`
@@ -3625,4 +3710,60 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 	resourceID := c.hcpLinkStatus.ResourceIDOnHCP
 
 	return status, resourceID
+}
+
+// ListenerAddresses provides a slice of configured listener addresses
+func (c *Core) ListenerAddresses() ([]string, error) {
+	addresses := make([]string, 0)
+
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return nil, fmt.Errorf("failed to load core raw config")
+	}
+
+	listeners := conf.(*server.Config).Listeners
+	if listeners == nil {
+		return nil, fmt.Errorf("no listener configured")
+	}
+
+	for _, listener := range listeners {
+		addresses = append(addresses, listener.Address)
+	}
+
+	return addresses, nil
+}
+
+// IsRaftVoter specifies whether the node is a raft voter which is
+// always false if raft storage is not in use.
+func (c *Core) IsRaftVoter() bool {
+	raftInfo := c.raftInfo.Load().(*raftInformation)
+
+	if raftInfo == nil {
+		return false
+	}
+
+	return !raftInfo.nonVoter
+}
+
+func (c *Core) HAEnabled() bool {
+	return c.ha != nil && c.ha.HAEnabled()
+}
+
+func (c *Core) GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error) {
+	raftBackend := c.getRaftBackend()
+
+	if raftBackend == nil {
+		return nil, nil
+	}
+
+	return raftBackend.GetConfiguration(ctx)
+}
+
+func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState, error) {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		return nil, nil
+	}
+
+	return raftBackend.GetAutopilotServerState(ctx)
 }

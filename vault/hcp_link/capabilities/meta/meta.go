@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	scada "github.com/hashicorp/hcp-scada-provider"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities"
@@ -23,7 +25,7 @@ import (
 type hcpLinkMetaHandler struct {
 	meta.UnimplementedHCPLinkMetaServer
 
-	wrappedCore   internal.WrappedCoreListNamespacesMounts
+	wrappedCore   internal.WrappedCoreMeta
 	scadaProvider scada.SCADAProvider
 	logger        hclog.Logger
 
@@ -129,7 +131,7 @@ func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *meta.ListN
 func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMountsRequest) (*meta.ListMountsResponse, error) {
 	mountEntries, err := h.wrappedCore.ListMounts()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to list secret mounts: %w", err)
 	}
 
 	var mounts []*meta.Mount
@@ -140,7 +142,7 @@ func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMount
 		if nsID != namespace.RootNamespaceID {
 			ns, err := h.wrappedCore.NamespaceByID(ctx, entry.NamespaceID)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("unable to get namespace associated with secret mount: %w", err)
 			}
 
 			path = ns.Path + path
@@ -161,7 +163,7 @@ func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMount
 func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsRequest) (*meta.ListAuthResponse, error) {
 	authEntries, err := h.wrappedCore.ListAuths()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to list auth mounts: %w", err)
 	}
 
 	var auths []*meta.Auth
@@ -172,7 +174,7 @@ func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsR
 		if nsID != namespace.RootNamespaceID {
 			ns, err := h.wrappedCore.NamespaceByID(ctx, entry.NamespaceID)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("unable to get namespace associated with auth mount: %w", err)
 			}
 
 			path = ns.Path + path
@@ -188,4 +190,114 @@ func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsR
 	return &meta.ListAuthResponse{
 		Auths: auths,
 	}, nil
+}
+
+func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.GetClusterStatusRequest) (*meta.GetClusterStatusResponse, error) {
+	if h.wrappedCore.HAStateWithLock() != consts.Active {
+		return nil, fmt.Errorf("node not active")
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch hostname: %w", err)
+	}
+
+	haEnabled := h.wrappedCore.HAEnabled()
+	haStatus := &meta.HAStatus{
+		Enabled: haEnabled,
+	}
+
+	if haEnabled {
+		leader := &meta.HANode{
+			Hostname: hostname,
+		}
+
+		peers := h.wrappedCore.GetHAPeerNodesCached()
+
+		haNodes := make([]*meta.HANode, len(peers)+1)
+		haNodes[0] = leader
+
+		for i, peerNode := range peers {
+			haNodes[i+1] = &meta.HANode{
+				Hostname: peerNode.Hostname,
+			}
+		}
+
+		haStatus.Nodes = haNodes
+	}
+
+	raftStatus := &meta.RaftStatus{}
+	raftConfig, err := h.wrappedCore.GetRaftConfiguration(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get Raft configuration: %w", err)
+	}
+
+	if raftConfig != nil {
+		raftServers := make([]*meta.RaftServer, len(raftConfig.Servers))
+
+		var voterCount uint32
+		for i, srv := range raftConfig.Servers {
+			raftServers[i] = &meta.RaftServer{
+				NodeID:          srv.NodeID,
+				Address:         srv.Address,
+				Voter:           srv.Voter,
+				Leader:          srv.Leader,
+				ProtocolVersion: srv.ProtocolVersion,
+			}
+
+			if srv.Voter {
+				voterCount++
+			}
+		}
+
+		raftStatus.RaftConfiguration = &meta.RaftConfiguration{
+			Servers: raftServers,
+		}
+
+		evenVoterMessage := "Vault should have access to an odd number of voter nodes."
+		largeClusterMessage := "Very large cluster detected."
+		var quorumWarning string
+
+		if voterCount == 1 {
+			quorumWarning = "Only one server node found. Vault is not running in high availability mode."
+		} else if voterCount%2 == 0 && voterCount > 7 {
+			quorumWarning = evenVoterMessage + " " + largeClusterMessage
+		} else if voterCount%2 == 0 {
+			quorumWarning = evenVoterMessage
+		} else if voterCount > 7 {
+			quorumWarning = largeClusterMessage
+		}
+
+		raftStatus.QuorumWarning = quorumWarning
+	}
+
+	raftAutopilotState, err := h.wrappedCore.GetRaftAutopilotState(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get Raft Autopilot state: %w", err)
+	}
+
+	if raftAutopilotState != nil {
+		autopilotStatus := &meta.AutopilotStatus{
+			Healthy: raftAutopilotState.Healthy,
+		}
+
+		autopilotServers := make([]*meta.AutopilotServer, 0)
+		for _, srv := range raftAutopilotState.Servers {
+			autopilotServers = append(autopilotServers, &meta.AutopilotServer{
+				ID:      srv.ID,
+				Healthy: srv.Healthy,
+			})
+		}
+
+		raftStatus.AutopilotStatus = autopilotStatus
+	}
+
+	resp := &meta.GetClusterStatusResponse{
+		ClusterID:   h.wrappedCore.ClusterID(),
+		HAStatus:    haStatus,
+		RaftStatus:  raftStatus,
+		StorageType: h.wrappedCore.StorageType(),
+	}
+
+	return resp, nil
 }
