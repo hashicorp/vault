@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -236,27 +237,47 @@ type Response struct {
 	Example     *logical.Response       // example response data
 }
 
+// ValidateResponse validates whether the given response object
+// conforms to the response schema (Fields). It ensures that every required
+// field defined in the schema is present in the response data map and is of
+// the correct type. In "strict" mode, the function also ensures that the data
+// map does not have any fields that are not defined within the schema.
+func (r *Response) ValidateResponse(response *logical.Response, strict bool) error {
+	if response != nil {
+		return r.ValidateResponseData(response.Data, strict)
+	}
+
+	return r.ValidateResponseData(map[string]interface{}{}, strict)
+}
+
 // ValidateResponseData validates whether the given response data object
 // conforms to the response schema (Fields). It ensures that every required
 // field defined in the schema is present in the response data map and is of
 // the correct type. In "strict" mode, the function also ensures that the data
 // map does not have any fields that are not defined within the schema.
 func (r *Response) ValidateResponseData(data map[string]interface{}, strict bool) error {
-	for field, s := range r.Fields {
-		if !s.Required {
+	for name, schema := range r.Fields {
+		if !schema.Required {
 			continue
 		}
 
-		if _, ok := data[field]; !ok {
-			return fmt.Errorf("missing required field %q", field)
+		if _, ok := data[name]; !ok {
+			return fmt.Errorf("missing required field %q", name)
 		}
 
-		if reflect.TypeOf(data[field]) != reflect.TypeOf(s.Type.Zero()) {
+		dataType := reflect.TypeOf(data[name])
+
+		// special handling for []*sockaddr.SockAddrMarshaler -> []string
+		if dataType == reflect.TypeOf([]*sockaddr.SockAddrMarshaler{}) {
+			dataType = reflect.TypeOf([]string{})
+		}
+
+		if !dataType.ConvertibleTo(reflect.TypeOf(schema.Type.Zero())) {
 			return fmt.Errorf(
-				"invalid type for field %q, expected %v, got %v",
-				field,
-				reflect.TypeOf(s.Type.Zero()),
-				reflect.TypeOf(data[field]),
+				"invalid type for field %q, expected: convertible to %v, got: %v",
+				name,
+				reflect.TypeOf(schema.Type.Zero()),
+				dataType,
 			)
 		}
 	}
@@ -265,11 +286,11 @@ func (r *Response) ValidateResponseData(data map[string]interface{}, strict bool
 		return nil // early return
 	}
 
-	for field := range data {
-		if _, ok := r.Fields[field]; !ok {
+	for name := range data {
+		if _, ok := r.Fields[name]; !ok {
 			return fmt.Errorf(
 				"field %q not found in response schema",
-				field,
+				name,
 			)
 		}
 	}
