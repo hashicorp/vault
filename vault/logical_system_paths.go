@@ -2442,7 +2442,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 									Required:    true,
 								},
 								"default_lease_ttl": {
-									Type:        framework.TypeString,
+									Type:        framework.TypeInt,
 									Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
 									Required:    true,
 								},
