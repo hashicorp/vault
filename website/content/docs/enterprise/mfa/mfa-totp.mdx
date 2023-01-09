@@ -33,6 +33,8 @@ This page demonstrates the TOTP MFA on ACL'd paths of Vault.
 
 1.  Configure TOTP MFA:
 
+    -> **Note**: Consider the algorithms supported by your authenticator. For example, Google Authenticator for Android supports only SHA1 as the value of `algorithm`.
+
     ```text
     $ vault write sys/mfa/method/totp/my_totp \
         issuer=Vault \
@@ -137,7 +139,7 @@ This page demonstrates the TOTP MFA on ACL'd paths of Vault.
 1.  Read the secret, specifying the mfa flag:
 
     ```text
-    $ vault read -mfa my_totp:146378 secret/foo
+    $ vault read -mfa my_totp:146378 secret/data/foo
 
     Key                 Value
     ---                 -----

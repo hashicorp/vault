@@ -15,7 +15,7 @@ GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 SED?=$(shell command -v gsed || command -v sed)
 
 
-GO_VERSION_MIN=1.19.2
+GO_VERSION_MIN=$$(cat $(CURDIR)/.go-version)
 PROTOC_VERSION_MIN=3.21.5
 GO_CMD?=go
 CGO_ENABLED?=0
@@ -254,18 +254,72 @@ ci-verify:
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 
-.PHONY: build
-# This is used for release builds by .github/workflows/build.yml
-build:
-	@echo "--> Building Vault $(VAULT_VERSION)"
-	@go build -v -tags "$(GO_TAGS)" -ldflags " -X github.com/hashicorp/vault/sdk/version.Version=$(VAULT_VERSION) -X github.com/hashicorp/vault/sdk/version.GitCommit=$(VAULT_REVISION) -X github.com/hashicorp/vault/sdk/version.BuildDate=$(VAULT_BUILD_DATE)" -o dist/
+# These ci targets are used for used for building and testing in Github Actions
+# workflows and for Enos scenarios.
+.PHONY: ci-build
+ci-build:
+	@$(CURDIR)/scripts/ci-helper.sh build
 
-.PHONY: version
-# This is used for release builds by .github/workflows/build.yml
-version:
-	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
+.PHONY: ci-build-ui
+ci-build-ui:
+	@$(CURDIR)/scripts/ci-helper.sh build-ui
 
-.PHONY: build-date
-# This is used for release builds by .github/workflows/build.yml
-build-date:
-	@$(CURDIR)/scripts/build_date.sh
+.PHONY: ci-bundle
+ci-bundle:
+	@$(CURDIR)/scripts/ci-helper.sh bundle
+
+.PHONY: ci-filter-matrix
+ci-filter-matrix:
+	@$(CURDIR)/scripts/ci-helper.sh matrix-filter-file
+
+.PHONY: ci-get-artifact-basename
+ci-get-artifact-basename:
+	@$(CURDIR)/scripts/ci-helper.sh artifact-basename
+
+.PHONY: ci-get-date
+ci-get-date:
+	@$(CURDIR)/scripts/ci-helper.sh date
+
+.PHONY: ci-get-matrix-group-id
+ci-get-matrix-group-id:
+	@$(CURDIR)/scripts/ci-helper.sh matrix-group-id
+
+.PHONY: ci-get-revision
+ci-get-revision:
+	@$(CURDIR)/scripts/ci-helper.sh revision
+
+.PHONY: ci-get-version
+ci-get-version:
+	@$(CURDIR)/scripts/ci-helper.sh version
+
+.PHONY: ci-get-version-base
+ci-get-version-base:
+	@$(CURDIR)/scripts/ci-helper.sh version-base
+
+.PHONY: ci-get-version-major
+ci-get-version-major:
+	@$(CURDIR)/scripts/ci-helper.sh version-major
+
+.PHONY: ci-get-version-meta
+ci-get-version-meta:
+	@$(CURDIR)/scripts/ci-helper.sh version-meta
+
+.PHONY: ci-get-version-minor
+ci-get-version-minor:
+	@$(CURDIR)/scripts/ci-helper.sh version-minor
+
+.PHONY: ci-get-version-package
+ci-get-version-package:
+	@$(CURDIR)/scripts/ci-helper.sh version-package
+
+.PHONY: ci-get-version-patch
+ci-get-version-patch:
+	@$(CURDIR)/scripts/ci-helper.sh version-patch
+
+.PHONY: ci-get-version-pre
+ci-get-version-pre:
+	@$(CURDIR)/scripts/ci-helper.sh version-pre
+
+.PHONY: ci-prepare-legal
+ci-prepare-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-legal

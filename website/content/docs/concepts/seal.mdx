@@ -42,22 +42,22 @@ the unseal key.
 The default Vault config uses a Shamir seal. Instead of distributing the unseal
 key as a single key to an operator, Vault uses an algorithm known as
 [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
-to split the key into shards. A certain threshold of shards is required to
+to split the key into shares. A certain threshold of shares is required to
 reconstruct the unseal key, which is then used to decrypt the root key.
 
-This is the _unseal_ process: the shards are added one at a time (in any
-order) until enough shards are present to reconstruct the key and
+This is the _unseal_ process: the shares are added one at a time (in any
+order) until enough shares are present to reconstruct the key and
 decrypt the root key.
 
 ## Unsealing
 
 The unseal process is done by running `vault operator unseal` or via the API.
 This process is stateful: each key can be entered via multiple mechanisms from
-multiple client machines and it will work. This allows each shard of the root
+multiple client machines and it will work. This allows each shares of the root
 key to be on a distinct client machine for better security.
 
 Note that when using the Shamir seal with multiple nodes, each node must be
-unsealed with the required threshold of shards. Partial unsealing of each node
+unsealed with the required threshold of shares. Partial unsealing of each node
 is not distributed across the cluster.
 
 Once a Vault node is unsealed, it remains unsealed until one of these things happens:
@@ -81,7 +81,7 @@ only requires a single operator with root privileges.
 
 This way, if there is a detected intrusion, the Vault data can be locked
 quickly to try to minimize damages. It can't be accessed again without
-access to the root key shards.
+access to the root key shares.
 
 ## Auto Unseal
 

@@ -43,6 +43,10 @@ const (
 
 	// EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
 	EnvVaultRaftPath = "VAULT_RAFT_PATH"
+
+	// EnvVaultRaftNonVoter is used to override the non_voter config option, telling Vault to join as a non-voter (i.e. read replica).
+	EnvVaultRaftNonVoter  = "VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER"
+	raftNonVoterConfigKey = "retry_join_as_non_voter"
 )
 
 var getMmapFlags = func(string) int { return 0 }
@@ -171,6 +175,10 @@ type RaftBackend struct {
 
 	// redundancyZone specifies a redundancy zone for autopilot.
 	redundancyZone string
+
+	// nonVoter specifies whether the node should join the cluster as a non-voter. Non-voters get
+	// replicated to and can serve reads, but do not take part in leader elections.
+	nonVoter bool
 
 	effectiveSDKVersion string
 }
@@ -473,6 +481,22 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 	}
 
+	var nonVoter bool
+	if v := os.Getenv(EnvVaultRaftNonVoter); v != "" {
+		// Consistent with handling of other raft boolean env vars
+		// VAULT_RAFT_AUTOPILOT_DISABLE and VAULT_RAFT_FREELIST_SYNC
+		nonVoter = true
+	} else if v, ok := conf[raftNonVoterConfigKey]; ok {
+		nonVoter, err = strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %s config value %q as a boolean: %w", raftNonVoterConfigKey, v, err)
+		}
+	}
+
+	if nonVoter && conf["retry_join"] == "" {
+		return nil, fmt.Errorf("setting %s to true is only valid if at least one retry_join stanza is specified", raftNonVoterConfigKey)
+	}
+
 	return &RaftBackend{
 		logger:                     logger,
 		fsm:                        fsm,
@@ -489,6 +513,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		autopilotReconcileInterval: reconcileInterval,
 		autopilotUpdateInterval:    updateInterval,
 		redundancyZone:             conf["autopilot_redundancy_zone"],
+		nonVoter:                   nonVoter,
 		upgradeVersion:             upgradeVersion,
 	}, nil
 }
@@ -530,7 +555,7 @@ func (b *RaftBackend) Close() error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	if err := b.fsm.db.Close(); err != nil {
+	if err := b.fsm.Close(); err != nil {
 		return err
 	}
 
@@ -552,6 +577,13 @@ func (b *RaftBackend) RedundancyZone() string {
 	defer b.l.RUnlock()
 
 	return b.redundancyZone
+}
+
+func (b *RaftBackend) NonVoter() bool {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	return b.nonVoter
 }
 
 func (b *RaftBackend) EffectiveVersion() string {
@@ -580,10 +612,23 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	b.l.RLock()
 	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
-	fsmStats := b.fsm.db.Stats()
+	fsmStats := b.fsm.Stats()
+	stats := b.raft.Stats()
 	b.l.RUnlock()
 	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
 	b.collectMetricsWithStats(fsmStats, sink, "fsm")
+	labels := []metrics.Label{
+		{
+			Name:  "peer_id",
+			Value: b.localID,
+		},
+	}
+	for _, key := range []string{"term", "commit_index", "applied_index", "fsm_pending"} {
+		n, err := strconv.ParseUint(stats[key], 10, 64)
+		if err == nil {
+			sink.SetGaugeWithLabels([]string{"raft_storage", "stats", key}, float32(n), labels)
+		}
+	}
 }
 
 func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {

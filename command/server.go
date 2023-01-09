@@ -78,9 +78,8 @@ const (
 
 	// Even though there are more types than the ones below, the following consts
 	// are declared internally for value comparison and reusability.
-	storageTypeRaft            = "raft"
-	storageTypeConsul          = "consul"
-	disableStorageTypeCheckEnv = "VAULT_DISABLE_SUPPORTED_STORAGE_CHECK"
+	storageTypeRaft   = "raft"
+	storageTypeConsul = "consul"
 )
 
 type ServerCommand struct {
@@ -1267,16 +1266,6 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if allowPendingRemoval := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allowPendingRemoval != "" {
-		var err error
-		vault.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
-		if err != nil {
-			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
-				consts.VaultAllowPendingRemovalMountsEnv + " env var: " +
-				"defaulting to false."))
-		}
-	}
-
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -1330,6 +1319,21 @@ func (c *ServerCommand) Run(args []string) int {
 	info := make(map[string]string)
 	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
+
+	// returns a slice of env vars formatted as "key=value"
+	envVars := os.Environ()
+	var envVarKeys []string
+	for _, v := range envVars {
+		splitEnvVars := strings.Split(v, "=")
+		envVarKeys = append(envVarKeys, splitEnvVars[0])
+	}
+
+	sort.Strings(envVarKeys)
+
+	key := "environment variables"
+	info[key] = strings.Join(envVarKeys, ", ")
+	infoKeys = append(infoKeys, key)
+
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
 	// Check error here
 	if err != nil {
@@ -1368,6 +1372,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if c.flagDevFourCluster {
 		return enableFourClusterDev(c, &coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+	}
+
+	if allowPendingRemoval := os.Getenv(consts.EnvVaultAllowPendingRemovalMounts); allowPendingRemoval != "" {
+		var err error
+		coreConfig.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				consts.EnvVaultAllowPendingRemovalMounts + " env var: " +
+				"defaulting to false."))
+		}
 	}
 
 	// Initialize the separate HA storage backend, if it exists
@@ -1411,7 +1425,13 @@ func (c *ServerCommand) Run(args []string) int {
 	// Apply any enterprise configuration onto the coreConfig.
 	adjustCoreConfigForEnt(config, &coreConfig)
 
-	if !c.flagDev && os.Getenv(disableStorageTypeCheckEnv) == "" {
+	if !storageSupportedForEnt(&coreConfig) {
+		c.UI.Warn("")
+		c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING: storage configured to use %q which is not supported for Vault Enterprise, must be \"raft\" or \"consul\"", coreConfig.StorageType)))
+		c.UI.Warn("")
+	}
+
+	if !c.flagDev {
 		inMemStorageTypes := []string{
 			"inmem", "inmem_ha", "inmem_transactional", "inmem_transactional_ha",
 		}
@@ -1420,12 +1440,6 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Warn("")
 			c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING: storage configured to use %q which should NOT be used in production", coreConfig.StorageType)))
 			c.UI.Warn("")
-		} else {
-			err = checkStorageTypeForEnt(&coreConfig)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Invalid storage type: %s", err))
-				return 1
-			}
 		}
 	}
 

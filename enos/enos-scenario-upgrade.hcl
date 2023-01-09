@@ -3,10 +3,18 @@ scenario "upgrade" {
     arch            = ["amd64", "arm64"]
     backend         = ["consul", "raft"]
     artifact_source = ["local", "crt", "artifactory"]
-    consul_version  = ["1.13.2", "1.12.5", "1.11.10"]
+    artifact_type   = ["bundle", "package"]
+    consul_version  = ["1.14.2", "1.13.4", "1.12.7"]
     distro          = ["ubuntu", "rhel"]
-    edition         = ["oss", "ent"]
+    edition         = ["oss", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     seal            = ["awskms", "shamir"]
+
+    # Packages are not offered for the oss edition
+    exclude {
+      edition       = ["oss"]
+      artifact_type = ["package"]
+    }
+
   }
 
   terraform_cli = terraform_cli.default
@@ -19,8 +27,11 @@ scenario "upgrade" {
 
   locals {
     build_tags = {
-      "oss" = ["ui"]
-      "ent" = ["enterprise", "ent"]
+      "oss"              = ["ui"]
+      "ent"              = ["ui", "enterprise", "ent"]
+      "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
+      "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
+      "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
     }
     bundle_path             = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
     dependencies_to_install = ["jq"]
@@ -28,7 +39,6 @@ scenario "upgrade" {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    install_artifactory_artifact = local.bundle_path == null
     tags = merge({
       "Project Name" : var.project_name
       "Project" : "Enos",
@@ -39,27 +49,34 @@ scenario "upgrade" {
       arm64 = "t4g.small"
     }
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
+    vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
+    vault_install_dir_packages = {
+      rhel   = "/bin"
+      ubuntu = "/usr/bin"
+    }
+    vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : local.vault_install_dir_packages[matrix.distro]
   }
 
+  # This step gets/builds the upgrade artifact that we will upgrade to
   step "build_vault" {
     module = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags            = try(var.vault_local_build_tags, local.build_tags[matrix.edition])
-      bundle_path           = local.bundle_path
-      goarch                = matrix.arch
-      goos                  = "linux"
-      artifactory_host      = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
-      artifactory_repo      = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
-      artifactory_username  = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
-      artifactory_token     = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
-      arch                  = matrix.artifact_source == "artifactory" ? matrix.arch : null
-      vault_product_version = var.vault_product_version
-      artifact_type         = matrix.artifact_source == "artifactory" ? var.vault_artifact_type : null
-      distro                = matrix.artifact_source == "artifactory" ? matrix.distro : null
-      edition               = matrix.artifact_source == "artifactory" ? matrix.edition : null
-      instance_type         = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
-      revision              = var.vault_revision
+      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
+      bundle_path          = local.bundle_path
+      goarch               = matrix.arch
+      goos                 = "linux"
+      artifactory_host     = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
+      artifactory_repo     = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
+      artifactory_username = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
+      artifactory_token    = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
+      arch                 = matrix.artifact_source == "artifactory" ? matrix.arch : null
+      product_version      = var.vault_product_version
+      artifact_type        = matrix.artifact_type
+      distro               = matrix.artifact_source == "artifactory" ? matrix.distro : null
+      edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
+      instance_type        = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
+      revision             = var.vault_revision
     }
   }
 
@@ -78,7 +95,7 @@ scenario "upgrade" {
     module = module.create_vpc
 
     variables {
-      ami_architectures  = [matrix.arch]
+      ami_architectures  = distinct([matrix.arch, "amd64"])
       availability_zones = step.find_azs.availability_zones
       common_tags        = local.tags
     }
@@ -89,7 +106,7 @@ scenario "upgrade" {
     module    = module.read_license
 
     variables {
-      file_name = abspath(joinpath(path.root, "./support/vault.hclic"))
+      file_name = local.vault_license_path
     }
   }
 
@@ -107,7 +124,7 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id      = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      ami_id      = step.create_vpc.ami_ids["ubuntu"]["amd64"]
       common_tags = local.tags
       consul_release = {
         edition = var.backend_edition
@@ -119,6 +136,8 @@ scenario "upgrade" {
     }
   }
 
+  # This step creates a Vault cluster using a bundle downloaded from
+  # releases.hashicorp.com, with the version specified in var.vault_autopilot_initial_release
   step "create_vault_cluster" {
     module = module.vault_cluster
     depends_on = [
@@ -139,12 +158,15 @@ scenario "upgrade" {
       kms_key_arn             = step.create_vpc.kms_key_arn
       storage_backend         = matrix.backend
       unseal_method           = matrix.seal
+      vault_install_dir       = local.vault_install_dir
       vault_release           = var.vault_upgrade_initial_release
       vault_license           = matrix.edition != "oss" ? step.read_license.license : null
       vpc_id                  = step.create_vpc.vpc_id
     }
   }
 
+  # This step upgrades the Vault cluster to the var.vault_product_version
+  # by getting a bundle or package of that version from the matrix.artifact_source
   step "upgrade_vault" {
     module = module.vault_upgrade
     depends_on = [
@@ -158,9 +180,9 @@ scenario "upgrade" {
     variables {
       vault_api_addr            = "http://localhost:8200"
       vault_instances           = step.create_vault_cluster.vault_instances
-      vault_local_bundle_path   = local.bundle_path
       vault_local_artifact_path = local.bundle_path
-      vault_artifactory_release = local.install_artifactory_artifact ? step.build_vault.vault_artifactory_release : null
+      vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      vault_install_dir         = local.vault_install_dir
       vault_unseal_keys         = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
       vault_seal_type           = matrix.seal
     }
@@ -180,6 +202,7 @@ scenario "upgrade" {
     variables {
       vault_instances       = step.create_vault_cluster.vault_instances
       vault_edition         = matrix.edition
+      vault_install_dir     = local.vault_install_dir
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
       vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
@@ -199,8 +222,9 @@ scenario "upgrade" {
     }
 
     variables {
-      vault_instances  = step.create_vault_cluster.vault_instances
-      vault_root_token = step.create_vault_cluster.vault_root_token
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.vault_root_token
     }
   }
 
@@ -217,8 +241,9 @@ scenario "upgrade" {
     }
 
     variables {
-      vault_instances  = step.create_vault_cluster.vault_instances
-      vault_root_token = step.create_vault_cluster.vault_root_token
+      vault_install_dir = local.vault_install_dir
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_root_token  = step.create_vault_cluster.vault_root_token
     }
   }
 
