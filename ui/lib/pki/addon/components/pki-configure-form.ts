@@ -1,14 +1,29 @@
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
+import errorMessage from 'vault/utils/error-message';
+// TYPES
+import Store from '@ember-data/store';
+import Router from '@ember/routing/router';
+import FlashMessageService from 'vault/services/flash-messages';
+import { action } from '@ember/object';
+import { HTMLElementEvent } from 'forms';
+import PkiConfigModel from 'vault/models/pki/config';
+
+interface Args {
+  config: PkiConfigModel;
+}
 
 /**
  * @module PkiConfigureForm
- * PkiConfigureForm components are used to configure a PKI engine mount.
- *
+ * PkiConfigureForm component is used to configure a PKI engine mount.
+ * The component shows three options for configuration and handles
+ * the save and cancel actions. The sub-forms rendered handle which
+ * attributes of the form is shown, based on the formType
  */
-
-export default class PkiConfigureForm extends Component {
-  @tracked configType = '';
+export default class PkiConfigureForm extends Component<Args> {
+  @service declare readonly store: Store;
+  @service declare readonly router: Router;
+  @service declare readonly flashMessages: FlashMessageService;
 
   get configTypes() {
     return [
@@ -34,5 +49,30 @@ export default class PkiConfigureForm extends Component {
           'Generate a new CSR for signing, optionally generating a new private key. No new issuer is created by this call.',
       },
     ];
+  }
+
+  getFlashMessage(type: string, successful: boolean): string {
+    if (type === 'import') {
+      return successful
+        ? 'Successfully imported the certificate.'
+        : 'Could not import the given certificate.';
+    }
+    // TODO: Fill in messages based on type
+    return successful ? 'Configuration successful.' : 'Could not complete configuration';
+  }
+
+  @action submitForm(evt: HTMLElementEvent<HTMLFormElement>) {
+    evt.preventDefault();
+    const { formType } = this.args.config;
+    if (!this.args.config) return;
+    this.args.config
+      .save()
+      .then(() => {
+        this.flashMessages.success(this.getFlashMessage(formType, true));
+        this.router.transitionTo('vault.cluster.secrets.backend.pki.issuers.index');
+      })
+      .catch((e: Error) => {
+        this.flashMessages.danger(errorMessage(e, this.getFlashMessage(formType, false)));
+      });
   }
 }

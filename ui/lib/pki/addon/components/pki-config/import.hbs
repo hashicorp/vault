@@ -1,4 +1,4 @@
-<form {{on "submit" this.submitForm}} data-test-pki-config-import-form>
+<form {{on "submit" @onSave}} data-test-pki-config-import-form>
   <TextFile @subText="Upload a PEM bundle or certificate" @onChange={{this.onFileUploaded}} @label="Import" />
   {{yield}}
   <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -6,9 +6,9 @@
       <button type="submit" class="button is-primary" data-test-pki-config-save>
         Done
       </button>
-      <LinkTo @route="overview" class="button has-left-margin-s" data-test-pki-config-cancel>
+      <button {{on "click" @onCancel}} type="button" class="button has-left-margin-s" data-test-pki-config-cancel>
         Cancel
-      </LinkTo>
+      </button>
     </div>
   </div>
 </form>

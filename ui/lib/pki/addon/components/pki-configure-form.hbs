@@ -2,7 +2,7 @@
   <div class="columns">
     {{#each this.configTypes as |option|}}
       <div class="column is-flex">
-        <label for={{option.key}} class="box-label is-column {{if (eq this.configType option.key) 'is-selected'}}">
+        <label for={{option.key}} class="box-label is-column {{if (eq @config.formType option.key) 'is-selected'}}">
           <div>
             <h3 class="box-label-header title is-6">
               <Icon @size="24" @name={{option.icon}} />
@@ -16,9 +16,9 @@
             <RadioButton
               id={{option.key}}
               name="pki-config-type"
-              @value={{this.configType}}
-              @groupValue={{this.replicationMode}}
-              @onChange={{fn (mut this.configType) option.key}}
+              @value={{option.key}}
+              @groupValue={{@config.formType}}
+              @onChange={{fn (mut @config.formType) option.key}}
               data-test-pki-config-option={{option.key}}
             />
             <label for={{option.key}}></label>
@@ -27,10 +27,17 @@
       </div>
     {{/each}}
   </div>
-  {{#if (eq this.configType "import")}}
-    <PkiConfig::Import />
-  {{else if this.configType}}
-    {{! TODO: Forms }}
+  {{#if (eq @config.formType "import")}}
+    <code>POST /pki/import/bundle</code>
+    <PkiConfig::Import
+      @config={{@config}}
+      @onSave={{this.submitForm}}
+      @onCancel={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
+    />
+  {{else if (eq @config.formType "generate-root")}}
+    <code>POST /pki/issuers/generate/root/:type</code>
+  {{else if (eq @config.formType "generate-csr")}}
+    <code>POST /pki/issuers/generate/intermediate/:type</code>
   {{else}}
     <EmptyState @title="Choose an option" @message="To see configuration options, choose your desired output above." />
     <div class="field is-grouped box is-fullwidth is-bottomless">
