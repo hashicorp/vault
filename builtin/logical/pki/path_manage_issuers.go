@@ -67,12 +67,12 @@ func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
 							"key_id": {
 								Type:        framework.TypeString,
 								Description: `The ID of the key.`,
-								Required:    false,
+								Required:    true,
 							},
 							"key_name": {
 								Type:        framework.TypeString,
 								Description: `The key name if given.`,
-								Required:    false,
+								Required:    true,
 							},
 							"private_key": {
 								Type:        framework.TypeString,
