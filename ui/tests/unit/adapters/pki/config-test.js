@@ -48,7 +48,7 @@ module('Unit | Adapter | pki/config', function (hooks) {
   });
 
   test('it calls the correct endpoint on create when formType is generate-root', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     this.server.post(`${this.backend}/issuers/generate/root/internal`, () => {
       assert.ok(true, 'request made correctly when type = internal');
       return {};
@@ -61,6 +61,10 @@ module('Unit | Adapter | pki/config', function (hooks) {
       assert.ok(true, 'request made correctly when type = exising');
       return {};
     });
+    this.server.post(`${this.backend}/issuers/generate/root/kms`, () => {
+      assert.ok(true, 'request made correctly when type = kms');
+      return {};
+    });
 
     await this.store
       .createRecord('pki/config', {
@@ -80,10 +84,16 @@ module('Unit | Adapter | pki/config', function (hooks) {
         type: 'existing',
       })
       .save();
+    await this.store
+      .createRecord('pki/config', {
+        formType: 'generate-root',
+        type: 'kms',
+      })
+      .save();
   });
 
   test('it calls the correct endpoint on create when formType is generate-csr', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     this.server.post(`${this.backend}/issuers/generate/intermediate/internal`, () => {
       assert.ok(true, 'request made correctly when type = internal');
       return {};
@@ -96,6 +106,10 @@ module('Unit | Adapter | pki/config', function (hooks) {
       assert.ok(true, 'request made correctly when type = exising');
       return {};
     });
+    this.server.post(`${this.backend}/issuers/generate/intermediate/kms`, () => {
+      assert.ok(true, 'request made correctly when type = kms');
+      return {};
+    });
 
     await this.store
       .createRecord('pki/config', {
@@ -113,6 +127,12 @@ module('Unit | Adapter | pki/config', function (hooks) {
       .createRecord('pki/config', {
         formType: 'generate-csr',
         type: 'existing',
+      })
+      .save();
+    await this.store
+      .createRecord('pki/config', {
+        formType: 'generate-csr',
+        type: 'kms',
       })
       .save();
   });

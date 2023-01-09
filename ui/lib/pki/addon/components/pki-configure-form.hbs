@@ -28,12 +28,7 @@
     {{/each}}
   </div>
   {{#if (eq @config.formType "import")}}
-    <code>POST /pki/import/bundle</code>
-    <PkiConfig::Import
-      @config={{@config}}
-      @onSave={{this.submitForm}}
-      @onCancel={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
-    />
+    <PkiConfig::Import @config={{@config}} @onSave={{this.submitForm}} @onCancel={{this.cancel}} />
   {{else if (eq @config.formType "generate-root")}}
     <code>POST /pki/issuers/generate/root/:type</code>
   {{else if (eq @config.formType "generate-csr")}}

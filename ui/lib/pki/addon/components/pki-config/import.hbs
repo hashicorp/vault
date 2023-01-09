@@ -1,6 +1,8 @@
 <form {{on "submit" @onSave}} data-test-pki-config-import-form>
+  <h3 class="title has-border-bottom-light page-header">Certificate parameters</h3>
   <TextFile @subText="Upload a PEM bundle or certificate" @onChange={{this.onFileUploaded}} @label="Import" />
-  {{yield}}
+  <p class="box is-fullwidth is-shadowless">Issuer URLs (Issuing certificates, CRL distribution points, OCSP servers, and
+    delta CRL URLs) can be specified by editing the individual issuer once it is uploaded to Vault.</p>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
       <button type="submit" class="button is-primary" data-test-pki-config-save>

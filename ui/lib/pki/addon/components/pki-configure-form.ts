@@ -75,4 +75,9 @@ export default class PkiConfigureForm extends Component<Args> {
         this.flashMessages.danger(errorMessage(e, this.getFlashMessage(formType, false)));
       });
   }
+
+  @action cancel() {
+    this.args.config.rollbackAttributes();
+    this.router.transitionTo('vault.cluster.secrets.backend.pki.overview');
+  }
 }
