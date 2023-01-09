@@ -27,10 +27,10 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     if (adapterOptions.import) {
       url = `${url}/import/bundle`;
     } else {
-      // TODO WIP generate
-      const type = 'root' || 'generate';
-      // record.type is internal or exported
-      url = ` ${url}/generate/${type}/${record.type}`;
+      // TODO WIP generate root or intermediate CSR actions from issuers index page
+      // certType = 'root' || 'intermediate',   // record.type is internal or exported
+      // url = ` ${url}/generate/${certType}/${record.type}`;
+      throw new Error('createRecord method in adapters/pki/issuer.js is incomplete.');
     }
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
       return resp;
