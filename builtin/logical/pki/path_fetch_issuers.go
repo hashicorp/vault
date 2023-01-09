@@ -262,7 +262,7 @@ set on all PR Secondary clusters.`,
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathUpdateIssuer,
+				Callback:  b.pathUpdateIssuer,
 				Responses: updateIssuerSchema,
 
 				// Read more about why these flags are set in backend.go.
@@ -281,7 +281,7 @@ set on all PR Secondary clusters.`,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.PatchOperation: &framework.PathOperation{
-				Callback: b.pathPatchIssuer,
+				Callback:  b.pathPatchIssuer,
 				Responses: updateIssuerSchema,
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
@@ -1074,9 +1074,9 @@ func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"crl": {
-								Type:     framework.TypeString,
+								Type:        framework.TypeString,
 								Description: ``,
-								Required: false,
+								Required:    false,
 							},
 						},
 					}},

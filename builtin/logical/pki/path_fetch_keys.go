@@ -17,7 +17,7 @@ func pathListKeys(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				Callback:                    b.pathListKeysHandler,
+				Callback: b.pathListKeysHandler,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -109,7 +109,7 @@ func buildPathKey(b *backend, pattern string) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.pathGetKeyHandler,
+				Callback: b.pathGetKeyHandler,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -146,7 +146,7 @@ func buildPathKey(b *backend, pattern string) *framework.Path {
 				ForwardPerformanceSecondary: false,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathUpdateKeyHandler,
+				Callback: b.pathUpdateKeyHandler,
 				Responses: map[int][]framework.Response{
 					http.StatusNoContent: {{
 						Description: "OK",
@@ -173,7 +173,7 @@ func buildPathKey(b *backend, pattern string) *framework.Path {
 				ForwardPerformanceSecondary: true,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
-				Callback:                    b.pathDeleteKeyHandler,
+				Callback: b.pathDeleteKeyHandler,
 				Responses: map[int][]framework.Response{
 					http.StatusNoContent: {{
 						Description: "No Content",
