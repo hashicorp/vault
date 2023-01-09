@@ -1,10 +1,12 @@
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
+import FlashMessageService from 'vault/services/flash-messages';
+import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
-import errorMessage from 'vault/utils/error-message';
 import { waitFor } from '@ember/test-waiters';
+import errorMessage from 'vault/utils/error-message';
+import PkiBaseCertificateModel from 'vault/models/pki/certificate/base';
 
 /**
  * @module PkiCaCertificateImport
@@ -21,15 +23,20 @@ import { waitFor } from '@ember/test-waiters';
  * @callback onSubmit - Callback triggered on submit success.
  */
 
-export default class PkiCaCertificateImport extends Component {
-  @service flashMessages;
+interface Args {
+  onSave: CallableFunction;
+  onCancel: CallableFunction;
+  model: PkiBaseCertificateModel;
+}
 
-  @tracked errorBanner;
-  @tracked invalidFormAlert;
+export default class PkiCaCertificateImport extends Component<Args> {
+  @service declare readonly flashMessages: FlashMessageService;
+
+  @tracked errorBanner = '';
 
   @task
   @waitFor
-  *submitForm(event) {
+  *submitForm(event: Event) {
     event.preventDefault();
     try {
       yield this.args.model.save({ adapterOptions: { import: true } });
@@ -37,12 +44,11 @@ export default class PkiCaCertificateImport extends Component {
       this.args.onSave();
     } catch (error) {
       this.errorBanner = errorMessage(error);
-      this.invalidFormAlert = 'There was a problem importing issuer.';
     }
   }
 
   @action
-  onFileUploaded({ value }) {
+  onFileUploaded({ value }: { value: string }) {
     this.args.model.pemBundle = value;
   }
 

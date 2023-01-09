@@ -6,7 +6,7 @@
     <form {{on "submit" (perform this.submitForm)}} data-test-pki-ca-cert-import-form>
       <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
       <div class="box is-sideless is-fullwidth is-marginless has-top-padding-l">
-        <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" data-test-pki-ca-cert-file />
+        <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" />
         <p class="has-top-margin-m has-bottom-margin-l">
           Issuer URLs (Issuing certificates, CRL distribution points, OCSP servers, and delta CRL URLs) can be specified by
           editing the individual issuer once it is uploaded to Vault.
@@ -30,17 +30,6 @@
         >
           Cancel
         </button>
-        {{#if this.invalidFormAlert}}
-          <div class="control">
-            <AlertInline
-              @type="danger"
-              @paddingTop={{true}}
-              @message={{this.invalidFormAlert}}
-              @mimicRefresh={{true}}
-              data-test-pki-ca-cert-validation-error
-            />
-          </div>
-        {{/if}}
       </div>
     </form>
   </div>
