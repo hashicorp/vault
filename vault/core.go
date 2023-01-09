@@ -53,6 +53,7 @@ import (
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
@@ -675,6 +676,8 @@ type Core struct {
 
 	pendingRemovalMountsAllowed bool
 	expirationRevokeRetryBase   time.Duration
+
+	events *eventbus.EventBus
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -3766,4 +3769,8 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	}
 
 	return raftBackend.GetAutopilotServerState(ctx)
+}
+
+func (c *Core) Events() *eventbus.EventBus {
+	return c.events
 }
