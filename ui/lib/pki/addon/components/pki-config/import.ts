@@ -15,7 +15,7 @@ interface Args {
 }
 
 /**
- * Pki Config Import Component creates a PKI Config record on mount, and cleans it up if dirty on unmount
+ * Pki Config Import Component shows the relevant form fields for configuring a PKI mount via import
  */
 export default class PkiConfigImportComponent extends Component<Args> {
   @action

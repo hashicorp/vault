@@ -5,8 +5,4 @@ export default class PkiConfigSerializer extends ApplicationSerializer {
   attrs = {
     formType: { serialize: false },
   };
-
-  /*
-  serializing: ID for import could be `imported_issuers[0]`?
-  */
 }
