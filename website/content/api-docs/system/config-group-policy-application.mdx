@@ -7,11 +7,11 @@ description: The '/sys/config/group-policy-application' endpoint is used to conf
 # `/sys/config/group-policy-application`
 
 The `sys/config/group-policy-application` endpoint can be used to configure the
-mode of policy application for identity groups in Vault.
+mode of policy application for identity groups in Vault. Policy application in this case
+refers to whether or not a policy as defined in a group will apply to a member of that group.
 Currently, it only supports two modes, `within_namespace_hierarchy` (default), which
-restricts policy application to only policies from groups from parent namespaces, and
-`any` which does not restrict policy application, and policies will apply from any namespace,
-irrespective of namespace hierarchy.
+means that policies will only be applied and asserted on from groups in parent namespaces, and
+`any` which means that every policy will be applied, irrespective of namespace hierarchy.
 
 Note that this configuration will be replicated between primary and secondaries, that
 is to say, primaries cannot have a different policy application mode to secondaries.
