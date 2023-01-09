@@ -1766,7 +1766,6 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields:      map[string]*framework.FieldSchema{},
 					}},
 				},
 			},
@@ -2038,16 +2037,16 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"policies": {
-									Type:     framework.TypeStringSlice,
-									Required: false,
-								},
-								"keys": {
-									Type:     framework.TypeStringSlice,
+								"name": {
+									Type:     framework.TypeString,
 									Required: true,
 								},
-								"keys_info": {
-									Type:     framework.TypeMap,
+								"rules": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"policy": {
+									Type:     framework.TypeString,
 									Required: false,
 								},
 							},
@@ -2188,7 +2187,8 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"keys": {
-									Type: framework.TypeStringSlice,
+									Type:     framework.TypeStringSlice,
+									Required: false,
 								},
 							},
 						}},
@@ -2469,11 +2469,6 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 									Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
 									Required:    false,
 								},
-								"allowed_request_headers": {
-									Type:        framework.TypeCommaStringSlice,
-									Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
-									Required:    false,
-								},
 								"options": {
 									Type:        framework.TypeKVPairs,
 									Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
@@ -2527,7 +2522,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleMountTuneWrite,
 					Responses: map[int][]framework.Response{
-						http.StatusNoContent: {{
+						http.StatusOK: {{
 							Description: "OK",
 							Fields:      map[string]*framework.FieldSchema{},
 						}},
