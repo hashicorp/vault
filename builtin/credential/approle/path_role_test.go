@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -21,6 +23,8 @@ func TestAppRole_LocalSecretIDsRead(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	roleData := map[string]interface{}{
 		"local_secret_ids": true,
@@ -36,6 +40,9 @@ func TestAppRole_LocalSecretIDsRead(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -44,6 +51,9 @@ func TestAppRole_LocalSecretIDsRead(t *testing.T) {
 	})
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 2, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 	if !resp.Data["local_secret_ids"].(bool) {
 		t.Fatalf("expected local_secret_ids to be returned")
@@ -55,6 +65,8 @@ func TestAppRole_LocalNonLocalSecretIDs(t *testing.T) {
 	var err error
 
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	// Create a role with local_secret_ids set
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -70,6 +82,9 @@ func TestAppRole_LocalNonLocalSecretIDs(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\n resp: %#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	// Create another role without setting local_secret_ids
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -84,6 +99,9 @@ func TestAppRole_LocalNonLocalSecretIDs(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\n resp: %#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	count := 10
 	// Create secret IDs on testrole1
@@ -95,6 +113,9 @@ func TestAppRole_LocalNonLocalSecretIDs(t *testing.T) {
 		})
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+		if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+			t.Fatalf("validation error: %v; resp: %#v", err, resp)
 		}
 	}
 
@@ -110,6 +131,9 @@ func TestAppRole_LocalNonLocalSecretIDs(t *testing.T) {
 	if len(resp.Data["keys"].([]string)) != count {
 		t.Fatalf("failed to list secret IDs")
 	}
+	if err := responseSchema(t, paths, 15, logical.ListOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	// Create secret IDs on testrole1
 	for i := 0; i < count; i++ {
@@ -120,6 +144,9 @@ func TestAppRole_LocalNonLocalSecretIDs(t *testing.T) {
 		})
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+		if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+			t.Fatalf("validation error: %v; resp: %#v", err, resp)
 		}
 	}
 
@@ -134,6 +161,9 @@ func TestAppRole_LocalNonLocalSecretIDs(t *testing.T) {
 	if len(resp.Data["keys"].([]string)) != count {
 		t.Fatalf("failed to list secret IDs")
 	}
+	if err := responseSchema(t, paths, 15, logical.ListOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 }
 
 func TestAppRole_UpgradeSecretIDPrefix(t *testing.T) {
@@ -141,6 +171,8 @@ func TestAppRole_UpgradeSecretIDPrefix(t *testing.T) {
 	var err error
 
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	// Create a role entry directly in storage without SecretIDPrefix
 	err = b.setRoleEntry(context.Background(), storage, "testrole", &roleStorageEntry{
@@ -176,6 +208,9 @@ func TestAppRole_UpgradeSecretIDPrefix(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected local_secret_ids to be present in the response")
 	}
+	if err := responseSchema(t, paths, 0, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 }
 
 func TestAppRole_LocalSecretIDImmutability(t *testing.T) {
@@ -183,6 +218,8 @@ func TestAppRole_LocalSecretIDImmutability(t *testing.T) {
 	var err error
 
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	roleData := map[string]interface{}{
 		"policies":         []string{"default"},
@@ -200,6 +237,9 @@ func TestAppRole_LocalSecretIDImmutability(t *testing.T) {
 	})
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	// Attempt to modify local_secret_ids should fail
@@ -223,6 +263,8 @@ func TestAppRole_UpgradeBoundCIDRList(t *testing.T) {
 
 	b, storage := createBackendWithStorage(t)
 
+	paths := rolePaths(b)
+
 	roleData := map[string]interface{}{
 		"policies":        []string{"default"},
 		"bind_secret_id":  true,
@@ -239,6 +281,9 @@ func TestAppRole_UpgradeBoundCIDRList(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	// Read the role and check that the bound_cidr_list is set properly
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -248,6 +293,9 @@ func TestAppRole_UpgradeBoundCIDRList(t *testing.T) {
 	})
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	expected := []string{"127.0.0.1/18", "192.178.1.2/24"}
@@ -280,6 +328,10 @@ func TestAppRole_UpgradeBoundCIDRList(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: bound_cidr_list; expected: %#v\nactual: %#v\n", expected, actual)
 	}
@@ -296,6 +348,10 @@ func TestAppRole_UpgradeBoundCIDRList(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	if resp.Data["secret_id"].(string) == "" {
 		t.Fatalf("failed to generate secret-id")
 	}
@@ -312,6 +368,10 @@ func TestAppRole_UpgradeBoundCIDRList(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	if resp.Data["secret_id"].(string) == "" {
 		t.Fatalf("failed to generate secret-id")
 	}
@@ -323,6 +383,8 @@ func TestAppRole_RoleNameLowerCasing(t *testing.T) {
 	var roleID, secretID string
 
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	// Save a role with out LowerCaseRoleName set
 	role := &roleStorageEntry{
@@ -346,6 +408,10 @@ func TestAppRole_RoleNameLowerCasing(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	secretID = resp.Data["secret_id"].(string)
 	roleID = "testroleid"
 
@@ -368,6 +434,9 @@ func TestAppRole_RoleNameLowerCasing(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 	secretID = resp.Data["secret_id"].(string)
 
@@ -399,6 +468,9 @@ func TestAppRole_RoleNameLowerCasing(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	if err := responseSchema(t, paths, 0, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq := &logical.Request{
 		Path:      "role/testRoleName",
@@ -412,6 +484,9 @@ func TestAppRole_RoleNameLowerCasing(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	// Create secret id with lower cased role name
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -422,6 +497,10 @@ func TestAppRole_RoleNameLowerCasing(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	secretID = resp.Data["secret_id"].(string)
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -432,6 +511,10 @@ func TestAppRole_RoleNameLowerCasing(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	if err := responseSchema(t, paths, 14, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	roleID = resp.Data["role_id"].(string)
 
 	// Login should pass
@@ -463,6 +546,9 @@ func TestAppRole_RoleNameLowerCasing(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("failed to lookup secret IDs")
 	}
+	if err := responseSchema(t, paths, 16, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	// Listing of secret IDs should work in case-insensitive manner
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -472,6 +558,9 @@ func TestAppRole_RoleNameLowerCasing(t *testing.T) {
 	})
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if err := responseSchema(t, paths, 15, logical.ListOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if len(resp.Data["keys"].([]string)) != 1 {
@@ -484,6 +573,8 @@ func TestAppRole_RoleReadSetIndex(t *testing.T) {
 	var err error
 
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	roleReq := &logical.Request{
 		Path:      "role/testrole",
@@ -499,6 +590,9 @@ func TestAppRole_RoleReadSetIndex(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleIDReq := &logical.Request{
 		Path:      "role/testrole/role-id",
@@ -510,6 +604,9 @@ func TestAppRole_RoleReadSetIndex(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), roleIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+	if err := responseSchema(t, paths, 14, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 	roleID := resp.Data["role_id"].(string)
 
@@ -553,10 +650,17 @@ func TestAppRole_RoleReadSetIndex(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
 	}
+	if err := responseSchema(t, paths, 0, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+	if err := responseSchema(t, paths, 0, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 }
 
@@ -565,6 +669,8 @@ func TestAppRole_CIDRSubset(t *testing.T) {
 	var err error
 
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	roleData := map[string]interface{}{
 		"role_id":         "role-id-123",
@@ -582,6 +688,9 @@ func TestAppRole_CIDRSubset(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v resp: %#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	secretIDData := map[string]interface{}{
@@ -608,6 +717,9 @@ func TestAppRole_CIDRSubset(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v resp: %#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	secretIDData["cidr_list"] = "192.168.27.29/20,172.245.30.40/25,10.20.30.40/32"
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
@@ -617,6 +729,9 @@ func TestAppRole_CIDRSubset(t *testing.T) {
 	if resp != nil && resp.IsError() {
 		t.Fatalf("resp: %#v", resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 }
 
 func TestAppRole_TokenBoundCIDRSubset32Mask(t *testing.T) {
@@ -624,6 +739,8 @@ func TestAppRole_TokenBoundCIDRSubset32Mask(t *testing.T) {
 	var err error
 
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	roleData := map[string]interface{}{
 		"role_id":           "role-id-123",
@@ -642,6 +759,9 @@ func TestAppRole_TokenBoundCIDRSubset32Mask(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v resp: %#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	secretIDData := map[string]interface{}{
 		"token_bound_cidrs": "127.0.0.1/32",
@@ -656,6 +776,9 @@ func TestAppRole_TokenBoundCIDRSubset32Mask(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
 	if err != nil {
 		t.Fatalf("err: %v resp: %#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	secretIDData = map[string]interface{}{
@@ -683,6 +806,8 @@ func TestAppRole_RoleConstraints(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
+	paths := rolePaths(b)
+
 	roleData := map[string]interface{}{
 		"role_id":  "role-id-123",
 		"policies": "a,b",
@@ -700,6 +825,9 @@ func TestAppRole_RoleConstraints(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	// Set bound_cidr_list alone by explicitly disabling bind_secret_id
 	roleReq.Operation = logical.UpdateOperation
@@ -708,6 +836,9 @@ func TestAppRole_RoleConstraints(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	// Remove both constraints
@@ -721,12 +852,17 @@ func TestAppRole_RoleConstraints(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
+	if err := responseSchema(t, paths, 0, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 }
 
 func TestAppRole_RoleIDUpdate(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	roleData := map[string]interface{}{
 		"role_id":            "role-id-123",
@@ -746,6 +882,9 @@ func TestAppRole_RoleIDUpdate(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleIDUpdateReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -759,6 +898,9 @@ func TestAppRole_RoleIDUpdate(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 14, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	secretIDReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -769,6 +911,10 @@ func TestAppRole_RoleIDUpdate(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	secretID := resp.Data["secret_id"].(string)
 
 	loginData := map[string]interface{}{
@@ -799,6 +945,8 @@ func TestAppRole_RoleIDUniqueness(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
+	paths := rolePaths(b)
+
 	roleData := map[string]interface{}{
 		"role_id":            "role-id-123",
 		"policies":           "a,b",
@@ -818,6 +966,9 @@ func TestAppRole_RoleIDUniqueness(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Path = "role/testrole2"
 	resp, err = b.HandleRequest(context.Background(), roleReq)
@@ -830,12 +981,18 @@ func TestAppRole_RoleIDUniqueness(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.UpdateOperation
 	roleData["role_id"] = "role-id-123"
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err == nil && !(resp != nil && resp.IsError()) {
 		t.Fatalf("expected an error: got resp:%#v", resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	roleReq.Path = "role/testrole1"
@@ -871,6 +1028,9 @@ func TestAppRole_RoleIDUniqueness(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 14, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleIDData["role_id"] = "role-id-1000"
 	roleIDReq.Path = "role/testrole1/role-id"
@@ -878,12 +1038,17 @@ func TestAppRole_RoleIDUniqueness(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 14, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 }
 
 func TestAppRole_RoleDeleteSecretID(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	createRole(t, b, storage, "role1", "a,b")
 	secretIDReq := &logical.Request{
@@ -896,13 +1061,24 @@ func TestAppRole_RoleDeleteSecretID(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	listReq := &logical.Request{
@@ -914,6 +1090,10 @@ func TestAppRole_RoleDeleteSecretID(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.ListOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	secretIDAccessors := resp.Data["keys"].([]string)
 	if len(secretIDAccessors) != 3 {
 		t.Fatalf("bad: len of secretIDAccessors: expected:3 actual:%d", len(secretIDAccessors))
@@ -928,6 +1108,10 @@ func TestAppRole_RoleDeleteSecretID(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	resp, err = b.HandleRequest(context.Background(), listReq)
 	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("expected an error. err:%v resp:%#v", err, resp)
@@ -939,6 +1123,8 @@ func TestAppRole_RoleSecretIDReadDelete(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
+	paths := rolePaths(b)
+
 	createRole(t, b, storage, "role1", "a,b")
 	secretIDCreateReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -948,6 +1134,9 @@ func TestAppRole_RoleSecretIDReadDelete(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), secretIDCreateReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	secretID := resp.Data["secret_id"].(string)
@@ -967,6 +1156,9 @@ func TestAppRole_RoleSecretIDReadDelete(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 16, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 	if resp.Data == nil {
 		t.Fatal(err)
 	}
@@ -983,6 +1175,9 @@ func TestAppRole_RoleSecretIDReadDelete(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 17, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
 	if resp != nil && resp.IsError() {
@@ -998,6 +1193,8 @@ func TestAppRole_RoleSecretIDAccessorReadDelete(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
+	paths := rolePaths(b)
+
 	createRole(t, b, storage, "role1", "a,b")
 	secretIDReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1008,6 +1205,9 @@ func TestAppRole_RoleSecretIDAccessorReadDelete(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	listReq := &logical.Request{
 		Operation: logical.ListOperation,
@@ -1017,6 +1217,9 @@ func TestAppRole_RoleSecretIDAccessorReadDelete(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), listReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 15, logical.ListOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 	hmacSecretID := resp.Data["keys"].([]string)[0]
 
@@ -1035,11 +1238,17 @@ func TestAppRole_RoleSecretIDAccessorReadDelete(t *testing.T) {
 	if resp.Data == nil {
 		t.Fatal(err)
 	}
+	if err := responseSchema(t, paths, 18, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	hmacReq.Path = "role/role1/secret-id-accessor/destroy"
 	resp, err = b.HandleRequest(context.Background(), hmacReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 19, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	hmacReq.Operation = logical.ReadOperation
@@ -1085,6 +1294,8 @@ func TestAppRoleRoleListSecretID(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
+	paths := rolePaths(b)
+
 	createRole(t, b, storage, "role1", "a,b")
 
 	secretIDReq := &logical.Request{
@@ -1097,21 +1308,40 @@ func TestAppRoleRoleListSecretID(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	listReq := &logical.Request{
@@ -1123,6 +1353,10 @@ func TestAppRoleRoleListSecretID(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 15, logical.ListOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
+
 	secrets := resp.Data["keys"].([]string)
 	if len(secrets) != 5 {
 		t.Fatalf("bad: len of secrets: expected:5 actual:%d", len(secrets))
@@ -1133,6 +1367,8 @@ func TestAppRole_RoleList(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	createRole(t, b, storage, "role1", "a,b")
 	createRole(t, b, storage, "role2", "c,d")
@@ -1149,6 +1385,9 @@ func TestAppRole_RoleList(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 1, logical.ListOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	actual := resp.Data["keys"].([]string)
 	expected := []string{"role1", "role2", "role3", "role4", "role5"}
@@ -1161,6 +1400,8 @@ func TestAppRole_RoleSecretIDWithoutFields(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	roleData := map[string]interface{}{
 		"policies":           "p,q,r,s",
@@ -1180,6 +1421,9 @@ func TestAppRole_RoleSecretIDWithoutFields(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleSecretIDReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1189,6 +1433,9 @@ func TestAppRole_RoleSecretIDWithoutFields(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["secret_id"].(string) == "" {
@@ -1209,6 +1456,9 @@ func TestAppRole_RoleSecretIDWithoutFields(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 20, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["secret_id"] != "abcd123" {
@@ -1232,6 +1482,8 @@ func TestAppRole_RoleSecretIDWithValidFields(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
+	paths := rolePaths(b)
+
 	roleData := map[string]interface{}{
 		"policies":           "p,q,r,s",
 		"secret_id_num_uses": 0,
@@ -1249,6 +1501,9 @@ func TestAppRole_RoleSecretIDWithValidFields(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	testCases := []testCase{
@@ -1284,6 +1539,9 @@ func TestAppRole_RoleSecretIDWithValidFields(t *testing.T) {
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("err:%v resp:%#v", err, resp)
 			}
+			if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+				t.Fatalf("validation error: %v; resp: %#v", err, resp)
+			}
 
 			if resp.Data["secret_id"].(string) == "" {
 				t.Fatalf("failed to generate secret_id")
@@ -1300,6 +1558,9 @@ func TestAppRole_RoleSecretIDWithValidFields(t *testing.T) {
 			resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+			if err := responseSchema(t, paths, 20, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+				t.Fatalf("validation error: %v; resp: %#v", err, resp)
 			}
 
 			if resp.Data["secret_id"] != tc.payload["secret_id"] {
@@ -1400,6 +1661,8 @@ func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
+	paths := rolePaths(b)
+
 	for i, rc := range roleTestCases {
 		roleData := map[string]interface{}{
 			"policies":      "p,q,r,s",
@@ -1419,6 +1682,9 @@ func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
 		resp, err = b.HandleRequest(context.Background(), roleReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+			t.Fatalf("validation error: %v; resp: %#v", err, resp)
 		}
 
 		for _, tc := range rc.cases {
@@ -1455,6 +1721,8 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
+	paths := rolePaths(b)
+
 	roleData := map[string]interface{}{
 		"policies":              "p,q,r,s",
 		"secret_id_num_uses":    10,
@@ -1475,11 +1743,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	expected := map[string]interface{}{
@@ -1527,11 +1801,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	expected = map[string]interface{}{
@@ -1562,6 +1842,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 14, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 	if resp.Data["role_id"].(string) != "test_role_id" {
 		t.Fatalf("bad: role_id: expected:test_role_id actual:%s\n", resp.Data["role_id"].(string))
 	}
@@ -1572,11 +1855,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 14, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 14, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 	if resp.Data["role_id"].(string) != "custom_role_id" {
 		t.Fatalf("bad: role_id: expected:custom_role_id actual:%s\n", resp.Data["role_id"].(string))
@@ -1589,6 +1878,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 7, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Data = map[string]interface{}{"bind_secret_id": false}
 	roleReq.Operation = logical.UpdateOperation
@@ -1596,11 +1888,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 7, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 7, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["bind_secret_id"].(bool) {
@@ -1611,11 +1909,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 7, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 7, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if !resp.Data["bind_secret_id"].(bool) {
@@ -1629,6 +1933,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 3, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Data = map[string]interface{}{"policies": "a1,b1,c1,d1"}
 	roleReq.Operation = logical.UpdateOperation
@@ -1636,11 +1943,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 3, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 3, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if !reflect.DeepEqual(resp.Data["policies"].([]string), []string{"a1", "b1", "c1", "d1"}) {
@@ -1654,11 +1967,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 3, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 3, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	expectedPolicies := []string{}
@@ -1674,6 +1993,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 8, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Data = map[string]interface{}{"secret_id_num_uses": 200}
 	roleReq.Operation = logical.UpdateOperation
@@ -1681,11 +2003,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 8, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 8, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["secret_id_num_uses"].(int) != 200 {
@@ -1696,11 +2024,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 8, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 8, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["secret_id_num_uses"].(int) != 0 {
@@ -1714,6 +2048,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 9, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Data = map[string]interface{}{"secret_id_ttl": 3001}
 	roleReq.Operation = logical.UpdateOperation
@@ -1721,11 +2058,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 9, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 9, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["secret_id_ttl"].(time.Duration) != 3001 {
@@ -1736,11 +2079,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 9, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 9, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["secret_id_ttl"].(time.Duration) != 0 {
@@ -1754,6 +2103,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 11, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 	if resp.Data["token_num_uses"].(int) != 600 {
 		t.Fatalf("bad: token_num_uses: expected:600 actual:%d\n", resp.Data["token_num_uses"].(int))
 	}
@@ -1764,11 +2116,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 11, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 11, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["token_num_uses"].(int) != 60 {
@@ -1780,11 +2138,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 11, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 11, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["token_num_uses"].(int) != 0 {
@@ -1798,6 +2162,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 10, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Data = map[string]interface{}{"period": 9001}
 	roleReq.Operation = logical.UpdateOperation
@@ -1805,11 +2172,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 10, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 10, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["period"].(time.Duration) != 9001 {
@@ -1820,11 +2193,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 10, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 10, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["token_period"].(time.Duration) != 0 {
@@ -1838,6 +2217,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 12, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Data = map[string]interface{}{"token_ttl": 4001}
 	roleReq.Operation = logical.UpdateOperation
@@ -1845,11 +2227,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 12, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 12, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["token_ttl"].(time.Duration) != 4001 {
@@ -1860,11 +2248,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 12, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 12, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["token_ttl"].(time.Duration) != 0 {
@@ -1878,6 +2272,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 13, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Data = map[string]interface{}{"token_max_ttl": 5001}
 	roleReq.Operation = logical.UpdateOperation
@@ -1885,11 +2282,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 13, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 13, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["token_max_ttl"].(time.Duration) != 5001 {
@@ -1900,11 +2303,17 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 13, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 13, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["token_max_ttl"].(time.Duration) != 0 {
@@ -1917,6 +2326,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
@@ -1934,6 +2346,8 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	roleData := map[string]interface{}{
 		"policies":              "p,q,r,s",
@@ -1956,11 +2370,17 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	expected := map[string]interface{}{
@@ -2008,11 +2428,17 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	expected = map[string]interface{}{
@@ -2043,6 +2469,9 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 5, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 	if resp.Data["secret_id_bound_cidrs"].([]string)[0] != "127.0.0.1/32" ||
 		resp.Data["secret_id_bound_cidrs"].([]string)[1] != "127.0.0.1/16" {
 		t.Fatalf("bad: secret_id_bound_cidrs: expected:127.0.0.1/32,127.0.0.1/16 actual:%d\n", resp.Data["secret_id_bound_cidrs"].(int))
@@ -2054,11 +2483,17 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 5, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 5, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["secret_id_bound_cidrs"].([]string)[0] != "127.0.0.1/20" {
@@ -2070,11 +2505,17 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 5, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 5, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if len(resp.Data["secret_id_bound_cidrs"].([]string)) != 0 {
@@ -2087,6 +2528,9 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 6, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 	if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" ||
 		resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[1].String() != "127.0.0.1/16" {
@@ -2103,11 +2547,17 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 6, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 6, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1/20" {
@@ -2119,11 +2569,17 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 6, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 6, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	if len(resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)) != 0 {
@@ -2136,6 +2592,9 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
@@ -2153,6 +2612,8 @@ func TestAppRole_RoleWithTokenTypeCRUD(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+
+	paths := rolePaths(b)
 
 	roleData := map[string]interface{}{
 		"policies":           "p,q,r,s",
@@ -2174,6 +2635,9 @@ func TestAppRole_RoleWithTokenTypeCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 	if 0 == len(resp.Warnings) {
 		t.Fatalf("bad:\nexpected warning in resp:%#v\n", resp.Warnings)
 	}
@@ -2182,6 +2646,9 @@ func TestAppRole_RoleWithTokenTypeCRUD(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	expected := map[string]interface{}{
@@ -2228,6 +2695,9 @@ func TestAppRole_RoleWithTokenTypeCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 	if 0 == len(resp.Warnings) {
 		t.Fatalf("bad:\nexpected a warning in resp:%#v\n", resp.Warnings)
 	}
@@ -2236,6 +2706,9 @@ func TestAppRole_RoleWithTokenTypeCRUD(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.ReadOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 
 	expected = map[string]interface{}{
@@ -2267,6 +2740,9 @@ func TestAppRole_RoleWithTokenTypeCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if err := responseSchema(t, paths, 0, logical.DeleteOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
+	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
@@ -2294,9 +2770,14 @@ func createRole(t *testing.T, b *backend, s logical.Storage, roleName, policies 
 		Data:      roleData,
 	}
 
+	paths := rolePaths(b)
+
 	resp, err := b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+		t.Fatalf("validation error: %v; resp: %#v", err, resp)
 	}
 }
 
@@ -2419,6 +2900,8 @@ func TestAppRole_SecretID_WithTTL(t *testing.T) {
 
 	b, storage := createBackendWithStorage(t)
 
+	paths := rolePaths(b)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create role
@@ -2437,6 +2920,9 @@ func TestAppRole_SecretID_WithTTL(t *testing.T) {
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("err:%v resp:%#v", err, resp)
 			}
+			if err := responseSchema(t, paths, 0, logical.CreateOperation).ValidateResponse(resp, true); err != nil {
+				t.Fatalf("validation error: %v; resp: %#v", err, resp)
+			}
 
 			// Generate secret ID
 			secretIDReq := &logical.Request{
@@ -2447,6 +2933,9 @@ func TestAppRole_SecretID_WithTTL(t *testing.T) {
 			resp, err = b.HandleRequest(context.Background(), secretIDReq)
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+			if err := responseSchema(t, paths, 15, logical.UpdateOperation).ValidateResponse(resp, true); err != nil {
+				t.Fatalf("validation error: %v; resp: %#v", err, resp)
 			}
 
 			// Extract the "ttl" value from the response data if it exists
@@ -2477,4 +2966,46 @@ func TestAppRole_SecretID_WithTTL(t *testing.T) {
 			}
 		})
 	}
+}
+
+// responseSchema is a test helper to extract the response schema from a given framework path / operation
+func responseSchema(t *testing.T, paths []*framework.Path, pathIdx int, operation logical.Operation) *framework.Response {
+	t.Helper()
+
+	if pathIdx >= len(paths) {
+		t.Fatalf("path index %d is out of range", pathIdx)
+	}
+
+	schemaPath := paths[pathIdx]
+
+	schemaOperation, ok := schemaPath.Operations[operation]
+	if !ok {
+		t.Fatalf(
+			"could not find response schema: %s: %q operation does not exist",
+			schemaPath.Pattern,
+			operation,
+		)
+	}
+
+	var schemaResponses []framework.Response
+
+	for _, status := range []int{
+		http.StatusOK,
+		http.StatusNoContent,
+	} {
+		schemaResponses, ok = schemaOperation.Properties().Responses[status]
+		if ok {
+			break
+		}
+	}
+
+	if len(schemaResponses) == 0 {
+		t.Fatalf(
+			"could not find response schema: %s: %q operation: no responses found",
+			schemaPath.Pattern,
+			operation,
+		)
+	}
+
+	return &schemaResponses[0]
 }
