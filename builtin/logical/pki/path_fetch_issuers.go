@@ -243,23 +243,7 @@ set on all PR Secondary clusters.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathGetIssuer,
-				Responses: map[int][]framework.Response{
-					http.StatusOK: {{
-						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"certificate": {
-								Type:        framework.TypeString,
-								Description: `Certificate`,
-								Required:    false,
-							},
-							"ca_chain": {
-								Type:        framework.TypeString,
-								Description: `CA Chain`,
-								Required:    false,
-							},
-						},
-					}},
-				},
+				Responses: updateIssuerSchema,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:  b.pathUpdateIssuer,
