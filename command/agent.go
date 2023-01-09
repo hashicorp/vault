@@ -94,7 +94,8 @@ type AgentCommand struct {
 
 	cleanupGuard sync.Once
 
-	startedCh chan (struct{}) // for tests
+	startedCh  chan struct{} // for tests
+	reloadedCh chan struct{}
 
 	flagConfigs        []string
 	flagExitAfterAuth  bool
@@ -666,7 +667,6 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Ensure we've added all the reload funcs for TLS before anyone triggers a reload.
 	c.tlsReloadFuncsLock.Lock()
-	defer c.tlsReloadFuncsLock.Unlock()
 
 	for i, lnConfig := range c.config.Listeners {
 		var ln net.Listener
@@ -688,7 +688,7 @@ func (c *AgentCommand) Run(args []string) int {
 			tlsCfg = lnBundle.TLSConfig
 			ln = lnBundle.Listener
 
-			// Track the reload func so we can reload later if needed.
+			// Track the reload func, so we can reload later if needed.
 			// NOTE: If we plan to reload entire listeners at some point it won't be enough to just
 			// throw the reload func into a slice and call it later.
 			c.tlsReloadFuncs = append(c.tlsReloadFuncs, lnBundle.TLSReloadFunc)
@@ -760,6 +760,8 @@ func (c *AgentCommand) Run(args []string) int {
 		go server.Serve(ln)
 	}
 
+	c.tlsReloadFuncsLock.Unlock()
+
 	// Ensure that listeners are closed at all the exits
 	listenerCloseFunc := func() {
 		for _, ln := range listeners {
@@ -784,6 +786,11 @@ func (c *AgentCommand) Run(args []string) int {
 				if err != nil {
 					c.outputErrors(err)
 				}
+				// Send the 'reloaded' message on the relevant channel
+				select {
+				case c.reloadedCh <- struct{}{}:
+				default:
+				}
 			case <-ctx.Done():
 				c.notifySystemd(systemd.SdNotifyStopping)
 				return nil
@@ -805,6 +812,9 @@ func (c *AgentCommand) Run(args []string) int {
 				// everything
 				if leaseCache != nil {
 					leaseCache.SetShuttingDown(true)
+				}
+				if c.reloadedCh != nil {
+					close(c.reloadedCh)
 				}
 				return nil
 			case <-ctx.Done():
