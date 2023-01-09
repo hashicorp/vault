@@ -979,8 +979,7 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 		}
 		key := keyEntry.RSAKey
 		if key == nil {
-			// What is the version being used?
-			return "", errutil.InternalError{Err: fmt.Sprintf("cannot decrypt ciphertext, key version %v does not have a private counterpart", p.MinDecryptionVersion)}
+			return "", errutil.InternalError{Err: fmt.Sprintf("cannot decrypt ciphertext, key version does not have a private counterpart")}
 		}
 		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
 		if err != nil {
