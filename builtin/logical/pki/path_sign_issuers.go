@@ -1,9 +1,10 @@
 package pki
 
 import (
+	"net/http"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"net/http"
 )
 
 func pathIssuerSignIntermediate(b *backend) *framework.Path {
