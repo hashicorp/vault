@@ -55,7 +55,7 @@ is required. Ignored for other types.`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathGenerateKeyHandler,
+				Callback: b.pathGenerateKeyHandler,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -63,15 +63,15 @@ is required. Ignored for other types.`,
 							"key_id": {
 								Type:        framework.TypeString,
 								Description: `ID assigned to this key.`,
-								Required: true,
+								Required:    true,
 							},
 							"key_name": {
 								Type:        framework.TypeString,
 								Description: `Name assigned to this key.`,
-								Required: true,
+								Required:    true,
 							},
 							"key_type": {
-								Type:        framework.TypeString,
+								Type: framework.TypeString,
 								Description: `The type of key to use; defaults to RSA. "rsa"
 								"ec" and "ed25519" are the only valid values.`,
 								Required: true,
@@ -79,7 +79,7 @@ is required. Ignored for other types.`,
 							"private_key": {
 								Type:        framework.TypeString,
 								Description: `The private key string`,
-								Required: false,
+								Required:    false,
 							},
 						},
 					}},
@@ -192,7 +192,7 @@ func pathImportKey(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathImportKeyHandler,
+				Callback: b.pathImportKeyHandler,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -200,15 +200,15 @@ func pathImportKey(b *backend) *framework.Path {
 							"key_id": {
 								Type:        framework.TypeString,
 								Description: `ID assigned to this key.`,
-								Required: true,
+								Required:    true,
 							},
 							"key_name": {
 								Type:        framework.TypeString,
 								Description: `Name assigned to this key.`,
-								Required: true,
+								Required:    true,
 							},
 							"key_type": {
-								Type:        framework.TypeString,
+								Type: framework.TypeString,
 								Description: `The type of key to use; defaults to RSA. "rsa"
 								"ec" and "ed25519" are the only valid values.`,
 								Required: true,
