@@ -875,7 +875,7 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 								Required: true,
 							},
 							"deprecation_status": {
-								Type:     framework.TypeBool,
+								Type:     framework.TypeString,
 								Required: false,
 							},
 						},
