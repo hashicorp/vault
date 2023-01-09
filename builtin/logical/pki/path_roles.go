@@ -31,7 +31,7 @@ func pathListRoles(b *backend) *framework.Path {
 							"keys": {
 								Type:        framework.TypeMap,
 								Description: `List of keys`,
-								Required: true,
+								Required:    true,
 							},
 						},
 					}},
@@ -48,18 +48,18 @@ func pathRoles(b *backend) *framework.Path {
 	pathRolesResponse := map[string]*framework.FieldSchema{
 		"backend": {
 			Type:        framework.TypeString,
-			Required: true,
+			Required:    true,
 			Description: "Backend Type",
 		},
 
 		"name": {
 			Type:        framework.TypeString,
-			Required: true,
+			Required:    true,
 			Description: "Name of the role",
 		},
 
 		"ttl": {
-			Type: framework.TypeDurationSecond,
+			Type:     framework.TypeDurationSecond,
 			Required: true,
 			Description: `The lease duration (validity period of the
 certificate) if no specific lease duration is requested.
@@ -69,21 +69,21 @@ value or the value of max_ttl, whichever is shorter.`,
 		},
 
 		"max_ttl": {
-			Type: framework.TypeDurationSecond,
+			Type:     framework.TypeDurationSecond,
 			Required: true,
 			Description: `The maximum allowed lease duration. If not
 set, defaults to the system maximum lease TTL.`,
 		},
 
 		"allow_localhost": {
-			Type:    framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `Whether to allow "localhost" and "localdomain"
 as a valid common name in a request, independent of allowed_domains value.`,
 		},
 
 		"allowed_domains": {
-			Type: framework.TypeCommaStringSlice,
+			Type:     framework.TypeCommaStringSlice,
 			Required: true,
 			Description: `Specifies the domains this role is allowed
 to issue certificates for. This is used with the allow_bare_domains,
@@ -93,13 +93,13 @@ certificates. See the documentation for more information. This parameter
 accepts a comma-separated string or list of domains.`,
 		},
 		"allowed_domains_template": {
-			Type: framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, Allowed domains can be specified using identity template policies.
 				Non-templated domains are also permitted.`,
 		},
 		"allow_bare_domains": {
-			Type: framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, clients can request certificates
 for the base domains themselves, e.g. "example.com" of domains listed
@@ -109,7 +109,7 @@ information.`,
 		},
 
 		"allow_subdomains": {
-			Type: framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, clients can request certificates for
 subdomains of domains listed in allowed_domains, including wildcard
@@ -117,7 +117,7 @@ subdomains. See the documentation for more information.`,
 		},
 
 		"allow_glob_domains": {
-			Type: framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, domains specified in allowed_domains
 can include shell-style glob patterns, e.g. "ftp*.example.com".
@@ -125,7 +125,7 @@ See the documentation for more information.`,
 		},
 
 		"allow_wildcard_certificates": {
-			Type: framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, allows certificates with wildcards in
 the common name to be issued, conforming to RFC 6125's Section 6.4.3; e.g.,
@@ -134,7 +134,7 @@ information.`,
 		},
 
 		"allow_any_name": {
-			Type: framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, clients can request certificates for
 any domain, regardless of allowed_domains restrictions.
@@ -142,28 +142,28 @@ See the documentation for more information.`,
 		},
 
 		"enforce_hostnames": {
-			Type:    framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, only valid host names are allowed for
 CN and DNS SANs, and the host part of email addresses. Defaults to true.`,
 		},
 
 		"allow_ip_sans": {
-			Type:    framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, IP Subject Alternative Names are allowed.
 Any valid IP is accepted and No authorization checking is performed.`,
 		},
 
 		"allowed_uri_sans": {
-			Type: framework.TypeCommaStringSlice,
+			Type:     framework.TypeCommaStringSlice,
 			Required: true,
 			Description: `If set, an array of allowed URIs for URI Subject Alternative Names.
 Any valid URI is accepted, these values support globbing.`,
 		},
 
 		"allowed_uri_sans_template": {
-			Type: framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, Allowed URI SANs can be specified using identity template policies.
 				Non-templated URI SANs are also permitted.`,
@@ -171,13 +171,13 @@ Any valid URI is accepted, these values support globbing.`,
 
 		"allowed_other_sans": {
 			Type:        framework.TypeCommaStringSlice,
-			Required: true,
+			Required:    true,
 			Description: `If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).`,
 		},
 
 		"allowed_serial_numbers": {
 			Type:        framework.TypeCommaStringSlice,
-			Required: true,
+			Required:    true,
 			Description: `If set, an array of allowed serial numbers to put in Subject. These values support globbing.`,
 		},
 
@@ -189,35 +189,35 @@ Defaults to true. See also RFC 5280 Section 4.2.1.12.`,
 		},
 
 		"client_flag": {
-			Type:    framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, certificates are flagged for client auth use.
 Defaults to true. See also RFC 5280 Section 4.2.1.12.`,
 		},
 
 		"code_signing_flag": {
-			Type: framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, certificates are flagged for code signing
 use. Defaults to false. See also RFC 5280 Section 4.2.1.12.`,
 		},
 
 		"email_protection_flag": {
-			Type: framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, certificates are flagged for email
 protection use. Defaults to false. See also RFC 5280 Section 4.2.1.12.`,
 		},
 
 		"key_type": {
-			Type:    framework.TypeString,
+			Type:     framework.TypeString,
 			Required: true,
 			Description: `The type of key to use; defaults to RSA. "rsa"
 "ec", "ed25519" and "any" are the only valid values.`,
 		},
 
 		"key_bits": {
-			Type:    framework.TypeInt,
+			Type:     framework.TypeInt,
 			Required: true,
 			Description: `The number of bits to use. Allowed values are
 0 (universal default); with rsa key_type: 2048 (default), 3072, or
@@ -225,7 +225,7 @@ protection use. Defaults to false. See also RFC 5280 Section 4.2.1.12.`,
 ed25519.`,
 		},
 		"signature_bits": {
-			Type:    framework.TypeInt,
+			Type:     framework.TypeInt,
 			Required: true,
 			Description: `The number of bits to use in the signature
 algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
@@ -233,13 +233,13 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 (SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
 		},
 		"use_pss": {
-			Type:    framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: false,
 			Description: `Whether or not to use PSS signatures when using a
 RSA key-type issuer. Defaults to false.`,
 		},
 		"key_usage": {
-			Type:    framework.TypeCommaStringSlice,
+			Type:     framework.TypeCommaStringSlice,
 			Required: true,
 			Description: `A comma-separated string or list of key usages (not extended
 key usages). Valid values can be found at
@@ -251,7 +251,7 @@ Section 4.2.1.3.`,
 		},
 
 		"ext_key_usage": {
-			Type:    framework.TypeCommaStringSlice,
+			Type:     framework.TypeCommaStringSlice,
 			Required: true,
 			Description: `A comma-separated string or list of extended key usages. Valid values can be found at
 https://golang.org/pkg/crypto/x509/#ExtKeyUsage
@@ -263,12 +263,12 @@ Section 4.2.1.12.`,
 
 		"ext_key_usage_oids": {
 			Type:        framework.TypeCommaStringSlice,
-			Required: true,
+			Required:    true,
 			Description: `A comma-separated string or list of extended key usage oids.`,
 		},
 
 		"use_csr_common_name": {
-			Type:    framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, when used with a signing profile,
 the common name in the CSR will be used. This
@@ -277,7 +277,7 @@ Names; use use_csr_sans for that. Defaults to true.`,
 		},
 
 		"use_csr_sans": {
-			Type:    framework.TypeBool,
+			Type:     framework.TypeBool,
 			Required: true,
 			Description: `If set, when used with a signing profile,
 the SANs in the CSR will be used. This does *not*
@@ -357,7 +357,7 @@ for "generate_lease".`,
 		},
 
 		"cn_validations": {
-			Type:    framework.TypeCommaStringSlice,
+			Type: framework.TypeCommaStringSlice,
 			Description: `List of allowed validations to run against the
 Common Name field. Values can include 'email' to validate the CN is a email
 address, 'hostname' to validate the CN is a valid hostname (potentially
@@ -810,7 +810,7 @@ serviced by this role.`,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: pathRolesResponse,
+						Fields:      pathRolesResponse,
 					}},
 				},
 			},
@@ -819,7 +819,7 @@ serviced by this role.`,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: pathRolesResponse,
+						Fields:      pathRolesResponse,
 					}},
 				},
 				// Read more about why these flags are set in backend.go.
@@ -831,7 +831,7 @@ serviced by this role.`,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: pathRolesResponse,
+						Fields:      pathRolesResponse,
 					}},
 				},
 				// Read more about why these flags are set in backend.go.
@@ -843,7 +843,7 @@ serviced by this role.`,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: pathRolesResponse,
+						Fields:      pathRolesResponse,
 					}},
 				},
 				// Read more about why these flags are set in backend.go.

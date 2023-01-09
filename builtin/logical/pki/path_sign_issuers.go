@@ -31,27 +31,27 @@ func buildPathIssuerSignIntermediateRaw(b *backend, pattern string) *framework.P
 							"expiration": {
 								Type:        framework.TypeInt64,
 								Description: `Expiration Time`,
-								Required: true,
+								Required:    true,
 							},
 							"serial_number": {
 								Type:        framework.TypeString,
 								Description: `Serial Number`,
-								Required: false,
+								Required:    false,
 							},
 							"certificate": {
 								Type:        framework.TypeString,
 								Description: `Certificate`,
-								Required: true,
+								Required:    true,
 							},
 							"issuing_ca": {
 								Type:        framework.TypeString,
 								Description: `Issuing CA`,
-								Required: true,
+								Required:    true,
 							},
 							"ca_chain": {
 								Type:        framework.TypeStringSlice,
 								Description: `CA Chain`,
-								Required: true,
+								Required:    true,
 							},
 						},
 					}},
@@ -180,12 +180,12 @@ func buildPathIssuerSignSelfIssued(b *backend, pattern string) *framework.Path {
 							"certificate": {
 								Type:        framework.TypeString,
 								Description: `Certificate`,
-								Required: true,
+								Required:    true,
 							},
 							"issuing_ca": {
 								Type:        framework.TypeString,
 								Description: `Issuing CA`,
-								Required: true,
+								Required:    true,
 							},
 						},
 					}},
