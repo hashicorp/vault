@@ -2432,7 +2432,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"max_lease_ttl": {
-									Type:        framework.TypeString,
+									Type:        framework.TypeInt,
 									Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
 									Required:    true,
 								},
