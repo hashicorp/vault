@@ -80,6 +80,18 @@ const (
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
 	coreKeyringCanaryPath = "core/canary-keyring"
 
+	// coreGroupPolicyApplicationPath is used to store the behaviour for
+	// how policies should be applied
+	coreGroupPolicyApplicationPath = "core/group-policy-application-mode"
+
+	// groupPolicyApplicationModeWithinNamespaceHierarchy is a configuration option for group
+	// policy application modes, which allows only in-namespace-hierarchy policy application
+	groupPolicyApplicationModeWithinNamespaceHierarchy = "within_namespace_hierarchy"
+
+	// groupPolicyApplicationModeAny is a configuration option for group
+	// policy application modes, which allows policy application irrespective of namespaces
+	groupPolicyApplicationModeAny = "any"
+
 	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
 
 	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
@@ -674,6 +686,13 @@ func (c *Core) HAState() consts.HAState {
 	default:
 		return consts.Active
 	}
+}
+
+func (c *Core) HAStateWithLock() consts.HAState {
+	c.stateLock.RLock()
+	c.stateLock.RUnlock()
+
+	return c.HAState()
 }
 
 // CoreConfig is used to parameterize a core
@@ -3063,6 +3082,11 @@ func (c *Core) LogFormat() string {
 	return conf.(*server.Config).LogFormat
 }
 
+// LogLevel returns the log level provided by level provided by config, CLI flag, or env
+func (c *Core) LogLevel() string {
+	return c.logLevel
+}
+
 // MetricsHelper returns the global metrics helper which allows external
 // packages to access Vault's internal metrics.
 func (c *Core) MetricsHelper() *metricsutil.MetricsHelper {
@@ -3627,6 +3651,44 @@ func (c *Core) ListAuths() ([]*MountEntry, error) {
 	return entries, nil
 }
 
+type GroupPolicyApplicationMode struct {
+	GroupPolicyApplicationMode string `json:"group_policy_application_mode"`
+}
+
+func (c *Core) GetGroupPolicyApplicationMode(ctx context.Context) (string, error) {
+	se, err := c.barrier.Get(ctx, coreGroupPolicyApplicationPath)
+	if err != nil {
+		return "", err
+	}
+	if se == nil {
+		return groupPolicyApplicationModeWithinNamespaceHierarchy, nil
+	}
+
+	var modeStruct GroupPolicyApplicationMode
+
+	err = jsonutil.DecodeJSON(se.Value, &modeStruct)
+	if err != nil {
+		return "", err
+	}
+	mode := modeStruct.GroupPolicyApplicationMode
+	if mode == "" {
+		mode = groupPolicyApplicationModeWithinNamespaceHierarchy
+	}
+
+	return mode, nil
+}
+
+func (c *Core) SetGroupPolicyApplicationMode(ctx context.Context, mode string) error {
+	json, err := jsonutil.EncodeJSON(&GroupPolicyApplicationMode{GroupPolicyApplicationMode: mode})
+	if err != nil {
+		return err
+	}
+	return c.barrier.Put(ctx, &logical.StorageEntry{
+		Key:   coreGroupPolicyApplicationPath,
+		Value: json,
+	})
+}
+
 type HCPLinkStatus struct {
 	lock             sync.RWMutex
 	ConnectionStatus string `json:"hcp_link_status,omitempty"`
@@ -3648,4 +3710,60 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 	resourceID := c.hcpLinkStatus.ResourceIDOnHCP
 
 	return status, resourceID
+}
+
+// ListenerAddresses provides a slice of configured listener addresses
+func (c *Core) ListenerAddresses() ([]string, error) {
+	addresses := make([]string, 0)
+
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return nil, fmt.Errorf("failed to load core raw config")
+	}
+
+	listeners := conf.(*server.Config).Listeners
+	if listeners == nil {
+		return nil, fmt.Errorf("no listener configured")
+	}
+
+	for _, listener := range listeners {
+		addresses = append(addresses, listener.Address)
+	}
+
+	return addresses, nil
+}
+
+// IsRaftVoter specifies whether the node is a raft voter which is
+// always false if raft storage is not in use.
+func (c *Core) IsRaftVoter() bool {
+	raftInfo := c.raftInfo.Load().(*raftInformation)
+
+	if raftInfo == nil {
+		return false
+	}
+
+	return !raftInfo.nonVoter
+}
+
+func (c *Core) HAEnabled() bool {
+	return c.ha != nil && c.ha.HAEnabled()
+}
+
+func (c *Core) GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error) {
+	raftBackend := c.getRaftBackend()
+
+	if raftBackend == nil {
+		return nil, nil
+	}
+
+	return raftBackend.GetConfiguration(ctx)
+}
+
+func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState, error) {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		return nil, nil
+	}
+
+	return raftBackend.GetAutopilotServerState(ctx)
 }

@@ -956,26 +956,12 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Context string appended to every operationId",
 				},
-				"generic_mount_paths": {
-					Type:        framework.TypeBool,
-					Description: "Use generic mount paths",
-					Query:       true,
-					Default:     false,
-				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation:   b.pathInternalOpenAPI,
 				logical.UpdateOperation: b.pathInternalOpenAPI,
 			},
-		},
-		{
-			Pattern: "internal/specs/openapi",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalOpenAPI,
-					Summary:  "Generate an OpenAPI 3 document of all mounted paths.",
-				},
-			},
+			HelpSynopsis: "Generate an OpenAPI 3 document of all mounted paths.",
 		},
 		{
 			Pattern: "internal/ui/feature-flags",
