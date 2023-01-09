@@ -1,5 +1,6 @@
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
+import { HTMLElementEvent } from 'forms';
 import PkiConfigModel from 'vault/models/pki/config';
 
 interface File {
@@ -22,5 +23,10 @@ export default class PkiConfigImportComponent extends Component<Args> {
   onFileUploaded(file: File) {
     if (!this.args.config) return;
     this.args.config.pemBundle = file.value;
+  }
+
+  @action handleSave(evt: HTMLElementEvent<HTMLFormElement>) {
+    evt.preventDefault();
+    this.args.onSave();
   }
 }

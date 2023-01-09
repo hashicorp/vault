@@ -1,4 +1,4 @@
-<form {{on "submit" @onSave}} data-test-pki-config-import-form>
+<form {{on "submit" this.handleSave}} data-test-pki-config-import-form>
   <h3 class="title has-border-bottom-light page-header">Certificate parameters</h3>
   <TextFile @subText="Upload a PEM bundle or certificate" @onChange={{this.onFileUploaded}} @label="Import" />
   <p class="box is-fullwidth is-shadowless">Issuer URLs (Issuing certificates, CRL distribution points, OCSP servers, and

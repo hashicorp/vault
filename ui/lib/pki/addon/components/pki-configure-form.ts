@@ -6,7 +6,6 @@ import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
 import { action } from '@ember/object';
-import { HTMLElementEvent } from 'forms';
 import PkiConfigModel from 'vault/models/pki/config';
 
 interface Args {
@@ -61,8 +60,7 @@ export default class PkiConfigureForm extends Component<Args> {
     return successful ? 'Configuration successful.' : 'Could not complete configuration';
   }
 
-  @action submitForm(evt: HTMLElementEvent<HTMLFormElement>) {
-    evt.preventDefault();
+  @action submitForm() {
     const { formType } = this.args.config;
     if (!this.args.config) return;
     this.args.config
