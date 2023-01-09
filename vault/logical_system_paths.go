@@ -1435,7 +1435,6 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary: "Renews a lease, requesting to extend the lease.",
