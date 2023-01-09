@@ -6,8 +6,11 @@ description: The '/sys/config/group-policy-application' endpoint is used to conf
 
 # `/sys/config/group-policy-application`
 
+~> **Enterprise Only** – These endpoints require Vault Enterprise Platform.
+
 The `sys/config/group-policy-application` endpoint can be used to configure the
-mode of policy application for identity groups in Vault.
+mode of policy application for identity groups in Vault. This setting dictates
+the behavior across all groups in all namespaces in Vault.
 
 Vault allows you to add entities and groups from any namespace into an identity group.
 However, historically, any policies attached to that group would only apply when the
@@ -21,8 +24,6 @@ Note that this configuration will be replicated between primary and secondaries,
 is to say, primaries cannot have a different policy application mode to secondaries.
 
 ## Get Group Policy Application Information
-
-~> **Enterprise Only** – This endpoint requires Vault Enterprise.
 
 This endpoint returns the current group policy application mode, which will be
 either `within_namespace_hierarchy` or `any`.
@@ -49,8 +50,6 @@ $ curl \
 ```
 
 ## Set Group Policy Application Information
-
-~> **Enterprise Only** – This endpoint requires Vault Enterprise.
 
 This endpoint allows you to modify the current group policy application mode, which can be
 either `within_namespace_hierarchy` or `any`. `within_namespace_hierarchy`
