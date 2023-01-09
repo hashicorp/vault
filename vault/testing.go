@@ -1367,8 +1367,6 @@ func (tl *TestLogger) StopLogging() {
 // given, one will be generated based on t.Name() for the cluster logger, and if
 // no base.Logger is given will also be used as the basis for each core's logger.
 func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
-	base.DetectDeadlocks = TestDeadlockDetection
-
 	var err error
 
 	var numCores int
@@ -1637,6 +1635,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if base != nil {
+		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
 		coreConfig.DisableCache = base.DisableCache
 		coreConfig.EnableUI = base.EnableUI

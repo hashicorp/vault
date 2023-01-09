@@ -890,7 +890,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	// Use imported logging deadlock if requested
 	var stateLock locking.RWMutex
-	if conf.DetectDeadlocks != "" && strings.Contains(conf.DetectDeadlocks, "statelock") {
+	if strings.Contains(conf.DetectDeadlocks, "statelock") {
 		stateLock = &locking.DeadlockRWMutex{}
 	} else {
 		stateLock = &locking.SyncRWMutex{}
