@@ -472,17 +472,17 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 							},
 							"certificate": {
 								Type:        framework.TypeString,
-								Description: ``,
+								Description: `Certificate`,
 								Required:    true,
 							},
 							"manual_chain": {
 								Type:        framework.TypeCommaStringSlice,
-								Description: ``,
+								Description: `Manual Chain`,
 								Required:    true,
 							},
 							"ca_chain": {
 								Type:        framework.TypeCommaStringSlice,
-								Description: ``,
+								Description: `Certificate Authority Chain`,
 								Required:    true,
 							},
 							"leaf_not_after_behavior": {
@@ -492,12 +492,12 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 							},
 							"usage": {
 								Type:        framework.TypeString,
-								Description: ``,
+								Description: `Allowed usage`,
 								Required:    true,
 							},
 							"revocation_signature_algorithm": {
 								Type:        framework.TypeString,
-								Description: ``,
+								Description: `Which signature algorithm to use when building CRLs`,
 								Required:    true,
 							},
 							"revoked": {
@@ -507,17 +507,17 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 							},
 							"issuing_certificates": {
 								Type:        framework.TypeCommaStringSlice,
-								Description: ``,
+								Description: `Specifies the URL values for the Issuing Certificate field`,
 								Required:    true,
 							},
 							"crl_distribution_points": {
 								Type:        framework.TypeStringSlice,
-								Description: ``,
+								Description: `Specifies the URL values for the CRL Distribution Points field`,
 								Required:    true,
 							},
 							"ocsp_servers": {
 								Type:        framework.TypeStringSlice,
-								Description: ``,
+								Description: `Specifies the URL values for the OCSP Servers field`,
 								Required:    true,
 							},
 							"revocation_time": {
