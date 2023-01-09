@@ -1219,36 +1219,36 @@ func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
 		return nil, fmt.Errorf("cannot create logger, no config")
 	}
 
-	var error error
+	var errors error
 
 	// Parse all the log related config
 	logLevel, err := logging.ParseLogLevel(c.config.LogLevel)
 	if err != nil {
-		error = multierror.Append(error, err)
+		errors = multierror.Append(errors, err)
 	}
 
 	logFormat, err := logging.ParseLogFormat(c.config.LogFormat)
 	if err != nil {
-		error = multierror.Append(error, err)
+		errors = multierror.Append(errors, err)
 	}
 
 	logRotateDuration, err := parseutil.ParseDurationSecond(c.config.LogRotateDuration)
 	if err != nil {
-		error = multierror.Append(error, err)
+		errors = multierror.Append(errors, err)
 	}
 
 	logRotateBytes, err := parseutil.ParseInt(c.config.LogRotateBytes)
 	if err != nil {
-		error = multierror.Append(error, err)
+		errors = multierror.Append(errors, err)
 	}
 
 	logRotateMaxFiles, err := parseutil.ParseInt(c.config.LogRotateMaxFiles)
 	if err != nil {
-		error = multierror.Append(error, err)
+		errors = multierror.Append(errors, err)
 	}
 
-	if error != nil {
-		return nil, error
+	if errors != nil {
+		return nil, errors
 	}
 
 	logCfg := &logging.LogConfig{
@@ -1277,7 +1277,7 @@ func (c *AgentCommand) loadConfig(paths []string) (*agentConfig.Config, error) {
 	for _, configPath := range paths {
 		configFromPath, err := agentConfig.LoadConfig(configPath)
 		if err != nil {
-			errors = multierror.Append(fmt.Errorf("error loading configuration from %s: %w", configPath, err), errors)
+			errors = multierror.Append(errors, fmt.Errorf("error loading configuration from %s: %w", configPath, err))
 		} else {
 			cfg = cfg.Merge(configFromPath)
 		}
@@ -1320,13 +1320,13 @@ func (c *AgentCommand) reloadConfig(paths []string) error {
 	// Update the log level
 	err = c.reloadLogLevel()
 	if err != nil {
-		errors = multierror.Append(err, errors)
+		errors = multierror.Append(errors, err)
 	}
 
 	// Update certs
 	err = c.reloadCerts()
 	if err != nil {
-		errors = multierror.Append(err, errors)
+		errors = multierror.Append(errors, err)
 	}
 
 	return errors
