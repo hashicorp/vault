@@ -875,7 +875,7 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 								Required: true,
 							},
 							"deprecation_status": {
-								Type:     framework.TypeBool,
+								Type:     framework.TypeString,
 								Required: false,
 							},
 						},
@@ -1435,7 +1435,6 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary: "Renews a lease, requesting to extend the lease.",
@@ -1471,7 +1470,6 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary: "Revokes a lease immediately.",
@@ -1498,7 +1496,6 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary:     "Revokes all secrets or tokens generated under a given prefix immediately",
@@ -1531,7 +1528,6 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary: "Revokes all secrets (via a lease ID prefix) or tokens (via the tokens' path property) generated under a given prefix immediately.",
@@ -2436,7 +2432,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"max_lease_ttl": {
-									Type:        framework.TypeString,
+									Type:        framework.TypeInt,
 									Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
 									Required:    true,
 								},
@@ -2446,7 +2442,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 									Required:    true,
 								},
 								"default_lease_ttl": {
-									Type:        framework.TypeString,
+									Type:        framework.TypeInt,
 									Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
 									Required:    true,
 								},
