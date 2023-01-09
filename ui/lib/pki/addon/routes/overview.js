@@ -19,6 +19,18 @@ export default class PkiOverviewRoute extends Route {
       .catch(() => false);
   }
 
+  fetchEngine() {
+    return this.store
+      .query('secret-engine', {
+        path: this.secretMountPath.currentPath,
+      })
+      .then((model) => {
+        if (model) {
+          return model.get('firstObject');
+        }
+      });
+  }
+
   async fetchAllRoles() {
     try {
       return await this.store.query('pki/role', { backend: this.secretMountPath.currentPath });
@@ -43,16 +55,18 @@ export default class PkiOverviewRoute extends Route {
     }
   }
 
-  fetchEngine() {
-    return this.store
-      .query('secret-engine', {
-        path: this.secretMountPath.currentPath,
-      })
-      .then((model) => {
-        if (model) {
-          return model.get('firstObject');
-        }
-      });
+  async fetchAllRolesCapabilities() {
+    const query = { id: `${this.secretMountPath.currentPath}/roles` };
+    return await this.store.queryRecord('capabilities', query);
+  }
+
+  async fetchAllIssuersCapabilities() {
+    const query = { id: `${this.secretMountPath.currentPath}/issuers` };
+    return await this.store.queryRecord('capabilities', query);
+  }
+  async fetchAllCertificatesCapabilities() {
+    const query = { id: `${this.secretMountPath.currentPath}/certificates` };
+    return await this.store.queryRecord('capabilities', query);
   }
 
   async model() {
@@ -62,6 +76,9 @@ export default class PkiOverviewRoute extends Route {
       roles: this.fetchAllRoles(),
       issuers: this.fetchAllIssuers(),
       certificates: this.fetchAllCertificates(),
+      rolesCapabilities: this.fetchAllRolesCapabilities(),
+      issuersCapabilities: this.fetchAllIssuersCapabilities(),
+      certificateCapabilities: this.fetchAllCertificatesCapabilities(),
     });
   }
 
@@ -69,18 +86,20 @@ export default class PkiOverviewRoute extends Route {
     super.setupController(controller, resolvedModel);
     const backend = this.secretMountPath.currentPath || 'pki';
 
-    controller.canViewRoles = resolvedModel.roles.length;
-    controller.canViewIssuers = resolvedModel.issuers.length;
+    const { rolesCapabilities, roles, certificates, hasConfig } = resolvedModel;
 
-    controller.roles = resolvedModel.roles.map((role) => {
-      return { name: role.id, id: role.id };
-    });
-    controller.issuers = resolvedModel.issuers.map((issuer) => {
-      return { name: issuer.id, id: issuer.id };
-    });
-    controller.certificates = resolvedModel.certificates.map((certificate) => {
-      return { name: certificate.id, id: certificate.id };
-    });
+    if (rolesCapabilities.canList && roles.length) {
+      controller.roleOptions = roles.map((role) => {
+        return { name: role.id, id: role.id };
+      });
+    }
+
+    if (hasConfig && certificates.length) {
+      controller.certificateOptions = certificates.map((certificate) => {
+        return { name: certificate.id, id: certificate.id };
+      });
+    }
+
     controller.breadcrumbs = [{ label: 'secrets', route: 'secrets', linkExternal: true }, { label: backend }];
   }
 }

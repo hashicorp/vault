@@ -19,11 +19,13 @@
 </Toolbar>
 
 {{#if this.model.hasConfig}}
-  {{! TODO show overview items }}
-  <div class="selectable-card-container has-grid has-two-col-grid has-top-margin-l">
-    {{#if this.canViewIssuers}}
+  <div
+    class="selectable-card-container has-grid has-top-margin-l
+      {{if (or (eq this.model.issuers 403) (eq this.model.roles 403)) 'has-three-col-grid' 'has-two-col-grid'}}"
+  >
+    {{#if this.model.issuersCapabilities.canList}}
       <SelectableCard
-        @cardTitle="Issuer"
+        @cardTitle="Issuers"
         @total={{if (eq this.model.issuers 404) 0 this.model.issuers.length}}
         @subText="The total number of issuers in this PKI mount. Includes both root and intermediate certificates."
         @actionText="View issuers"
@@ -31,7 +33,7 @@
         @type="role"
       />
     {{/if}}
-    {{#if this.canViewRoles}}
+    {{#if this.model.rolesCapabilities.canList}}
       <SelectableCard
         @cardTitle="Roles"
         @total={{if (eq this.model.roles 404) 0 this.model.roles.length}}
@@ -46,7 +48,7 @@
       @subText="Quickly issue a certificate by typing the role name."
       @placeholder="Type to find a role..."
       @buttonText="Issue"
-      @options={{this.roles}}
+      @options={{this.roleOptions}}
       @navigateToPage={{this.navigateToIssueCertificate}}
       @type="role"
     />
@@ -55,7 +57,7 @@
       @subText="Quickly view a certificate by typing its serial number."
       @placeholder="33:a3:..."
       @buttonText="View"
-      @options={{this.certificates}}
+      @options={{this.certificateOptions}}
       @navigateToPage={{this.navigateToViewCertificate}}
       @type="role"
     />

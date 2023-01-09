@@ -10,7 +10,10 @@ export default class PkiOverviewController extends Controller {
     this.router.transitionTo(`vault.cluster.secrets.backend.pki.roles.role.generate`, roleName);
   }
   @action
-  navigateToViewCertificate(issuerId) {
-    this.router.transitionTo(`vault.cluster.secrets.backend.pki.issuers.issuer.details`, issuerId);
+  navigateToViewCertificate(certificateSerialNumber) {
+    this.router.transitionTo(
+      `vault.cluster.secrets.backend.pki.certificates.certificate.details`,
+      certificateSerialNumber
+    );
   }
 }
