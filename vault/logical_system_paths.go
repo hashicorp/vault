@@ -1528,7 +1528,6 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary: "Revokes all secrets (via a lease ID prefix) or tokens (via the tokens' path property) generated under a given prefix immediately.",
