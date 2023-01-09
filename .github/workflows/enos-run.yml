@@ -46,7 +46,7 @@ on:
         default: '"ubuntu-latest"'
       ssh-key-name:
         type: string
-        default: vault-ci-ssh-key
+        default: ${{ github.event.repository.name }}-ci-ssh-key
       # Which edition of Vault we're using. e.g. "oss", "ent", "ent.hsm.fips1402"
       vault-edition:
         required: true
