@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -217,6 +218,10 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		if config.UseGlobalQueue {
 			return logical.ErrorResponse("Global, cross-cluster revocation queue cannot be enabled when auto rebuilding is disabled as the local cluster may not have the certificate entry!"), nil
 		}
+	}
+
+	if !constants.IsEnterprise && config.UseGlobalQueue {
+		return logical.ErrorResponse("Global, cross-cluster revocation queue can only be enabled on Vault Enterprise."), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("config/crl", config)
