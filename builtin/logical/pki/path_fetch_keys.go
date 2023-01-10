@@ -30,7 +30,7 @@ func pathListKeys(b *backend) *framework.Path {
 							"key_info": {
 								Type:        framework.TypeMap,
 								Description: `Key info with issuer name`,
-								Required:    true,
+								Required:    false,
 							},
 						},
 					}},
