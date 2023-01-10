@@ -16,7 +16,7 @@ scenario "replication" {
 
     # Packages are not offered for the oss, ent.fips1402, and ent.hsm.fips1402 editions
     exclude {
-      edition       = ["oss", "ent.fips1402", "ent.hsm.fips1402"]
+      edition       = ["ent.fips1402", "ent.hsm.fips1402"]
       artifact_type = ["package"]
     }
   }
