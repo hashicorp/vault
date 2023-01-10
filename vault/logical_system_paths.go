@@ -2052,3 +2052,19 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 		},
 	}
 }
+
+func (b *SystemBackend) experimentPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "experiments$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadExperiments,
+					Summary:  "Returns the available and enabled experiments",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["experiments"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["experiments"][1]),
+		},
+	}
+}

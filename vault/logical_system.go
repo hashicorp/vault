@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	semver "github.com/hashicorp/go-version"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/logging"
@@ -191,6 +192,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -5023,6 +5025,24 @@ func (b *SystemBackend) handleLoggersByNameDelete(ctx context.Context, req *logi
 	return nil, nil
 }
 
+// handleReadExperiments returns the available and enabled experiments on this node.
+// Each node within a cluster could have different values for each, but it's not
+// recommended.
+func (b *SystemBackend) handleReadExperiments(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	enabled := b.Core.experiments
+	if len(enabled) == 0 {
+		// Return empty slice instead of nil, so the JSON shows [] instead of null
+		enabled = []string{}
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"available": experiments.ValidExperiments(),
+			"enabled":   enabled,
+		},
+	}, nil
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -5850,6 +5870,14 @@ This path responds to the following HTTP methods.
 
     LIST /
         Returns a list historical version changes sorted by installation time in ascending order.
+		`,
+	},
+	"experiments": {
+		"Returns information about Vault's experimental features. Should NOT be used in production.",
+		`
+This path responds to the following HTTP methods.
+		GET /
+			Returns the available and enabled experiments.
 		`,
 	},
 }

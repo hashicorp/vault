@@ -645,6 +645,8 @@ type Core struct {
 	effectiveSDKVersion string
 
 	rollbackPeriod time.Duration
+
+	experiments []string
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -779,6 +781,8 @@ type CoreConfig struct {
 	EffectiveSDKVersion string
 
 	RollbackPeriod time.Duration
+
+	Experiments []string
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -932,6 +936,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableSSCTokens:               conf.DisableSSCTokens,
 		effectiveSDKVersion:            effectiveSDKVersion,
 		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
+		experiments:                    conf.Experiments,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -3488,4 +3493,8 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 	resourceID := c.hcpLinkStatus.ResourceIDOnHCP
 
 	return status, resourceID
+}
+
+func (c *Core) isExperimentEnabled(experiment string) bool {
+	return strutil.StrListContains(c.experiments, experiment)
 }
