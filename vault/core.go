@@ -264,8 +264,7 @@ type Core struct {
 	underlyingPhysical physical.Backend
 
 	// seal is our seal, for seal configuration information
-	seal         Seal
-	recoverySeal Seal
+	seal Seal
 
 	// raftJoinDoneCh is used by the raft retry join routine to inform unseal process
 	// that the join is complete
@@ -1605,7 +1604,12 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 
 	if seal.RecoveryKeySupported() {
 		if err := seal.VerifyRecoveryKey(ctx, unsealKey); err != nil {
-			return nil, &ErrInvalidKey{fmt.Sprintf("failed to verify recovery key: %v", err)}
+			seal.(*autoSeal).initRecoveryAccess(unsealKey)
+			// This may also be the recovery unseal case, try to verify that instead
+			if err2 := seal.VerifyRecoveryUnsealKey(ctx, unsealKey); err2 != nil {
+				// Nope, not that either
+				return nil, &ErrInvalidKey{fmt.Sprintf("failed to verify recovery key: %v", err)}
+			}
 		}
 	}
 
@@ -2845,7 +2849,11 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 	switch seal.StoredKeysSupported() {
 	case vaultseal.StoredKeysSupportedGeneric:
 		if err := seal.VerifyRecoveryKey(ctx, combinedKey); err != nil {
-			return nil, fmt.Errorf("recovery key verification failed: %w", err)
+			seal.(*autoSeal).initRecoveryAccess(combinedKey)
+			// This may also be the recovery unseal case, try to verify that instead
+			if err2 := seal.VerifyRecoveryUnsealKey(ctx, combinedKey); err2 != nil {
+				return nil, fmt.Errorf("recovery key verification failed: %w", err)
+			}
 		}
 
 		storedKeys, err := seal.GetStoredKeys(ctx)

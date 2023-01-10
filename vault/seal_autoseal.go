@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
@@ -34,6 +36,7 @@ var (
 // well as logic related to recovery keys and barrier config.
 type autoSeal struct {
 	*seal.Access
+	recoverySeal *seal.Access
 
 	barrierConfig  atomic.Value
 	recoveryConfig atomic.Value
@@ -108,13 +111,30 @@ func (d *autoSeal) RecoveryKeySupported() bool {
 // SetStoredKeys uses the autoSeal.Access.Encrypts method to wrap the keys. The stored entry
 // does not need to be seal wrapped in this case.
 func (d *autoSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
-	return writeStoredKeys(ctx, d.core.physical, d.Access, keys, StoredBarrierKeysPath)
+	if err := writeStoredKeys(ctx, d.core.physical, d.Access, keys, StoredBarrierKeysPath); err != nil {
+		return err
+	}
+	if d.recoverySeal != nil {
+		return writeStoredKeys(ctx, d.core.physical, d.recoverySeal, keys, recoveryUnsealKeyPath)
+	}
+	return nil
 }
 
 // GetStoredKeys retrieves the key shares by unwrapping the encrypted key using the
 // autoseal.
 func (d *autoSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
-	return readStoredKeys(ctx, d.core.physical, d.Access, "")
+	if keys, err := readStoredKeys(ctx, d.core.physical, d.Access, StoredBarrierKeysPath); err != nil {
+		// Try this as a recovery unseal key attempt
+		if d.recoverySeal != nil {
+			d.logger.Warn("error reading store keys using primary seal, trying recovery seal", "error", err)
+			if keys, err2 := readStoredKeys(ctx, d.core.physical, d.recoverySeal, recoveryUnsealKeyPath); err2 == nil {
+				return keys, nil
+			}
+		}
+		return keys, err
+	} else {
+		return keys, nil
+	}
 }
 
 func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
@@ -398,7 +418,26 @@ func (d *autoSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 	return nil
 }
 
+func (d *autoSeal) VerifyRecoveryUnsealKey(ctx context.Context, key []byte) error {
+	if key == nil {
+		return fmt.Errorf("recovery key to verify is nil")
+	}
+
+	pt, err := d.getRecoveryUnsealKeyInternal(ctx)
+	if err != nil {
+		return err
+	}
+
+	if pt == nil {
+		return fmt.Errorf("no recovery unseal key found")
+	}
+
+	return nil
+}
+
 func (d *autoSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
+	d.initRecoveryAccess(key)
+
 	if err := d.checkCore(); err != nil {
 		return err
 	}
@@ -457,6 +496,35 @@ func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
 	}
 
 	return pt, nil
+}
+
+func (d *autoSeal) getRecoveryUnsealKeyInternal(ctx context.Context) ([]byte, error) {
+	pe, err := d.core.physical.Get(ctx, recoveryUnsealKeyPath)
+	if err != nil {
+		d.logger.Error("failed to read recovery unseal key", "error", err)
+		return nil, fmt.Errorf("failed to read recovery unseal key: %w", err)
+	}
+	if pe == nil {
+		d.logger.Warn("no recovery unseal key found")
+		return nil, fmt.Errorf("no recovery unseal key found")
+	}
+
+	blobInfo := &wrapping.BlobInfo{}
+	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
+		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
+	}
+
+	ptj, err := d.recoverySeal.Decrypt(ctx, blobInfo, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt encrypted stored keys: %w", err)
+	}
+
+	var keys [][]byte
+	err = json.Unmarshal(ptj, &keys)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal stored keys: %w", err)
+	}
+	return keys[0], nil
 }
 
 func (d *autoSeal) upgradeRecoveryKey(ctx context.Context) error {
@@ -605,5 +673,13 @@ func (d *autoSeal) StopHealthCheck() {
 	if d.healthCheckStop != nil {
 		close(d.healthCheckStop)
 		d.healthCheckStop = nil
+	}
+}
+
+func (d *autoSeal) initRecoveryAccess(key []byte) {
+	wrapper := aead.NewShamirWrapper()
+	wrapper.SetAesGcmKeyBytes(key)
+	d.recoverySeal = &seal.Access{
+		Wrapper: wrapper,
 	}
 }

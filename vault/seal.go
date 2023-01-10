@@ -42,11 +42,11 @@ const (
 	// recoveryKeyPath is the path to the recovery key
 	recoveryKeyPath = "core/recovery-key"
 
+	// recoveryUnsealKeyPath is the path to the recovery unseal key
+	recoveryUnsealKeyPath = "core/recovery-unseal-key"
+
 	// StoredBarrierKeysPath is the path used for storing HSM-encrypted unseal keys
 	StoredBarrierKeysPath = "core/hsm/barrier-unseal-keys"
-
-	// StoredBarrierRecoveryKeysPath is the path to alternate barrier keys encrypted by the recovery split
-	StoredBarrierRecoveryKeysPath = "core/hsm/barrier-unseal-recovery-keys"
 
 	// hsmStoredIVPath is the path to the initialization vector for stored keys
 	hsmStoredIVPath = "core/hsm/iv"
@@ -77,28 +77,21 @@ type Seal interface {
 	SetCachedRecoveryConfig(*SealConfig)
 	SetRecoveryKey(context.Context, []byte) error
 	VerifyRecoveryKey(context.Context, []byte) error
+	VerifyRecoveryUnsealKey(context.Context, []byte) error
 	GetAccess() *seal.Access
 }
 
 type defaultSeal struct {
-	access   *seal.Access
-	config   atomic.Value
-	core     *Core
-	recovery bool
-}
-
-func NewRecoverySeal(lowLevel *seal.Access) Seal {
-	ret := &defaultSeal{
-		access:   lowLevel,
-		recovery: true,
-	}
-	ret.config.Store((*SealConfig)(nil))
-	return ret
+	access        *seal.Access
+	config        atomic.Value
+	core          *Core
+	unsealKeyPath string
 }
 
 func NewDefaultSeal(lowLevel *seal.Access) Seal {
 	ret := &defaultSeal{
-		access: lowLevel,
+		access:        lowLevel,
+		unsealKeyPath: StoredBarrierKeysPath,
 	}
 	ret.config.Store((*SealConfig)(nil))
 	return ret
@@ -156,13 +149,7 @@ func (d *defaultSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 	if d.LegacySeal() {
 		return fmt.Errorf("stored keys are not supported")
 	}
-	var path string
-	if d.recovery {
-		path = StoredBarrierRecoveryKeysPath
-	} else {
-		path = StoredBarrierKeysPath
-	}
-	return writeStoredKeys(ctx, d.core.physical, d.access, keys, path)
+	return writeStoredKeys(ctx, d.core.physical, d.access, keys, d.unsealKeyPath)
 }
 
 func (d *defaultSeal) LegacySeal() bool {
@@ -177,13 +164,7 @@ func (d *defaultSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
 	if d.LegacySeal() {
 		return nil, fmt.Errorf("stored keys are not supported")
 	}
-	var path string
-	if d.recovery {
-		path = StoredBarrierRecoveryKeysPath
-	} else {
-		path = StoredBarrierKeysPath
-	}
-	keys, err := readStoredKeys(ctx, d.core.physical, d.access, path)
+	keys, err := readStoredKeys(ctx, d.core.physical, d.access, d.unsealKeyPath)
 	return keys, err
 }
 
@@ -306,6 +287,10 @@ func (d *defaultSeal) SetCachedRecoveryConfig(config *SealConfig) {
 
 func (d *defaultSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 	return fmt.Errorf("recovery not supported")
+}
+
+func (d *defaultSeal) VerifyRecoveryUnsealKey(ctx context.Context, key []byte) error {
+	return fmt.Errorf("recovery unseal not supported")
 }
 
 func (d *defaultSeal) SetRecoveryKey(ctx context.Context, key []byte) error {

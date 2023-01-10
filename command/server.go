@@ -2364,7 +2364,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 		}
 	}
-	var createdSeals []vault.Seal = make([]vault.Seal, len(config.Seals))
+	var createdSeals []vault.Seal = make([]vault.Seal, len(config.Seals)+1)
 	for _, configSeal := range config.Seals {
 		sealType := wrapping.WrapperTypeShamir.String()
 		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
@@ -2378,16 +2378,10 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 		c.allLoggers = append(c.allLoggers, sealLogger)
 
-		var defaultSeal vault.Seal
-		if configSeal.Recovery {
-			defaultSeal = vault.NewRecoverySeal(&vaultseal.Access{
-				Wrapper: aeadwrapper.NewShamirWrapper(),
-			})
-		} else {
-			defaultSeal = vault.NewDefaultSeal(&vaultseal.Access{
-				Wrapper: aeadwrapper.NewShamirWrapper(),
-			})
-		}
+		defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
+			Wrapper: aeadwrapper.NewShamirWrapper(),
+		})
+
 		var sealInfoKeys []string
 		sealInfoMap := map[string]string{}
 		wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
@@ -2422,6 +2416,10 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		}
 		createdSeals = append(createdSeals, seal)
 	}
+
+	sealLogger := c.logger.ResetNamed(fmt.Sprintf("recovery seal.%s", wrapping.WrapperTypeShamir.String()))
+	c.allLoggers = append(c.allLoggers, sealLogger)
+
 	return barrierSeal, barrierWrapper, unwrapSeal, createdSeals, sealConfigError, nil
 }
 
@@ -2611,9 +2609,7 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 	}
 }
 
-func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal,
-	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader,
-) vault.CoreConfig {
+func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal, metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader) vault.CoreConfig {
 	coreConfig := &vault.CoreConfig{
 		RawConfig:                      config,
 		Physical:                       backend,

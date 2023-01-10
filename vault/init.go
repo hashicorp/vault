@@ -389,16 +389,13 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 			wrapper := aeadwrapper.NewShamirWrapper()
 			wrapper.SetAesGcmKeyBytes(recoveryKey)
-			recoverySeal := NewRecoverySeal(&seal.Access{
+			c.seal.(*autoSeal).recoverySeal = &seal.Access{
 				Wrapper: wrapper,
-			})
-			recoverySeal.SetCore(c)
-			keysToStore := [][]byte{barrierKey}
-			if err := recoverySeal.SetStoredKeys(ctx, keysToStore); err != nil {
-				c.logger.Error("failed to store recovery keys", "error", err)
-				return nil, fmt.Errorf("failed to store keys: %w", err)
 			}
-			c.recoverySeal = recoverySeal
+			keysToStore := [][]byte{barrierKey}
+			if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
+				c.logger.Error("failed to store recovery keys", "error", err)
+			}
 		}
 	}
 
