@@ -110,7 +110,7 @@ func (c *AgentCommand) Help() string {
 	helpText := `
 Usage: vault agent [options]
 
-  This command starts a Vault agent that can perform automatic authentication
+  This command starts a Vault Agent that can perform automatic authentication
   in certain environments.
 
   Start an agent with a configuration file:
@@ -460,7 +460,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Output the header that the agent has started
 	if !c.logFlags.flagCombineLogs {
-		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
+		c.UI.Output("==> Vault Agent started! Log data will stream in below:\n")
 	}
 
 	var leaseCache *cache.LeaseCache
@@ -781,7 +781,7 @@ func (c *AgentCommand) Run(args []string) int {
 		for {
 			select {
 			case <-c.SighupCh:
-				c.UI.Output("==> Vault agent config reload triggered")
+				c.UI.Output("==> Vault Agent config reload triggered")
 				err := c.reloadConfig(c.flagConfigs)
 				if err != nil {
 					c.outputErrors(err)
@@ -805,7 +805,7 @@ func (c *AgentCommand) Run(args []string) int {
 		for {
 			select {
 			case <-c.ShutdownCh:
-				c.UI.Output("==> Vault agent shutdown triggered")
+				c.UI.Output("==> Vault Agent shutdown triggered")
 				// Notify systemd that the server is shutting down
 				c.notifySystemd(systemd.SdNotifyStopping)
 				// Let the lease cache know this is a shutdown; no need to evict
@@ -933,7 +933,7 @@ func (c *AgentCommand) Run(args []string) int {
 	// Server configuration output
 	padding := 24
 	sort.Strings(infoKeys)
-	c.UI.Output("==> Vault agent configuration:\n")
+	c.UI.Output("==> Vault Agent configuration:\n")
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
