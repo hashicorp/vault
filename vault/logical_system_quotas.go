@@ -36,7 +36,7 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleQuotasConfigUpdate(),
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 						}},
 					},
