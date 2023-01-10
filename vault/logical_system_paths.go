@@ -1342,7 +1342,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 								"keys": {
 									Type:        framework.TypeCommaStringSlice,
 									Description: "A list of lease ids",
-									Required:    true,
+									Required:    false,
 								},
 							},
 						}},
