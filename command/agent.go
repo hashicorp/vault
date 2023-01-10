@@ -792,7 +792,6 @@ func (c *AgentCommand) Run(args []string) int {
 				default:
 				}
 			case <-ctx.Done():
-				c.notifySystemd(systemd.SdNotifyStopping)
 				return nil
 			}
 		}
@@ -807,15 +806,12 @@ func (c *AgentCommand) Run(args []string) int {
 			case <-c.ShutdownCh:
 				c.UI.Output("==> Vault Agent shutdown triggered")
 				// Notify systemd that the server is shutting down
-				c.notifySystemd(systemd.SdNotifyStopping)
-				// Let the lease cache know this is a shutdown; no need to evict
-				// everything
+				// Let the lease cache know this is a shutdown; no need to evict everything
 				if leaseCache != nil {
 					leaseCache.SetShuttingDown(true)
 				}
 				return nil
 			case <-ctx.Done():
-				c.notifySystemd(systemd.SdNotifyStopping)
 				return nil
 			case <-winsvc.ShutdownChannel():
 				return nil
@@ -957,13 +953,14 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
+	var exitCode int
 	if err := g.Run(); err != nil {
 		c.logger.Error("runtime error encountered", "error", err)
 		c.UI.Error("Error encountered during run, refer to logs for more details.")
-		return 1
+		exitCode = 1
 	}
-
-	return 0
+	c.notifySystemd(systemd.SdNotifyStopping)
+	return exitCode
 }
 
 // updateConfig ensures that the config object accurately reflects the desired
