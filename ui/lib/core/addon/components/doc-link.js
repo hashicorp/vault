@@ -9,7 +9,7 @@ import ExternalLink from './external-link';
     <DocLink @path="/docs/secrets/kv/kv-v2.html">Learn about KV v2</DocLink>
  * ```
  *
- * @param path="/"{String} - The path to documentation on developer.hashicorp.com that the component should link to.
+ * @param {string} path="/" - The path to documentation on developer.hashicorp.com that the component should link to.
  *
  */
 export default class DocLinkComponent extends ExternalLink {
