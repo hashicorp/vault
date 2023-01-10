@@ -462,7 +462,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleRekeyDeleteRecovery,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http. StatusNoContent: {{
 							Description: "OK",
 						}},
 					},
