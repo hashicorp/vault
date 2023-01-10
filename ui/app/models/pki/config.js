@@ -18,20 +18,11 @@ export default class PkiConfigModel extends Model {
   @lazyCapabilities(apiPath`${'backend'}/issuers/generate/intermediate/${'type'}`, 'backend', 'type')
   generateIssuerCsrPath;
 
-  get canConfigCa() {
-    return this.configCaPath.get('canCreate') !== false;
-  }
   get canImportBundle() {
     return this.importBundlePath.get('canCreate') !== false;
   }
-  get canGenerateRoot() {
-    return this.generateRootPath.get('canCreate') !== false;
-  }
   get canGenerateIssuerRoot() {
     return this.generateIssuerRootPath.get('canCreate') !== false;
-  }
-  get canGenerateIntermediate() {
-    return this.generateCsrPath.get('canCreate') !== false;
   }
   get canGenerateIssuerIntermediate() {
     return this.generateIssuerCsrPath.get('canCreate') !== false;
