@@ -6,13 +6,13 @@ export default class PkiConfigModel extends Model {
   type: string;
   get backend(): string;
   // apiPaths for capabilities
-  configCaPath: string;
-  generateRootPath: string;
-  generateCsrPath: string;
+  importBundlePath: string;
+  generateIssuerRootPath: string;
+  generateIssuerCsrPath: string;
   crossSignPath: string;
   // Capabilities
-  get canConfigCa(): boolean;
-  get canGenerateRoot(): boolean;
-  get canGenerateIntermediate(): boolean;
+  get canImportBundle(): boolean;
+  get canGenerateIssuerRoot(): boolean;
+  get canGenerateIssuerIntermediate(): boolean;
   get canCrossSign(): boolean;
 }
