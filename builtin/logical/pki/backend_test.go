@@ -1806,6 +1806,16 @@ func TestRolesAltIssuer(t *testing.T) {
 	leafCert = parseCert(t, leafPem)
 	err = leafCert.CheckSignatureFrom(rootBCert)
 	require.NoError(t, err, "should be signed by root-b but wasn't")
+
+	// Validate that we can set an issuer name and remove it.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuer_name": "my-issuer",
+	})
+	require.NoError(t, err)
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuer_name": "",
+	})
+	require.NoError(t, err)
 }
 
 func TestBackend_PathFetchValidRaw(t *testing.T) {
