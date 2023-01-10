@@ -4,7 +4,6 @@ import { setupTest } from 'vault/tests/helpers';
 module('Unit | Serializer | pki/config', function (hooks) {
   setupTest(hooks);
 
-  // Replace this with your real tests.
   test('it exists', function (assert) {
     const store = this.owner.lookup('service:store');
     const serializer = store.serializerFor('pki/config');
