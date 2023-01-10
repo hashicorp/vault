@@ -110,6 +110,7 @@ module('Integration | Component | pki issuer import', function (hooks) {
          @model={{this.model}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
+         @adapterOptions={{hash import=true}}
        />
       `,
       { owner: this.engine }

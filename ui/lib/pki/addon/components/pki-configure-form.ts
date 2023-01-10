@@ -62,11 +62,12 @@ export default class PkiConfigureForm extends Component<Args> {
     return successful ? 'Configuration successful.' : 'Could not complete configuration';
   }
 
-  shouldUseIssuerEndpoint(formType: string, config: PkiConfigModel) {
+  shouldUseIssuerEndpoint() {
+    const { config } = this.args;
     // To determine which endpoint the config adapter should use,
     // we want to check highest-privileged capabilities and use the
     // fallback (issuer path) if user does not have permissions.
-    switch (formType) {
+    switch (this.formType) {
       case 'import':
         return !config.canConfigCa;
       case 'generate-root':
@@ -76,24 +77,5 @@ export default class PkiConfigureForm extends Component<Args> {
       default:
         return false;
     }
-  }
-
-  @action submitForm() {
-    if (!this.args.config) return;
-    const useIssuer = this.shouldUseIssuerEndpoint(this.formType, this.args.config);
-    this.args.config
-      .save({ adapterOptions: { formType: this.formType, useIssuer } })
-      .then(() => {
-        this.flashMessages.success(this.getFlashMessage(this.formType, true));
-        this.router.transitionTo('vault.cluster.secrets.backend.pki.issuers.index');
-      })
-      .catch((e: Error) => {
-        this.flashMessages.danger(errorMessage(e, this.getFlashMessage(this.formType, false)));
-      });
-  }
-
-  @action cancel() {
-    this.args.config.unloadRecord();
-    this.router.transitionTo('vault.cluster.secrets.backend.pki.overview');
   }
 }

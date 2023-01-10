@@ -28,11 +28,11 @@
     {{/each}}
   </div>
   {{#if (eq this.formType "import")}}
-    <PkiConfig::Import
-      @config={{@config}}
-      @onSave={{this.submitForm}}
-      @onCancel={{this.cancel}}
-      @canConfigCa={{@config.canConfigCa}}
+    <PkiCaCertificateImport
+      @model={{@config}}
+      @onCancel={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
+      @onSave={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
+      @adapterOptions={{hash formType=this.formType useIssuer=this.shouldUseIssuerEndpoint}}
     />
   {{else if (eq this.formType "generate-root")}}
     <code>POST /root/generate/:type ~or~ /issuers/generate/root/:type</code>
