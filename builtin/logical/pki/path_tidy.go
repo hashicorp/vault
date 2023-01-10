@@ -662,9 +662,6 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 		return nil
 	}
 
-	b.crlBuilder._revQueue.Lock()
-	defer b.crlBuilder._revQueue.Unlock()
-
 	sc := b.makeStorageContext(ctx, req.Storage)
 	clusters, err := sc.Storage.List(sc.Context, crossRevocationPrefix)
 	if err != nil {
@@ -690,9 +687,7 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 
 			// Check for pause duration to reduce resource consumption.
 			if config.PauseDuration > (0 * time.Second) {
-				b.crlBuilder._revQueue.Unlock()
 				time.Sleep(config.PauseDuration)
-				b.crlBuilder._revQueue.Lock()
 			}
 
 			ePath := cPath + serial

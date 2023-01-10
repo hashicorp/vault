@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -358,4 +359,80 @@ func addWarnings(resp *logical.Response, warnings []string) *logical.Response {
 		resp.AddWarning(warning)
 	}
 	return resp
+}
+
+type revocationQueue struct {
+	_l    sync.Mutex
+	queue map[string][]string
+}
+
+func (q *revocationQueue) initialize() {
+	if q.queue == nil {
+		q.queue = make(map[string][]string)
+	}
+}
+
+func (q *revocationQueue) Add(items ...*revocationQueueEntry) {
+	q._l.Lock()
+	defer q._l.Unlock()
+	q.initialize()
+
+	for _, item := range items {
+		q.queue[item.Serial] = append(q.queue[item.Serial], item.Cluster)
+	}
+}
+
+func (q *revocationQueue) Remove(item *revocationQueueEntry) {
+	q._l.Lock()
+	defer q._l.Unlock()
+	q.initialize()
+
+	clusters, present := q.queue[item.Serial]
+	if !present {
+		return
+	}
+
+	if len(clusters) == 0 || (len(clusters) == 1 && clusters[0] == item.Cluster) {
+		delete(q.queue, item.Serial)
+		return
+	}
+
+	result := clusters
+	for index, cluster := range clusters {
+		if cluster == item.Cluster {
+			result = append(clusters[0:index], clusters[index+1:]...)
+			break
+		}
+	}
+
+	q.queue[item.Serial] = result
+}
+
+func (q *revocationQueue) RemoveAll() {
+	q._l.Lock()
+	defer q._l.Unlock()
+
+	q.queue = nil
+}
+
+func (q *revocationQueue) Iterate() []*revocationQueueEntry {
+	q._l.Lock()
+	defer q._l.Unlock()
+	q.initialize()
+
+	// Heuristic: by storing by serial, occasionally we'll get double entires
+	// if it was already revoked, but otherwise we'll be off by fewer when
+	// building this list.
+	ret := make([]*revocationQueueEntry, 0, len(q.queue))
+
+	for serial, clusters := range q.queue {
+		for _, cluster := range clusters {
+			ret = append(ret, &revocationQueueEntry{
+				Serial:  serial,
+				Cluster: cluster,
+			})
+		}
+	}
+
+	return ret
 }

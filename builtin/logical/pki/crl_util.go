@@ -96,10 +96,9 @@ type crlBuilder struct {
 
 	// Global revocation queue entries get accepted by the invalidate func
 	// and passed to the crlBuilder for processing.
-	_revQueue            sync.Mutex
 	haveInitializedQueue bool
-	revQueue             []*revocationQueueEntry
-	removalQueue         []*revocationQueueEntry
+	revQueue             revocationQueue
+	removalQueue         revocationQueue
 }
 
 const (
@@ -447,49 +446,19 @@ func (cb *crlBuilder) rebuildDeltaCRLsHoldingLock(sc *storageContext, forceNew b
 }
 
 func (cb *crlBuilder) addCertForRevocationCheck(cluster, serial string) {
-	cb._revQueue.Lock()
-	defer cb._revQueue.Unlock()
-
-	found := false
-	for _, value := range cb.revQueue {
-		if value.Cluster == cluster && value.Serial == serial {
-			found = true
-			break
-		}
-	}
-	if found {
-		return
-	}
-
 	entry := &revocationQueueEntry{
 		Cluster: cluster,
 		Serial:  serial,
 	}
-
-	cb.revQueue = append(cb.revQueue, entry)
+	cb.revQueue.Add(entry)
 }
 
 func (cb *crlBuilder) addCertForRevocationRemoval(cluster, serial string) {
-	cb._revQueue.Lock()
-	defer cb._revQueue.Unlock()
-
-	found := false
-	for _, value := range cb.removalQueue {
-		if value.Cluster == cluster && value.Serial == serial {
-			found = true
-			break
-		}
-	}
-	if found {
-		return
-	}
-
 	entry := &revocationQueueEntry{
 		Cluster: cluster,
 		Serial:  serial,
 	}
-
-	cb.removalQueue = append(cb.removalQueue, entry)
+	cb.removalQueue.Add(entry)
 }
 
 func (cb *crlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotPerfPrimary bool) error {
@@ -534,9 +503,9 @@ func (cb *crlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotP
 			// No removal entry yet; add to regular queue. Otherwise, slate it
 			// for removal if we're a perfPrimary.
 			if err != nil || removalEntry == nil {
-				cb.revQueue = append(cb.revQueue, entry)
+				cb.revQueue.Add(entry)
 			} else if !isNotPerfPrimary {
-				cb.removalQueue = append(cb.removalQueue, entry)
+				cb.removalQueue.Add(entry)
 			} else {
 				sc.Backend.Logger().Debug(fmt.Sprintf("ignoring confirmed revoked serial %v: %v vs %v ", serial, err, removalEntry))
 			}
@@ -551,9 +520,6 @@ func (cb *crlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotP
 }
 
 func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
-	cb._revQueue.Lock()
-	defer cb._revQueue.Unlock()
-
 	sc.Backend.Logger().Debug(fmt.Sprintf("starting to process revocation requests"))
 
 	isNotPerfPrimary := sc.Backend.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
@@ -563,9 +529,12 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 		return fmt.Errorf("failed to gather first queue: %v", err)
 	}
 
-	sc.Backend.Logger().Debug(fmt.Sprintf("gathered %v revocations and %v confirmation entries", len(cb.revQueue), len(cb.removalQueue)))
+	revQueue := cb.revQueue.Iterate()
+	removalQueue := cb.removalQueue.Iterate()
 
-	for _, req := range cb.revQueue {
+	sc.Backend.Logger().Debug(fmt.Sprintf("gathered %v revocations and %v confirmation entries", len(revQueue), len(removalQueue)))
+
+	for _, req := range revQueue {
 		sc.Backend.Logger().Debug(fmt.Sprintf("handling revocation request: %v", req))
 		rPath := crossRevocationPrefix + req.Cluster + "/" + req.Serial
 		entry, err := sc.Storage.Get(sc.Context, rPath)
@@ -575,6 +544,7 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 		if entry == nil {
 			// Skipping this entry; it was likely an incorrect invalidation
 			// caused by the primary cluster removing the confirmation.
+			cb.revQueue.Remove(req)
 			continue
 		}
 
@@ -610,13 +580,12 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 			// this err should actually be fatal.
 			return err
 		}
+		cb.revQueue.Remove(req)
 	}
 
-	cb.revQueue = nil
 	if isNotPerfPrimary {
 		sc.Backend.Logger().Debug(fmt.Sprintf("not on perf primary so done; ignoring any revocation confirmations"))
-
-		cb.removalQueue = nil
+		cb.removalQueue.RemoveAll()
 		cb.haveInitializedQueue = true
 		return nil
 	}
@@ -626,7 +595,7 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 		return err
 	}
 
-	for _, entry := range cb.removalQueue {
+	for _, entry := range removalQueue {
 		sc.Backend.Logger().Debug(fmt.Sprintf("handling revocation confirmation: %v", entry))
 		// First remove the revocation request.
 		for cIndex, cluster := range clusters {
@@ -640,9 +609,10 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 		if err := sc.Storage.Delete(sc.Context, crossRevocationPrefix+entry.Cluster+"/"+entry.Serial+"/confirmed"); err != nil {
 			return fmt.Errorf("failed to delete cross-cluster revocation confirmation entry for cluster %v and serial %v: %w", entry.Cluster, entry.Serial, err)
 		}
+
+		cb.removalQueue.Remove(entry)
 	}
 
-	cb.removalQueue = nil
 	cb.haveInitializedQueue = true
 
 	return nil
