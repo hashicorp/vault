@@ -1299,9 +1299,10 @@ func (c *AgentCommand) loadConfig(paths []string) (*agentConfig.Config, error) {
 // If config is retrieved without error it is stored in the config field of the AgentCommand.
 // This operation is not atomic and could result in updated config but partially applied config settings.
 // The error returned from this func may be a multierror.
+// This function will most likely be called due to Vault Agent receiving a SIGHUP signal.
 // Currently only reloading the following are supported:
 // * log level
-// * TLS certs are supported
+// * TLS certs for listeners
 func (c *AgentCommand) reloadConfig(paths []string) error {
 	// Notify systemd that the server is reloading
 	c.notifySystemd(systemd.SdNotifyReloading)
