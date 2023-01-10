@@ -3,12 +3,10 @@ package framework
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -237,65 +235,35 @@ type Response struct {
 	Example     *logical.Response       // example response data
 }
 
-// ValidateResponse validates whether the given response object
-// conforms to the response schema (Fields). It ensures that every required
-// field defined in the schema is present in the response data map and is of
-// the correct type. In "strict" mode, the function also ensures that the data
-// map does not have any fields that are not defined within the schema.
-func (r *Response) ValidateResponse(response *logical.Response, strict bool) error {
+// ValidateLogicalResponse validates whether the given response object conforms
+// to the response schema (response.Fields). It cycles through the data map and
+// validates conversions in the schema. In "strict" mode, this function will
+// also ensure that the data map has all schema-required fields and does not
+// have any fields outside of the schema.
+func (r *Response) ValidateLogicalResponse(response *logical.Response, strict bool) error {
 	if response != nil {
 		return r.ValidateResponseData(response.Data, strict)
 	}
 
-	return r.ValidateResponseData(map[string]interface{}{}, strict)
+	return r.ValidateResponseData(nil, strict)
 }
 
-// ValidateResponseData validates whether the given response data object
-// conforms to the response schema (Fields). It ensures that every required
-// field defined in the schema is present in the response data map and is of
-// the correct type. In "strict" mode, the function also ensures that the data
-// map does not have any fields that are not defined within the schema.
+// ValidateResponse validates whether the given response data map conforms to
+// the response schema (response.Fields). It cycles through the data map and
+// validates conversions in the schema. In "strict" mode, this function will
+// also ensure that the data map has all schema-required fields and does not
+// have any fields outside of the schema.
 func (r *Response) ValidateResponseData(data map[string]interface{}, strict bool) error {
-	for name, schema := range r.Fields {
-		if !schema.Required {
-			continue
-		}
-
-		if _, ok := data[name]; !ok {
-			return fmt.Errorf("missing required field %q", name)
-		}
-
-		dataType := reflect.TypeOf(data[name])
-
-		// special handling for []*sockaddr.SockAddrMarshaler -> []string
-		if dataType == reflect.TypeOf([]*sockaddr.SockAddrMarshaler{}) {
-			dataType = reflect.TypeOf([]string{})
-		}
-
-		if !dataType.ConvertibleTo(reflect.TypeOf(schema.Type.Zero())) {
-			return fmt.Errorf(
-				"invalid type for field %q, expected: convertible to %v, got: %v",
-				name,
-				reflect.TypeOf(schema.Type.Zero()),
-				dataType,
-			)
-		}
+	fd := FieldData{
+		Raw:    data,
+		Schema: r.Fields,
 	}
 
-	if !strict {
-		return nil // early return
+	if strict {
+		return fd.ValidateStrict()
 	}
 
-	for name := range data {
-		if _, ok := r.Fields[name]; !ok {
-			return fmt.Errorf(
-				"field %q not found in response schema",
-				name,
-			)
-		}
-	}
-
-	return nil
+	return fd.Validate()
 }
 
 // PathOperation is a concrete implementation of OperationHandler.
