@@ -598,6 +598,21 @@ scenario "replication" {
     value       = step.create_vault_primary_cluster.vault_unseal_keys_hex
   }
 
+  output "vault_primary_cluster_recovery_key_shares" {
+    description = "The Vault primary cluster recovery key shares"
+    value       = step.create_vault_cluster.vault_recovery_key_shares
+  }
+
+  output "vault_primary_cluster_recovery_keys_b64" {
+    description = "The Vault primary cluster recovery keys b64"
+    value       = step.create_vault_cluster.vault_recovery_keys_b64
+  }
+
+  output "vault_primary_cluster_recovery_keys_hex" {
+    description = "The Vault primary cluster recovery keys hex"
+    value       = step.create_vault_cluster.vault_recovery_keys_hex
+  }
+
   output "vault_secondary_cluster_pub_ips" {
     description = "The Vault secondary cluster public IPs"
     value       = step.create_vault_secondary_cluster.instance_public_ips

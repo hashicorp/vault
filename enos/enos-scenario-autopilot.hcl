@@ -370,6 +370,21 @@ scenario "autopilot" {
     value       = step.create_vault_cluster.vault_unseal_keys_b64
   }
 
+  output "vault_cluster_recovery_key_shares" {
+    description = "The Vault cluster recovery key shares"
+    value       = step.create_vault_cluster.vault_recovery_key_shares
+  }
+
+  output "vault_cluster_recovery_keys_b64" {
+    description = "The Vault cluster recovery keys b64"
+    value       = step.create_vault_cluster.vault_recovery_keys_b64
+  }
+
+  output "vault_cluster_recovery_keys_hex" {
+    description = "The Vault cluster recovery keys hex"
+    value       = step.create_vault_cluster.vault_recovery_keys_hex
+  }
+
   output "vault_cluster_unseal_keys_hex" {
     description = "The Vault cluster unseal keys hex"
     value       = step.create_vault_cluster.vault_unseal_keys_hex
