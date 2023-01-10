@@ -51,6 +51,15 @@ Base64 encoded nonce value used during encryption. Must be provided if
 convergent encryption is enabled for this key and the key was generated with
 Vault 0.6.1. Not required for keys created in 0.6.2+.`,
 			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be decrypted in a single batch. When this
+parameter is set, if the parameters 'ciphertext', 'context' and 'nonce' are
+also set, they will be ignored. Any batch output will preserve the order
+of the batch input.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
