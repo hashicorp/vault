@@ -98,10 +98,10 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	switch version {
 	case "":
 		for k, v := range p.Keys {
-            // If key version only consists of a public key, continue?
-            if v.IsPublicKeyImported() {
-                continue
-            }
+			// If key version only consists of a public key, continue?
+			if v.IsPublicKeyImported() {
+				continue
+			}
 
 			exportKey, err := getExportKey(p, &v, exportType)
 			if err != nil {
@@ -130,10 +130,10 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 			return logical.ErrorResponse("version does not exist or cannot be found"), logical.ErrInvalidRequest
 		}
 
-        // If key version only consists of a public key, continue?
-        if key.IsPublicKeyImported() {
-            return nil, err
-        }
+		// If key version only consists of a public key, continue?
+		if key.IsPublicKeyImported() {
+			return nil, err
+		}
 
 		exportKey, err := getExportKey(p, &key, exportType)
 		if err != nil {
@@ -218,9 +218,9 @@ func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string,
 		return "", errors.New("nil KeyEntry provided")
 	}
 
-    if k.IsPublicKeyImported() {
-        return "", nil
-    }
+	if k.IsPublicKeyImported() {
+		return "", nil
+	}
 
 	privKey := &ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{
