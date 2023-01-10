@@ -689,8 +689,6 @@ func (c *AgentCommand) Run(args []string) int {
 			ln = lnBundle.Listener
 
 			// Track the reload func, so we can reload later if needed.
-			// NOTE: If we plan to reload entire listeners at some point it won't be enough to just
-			// throw the reload func into a slice and call it later.
 			c.tlsReloadFuncs = append(c.tlsReloadFuncs, lnBundle.TLSReloadFunc)
 		}
 
