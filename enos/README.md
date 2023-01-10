@@ -135,6 +135,55 @@ The [`replication` scenario](./enos-scenario-replication.hcl) creates two 3-node
 
  This scenario verifies the performance replication status on both clusters to have their connection_status as "connected" and that the secondary cluster has known_primaries cluster addresses updated to the active nodes IP addresses of the primary Vault cluster. This scenario currently works around issues VAULT-12311 and VAULT-12309.  The scenario fails when the primary storage backend is Consul due to issue VAULT-12332
 
+## UI Tests
+The [`ui` scenario](./enos-scenario-ui.hcl) creates a Vault cluster (deployed to AWS) using a version 
+built from the current checkout of the project. Once the cluster is available the UI acceptance tests
+are run in a headless browser.
+### Variables
+In addition to the required variables that must be set, as described in the [Scenario Variables](#Scenario Variables), 
+the `ui` scenario has two optional variables:
+
+**ui_test_filter** - An optional test filter to limit the tests that are run, i.e. `'!enterprise'`.
+To set a filter export the variable as follows:
+```shell
+> export ENOS_VAR_ui_test_filter="some filter"
+```
+**ui_run_tests** - An optional boolean variable to run or not run the tests. The default value is true. 
+Setting this value to false is useful in the case where you want to create a cluster, but run the tests 
+manually. The section [Running the Tests](#Running the Tests) describes the different ways to run the
+'UI' acceptance tests.
+
+### Running the Tests
+The UI tests can be run fully automated or manually.
+#### Fully Automated
+The following will deploy the cluster, run the tests, and subsequently tear down the cluster: 
+```shell
+> export ENOS_VAR_ui_test_filter="some filter" # <-- optional
+> cd enos
+> enos scenario ui run edition:oss
+```
+#### Manually
+The UI tests can be run manually as follows:
+```shell
+> export ENOS_VAR_ui_test_filter="some filter" # <-- optional
+> cd enos
+> enos scenario ui launch edition:oss
+# once complete the scenario will output a set of environment variables that must be exported. The 
+# output will look as follows:
+#   export TEST_FILTER="<some filter>"
+#   export VAULT_ADDR="http://<some ip address>:8200"
+#   export VAULT_TOKEN="<some token>"
+#   export VAULT_UNSEAL_KEYS="[\"<some key>\",\"<some key>\",\"<some key>\"]"
+# copy and paste the above outputs into the terminal to export the values
+> cd ../ui
+> yarn test:enos # run headless
+# or
+> yarn test:enos -s # run manually in a web browser 
+# once testing is complete
+> cd ../enos
+> enos scenario ui destroy edition:oss
+```
+
 # Variants
 Both scenarios support a matrix of variants. In order to achieve broad coverage while
 keeping test run time reasonable, the variants executed by the `enos-run` Github
