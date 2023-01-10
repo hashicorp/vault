@@ -7,6 +7,7 @@ import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
 import { action } from '@ember/object';
 import PkiConfigModel from 'vault/models/pki/config';
+import { tracked } from '@glimmer/tracking';
 
 interface Args {
   config: PkiConfigModel;
@@ -23,6 +24,7 @@ export default class PkiConfigureForm extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
+  @tracked formType = '';
 
   get configTypes() {
     return [
@@ -60,17 +62,33 @@ export default class PkiConfigureForm extends Component<Args> {
     return successful ? 'Configuration successful.' : 'Could not complete configuration';
   }
 
+  shouldUseIssuerEndpoint(formType: string, config: PkiConfigModel) {
+    // To determine which endpoint the config adapter should use,
+    // we want to check highest-privileged capabilities and use the
+    // fallback (issuer path) if user does not have permissions.
+    switch (formType) {
+      case 'import':
+        return !config.canConfigCa;
+      case 'generate-root':
+        return !config.canGenerateRoot;
+      case 'generate-csr':
+        return !config.canGenerateIntermediate;
+      default:
+        return false;
+    }
+  }
+
   @action submitForm() {
-    const { formType } = this.args.config;
     if (!this.args.config) return;
+    const useIssuer = this.shouldUseIssuerEndpoint(this.formType, this.args.config);
     this.args.config
-      .save()
+      .save({ adapterOptions: { formType: this.formType, useIssuer } })
       .then(() => {
-        this.flashMessages.success(this.getFlashMessage(formType, true));
+        this.flashMessages.success(this.getFlashMessage(this.formType, true));
         this.router.transitionTo('vault.cluster.secrets.backend.pki.issuers.index');
       })
       .catch((e: Error) => {
-        this.flashMessages.danger(errorMessage(e, this.getFlashMessage(formType, false)));
+        this.flashMessages.danger(errorMessage(e, this.getFlashMessage(this.formType, false)));
       });
   }
 

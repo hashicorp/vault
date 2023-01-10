@@ -2,7 +2,7 @@
   <div class="columns">
     {{#each this.configTypes as |option|}}
       <div class="column is-flex">
-        <label for={{option.key}} class="box-label is-column {{if (eq @config.formType option.key) 'is-selected'}}">
+        <label for={{option.key}} class="box-label is-column {{if (eq this.formType option.key) 'is-selected'}}">
           <div>
             <h3 class="box-label-header title is-6">
               <Icon @size="24" @name={{option.icon}} />
@@ -17,8 +17,8 @@
               id={{option.key}}
               name="pki-config-type"
               @value={{option.key}}
-              @groupValue={{@config.formType}}
-              @onChange={{fn (mut @config.formType) option.key}}
+              @groupValue={{this.formType}}
+              @onChange={{fn (mut this.formType) option.key}}
               data-test-pki-config-option={{option.key}}
             />
             <label for={{option.key}}></label>
@@ -27,12 +27,17 @@
       </div>
     {{/each}}
   </div>
-  {{#if (eq @config.formType "import")}}
-    <PkiConfig::Import @config={{@config}} @onSave={{this.submitForm}} @onCancel={{this.cancel}} />
-  {{else if (eq @config.formType "generate-root")}}
-    <code>POST /pki/issuers/generate/root/:type</code>
-  {{else if (eq @config.formType "generate-csr")}}
-    <code>POST /pki/issuers/generate/intermediate/:type</code>
+  {{#if (eq this.formType "import")}}
+    <PkiConfig::Import
+      @config={{@config}}
+      @onSave={{this.submitForm}}
+      @onCancel={{this.cancel}}
+      @canConfigCa={{@config.canConfigCa}}
+    />
+  {{else if (eq this.formType "generate-root")}}
+    <code>POST /root/generate/:type ~or~ /issuers/generate/root/:type</code>
+  {{else if (eq this.formType "generate-csr")}}
+    <code>POST /intermediate/generate/:type ~or~ /issuers/generate/intermediate/:type</code>
   {{else}}
     <EmptyState @title="Choose an option" @message="To see configuration options, choose your desired output above." />
     <div class="field is-grouped box is-fullwidth is-bottomless">
