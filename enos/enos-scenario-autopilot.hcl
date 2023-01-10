@@ -40,7 +40,7 @@ scenario "autopilot" {
       arm64 = "t4g.small"
     }
 
-    enable_undo_logs = matrix.undo_logs_status == "1" && semverconstraint(var.vault_product_version, ">=1.12.0-0") ? true : false
+    enable_undo_logs = matrix.undo_logs_status == "1" && semverconstraint(var.vault_product_version, ">=1.13.0-0") ? true : false
 
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
     vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
@@ -240,7 +240,7 @@ scenario "autopilot" {
   }
 
   step "verify_undo_logs_status" {
-    skip_step = semverconstraint(var.vault_product_version, "<1.12.0-0")
+    skip_step = semverconstraint(var.vault_product_version, "<1.13.0-0")
     module    = module.vault_verify_undo_logs
     depends_on = [
       step.upgrade_vault_cluster_with_autopilot,
