@@ -544,6 +544,15 @@
         ]
       },
       {
+        "title": "<code>pki</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/pki"
+          }
+        ]
+      },
+      {
         "title": "<code>lease</code>",
         "routes": [
           {
