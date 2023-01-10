@@ -7,6 +7,7 @@ import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
 import PkiBaseCertificateModel from 'vault/models/pki/certificate/base';
+import PkiConfigModel from 'vault/models/pki/config';
 
 /**
  * @module PkiCaCertificateImport
@@ -26,7 +27,8 @@ import PkiBaseCertificateModel from 'vault/models/pki/certificate/base';
 interface Args {
   onSave: CallableFunction;
   onCancel: CallableFunction;
-  model: PkiBaseCertificateModel;
+  model: PkiBaseCertificateModel | PkiConfigModel;
+  adapterOptions: object | undefined;
 }
 
 export default class PkiCaCertificateImport extends Component<Args> {
@@ -39,7 +41,7 @@ export default class PkiCaCertificateImport extends Component<Args> {
   *submitForm(event: Event) {
     event.preventDefault();
     try {
-      yield this.args.model.save({ adapterOptions: { import: true } });
+      yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
       this.flashMessages.success('Successfully imported certificate.');
       this.args.onSave();
     } catch (error) {
