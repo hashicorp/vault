@@ -350,7 +350,7 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: r.handleRawDelete,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 						}},
 					},
