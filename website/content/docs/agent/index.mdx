@@ -186,7 +186,7 @@ These are the currently-available general configuration options:
 
 - `listener` <code>([listener][listener]: <optional\>)</code> - Specifies the addresses and ports on which the Agent will respond to requests.
 
-  ~> **Note:** On `SIGHUP` (`sudo kill -s HUP {PID of vault}`), Vault Agent will attempt to reload listener TLS configuration.
+  ~> **Note:** On `SIGHUP` (`kill -SIGHUP $(pidof vault)`), Vault Agent will attempt to reload listener TLS configuration.
   This method can be used to refresh certificates used by Vault Agent without having to restart its process.
 
 - `pid_file` `(string: "")` - Path to the file in which the agent's Process ID
@@ -216,7 +216,7 @@ These are the currently-available general configuration options:
 
 - `log_level` - Equivalent to the [`-log-level` command-line flag](#_log_level).
 
-  ~> **Note:** On `SIGHUP` (`sudo kill -s HUP {PID of vault}`), Vault Agent will update the log level to the value
+  ~> **Note:** On `SIGHUP` (`kill -SIGHUP $(pidof vault)`), Vault Agent will update the log level to the value
   specified by configuration file (including overriding values set using CLI or environment variable parameters).
 
 - `log_format` - Equivalent to the [`-log-format` command-line flag](#_log_format).
