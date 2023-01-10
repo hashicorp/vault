@@ -95,7 +95,7 @@ type AgentCommand struct {
 	cleanupGuard sync.Once
 
 	startedCh  chan struct{} // for tests
-	reloadedCh chan struct{}
+	reloadedCh chan struct{} // for tests
 
 	flagConfigs        []string
 	flagExitAfterAuth  bool
