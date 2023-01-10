@@ -813,9 +813,6 @@ func (c *AgentCommand) Run(args []string) int {
 				if leaseCache != nil {
 					leaseCache.SetShuttingDown(true)
 				}
-				if c.reloadedCh != nil {
-					close(c.reloadedCh)
-				}
 				return nil
 			case <-ctx.Done():
 				c.notifySystemd(systemd.SdNotifyStopping)
