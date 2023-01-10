@@ -14,9 +14,9 @@ interface Args {
 /**
  * @module PkiConfigureForm
  * PkiConfigureForm component is used to configure a PKI engine mount.
- * The component shows three options for configuration and handles
- * the save and cancel actions. The sub-forms rendered handle which
- * attributes of the form is shown, based on the formType
+ * The component shows three options for configuration and which form
+ * is shown. The sub-forms rendered handle rendering the form itself
+ * and form submission and cancel actions.
  */
 export default class PkiConfigureForm extends Component<Args> {
   @service declare readonly store: Store;
@@ -48,16 +48,6 @@ export default class PkiConfigureForm extends Component<Args> {
           'Generate a new CSR for signing, optionally generating a new private key. No new issuer is created by this call.',
       },
     ];
-  }
-
-  getFlashMessage(type: string, successful: boolean): string {
-    if (type === 'import') {
-      return successful
-        ? 'Successfully imported the certificate.'
-        : 'Could not import the given certificate.';
-    }
-    // TODO: Fill in messages based on type
-    return successful ? 'Configuration successful.' : 'Could not complete configuration';
   }
 
   shouldUseIssuerEndpoint() {
