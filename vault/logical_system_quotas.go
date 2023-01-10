@@ -129,7 +129,7 @@ from any further requests until after the 'block_interval' has elapsed.`,
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasUpdate(),
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 						}},
 					},
