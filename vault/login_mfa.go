@@ -686,12 +686,12 @@ func (b *LoginMFABackend) sanitizeMethodNameSameNamespace(ns *namespace.Namespac
 		return "", nil
 	}
 
-	if ns == nil {
-		return "", fmt.Errorf("namespace cannot be nil")
-	}
-
 	if !strings.Contains(name, "/") {
 		return name, nil
+	}
+
+	if ns == nil {
+		return "", fmt.Errorf("namespace cannot be nil")
 	}
 
 	// method name
