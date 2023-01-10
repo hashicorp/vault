@@ -33,6 +33,7 @@ export default class MountBackendForm extends Component {
   willDestroy() {
     // if unsaved, we want to unload so it doesn't show up in the auth mount list
     super.willDestroy(...arguments);
+    // if (this.args.mountModel) this.args.mountModel.unloadRecord();
     this.args.mountModel.rollbackAttributes();
   }
 
