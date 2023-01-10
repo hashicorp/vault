@@ -1,6 +1,7 @@
 scenario "ui" {
   matrix {
     edition = ["oss", "ent"]
+    backend = ["consul", "raft"]
   }
 
   terraform_cli = terraform_cli.default
@@ -11,11 +12,11 @@ scenario "ui" {
   ]
 
   locals {
-    arch          = "amd64"
-    backend       = "raft"
-    distro        = "ubuntu"
-    seal          = "awskms"
-    artifact_type = "bundle"
+    arch           = "amd64"
+    distro         = "ubuntu"
+    seal           = "awskms"
+    artifact_type  = "bundle"
+    consul_version = "1.14.2"
     build_tags = {
       "oss" = ["ui"]
       "ent" = ["ui", "enterprise", "ent"]
@@ -37,7 +38,7 @@ scenario "ui" {
       ubuntu = "/usr/bin"
     }
     vault_install_dir = var.vault_install_dir
-    ui_test_filter = var.ui_test_filter != null ? var.ui_test_filter : (matrix.edition == "oss") ? "!enterprise" : null
+    ui_test_filter    = var.ui_test_filter != null ? var.ui_test_filter : (matrix.edition == "oss") ? "!enterprise" : null
   }
 
   step "get_local_metadata" {
@@ -88,10 +89,31 @@ scenario "ui" {
     }
   }
 
+  step "create_backend_cluster" {
+    module     = "backend_${matrix.backend}"
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      ami_id      = step.create_vpc.ami_ids["ubuntu"]["amd64"]
+      common_tags = local.tags
+      consul_release = {
+        edition = var.backend_edition
+        version = local.consul_version
+      }
+      instance_type = var.backend_instance_type
+      kms_key_arn   = step.create_vpc.kms_key_arn
+      vpc_id        = step.create_vpc.vpc_id
+    }
+  }
+
   step "create_vault_cluster" {
     module = module.vault_cluster
     depends_on = [
-      step.create_vpc,
+      step.create_backend_cluster,
       step.build_vault,
     ]
 
@@ -102,9 +124,10 @@ scenario "ui" {
     variables {
       ami_id                    = step.create_vpc.ami_ids[local.distro][local.arch]
       common_tags               = local.tags
+      consul_cluster_tag        = step.create_backend_cluster.consul_cluster_tag
       instance_type             = local.vault_instance_type
       kms_key_arn               = step.create_vpc.kms_key_arn
-      storage_backend           = local.backend
+      storage_backend           = matrix.backend
       unseal_method             = local.seal
       vault_local_artifact_path = local.bundle_path
       vault_install_dir         = local.vault_install_dir

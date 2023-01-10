@@ -166,15 +166,16 @@ The following will deploy the cluster, run the tests, and subsequently tear down
 The UI tests can be run manually as follows:
 ```shell
 > export ENOS_VAR_ui_test_filter="some filter" # <-- optional
+> export ENOS_VAR_ui_run_tests=false
 > cd enos
 > enos scenario ui launch edition:oss
 # once complete the scenario will output a set of environment variables that must be exported. The 
 # output will look as follows:
-#   export TEST_FILTER="<some filter>"
-#   export VAULT_ADDR="http://<some ip address>:8200"
-#   export VAULT_TOKEN="<some token>"
-#   export VAULT_UNSEAL_KEYS="[\"<some key>\",\"<some key>\",\"<some key>\"]"
-# copy and paste the above outputs into the terminal to export the values
+export TEST_FILTER='some filter>' \
+export VAULT_ADDR='http://<some ip address>:8200' \
+export VAULT_TOKEN='<some token>' \
+export VAULT_UNSEAL_KEYS='["<some key>","<some key>","<some key>"]'
+# copy and paste the above into the terminal to export the values
 > cd ../ui
 > yarn test:enos # run headless
 # or
