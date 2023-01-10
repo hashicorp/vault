@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -943,6 +944,17 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["random"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["random"][1]),
+		},
+
+		{
+			Pattern: "tools/error-response",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: func(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+						return logical.ErrorResponse("this is an error!"), nil
+					},
+				},
+			},
 		},
 	}
 }
