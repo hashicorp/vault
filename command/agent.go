@@ -211,7 +211,7 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Info("No auto_auth block found in config, the automatic authentication feature will not be started")
 	}
 
-	c.updateConfig(f, config) // This only needs to happen on start-up to aggregate config from flags and env vars
+	c.applyConfigOverrides(f, config) // This only needs to happen on start-up to aggregate config from flags and env vars
 	c.config = config
 
 	l, err := c.newLogger()
@@ -961,16 +961,16 @@ func (c *AgentCommand) Run(args []string) int {
 	return exitCode
 }
 
-// updateConfig ensures that the config object accurately reflects the desired
+// applyConfigOverrides ensures that the config object accurately reflects the desired
 // settings as configured by the user. It applies the relevant config setting based
 // on the precedence (env var overrides file config, cli overrides env var).
 // It mutates the config object supplied.
-func (c *AgentCommand) updateConfig(f *FlagSets, config *agentConfig.Config) {
+func (c *AgentCommand) applyConfigOverrides(f *FlagSets, config *agentConfig.Config) {
 	if config.Vault == nil {
 		config.Vault = &agentConfig.Vault{}
 	}
 
-	f.updateLogConfig(config.SharedConfig)
+	f.applyLogConfigOverrides(config.SharedConfig)
 
 	f.Visit(func(fl *flag.Flag) {
 		if fl.Name == flagNameAgentExitAfterAuth {
@@ -1228,16 +1228,6 @@ func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
 		errors = multierror.Append(errors, err)
 	}
 
-	logRotateBytes, err := parseutil.ParseInt(c.config.LogRotateBytes)
-	if err != nil {
-		errors = multierror.Append(errors, err)
-	}
-
-	logRotateMaxFiles, err := parseutil.ParseInt(c.config.LogRotateMaxFiles)
-	if err != nil {
-		errors = multierror.Append(errors, err)
-	}
-
 	if errors != nil {
 		return nil, errors
 	}
@@ -1248,8 +1238,8 @@ func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
 		LogFormat:         logFormat,
 		LogFilePath:       c.config.LogFile,
 		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    int(logRotateBytes),
-		LogRotateMaxFiles: int(logRotateMaxFiles),
+		LogRotateBytes:    c.config.LogRotateBytes,
+		LogRotateMaxFiles: c.config.LogRotateMaxFiles,
 	}
 
 	l, err := logging.Setup(logCfg, c.logWriter)

@@ -41,9 +41,9 @@ type SharedConfig struct {
 	LogFormat         string `hcl:"log_format"`
 	LogLevel          string `hcl:"log_level"`
 	LogFile           string `hcl:"log_file"`
-	LogRotateBytes    string `hcl:"log_rotate_bytes"`
+	LogRotateBytes    int    `hcl:"log_rotate_bytes"`
 	LogRotateDuration string `hcl:"log_rotate_duration"`
-	LogRotateMaxFiles string `hcl:"log_rotate_max_files"`
+	LogRotateMaxFiles int    `hcl:"log_rotate_max_files"`
 
 	PidFile string `hcl:"pid_file"`
 

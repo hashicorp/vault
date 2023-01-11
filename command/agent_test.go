@@ -2110,7 +2110,7 @@ func TestAgent_LogFile_CliOverridesConfig(t *testing.T) {
 	}
 
 	// Update the config based on the inputs.
-	cmd.updateConfig(f, cfg)
+	cmd.applyConfigOverrides(f, cfg)
 
 	assert.NotEqual(t, "TMPDIR/juan.log", cfg.LogFile)
 	assert.NotEqual(t, "/squiggle/logs.txt", cfg.LogFile)
@@ -2136,7 +2136,7 @@ func TestAgent_LogFile_Config(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cmd.updateConfig(f, cfg)
+	cmd.applyConfigOverrides(f, cfg)
 
 	assert.Equal(t, "TMPDIR/juan.log", cfg.LogFile, "actual config check")
 }
