@@ -7,7 +7,6 @@ import errorMessage from 'vault/utils/error-message';
 import trimRight from 'vault/utils/trim-right';
 import { waitFor } from '@ember/test-waiters';
 
-// TODO: convert to typescript after https://github.com/hashicorp/vault/pull/18387 is merged
 /**
  * @module PkiKeyImport
  * PkiKeyImport components are used to import PKI keys.
