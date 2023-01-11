@@ -343,11 +343,9 @@ func TestPredict_Plugins(t *testing.T) {
 			[]string{
 				"ad",
 				"alicloud",
-				"app-id",
 				"approle",
 				"aws",
 				"azure",
-				"cassandra",
 				"cassandra-database-plugin",
 				"centrify",
 				"cert",
@@ -367,13 +365,10 @@ func TestPredict_Plugins(t *testing.T) {
 				"kubernetes",
 				"kv",
 				"ldap",
-				"mongodb",
 				"mongodb-database-plugin",
 				"mongodbatlas",
 				"mongodbatlas-database-plugin",
-				"mssql",
 				"mssql-database-plugin",
-				"mysql",
 				"mysql-aurora-database-plugin",
 				"mysql-database-plugin",
 				"mysql-legacy-database-plugin",
@@ -385,7 +380,6 @@ func TestPredict_Plugins(t *testing.T) {
 				"openldap",
 				"pcf", // Deprecated.
 				"pki",
-				"postgresql",
 				"postgresql-database-plugin",
 				"rabbitmq",
 				"radius",
@@ -439,7 +433,7 @@ func TestPredict_Plugins(t *testing.T) {
 					}
 				}
 				if !reflect.DeepEqual(act, tc.exp) {
-					t.Errorf("expected:%q, got: %q", tc.exp, act)
+					t.Errorf("expected: %q, got: %q, diff: %v", tc.exp, act, strutil.Difference(act, tc.exp, true))
 				}
 			})
 		}

@@ -42,6 +42,11 @@ export default class PkiCertificateBaseModel extends Model {
   @attr('date') notValidAfter;
   @attr('date') notValidBefore;
 
+  // For importing
+  @attr('string') pemBundle;
+  @attr importedIssuers;
+  @attr importedKeys;
+
   @lazyCapabilities(apiPath`${'backend'}/revoke`, 'backend') revokePath;
   get canRevoke() {
     return this.revokePath.get('isLoading') || this.revokePath.get('canCreate') !== false;
