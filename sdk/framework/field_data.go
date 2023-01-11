@@ -71,7 +71,7 @@ func (d *FieldData) ValidateStrict() error {
 
 	for field := range d.Raw {
 		if _, _, err := d.GetOkErr(field); err != nil {
-			return err
+			return fmt.Errorf("field %q: %w", field, err)
 		}
 	}
 
