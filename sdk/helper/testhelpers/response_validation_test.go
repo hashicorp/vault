@@ -2,6 +2,7 @@ package testhelpers
 
 import (
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -152,6 +153,78 @@ func TestValidateResponse(t *testing.T) {
 			response: &logical.Response{
 				Data: map[string]interface{}{
 					"foo": "bar",
+				},
+			},
+			strict:        false,
+			errorExpected: false,
+		},
+
+		"time schema, string response, strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"time": {
+						Type: framework.TypeTime,
+						Required: true,
+					},
+				},
+			},
+			response: &logical.Response{
+				Data: map[string]interface{}{
+					"time": "2024-12-11T09:08:07Z",
+				},
+			},
+			strict:        true,
+			errorExpected: false,
+		},
+
+		"time schema, string response, not strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"time": {
+						Type: framework.TypeTime,
+						Required: true,
+					},
+				},
+			},
+			response: &logical.Response{
+				Data: map[string]interface{}{
+					"time": "2024-12-11T09:08:07Z",
+				},
+			},
+			strict:        false,
+			errorExpected: false,
+		},
+
+		"time schema, time response, strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"time": {
+						Type: framework.TypeTime,
+						Required: true,
+					},
+				},
+			},
+			response: &logical.Response{
+				Data: map[string]interface{}{
+					"time": time.Date(2024, 12, 11, 9, 8, 7, 0, time.UTC),
+				},
+			},
+			strict:        true,
+			errorExpected: false,
+		},
+
+		"time schema, time response, not strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"time": {
+						Type: framework.TypeTime,
+						Required: true,
+					},
+				},
+			},
+			response: &logical.Response{
+				Data: map[string]interface{}{
+					"time": time.Date(2024, 12, 11, 9, 8, 7, 0, time.UTC),
 				},
 			},
 			strict:        false,
