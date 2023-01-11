@@ -442,6 +442,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		enginePath := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
 
 		runCommand := func(methodIdentifier string) {
+			// the time required for the totp engine to generate a new code
 			time.Sleep(21 * time.Second)
 			totpCode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath)
 
