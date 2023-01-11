@@ -1,22 +1,25 @@
+{{yield}}
 {{#each this.inputList as |row index|}}
   <div class="field is-grouped">
     {{#each-in row as |key value|}}
-      <div class="control is-expanded">
-        {{#if (eq index 0)}}
-          {{#let (find-by "name" key @objectKeys) as |field|}}
+      {{#let (find-by "key" key @objectKeys) as |field|}}
+        <div class="control is-expanded">
+          {{#if (eq index 0)}}
             <h2>{{field.label}}</h2>
-          {{/let}}
-        {{/if}}
-        <Input
-          data-test-object-list-input="{{key}}-{{index}}"
-          class="input"
-          @type="text"
-          @value={{value}}
-          name={{key}}
-          id="{{key}}-{{index}}"
-          {{on "input" (fn this.handleInput index)}}
-        />
-      </div>
+          {{/if}}
+          <Input
+            data-test-object-list-input="{{field.key}}-{{index}}"
+            aria-label={{if field.placeholder "{{field.placeholder}} for {{index}}" "{{field.label}} for {{index}}"}}
+            class="input"
+            placeholder={{or field.placeholder ""}}
+            @type="text"
+            @value={{value}}
+            name={{field.key}}
+            id="{{field.key}}-{{index}}"
+            {{on "input" (fn this.handleInput index)}}
+          />
+        </div>
+      {{/let}}
     {{/each-in}}
     <div class="control is-align-end">
       {{#if (eq (inc index) this.inputList.length)}}
@@ -24,7 +27,8 @@
           type="button"
           class="button is-outlined is-primary"
           data-test-object-list-button="add"
-          {{on "click" (fn this.addInput index)}}
+          disabled={{this.disableAdd}}
+          {{on "click" (fn this.addRow index)}}
         >
           Add
         </button>
@@ -33,7 +37,7 @@
           type="button"
           class="button is-icon"
           data-test-object-list-button="delete"
-          {{on "click" (fn this.removeInput index)}}
+          {{on "click" (fn this.removeRow index)}}
         >
           <Icon @name="trash" />
         </button>
