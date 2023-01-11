@@ -14,7 +14,7 @@ scenario "replication" {
     secondary_backend = ["raft", "consul"]
     secondary_seal    = ["awskms", "shamir"]
 
-    # Packages are not offered for the oss, ent.fips1402, and ent.hsm.fips1402 editions
+    # Packages are not offered for the   oss, ent.fips1402, and ent.hsm.fips1402 editions
     exclude {
       edition       = ["ent.fips1402", "ent.hsm.fips1402"]
       artifact_type = ["package"]
@@ -600,17 +600,17 @@ scenario "replication" {
 
   output "vault_primary_cluster_recovery_key_shares" {
     description = "The Vault primary cluster recovery key shares"
-    value       = step.create_vault_cluster.vault_recovery_key_shares
+    value       = step.create_vault_primary_cluster.vault_recovery_key_shares
   }
 
   output "vault_primary_cluster_recovery_keys_b64" {
     description = "The Vault primary cluster recovery keys b64"
-    value       = step.create_vault_cluster.vault_recovery_keys_b64
+    value       = step.create_vault_primary_cluster.vault_recovery_keys_b64
   }
 
   output "vault_primary_cluster_recovery_keys_hex" {
     description = "The Vault primary cluster recovery keys hex"
-    value       = step.create_vault_cluster.vault_recovery_keys_hex
+    value       = step.create_vault_primary_cluster.vault_recovery_keys_hex
   }
 
   output "vault_secondary_cluster_pub_ips" {
