@@ -5,26 +5,17 @@
   <div class="has-top-bottom-margin">
     <p class="sub-text">{{@subText}}</p>
   </div>
-  {{#if @renderInputSearch}}
-    <InputSearch
-      @id="search-input-{{@type}}"
-      @onChange={{this.handleInput}}
-      @placeholder={{@placeholder}}
-      data-test-search-roles
-    />
-  {{else}}
-    <SearchSelect
-      class="is-flex-1"
-      @id="search-input-{{@type}}"
-      @selectLimit="1"
-      @options={{@options}}
-      @fallbackComponent="input-search"
-      @onChange={{this.handleInput}}
-      @placeholder={{@placeholder}}
-      @navigateToPage={{@navigateToPage}}
-      data-test-selectable-card-form-input={{@testName}}
-    />
-  {{/if}}
+
+  <SearchSelect
+    class="is-flex-1"
+    @selectLimit="1"
+    @options={{@options}}
+    @fallbackComponent="input-search"
+    @onChange={{this.handleInput}}
+    @placeholder={{@placeholder}}
+    @navigateToPage={{@navigateToPage}}
+    data-test-selectable-card-form-input={{@testName}}
+  />
   <button
     type="button"
     class="button is-secondary"
