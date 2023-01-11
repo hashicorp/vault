@@ -54,7 +54,7 @@ func (d *FieldData) Validate() error {
 }
 
 // ValidateStrict cycles through raw data and validates conversions in the
-// schema. In addition to the checks done by Validate, this function ensures 
+// schema. In addition to the checks done by Validate, this function ensures
 // that the raw data has all of the schema's required fields and does not
 // have any fields outside of the schema. It will return a non-nil error if:
 //
