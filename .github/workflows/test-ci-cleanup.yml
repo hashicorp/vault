@@ -3,9 +3,6 @@ on:
   schedule:
     # * is a special character in YAML so you have to quote this string
     - cron:  '05 02 * * *'
-  push:
-    branches:
-      - "jb/QTI-400"
 
 jobs:
   setup:
@@ -62,9 +59,8 @@ jobs:
       # we'll fail on actually actionable things in the quota steep afterwards.
       - name: Clean up abandoned resources
         # Filter STDERR because it's super noisy about things we don't have access to
-        # this without --no-dry-run will just print what would change (for testing)
         run: |
-          aws-nuke -c aws-nuke.yml -q --force 2>/tmp/aws-nuke-error.log || true
+          aws-nuke -c aws-nuke.yml -q --no-dry-run --force 2>/tmp/aws-nuke-error.log || true
 
   check-quotas:
     needs: [ setup, aws-nuke ]
