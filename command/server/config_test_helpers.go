@@ -745,6 +745,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"raw_storage_endpoint":                true,
 		"introspection_endpoint":              false,
 		"disable_sentinel_trace":              true,
+		"detect_deadlocks":                    "",
 		"enable_ui":                           true,
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
