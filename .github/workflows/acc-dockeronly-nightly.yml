@@ -1,0 +1,52 @@
+name: Acceptance Tests Docker Only
+
+on: [push]
+
+env:
+  VAULT_ACC: 1
+
+jobs:
+  product-metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      go-version: ${{ steps.get-metadata.outputs.go-version }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: get-metadata
+        run: echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
+
+  plugins-database:
+    runs-on: ubuntu-latest
+    needs: product-metadata
+    strategy:
+      matrix:
+          name: [mongodb, mysql, postgresql]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ needs.product-metadata.outputs.go-version }}
+      - run: go test -v ./plugins/database/${{ matrix.name }}/... 2>&1 | tee ${{ matrix.name }}-plugins-database.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.name }}-plugins-database-output
+          path: ${{ matrix.name }}-plugins-database.txt
+
+  external:
+    runs-on: ubuntu-latest
+    needs: product-metadata
+    strategy:
+      matrix:
+          name: [api, identity, token]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ needs.product-metadata.outputs.go-version }}
+      - run: go test -v ./vault/external_tests/${{ matrix.name }}/... 2>&1 | tee ${{ matrix.name }}-external.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.name }}-external-output
+          path: ${{ matrix.name }}-external.txt
