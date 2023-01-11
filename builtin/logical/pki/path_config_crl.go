@@ -24,7 +24,7 @@ type crlConfig struct {
 	OcspExpiry             string `json:"ocsp_expiry"`
 	EnableDelta            bool   `json:"enable_delta"`
 	DeltaRebuildInterval   string `json:"delta_rebuild_interval"`
-	UseGlobalQueue         bool   `json:"use_global_queue"`
+	UseGlobalQueue         bool   `json:"cross_cluster_revocation"`
 }
 
 // Implicit default values for the config if it does not exist.
@@ -83,7 +83,7 @@ the NextUpdate field); defaults to 12 hours`,
 				Description: `The time between delta CRL rebuilds if a new revocation has occurred. Must be shorter than the CRL expiry. Defaults to 15m.`,
 				Default:     "15m",
 			},
-			"use_global_queue": {
+			"cross_cluster_revocation": {
 				Type: framework.TypeBool,
 				Description: `Whether to enable a global, cross-cluster revocation queue.
 Must be used with auto_rebuild=true.`,
@@ -124,7 +124,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 			"auto_rebuild_grace_period": config.AutoRebuildGracePeriod,
 			"enable_delta":              config.EnableDelta,
 			"delta_rebuild_interval":    config.DeltaRebuildInterval,
-			"use_global_queue":          config.UseGlobalQueue,
+			"cross_cluster_revocation":  config.UseGlobalQueue,
 		},
 	}, nil
 }
@@ -191,7 +191,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.DeltaRebuildInterval = deltaRebuildInterval
 	}
 
-	if useGlobalQueue, ok := d.GetOk("use_global_queue"); ok {
+	if useGlobalQueue, ok := d.GetOk("cross_cluster_revocation"); ok {
 		config.UseGlobalQueue = useGlobalQueue.(bool)
 	}
 

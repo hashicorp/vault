@@ -182,7 +182,7 @@ type internalCRLConfigEntry struct {
 	CRLExpirationMap      map[crlID]time.Time `json:"crl_expiration_map"`
 	LastModified          time.Time           `json:"last_modified"`
 	DeltaLastModified     time.Time           `json:"delta_last_modified"`
-	UseGlobalQueue        bool                `json:"use_global_queue"`
+	UseGlobalQueue        bool                `json:"cross_cluster_revocation"`
 }
 
 type keyConfigEntry struct {
