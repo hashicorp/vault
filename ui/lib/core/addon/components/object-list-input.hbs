@@ -5,7 +5,7 @@
       {{#let (find-by "key" key @objectKeys) as |field|}}
         <div class="control is-expanded">
           {{#if (eq index 0)}}
-            <h2>{{field.label}}</h2>
+            <h2 data-test-object-list-label={{key}}>{{field.label}}</h2>
           {{/if}}
           <Input
             data-test-object-list-input="{{field.key}}-{{index}}"

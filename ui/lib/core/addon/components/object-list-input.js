@@ -26,15 +26,16 @@ export default class ObjectListInput extends Component {
     this.inputList = [this.createInputRow(this.inputKeys)];
   }
 
+  createInputRow(keys) {
+    // create a new object with from input keys with empty values
+    return Object.fromEntries(keys.map((key) => [key, '']));
+  }
+
   @action
   handleInput(idx, { target }) {
     const inputObj = this.inputList.objectAt(idx);
     inputObj[target.name] = target.value;
-
-    const lastObject = this.inputList[this.inputList.length - 1];
-    this.disableAdd = Object.values(lastObject).any((input) => input === '') ? true : false;
-
-    this.args.onChange(this.inputList);
+    this.handleChange();
   }
 
   @action
@@ -42,20 +43,26 @@ export default class ObjectListInput extends Component {
     const newRow = this.createInputRow(this.inputKeys);
     this.inputList.pushObject(newRow);
     this.disableAdd = true;
-
-    this.args.onChange(this.inputList);
   }
 
   @action
   removeRow(idx) {
     const row = this.inputList.objectAt(idx);
     this.inputList.removeObject(row);
-
-    this.args.onChange(this.inputList);
+    this.handleChange();
   }
 
-  createInputRow(keys) {
-    // creates a new object from array of keys, giving each key an empty value
-    return Object.fromEntries(keys.map((key) => [key, '']));
+  @action
+  handleChange() {
+    // disable/enable "add" button
+    const lastObject = this.inputList[this.inputList.length - 1];
+    this.disableAdd = Object.values(lastObject).any((input) => input === '') ? true : false;
+
+    // don't send an empty last object to parent
+    if (Object.values(lastObject).every((input) => input === '')) {
+      this.args.onChange(this.inputList.slice(0, -1));
+    } else {
+      this.args.onChange(this.inputList);
+    }
   }
 }
