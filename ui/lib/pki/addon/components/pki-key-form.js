@@ -40,7 +40,9 @@ export default class PkiKeyForm extends Component {
       }
       if (!isValid && isNew) return;
       yield this.args.model.save({ adapterOptions: { import: false } });
-      this.flashMessages.success(`Successfully ${isNew ? 'generated' : 'updated'} the key ${keyName}.`);
+      this.flashMessages.success(
+        `Successfully ${isNew ? 'generated' : 'updated'} key${keyName ? ` ${keyName}.` : '.'}`
+      );
       this.args.onSave();
     } catch (error) {
       this.errorBanner = errorMessage(error);

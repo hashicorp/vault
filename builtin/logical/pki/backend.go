@@ -112,6 +112,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			SealWrapStorage: []string{
 				legacyCertBundlePath,
+				legacyCertBundleBackupPath,
 				keyPrefix,
 			},
 		},
@@ -271,6 +272,7 @@ type tidyStatus struct {
 	tidyRevokedCerts   bool
 	tidyRevokedAssocs  bool
 	tidyExpiredIssuers bool
+	tidyBackupBundle   bool
 	pauseDuration      string
 
 	// Status
