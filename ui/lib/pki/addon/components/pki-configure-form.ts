@@ -67,4 +67,9 @@ export default class PkiConfigureForm extends Component<Args> {
         return false;
     }
   }
+
+  @action cancel() {
+    this.args.config.rollbackAttributes();
+    this.router.transitionTo('vault.cluster.secrets.backend.pki.overview');
+  }
 }

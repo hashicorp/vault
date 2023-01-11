@@ -45,9 +45,9 @@
         <button type="button" class="button is-primary" disabled={{true}} data-test-pki-config-save>
           Done
         </button>
-        <LinkTo @route="overview" class="button has-left-margin-s" data-test-pki-config-cancel>
+        <button type="button" class="button has-left-margin-s" {{on "click" this.cancel}} data-test-pki-config-cancel>
           Cancel
-        </LinkTo>
+        </button>
       </div>
     </div>
   {{/if}}
