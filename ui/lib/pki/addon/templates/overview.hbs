@@ -51,7 +51,7 @@
       @models={{array "pki/role"}}
       @backend={{this.backend}}
       @pagePath="vault.cluster.secrets.backend.pki.roles.role.generate"
-      @testTitle="issue-certificate"
+      @testLabel="issue-certificate"
     />
     <SelectableCardForm
       @title="View certificate"
@@ -61,7 +61,7 @@
       @models={{array "pki/certificate"}}
       @backend={{this.backend}}
       @pagePath="vault.cluster.secrets.backend.pki.certificates.certificate.details"
-      @testTitle="view-certificate"
+      @testLabel="view-certificate"
     />
   </div>
 {{else}}

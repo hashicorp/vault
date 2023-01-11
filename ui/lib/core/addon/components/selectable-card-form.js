@@ -13,7 +13,7 @@
  * @param {string} [subText] - Text below title
  * @param {string} [placeholder] - Input placeholder text (default for SearchSelect is 'Search', none for InputSearch)
  * @param {string} backend - Passed to SearchSelect query method to fetch dropdown options
- * @param {string} testTitle - The name for the data-test attribute
+ * @param {string} testLabel - The name for the data-test attribute
  * @param {string} pagePath - The name of the path where the page will transition to
  */
 

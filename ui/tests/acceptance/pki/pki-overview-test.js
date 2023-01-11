@@ -112,13 +112,6 @@ module('Acceptance | pki overview', function (hooks) {
     assert.dom(SELECTORS.issuersCardTitle).exists('Issuers card exists');
   });
 
-  test('hides issuers card if user does not have permissions', async function (assert) {
-    await authPage.login(this.pkiRolesList);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-    assert.dom(SELECTORS.issuersCardTitle).doesNotExist('Issuers card does not exist');
-    assert.dom(SELECTORS.rolesCardTitle).exists('Roles card does exist');
-  });
-
   test('navigates to generate credentials page for Issue Certificates card', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await runCommands([

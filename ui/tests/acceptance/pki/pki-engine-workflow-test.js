@@ -87,6 +87,7 @@ module('Acceptance | pki workflow', function (hooks) {
     // TODO comment in when roles index empty state updated & update assert.expect() number
     // await click(SELECTORS.rolesTab);
     // assertEmptyState(assert, 'roles');
+
     await click(SELECTORS.issuersTab);
     assertEmptyState(assert, 'issuers');
 

@@ -6,7 +6,6 @@ export default class PkiOverviewRoute extends Route {
   @service secretMountPath;
   @service auth;
   @service store;
-  @service pathHelp;
 
   get win() {
     return this.window || window;

@@ -1,4 +1,4 @@
-<form class="selectable-card is-rounded no-flex" data-test-selectable-card-form={{@testTitle}}>
+<form class="selectable-card is-rounded no-flex" data-test-selectable-card-form={{@testLabel}}>
   <div class="is-flex-between is-fullwidth card-details">
     <h3 class="title is-5">{{@title}}</h3>
   </div>
@@ -15,14 +15,14 @@
       @fallbackComponent="input-search"
       @onChange={{this.handleInput}}
       @placeholder={{@placeholder}}
-      data-test-selectable-card-form-input={{@testTitle}}
+      data-test-selectable-card-form-input={{@testLabel}}
     />
     <button
       type="button"
       class="button is-secondary has-left-margin-s"
       disabled={{this.buttonDisabled}}
       {{on "click" this.transitionToPage}}
-      data-test-selectable-card-form-button={{@testTitle}}
+      data-test-selectable-card-form-button={{@testLabel}}
     >
       {{@buttonText}}
     </button>
