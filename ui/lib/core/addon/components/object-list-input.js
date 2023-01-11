@@ -1,18 +1,29 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { assert } from '@ember/debug';
 
 /**
  * @module ObjectListInput
- * ObjectListInput components are used to...
+ * ObjectListInput components are used to render a variable number of text inputs,
+ * in a single row with an "Add" button beside the last input of the row.
+ * Clicking 'add' generates a new row of empty inputs. The inputs are based on the @objectKeys
+ * array, in which each object corresponds to an input field in the row.
+ * sample object:
+ *   {
+ *     label: 'Input label', // required key
+ *     key: 'attrKey', // required key
+ *     type: 'string',
+ *     placeholder: 'Enter input here'
+ *   }
  *
  * @example
  * ```js
- * <ObjectListInput @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <ObjectListInput @objectKeys={{this.arrayOfObjects}} @onChange={{this.handleChange}} @inputValue={{this.inputValue}}/>
  * ```
- * @param {array} objectKeys - array of strings that correspond to object keys
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {array} objectKeys - an array of objects (sample above), the length determines the number of columns the component renders
+ * @callback onChange - callback triggered when any input changes or when a row is deleted, called with array of objects containing each input's key and value ex: [ { attrKey: 'some input value' } ]
+ * @param {string} [inputValue] - an array of objects to pre-fill the component inputs
  */
 
 export default class ObjectListInput extends Component {
@@ -22,6 +33,10 @@ export default class ObjectListInput extends Component {
 
   constructor() {
     super(...arguments);
+    const requiredKeys = ['label', 'key'];
+    if (!this.args.objectKeys.every((obj) => requiredKeys.every((k) => Object.keys(obj).includes(k)))) {
+      assert(`objects in the @objectKeys array must include keys called: ${requiredKeys.join(', ')}`);
+    }
     this.inputKeys = this.args.objectKeys.map((e) => e.key);
     const emptyRow = this.createEmptyRow(this.inputKeys);
     this.inputList = this.args.inputValue ? [...this.args.inputValue, emptyRow] : [emptyRow];
@@ -42,7 +57,8 @@ export default class ObjectListInput extends Component {
   @action
   addRow() {
     const emptyRow = this.createEmptyRow(this.inputKeys);
-    this.inputList.pushObject(emptyRow);
+    // this.inputList.pushObject(emptyRow);
+    this.inputList = [...this.inputList, emptyRow];
     this.disableAdd = true;
   }
 

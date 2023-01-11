@@ -24,19 +24,19 @@
     <div class="control is-align-end">
       {{#if (eq (inc index) this.inputList.length)}}
         <button
+          data-test-object-list-add-button
           type="button"
           class="button is-outlined is-primary"
-          data-test-object-list-button="add"
           disabled={{this.disableAdd}}
-          {{on "click" (fn this.addRow index)}}
+          {{on "click" this.addRow}}
         >
           Add
         </button>
       {{else}}
         <button
+          data-test-object-list-delete-button={{index}}
           type="button"
           class="button is-icon"
-          data-test-object-list-button="delete"
           {{on "click" (fn this.removeRow index)}}
         >
           <Icon @name="trash" />
