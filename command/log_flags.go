@@ -165,11 +165,13 @@ func (f *FlagSets) applyLogConfigOverrides(config *configutil.SharedConfig) {
 
 	// Update log max files
 	if val, found := p.overrideValue(flagNameLogRotateMaxFiles, ""); found {
-		config.LogRotateMaxFiles, _ = strconv.Atoi(val)
+		n, _ := strconv.Atoi(val)
+		config.LogRotateMaxFiles = &n
 	}
 
 	// Update log rotation max bytes
 	if val, found := p.overrideValue(flagNameLogRotateBytes, ""); found {
-		config.LogRotateBytes, _ = strconv.Atoi(val)
+		n, _ := strconv.Atoi(val)
+		config.LogRotateBytes = &n
 	}
 }

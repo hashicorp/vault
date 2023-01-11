@@ -2131,8 +2131,10 @@ func TestAgent_LogFile_Config(t *testing.T) {
 
 	// Sanity check that the config value is the current value
 	assert.Equal(t, "TMPDIR/juan.log", cfg.LogFile, "sanity check on log config failed")
-	assert.Equal(t, 2, cfg.LogRotateMaxFiles)
-	assert.Equal(t, 1048576, cfg.LogRotateBytes)
+	assert.True(t, cfg.LogRotateMaxFiles != nil)
+	assert.Equal(t, 2, *cfg.LogRotateMaxFiles)
+	assert.True(t, cfg.LogRotateBytes != nil)
+	assert.Equal(t, 1048576, *cfg.LogRotateBytes)
 
 	// Parse the cli flags (but we pass in an empty slice)
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
@@ -2146,8 +2148,10 @@ func TestAgent_LogFile_Config(t *testing.T) {
 	cmd.applyConfigOverrides(f, cfg)
 
 	assert.Equal(t, "TMPDIR/juan.log", cfg.LogFile, "actual config check")
-	assert.Equal(t, 2, cfg.LogRotateMaxFiles)
-	assert.Equal(t, 1048576, cfg.LogRotateBytes)
+	assert.True(t, cfg.LogRotateMaxFiles != nil)
+	assert.Equal(t, 2, *cfg.LogRotateMaxFiles)
+	assert.True(t, cfg.LogRotateBytes != nil)
+	assert.Equal(t, 1048576, *cfg.LogRotateBytes)
 }
 
 func TestAgent_Config_NewLogger_Default(t *testing.T) {

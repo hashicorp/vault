@@ -68,19 +68,15 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 		result.LogFile = c2.LogFile
 	}
 
-	// TODO: PW: Is this the behavior we want.
-	result.LogRotateBytes = c2.LogRotateBytes
-	//result.LogRotateBytes = c.LogRotateBytes
-	//if c2.LogRotateBytes != "" {
-	//	result.LogRotateBytes = c2.LogRotateBytes
-	//}
+	result.LogRotateBytes = c.LogRotateBytes
+	if c2.LogRotateBytes != nil {
+		result.LogRotateBytes = c2.LogRotateBytes
+	}
 
-	// TODO: PW: Is this the behavior we want.
-	result.LogRotateMaxFiles = c2.LogRotateMaxFiles
-	//result.LogRotateMaxFiles = c.LogRotateMaxFiles
-	//if c2.LogRotateMaxFiles != "" {
-	//	result.LogRotateMaxFiles = c2.LogRotateMaxFiles
-	//}
+	result.LogRotateMaxFiles = c.LogRotateMaxFiles
+	if c2.LogRotateMaxFiles != nil {
+		result.LogRotateMaxFiles = c2.LogRotateMaxFiles
+	}
 
 	result.LogRotateDuration = c.LogRotateDuration
 	if c2.LogRotateDuration != "" {

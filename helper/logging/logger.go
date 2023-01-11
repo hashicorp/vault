@@ -41,10 +41,10 @@ type LogConfig struct {
 	LogRotateDuration time.Duration
 
 	// LogRotateBytes is the user specified byte limit to rotate logs
-	LogRotateBytes int
+	LogRotateBytes *int
 
 	// LogRotateMaxFiles is the maximum number of past archived log files to keep
-	LogRotateMaxFiles int
+	LogRotateMaxFiles *int
 }
 
 func (c *LogConfig) isLevelInvalid() bool {
@@ -122,12 +122,21 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 		if config.LogRotateDuration == 0 {
 			config.LogRotateDuration = defaultRotateDuration
 		}
+
+		if config.LogRotateBytes == nil {
+			config.LogRotateBytes = new(int)
+		}
+
+		if config.LogRotateMaxFiles == nil {
+			config.LogRotateMaxFiles = new(int)
+		}
+
 		logFile := &LogFile{
 			fileName:         fileName,
 			logPath:          dir,
 			duration:         config.LogRotateDuration,
-			maxBytes:         config.LogRotateBytes,
-			maxArchivedFiles: config.LogRotateMaxFiles,
+			maxBytes:         *config.LogRotateBytes,
+			maxArchivedFiles: *config.LogRotateMaxFiles,
 		}
 		if err := logFile.pruneFiles(); err != nil {
 			return nil, fmt.Errorf("failed to prune log files: %w", err)
