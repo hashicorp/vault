@@ -149,6 +149,34 @@ func TestValidateResponse(t *testing.T) {
 			errorExpected: false,
 		},
 
+		"string schema required field, nil response, strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"foo": {
+						Type:     framework.TypeString,
+						Required: true,
+					},
+				},
+			},
+			response:      nil,
+			strict:        true,
+			errorExpected: true,
+		},
+
+		"string schema required field, nil response, not strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"foo": {
+						Type:     framework.TypeString,
+						Required: true,
+					},
+				},
+			},
+			response:      nil,
+			strict:        false,
+			errorExpected: false,
+		},
+
 		"empty schema, string response, strict": {
 			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{},
