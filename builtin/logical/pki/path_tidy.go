@@ -308,7 +308,7 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 			return fmt.Errorf("unable to parse stored certificate with serial %q: %w", serial, err)
 		}
 
-		if time.Now().After(cert.NotAfter.Add(config.SafetyBuffer)) {
+		if time.Since(cert.NotAfter) > config.SafetyBuffer {
 			if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 				return fmt.Errorf("error deleting serial %q from storage: %w", serial, err)
 			}
@@ -416,7 +416,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 			// past its NotAfter value. This is because we use the
 			// information on revoked/ to build the CRL and the
 			// information on certs/ for lookup.
-			if time.Now().After(revokedCert.NotAfter.Add(config.SafetyBuffer)) {
+			if time.Since(revokedCert.NotAfter) > config.SafetyBuffer {
 				if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 					return fmt.Errorf("error deleting serial %q from revoked list: %w", serial, err)
 				}
@@ -502,16 +502,11 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 	}
 
 	// We want certificates which have expired before this date by a given
-	// safety buffer. So we subtract the buffer from now, and anything which
-	// has expired before our after buffer can be tidied, and anything that
-	// expired after this buffer must be kept.
-	now := time.Now()
-	afterBuffer := now.Add(-1 * config.IssuerSafetyBuffer)
-
+	// safety buffer.
 	rebuildChainsAndCRL := false
 
 	for issuer, cert := range issuerIDCertMap {
-		if cert.NotAfter.After(afterBuffer) {
+		if time.Since(cert.NotAfter) <= config.IssuerSafetyBuffer {
 			continue
 		}
 
@@ -608,10 +603,7 @@ func (b *backend) doTidyMoveCABundle(ctx context.Context, req *logical.Request, 
 		return fmt.Errorf("refusing to tidy with an empty legacy migration log but present CA bundle: %w", err)
 	}
 
-	now := time.Now()
-	afterBuffer := now.Add(-1 * config.IssuerSafetyBuffer)
-
-	if log.Created.After(afterBuffer) {
+	if time.Since(log.Created) <= config.IssuerSafetyBuffer {
 		b.Logger().Debug("Migration was created too recently to remove the legacy bundle; refusing to move legacy CA bundle to backup location.")
 		return nil
 	}
