@@ -1263,15 +1263,12 @@ func TestValidateStrict(t *testing.T) {
 			}
 
 			err := data.ValidateStrict()
-			switch {
-			case tc.ExpectError && err == nil:
+
+			if err == nil && tc.ExpectError == true {
 				t.Fatalf("expected an error, got nil")
-			case tc.ExpectError && err != nil:
-				return
-			case !tc.ExpectError && err != nil:
+			}
+			if err != nil && tc.ExpectError == false {
 				t.Fatalf("unexpected error: %v", err)
-			default:
-				// Continue if !tc.ExpectError && err == nil
 			}
 		})
 	}
