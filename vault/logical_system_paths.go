@@ -2053,7 +2053,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "lockedusers/(?P<mount_accessor>.+?)/unlock/(?P<alias_identifier>.+)",
+			Pattern: "locked-users/(?P<mount_accessor>.+?)/unlock/(?P<alias_identifier>.+)",
 			Fields: map[string]*framework.FieldSchema{
 				"mount_accessor": {
 					Type:        framework.TypeString,
@@ -2072,6 +2072,23 @@ func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
+		},
+		{
+			Pattern: "locked-users",
+			Fields: map[string]*framework.FieldSchema{
+				"mount_accessor": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLockedUsersMetricQuery,
+					Summary:  "Report the locked user count metrics, for this namespace and all child namespaces.",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["locked_users"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["locked_users"][1]),
 		},
 	}
 }
