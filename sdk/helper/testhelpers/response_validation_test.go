@@ -50,21 +50,21 @@ func TestValidateResponse(t *testing.T) {
 		},
 
 		"nil schema fields, good response, not strict": {
-			schema:	       &framework.Response{},
+			schema:        &framework.Response{},
 			response:      nil,
 			strict:        true,
 			errorExpected: false,
 		},
 
 		"string schema field, string response, strict": {
-			schema:        &framework.Response{
+			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{
 					"foo": {
 						Type: framework.TypeString,
 					},
 				},
 			},
-			response:      &logical.Response{
+			response: &logical.Response{
 				Data: map[string]interface{}{
 					"foo": "bar",
 				},
@@ -74,14 +74,14 @@ func TestValidateResponse(t *testing.T) {
 		},
 
 		"string schema field, string response, not strict": {
-			schema:        &framework.Response{
+			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{
 					"foo": {
 						Type: framework.TypeString,
 					},
 				},
-			},	
-			response:      &logical.Response{
+			},
+			response: &logical.Response{
 				Data: map[string]interface{}{
 					"foo": "bar",
 				},
@@ -91,10 +91,10 @@ func TestValidateResponse(t *testing.T) {
 		},
 
 		"string schema not required field, empty response, strict": {
-			schema:        &framework.Response{
+			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{
 					"foo": {
-						Type: framework.TypeString,
+						Type:     framework.TypeString,
 						Required: false,
 					},
 				},
@@ -105,10 +105,10 @@ func TestValidateResponse(t *testing.T) {
 		},
 
 		"string schema required field, empty response, strict": {
-			schema:        &framework.Response{
+			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{
 					"foo": {
-						Type: framework.TypeString,
+						Type:     framework.TypeString,
 						Required: true,
 					},
 				},
@@ -119,10 +119,10 @@ func TestValidateResponse(t *testing.T) {
 		},
 
 		"string schema required field, empty response, not strict": {
-			schema:        &framework.Response{
+			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{
 					"foo": {
-						Type: framework.TypeString,
+						Type:     framework.TypeString,
 						Required: true,
 					},
 				},
@@ -133,10 +133,10 @@ func TestValidateResponse(t *testing.T) {
 		},
 
 		"empty schema, string response, strict": {
-			schema:        &framework.Response{
+			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{},
 			},
-			response:      &logical.Response{
+			response: &logical.Response{
 				Data: map[string]interface{}{
 					"foo": "bar",
 				},
@@ -146,10 +146,10 @@ func TestValidateResponse(t *testing.T) {
 		},
 
 		"empty schema, string response, not strict": {
-			schema:        &framework.Response{
+			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{},
 			},
-			response:      &logical.Response{
+			response: &logical.Response{
 				Data: map[string]interface{}{
 					"foo": "bar",
 				},

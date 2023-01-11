@@ -44,4 +44,3 @@ func ValidateResponseData(schema *framework.Response, data map[string]interface{
 
 	return fd.Validate()
 }
-
