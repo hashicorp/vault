@@ -163,7 +163,7 @@ func TestValidateResponse(t *testing.T) {
 			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{
 					"time": {
-						Type: framework.TypeTime,
+						Type:     framework.TypeTime,
 						Required: true,
 					},
 				},
@@ -181,7 +181,7 @@ func TestValidateResponse(t *testing.T) {
 			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{
 					"time": {
-						Type: framework.TypeTime,
+						Type:     framework.TypeTime,
 						Required: true,
 					},
 				},
@@ -199,7 +199,7 @@ func TestValidateResponse(t *testing.T) {
 			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{
 					"time": {
-						Type: framework.TypeTime,
+						Type:     framework.TypeTime,
 						Required: true,
 					},
 				},
@@ -217,7 +217,7 @@ func TestValidateResponse(t *testing.T) {
 			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{
 					"time": {
-						Type: framework.TypeTime,
+						Type:     framework.TypeTime,
 						Required: true,
 					},
 				},
