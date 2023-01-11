@@ -1,6 +1,6 @@
 /**
  * @module SelectableCardForm
- * SelectableCardForm components are card-like components that display a title, and SearchSelect component that sends you to a credentials route for the selected item.
+ * SelectableCardForm components are card-like components that display a title, and SearchSelect component that sends you to a route for the selected item.
  * They are designed to be used in containers that act as flexbox or css grid containers.
  *
  * @example
@@ -13,7 +13,8 @@
  * @param {string} [subText] - Text below title
  * @param {string} [placeholder] - Input placeholder text (default for SearchSelect is 'Search', none for InputSearch)
  * @param {string} backend - Passed to SearchSelect query method to fetch dropdown options
- * @param {string} testName - The name for the data-test attribute
+ * @param {string} testTitle - The name for the data-test attribute
+ * @param {string} pagePath - The name of the path where the page will transition to
  */
 
 import Component from '@glimmer/component';
@@ -30,11 +31,17 @@ export default class SelectableCardForm extends Component {
 
   @action
   transitionToPage() {
-    this.args.navigateToPage(this.value);
+    this.router.transitionTo(this.args.pagePath, this.value);
   }
 
   @action
-  handleInput([value]) {
-    this.value = value;
+  handleInput(value) {
+    // if it comes in from the fallback component then the value is a string otherwise it's an array
+    // which currently only happens if type is role.
+    if (Array.isArray(value)) {
+      this.value = value[0];
+    } else {
+      this.value = value;
+    }
   }
 }

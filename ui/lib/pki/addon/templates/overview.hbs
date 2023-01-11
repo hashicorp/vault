@@ -23,7 +23,7 @@
     class="selectable-card-container has-grid has-top-margin-l has-two-col-grid
       {{if (or (eq this.model.issuers 403) (eq this.model.roles 403)) 'has-three-col-grid' 'has-two-col-grid'}}"
   >
-    {{#if this.model.issuersCapabilities.canList}}
+    {{#if this.issuersCanList}}
       <SelectableCard
         @cardTitle="Issuers"
         @total={{if (eq this.model.issuers 404) 0 this.model.issuers.length}}
@@ -33,7 +33,7 @@
         @type="role"
       />
     {{/if}}
-    {{#if this.model.rolesCapabilities.canList}}
+    {{#if this.rolesCanList}}
       <SelectableCard
         @cardTitle="Roles"
         @total={{if (eq this.model.roles 404) 0 this.model.roles.length}}
@@ -48,18 +48,20 @@
       @subText="Quickly issue a certificate by typing the role name."
       @placeholder="Type to find a role..."
       @buttonText="Issue"
-      @options={{this.roleOptions}}
-      @navigateToPage={{this.navigateToIssueCertificate}}
-      @testName="issue-certificate"
+      @models={{array "pki/role"}}
+      @backend={{this.backend}}
+      @pagePath="vault.cluster.secrets.backend.pki.roles.role.generate"
+      @testTitle="issue-certificate"
     />
     <SelectableCardForm
       @title="View certificate"
       @subText="Quickly view a certificate by typing its serial number."
       @placeholder="33:a3:..."
       @buttonText="View"
-      @options={{this.certificateOptions}}
-      @navigateToPage={{this.navigateToViewCertificate}}
-      @testName="view-certificate"
+      @models={{array "pki/certificate"}}
+      @backend={{this.backend}}
+      @pagePath="vault.cluster.secrets.backend.pki.certificates.certificate.details"
+      @testTitle="view-certificate"
     />
   </div>
 {{else}}
