@@ -590,6 +590,190 @@ func TestExpectedOpsWork_PreMigration(t *testing.T) {
 	requireFailInMigration(t, b, s, logical.ReadOperation, "config/keys")
 }
 
+func TestBackupBundle(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	b, s := CreateBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
+
+	// Reset the version the helper above set to 1.
+	b.pkiStorageVersion.Store(0)
+	require.True(t, b.useLegacyBundleCaStorage(), "pre migration we should have been told to use legacy storage.")
+
+	// Create an empty request and tidy configuration for us.
+	req := &logical.Request{
+		Storage:    s,
+		MountPoint: "pki/",
+	}
+	cfg := &tidyConfig{
+		BackupBundle:       true,
+		IssuerSafetyBuffer: 120 * time.Second,
+	}
+
+	// Migration should do nothing if we're on an empty mount.
+	err := b.doTidyMoveCABundle(ctx, req, b.Logger(), cfg)
+	require.NoError(t, err)
+	requireFileNotExists(t, sc, legacyCertBundlePath)
+	requireFileNotExists(t, sc, legacyCertBundleBackupPath)
+	issuerIds, err := sc.listIssuers()
+	require.NoError(t, err)
+	require.Empty(t, issuerIds)
+	keyIds, err := sc.listKeys()
+	require.NoError(t, err)
+	require.Empty(t, keyIds)
+
+	// Create a legacy CA bundle and write it out.
+	bundle := genCertBundle(t, b, s)
+	json, err := logical.StorageEntryJSON(legacyCertBundlePath, bundle)
+	require.NoError(t, err)
+	err = s.Put(ctx, json)
+	require.NoError(t, err)
+	legacyContents := requireFileExists(t, sc, legacyCertBundlePath, nil)
+
+	// Doing another tidy should maintain the status quo since we've
+	// still not done our migration.
+	err = b.doTidyMoveCABundle(ctx, req, b.Logger(), cfg)
+	require.NoError(t, err)
+	requireFileExists(t, sc, legacyCertBundlePath, legacyContents)
+	requireFileNotExists(t, sc, legacyCertBundleBackupPath)
+	issuerIds, err = sc.listIssuers()
+	require.NoError(t, err)
+	require.Empty(t, issuerIds)
+	keyIds, err = sc.listKeys()
+	require.NoError(t, err)
+	require.Empty(t, keyIds)
+
+	// Do a migration; this should provision an issuer and key.
+	initReq := &logical.InitializationRequest{Storage: s}
+	err = b.initialize(ctx, initReq)
+	require.NoError(t, err)
+	requireFileExists(t, sc, legacyCertBundlePath, legacyContents)
+	issuerIds, err = sc.listIssuers()
+	require.NoError(t, err)
+	require.NotEmpty(t, issuerIds)
+	keyIds, err = sc.listKeys()
+	require.NoError(t, err)
+	require.NotEmpty(t, keyIds)
+
+	// Doing another tidy should maintain the status quo since we've
+	// done our migration too recently relative to the safety buffer.
+	err = b.doTidyMoveCABundle(ctx, req, b.Logger(), cfg)
+	require.NoError(t, err)
+	requireFileExists(t, sc, legacyCertBundlePath, legacyContents)
+	requireFileNotExists(t, sc, legacyCertBundleBackupPath)
+	issuerIds, err = sc.listIssuers()
+	require.NoError(t, err)
+	require.NotEmpty(t, issuerIds)
+	keyIds, err = sc.listKeys()
+	require.NoError(t, err)
+	require.NotEmpty(t, keyIds)
+
+	// Shortening our buffer should ensure the migration occurs, removing
+	// the legacy bundle but creating the backup one.
+	time.Sleep(2 * time.Second)
+	cfg.IssuerSafetyBuffer = 1 * time.Second
+	err = b.doTidyMoveCABundle(ctx, req, b.Logger(), cfg)
+	require.NoError(t, err)
+	requireFileNotExists(t, sc, legacyCertBundlePath)
+	requireFileExists(t, sc, legacyCertBundleBackupPath, legacyContents)
+	issuerIds, err = sc.listIssuers()
+	require.NoError(t, err)
+	require.NotEmpty(t, issuerIds)
+	keyIds, err = sc.listKeys()
+	require.NoError(t, err)
+	require.NotEmpty(t, keyIds)
+
+	// A new initialization should do nothing.
+	err = b.initialize(ctx, initReq)
+	require.NoError(t, err)
+	requireFileNotExists(t, sc, legacyCertBundlePath)
+	requireFileExists(t, sc, legacyCertBundleBackupPath, legacyContents)
+	issuerIds, err = sc.listIssuers()
+	require.NoError(t, err)
+	require.NotEmpty(t, issuerIds)
+	require.Equal(t, len(issuerIds), 1)
+	keyIds, err = sc.listKeys()
+	require.NoError(t, err)
+	require.NotEmpty(t, keyIds)
+	require.Equal(t, len(keyIds), 1)
+
+	// Restoring the legacy bundles with new issuers should redo the
+	// migration.
+	newBundle := genCertBundle(t, b, s)
+	json, err = logical.StorageEntryJSON(legacyCertBundlePath, newBundle)
+	require.NoError(t, err)
+	err = s.Put(ctx, json)
+	require.NoError(t, err)
+	newLegacyContents := requireFileExists(t, sc, legacyCertBundlePath, nil)
+
+	// -> reinit
+	err = b.initialize(ctx, initReq)
+	require.NoError(t, err)
+	requireFileExists(t, sc, legacyCertBundlePath, newLegacyContents)
+	requireFileExists(t, sc, legacyCertBundleBackupPath, legacyContents)
+	issuerIds, err = sc.listIssuers()
+	require.NoError(t, err)
+	require.NotEmpty(t, issuerIds)
+	require.Equal(t, len(issuerIds), 2)
+	keyIds, err = sc.listKeys()
+	require.NoError(t, err)
+	require.NotEmpty(t, keyIds)
+	require.Equal(t, len(keyIds), 2)
+
+	// -> when we tidy again, we'll overwrite the old backup with the new
+	// one.
+	time.Sleep(2 * time.Second)
+	err = b.doTidyMoveCABundle(ctx, req, b.Logger(), cfg)
+	require.NoError(t, err)
+	requireFileNotExists(t, sc, legacyCertBundlePath)
+	requireFileExists(t, sc, legacyCertBundleBackupPath, newLegacyContents)
+	issuerIds, err = sc.listIssuers()
+	require.NoError(t, err)
+	require.NotEmpty(t, issuerIds)
+	keyIds, err = sc.listKeys()
+	require.NoError(t, err)
+	require.NotEmpty(t, keyIds)
+
+	// Finally, restoring the legacy bundle and re-migrating should redo
+	// the migration.
+	err = s.Put(ctx, json)
+	require.NoError(t, err)
+	requireFileExists(t, sc, legacyCertBundlePath, newLegacyContents)
+	requireFileExists(t, sc, legacyCertBundleBackupPath, newLegacyContents)
+
+	// -> overwrite the version and re-migrate
+	logEntry, err := getLegacyBundleMigrationLog(ctx, s)
+	require.NoError(t, err)
+	logEntry.MigrationVersion = 0
+	err = setLegacyBundleMigrationLog(ctx, s, logEntry)
+	require.NoError(t, err)
+	err = b.initialize(ctx, initReq)
+	require.NoError(t, err)
+	requireFileExists(t, sc, legacyCertBundlePath, newLegacyContents)
+	requireFileExists(t, sc, legacyCertBundleBackupPath, newLegacyContents)
+	issuerIds, err = sc.listIssuers()
+	require.NoError(t, err)
+	require.NotEmpty(t, issuerIds)
+	require.Equal(t, len(issuerIds), 2)
+	keyIds, err = sc.listKeys()
+	require.NoError(t, err)
+	require.NotEmpty(t, keyIds)
+	require.Equal(t, len(keyIds), 2)
+
+	// -> Re-tidy should remove the legacy one.
+	time.Sleep(2 * time.Second)
+	err = b.doTidyMoveCABundle(ctx, req, b.Logger(), cfg)
+	require.NoError(t, err)
+	requireFileNotExists(t, sc, legacyCertBundlePath)
+	requireFileExists(t, sc, legacyCertBundleBackupPath, newLegacyContents)
+	issuerIds, err = sc.listIssuers()
+	require.NoError(t, err)
+	require.NotEmpty(t, issuerIds)
+	keyIds, err = sc.listKeys()
+	require.NoError(t, err)
+	require.NotEmpty(t, keyIds)
+}
+
 // requireFailInMigration validate that we fail the operation with the appropriate error message to the end-user
 func requireFailInMigration(t *testing.T, b *backend, s logical.Storage, operation logical.Operation, path string) {
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -603,6 +787,27 @@ func requireFailInMigration(t *testing.T, b *backend, s logical.Storage, operati
 	require.True(t, resp.IsError(), "error flag was not set from op:%s path:%s resp: %#v", operation, path, resp)
 	require.Contains(t, resp.Error().Error(), "migration has completed",
 		"error message did not contain migration test for op:%s path:%s resp: %#v", operation, path, resp)
+}
+
+func requireFileNotExists(t *testing.T, sc *storageContext, path string) {
+	entry, err := sc.Storage.Get(sc.Context, path)
+	require.NoError(t, err)
+	if entry != nil {
+		require.Empty(t, entry.Value)
+	} else {
+		require.Empty(t, entry)
+	}
+}
+
+func requireFileExists(t *testing.T, sc *storageContext, path string, contents []byte) []byte {
+	entry, err := sc.Storage.Get(sc.Context, path)
+	require.NoError(t, err)
+	require.NotNil(t, entry)
+	require.NotEmpty(t, entry.Value)
+	if contents != nil {
+		require.Equal(t, entry.Value, contents)
+	}
+	return entry.Value
 }
 
 // Keys to simulate an intermediate CA mount with also-imported root (parent).
