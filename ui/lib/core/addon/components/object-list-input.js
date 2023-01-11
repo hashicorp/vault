@@ -23,10 +23,11 @@ export default class ObjectListInput extends Component {
   constructor() {
     super(...arguments);
     this.inputKeys = this.args.objectKeys.map((e) => e.key);
-    this.inputList = [this.createInputRow(this.inputKeys)];
+    const emptyRow = this.createEmptyRow(this.inputKeys);
+    this.inputList = this.args.inputValue ? [...this.args.inputValue, emptyRow] : [emptyRow];
   }
 
-  createInputRow(keys) {
+  createEmptyRow(keys) {
     // create a new object with from input keys with empty values
     return Object.fromEntries(keys.map((key) => [key, '']));
   }
@@ -40,8 +41,8 @@ export default class ObjectListInput extends Component {
 
   @action
   addRow() {
-    const newRow = this.createInputRow(this.inputKeys);
-    this.inputList.pushObject(newRow);
+    const emptyRow = this.createEmptyRow(this.inputKeys);
+    this.inputList.pushObject(emptyRow);
     this.disableAdd = true;
   }
 
@@ -54,7 +55,7 @@ export default class ObjectListInput extends Component {
 
   @action
   handleChange() {
-    // disable/enable "add" button
+    // disable/enable "add" button based on last row
     const lastObject = this.inputList[this.inputList.length - 1];
     this.disableAdd = Object.values(lastObject).any((input) => input === '') ? true : false;
 
