@@ -30,29 +30,45 @@ func TestValidateResponse(t *testing.T) {
 		},
 
 		"nil schema, good response, strict": {
-			schema:        nil,
-			response:      nil,
+			schema: nil,
+			response: &logical.Response{
+				Data: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
 			strict:        true,
 			errorExpected: false,
 		},
 
 		"nil schema, good response, not strict": {
-			schema:        nil,
-			response:      nil,
+			schema: nil,
+			response: &logical.Response{
+				Data: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
 			strict:        true,
 			errorExpected: false,
 		},
 
 		"nil schema fields, good response, strict": {
-			schema:        &framework.Response{},
-			response:      nil,
+			schema: &framework.Response{},
+			response: &logical.Response{
+				Data: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
 			strict:        true,
 			errorExpected: false,
 		},
 
 		"nil schema fields, good response, not strict": {
-			schema:        &framework.Response{},
-			response:      nil,
+			schema: &framework.Response{},
+			response: &logical.Response{
+				Data: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
 			strict:        true,
 			errorExpected: false,
 		},
