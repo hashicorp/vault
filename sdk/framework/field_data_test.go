@@ -637,7 +637,6 @@ func TestFieldDataGet(t *testing.T) {
 			map[string]interface{}{
 				"foo": map[string]interface{}{
 					"key1": "value1",
-
 					"key2": "value2",
 					"key3": 1,
 				},
