@@ -104,52 +104,21 @@ presets:
       IAMRole:
         - property: Name
           type: glob
-          value: "github_actions*"
-        - property: Name
-          type: glob
-          value: "enos*"
-        - property: Name
-          type: glob
-          value: "terraform-enos*"
-        - property: Name
-          type: glob
-          value: "boundary-*"
-        - property: Name
-          type: glob
-          value: "Enos*"
+          value: "github_actions-*"
         - property: Name
           value: "rds-monitoring-role"
       IAMRolePolicy:
         - property: role:RoleName
           type: glob
-          value: "enos*"
-        - property: role:RoleName
-          type: glob
           value: "github_actions*"
-        - property: role:RoleName
-          type: glob
-          value: "terraform-enos*"
-        - property: role:RoleName
-          type: glob
-          value: "boundary-*"
         - property: role:RoleName
           type: glob
           value: "rds-*"
       IAMRolePolicyAttachment:
-        - "enos_lambda -> lambda_policy"
-        - "enos_lambda -> AWSLambdaBasicExecutionRole"
-        - "EnosCleanup-role-9k1e5pzf -> AWSLambdaBasicExecutionRole-ed4b0354-520e-4022-abbf-dc4c1f031659"
         - "rds-monitoring-role -> AmazonRDSEnhancedMonitoringRole"
       IAMUserPolicy:
         - "github_actions-vault_ci -> AssumeServiceUserRole"
-        - "github_actions-vault_enterprise_ci -> AssumeServiceUserRole"
-        - "github_actions-boundary_ci -> AssumeServiceUserRole"
-        - "github_actions-boundary_enterprise_ci -> AssumeServiceUserRole"
-        - "github_actions-boundary_hcp_ci -> AssumeServiceUserRole"
-        # Legacy CI roles
-        - "github_actions-Boundary-Tests -> AssumeServiceUserRole"
-        - "github_actions-Vault-Tests -> AssumeServiceUserRole"
-        - "github_actions-Vault-Ent-Tests -> AssumeServiceUserRole"
+
 
 resource-types:
   # Run against everything, excluding these:
