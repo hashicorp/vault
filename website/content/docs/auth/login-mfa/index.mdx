@@ -85,8 +85,7 @@ If an MFA method does not require a passcode, the login request MFA header only 
      http://127.0.0.1:8200/v1/auth/userpass/login/alice
 ```
 
-From Vault 1.13.0, an operator can configure a name for an MFA method. This name should be unique in the namespace in which the MFA method is configured.
-Then, one can use the MFA method name instead of an MFA method ID in the MFA header.
+Starting in Vault 1.13.0, an operator can configure a name for an MFA method. This name should be unique in the namespace in which the MFA method is configured. The MFA method name can be used in the MFA header.
 
 ```shell-session
 $ curl \

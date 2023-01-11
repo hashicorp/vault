@@ -35,7 +35,9 @@ string slices. In cases where an MFA method is configured not to use passcodes, 
 }
 ```
 
-As of Vault 1.13.0, it is also possible to use an MFA method name as the key to the mfa_payload.
+As of Vault 1.13.0, it is also possible to use an MFA method name as the key to the `mfa_payload`.
+
+In versions 1.12.x and below,`passcode=` was used for Duo MFA only. Starting in version 1.13.x, `passcode=` is optional for all supported MFA methods.
 
 ```json
 {
@@ -44,12 +46,6 @@ As of Vault 1.13.0, it is also possible to use an MFA method name as the key to 
       "sample_mfa_method_name": ["passcode=910201"]
   }
 }
-```
-
-In the above example, please note the use of `passcode=` in the `mfa_payload`. Before Vault 1.13.0, that phrase should
-have been used for the Duo MFA method only. However, from the new version going forward, it is optional to use that
-phrase for all supported MFA methods.
-
 ### Sample Request
 
 ```shell-session
