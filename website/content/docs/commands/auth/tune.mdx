@@ -43,7 +43,7 @@ $ vault auth tune -audit-non-hmac-request-keys=value1 -audit-non-hmac-request-ke
 Success! Tuned the auth method at: github/
 ```
 
-User lockout feature is only supported for userpass, ldap and approle auth methods.
+User lockout feature is only supported for userpass, ldap, and approle auth methods.
 
 ```shell-session
 $ vault auth tune -user-lockout-threshold=10  -user-lockout-duration=10m userpass/
