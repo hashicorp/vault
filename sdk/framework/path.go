@@ -235,37 +235,6 @@ type Response struct {
 	Example     *logical.Response       // example response data
 }
 
-// ValidateLogicalResponse validates whether the given response object conforms
-// to the response schema (response.Fields). It cycles through the data map and
-// validates conversions in the schema. In "strict" mode, this function will
-// also ensure that the data map has all schema-required fields and does not
-// have any fields outside of the schema.
-func (r *Response) ValidateLogicalResponse(response *logical.Response, strict bool) error {
-	if response != nil {
-		return r.ValidateResponseData(response.Data, strict)
-	}
-
-	return r.ValidateResponseData(nil, strict)
-}
-
-// ValidateResponse validates whether the given response data map conforms to
-// the response schema (response.Fields). It cycles through the data map and
-// validates conversions in the schema. In "strict" mode, this function will
-// also ensure that the data map has all schema-required fields and does not
-// have any fields outside of the schema.
-func (r *Response) ValidateResponseData(data map[string]interface{}, strict bool) error {
-	fd := FieldData{
-		Raw:    data,
-		Schema: r.Fields,
-	}
-
-	if strict {
-		return fd.ValidateStrict()
-	}
-
-	return fd.Validate()
-}
-
 // PathOperation is a concrete implementation of OperationHandler.
 type PathOperation struct {
 	Callback                    OperationFunc
