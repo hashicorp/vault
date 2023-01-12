@@ -391,7 +391,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	// disk.
 	if writeCert {
 		err := req.Storage.Put(ctx, &logical.StorageEntry{
-			Key:   "certs/" + serial,
+			Key:   "certs/" + normalizeSerial(serial),
 			Value: cert.Raw,
 		})
 		if err != nil {
