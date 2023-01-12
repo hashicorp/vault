@@ -25,4 +25,12 @@ export default class PkiConfigAdapter extends ApplicationAdapter {
         assert('formType must be one of import, generate-root, or generate-csr');
     }
   }
+
+  createRecord(store, type, snapshot) {
+    const serializer = store.serializerFor(type.modelName);
+    const url = this.urlForCreateRecord(type.modelName, snapshot);
+    // Override requestType so that we serialize data based on the endpoint
+    const data = serializer.serialize(snapshot, snapshot.adapterOptions.formType);
+    return this.ajax(url, 'POST', { data });
+  }
 }

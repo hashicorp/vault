@@ -1,0 +1,75 @@
+<form {{on "submit" this.generateRoot}} data-test-pki-config-generate-root-form>
+  <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+  <h2 class="title is-size-5 has-border-bottom-light page-header">Root parameters</h2>
+  {{#each this.defaultFields as |field|}}
+    {{#let (find-by "name" field @model.allFields) as |attr|}}
+      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} data-test-generate-root-field={{field}}>
+        {{#if (eq field "customTtl")}}
+          {{! customTtl attr has editType yield, which will render this }}
+          <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+        {{/if}}
+      </FormField>
+    {{/let}}
+  {{/each}}
+
+  {{! togglable groups }}
+  {{#each-in this.groups as |group fields|}}
+    <ToggleButton
+      @isOpen={{eq this.showGroup group}}
+      @openLabel={{concat "Hide " group}}
+      @closedLabel={{group}}
+      @onClick={{fn this.toggleGroup group}}
+      class="is-block"
+      data-test-toggle-group={{group}}
+    />
+    {{#if (eq this.showGroup group)}}
+      <div class="box is-marginless">
+        {{#if (eq group "Key parameters")}}
+          <PkiKeyParameters @model={{@model}} @fields={{this.keyParamFields}} />
+        {{else}}
+          {{#each fields as |fieldName|}}
+            {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
+              <FormField
+                data-test-field
+                @attr={{attr}}
+                @mode="create"
+                @model={{@model}}
+                {{!-- @onChange={{fn (mut (get @model fieldName))}}
+              @modelValidations={{this.modelValidations}}
+              @onKeyUp={{this.validateForm}} --}}
+              />
+            {{/let}}
+          {{/each}}
+        {{/if}}
+      </div>
+    {{/if}}
+  {{/each-in}}
+
+  <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth">
+    <h2 class="title is-size-5 has-border-bottom-light page-header">Issuer URLs</h2>
+    {{! TODO: fill in URL fields }}
+    {{! Updating this area of the form will require a secondary call to issuer/:issuer_ref/update once the initial request is complete }}
+  </fieldset>
+
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button type="submit" class="button is-primary" data-test-pki-config-save>
+        Done
+      </button>
+      <button {{on "click" this.cancel}} type="button" class="button has-left-margin-s" data-test-pki-config-cancel>
+        Cancel
+      </button>
+    </div>
+    {{#if this.invalidFormAlert}}
+      <div class="control">
+        <AlertInline
+          @type="danger"
+          @paddingTop={{true}}
+          @message={{this.invalidFormAlert}}
+          @mimicRefresh={{true}}
+          data-test-pki-key-validation-error
+        />
+      </div>
+    {{/if}}
+  </div>
+</form>
