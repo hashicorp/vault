@@ -31,7 +31,7 @@ func pathListRoles(b *backend) *framework.Path {
 							"keys": {
 								Type:        framework.TypeMap,
 								Description: `List of keys`,
-								Required:    true,
+								Required:    false,
 							},
 						},
 					}},
