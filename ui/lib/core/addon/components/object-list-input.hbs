@@ -38,6 +38,7 @@
           data-test-object-list-delete-button={{index}}
           type="button"
           class="button is-icon"
+          aria-label="remove"
           {{on "click" (fn this.removeRow index)}}
         >
           <Icon @name="trash" />
