@@ -77,7 +77,6 @@ type Seal interface {
 	SetCachedRecoveryConfig(*SealConfig)
 	SetRecoveryKey(context.Context, []byte) error
 	VerifyRecoveryKey(context.Context, []byte) error
-	VerifyRecoveryUnsealKey(context.Context, []byte) error
 	GetAccess() *seal.Access
 }
 
@@ -92,6 +91,15 @@ func NewDefaultSeal(lowLevel *seal.Access) Seal {
 	ret := &defaultSeal{
 		access:        lowLevel,
 		unsealKeyPath: StoredBarrierKeysPath,
+	}
+	ret.config.Store((*SealConfig)(nil))
+	return ret
+}
+
+func NewRecoverySeal(lowLevel *seal.Access) Seal {
+	ret := &defaultSeal{
+		access:        lowLevel,
+		unsealKeyPath: recoveryUnsealKeyPath,
 	}
 	ret.config.Store((*SealConfig)(nil))
 	return ret
@@ -205,8 +213,10 @@ func (d *defaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 		conf.Type = d.BarrierType().String()
 	case d.BarrierType().String():
 	default:
-		d.core.logger.Error("barrier seal type does not match expected type", "barrier_seal_type", conf.Type, "loaded_seal_type", d.BarrierType())
-		return nil, fmt.Errorf("barrier seal type of %q does not match expected type of %q", conf.Type, d.BarrierType())
+		if !(conf.Type != wrapping.WrapperTypeShamir.String() && d.unsealKeyPath == recoveryUnsealKeyPath) {
+			d.core.logger.Error("barrier seal type does not match expected type", "barrier_seal_type", conf.Type, "loaded_seal_type", d.BarrierType())
+			return nil, fmt.Errorf("barrier seal type of %q does not match expected type of %q", conf.Type, d.BarrierType())
+		}
 	}
 
 	// Check for a valid seal configuration

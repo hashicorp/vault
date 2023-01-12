@@ -1036,7 +1036,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 			Wrapper: wrapper,
 		})
 	}
-
 	c.seal.SetCore(c)
 	return c, nil
 }
@@ -1383,7 +1382,7 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 	if migrate && c.isRaftUnseal() {
 		return fmt.Errorf("can't perform a seal migration while joining a raft cluster")
 	}
-	if false && !migrate && c.migrationInfo != nil {
+	if !migrate && c.migrationInfo != nil {
 		done, err := c.sealMigrated(ctx)
 		if err != nil {
 			return fmt.Errorf("error checking to see if seal is migrated: %w", err)
@@ -1604,12 +1603,7 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 
 	if seal.RecoveryKeySupported() {
 		if err := seal.VerifyRecoveryKey(ctx, unsealKey); err != nil {
-			seal.(*autoSeal).initRecoveryAccess(unsealKey)
-			// This may also be the recovery unseal case, try to verify that instead
-			if err2 := seal.VerifyRecoveryUnsealKey(ctx, unsealKey); err2 != nil {
-				// Nope, not that either
-				return nil, &ErrInvalidKey{fmt.Sprintf("failed to verify recovery key: %v", err)}
-			}
+			return nil, &ErrInvalidKey{fmt.Sprintf("failed to verify recovery key: %v", err)}
 		}
 	}
 
@@ -2693,6 +2687,10 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 			// We have the same barrier type and the unwrap seal is nil so we're not
 			// migrating from same to same, IOW we assume it's not a migration.
 			return nil
+		case c.seal.BarrierType() == wrapping.WrapperTypeShamir && c.seal.(*defaultSeal).unsealKeyPath == recoveryUnsealKeyPath:
+			// The stored barrier config is not shamir, but we have a shamir seal anyway, because
+			// seal recovery mode has been requested
+			return nil
 		case c.seal.BarrierType() == wrapping.WrapperTypeShamir:
 			// The stored barrier config is not shamir, there is no disabled seal
 			// in config, and either no configured seal (which equates to Shamir)
@@ -2849,11 +2847,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 	switch seal.StoredKeysSupported() {
 	case vaultseal.StoredKeysSupportedGeneric:
 		if err := seal.VerifyRecoveryKey(ctx, combinedKey); err != nil {
-			seal.(*autoSeal).initRecoveryAccess(combinedKey)
-			// This may also be the recovery unseal case, try to verify that instead
-			if err2 := seal.VerifyRecoveryUnsealKey(ctx, combinedKey); err2 != nil {
-				return nil, fmt.Errorf("recovery key verification failed: %w", err)
-			}
+			return nil, fmt.Errorf("recovery key verification failed: %w", err)
 		}
 
 		storedKeys, err := seal.GetStoredKeys(ctx)

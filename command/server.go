@@ -2364,7 +2364,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 		}
 	}
-	var createdSeals []vault.Seal = make([]vault.Seal, len(config.Seals)+1)
+	createdSeals := make([]vault.Seal, len(config.Seals))
 	for _, configSeal := range config.Seals {
 		sealType := wrapping.WrapperTypeShamir.String()
 		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
@@ -2377,11 +2377,9 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		var seal vault.Seal
 		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 		c.allLoggers = append(c.allLoggers, sealLogger)
-
 		defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
 			Wrapper: aeadwrapper.NewShamirWrapper(),
 		})
-
 		var sealInfoKeys []string
 		sealInfoMap := map[string]string{}
 		wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
@@ -2391,7 +2389,11 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 					"Error parsing Seal configuration: %s", sealConfigError)
 			}
 		}
-		if wrapper == nil {
+		if configSeal.Recover {
+			seal = vault.NewRecoverySeal(&vaultseal.Access{
+				Wrapper: aeadwrapper.NewShamirWrapper(),
+			})
+		} else if wrapper == nil {
 			seal = defaultSeal
 		} else {
 			var err error
@@ -2416,9 +2418,6 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		}
 		createdSeals = append(createdSeals, seal)
 	}
-
-	sealLogger := c.logger.ResetNamed(fmt.Sprintf("recovery seal.%s", wrapping.WrapperTypeShamir.String()))
-	c.allLoggers = append(c.allLoggers, sealLogger)
 
 	return barrierSeal, barrierWrapper, unwrapSeal, createdSeals, sealConfigError, nil
 }
