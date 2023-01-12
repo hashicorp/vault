@@ -2,9 +2,11 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -49,10 +51,36 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 	defer b.revokeStorageLock.Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	colonSerial := denormalizeSerial(serialInt.(string))
-	resp, err := revokeCert(sc, colonSerial, true)
-	if resp == nil && err == nil {
-		b.Logger().Warn("expired certificate revoke failed because not found in storage, treating as success", "serial", serialInt.(string))
+
+	certEntry, err := fetchCertBySerial(sc, "certs/", serialInt.(string))
+	if err != nil {
+		switch err.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(err.Error()), nil
+		default:
+			return nil, err
+		}
 	}
-	return resp, err
+	if certEntry == nil {
+		// We can't write to revoked/ or update the CRL anyway because we don't have the cert,
+		// and there's no reason to expect this will work on a subsequent
+		// retry.  Just give up and let the lease get deleted.
+		b.Logger().Warn("expired certificate revoke failed because not found in storage, treating as success", "serial", serialInt.(string))
+		return nil, nil
+	}
+
+	cert, err := x509.ParseCertificate(certEntry.Value)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing certificate: %w", err)
+	}
+	if cert == nil {
+		return nil, fmt.Errorf("got a nil certificate")
+	}
+
+	// Compatibility: Don't revoke CAs if they had leases. New CAs going forward aren't issued leases.
+	if cert.IsCA {
+		return nil, nil
+	}
+
+	return revokeCert(sc, cert)
 }

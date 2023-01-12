@@ -467,7 +467,7 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509
 }
 
 // Revokes a cert, and tries to be smart about error recovery
-func revokeCert(sc *storageContext, colonSerial string, fromLease bool) (*logical.Response, error) {
+func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, error) {
 	// As this backend is self-contained and this function does not hook into
 	// third parties to manage users or resources, if the mount is tainted,
 	// revocation doesn't matter anyways -- the CRL that would be written will
@@ -476,6 +476,8 @@ func revokeCert(sc *storageContext, colonSerial string, fromLease bool) (*logica
 	if sc.Backend.System().Tainted() {
 		return nil, nil
 	}
+
+	colonSerial := serialFromCert(cert)
 
 	// Validate that no issuers match the serial number to be revoked. We need
 	// to gracefully degrade to the legacy cert bundle when it is required, as
@@ -516,33 +518,6 @@ func revokeCert(sc *storageContext, colonSerial string, fromLease bool) (*logica
 	}
 
 	if !alreadyRevoked {
-		certEntry, err := fetchCertBySerial(sc, "certs/", colonSerial)
-		if err != nil {
-			switch err.(type) {
-			case errutil.UserError:
-				return logical.ErrorResponse(err.Error()), nil
-			default:
-				return nil, err
-			}
-		}
-		if certEntry == nil {
-			if fromLease {
-				// We can't write to revoked/ or update the CRL anyway because we don't have the cert,
-				// and there's no reason to expect this will work on a subsequent
-				// retry.  Just give up and let the lease get deleted.
-				return nil, nil
-			}
-			return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found", colonSerial)), nil
-		}
-
-		cert, err := x509.ParseCertificate(certEntry.Value)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing certificate: %w", err)
-		}
-		if cert == nil {
-			return nil, fmt.Errorf("got a nil certificate")
-		}
-
 		// Add a little wiggle room because leases are stored with a second
 		// granularity
 		if cert.NotAfter.Before(time.Now().Add(2 * time.Second)) {
@@ -551,14 +526,8 @@ func revokeCert(sc *storageContext, colonSerial string, fromLease bool) (*logica
 			return response, nil
 		}
 
-		// Compatibility: Don't revoke CAs if they had leases. New CAs going
-		// forward aren't issued leases.
-		if cert.IsCA && fromLease {
-			return nil, nil
-		}
-
 		currTime := time.Now()
-		revInfo.CertificateBytes = certEntry.Value
+		revInfo.CertificateBytes = cert.Raw
 		revInfo.RevocationTime = currTime.Unix()
 		revInfo.RevocationTimeUTC = currTime.UTC()
 

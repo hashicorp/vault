@@ -344,7 +344,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse("Provided data for private_key was too short; perhaps a path was passed to the API rather than the contents of a PEM file?"), nil
 		}
 	}
-
+	sc := b.makeStorageContext(ctx, req.Storage)
 	var serial string
 	if haveSerial {
 		// Easy case: this cert should be in storage already.
@@ -354,7 +354,6 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 		}
 
 		// Here, fetch the certificate from disk to validate we can revoke it.
-		sc := b.makeStorageContext(ctx, req.Storage)
 		certEntry, err := fetchCertBySerial(sc, "certs/", serial)
 		if err != nil {
 			switch err.(type) {
@@ -418,12 +417,32 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 
 	// We store and identify by lowercase colon-separated hex, but other
 	// utilities use dashes and/or uppercase, so normalize
-	colonSerial := denormalizeSerial(serial)
+	hyphenSerial := normalizeSerial(serial)
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	sc := b.makeStorageContext(ctx, req.Storage)
-	return revokeCert(sc, colonSerial, false)
+	certEntry, err := fetchCertBySerial(sc, "certs/", hyphenSerial)
+	if err != nil {
+		switch err.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(err.Error()), nil
+		default:
+			return nil, err
+		}
+	}
+	if certEntry == nil {
+		return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found", denormalizeSerial(serial))), nil
+	}
+
+	cert, err := x509.ParseCertificate(certEntry.Value)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing certificate: %w", err)
+	}
+	if cert == nil {
+		return nil, fmt.Errorf("got a nil certificate")
+	}
+
+	return revokeCert(sc, cert)
 }
 
 func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
