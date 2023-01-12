@@ -238,6 +238,7 @@ message TokenEntry {
 	map<string, string> internal_meta = 19;
 	string inline_policy = 20;
 	bool no_identity_policies = 21;
+	string external_id = 22;
 }
 
 message LeaseOptions {
