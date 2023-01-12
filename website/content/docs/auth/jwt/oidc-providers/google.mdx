@@ -34,7 +34,7 @@ To set up the Google-specific handling, you'll need:
 - The ability to create a service account in [Google Cloud Platform](https://console.developers.google.com/iam-admin/serviceaccounts).
 - To enable the [Admin SDK API](https://console.developers.google.com/apis/api/admin.googleapis.com/overview).
 - An OAuth 2.0 application with an [internal user type](https://support.google.com/cloud/answer/10311615#user-type).
-  We do not recommend using an external user type since it would allow _any user_ with a
+  We **do not** recommend using an external user type since it would allow _any user_ with a
   Google account to authenticate with Vault.
 
 The Google-specific handling that's used to fetch Google Workspace groups and user information in Vault uses
