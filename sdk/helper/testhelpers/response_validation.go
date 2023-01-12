@@ -36,23 +36,25 @@ func ValidateResponseData(schema *framework.Response, data map[string]interface{
 		return nil
 	}
 
-	// Convert to json & back to coerse data entries into the final
-	// output format expected by Validate() and ValidateStrict(). This is
+	// Marshal the data to JSON and back to convert the map's values into
+	// JSON strings expected by Validate() and ValidateStrict(). This is
 	// not efficient and is done for testing purposes only.
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("failed to convert input to json: %w", err)
 	}
 
-	var jsonData map[string]interface{}
-
-	if err := json.Unmarshal(jsonBytes, &jsonData); err != nil {
+	var dataWithStringValues map[string]interface{}
+	if err := json.Unmarshal(
+		jsonBytes,
+		&dataWithStringValues,
+	); err != nil {
 		return fmt.Errorf("failed to unmashal data: %w", err)
 	}
 
 	// Validate
 	fd := framework.FieldData{
-		Raw:    jsonData,
+		Raw:    dataWithStringValues,
 		Schema: schema.Fields,
 	}
 
