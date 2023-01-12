@@ -1,11 +1,11 @@
 {{yield}}
 {{#each this.inputList as |row index|}}
   <div class="field is-grouped">
-    {{#each-in row as |key value|}}
-      {{#let (find-by "key" key @objectKeys) as |field|}}
+    {{#each-in row as |inputKey value|}}
+      {{#let (find-by "key" inputKey @objectKeys) as |field|}}
         <div class="control is-expanded">
           {{#if (eq index 0)}}
-            <h2 data-test-object-list-label={{key}}>{{field.label}}</h2>
+            <h2 data-test-object-list-label={{inputKey}}>{{field.label}}</h2>
           {{/if}}
           <Input
             data-test-object-list-input="{{field.key}}-{{index}}"
