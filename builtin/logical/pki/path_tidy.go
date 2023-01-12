@@ -75,12 +75,12 @@ func pathTidyCancel(b *backend) *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"safety_buffer": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt,
 								Description: `Safety buffer time duration`,
 								Required:    true,
 							},
 							"issuer_safety_buffer": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt,
 								Description: `Issuer safety buffer`,
 								Required:    true,
 							},
@@ -176,12 +176,12 @@ func pathTidyStatus(b *backend) *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"safety_buffer": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt,
 								Description: `Safety buffer time duration`,
 								Required:    true,
 							},
 							"issuer_safety_buffer": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt,
 								Description: `Issuer safety buffer`,
 								Required:    true,
 							},
@@ -318,12 +318,12 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 								Required:    true,
 							},
 							"safety_buffer": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt,
 								Description: `Safety buffer time duration`,
 								Required:    true,
 							},
 							"issuer_safety_buffer": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt,
 								Description: `Issuer safety buffer`,
 								Required:    true,
 							},
@@ -373,12 +373,12 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 								Required:    true,
 							},
 							"safety_buffer": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt,
 								Description: `Safety buffer time duration`,
 								Required:    true,
 							},
 							"issuer_safety_buffer": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt,
 								Description: `Issuer safety buffer`,
 								Required:    true,
 							},
