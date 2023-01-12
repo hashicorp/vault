@@ -11,26 +11,24 @@ export default class PkiOverviewRoute extends Route {
     return this.window || window;
   }
 
-  hasConfig() {
+  async hasConfig() {
     // When the engine is configured, it creates a default issuer.
     // If the issuers list is empty, we know it hasn't been configured
     const endpoint = `${this.win.origin}/v1/${this.secretMountPath.currentPath}/issuers?list=true`;
-    return this.auth
-      .ajax(endpoint, 'GET', {})
-      .then(() => true)
-      .catch(() => false);
+
+    try {
+      await this.auth.ajax(endpoint, 'GET', {});
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
-  fetchEngine() {
-    return this.store
-      .query('secret-engine', {
-        path: this.secretMountPath.currentPath,
-      })
-      .then((model) => {
-        if (model) {
-          return model.get('firstObject');
-        }
-      });
+  async fetchEngine() {
+    const model = await this.store.query('secret-engine', {
+      path: this.secretMountPath.currentPath,
+    });
+    return model.get('firstObject');
   }
 
   async fetchAllRoles() {

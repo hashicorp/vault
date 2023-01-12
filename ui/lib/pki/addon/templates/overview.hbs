@@ -30,7 +30,6 @@
         @subText="The total number of issuers in this PKI mount. Includes both root and intermediate certificates."
         @actionText="View issuers"
         @actionTo="issuers"
-        @type="role"
       />
     {{/if}}
     {{#if this.rolesCanList}}
@@ -40,7 +39,6 @@
         @subText="The total number of roles in this PKI mount that have been created to generate certificates."
         @actionText="View roles"
         @actionTo="roles"
-        @type="role"
       />
     {{/if}}
     <SelectableCardForm

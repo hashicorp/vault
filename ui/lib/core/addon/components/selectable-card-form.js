@@ -37,7 +37,6 @@ export default class SelectableCardForm extends Component {
   @action
   handleInput(value) {
     // if it comes in from the fallback component then the value is a string otherwise it's an array
-    // which currently only happens if type is role.
     if (Array.isArray(value)) {
       this.value = value[0];
     } else {
