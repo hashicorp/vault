@@ -54,8 +54,7 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
     label: 'Leaf notAfter behavior',
     subText:
       'What happens when a leaf certificate is issued, but its NotAfter field (and therefore its expiry date) exceeds that of this issuer.',
-    dockLink:
-      'https://github.com/hashicorp/vault/blob/main/website/content/api-docs/secret/pki.mdx#update-issuer',
+    docLink: '/vault/api-docs/secret/pki#update-issuer',
     editType: 'yield',
     valueOptions: ['err', 'truncate', 'permit'],
   })
@@ -77,7 +76,6 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
     label: 'Manual chain',
     subText:
       "An advanced field useful when automatic chain building isn't desired. The first element must be the present issuer's reference.",
-    editType: null,
   })
   manualChain;
 

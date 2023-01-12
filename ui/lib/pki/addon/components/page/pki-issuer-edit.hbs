@@ -9,7 +9,7 @@
           </h2>
         </div>
       {{/if}}
-      <FormField @attr={{field}} @model={{@model}} @showHelpText={{false}}>
+      <FormField @attr={{field}} @model={{@model}}>
         {{#if (eq field.name "usage")}}
           {{#each field.options.valueOptions as |option|}}
             <div class="is-flex-center has-text-grey has-text-weight-bold">
