@@ -500,26 +500,18 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *se
 		return nil, nil
 	}
 
+	var blobInfo *wrapping.BlobInfo
 	// Read as a multi-blob first
-	blobInfos := &wrapping.MultiBlobInfo{}
-	if err := proto.Unmarshal(pe.Value, blobInfos); err != nil {
-		blobInfo := &wrapping.BlobInfo{}
-
-		if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
-			return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
-		}
-		blobInfos.BlobInfos = []*wrapping.BlobInfo{blobInfo}
+	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
+		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
 	}
 
-	var pt []byte
-	for _, blobInfo := range blobInfos.BlobInfos {
-		pt, err = encryptor.Decrypt(ctx, blobInfo, nil)
-		if err != nil {
-			if strings.Contains(err.Error(), "message authentication failed") {
-				err = multierror.Append(err, &ErrInvalidKey{Reason: fmt.Sprintf("failed to decrypt keys from storage: %v", err)})
-			} else {
-				err = multierror.Append(err, &ErrDecrypt{Err: fmt.Errorf("failed to decrypt keys from storage: %w", err)})
-			}
+	pt, err := encryptor.Decrypt(ctx, blobInfo, nil)
+	if err != nil {
+		if strings.Contains(err.Error(), "message authentication failed") {
+			err = multierror.Append(err, &ErrInvalidKey{Reason: fmt.Sprintf("failed to decrypt keys from storage: %v", err)})
+		} else {
+			err = multierror.Append(err, &ErrDecrypt{Err: fmt.Errorf("failed to decrypt keys from storage: %w", err)})
 		}
 	}
 	if len(pt) == 0 {
