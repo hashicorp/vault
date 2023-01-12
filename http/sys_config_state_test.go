@@ -38,6 +38,7 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 		"disable_performance_standby":         false,
 		"disable_printable_check":             false,
 		"disable_sealwrap":                    false,
+		"experiments":                         nil,
 		"raw_storage_endpoint":                false,
 		"disable_sentinel_trace":              false,
 		"enable_ui":                           false,
