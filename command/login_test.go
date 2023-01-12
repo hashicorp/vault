@@ -445,7 +445,6 @@ func TestLoginCommand_Run(t *testing.T) {
 			// the time required for the totp engine to generate a new code
 			time.Sleep(21 * time.Second)
 			totpCode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath)
-
 			ui, cmd := testLoginCommand(t)
 			cmd.client = userClient
 			// login command bails early for test clients, so we have to explicitly set this
@@ -561,7 +560,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		validateFunc := func(methodIdentifier string) {
 			// the time required for the totp engine to generate a new code
 			time.Sleep(22 * time.Second)
-			totpPasscode1 := testhelpers.GetTOTPCodeFromEngine(t, client, engineName)
+			totpPasscode1 := "passcode=" + testhelpers.GetTOTPCodeFromEngine(t, client, engineName)
 
 			secret, err := cmd.client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
 				"mfa_request_id": mfaReqID,
