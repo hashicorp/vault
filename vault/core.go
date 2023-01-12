@@ -1746,6 +1746,16 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 			return fmt.Errorf("error storing new master key: %w", err)
 		}
 
+		// Store the unseal recovery key
+		wrapper := aeadwrapper.NewShamirWrapper()
+		wrapper.SetAesGcmKeyBytes(c.migrationInfo.unsealKey)
+		recoverySeal := NewRecoverySeal(&vaultseal.Access{
+			Wrapper: wrapper,
+		})
+		recoverySeal.SetCore(c)
+		if err := recoverySeal.SetStoredKeys(ctx, [][]byte{newMasterKey}); err != nil {
+			c.logger.Error("failed to store recovery unseal keys", "error", err)
+		}
 	default:
 		return errors.New("unhandled migration case (shamir to shamir)")
 	}
@@ -2687,7 +2697,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 			// We have the same barrier type and the unwrap seal is nil so we're not
 			// migrating from same to same, IOW we assume it's not a migration.
 			return nil
-		case c.seal.BarrierType() == wrapping.WrapperTypeShamir && c.seal.(*defaultSeal).unsealKeyPath == recoveryUnsealKeyPath:
+		case c.seal.BarrierType() == wrapping.WrapperTypeShamir && isUnsealRecoverySeal(c.seal):
 			// The stored barrier config is not shamir, but we have a shamir seal anyway, because
 			// seal recovery mode has been requested
 			return nil
@@ -2748,6 +2758,13 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	c.logger.Warn("entering seal migration mode; Vault will not automatically unseal even if using an autoseal", "from_barrier_type", c.migrationInfo.seal.BarrierType(), "to_barrier_type", c.seal.BarrierType())
 
 	return nil
+}
+
+func isUnsealRecoverySeal(seal Seal) bool {
+	if ds, ok := seal.(*defaultSeal); ok {
+		return ds.unsealKeyPath == recoveryUnsealKeyPath
+	}
+	return false
 }
 
 func (c *Core) migrateSealConfig(ctx context.Context) error {
