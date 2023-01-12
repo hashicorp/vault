@@ -251,6 +251,39 @@ func TestConsul_TooLarge(t *testing.T) {
 	}
 }
 
+func TestConsul_ExpandedCapabilitiesAvailable(t *testing.T) {
+	testCases := map[string]bool{
+		"1.13.5": false,
+		"1.14.3": true,
+	}
+
+	for version, shouldBeAvailable := range testCases {
+		t.Run(version, func(t *testing.T) {
+			cleanup, config := consul.PrepareTestContainer(t, version, false, true)
+			defer cleanup()
+
+			logger := logging.NewVaultLogger(log.Debug)
+			backendConfig := map[string]string{
+				"address":      config.Address(),
+				"token":        config.Token,
+				"path":         "vault/",
+				"max_parallel": "-1",
+			}
+
+			be, err := NewConsulBackend(backendConfig, logger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			b := be.(*ConsulBackend)
+
+			isAvailable := b.ExpandedCapabilitiesAvailable(context.Background())
+			if isAvailable != shouldBeAvailable {
+				t.Errorf("%t != %t, version %s\n", isAvailable, shouldBeAvailable, version)
+			}
+		})
+	}
+}
+
 func TestConsul_TransactionalBackend_GetTransactionsForNonExistentValues(t *testing.T) {
 	cleanup, config := consul.PrepareTestContainer(t, "1.14.2", false, true)
 	defer cleanup()
