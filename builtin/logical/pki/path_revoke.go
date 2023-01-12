@@ -33,7 +33,7 @@ func pathListCertsRevoked(b *backend) *framework.Path {
 							"keys": {
 								Type:        framework.TypeStringSlice,
 								Description: `List of Keys`,
-								Required:    true,
+								Required:    false,
 							},
 						},
 					}},
