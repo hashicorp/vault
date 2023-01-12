@@ -47,31 +47,16 @@ export default class PkiOverviewRoute extends Route {
     }
   }
 
-  async fetchAllCertificates() {
-    try {
-      return await this.store.query('pki/certificate', { backend: this.secretMountPath.currentPath });
-    } catch (e) {
-      return e.httpStatus;
-    }
-  }
-
   async model() {
     return hash({
       hasConfig: this.hasConfig(),
       engine: this.fetchEngine(),
       roles: this.fetchAllRoles(),
       issuers: this.fetchAllIssuers(),
-      certificates: this.fetchAllCertificates(),
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    const backend = this.secretMountPath.currentPath || 'pki';
-
-    controller.backend = backend;
-    controller.rolesCanList = !(resolvedModel.roles === 403);
-    controller.issuersCanList = !(resolvedModel.issuers === 403);
-    controller.breadcrumbs = [{ label: 'secrets', route: 'secrets', linkExternal: true }, { label: backend }];
   }
 }

@@ -19,49 +19,7 @@
 </Toolbar>
 
 {{#if this.model.hasConfig}}
-  <div
-    class="selectable-card-container has-grid has-top-margin-l has-two-col-grid
-      {{if (or (eq this.model.issuers 403) (eq this.model.roles 403)) 'has-three-col-grid' 'has-two-col-grid'}}"
-  >
-    {{#if this.issuersCanList}}
-      <SelectableCard
-        @cardTitle="Issuers"
-        @total={{if (eq this.model.issuers 404) 0 this.model.issuers.length}}
-        @subText="The total number of issuers in this PKI mount. Includes both root and intermediate certificates."
-        @actionText="View issuers"
-        @actionTo="issuers"
-      />
-    {{/if}}
-    {{#if this.rolesCanList}}
-      <SelectableCard
-        @cardTitle="Roles"
-        @total={{if (eq this.model.roles 404) 0 this.model.roles.length}}
-        @subText="The total number of roles in this PKI mount that have been created to generate certificates."
-        @actionText="View roles"
-        @actionTo="roles"
-      />
-    {{/if}}
-    <SelectableCardForm
-      @title="Issue certificate"
-      @subText="Quickly issue a certificate by typing the role name."
-      @placeholder="Type to find a role..."
-      @buttonText="Issue"
-      @models={{array "pki/role"}}
-      @backend={{this.backend}}
-      @pagePath="vault.cluster.secrets.backend.pki.roles.role.generate"
-      @testLabel="issue-certificate"
-    />
-    <SelectableCardForm
-      @title="View certificate"
-      @subText="Quickly view a certificate by typing its serial number."
-      @placeholder="33:a3:..."
-      @buttonText="View"
-      @models={{array "pki/certificate"}}
-      @backend={{this.backend}}
-      @pagePath="vault.cluster.secrets.backend.pki.certificates.certificate.details"
-      @testLabel="view-certificate"
-    />
-  </div>
+  <Page::PkiOverview @issuers={{this.model.issuers}} @roles={{this.model.roles}} @engine={{this.model.engine}} />
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
     <LinkTo @route="configuration.create" @model={{this.model.engine}}>
