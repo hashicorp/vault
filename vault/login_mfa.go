@@ -722,27 +722,22 @@ func (b *LoginMFABackend) sanitizeMFACredsWithLoginEnforcementMethodIDs(ctx cont
 		if err != nil {
 			return nil, err
 		}
-		// method name in the MFACredsMap could be just the method full name,
-		// i.e., namespace path+name, or just the name without namespace.
-		// let's check for both cases.
-		val, ok = mfaCredsMap[mConfig.Name]
-		if ok {
-			sanitizedMfaCreds[mConfig.ID] = val
-		} else {
-			configNS, err := NamespaceByID(ctx, mConfig.NamespaceID, b.Core)
-			if err != nil {
-				return nil, err
-			}
-			if configNS != nil {
-				val, ok = mfaCredsMap[configNS.Path+mConfig.Name]
-				if ok {
-					sanitizedMfaCreds[mConfig.ID] = val
-				} else {
-					multiError = multierror.Append(multiError, fmt.Errorf("failed to find MFA credentials associated with an MFA method ID %v, method name %v", methodID, mConfig.Name))
-				}
+		// method name in the MFACredsMap should be the method full name,
+		// i.e., namespacePath+name. This is because, a user in a child
+		// namespace can reference an MFA method ID in a parent namespace
+		configNS, err := NamespaceByID(ctx, mConfig.NamespaceID, b.Core)
+		if err != nil {
+			return nil, err
+		}
+		if configNS != nil {
+			val, ok = mfaCredsMap[configNS.Path+mConfig.Name]
+			if ok {
+				sanitizedMfaCreds[mConfig.ID] = val
 			} else {
-				multiError = multierror.Append(multiError, fmt.Errorf("failed to find the namespace associated with an MFA method"))
+				multiError = multierror.Append(multiError, fmt.Errorf("failed to find MFA credentials associated with an MFA method ID %v, method name %v", methodID, mConfig.Name))
 			}
+		} else {
+			multiError = multierror.Append(multiError, fmt.Errorf("failed to find the namespace associated with an MFA method ID %v", mConfig.ID))
 		}
 	}
 
