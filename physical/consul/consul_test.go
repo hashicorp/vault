@@ -252,10 +252,7 @@ func TestConsul_TooLarge(t *testing.T) {
 }
 
 func TestConsul_TransactionalBackend_GetTransactionsForNonExistentValues(t *testing.T) {
-	// TODO: unskip this after Consul releases 1.14 and we update our API dep. It currently fails but should pass with Consul 1.14
-	t.SkipNow()
-
-	cleanup, config := consul.PrepareTestContainer(t, "1.4.4", false, true)
+	cleanup, config := consul.PrepareTestContainer(t, "1.14.2", false, true)
 	defer cleanup()
 
 	client, err := api.NewClient(config.APIConfig())
@@ -316,10 +313,7 @@ func TestConsul_TransactionalBackend_GetTransactionsForNonExistentValues(t *test
 // TestConsul_TransactionalBackend_GetTransactions tests that passing a slice of transactions to the
 // consul backend will populate values for any transactions that are Get operations.
 func TestConsul_TransactionalBackend_GetTransactions(t *testing.T) {
-	// TODO: unskip this after Consul releases 1.14 and we update our API dep. It currently fails but should pass with Consul 1.14
-	t.SkipNow()
-
-	cleanup, config := consul.PrepareTestContainer(t, "1.4.4", false, true)
+	cleanup, config := consul.PrepareTestContainer(t, "1.14.2", false, true)
 	defer cleanup()
 
 	client, err := api.NewClient(config.APIConfig())
