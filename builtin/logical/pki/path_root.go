@@ -37,8 +37,8 @@ func pathDeleteRoot(b *backend) *framework.Path {
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathCADeleteRoot,
 				Responses: map[int][]framework.Response{
-					http.StatusNoContent: {{
-						Description: "No Content",
+					http.StatusOK: {{
+						Description: "OK",
 					}},
 				},
 				// Read more about why these flags are set in backend.go

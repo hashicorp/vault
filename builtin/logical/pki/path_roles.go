@@ -818,7 +818,7 @@ serviced by this role.`,
 				Callback: b.pathRoleDelete,
 				Responses: map[int][]framework.Response{
 					http.StatusNoContent: {{
-						Description: "OK",
+						Description: "No Content",
 					}},
 				},
 				// Read more about why these flags are set in backend.go.
