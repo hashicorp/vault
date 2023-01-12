@@ -348,7 +348,7 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 								Required:    true,
 							},
 							"interval_duration": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt,
 								Description: `Specifies the duration between automatic tidy operation`,
 								Required:    true,
 							},
