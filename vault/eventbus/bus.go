@@ -16,95 +16,23 @@ import (
 
 var ErrNotStarted = errors.New("event broker has not been started")
 
+var cloudEventsFormatterFilter *cloudevents.FormatterFilter
+
 // EventBus contains the main logic of running an event broker for Vault.
 // Start() must be called before the EventBus will accept events for sending.
 type EventBus struct {
-	logger  hclog.Logger
-	broker  *eventlogger.Broker
-	started atomic.Bool
+	logger          hclog.Logger
+	broker          *eventlogger.Broker
+	started         atomic.Bool
+	formatterNodeID eventlogger.NodeID
 }
 
-func NewEventBus() *EventBus {
-	return &EventBus{
-		logger: hclog.Default().Named("eventbus"),
-		broker: eventlogger.NewBroker(),
-	}
+type asyncChanNode struct {
+	// TODO: add bounded deque buffer of *any
+	ch chan any
 }
 
-// Start starts the event bus, allowing events to be written.
-// It is not possible to stop or restart the event bus.
-// It is safe to call Start() multiple times.
-func (bus *EventBus) Start() {
-	bus.started.Store(true)
-}
-
-var _ logical.EventSender = (*EventBus)(nil)
-
-// Send sends an event to the event bus and routes it to all relevant subscribers.
-// This function does *not* wait for all subscribers to acknowledge before returning.
-// TODO: use schema once it is defined
-func (bus *EventBus) Send(ctx context.Context, eventType string, s any) error {
-	if !bus.started.Load() {
-		return ErrNotStarted
-	}
-	bus.logger.Info("Sending event", "event", s)
-	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), s)
-	if err != nil {
-		// if no listeners for this event type are registered, that's okay, the event
-		// will just not be sent anywhere
-		if strings.Contains(strings.ToLower(err.Error()), "no graph for eventtype") {
-			return nil
-		}
-	}
-	return err
-}
-
-func (bus *EventBus) Subscribe(_ context.Context, eventType string) (chan any, error) {
-	// subscriptions are still stored even if the bus has not been started
-	pipelineID, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, err
-	}
-
-	nodeID, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, err
-	}
-	formatterNodeID, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: should we have just one node, and handle all the routing ourselves?
-	asyncNode := newAsyncNode()
-	err = bus.broker.RegisterNode(eventlogger.NodeID(nodeID), asyncNode)
-	if err != nil {
-		defer asyncNode.Close()
-		return nil, err
-	}
-
-	err = bus.broker.RegisterNode(eventlogger.NodeID(formatterNodeID), cloudEventsFormatterFilter)
-	if err != nil {
-		defer asyncNode.Close()
-		return nil, err
-	}
-
-	nodes := []eventlogger.NodeID{eventlogger.NodeID(formatterNodeID), eventlogger.NodeID(nodeID)}
-
-	pipeline := eventlogger.Pipeline{
-		PipelineID: eventlogger.PipelineID(pipelineID),
-		EventType:  eventlogger.EventType(eventType),
-		NodeIDs:    nodes,
-	}
-	err = bus.broker.RegisterPipeline(pipeline)
-	if err != nil {
-		defer asyncNode.Close()
-		return nil, err
-	}
-	return asyncNode.ch, nil
-}
-
-var cloudEventsFormatterFilter *cloudevents.FormatterFilter
+var _ eventlogger.Node = &asyncChanNode{}
 
 func init() {
 	// TODO: maybe this should relate to the Vault core somehow?
@@ -120,9 +48,87 @@ func init() {
 	}
 }
 
-type asyncChanNode struct {
-	// TODO: add bounded deque buffer of *any
-	ch chan any
+func NewEventBus() (*EventBus, error) {
+	broker := eventlogger.NewBroker()
+
+	formatterID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	formatterNodeID := eventlogger.NodeID(formatterID)
+	err = broker.RegisterNode(formatterNodeID, cloudEventsFormatterFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	return &EventBus{
+		logger:          hclog.Default().Named("eventbus"),
+		broker:          broker,
+		formatterNodeID: formatterNodeID,
+	}, nil
+}
+
+// Start starts the event bus, allowing events to be written.
+// It is not possible to stop or restart the event bus.
+// It is safe to call Start() multiple times.
+func (bus *EventBus) Start() {
+	bus.started.Store(true)
+}
+
+var _ logical.EventSender = (*EventBus)(nil)
+
+// Send sends an event to the event bus and routes it to all relevant subscribers.
+// This function does *not* wait for all subscribers to acknowledge before returning.
+// TODO: use schema once it is defined
+func (bus *EventBus) Send(ctx context.Context, eventType logical.EventType, s any) error {
+	if !bus.started.Load() {
+		return ErrNotStarted
+	}
+	bus.logger.Info("Sending event", "event", s)
+	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), s)
+	if err != nil {
+		// if no listeners for this event type are registered, that's okay, the event
+		// will just not be sent anywhere
+		if strings.Contains(strings.ToLower(err.Error()), "no graph for eventtype") {
+			return nil
+		}
+	}
+	return err
+}
+
+func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (chan any, error) {
+	// subscriptions are still stored even if the bus has not been started
+	pipelineID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	nodeID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: should we have just one node, and handle all the routing ourselves?
+	asyncNode := newAsyncNode()
+	err = bus.broker.RegisterNode(eventlogger.NodeID(nodeID), asyncNode)
+	if err != nil {
+		defer asyncNode.Close()
+		return nil, err
+	}
+
+	nodes := []eventlogger.NodeID{bus.formatterNodeID, eventlogger.NodeID(nodeID)}
+
+	pipeline := eventlogger.Pipeline{
+		PipelineID: eventlogger.PipelineID(pipelineID),
+		EventType:  eventlogger.EventType(eventType),
+		NodeIDs:    nodes,
+	}
+	err = bus.broker.RegisterPipeline(pipeline)
+	if err != nil {
+		defer asyncNode.Close()
+		return nil, err
+	}
+	return asyncNode.ch, nil
 }
 
 func newAsyncNode() *asyncChanNode {
@@ -138,9 +144,10 @@ func (node *asyncChanNode) Close() error {
 
 func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	// TODO: add timeout on sending to node.ch
+	// sends to the channel async in another goroutine
 	go func() {
 		select {
-		case node.ch <- e.Payload: // sends to the channel async
+		case node.ch <- e.Payload:
 		case <-ctx.Done():
 		}
 	}()
@@ -154,5 +161,3 @@ func (node *asyncChanNode) Reopen() error {
 func (node *asyncChanNode) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
 }
-
-var _ eventlogger.Node = &asyncChanNode{}
