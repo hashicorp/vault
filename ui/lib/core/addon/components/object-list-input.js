@@ -52,7 +52,7 @@ export default class ObjectListInput extends Component {
   }
 
   createEmptyRow(keys) {
-    // create a new object with from input keys with empty values
+    // create a new object from input keys that have empty values
     return Object.fromEntries(keys.map((key) => [key, '']));
   }
 
