@@ -144,6 +144,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"unseal",
 				"leader",
 				"health",
+				"experiments",
 				"generate-root/attempt",
 				"generate-root/update",
 				"rekey/init",
