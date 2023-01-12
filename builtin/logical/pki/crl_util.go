@@ -525,6 +525,14 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 	isNotPerfPrimary := sc.Backend.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
 		(!sc.Backend.System().LocalMount() && sc.Backend.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
 
+	// Before revoking certificates, we need to hold the lock for certificate
+	// storage. This prevents any parallel revocations and prevents us from
+	// multiple places. We do this before grabbing the contents of the
+	// revocation queues themselves, to ensure we interleave well with other
+	// invocations of this function and avoid duplicate work.
+	sc.Backend.revokeStorageLock.Lock()
+	defer sc.Backend.revokeStorageLock.Unlock()
+
 	if err := cb.maybeGatherQueueForFirstProcess(sc, isNotPerfPrimary); err != nil {
 		return fmt.Errorf("failed to gather first queue: %v", err)
 	}
