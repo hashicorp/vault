@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/kubernetes: Add /check endpoint to determine if environment variables are set [[GH-18](https://github.com/hashicorp/vault-plugin-secrets-kubernetes/pull/18)]
+```

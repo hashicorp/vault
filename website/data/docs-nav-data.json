@@ -214,6 +214,10 @@
           {
             "title": "TCP",
             "path": "configuration/listener/tcp"
+          },
+          {
+            "title": "Unix",
+            "path": "configuration/listener/unix"
           }
         ]
       },
@@ -536,6 +540,19 @@
           {
             "title": "<code>undelete</code>",
             "path": "commands/kv/undelete"
+          }
+        ]
+      },
+      {
+        "title": "<code>pki</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/pki"
+          },
+          {
+            "title": "<code>health-check</code>",
+            "path": "commands/pki/health-check"
           }
         ]
       },
@@ -893,6 +910,10 @@
             ]
           }
         ]
+      },
+      {
+        "title": "API Proxy",
+        "path": "agent/apiproxy"
       },
       {
         "title": "Caching",

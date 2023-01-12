@@ -40,20 +40,20 @@ import (
 	loghelper "github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/hcp_link"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/pkg/errors"
@@ -446,7 +446,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	// Update the 'log' related aspects of shared config based on config/env var/cli
-	c.Flags().updateLogConfig(config.SharedConfig)
+	c.Flags().applyLogConfigOverrides(config.SharedConfig)
 	l, err := c.configureLogging(config)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -1052,7 +1052,7 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	f.updateLogConfig(config.SharedConfig)
+	f.applyLogConfigOverrides(config.SharedConfig)
 
 	// Set 'trace' log level for the following 'dev' clusters
 	if c.flagDevThreeNode || c.flagDevFourCluster {
@@ -1115,16 +1115,6 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
 				"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS env var: " +
 				"setting to default value false"))
-		}
-	}
-
-	if allowPendingRemoval := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allowPendingRemoval != "" {
-		var err error
-		vault.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
-		if err != nil {
-			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
-				consts.VaultAllowPendingRemovalMountsEnv + " env var: " +
-				"defaulting to false."))
 		}
 	}
 
@@ -1249,6 +1239,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if c.flagDevFourCluster {
 		return enableFourClusterDev(c, &coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+	}
+
+	if allowPendingRemoval := os.Getenv(consts.EnvVaultAllowPendingRemovalMounts); allowPendingRemoval != "" {
+		var err error
+		coreConfig.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				consts.EnvVaultAllowPendingRemovalMounts + " env var: " +
+				"defaulting to false."))
+		}
 	}
 
 	// Initialize the separate HA storage backend, if it exists
@@ -1401,6 +1401,17 @@ func (c *ServerCommand) Run(args []string) int {
 		info["fips"] = fipsStatus
 	}
 
+	if config.HCPLinkConf != nil {
+		infoKeys = append(infoKeys, "HCP organization")
+		info["HCP organization"] = config.HCPLinkConf.Resource.Organization
+
+		infoKeys = append(infoKeys, "HCP project")
+		info["HCP project"] = config.HCPLinkConf.Resource.Project
+
+		infoKeys = append(infoKeys, "HCP resource ID")
+		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
+	}
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1470,12 +1481,12 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	hcpLogger := c.logger.Named("hcpLink")
+	hcpLogger := c.logger.Named("hcp-connectivity")
 	hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, core, hcpLogger)
 	if err != nil {
-		c.logger.Error("failed to start HCP Link", "error", err)
+		c.logger.Error("failed to establish HCP connection", "error", err)
 	} else if hcpLink != nil {
-		c.logger.Trace("started HCP link")
+		c.logger.Trace("established HCP connection")
 	}
 
 	if c.flagTestServerConfig {
@@ -1605,7 +1616,7 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 		RUNRELOADFUNCS:
-			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
+			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs, core); err != nil {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
 
@@ -1709,30 +1720,20 @@ func (c *ServerCommand) configureLogging(config *server.Config) (hclog.Intercept
 		return nil, err
 	}
 
-	logRotateBytes, err := parseutil.ParseInt(config.LogRotateBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	logRotateMaxFiles, err := parseutil.ParseInt(config.LogRotateMaxFiles)
-	if err != nil {
-		return nil, err
-	}
-
 	logCfg := &loghelper.LogConfig{
 		Name:              "vault",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       config.LogFile,
 		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    int(logRotateBytes),
-		LogRotateMaxFiles: int(logRotateMaxFiles),
+		LogRotateBytes:    config.LogRotateBytes,
+		LogRotateMaxFiles: config.LogRotateMaxFiles,
 	}
 
 	return loghelper.Setup(logCfg, c.logWriter)
 }
 
-func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.WrappedHCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.WrappedHCPLinkVault, error) {
+func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.HCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.HCPLinkVault, error) {
 	// trigger a shutdown
 	if hcpLinkVault != nil {
 		err := hcpLinkVault.Shutdown()
@@ -2102,7 +2103,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
 			for _, core := range testCluster.Cores {
-				if err := c.Reload(core.ReloadFuncsLock, core.ReloadFuncs, nil); err != nil {
+				if err := c.Reload(core.ReloadFuncsLock, core.ReloadFuncs, nil, core.Core); err != nil {
 					c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 				}
 			}
@@ -2220,7 +2221,7 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 	return url.String(), nil
 }
 
-func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reloadutil.ReloadFunc, configPath []string) error {
+func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reloadutil.ReloadFunc, configPath []string, core *vault.Core) error {
 	lock.RLock()
 	defer lock.RUnlock()
 
@@ -2247,6 +2248,9 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			}
 		}
 	}
+
+	// Set Introspection Endpoint to enabled with new value in the config after reload
+	core.ReloadIntrospectionEndpointEnabled()
 
 	// Send a message that we reloaded. This prevents "guessing" sleep times
 	// in tests.
@@ -2629,6 +2633,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		CredentialBackends:             c.CredentialBackends,
 		LogicalBackends:                c.LogicalBackends,
 		Logger:                         c.logger,
+		DetectDeadlocks:                config.DetectDeadlocks,
 		DisableSentinelTrace:           config.DisableSentinelTrace,
 		DisableCache:                   config.DisableCache,
 		DisableMlock:                   config.DisableMlock,
@@ -2641,6 +2646,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		PluginFilePermissions:          config.PluginFilePermissions,
 		EnableUI:                       config.EnableUI,
 		EnableRaw:                      config.EnableRawEndpoint,
+		EnableIntrospection:            config.EnableIntrospectionEndpoint,
 		DisableSealWrap:                config.DisableSealWrap,
 		DisablePerformanceStandby:      config.DisablePerformanceStandby,
 		DisableIndexing:                config.DisableIndexing,
@@ -2660,6 +2666,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 
 	if c.flagDev {
 		coreConfig.EnableRaw = true
+		coreConfig.EnableIntrospection = true
 		coreConfig.DevToken = c.flagDevRootTokenID
 		if c.flagDevLeasedKV {
 			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory

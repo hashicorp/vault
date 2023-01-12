@@ -40,6 +40,8 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 		"disable_sealwrap":                    false,
 		"experiments":                         nil,
 		"raw_storage_endpoint":                false,
+		"detect_deadlocks":                    "",
+		"introspection_endpoint":              false,
 		"disable_sentinel_trace":              false,
 		"enable_ui":                           false,
 		"log_format":                          "",

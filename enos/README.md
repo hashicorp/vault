@@ -143,9 +143,9 @@ unzipped Vault binary at the `vault_local_binary_path`.
 
 # CI Bootstrap
 In order to execute any of the scenarios in this repository, it is first necessary to bootstrap the 
-CI AWS account with the required permissions and supporting AWS resources. There are two Terraform
-modules which are used for this purpose, [service-user-iam](./ci/service-user-iam) for the account
-permissions and [bootstrap](./ci/bootstrap) for the supporting resources.
+CI AWS account with the required permissions, service quotas and supporting AWS resources. There are 
+two Terraform modules which are used for this purpose, [service-user-iam](./ci/service-user-iam) for 
+the account permissions, and service quotas and [bootstrap](./ci/bootstrap) for the supporting resources.
 
 **Supported Regions** - enos scenarios are supported in the following regions: 
 `"us-east-1", "us-east-2", "us-west-1", "us-west-2"`
@@ -153,13 +153,16 @@ permissions and [bootstrap](./ci/bootstrap) for the supporting resources.
 ## Bootstrap Process
 These steps should be followed to bootstrap this repo for enos scenario execution:
 
-### Set up CI service user IAM role
+### Set up CI service user IAM role and Service Quotas
 The service user that is used when executing enos scenarios from any GitHub Action workflow must have 
-a properly configured IAM role granting the access required to create resources in AWS. The
-[service-user-iam](./ci/service-user-iam) module contains the IAM Policy and Role for that grants
-this access. This module should be updated whenever a new AWS resource type is required for a scenario.
-Since this is persistent and cannot be created and destroyed each time a scenario is run, the Terraform
-state will be managed by Terraform Cloud. Here are the steps to configure the GitHub Actions service user:
+a properly configured IAM role granting the access required to create resources in AWS. Additionally,
+service quotas need to be adjusted to ensure that normal use of the ci account does not cause any
+service quotas to be exceeded. The [service-user-iam](./ci/service-user-iam) module contains the IAM 
+Policy and Role for that grants this access as well as the service quota increase requests to adjust 
+the service quotas. This module should be updated whenever a new AWS resource type is required for a 
+scenario or a service quota limit needs to be increased. Since this is persistent and cannot be created 
+and destroyed each time a scenario is run, the Terraform state will be managed by Terraform Cloud. 
+Here are the steps to configure the GitHub Actions service user:
 
 #### Pre-requisites
 - Access to the `hashicorp-qti` organization in Terraform Cloud.

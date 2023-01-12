@@ -10,6 +10,7 @@ Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.googl
 
 1. Visit the [Google API Console](https://console.developers.google.com).
 1. Create or a select a project.
+1. Navigate to Menu > APIs & Services
 1. Create a new credential via Credentials > Create Credentials > OAuth Client ID.
 1. Configure the OAuth Consent Screen. Application Name is required. Save.
 1. Select application type: "Web Application".
@@ -32,7 +33,9 @@ To set up the Google-specific handling, you'll need:
   for granting domain-wide delegation API client access.
 - The ability to create a service account in [Google Cloud Platform](https://console.developers.google.com/iam-admin/serviceaccounts).
 - To enable the [Admin SDK API](https://console.developers.google.com/apis/api/admin.googleapis.com/overview).
-- An OAuth 2.0 application with an [external user type](https://support.google.com/cloud/answer/10311615#user-type).
+- An OAuth 2.0 application with an [internal user type](https://support.google.com/cloud/answer/10311615#user-type).
+  We **do not** recommend using an external user type since it would allow _any user_ with a
+  Google account to authenticate with Vault.
 
 The Google-specific handling that's used to fetch Google Workspace groups and user information in Vault uses
 Google Workspace Domain-Wide Delegation of Authority for authentication and authorization. You need to follow

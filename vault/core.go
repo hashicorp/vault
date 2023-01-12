@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -49,12 +50,12 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
+	"github.com/hashicorp/vault/version"
 	"github.com/patrickmn/go-cache"
 	uberAtomic "go.uber.org/atomic"
 	"google.golang.org/grpc"
@@ -78,6 +79,18 @@ const (
 	// clusters that they need to perform a rekey operation synchronously; this
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
 	coreKeyringCanaryPath = "core/canary-keyring"
+
+	// coreGroupPolicyApplicationPath is used to store the behaviour for
+	// how policies should be applied
+	coreGroupPolicyApplicationPath = "core/group-policy-application-mode"
+
+	// groupPolicyApplicationModeWithinNamespaceHierarchy is a configuration option for group
+	// policy application modes, which allows only in-namespace-hierarchy policy application
+	groupPolicyApplicationModeWithinNamespaceHierarchy = "within_namespace_hierarchy"
+
+	// groupPolicyApplicationModeAny is a configuration option for group
+	// policy application modes, which allows policy application irrespective of namespaces
+	groupPolicyApplicationModeAny = "any"
 
 	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
 
@@ -119,6 +132,10 @@ var (
 	// ErrHANotEnabled is returned if the operation only makes sense
 	// in an HA setting
 	ErrHANotEnabled = errors.New("Vault is not configured for highly-available mode")
+
+	// ErrIntrospectionNotEnabled is returned if "introspection_endpoint" is not
+	// enabled in the configuration file
+	ErrIntrospectionNotEnabled = errors.New("The Vault configuration must set \"introspection_endpoint\" to true to enable this endpoint")
 
 	// manualStepDownSleepPeriod is how long to sleep after a user-initiated
 	// step down of the active node, to prevent instantly regrabbing the lock.
@@ -299,7 +316,7 @@ type Core struct {
 	auditBackends map[string]audit.Factory
 
 	// stateLock protects mutable state
-	stateLock locking.DeadlockRWMutex
+	stateLock locking.RWMutex
 	sealed    *uint32
 
 	standby              bool
@@ -310,8 +327,11 @@ type Core struct {
 	keepHALockOnStepDown *uint32
 	heldHALock           physical.Lock
 
-	// shutdownDoneCh is used to notify when Shutdown() completes
-	shutdownDoneCh chan struct{}
+	// shutdownDoneCh is used to notify when core.Shutdown() completes.
+	// core.Shutdown() is typically issued in a goroutine to allow Vault to
+	// release the stateLock. This channel is marked atomic to prevent race
+	// conditions.
+	shutdownDoneCh *atomic.Value
 
 	// unlockInfo has the keys provided to Unseal until the threshold number of parts is available, as well as the operation nonce
 	unlockInfo *unlockInformation
@@ -508,6 +528,10 @@ type Core struct {
 	// rawEnabled indicates whether the Raw endpoint is enabled
 	rawEnabled bool
 
+	// inspectableEnabled indicates whether the Inspect endpoint is enabled
+	introspectionEnabled     bool
+	introspectionEnabledLock sync.Mutex
+
 	// pluginDirectory is the location vault will look for plugin binaries
 	pluginDirectory string
 
@@ -524,6 +548,9 @@ type Core struct {
 	// It has user information (alias-name and mount accessor) as a key
 	// and login counter, last failed login time as value
 	userFailedLoginInfo map[FailedLoginUser]*FailedLoginInfo
+
+	// userFailedLoginInfoLock controls access to the userFailedLoginInfoMap
+	userFailedLoginInfoLock sync.RWMutex
 
 	enableMlock bool
 
@@ -647,6 +674,9 @@ type Core struct {
 	rollbackPeriod time.Duration
 
 	experiments []string
+
+	pendingRemovalMountsAllowed bool
+	expirationRevokeRetryBase   time.Duration
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -658,6 +688,13 @@ func (c *Core) HAState() consts.HAState {
 	default:
 		return consts.Active
 	}
+}
+
+func (c *Core) HAStateWithLock() consts.HAState {
+	c.stateLock.RLock()
+	c.stateLock.RUnlock()
+
+	return c.HAState()
 }
 
 // CoreConfig is used to parameterize a core
@@ -697,6 +734,9 @@ type CoreConfig struct {
 
 	Logger log.Logger
 
+	// Use the deadlocks library to detect deadlocks
+	DetectDeadlocks string
+
 	// Disables the trace display for Sentinel checks
 	DisableSentinelTrace bool
 
@@ -727,6 +767,9 @@ type CoreConfig struct {
 
 	// Enable the raw endpoint
 	EnableRaw bool
+
+	// Enable the introspection endpoint
+	EnableIntrospection bool
 
 	PluginDirectory string
 
@@ -783,6 +826,10 @@ type CoreConfig struct {
 	RollbackPeriod time.Duration
 
 	Experiments []string
+
+	PendingRemovalMountsAllowed bool
+
+	ExpirationRevokeRetryBase time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -864,6 +911,14 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		conf.NumExpirationWorkers = numExpirationWorkersDefault
 	}
 
+	// Use imported logging deadlock if requested
+	var stateLock locking.RWMutex
+	if strings.Contains(conf.DetectDeadlocks, "statelock") {
+		stateLock = &locking.DeadlockRWMutex{}
+	} else {
+		stateLock = &locking.SyncRWMutex{}
+	}
+
 	effectiveSDKVersion := conf.EffectiveSDKVersion
 	if effectiveSDKVersion == "" {
 		effectiveSDKVersion = version.GetVersion().Version
@@ -882,6 +937,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		clusterListener:      new(atomic.Value),
 		customListenerHeader: new(atomic.Value),
 		seal:                 conf.Seal,
+		stateLock:            stateLock,
 		router:               NewRouter(),
 		sealed:               new(uint32),
 		sealMigrationDone:    new(uint32),
@@ -900,7 +956,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		clusterPeerClusterAddrsCache:   cache.New(3*clusterHeartbeatInterval, time.Second),
 		enableMlock:                    !conf.DisableMlock,
 		rawEnabled:                     conf.EnableRaw,
-		shutdownDoneCh:                 make(chan struct{}),
+		introspectionEnabled:           conf.EnableIntrospection,
+		shutdownDoneCh:                 new(atomic.Value),
 		replicationState:               new(uint32),
 		atomicPrimaryClusterAddrs:      new(atomic.Value),
 		atomicPrimaryFailoverAddrs:     new(atomic.Value),
@@ -937,11 +994,15 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		effectiveSDKVersion:            effectiveSDKVersion,
 		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
 		experiments:                    conf.Experiments,
+		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
+		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
 	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
+
+	c.shutdownDoneCh.Store(make(chan struct{}))
 
 	c.allLoggers = append(c.allLoggers, c.logger)
 
@@ -1205,7 +1266,8 @@ func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	if isUpdated {
 		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime, "build date", version.BuildDate)
 	}
-	// Finally, populate the version history cache
+
+	// Finally, repopulate the version history cache
 	err = c.loadVersionHistory(ctx)
 	if err != nil {
 		return err
@@ -1230,6 +1292,14 @@ func (c *Core) DisableSSCTokens() bool {
 	return c.disableSSCTokens
 }
 
+// ShutdownCoreError logs a shutdown error and shuts down the Vault core.
+func (c *Core) ShutdownCoreError(err error) {
+	c.Logger().Error("shutting down core", "error", err)
+	if shutdownErr := c.ShutdownWait(); shutdownErr != nil {
+		c.Logger().Error("failed to shutdown core", "error", shutdownErr)
+	}
+}
+
 // Shutdown is invoked when the Vault instance is about to be terminated. It
 // should not be accessible as part of an API call as it will cause an availability
 // problem. It is only used to gracefully quit in the case of HA so that failover
@@ -1240,9 +1310,11 @@ func (c *Core) Shutdown() error {
 
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
-	if c.shutdownDoneCh != nil {
-		close(c.shutdownDoneCh)
-		c.shutdownDoneCh = nil
+
+	doneCh := c.shutdownDoneCh.Load().(chan struct{})
+	if doneCh != nil {
+		close(doneCh)
+		c.shutdownDoneCh.Store((chan struct{})(nil))
 	}
 
 	return err
@@ -1259,7 +1331,7 @@ func (c *Core) ShutdownWait() error {
 
 // ShutdownDone returns a channel that will be closed after Shutdown completes
 func (c *Core) ShutdownDone() <-chan struct{} {
-	return c.shutdownDoneCh
+	return c.shutdownDoneCh.Load().(chan struct{})
 }
 
 // CORSConfig returns the current CORS configuration
@@ -2170,9 +2242,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	}
-	if err := c.handleVersionTimeStamps(ctx); err != nil {
-		return err
-	}
 	if err := c.setupPluginCatalog(ctx); err != nil {
 		return err
 	}
@@ -2276,6 +2345,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	c.metricsCh = make(chan struct{})
 	go c.emitMetricsActiveNode(c.metricsCh)
 
+	// Establish version timestamps at the end of unseal on active nodes only.
+	if err := c.handleVersionTimeStamps(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -2314,6 +2388,12 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		_ = c.seal.SetRecoveryConfig(ctx, nil)
 	}
 
+	// Load prior un-updated store into version history cache to compare
+	// previous state.
+	if err := c.loadVersionHistory(ctx); err != nil {
+		return err
+	}
+
 	if err := unsealer.unseal(ctx, c.logger, c); err != nil {
 		return err
 	}
@@ -2337,8 +2417,39 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	// This is intentionally the last block in this function. We want to allow
 	// writes just before allowing client requests, to ensure everything has
 	// been set up properly before any writes can have happened.
-	for _, v := range c.postUnsealFuncs {
-		v()
+	//
+	// Use a small temporary worker pool to run postUnsealFuncs in parallel
+	postUnsealFuncConcurrency := runtime.NumCPU() * 2
+	if v := os.Getenv("VAULT_POSTUNSEAL_FUNC_CONCURRENCY"); v != "" {
+		pv, err := strconv.Atoi(v)
+		if err != nil || pv < 1 {
+			c.logger.Warn("invalid value for VAULT_POSTUNSEAL_FUNC_CURRENCY, must be a positive integer", "error", err, "value", pv)
+		} else {
+			postUnsealFuncConcurrency = pv
+		}
+	}
+	if postUnsealFuncConcurrency <= 1 {
+		// Out of paranoia, keep the old logic for parallism=1
+		for _, v := range c.postUnsealFuncs {
+			v()
+		}
+	} else {
+		jobs := make(chan func())
+		var wg sync.WaitGroup
+		for i := 0; i < postUnsealFuncConcurrency; i++ {
+			go func() {
+				for v := range jobs {
+					v()
+					wg.Done()
+				}
+			}()
+		}
+		for _, v := range c.postUnsealFuncs {
+			wg.Add(1)
+			jobs <- v
+		}
+		wg.Wait()
+		close(jobs)
 	}
 
 	if atomic.LoadUint32(c.sealMigrationDone) == 1 {
@@ -2988,6 +3099,11 @@ func (c *Core) LogFormat() string {
 	return conf.(*server.Config).LogFormat
 }
 
+// LogLevel returns the log level provided by level provided by config, CLI flag, or env
+func (c *Core) LogLevel() string {
+	return c.logLevel
+}
+
 // MetricsHelper returns the global metrics helper which allows external
 // packages to access Vault's internal metrics.
 func (c *Core) MetricsHelper() *metricsutil.MetricsHelper {
@@ -3045,6 +3161,43 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 		}
 	}
 	return &flags, nil
+}
+
+// isMountable tells us whether or not we can continue mounting a plugin-based
+// mount entry after failing to instantiate a backend. We do this to preserve
+// the storage and path when a plugin is missing or has otherwise been
+// misconfigured. This allows users to recover from errors when starting Vault
+// with misconfigured plugins. It should not be possible for existing builtins
+// to be misconfigured, so that is a fatal error.
+func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
+	return !c.isMountEntryBuiltin(ctx, entry, pluginType)
+}
+
+// isMountEntryBuiltin determines whether a mount entry is associated with a
+// builtin of the specified plugin type.
+func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
+	// Prevent a panic early on
+	if entry == nil || c.pluginCatalog == nil {
+		return false
+	}
+
+	// Allow type to be determined from mount entry when not otherwise specified
+	if pluginType == consts.PluginTypeUnknown {
+		pluginType = c.builtinTypeFromMountEntry(ctx, entry)
+	}
+
+	// Handle aliases
+	pluginName := entry.Type
+	if alias, ok := mountAliases[pluginName]; ok {
+		pluginName = alias
+	}
+
+	plug, err := c.pluginCatalog.Get(ctx, pluginName, pluginType, entry.Version)
+	if err != nil || plug == nil {
+		return false
+	}
+
+	return plug.Builtin
 }
 
 // MatchingMount returns the path of the mount that will be responsible for
@@ -3333,6 +3486,16 @@ func (c *Core) ReloadLogRequestsLevel() {
 	}
 }
 
+func (c *Core) ReloadIntrospectionEndpointEnabled() {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return
+	}
+	c.introspectionEnabledLock.Lock()
+	defer c.introspectionEnabledLock.Unlock()
+	c.introspectionEnabled = conf.(*server.Config).EnableIntrospectionEndpoint
+}
+
 type PeerNode struct {
 	Hostname       string    `json:"hostname"`
 	APIAddress     string    `json:"api_address"`
@@ -3434,6 +3597,39 @@ func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]
 	return resp.Data["role"].(string)
 }
 
+// aliasNameFromLoginRequest will determine the aliasName from the login Request
+func (c *Core) aliasNameFromLoginRequest(ctx context.Context, req *logical.Request) (string, error) {
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// ns path is added while checking matching backend
+	mountPath := strings.TrimPrefix(req.MountPoint, ns.Path)
+
+	matchingBackend := c.router.MatchingBackend(ctx, mountPath)
+	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
+		// pathLoginAliasLookAhead operation does not apply to this request
+		return "", nil
+	}
+
+	path := strings.ReplaceAll(req.Path, mountPath, "")
+
+	resp, err := matchingBackend.HandleRequest(ctx, &logical.Request{
+		MountPoint: req.MountPoint,
+		Path:       path,
+		Operation:  logical.AliasLookaheadOperation,
+		Data:       req.Data,
+		Storage:    c.router.MatchingStorageByAPIPath(ctx, req.Path),
+	})
+	if err != nil || resp.Auth.Alias == nil {
+		return "", nil
+	}
+	return resp.Auth.Alias.Name, nil
+}
+
 // ListMounts will provide a slice containing a deep copy each mount entry
 func (c *Core) ListMounts() ([]*MountEntry, error) {
 	c.mountsLock.RLock()
@@ -3472,6 +3668,44 @@ func (c *Core) ListAuths() ([]*MountEntry, error) {
 	return entries, nil
 }
 
+type GroupPolicyApplicationMode struct {
+	GroupPolicyApplicationMode string `json:"group_policy_application_mode"`
+}
+
+func (c *Core) GetGroupPolicyApplicationMode(ctx context.Context) (string, error) {
+	se, err := c.barrier.Get(ctx, coreGroupPolicyApplicationPath)
+	if err != nil {
+		return "", err
+	}
+	if se == nil {
+		return groupPolicyApplicationModeWithinNamespaceHierarchy, nil
+	}
+
+	var modeStruct GroupPolicyApplicationMode
+
+	err = jsonutil.DecodeJSON(se.Value, &modeStruct)
+	if err != nil {
+		return "", err
+	}
+	mode := modeStruct.GroupPolicyApplicationMode
+	if mode == "" {
+		mode = groupPolicyApplicationModeWithinNamespaceHierarchy
+	}
+
+	return mode, nil
+}
+
+func (c *Core) SetGroupPolicyApplicationMode(ctx context.Context, mode string) error {
+	json, err := jsonutil.EncodeJSON(&GroupPolicyApplicationMode{GroupPolicyApplicationMode: mode})
+	if err != nil {
+		return err
+	}
+	return c.barrier.Put(ctx, &logical.StorageEntry{
+		Key:   coreGroupPolicyApplicationPath,
+		Value: json,
+	})
+}
+
 type HCPLinkStatus struct {
 	lock             sync.RWMutex
 	ConnectionStatus string `json:"hcp_link_status,omitempty"`
@@ -3497,4 +3731,60 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 
 func (c *Core) isExperimentEnabled(experiment string) bool {
 	return strutil.StrListContains(c.experiments, experiment)
+}
+
+// ListenerAddresses provides a slice of configured listener addresses
+func (c *Core) ListenerAddresses() ([]string, error) {
+	addresses := make([]string, 0)
+
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return nil, fmt.Errorf("failed to load core raw config")
+	}
+
+	listeners := conf.(*server.Config).Listeners
+	if listeners == nil {
+		return nil, fmt.Errorf("no listener configured")
+	}
+
+	for _, listener := range listeners {
+		addresses = append(addresses, listener.Address)
+	}
+
+	return addresses, nil
+}
+
+// IsRaftVoter specifies whether the node is a raft voter which is
+// always false if raft storage is not in use.
+func (c *Core) IsRaftVoter() bool {
+	raftInfo := c.raftInfo.Load().(*raftInformation)
+
+	if raftInfo == nil {
+		return false
+	}
+
+	return !raftInfo.nonVoter
+}
+
+func (c *Core) HAEnabled() bool {
+	return c.ha != nil && c.ha.HAEnabled()
+}
+
+func (c *Core) GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error) {
+	raftBackend := c.getRaftBackend()
+
+	if raftBackend == nil {
+		return nil, nil
+	}
+
+	return raftBackend.GetConfiguration(ctx)
+}
+
+func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState, error) {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		return nil, nil
+	}
+
+	return raftBackend.GetAutopilotServerState(ctx)
 }

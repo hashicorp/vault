@@ -194,3 +194,28 @@ func TestLogger_SetupLoggerWithInvalidLogFilePath(t *testing.T) {
 		assert.Contains(t, err.Error(), tc.message, "%s: error message does not match: %s", name, err.Error())
 	}
 }
+
+func TestLogger_ChangeLogLevels(t *testing.T) {
+	cfg := &LogConfig{
+		LogLevel: log.Debug,
+		Name:     "test-system",
+	}
+	var buf bytes.Buffer
+
+	logger, err := Setup(cfg, &buf)
+	require.NoError(t, err)
+	require.NotNil(t, logger)
+
+	assert.Equal(t, log.Debug, logger.GetLevel())
+
+	// Create new named loggers from the base logger and change the levels
+	logger2 := logger.Named("test2")
+	logger3 := logger.Named("test3")
+
+	logger2.SetLevel(log.Info)
+	logger3.SetLevel(log.Error)
+
+	assert.Equal(t, log.Debug, logger.GetLevel())
+	assert.Equal(t, log.Info, logger2.GetLevel())
+	assert.Equal(t, log.Error, logger3.GetLevel())
+}

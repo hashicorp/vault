@@ -2136,7 +2136,6 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	oidExtensionSubjectAltName = []int{2, 5, 29, 17}
 	csrReq := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
@@ -3941,6 +3940,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"tidy_revoked_certs":                    true,
 			"tidy_revoked_cert_issuer_associations": false,
 			"tidy_expired_issuers":                  false,
+			"tidy_move_legacy_ca_bundle":            false,
 			"pause_duration":                        "0s",
 			"state":                                 "Finished",
 			"error":                                 nil,
@@ -5083,6 +5083,16 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://example.com/ca", "https://backup.example.com/ca"})
 	require.Equal(t, leafCert.OCSPServer, []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"})
 	require.Equal(t, leafCert.CRLDistributionPoints, []string{"https://example.com/crl", "https://backup.example.com/crl"})
+
+	// Validate that we can set an issuer name and remove it.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuer_name": "my-issuer",
+	})
+	require.NoError(t, err)
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuer_name": "",
+	})
+	require.NoError(t, err)
 }
 
 func TestIssuersWithoutCRLBits(t *testing.T) {
@@ -5914,7 +5924,7 @@ func TestPKI_ListRevokedCerts(t *testing.T) {
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
-	requireSuccessNilResponse(t, resp, err, "error setting up pki role")
+	requireSuccessNonNilResponse(t, resp, err, "error setting up pki role")
 
 	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "test1.test.com",
@@ -5964,6 +5974,111 @@ func TestPKI_ListRevokedCerts(t *testing.T) {
 	require.Contains(t, certKeys, serial3)
 	require.Contains(t, certKeys, issuerSerial)
 	require.Equal(t, 4, len(certKeys), "Expected 4 cert entries got %d: %v", len(certKeys), certKeys)
+}
+
+func TestPKI_TemplatedAIAs(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Setting templated AIAs should succeed.
+	_, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
+		"path":     "http://localhost:8200/v1/pki",
+		"aia_path": "http://localhost:8200/cdn/pki",
+	})
+	require.NoError(t, err)
+
+	aiaData := map[string]interface{}{
+		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
+		"ocsp_servers":            "{{cluster_path}}/ocsp",
+		"enable_templating":       true,
+	}
+	_, err = CBWrite(b, s, "config/urls", aiaData)
+	require.NoError(t, err)
+
+	// But root generation will fail.
+	rootData := map[string]interface{}{
+		"common_name": "Long-Lived Root X1",
+		"issuer_name": "long-root-x1",
+		"key_type":    "ec",
+	}
+	_, err = CBWrite(b, s, "root/generate/internal", rootData)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unable to parse AIA URL")
+
+	// Clearing the config and regenerating the root should succeed.
+	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+		"crl_distribution_points": "",
+		"issuing_certificates":    "",
+		"ocsp_servers":            "",
+		"enable_templating":       false,
+	})
+	require.NoError(t, err)
+	resp, err := CBWrite(b, s, "root/generate/internal", rootData)
+	requireSuccessNonNilResponse(t, resp, err)
+	issuerId := string(resp.Data["issuer_id"].(issuerID))
+
+	// Now write the original AIA config and sign a leaf.
+	_, err = CBWrite(b, s, "config/urls", aiaData)
+	require.NoError(t, err)
+	_, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+		"allow_any_name": "true",
+		"key_type":       "ec",
+		"ttl":            "50m",
+	})
+	require.NoError(t, err)
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "example.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	// Validate the AIA info is correctly templated.
+	cert := parseCert(t, resp.Data["certificate"].(string))
+	require.Equal(t, cert.OCSPServer, []string{"http://localhost:8200/v1/pki/ocsp"})
+	require.Equal(t, cert.IssuingCertificateURL, []string{"http://localhost:8200/cdn/pki/issuer/" + issuerId + "/der"})
+	require.Equal(t, cert.CRLDistributionPoints, []string{"http://localhost:8200/v1/pki/issuer/" + issuerId + "/crl/der"})
+
+	// Modify our issuer to set custom AIAs: these URLs are bad.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"enable_aia_url_templating": "false",
+		"crl_distribution_points":   "a",
+		"issuing_certificates":      "b",
+		"ocsp_servers":              "c",
+	})
+	require.Error(t, err)
+
+	// These URLs are good.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"enable_aia_url_templating": "false",
+		"crl_distribution_points":   "http://localhost/a",
+		"issuing_certificates":      "http://localhost/b",
+		"ocsp_servers":              "http://localhost/c",
+	})
+
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "example.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	// Validate the AIA info is correctly templated.
+	cert = parseCert(t, resp.Data["certificate"].(string))
+	require.Equal(t, cert.OCSPServer, []string{"http://localhost/c"})
+	require.Equal(t, cert.IssuingCertificateURL, []string{"http://localhost/b"})
+	require.Equal(t, cert.CRLDistributionPoints, []string{"http://localhost/a"})
+
+	// These URLs are bad, but will fail at issuance time due to AIA templating.
+	resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"enable_aia_url_templating": "true",
+		"crl_distribution_points":   "a",
+		"issuing_certificates":      "b",
+		"ocsp_servers":              "c",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	require.NotEmpty(t, resp.Warnings)
+	_, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "example.com",
+	})
+	require.Error(t, err)
 }
 
 var (

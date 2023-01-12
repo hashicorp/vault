@@ -77,6 +77,9 @@ type Config struct {
 	PluginFilePermissions    int         `hcl:"-"`
 	PluginFilePermissionsRaw interface{} `hcl:"plugin_file_permissions,alias:PluginFilePermissions"`
 
+	EnableIntrospectionEndpoint    bool        `hcl:"-"`
+	EnableIntrospectionEndpointRaw interface{} `hcl:"introspection_endpoint,alias:EnableIntrospectionEndpoint"`
+
 	EnableRawEndpoint    bool        `hcl:"-"`
 	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint,alias:EnableRawEndpoint"`
 
@@ -102,6 +105,8 @@ type Config struct {
 
 	LogRequestsLevel    string      `hcl:"-"`
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
+
+	DetectDeadlocks string `hcl:"detect_deadlocks"`
 
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
@@ -331,6 +336,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnableRawEndpoint = c2.EnableRawEndpoint
 	}
 
+	result.EnableIntrospectionEndpoint = c.EnableIntrospectionEndpoint
+	if c2.EnableIntrospectionEndpoint {
+		result.EnableIntrospectionEndpoint = c2.EnableIntrospectionEndpoint
+	}
+
 	result.APIAddr = c.APIAddr
 	if c2.APIAddr != "" {
 		result.APIAddr = c2.APIAddr
@@ -388,6 +398,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.LogRequestsLevel = c.LogRequestsLevel
 	if c2.LogRequestsLevel != "" {
 		result.LogRequestsLevel = c2.LogRequestsLevel
+	}
+
+	result.DetectDeadlocks = c.DetectDeadlocks
+	if c2.DetectDeadlocks != "" {
+		result.DetectDeadlocks = c2.DetectDeadlocks
 	}
 
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
@@ -580,6 +595,12 @@ func ParseConfig(d, source string) (*Config, error) {
 
 	if result.EnableRawEndpointRaw != nil {
 		if result.EnableRawEndpoint, err = parseutil.ParseBool(result.EnableRawEndpointRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.EnableIntrospectionEndpointRaw != nil {
+		if result.EnableIntrospectionEndpoint, err = parseutil.ParseBool(result.EnableIntrospectionEndpointRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -1071,6 +1092,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"raw_storage_endpoint": c.EnableRawEndpoint,
 
+		"introspection_endpoint": c.EnableIntrospectionEndpoint,
+
 		"api_addr":           c.APIAddr,
 		"cluster_addr":       c.ClusterAddr,
 		"disable_clustering": c.DisableClustering,
@@ -1087,6 +1110,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"log_requests_level": c.LogRequestsLevel,
 		"experiments":        c.Experiments,
+    
+		"detect_deadlocks": c.DetectDeadlocks,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

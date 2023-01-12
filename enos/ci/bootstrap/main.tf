@@ -34,7 +34,7 @@ provider "aws" {
 
 
 locals {
-  key_name = "enos-ci-ssh-key"
+  key_name = "${var.repository}-ci-ssh-key"
 }
 
 resource "aws_key_pair" "enos_ci_key_us_east_1" {

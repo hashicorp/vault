@@ -80,8 +80,12 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 		}
 	}
 
-	// Delete legacy CA bundle.
+	// Delete legacy CA bundle and its backup, if any.
 	if err := req.Storage.Delete(ctx, legacyCertBundlePath); err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Delete(ctx, legacyCertBundleBackupPath); err != nil {
 		return nil, err
 	}
 
@@ -270,7 +274,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	b.incrementTotalCertificatesCount(certsCounted, key)
 
 	// Build a fresh CRL
-	err = b.crlBuilder.rebuild(ctx, b, req, true)
+	err = b.crlBuilder.rebuild(sc, true)
 	if err != nil {
 		return nil, err
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 
 	/*
@@ -265,6 +265,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					UI: serverCmdUi,
 				},
 				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
 			}, nil
 		},
 		"audit": func() (cli.Command, error) {
@@ -529,6 +530,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"path-help": func() (cli.Command, error) {
 			return &PathHelpCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki": func() (cli.Command, error) {
+			return &PKICommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki health-check": func() (cli.Command, error) {
+			return &PKIHealthCheckCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -801,11 +812,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 			return &MonitorCommand{
 				BaseCommand: getBaseCommand(),
 				ShutdownCh:  MakeShutdownCh(),
-			}, nil
-		},
-		"pki health-check": func() (cli.Command, error) {
-			return &PKIHealthCheckCommand{
-				BaseCommand: getBaseCommand(),
 			}, nil
 		},
 	}

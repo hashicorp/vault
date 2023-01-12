@@ -37,7 +37,7 @@ import { inject as service } from '@ember/service';
 
 export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
-  @service downloadCsv;
+  @service download;
 
   get hasCsvData() {
     return this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
@@ -185,7 +185,7 @@ export default class Attribution extends Component {
   @action
   exportChartData(filename) {
     const contents = this.generateCsvData();
-    this.downloadCsv.download(filename, contents);
+    this.download.csv(filename, contents);
     this.showCSVDownloadModal = false;
   }
 }
