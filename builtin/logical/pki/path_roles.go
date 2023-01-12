@@ -817,9 +817,8 @@ serviced by this role.`,
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathRoleDelete,
 				Responses: map[int][]framework.Response{
-					http.StatusOK: {{
+					http.StatusNoContent: {{
 						Description: "OK",
-						Fields:      pathRolesResponse,
 					}},
 				},
 				// Read more about why these flags are set in backend.go.
