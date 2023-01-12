@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/sdk/logical";
+
+package logical;
+
+// EventData contains event data in a CloudEvents container.
+message EventData {
+   	// EID identifies the event, cannot be an empty and is required. The
+	// combination of Source + EID must be unique. Events with the same Source +
+	// ID can be assumed to be duplicates by consumers.
+    // (Named EID to avoid conflict with ID method.)
+	string eid = 1;
+
+    // Arbitrary non-secret data. Optional.
+    bytes metadata = 2;
+
+    // The type of plugin this event originated from, i.e., "auth" or "secrets.
+    // Used for plugin-generated events. Empty otherwise.
+    string mount_class = 3;
+    // Mount of the plugin this event originated from, if plugin-generated.
+    string mount = 4;
+    // Plugin type that this event originated from, if plugin-generated.
+    string plugin = 5;
+    // Mount version that this event originated from, i.e., if KVv2, then "2". Usually empty.
+    string version = 6;
+    // Plugin version of the plugin this event originated from, if plugin-generated.
+    string plugin_version = 7;
+    // Any IDs that the event relates to, i.e., UUIDs, paths.
+    repeated string entity_ids = 8;
+    // Human-readable note.
+    string note = 9;
+}
