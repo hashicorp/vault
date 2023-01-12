@@ -100,7 +100,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/hashicorp/hcl v1.0.1-vault-5
 	github.com/hashicorp/hcp-link v0.1.0
-	github.com/hashicorp/hcp-scada-provider v0.2.1-0.20230111211817-d23c738a614d
+	github.com/hashicorp/hcp-scada-provider v0.2.1
 	github.com/hashicorp/hcp-sdk-go v0.23.0
 	github.com/hashicorp/nomad/api v0.0.0-20220707195938-75f4c2237b28
 	github.com/hashicorp/raft v1.3.10
