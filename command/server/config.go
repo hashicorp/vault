@@ -786,6 +786,7 @@ func mergeExperiments(left, right []string) []string {
 	for _, r := range right {
 		if _, seen := processed[r]; !seen {
 			result = append(result, r)
+			processed[r] = struct{}{}
 		}
 	}
 
@@ -1110,7 +1111,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"log_requests_level": c.LogRequestsLevel,
 		"experiments":        c.Experiments,
-    
+
 		"detect_deadlocks": c.DetectDeadlocks,
 	}
 	for k, v := range sharedResult {
