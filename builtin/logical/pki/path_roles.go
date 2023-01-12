@@ -46,18 +46,6 @@ func pathListRoles(b *backend) *framework.Path {
 
 func pathRoles(b *backend) *framework.Path {
 	pathRolesResponse := map[string]*framework.FieldSchema{
-		"backend": {
-			Type:        framework.TypeString,
-			Required:    true,
-			Description: "Backend Type",
-		},
-
-		"name": {
-			Type:        framework.TypeString,
-			Required:    true,
-			Description: "Name of the role",
-		},
-
 		"ttl": {
 			Type:     framework.TypeDurationSecond,
 			Required: true,
