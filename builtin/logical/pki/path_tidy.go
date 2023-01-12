@@ -48,12 +48,11 @@ func pathTidy(b *backend) *framework.Path {
 		Pattern: "tidy$",
 		Fields:  addTidyFields(map[string]*framework.FieldSchema{}),
 		Operations: map[logical.Operation]framework.OperationHandler{
-			// TODO: Should be no content?
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathTidyWrite,
 				Responses: map[int][]framework.Response{
-					http.StatusOK: {{
-						Description: "OK",
+					http.StatusAccepted: {{
+						Description: "Accepted",
 						Fields:      map[string]*framework.FieldSchema{},
 					}},
 				},
