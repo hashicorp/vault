@@ -113,7 +113,7 @@ documentation.
 1. Get a SecretID issued against the AppRole:
 
    ```shell-session
-   $ vault write -f auth/approle/role/my-role/secret-id
+   $ vault write -force auth/approle/role/my-role/secret-id
    secret_id               6a174c20-f6de-a53c-74d2-6018fcceff64
    secret_id_accessor      c454f7e5-996e-7230-6074-6ef26b7bcf86
    secret_id_ttl           10m
