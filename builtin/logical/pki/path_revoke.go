@@ -9,8 +9,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"strings"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -420,13 +418,12 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 
 	// We store and identify by lowercase colon-separated hex, but other
 	// utilities use dashes and/or uppercase, so normalize
-	serial = strings.ReplaceAll(strings.ToLower(serial), "-", ":")
-
+	colonSerial := denormalizeSerial(serial)
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	return revokeCert(sc, serial, false)
+	return revokeCert(sc, colonSerial, false)
 }
 
 func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {

@@ -7,7 +7,6 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 	"math/big"
-	"strings"
 	"sync"
 	"time"
 
@@ -468,7 +467,7 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509
 }
 
 // Revokes a cert, and tries to be smart about error recovery
-func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Response, error) {
+func revokeCert(sc *storageContext, colonSerial string, fromLease bool) (*logical.Response, error) {
 	// As this backend is self-contained and this function does not hook into
 	// third parties to manage users or resources, if the mount is tainted,
 	// revocation doesn't matter anyways -- the CRL that would be written will
@@ -490,7 +489,6 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 	// Ensure we don't revoke an issuer via this API; use /issuer/:issuer_ref/revoke
 	// instead.
 	for issuer, certificate := range issuerIDCertMap {
-		colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 		if colonSerial == serialFromCert(certificate) {
 			return logical.ErrorResponse(fmt.Sprintf("adding issuer (id: %v) to its own CRL is not allowed", issuer)), nil
 		}
@@ -499,7 +497,7 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 	alreadyRevoked := false
 	var revInfo revocationInfo
 
-	revEntry, err := fetchCertBySerial(sc, revokedPath, serial)
+	revEntry, err := fetchCertBySerial(sc, revokedPath, colonSerial)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -518,7 +516,7 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 	}
 
 	if !alreadyRevoked {
-		certEntry, err := fetchCertBySerial(sc, "certs/", serial)
+		certEntry, err := fetchCertBySerial(sc, "certs/", colonSerial)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -534,7 +532,7 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 				// retry.  Just give up and let the lease get deleted.
 				return nil, nil
 			}
-			return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found", serial)), nil
+			return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found", colonSerial)), nil
 		}
 
 		cert, err := x509.ParseCertificate(certEntry.Value)
@@ -549,7 +547,7 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 		// granularity
 		if cert.NotAfter.Before(time.Now().Add(2 * time.Second)) {
 			response := &logical.Response{}
-			response.AddWarning(fmt.Sprintf("certificate with serial %s already expired; refusing to add to CRL", serial))
+			response.AddWarning(fmt.Sprintf("certificate with serial %s already expired; refusing to add to CRL", colonSerial))
 			return response, nil
 		}
 
@@ -568,7 +566,7 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 		// ignore the return value.
 		associateRevokedCertWithIsssuer(&revInfo, cert, issuerIDCertMap)
 
-		revEntry, err = logical.StorageEntryJSON(revokedPath+normalizeSerial(serial), revInfo)
+		revEntry, err = logical.StorageEntryJSON(revokedPath+normalizeSerial(colonSerial), revInfo)
 		if err != nil {
 			return nil, fmt.Errorf("error creating revocation entry")
 		}
@@ -619,7 +617,7 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 		//
 		// Currently we don't store any data in the WAL entry.
 		var walInfo deltaWALInfo
-		walEntry, err := logical.StorageEntryJSON(deltaWALPath+normalizeSerial(serial), walInfo)
+		walEntry, err := logical.StorageEntryJSON(deltaWALPath+normalizeSerial(colonSerial), walInfo)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create delta CRL WAL entry")
 		}
@@ -631,7 +629,7 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 		// In order for periodic delta rebuild to be mildly efficient, we
 		// should write the last revoked delta WAL entry so we know if we
 		// have new revocations that we should rebuild the delta WAL for.
-		lastRevSerial := lastWALInfo{Serial: serial}
+		lastRevSerial := lastWALInfo{Serial: colonSerial}
 		lastWALEntry, err := logical.StorageEntryJSON(deltaWALLastRevokedSerial, lastRevSerial)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create last delta CRL WAL entry")
