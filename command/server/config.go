@@ -466,6 +466,7 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 
 	switch len(c.Seals) {
 	case 2:
+		// Two seals indicates a seal migration, but one and only one must be disabled
 		switch {
 		case c.Seals[0].Disabled && c.Seals[1].Disabled:
 			return nil, errors.New("seals: two seals provided but both are disabled")
@@ -473,9 +474,11 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 			return nil, errors.New("seals: two seals provided but neither is disabled")
 		}
 	case 1:
+		// One seal is still not okay if the hosting seal is disabled and a recovery is attempted.
 		if c.Seals[0].Disabled && c.Seals[0].Recover {
 			return nil, errors.New("seals: seal cannot be both disabled and in recovery mode")
 		}
+		// Otherwise this is a migration between an auto seal and shamir or vice versa
 	}
 
 	return c, nil
