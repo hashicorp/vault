@@ -2699,7 +2699,9 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 			return nil
 		case c.seal.BarrierType() == wrapping.WrapperTypeShamir && isUnsealRecoverySeal(c.seal):
 			// The stored barrier config is not shamir, but we have a shamir seal anyway, because
-			// seal recovery mode has been requested
+			// seal recovery mode has been requested.  Note that this isn't for migration, but this function
+			// is called regardless of whether migration is occurring or not, and this is a valid state
+			// for the seal to be in, thus we mustn't reject it.
 			return nil
 		case c.seal.BarrierType() == wrapping.WrapperTypeShamir:
 			// The stored barrier config is not shamir, there is no disabled seal
