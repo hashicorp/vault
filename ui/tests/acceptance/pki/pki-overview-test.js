@@ -47,7 +47,7 @@ module('Acceptance | pki overview', function (hooks) {
     await logout.visit();
   });
 
-  test('shows the correct information on issuer card', async function (assert) {
+  test('navigates to view issuers when link is clicked on issuer card', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     assert.dom(SELECTORS.issuersCardTitle).hasText('Issuers');
@@ -57,7 +57,7 @@ module('Acceptance | pki overview', function (hooks) {
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
   });
 
-  test('shows the correct information on roles card', async function (assert) {
+  test('navigates to view roles when link is clicked on roles card', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     assert.dom(SELECTORS.rolesCardTitle).hasText('Roles');
@@ -82,14 +82,26 @@ module('Acceptance | pki overview', function (hooks) {
     assert.dom(SELECTORS.issuersCardTitle).exists('Issuers card exists');
   });
 
-  test('navigates to generate credentials page for Issue Certificates card', async function () {
-    // TODO: add issue certificates card test after syncing with design
+  test('navigates to generate certificate page for Issue Certificates card', async function (assert) {
+    await authPage.login(this.pkiAdminToken);
+    await runCommands([
+      `write ${this.mountPath}/roles/some-role \
+    issuer_ref="default" \
+    allowed_domains="example.com" \
+    allow_subdomains=true \
+    max_ttl="720h"`,
+    ]);
+    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await click(SELECTORS.issueCertificatePowerSearch);
+    await click(SELECTORS.firstPowerSelectOption);
+    await click(SELECTORS.issueCertificateButton);
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.roles.role.generate');
   });
 
-  test('navigates to certificate details page for Issue Certificates card', async function (assert) {
+  test('navigates to certificate details page for View Certificates card', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-    await click(SELECTORS.viewCertificateInput);
+    await click(SELECTORS.viewCertificatePowerSearch);
     await click(SELECTORS.firstPowerSelectOption);
     await click(SELECTORS.viewCertificateButton);
     assert.strictEqual(

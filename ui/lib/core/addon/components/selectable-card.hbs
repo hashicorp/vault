@@ -6,7 +6,28 @@
     <div class="has-top-bottom-margin">
       <p class="sub-text">{{@subText}}</p>
     </div>
-    {{yield}}
+    <form class="is-flex" data-test-selectable-card={{@cardTitle}}>
+      <SearchSelect
+        class="is-flex-1"
+        @selectLimit="1"
+        @models={{@models}}
+        @backend={{@backend}}
+        @fallbackComponent="input-search"
+        @onChange={{this.handleInput}}
+        @placeholder="Type to find a role..."
+        @disallowNewItems={{@disallowNewItems}}
+        data-test-selectable-card-input={{@cardTitle}}
+      />
+      <button
+        type="button"
+        class="button is-secondary has-left-margin-s"
+        disabled={{unless this.value true}}
+        {{on "click" this.transitionToPage}}
+        data-test-selectable-card-button={{@cardTitle}}
+      >
+        {{@buttonText}}
+      </button>
+    </form>
   </div>
 {{else}}
   <div class="selectable-card is-rounded no-flex" data-test-selectable-card-container={{@cardTitle}}>

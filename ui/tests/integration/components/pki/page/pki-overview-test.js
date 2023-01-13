@@ -55,11 +55,23 @@ module('Integration | Component | Page::PkiOverview', function (hooks) {
     assert.dom(SELECTORS.rolesCardOverviewNum).hasText('0');
   });
 
-  test('navigates to certificate details page for Issue Certificates card', async function (assert) {
+  test('shows the input search fields for View Certificates card', async function (assert) {
+    await render(
+      hbs`<Page::PkiOverview @issuers={{this.issuers}} @roles={{this.roles}} @engine={{this.engineId}} />,`,
+      { owner: this.engine }
+    );
+    assert.dom(SELECTORS.issueCertificate).hasText('Issue certificate');
+    assert.dom(SELECTORS.issueCertificateInput).exists();
+    assert.dom(SELECTORS.issueCertificateButton).hasText('Issue');
+  });
+
+  test('shows the input search fields for Issue Certificates card', async function (assert) {
     await render(
       hbs`<Page::PkiOverview @issuers={{this.issuers}} @roles={{this.roles}} @engine={{this.engineId}} />,`,
       { owner: this.engine }
     );
     assert.dom(SELECTORS.viewCertificate).hasText('View certificate');
+    assert.dom(SELECTORS.viewCertificateInput).exists();
+    assert.dom(SELECTORS.viewCertificateButton).hasText('View');
   });
 });
