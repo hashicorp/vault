@@ -6,7 +6,7 @@ export default class PkiIssuersGenerateRootRoute extends Route {
   @service store;
 
   model() {
-    return this.store.createRecord('pki/config', {});
+    return this.store.createRecord('pki/action', {});
   }
 
   setupController(controller, resolvedModel) {

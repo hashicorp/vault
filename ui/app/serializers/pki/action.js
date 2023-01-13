@@ -1,6 +1,6 @@
 import ApplicationSerializer from '../application';
 
-export default class PkiConfigSerializer extends ApplicationSerializer {
+export default class PkiActionSerializer extends ApplicationSerializer {
   attrs = {
     customTtl: { serialize: false },
     type: { serialize: false },

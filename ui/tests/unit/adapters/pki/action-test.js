@@ -3,7 +3,7 @@ import { setupTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
-module('Unit | Adapter | pki/config', function (hooks) {
+module('Unit | Adapter | pki/action', function (hooks) {
   setupTest(hooks);
   setupMirage(hooks);
 
@@ -16,7 +16,7 @@ module('Unit | Adapter | pki/config', function (hooks) {
   });
 
   test('it exists', function (assert) {
-    const adapter = this.owner.lookup('adapter:pki/config');
+    const adapter = this.owner.lookup('adapter:pki/action');
     assert.ok(adapter);
   });
 
@@ -51,7 +51,7 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', this.payload)
+        .createRecord('pki/action', this.payload)
         .save({ adapterOptions: { formType: 'import', useIssuer: false } });
     });
 
@@ -63,7 +63,7 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', this.payload)
+        .createRecord('pki/action', this.payload)
         .save({ adapterOptions: { formType: 'import', useIssuer: true } });
     });
   });
@@ -90,22 +90,22 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'internal',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'exported',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'existing',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'kms',
         })
         .save(adapterOptions);
@@ -132,22 +132,22 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'internal',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'exported',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'existing',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'kms',
         })
         .save(adapterOptions);
@@ -176,22 +176,22 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'internal',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'exported',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'existing',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'kms',
         })
         .save(adapterOptions);
@@ -218,22 +218,22 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'internal',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'exported',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'existing',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'kms',
         })
         .save(adapterOptions);

@@ -1,6 +1,6 @@
 import Model from '@ember-data/model';
 
-export default class PkiConfigModel extends Model {
+export default class PkiActionModel extends Model {
   secretMountPath: unknown;
   pemBundle: string;
   type: string;

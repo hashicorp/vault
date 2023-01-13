@@ -17,7 +17,7 @@ import errorMessage from 'vault/utils/error-message';
  * <PkiGenerateRoot @model={{this.model}} @onCancel={{transition-to "vault.cluster"}} @onSave={{transition-to "vault.cluster.secrets"}} @adapterOptions={{hash formType="import" useIssuer=false}} />
  * ```
  *
- * @param {Object} model - pki/config model.
+ * @param {Object} model - pki/action model.
  * @callback onCancel - Callback triggered when cancel button is clicked, after model is unloaded
  * @callback onSave - Callback triggered after model save success.
  * @param {Object} adapterOptions - object passed as adapterOptions on the model.save method

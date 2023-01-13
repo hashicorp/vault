@@ -2,7 +2,7 @@ import { assert } from '@ember/debug';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import ApplicationAdapter from '../application';
 
-export default class PkiConfigAdapter extends ApplicationAdapter {
+export default class PkiActionAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   urlForCreateRecord(modelName, snapshot) {

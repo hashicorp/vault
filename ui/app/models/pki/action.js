@@ -20,7 +20,7 @@ const validations = {
 
 @withModelValidations(validations)
 @withFormFields()
-export default class PkiConfigModel extends Model {
+export default class PkiActionModel extends Model {
   @service secretMountPath;
 
   /* formType import */

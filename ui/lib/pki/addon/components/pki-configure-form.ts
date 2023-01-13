@@ -4,12 +4,12 @@ import { inject as service } from '@ember/service';
 import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
-import PkiConfigModel from 'vault/models/pki/config';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import PkiActionModel from 'vault/models/pki/action';
 
 interface Args {
-  config: PkiConfigModel;
+  config: PkiActionModel;
 }
 
 /**
