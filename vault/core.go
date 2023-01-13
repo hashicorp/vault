@@ -3417,6 +3417,7 @@ func (c *Core) runLockedUserEntryUpdates(ctx context.Context) error {
 		return err
 	}
 
+	totalLockedUsersCount := 0
 	for _, nsID := range nsIDs {
 		// get the list of mount accessors of locked users for each namespace
 		mountAccessors, err := c.barrier.List(ctx, coreLockedUsersPath+nsID)
@@ -3431,18 +3432,23 @@ func (c *Core) runLockedUserEntryUpdates(ctx context.Context) error {
 		// if incorrect, update the entry in userFailedLoginInfo map
 		for _, mountAccessorPath := range mountAccessors {
 			mountAccessor := strings.TrimSuffix(mountAccessorPath, "/")
-			if err := c.runLockedUserEntryUpdatesForMountAccessor(ctx, mountAccessor, coreLockedUsersPath+nsID+mountAccessorPath); err != nil {
+			lockedAliasesCount, err := c.runLockedUserEntryUpdatesForMountAccessor(ctx, mountAccessor, coreLockedUsersPath+nsID+mountAccessorPath)
+			if err != nil {
 				return err
 			}
+			totalLockedUsersCount = totalLockedUsersCount + lockedAliasesCount
 		}
 	}
+
+	// emit locked user count metrics
+	metrics.SetGaugeWithLabels([]string{"core", "locked_users"}, float32(totalLockedUsersCount), nil)
 	return nil
 }
 
 // runLockedUserEntryUpdatesForMountAccessor updates the storage entry for each locked user (alias name)
 // if the entry is stale, it removes it from storage and userFailedLoginInfo map if present
 // if the entry is not stale, it updates the userFailedLoginInfo map with correct values for entry if incorrect
-func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mountAccessor string, path string) error {
+func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mountAccessor string, path string) (int, error) {
 	// get mount entry for mountAccessor
 	mountEntry := c.router.MatchingMountByAccessor(mountAccessor)
 	if mountEntry == nil {
@@ -3454,8 +3460,10 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 	// get the list of aliases for mount accessor
 	aliases, err := c.barrier.List(ctx, path)
 	if err != nil {
-		return err
+		return 0, err
 	}
+
+	lockedAliasesCount := len(aliases)
 
 	// check storage entry for each alias to update
 	for _, alias := range aliases {
@@ -3466,7 +3474,7 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 
 		existingEntry, err := c.barrier.Get(ctx, path+alias)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		if existingEntry == nil {
@@ -3476,7 +3484,7 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 		var lastLoginTime int
 		err = jsonutil.DecodeJSON(existingEntry.Value, &lastLoginTime)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		lastFailedLoginTimeFromStorageEntry := time.Unix(int64(lastLoginTime), 0)
@@ -3489,15 +3497,16 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 		if time.Now().After(lastFailedLoginTimeFromStorageEntry.Add(lockoutDurationFromConfiguration)) {
 			// stale entry, remove from storage
 			if err := c.barrier.Delete(ctx, path+alias); err != nil {
-				return err
+				return 0, err
 			}
 
 			// remove entry for this user from userFailedLoginInfo map if present as the user is not locked
 			if failedLoginInfoFromMap != nil {
 				if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true); err != nil {
-					return err
+					return 0, err
 				}
 			}
+			lockedAliasesCount -= 1
 			continue
 		}
 
@@ -3511,11 +3520,11 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 		if failedLoginInfoFromMap != &actualFailedLoginInfo {
 			// entry is invalid, updating the entry in userFailedLoginMap with correct information
 			if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, &actualFailedLoginInfo, false); err != nil {
-				return err
+				return 0, err
 			}
 		}
 	}
-	return nil
+	return lockedAliasesCount, nil
 }
 
 // PopMFAResponseAuthByID pops an item from the mfaResponseAuthQueue by ID
