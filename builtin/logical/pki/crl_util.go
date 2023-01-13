@@ -527,7 +527,7 @@ func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, 
 
 	// Add a little wiggle room because leases are stored with a second
 	// granularity
-	if time.Since(cert.NotAfter) > -2*time.Second {
+	if cert.NotAfter.Before(time.Now().Add(2 * time.Second)) {
 		response := &logical.Response{}
 		response.AddWarning(fmt.Sprintf("certificate with serial %s already expired; refusing to add to CRL", colonSerial))
 		return response, nil
