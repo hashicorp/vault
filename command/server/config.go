@@ -472,6 +472,8 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 			return nil, errors.New("seals: two seals provided but both are disabled")
 		case !c.Seals[0].Disabled && !c.Seals[1].Disabled:
 			return nil, errors.New("seals: two seals provided but neither is disabled")
+		case (!c.Seals[0].Disabled && c.Seals[0].Recover) || (!c.Seals[1].Disabled && c.Seals[1].Recover):
+			return nil, errors.New("seals: migration target seal cannot be in recovery mode")
 		}
 	case 1:
 		// One seal is still not okay if the hosting seal is disabled and a recovery is attempted.

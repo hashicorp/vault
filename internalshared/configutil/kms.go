@@ -101,12 +101,12 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 		}
 
 		var recover bool
-		if v, ok := m["recovery_mode"]; ok {
+		if v, ok := m["recovery_keys_fallback"]; ok {
 			recover, err = parseutil.ParseBool(v)
 			if err != nil {
 				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 			}
-			delete(m, "recovery_mode")
+			delete(m, "recovery_keys_fallback")
 		}
 
 		strMap := make(map[string]string, len(m))
