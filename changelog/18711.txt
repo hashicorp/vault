@@ -1,3 +1,0 @@
-```release-note:bug
-auth/kubernetes: Ensure a consistent TLS configuration for all k8s API requests [[#173](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/173)]
-```
