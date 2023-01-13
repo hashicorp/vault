@@ -10,20 +10,20 @@ import (
 func TestValidateResponse(t *testing.T) {
 	cases := map[string]struct {
 		schema        *framework.Response
-		response          map[string]interface{}
+		response      map[string]interface{}
 		strict        bool
 		errorExpected bool
 	}{
 		"nil schema, nil response, strict": {
 			schema:        nil,
-			response:          nil,
+			response:      nil,
 			strict:        true,
 			errorExpected: false,
 		},
 
 		"nil schema, nil response, not strict": {
 			schema:        nil,
-			response:          nil,
+			response:      nil,
 			strict:        false,
 			errorExpected: false,
 		},
@@ -103,7 +103,7 @@ func TestValidateResponse(t *testing.T) {
 					},
 				},
 			},
-			response:          map[string]interface{}{},
+			response:      map[string]interface{}{},
 			strict:        true,
 			errorExpected: false,
 		},
@@ -117,7 +117,7 @@ func TestValidateResponse(t *testing.T) {
 					},
 				},
 			},
-			response:          map[string]interface{}{},
+			response:      map[string]interface{}{},
 			strict:        true,
 			errorExpected: true,
 		},
@@ -131,7 +131,7 @@ func TestValidateResponse(t *testing.T) {
 					},
 				},
 			},
-			response:          map[string]interface{}{},
+			response:      map[string]interface{}{},
 			strict:        false,
 			errorExpected: false,
 		},
@@ -145,7 +145,7 @@ func TestValidateResponse(t *testing.T) {
 					},
 				},
 			},
-			response:          nil,
+			response:      nil,
 			strict:        true,
 			errorExpected: true,
 		},
@@ -159,7 +159,7 @@ func TestValidateResponse(t *testing.T) {
 					},
 				},
 			},
-			response:          nil,
+			response:      nil,
 			strict:        false,
 			errorExpected: false,
 		},
