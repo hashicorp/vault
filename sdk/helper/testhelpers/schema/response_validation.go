@@ -15,6 +15,8 @@ import (
 // mode, this function will also ensure that the data map has all schema's
 // requred fields and does not have any fields outside of the schema.
 func ValidateResponse(t *testing.T, schema *framework.Response, response *logical.Response, strict bool) {
+	t.Helper()
+
 	if response != nil {
 		ValidateResponseData(t, schema, response.Data, strict)
 	} else {
@@ -28,6 +30,8 @@ func ValidateResponse(t *testing.T, schema *framework.Response, response *logica
 // function will also ensure that the data map has all schema-required fields
 // and does not have any fields outside of the schema.
 func ValidateResponseData(t *testing.T, schema *framework.Response, data map[string]interface{}, strict bool) {
+	t.Helper()
+
 	if err := validateResponseDataImpl(
 		schema,
 		data,
