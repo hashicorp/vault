@@ -1,18 +1,33 @@
 import { action } from '@ember/object';
+import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 
 /**
- * Pki Config/Generate Root shows only the fields valid for the generate root endpoint.
+ * @module PkiGenerateRoot
+ * PkiGenerateRoot shows only the fields valid for the generate root endpoint.
  * This form handles the model save and rollback actions, and will call the passed
  * onSave and onCancel args for transition (passed from parent).
- * NOTE: not TS because decorator-added items aren't recognized on the model.
+ * NOTE: this component is not TS because decorator-added parameters (eg validator and
+ * formFields) aren't recognized on the model.
+ *
+ * @example
+ * ```js
+ * <PkiGenerateRoot @model={{this.model}} @onCancel={{transition-to "vault.cluster"}} @onSave={{transition-to "vault.cluster.secrets"}} @adapterOptions={{hash formType="import" useIssuer=false}} />
+ * ```
+ *
+ * @param {Object} model - pki/config model.
+ * @callback onCancel - Callback triggered when cancel button is clicked, after model is unloaded
+ * @callback onSave - Callback triggered after model save success.
+ * @param {Object} adapterOptions - object passed as adapterOptions on the model.save method
  */
 export default class PkiGenerateRootComponent extends Component {
+  @service flashMessages;
   @tracked showGroup = null;
-  @tracked errorBanner;
-  @tracked invalidFormAlert;
+  @tracked modelValidations = null;
+  @tracked errorBanner = '';
+  @tracked invalidFormAlert = '';
 
   @action
   toggleGroup(group, isOpen) {
@@ -33,9 +48,10 @@ export default class PkiGenerateRootComponent extends Component {
   }
   get keyParamFields() {
     const { type } = this.args.model;
+    if (!type) return null;
     let fields = ['keyName', 'keyType', 'keyBits'];
     if (type === 'existing') {
-      fields = ['keyReference'];
+      fields = ['keyRef'];
     } else if (type === 'kms') {
       fields = ['keyName', 'managedKeyName', 'managedKeyId'];
     }
@@ -45,27 +61,57 @@ export default class PkiGenerateRootComponent extends Component {
   }
 
   @action cancel() {
+    // Generate root form will always have a new model
     this.args.model.unloadRecord();
     this.args.onCancel();
   }
+
   get groups() {
     return {
       'Key parameters': this.keyParamFields,
-      'Subject Alternative Name (SAN) Options': [],
-      'Other subject data': [],
+      'Subject Alternative Name (SAN) Options': [
+        'excludeCnFromSans',
+        'serialNumber',
+        'altNames',
+        'ipSans',
+        'uriSans',
+        'otherSans',
+      ],
+      'Additional subject fields': [
+        'ou',
+        'organization',
+        'country',
+        'locality',
+        'province',
+        'streetAddress',
+        'postalCode',
+      ],
     };
+  }
+
+  @action
+  checkFormValidity() {
+    if (this.args.model.validate) {
+      const { isValid, state } = this.args.model.validate();
+      this.modelValidations = state;
+      this.invalidFormAlert = isValid ? '' : 'The form has errors. Please fix before continuing.';
+      return isValid;
+    }
+    return true;
   }
 
   @action
   async generateRoot(event) {
     event.preventDefault();
-    const useIssuer = this.args.model.canGenerateIssuerRoot;
+    const continueSave = this.checkFormValidity();
+    if (!continueSave) return;
     try {
-      await this.args.model.save({ adapterOptions: { formType: 'generate-root', useIssuer } });
+      await this.args.model.save({ adapterOptions: this.args.adapterOptions });
+      this.flashMessages.success('Successfully generated root.');
       this.args.onSave();
     } catch (e) {
       this.errorBanner = errorMessage(e);
-      this.invalidFormAlert = 'There was a problem importing key.';
+      this.invalidFormAlert = 'There was a problem generating the root.';
     }
   }
 }

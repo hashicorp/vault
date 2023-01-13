@@ -32,10 +32,15 @@
       @model={{@config}}
       @onCancel={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
       @onSave={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
-      @adapterOptions={{hash formType=this.formType useIssuer=this.shouldUseIssuerEndpoint}}
+      @adapterOptions={{hash formType=this.formType useIssuer=@config.canImportBundle}}
     />
   {{else if (eq this.formType "generate-root")}}
-    <code>POST /root/generate/:type ~or~ /issuers/generate/root/:type</code>
+    <PkiGenerateRoot
+      @model={{@config}}
+      @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}
+      @onCancel={{this.cancel}}
+      @adapterOptions={{hash formType="generate-root" useIssuer=@config.canGenerateIssuerRoot}}
+    />
   {{else if (eq this.formType "generate-csr")}}
     <code>POST /intermediate/generate/:type ~or~ /issuers/generate/intermediate/:type</code>
   {{else}}

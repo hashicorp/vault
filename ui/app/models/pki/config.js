@@ -2,7 +2,23 @@ import Model, { attr } from '@ember-data/model';
 import { inject as service } from '@ember/service';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withFormFields } from 'vault/decorators/model-form-fields';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
+const validations = {
+  type: [{ type: 'presence', message: 'Type is required.' }],
+  commonName: [{ type: 'presence', message: 'Common name is required.' }],
+  issuerName: [
+    {
+      validator(model) {
+        if (model.issuerName === 'default') return false;
+        return true;
+      },
+      message: 'Issuer name must be unique across all issuers and not be the reserved value default.',
+    },
+  ],
+};
+
+@withModelValidations(validations)
 @withFormFields()
 export default class PkiConfigModel extends Model {
   @service secretMountPath;
@@ -13,6 +29,7 @@ export default class PkiConfigModel extends Model {
   /* formType generate-root */
   @attr('string', {
     possibleValues: ['exported', 'internal', 'existing', 'kms'],
+    noDefault: true,
   })
   type;
 
@@ -20,23 +37,33 @@ export default class PkiConfigModel extends Model {
 
   @attr('string') keyName; // cannot be "default"
 
-  @attr('string') keyRef; // search-select? only for type=existing
+  @attr('string', {
+    defaultValue: 'default',
+    label: 'Key reference',
+  })
+  keyRef; // type=existing only
 
   @attr('string') commonName; // REQUIRED
 
   @attr('string', {
-    label: 'DNS/Email Subject Alternative Names (SANs)',
+    label: 'Subject Alternative Names (SANs)',
   })
   altNames; // comma sep strings
 
   @attr('string', {
-    label: 'IP Subject Alternative Names (SANs)',
+    label: 'IP Subject Alternative Names (IP SANs)',
   })
   ipSans;
 
-  @attr('string') uriSans;
+  @attr('string', {
+    label: 'URI Subject Alternative Names (URI SANs)',
+  })
+  uriSans;
 
-  @attr('string') otherSans;
+  @attr('string', {
+    label: 'Other SANs',
+  })
+  otherSans;
 
   @attr('string', {
     defaultValue: 'pem',
@@ -56,8 +83,8 @@ export default class PkiConfigModel extends Model {
   })
   keyType;
 
-  @attr('number', {
-    defaultValue: 0,
+  @attr('string', {
+    defaultValue: '0',
     // options management happens in pki-key-parameters
   })
   keyBits;
@@ -68,6 +95,9 @@ export default class PkiConfigModel extends Model {
   maxPathLength;
 
   @attr('boolean', {
+    label: 'Exclude common name from SANs',
+    subText:
+      'If checked, the common name will not be included in DNS or Email Subject Alternate Names. This is useful if the CN is a human-readable identifier, not a hostname or email address.',
     defaultValue: false,
   })
   excludeCnFromSans;
@@ -77,7 +107,10 @@ export default class PkiConfigModel extends Model {
   })
   permittedDnsDomains;
 
-  @attr('string') ou;
+  @attr('string', {
+    label: 'Organizational Units (OU)',
+  })
+  ou;
   @attr('string') organization;
   @attr('string') country;
   @attr('string') locality;
@@ -85,7 +118,10 @@ export default class PkiConfigModel extends Model {
   @attr('string') streetAddress;
   @attr('string') postalCode;
 
-  @attr('string') serialNumber;
+  @attr('string', {
+    subText: "Specifies the requested Subject's named Serial Number value.",
+  })
+  serialNumber;
 
   @attr({
     label: 'Backdate validity',
@@ -99,7 +135,10 @@ export default class PkiConfigModel extends Model {
   notBeforeDuration;
 
   @attr('string') managedKeyName;
-  @attr('string') managedKeyId;
+  @attr('string', {
+    label: 'Managed key UUID',
+  })
+  managedKeyId;
 
   @attr({
     label: 'Not valid after',
@@ -116,22 +155,27 @@ export default class PkiConfigModel extends Model {
     return this.secretMountPath.currentPath;
   }
 
+  // To determine which endpoint the config adapter should use,
+  // we want to check capabilities on the newer endpoints (those
+  // prefixed with "issuers") and use the old path as fallback
+  // if user does not have permissions.
   @lazyCapabilities(apiPath`${'backend'}/issuers/import/bundle`, 'backend') importBundlePath;
   @lazyCapabilities(apiPath`${'backend'}/issuers/generate/root/${'type'}`, 'backend', 'type')
   generateIssuerRootPath;
   @lazyCapabilities(apiPath`${'backend'}/issuers/generate/intermediate/${'type'}`, 'backend', 'type')
   generateIssuerCsrPath;
+  @lazyCapabilities(apiPath`${'backend'}/issuers/cross-sign`, 'backend') crossSignPath;
 
   get canImportBundle() {
-    return this.importBundlePath.get('canCreate') !== false;
+    return this.importBundlePath.get('canCreate') === true;
   }
   get canGenerateIssuerRoot() {
-    return this.generateIssuerRootPath.get('canCreate') !== false;
+    return this.generateIssuerRootPath.get('canCreate') === true;
   }
   get canGenerateIssuerIntermediate() {
-    return this.generateIssuerCsrPath.get('canCreate') !== false;
+    return this.generateIssuerCsrPath.get('canCreate') === true;
   }
   get canCrossSign() {
-    return this.crossSignPath.get('canCreate') !== false;
+    return this.crossSignPath.get('canCreate') === true;
   }
 }

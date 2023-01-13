@@ -23,7 +23,10 @@ const KEY_BITS_OPTIONS = {
 
 export default class PkiKeyParameters extends Component {
   get keyBitOptions() {
-    return KEY_BITS_OPTIONS[this.args.model.keyType];
+    if (Object.keys(KEY_BITS_OPTIONS).includes(this.args.model.keyType)) {
+      return KEY_BITS_OPTIONS[this.args.model.keyType];
+    }
+    return ['0'];
   }
 
   @action handleSelection(name, selection) {
