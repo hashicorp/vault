@@ -478,6 +478,7 @@ func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, 
 	}
 
 	colonSerial := serialFromCert(cert)
+	hyphenSerial := normalizeSerial(colonSerial)
 
 	// Validate that no issuers match the serial number to be revoked. We need
 	// to gracefully degrade to the legacy cert bundle when it is required, as
@@ -497,7 +498,6 @@ func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, 
 	}
 
 	var revInfo revocationInfo
-
 	revEntry, err := fetchCertBySerial(sc, revokedPath, colonSerial)
 	if err != nil {
 		switch err.(type) {
@@ -527,7 +527,7 @@ func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, 
 
 	// Add a little wiggle room because leases are stored with a second
 	// granularity
-	if cert.NotAfter.Before(time.Now().Add(2 * time.Second)) {
+	if time.Since(cert.NotAfter) > -2*time.Second {
 		response := &logical.Response{}
 		response.AddWarning(fmt.Sprintf("certificate with serial %s already expired; refusing to add to CRL", colonSerial))
 		return response, nil
@@ -542,7 +542,7 @@ func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, 
 	// ignore the return value.
 	associateRevokedCertWithIsssuer(&revInfo, cert, issuerIDCertMap)
 
-	revEntry, err = logical.StorageEntryJSON(revokedPath+normalizeSerial(colonSerial), revInfo)
+	revEntry, err = logical.StorageEntryJSON(revokedPath+hyphenSerial, revInfo)
 	if err != nil {
 		return nil, fmt.Errorf("error creating revocation entry")
 	}
@@ -592,7 +592,7 @@ func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, 
 		//
 		// Currently we don't store any data in the WAL entry.
 		var walInfo deltaWALInfo
-		walEntry, err := logical.StorageEntryJSON(deltaWALPath+normalizeSerial(colonSerial), walInfo)
+		walEntry, err := logical.StorageEntryJSON(deltaWALPath+hyphenSerial, walInfo)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create delta CRL WAL entry")
 		}

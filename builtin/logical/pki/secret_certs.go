@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -54,12 +53,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 
 	certEntry, err := fetchCertBySerial(sc, "certs/", serialInt.(string))
 	if err != nil {
-		switch err.(type) {
-		case errutil.UserError:
-			return logical.ErrorResponse(err.Error()), nil
-		default:
-			return nil, err
-		}
+		return nil, err
 	}
 	if certEntry == nil {
 		// We can't write to revoked/ or update the CRL anyway because we don't have the cert,
@@ -72,9 +66,6 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 	cert, err := x509.ParseCertificate(certEntry.Value)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing certificate: %w", err)
-	}
-	if cert == nil {
-		return nil, fmt.Errorf("got a nil certificate")
 	}
 
 	// Compatibility: Don't revoke CAs if they had leases. New CAs going forward aren't issued leases.
