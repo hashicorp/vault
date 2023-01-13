@@ -38,6 +38,8 @@ const (
 	BasicHclConfig = `
 log_file = "TMPDIR/juan.log"
 log_level="warn"
+log_rotate_max_files=2
+log_rotate_bytes=1048576
 vault {
 	address = "http://127.0.0.1:8200"
 	retry {
@@ -54,6 +56,8 @@ listener "tcp" {
 	BasicHclConfig2 = `
 log_file = "TMPDIR/juan.log"
 log_level="debug"
+log_rotate_max_files=-1
+log_rotate_bytes=1048576
 vault {
 	address = "http://127.0.0.1:8200"
 	retry {
@@ -2110,7 +2114,7 @@ func TestAgent_LogFile_CliOverridesConfig(t *testing.T) {
 	}
 
 	// Update the config based on the inputs.
-	cmd.updateConfig(f, cfg)
+	cmd.applyConfigOverrides(f, cfg)
 
 	assert.NotEqual(t, "TMPDIR/juan.log", cfg.LogFile)
 	assert.NotEqual(t, "/squiggle/logs.txt", cfg.LogFile)
@@ -2127,6 +2131,8 @@ func TestAgent_LogFile_Config(t *testing.T) {
 
 	// Sanity check that the config value is the current value
 	assert.Equal(t, "TMPDIR/juan.log", cfg.LogFile, "sanity check on log config failed")
+	assert.Equal(t, 2, cfg.LogRotateMaxFiles)
+	assert.Equal(t, 1048576, cfg.LogRotateBytes)
 
 	// Parse the cli flags (but we pass in an empty slice)
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
@@ -2136,9 +2142,12 @@ func TestAgent_LogFile_Config(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cmd.updateConfig(f, cfg)
+	// Should change nothing...
+	cmd.applyConfigOverrides(f, cfg)
 
 	assert.Equal(t, "TMPDIR/juan.log", cfg.LogFile, "actual config check")
+	assert.Equal(t, 2, cfg.LogRotateMaxFiles)
+	assert.Equal(t, 1048576, cfg.LogRotateBytes)
 }
 
 func TestAgent_Config_NewLogger_Default(t *testing.T) {

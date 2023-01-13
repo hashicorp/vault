@@ -4,3 +4,7 @@ export interface FormField {
   type: string;
   options: unknown;
 }
+
+export interface FormFieldGroups {
+  [key: string]: Array<FormField>;
+}

@@ -433,7 +433,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	// Update the 'log' related aspects of shared config based on config/env var/cli
-	c.Flags().updateLogConfig(config.SharedConfig)
+	c.Flags().applyLogConfigOverrides(config.SharedConfig)
 	l, err := c.configureLogging(config)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -1039,7 +1039,7 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	f.updateLogConfig(config.SharedConfig)
+	f.applyLogConfigOverrides(config.SharedConfig)
 
 	// Set 'trace' log level for the following 'dev' clusters
 	if c.flagDevThreeNode || c.flagDevFourCluster {
@@ -1696,24 +1696,14 @@ func (c *ServerCommand) configureLogging(config *server.Config) (hclog.Intercept
 		return nil, err
 	}
 
-	logRotateBytes, err := parseutil.ParseInt(config.LogRotateBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	logRotateMaxFiles, err := parseutil.ParseInt(config.LogRotateMaxFiles)
-	if err != nil {
-		return nil, err
-	}
-
 	logCfg := &loghelper.LogConfig{
 		Name:              "vault",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       config.LogFile,
 		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    int(logRotateBytes),
-		LogRotateMaxFiles: int(logRotateMaxFiles),
+		LogRotateBytes:    config.LogRotateBytes,
+		LogRotateMaxFiles: config.LogRotateMaxFiles,
 	}
 
 	return loghelper.Setup(logCfg, c.logWriter)
@@ -2619,6 +2609,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		CredentialBackends:             c.CredentialBackends,
 		LogicalBackends:                c.LogicalBackends,
 		Logger:                         c.logger,
+		DetectDeadlocks:                config.DetectDeadlocks,
 		DisableSentinelTrace:           config.DisableSentinelTrace,
 		DisableCache:                   config.DisableCache,
 		DisableMlock:                   config.DisableMlock,

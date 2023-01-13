@@ -316,7 +316,7 @@ type Core struct {
 	auditBackends map[string]audit.Factory
 
 	// stateLock protects mutable state
-	stateLock locking.DeadlockRWMutex
+	stateLock locking.RWMutex
 	sealed    *uint32
 
 	standby              bool
@@ -732,6 +732,9 @@ type CoreConfig struct {
 
 	Logger log.Logger
 
+	// Use the deadlocks library to detect deadlocks
+	DetectDeadlocks string
+
 	// Disables the trace display for Sentinel checks
 	DisableSentinelTrace bool
 
@@ -904,6 +907,14 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		conf.NumExpirationWorkers = numExpirationWorkersDefault
 	}
 
+	// Use imported logging deadlock if requested
+	var stateLock locking.RWMutex
+	if strings.Contains(conf.DetectDeadlocks, "statelock") {
+		stateLock = &locking.DeadlockRWMutex{}
+	} else {
+		stateLock = &locking.SyncRWMutex{}
+	}
+
 	effectiveSDKVersion := conf.EffectiveSDKVersion
 	if effectiveSDKVersion == "" {
 		effectiveSDKVersion = version.GetVersion().Version
@@ -922,6 +933,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		clusterListener:      new(atomic.Value),
 		customListenerHeader: new(atomic.Value),
 		seal:                 conf.Seal,
+		stateLock:            stateLock,
 		router:               NewRouter(),
 		sealed:               new(uint32),
 		sealMigrationDone:    new(uint32),
@@ -2264,6 +2276,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
 	}
+	if err := c.runLockedUserEntryUpdates(ctx); err != nil {
+		return err
+	}
+	c.updateLockedUserEntries()
 
 	if !c.IsDRSecondary() {
 		if err := c.startRollback(); err != nil {
@@ -3357,6 +3373,149 @@ func (c *Core) setupCachedMFAResponseAuth() {
 		}
 	}()
 	return
+}
+
+// updateLockedUserEntries runs every 15 mins to remove stale user entries from storage
+// it also updates the userFailedLoginInfo map with correct information for locked users if incorrect
+func (c *Core) updateLockedUserEntries() {
+	ctx := c.activeContext
+	go func() {
+		ticker := time.NewTicker(15 * time.Minute)
+		for {
+			select {
+			case <-ctx.Done():
+				ticker.Stop()
+				return
+			case <-ticker.C:
+				if err := c.runLockedUserEntryUpdates(ctx); err != nil {
+					c.Logger().Error("failed to run locked user entry updates", "error", err)
+				}
+			}
+		}
+	}()
+	return
+}
+
+// runLockedUserEntryUpdates runs updates for locked user storage entries and userFailedLoginInfo map
+func (c *Core) runLockedUserEntryUpdates(ctx context.Context) error {
+	// check environment variable to see if user lockout workflow is disabled
+	var disableUserLockout bool
+	if disableUserLockoutEnv := os.Getenv(consts.VaultDisableUserLockout); disableUserLockoutEnv != "" {
+		var err error
+		disableUserLockout, err = strconv.ParseBool(disableUserLockoutEnv)
+		if err != nil {
+			c.Logger().Error("Error parsing the environment variable VAULT_DISABLE_USER_LOCKOUT", "error", err)
+		}
+	}
+	if disableUserLockout {
+		return nil
+	}
+
+	// get the list of namespaces of locked users from locked users path in storage
+	nsIDs, err := c.barrier.List(ctx, coreLockedUsersPath)
+	if err != nil {
+		return err
+	}
+
+	for _, nsID := range nsIDs {
+		// get the list of mount accessors of locked users for each namespace
+		mountAccessors, err := c.barrier.List(ctx, coreLockedUsersPath+nsID)
+		if err != nil {
+			return err
+		}
+
+		// update the entries for locked users for each mount accessor
+		// if storage entry is stale i.e; the lockout duration has passed
+		// remove this entry from storage and userFailedLoginInfo map
+		// else check if the userFailedLoginInfo map has correct failed login information
+		// if incorrect, update the entry in userFailedLoginInfo map
+		for _, mountAccessorPath := range mountAccessors {
+			mountAccessor := strings.TrimSuffix(mountAccessorPath, "/")
+			if err := c.runLockedUserEntryUpdatesForMountAccessor(ctx, mountAccessor, coreLockedUsersPath+nsID+mountAccessorPath); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// runLockedUserEntryUpdatesForMountAccessor updates the storage entry for each locked user (alias name)
+// if the entry is stale, it removes it from storage and userFailedLoginInfo map if present
+// if the entry is not stale, it updates the userFailedLoginInfo map with correct values for entry if incorrect
+func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mountAccessor string, path string) error {
+	// get mount entry for mountAccessor
+	mountEntry := c.router.MatchingMountByAccessor(mountAccessor)
+	if mountEntry == nil {
+		mountEntry = &MountEntry{}
+	}
+	// get configuration for mount entry
+	userLockoutConfiguration := c.getUserLockoutConfiguration(mountEntry)
+
+	// get the list of aliases for mount accessor
+	aliases, err := c.barrier.List(ctx, path)
+	if err != nil {
+		return err
+	}
+
+	// check storage entry for each alias to update
+	for _, alias := range aliases {
+		loginUserInfoKey := FailedLoginUser{
+			aliasName:     alias,
+			mountAccessor: mountAccessor,
+		}
+
+		existingEntry, err := c.barrier.Get(ctx, path+alias)
+		if err != nil {
+			return err
+		}
+
+		if existingEntry == nil {
+			continue
+		}
+
+		var lastLoginTime int
+		err = jsonutil.DecodeJSON(existingEntry.Value, &lastLoginTime)
+		if err != nil {
+			return err
+		}
+
+		lastFailedLoginTimeFromStorageEntry := time.Unix(int64(lastLoginTime), 0)
+		lockoutDurationFromConfiguration := userLockoutConfiguration.LockoutDuration
+
+		// get the entry for the locked user from userFailedLoginInfo map
+		failedLoginInfoFromMap := c.GetUserFailedLoginInfo(ctx, loginUserInfoKey)
+
+		// check if the storage entry for locked user is stale
+		if time.Now().After(lastFailedLoginTimeFromStorageEntry.Add(lockoutDurationFromConfiguration)) {
+			// stale entry, remove from storage
+			if err := c.barrier.Delete(ctx, path+alias); err != nil {
+				return err
+			}
+
+			// remove entry for this user from userFailedLoginInfo map if present as the user is not locked
+			if failedLoginInfoFromMap != nil {
+				if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true); err != nil {
+					return err
+				}
+			}
+			continue
+		}
+
+		// this is not a stale entry
+		// update the map with actual failed login information
+		actualFailedLoginInfo := FailedLoginInfo{
+			lastFailedLoginTime: lastLoginTime,
+			count:               uint(userLockoutConfiguration.LockoutThreshold),
+		}
+
+		if failedLoginInfoFromMap != &actualFailedLoginInfo {
+			// entry is invalid, updating the entry in userFailedLoginMap with correct information
+			if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, &actualFailedLoginInfo, false); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // PopMFAResponseAuthByID pops an item from the mfaResponseAuthQueue by ID
