@@ -42,7 +42,10 @@ const (
 	// recoveryKeyPath is the path to the recovery key
 	recoveryKeyPath = "core/recovery-key"
 
-	// recoveryUnsealKeyPath is the path to the recovery unseal key
+	// recoveryUnsealKeyPath is the path to a copy of the root key,
+	// encrypted using the shamir-combined recovery keys, just like
+	// StoredBarrierKeysPath is the root key encrypted by the seal
+	// (which in the case of a shamir seal is the shamir-combined unseal keys.)
 	recoveryUnsealKeyPath = "core/recovery-unseal-key"
 
 	// StoredBarrierKeysPath is the path used for storing HSM-encrypted unseal keys
