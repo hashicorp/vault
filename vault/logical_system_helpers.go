@@ -58,21 +58,7 @@ var (
 	}
 
 	entPaths = func(b *SystemBackend) []*framework.Path {
-		return []*framework.Path{
-			{
-				Pattern: "replication/status",
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-						resp := &logical.Response{
-							Data: map[string]interface{}{
-								"mode": "disabled",
-							},
-						}
-						return resp, nil
-					},
-				},
-			},
-		}
+		return enterprisePaths
 	}
 	handleGlobalPluginReload = func(context.Context, *Core, string, string, []string) error {
 		return nil
@@ -87,6 +73,10 @@ var (
 	}
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
 )
+
+func enterpriseOnlyErrorOperationFunc(context.Context, *logical.Request, *framework.FieldData) (*logical.Response, error) {
+	return logical.ErrorResponse("enterprise-only feature"), logical.ErrUnsupportedPath
+}
 
 // tuneMount is used to set config on a mount point
 func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *MountEntry, newDefault, newMax time.Duration) error {
