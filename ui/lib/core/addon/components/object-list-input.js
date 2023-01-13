@@ -40,6 +40,7 @@ export default class ObjectListInput extends Component {
     }
     const emptyRow = this.createEmptyRow(this.inputKeys);
     this.inputList = this.args.inputValue ? [...this.args.inputValue, emptyRow] : [emptyRow];
+    this.handleChange();
   }
 
   assertKeys(arrayOfObjects, requiredKeys) {
