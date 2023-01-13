@@ -8,7 +8,7 @@
     @actionText="View issuers"
     @actionTo="issuers"
   >
-    <h2 class="title-number">{{format-number this.totalRoles}}</h2>
+    <h2 class="title-number">{{format-number (if (eq @issuers 404) 0 @issuers.length)}}</h2>
   </OverviewCard>
   {{#if (not (eq @roles 403))}}
     <OverviewCard
@@ -17,7 +17,7 @@
       @actionText="View roles"
       @actionTo="roles"
     >
-      <h2 class="title-number">{{format-number this.totalIssuers}}</h2>
+      <h2 class="title-number">{{format-number (if (eq @roles 404) 0 @roles.length)}}</h2>
     </OverviewCard>
   {{/if}}
   <OverviewCard @cardTitle="Issue certificate" @subText="Begin issuing a certificate by choosing a role.">
@@ -36,13 +36,13 @@
           @disallowNewItems={{true}}
           @onChange={{this.handleRolesInput}}
           @fallbackComponent="input-search"
-          data-test-selectable-card-input="Issue certificate"
+          data-test-issue-certificate-input
         />
         <button
           type="submit"
           class="button is-secondary has-left-margin-s"
           disabled={{unless this.rolesValue true}}
-          data-test-selectable-card-button="Issue certificate"
+          data-test-issue-certificate-button
         >
           Issue
         </button>
@@ -66,13 +66,13 @@
           @disallowNewItems={{true}}
           @onChange={{this.handleCertificateInput}}
           @fallbackComponent="input-search"
-          data-test-selectable-card-input="View certificate"
+          data-test-view-certificate-input
         />
         <button
           type="submit"
           class="button is-secondary has-left-margin-s"
           disabled={{unless this.certificateValue true}}
-          data-test-selectable-card-button="View certificate"
+          data-test-view-certificate-button
         >
           View
         </button>
