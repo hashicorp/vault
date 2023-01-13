@@ -298,11 +298,13 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 		if err != nil {
 			return nil, err
 		}
-		if mConfig == nil {
-			mConfig = namedMfaConfig
-		} else {
-			if mConfig.ID != namedMfaConfig.ID {
-				return nil, fmt.Errorf("a login MFA method configuration with the method name %s already exists", methodName)
+		if namedMfaConfig != nil {
+			if mConfig == nil {
+				mConfig = namedMfaConfig
+			} else {
+				if mConfig.ID != namedMfaConfig.ID {
+					return nil, fmt.Errorf("a login MFA method configuration with the method name %s already exists", methodName)
+				}
 			}
 		}
 	}
