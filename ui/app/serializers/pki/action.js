@@ -8,6 +8,7 @@ export default class PkiActionSerializer extends ApplicationSerializer {
 
   serialize(snapshot, requestType) {
     const data = super.serialize(snapshot);
+    // requestType is a custom value specified from the pki/action adapter
     const allowedPayloadAttributes = this._allowedParamsByType(requestType);
     if (!allowedPayloadAttributes) return data;
 
