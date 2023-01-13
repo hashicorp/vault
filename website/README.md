@@ -125,7 +125,7 @@ A number of custom [mdx components](https://mdxjs.com/) are available for use wi
 
 #### Inline Alerts
 
-There are custom MDX components available to author alert data. [See the full documentation here](https://developer.hashicorp.com/swingset/components/mdxinlinealert). 
+There are custom MDX components available to author alert data. [See the full documentation here](https://developer.hashicorp.com/swingset/components/mdxinlinealert). They render as colored boxes to draw the user's attention to some type of aside.
 
 ```mdx
 ## Alert types
