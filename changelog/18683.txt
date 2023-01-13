@@ -1,4 +1,4 @@
-```release-note:improvement
+```release-note:change
 core: recovery keys may now be used to unseal an auto-sealed Vault via an
 opt in unseal recovery mode.
 ```
