@@ -1,4 +1,4 @@
-package testhelpers
+package schema
 
 import (
 	"encoding/json"
