@@ -40,13 +40,9 @@ The website can be run locally through node.js or [Docker](https://www.docker.co
 
 > **Note:** If you are using a text editor that uses a "safe write" save style such as **vim** or **goland**, this can cause issues with the live reload in development. If you turn off safe write, this should solve the problem. In vim, this can be done by running `:set backupcopy=yes`. In goland, search the settings for "safe write" and turn that setting off.
 
-| :warning: WARNING :warning:                                                                                                                                                                                                                                                                                                                                                     |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| If you've previously run the website successfully using either the Docker or Node.js approach but are now facing some issue then try `docker rmi $(docker images -aq hashicorp-vault-website-local) && make build-image && make website-local` or `rm -rf node_modules`; failing that consider cloning this repository again and re-attempting the steps anew in a clean clone. |
-
 ### With Docker
 
-Running the site locally is simple. Provided you have the [latest version](https://docs.docker.com/engine/release-notes/) of Docker installed, clone this repo, run `make`, and then visit `http://localhost:3000`.
+Running the site locally is simple. Provided you have Docker installed, clone this repo, run `make`, and then visit `http://localhost:3000`.
 
 The docker image is pre-built with all the website dependencies installed, which is what makes it so quick and simple, but also means if you need to change dependencies and test the changes within Docker, you'll need a new image. If this is something you need to do, you can run `make build-image` to generate a local Docker image with updated dependencies, then `make website-local` to use that image and preview.
 
@@ -167,7 +163,7 @@ The `Tabs` component creates tabbed content of any type, but is often used for c
 
 ![Tabs Component](https://p176.p0.n0.cdn.getcloudapp.com/items/WnubALZ4/Screen%20Recording%202020-06-11%20at%2006.03%20PM.gif?v=1de81ea720a8cc8ade83ca64fb0b9edd)
 
-> Please refer to the [Swingset](https://react-components.vercel.app/?component=Tabs) documentation for the latest examples and API reference.
+> Please refer to the [Swingset](https://react-components.vercel.app/?component=Tabs) documention for the latest examples and API reference.
 
 It can be used as such within a markdown file:
 
