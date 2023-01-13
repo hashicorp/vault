@@ -1,0 +1,17 @@
+name: Legacy Link Format Checker
+
+on:
+  push:
+    paths:
+      - "website/content/**/*.mdx"
+      - "website/data/*-nav-data.json"
+
+jobs:
+  check-links:
+    uses: hashicorp/dev-portal/.github/workflows/docs-content-check-legacy-links-format.yml@d7c2fceac2dc41e3f857f1ce7c344141fd6a13dd
+    with:
+      repo-owner: "hashicorp"
+      repo-name: "vault"
+      commit-sha: ${{ github.sha }}
+      mdx-directory: "website/content"
+      nav-data-directory: "website/data"
