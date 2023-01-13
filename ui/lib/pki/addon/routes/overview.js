@@ -16,12 +16,10 @@ export default class PkiOverviewRoute extends Route {
     // If the issuers list is empty, we know it hasn't been configured
     const endpoint = `${this.win.origin}/v1/${this.secretMountPath.currentPath}/issuers?list=true`;
 
-    try {
-      await this.auth.ajax(endpoint, 'GET', {});
-      return true;
-    } catch (e) {
-      return false;
-    }
+    return await this.auth
+      .ajax(endpoint, 'GET', {})
+      .then(() => true)
+      .catch(() => false);
   }
 
   async fetchEngine() {
