@@ -338,6 +338,9 @@ type SealConfig struct {
 	// How many keys to store, for seals that support storage.  Always 0 or 1.
 	StoredShares int `json:"stored_shares" mapstructure:"stored_shares"`
 
+	// Whether unseal using recovery keys should be disabled
+	DisableUnsealRecovery bool `json:"disable_unseal_recovery" mapstructure:"disable_unseal_recovery"`
+
 	// Stores the progress of the rekey operation (key shares)
 	RekeyProgress [][]byte `json:"-"`
 
@@ -500,13 +503,13 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *se
 		return nil, nil
 	}
 
-	var blobInfo *wrapping.BlobInfo
+	var blobInfo wrapping.BlobInfo
 	// Read as a multi-blob first
-	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
+	if err := proto.Unmarshal(pe.Value, &blobInfo); err != nil {
 		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
 	}
 
-	pt, err := encryptor.Decrypt(ctx, blobInfo, nil)
+	pt, err := encryptor.Decrypt(ctx, &blobInfo, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "message authentication failed") {
 			err = multierror.Append(err, &ErrInvalidKey{Reason: fmt.Sprintf("failed to decrypt keys from storage: %v", err)})
