@@ -1,11 +1,18 @@
 scenario "autopilot" {
   matrix {
-    arch            = ["amd64", "arm64"]
-    artifact_source = ["local", "crt", "artifactory"]
-    artifact_type   = ["bundle", "package"]
-    distro          = ["ubuntu", "rhel"]
-    edition         = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
-    seal            = ["awskms", "shamir"]
+    arch             = ["amd64", "arm64"]
+    artifact_source  = ["local", "crt", "artifactory"]
+    artifact_type    = ["bundle", "package"]
+    distro           = ["ubuntu", "rhel"]
+    edition          = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    seal             = ["awskms", "shamir"]
+    undo_logs_status = ["0", "1"]
+
+    # Packages are not offered for the oss, ent.fips1402, and ent.hsm.fips1402 editions
+    exclude {
+      edition       = ["oss", "ent.fips1402", "ent.hsm.fips1402"]
+      artifact_type = ["package"]
+    }
   }
 
   terraform_cli = terraform_cli.default
@@ -133,6 +140,41 @@ scenario "autopilot" {
     module    = module.get_local_metadata
   }
 
+  step "get_vault_cluster_ips" {
+    module     = module.vault_get_cluster_ips
+    depends_on = [step.create_vault_cluster]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.vault_root_token
+    }
+  }
+
+  step "verify_write_test_data" {
+    module = module.vault_verify_write_data
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_vault_cluster_ips
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
+      leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.vault_root_token
+    }
+  }
+
   step "create_autopilot_upgrade_storageconfig" {
     module = module.autopilot_upgrade_storageconfig
 
@@ -146,9 +188,10 @@ scenario "autopilot" {
   step "upgrade_vault_cluster_with_autopilot" {
     module = module.vault_cluster
     depends_on = [
-      step.create_vault_cluster,
       step.build_vault,
+      step.create_vault_cluster,
       step.create_autopilot_upgrade_storageconfig,
+      step.verify_write_test_data
     ]
 
     providers = {
@@ -194,6 +237,27 @@ scenario "autopilot" {
     }
   }
 
+  step "get_updated_vault_cluster_ips" {
+    module = module.vault_get_cluster_ips
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_vault_cluster_ips,
+      step.upgrade_vault_cluster_with_autopilot
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances       = step.create_vault_cluster.vault_instances
+      vault_install_dir     = local.vault_install_dir
+      added_vault_instances = step.upgrade_vault_cluster_with_autopilot.vault_instances
+      vault_root_token      = step.create_vault_cluster.vault_root_token
+      node_public_ip        = step.get_vault_cluster_ips.leader_public_ip
+    }
+  }
+
   step "verify_vault_unsealed" {
     module = module.vault_verify_unsealed
     depends_on = [
@@ -207,8 +271,7 @@ scenario "autopilot" {
 
     variables {
       vault_install_dir = local.vault_install_dir
-      vault_instances   = step.create_vault_cluster.vault_instances
-      vault_root_token  = step.create_vault_cluster.vault_root_token
+      vault_instances   = step.upgrade_vault_cluster_with_autopilot.vault_instances
     }
   }
 
@@ -225,8 +288,68 @@ scenario "autopilot" {
 
     variables {
       vault_install_dir = local.vault_install_dir
-      vault_instances   = step.create_vault_cluster.vault_instances
-      vault_root_token  = step.create_vault_cluster.vault_root_token
+      vault_instances   = step.upgrade_vault_cluster_with_autopilot.vault_instances
+      vault_root_token  = step.upgrade_vault_cluster_with_autopilot.vault_root_token
+    }
+  }
+
+  step "verify_read_test_data" {
+    module = module.vault_verify_read_data
+    depends_on = [
+      step.get_updated_vault_cluster_ips,
+      step.verify_write_test_data,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_raft_auto_join_voter
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      node_public_ips      = step.get_updated_vault_cluster_ips.follower_public_ips
+      vault_instance_count = 6
+      vault_install_dir    = local.vault_install_dir
+    }
+  }
+
+  step "verify_autopilot_upgraded_vault_cluster" {
+    module = module.vault_verify_autopilot
+    depends_on = [
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_raft_auto_join_voter
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_autopilot_upgrade_status  = "await-server-removal"
+      vault_install_dir               = local.vault_install_dir
+      vault_instances                 = step.create_vault_cluster.vault_instances
+      vault_root_token                = step.create_vault_cluster.vault_root_token
+    }
+  }
+
+  step "verify_undo_logs_status" {
+    skip_step = semverconstraint(var.vault_product_version, "<1.13.0-0")
+    module    = module.vault_verify_undo_logs
+    depends_on = [
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_autopilot_upgraded_vault_cluster
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir      = local.vault_install_dir
+      vault_undo_logs_status = matrix.undo_logs_status
+      vault_instances        = step.upgrade_vault_cluster_with_autopilot.vault_instances
+      vault_root_token       = step.create_vault_cluster.vault_root_token
     }
   }
 
@@ -258,6 +381,21 @@ scenario "autopilot" {
   output "vault_cluster_unseal_keys_b64" {
     description = "The Vault cluster unseal keys"
     value       = step.create_vault_cluster.vault_unseal_keys_b64
+  }
+
+  output "vault_cluster_recovery_key_shares" {
+    description = "The Vault cluster recovery key shares"
+    value       = step.create_vault_cluster.vault_recovery_key_shares
+  }
+
+  output "vault_cluster_recovery_keys_b64" {
+    description = "The Vault cluster recovery keys b64"
+    value       = step.create_vault_cluster.vault_recovery_keys_b64
+  }
+
+  output "vault_cluster_recovery_keys_hex" {
+    description = "The Vault cluster recovery keys hex"
+    value       = step.create_vault_cluster.vault_recovery_keys_hex
   }
 
   output "vault_cluster_unseal_keys_hex" {
