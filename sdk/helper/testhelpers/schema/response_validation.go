@@ -3,6 +3,7 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -71,4 +72,46 @@ func validateResponseDataImpl(schema *framework.Response, data map[string]interf
 	}
 
 	return fd.Validate()
+}
+
+// FindResponseSchema is a test helper to extract the response schema from a given framework path / operation
+func FindResponseSchema(t *testing.T, paths []*framework.Path, pathIdx int, operation logical.Operation) *framework.Response {
+	t.Helper()
+
+	if pathIdx >= len(paths) {
+		t.Fatalf("path index %d is out of range", pathIdx)
+	}
+
+	schemaPath := paths[pathIdx]
+
+	schemaOperation, ok := schemaPath.Operations[operation]
+	if !ok {
+		t.Fatalf(
+			"could not find response schema: %s: %q operation does not exist",
+			schemaPath.Pattern,
+			operation,
+		)
+	}
+
+	var schemaResponses []framework.Response
+
+	for _, status := range []int{
+		http.StatusOK,
+		http.StatusNoContent,
+	} {
+		schemaResponses, ok = schemaOperation.Properties().Responses[status]
+		if ok {
+			break
+		}
+	}
+
+	if len(schemaResponses) == 0 {
+		t.Fatalf(
+			"could not find response schema: %s: %q operation: no responses found",
+			schemaPath.Pattern,
+			operation,
+		)
+	}
+
+	return &schemaResponses[0]
 }
