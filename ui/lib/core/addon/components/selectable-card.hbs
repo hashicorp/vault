@@ -12,10 +12,10 @@
         @selectLimit="1"
         @models={{@models}}
         @backend={{@backend}}
-        @fallbackComponent="input-search"
-        @onChange={{this.handleInput}}
-        @placeholder="Type to find a role..."
+        @placeholder={{@placeholder}}
         @disallowNewItems={{@disallowNewItems}}
+        @onChange={{this.handleInput}}
+        @fallbackComponent="input-search"
         data-test-selectable-card-input={{@cardTitle}}
       />
       <button

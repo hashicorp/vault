@@ -18,7 +18,15 @@ import { inject as service } from '@ember/service';
  * @param {string} [actionTo] - route where link will take you.
  * @param {string} [queryParam] - tab for the route the link will take you.
  * @param {string} [type] - type used in the link type.
- * @param {boolean} [hasSearchInput] - boolean to show form inputs
+ *
+ * If hasSearchInput is enabled:
+ * @param {boolean} [hasSearchInput] - boolean to show form inputs.
+ * @param {array} [models] - list of model names.
+ * @param {string} [backend] - backend name.
+ * @param {string} [pagePath] - page path for transitionTo in form button.
+ * @param {string} [placeholder] - placeholder for input.
+ * @param {string} [buttonText] - button text for form button.
+ * @param {boolean} [disallowNewItems] - boolean to not enable search dropdown with new items.
  */
 
 export default class SelectableCard extends Component {
