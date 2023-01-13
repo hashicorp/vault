@@ -760,18 +760,28 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	}
 
 	// Store the unseal recovery key
-	rootKeys, err := c.seal.GetStoredKeys(ctx)
-	if err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform recovery rekey, failed retrieving root key: %w", err).Error())
-	}
 	wrapper := aeadwrapper.NewShamirWrapper()
-	wrapper.SetAesGcmKeyBytes(newRecoveryKey)
-	recoverySeal := NewRecoverySeal(&seal.Access{
-		Wrapper: wrapper,
-	})
-	recoverySeal.SetCore(c)
-	if err := recoverySeal.SetStoredKeys(ctx, rootKeys); err != nil {
-		c.logger.Error("failed to store recovery unseal keys", "error", err)
+	// TODO, just test if keys existed in the recovery path
+
+	keys, err := c.physical.Get(ctx, recoveryUnsealKeyPath)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform recovery rekey, failed testing for recovery unseal keys: %w", err).Error())
+	}
+	if keys != nil {
+		rootKeys, err := c.seal.GetStoredKeys(ctx)
+		if err != nil {
+			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform recovery rekey, failed retrieving root keys: %w", err).Error())
+		}
+
+		wrapper.SetAesGcmKeyBytes(newRecoveryKey)
+		recoverySeal := NewRecoverySeal(&seal.Access{
+			Wrapper: wrapper,
+		})
+		recoverySeal.SetCore(c)
+
+		if err := recoverySeal.SetStoredKeys(ctx, rootKeys); err != nil {
+			c.logger.Error("failed to store recovery unseal keys", "error", err)
+		}
 	}
 
 	c.recoveryRekeyConfig = nil
