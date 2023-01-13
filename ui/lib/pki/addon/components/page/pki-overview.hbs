@@ -11,7 +11,7 @@
       @actionTo="issuers"
     />
   {{/if}}
-  {{#if (not (eq @issuers 403))}}
+  {{#if (not (eq @roles 403))}}
     <SelectableCard
       @cardTitle="Roles"
       @total={{if (eq @roles 404) 0 @roles.length}}
@@ -21,25 +21,69 @@
     />
   {{/if}}
   <SelectableCard
-    @title="Issue certificate"
+    @cardTitle="Issue certificate"
     @subText="Quickly issue a certificate by typing the role name."
     @hasSearchInput={{true}}
-    @placeholder="Type to find a role..."
-    @buttonText="Issue"
-    @models={{array "pki/role"}}
-    @backend={{@engine.id}}
-    @pagePath="vault.cluster.secrets.backend.pki.roles.role.generate"
-    @disallowNewItems={{true}}
-  />
+  >
+    <form class="is-flex" aria-label="issue certificate" {{on "submit" (perform this.save)}} data-test-issue-certificate>
+      <SearchSelect
+        class="is-flex-1"
+        @selectLimit="1"
+        @models={{array "pki/role"}}
+        @backend={{@engine.id}}
+        @fallbackComponent="input-search"
+        @onChange={{this.handleRolesInput}}
+        @placeholder="Type to find a role..."
+        @disallowNewItems={{true}}
+        data-test-issue-certificate-input
+      />
+      <InputSearch
+        class="is-flex-1 has-left-margin-s"
+        @onChange={{this.handleCommonNameInput}}
+        @placeholder="Common name"
+        data-test-search-input-common-name
+      />
+      <button
+        type="submit"
+        class="button is-secondary has-left-margin-s"
+        disabled={{unless this.rolesValue true}}
+        data-test-issue-certificate-button
+      >
+        Issue
+      </button>
+    </form>
+  </SelectableCard>
   <SelectableCard
-    @title="View certificate"
+    @cardTitle="View certificate"
     @subText="Quickly view a certificate by typing its serial number."
     @hasSearchInput={{true}}
-    @placeholder="33:a3:..."
-    @buttonText="View"
-    @models={{array "pki/certificate"}}
-    @backend={{@engine.id}}
-    @pagePath="vault.cluster.secrets.backend.pki.certificates.certificate.details"
-    @disallowNewItems={{true}}
-  />
+  >
+    <form
+      class="is-flex"
+      aria-label="view certificate"
+      {{on "submit" this.transitionToViewCertificates}}
+      data-test-view-certificate
+    >
+      <SearchSelect
+        class="is-flex-1"
+        @selectLimit="1"
+        @placeholder="33:a3:..."
+        @buttonText="View"
+        @models={{array "pki/certificate"}}
+        @backend={{@engine.id}}
+        @fallbackComponent="input-search"
+        @onChange={{this.handleCertificateInput}}
+        @disallowNewItems={{true}}
+        data-test-view-certificate-input
+      />
+      <button
+        type="submit"
+        class="button is-secondary has-left-margin-s"
+        disabled={{unless this.certificateValue true}}
+        data-test-view-certificate-button
+      >
+        View
+      </button>
+    </form>
+  </SelectableCard>
 </div>

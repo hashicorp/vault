@@ -1,7 +1,5 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
 
 /**
  * @module SelectableCard
@@ -27,24 +25,8 @@ import { action } from '@ember/object';
 
 export default class SelectableCard extends Component {
   @service router;
-  @tracked value = '';
 
   get total() {
     return this.args.total || 0;
-  }
-
-  @action
-  transitionToPage() {
-    this.router.transitionTo(this.args.pagePath, this.value);
-  }
-
-  @action
-  handleInput(value) {
-    // if it comes in from the fallback component then the value is a string otherwise it's an array
-    if (Array.isArray(value)) {
-      this.value = value[0];
-    } else {
-      this.value = value;
-    }
   }
 }
