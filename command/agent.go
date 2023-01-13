@@ -267,8 +267,8 @@ func (c *AgentCommand) Run(args []string) int {
 		serverVersion := serverHealth.Version
 		agentVersion := version.GetVersion().VersionNumber()
 		if serverVersion != agentVersion {
-			c.UI.Info("==> Note: Vault Agent is not running with the same version as Vault itself, we recommend you upgrade! " +
-				fmt.Sprintf("Vault Agent version: %s, Vault version: %s", agentVersion, serverVersion))
+			c.UI.Info("==> Note: Vault Agent version does not match Vault server version. " +
+				fmt.Sprintf("Vault Agent version: %s, Vault server version: %s", agentVersion, serverVersion))
 		}
 	}
 
