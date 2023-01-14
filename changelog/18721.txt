@@ -1,0 +1,3 @@
+```release-note:
+api: Add missing defaults to parameters for sys endpoints to improve OpenApi Spec accuracy
+```
