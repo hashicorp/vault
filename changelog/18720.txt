@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Adds defaults to missing parameters in path definition
+```
