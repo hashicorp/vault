@@ -1464,7 +1464,7 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Log level to view system logs at. Currently supported values are \"trace\", \"debug\", \"info\", \"warn\", \"error\".",
 				Query:       true,
-				Default:	 "info",
+				Default:     "info",
 			},
 			"log_format": {
 				Type:        framework.TypeString,
