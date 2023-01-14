@@ -44,7 +44,7 @@
       type="button"
       class="button has-left-margin-s"
       disabled={{this.submit.isRunning}}
-      {{on "click" this.cancel}}
+      {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details")}}
       data-test-cross-sign-cancel
     >
       Cancel
