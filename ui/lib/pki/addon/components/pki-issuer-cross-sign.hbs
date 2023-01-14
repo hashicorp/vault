@@ -23,10 +23,31 @@
 </div>
 
 <h3 for="intermediates to cross-sign" class="title is-4">Intermediates</h3>
-<div class="box is-fullwidth has-only-top-shadow">
-  <p class="has-bottom-margin-xl">
-    Intermediates are identified by specifying the mount path and the issuer’s current name, as well as the new name it will
-    have when it is imported to Vault.
-  </p>
-  <ObjectListInput @objectKeys={{this.objectKeys}} @onChange={{this.handleChange}} />
-</div>
+<form {{on "submit" (perform this.submit)}} data-test-cross-sign-form>
+  <div class="box is-fullwidth is-sideless">
+    <p class="has-bottom-margin-xl">
+      Intermediates are identified by specifying the mount path and the issuer’s current name, as well as the new name it
+      will have when it is imported to Vault.
+    </p>
+    <ObjectListInput @objectKeys={{this.formFields}} @onChange={{this.handleChange}} />
+  </div>
+  <div class="control">
+    <button
+      type="submit"
+      class="button is-primary {{if this.submit.isRunning 'is-loading'}}"
+      disabled={{this.submit.isRunning}}
+      data-test-cross-sign-submit
+    >
+      Cross-sign
+    </button>
+    <button
+      type="button"
+      class="button has-left-margin-s"
+      disabled={{this.submit.isRunning}}
+      {{on "click" this.cancel}}
+      data-test-cross-sign-cancel
+    >
+      Cancel
+    </button>
+  </div>
+</form>
