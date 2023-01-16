@@ -673,6 +673,8 @@ type Core struct {
 
 	rollbackPeriod time.Duration
 
+	experiments []string
+
 	pendingRemovalMountsAllowed bool
 	expirationRevokeRetryBase   time.Duration
 }
@@ -822,6 +824,8 @@ type CoreConfig struct {
 	EffectiveSDKVersion string
 
 	RollbackPeriod time.Duration
+
+	Experiments []string
 
 	PendingRemovalMountsAllowed bool
 
@@ -989,6 +993,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableSSCTokens:               conf.DisableSSCTokens,
 		effectiveSDKVersion:            effectiveSDKVersion,
 		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
+		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 	}
@@ -3869,6 +3874,10 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 	resourceID := c.hcpLinkStatus.ResourceIDOnHCP
 
 	return status, resourceID
+}
+
+func (c *Core) isExperimentEnabled(experiment string) bool {
+	return strutil.StrListContains(c.experiments, experiment)
 }
 
 // ListenerAddresses provides a slice of configured listener addresses

@@ -205,6 +205,12 @@ a negative effect on performance due to the tracking of each lock attempt.
 
 - `log_rotate_max_files` - Equivalent to the [`-log-rotate-max-files` command-line flag](/docs/commands/server#_log_rotate_max_files).
 
+- `experiments` `(string array: [])` - The list of experiments to enable for this node.
+  Experiments should NOT be used in production, and the associated APIs may have backwards
+  incompatible changes between releases. Additional experiments can also be specified via
+  the `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
+  [`-experiment`](/docs/commands/server#experiment) flag.
+
 ### High Availability Parameters
 
 The following parameters are used on backends that support [high availability][high-availability].
