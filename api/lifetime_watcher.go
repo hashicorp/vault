@@ -77,15 +77,14 @@ const (
 type LifetimeWatcher struct {
 	l sync.Mutex
 
-	client         *Client
-	secret         *Secret
-	tokenRenewInfo *TokenRenewInfo
-	grace          time.Duration
-	random         *rand.Rand
-	increment      int
-	doneCh         chan error
-	renewCh        chan *RenewOutput
-	renewBehavior  RenewBehavior
+	client        *Client
+	secret        *Secret
+	grace         time.Duration
+	random        *rand.Rand
+	increment     int
+	doneCh        chan error
+	renewCh       chan *RenewOutput
+	renewBehavior RenewBehavior
 
 	stopped bool
 	stopCh  chan struct{}
@@ -106,11 +105,6 @@ type TokenRenewInfo struct {
 type LifetimeWatcherInput struct {
 	// Secret is the secret to renew
 	Secret *Secret
-
-	// TokenRenewInfo is for directly renewing a token that was
-	// not the product of an authentication method
-	// This will take precedence over secret, if provided.
-	TokenRenewInfo *TokenRenewInfo
 
 	// DEPRECATED: this does not do anything.
 	Grace time.Duration
@@ -170,14 +164,13 @@ func (c *Client) NewLifetimeWatcher(i *LifetimeWatcherInput) (*LifetimeWatcher, 
 	}
 
 	return &LifetimeWatcher{
-		client:         c,
-		secret:         secret,
-		tokenRenewInfo: i.TokenRenewInfo,
-		increment:      i.Increment,
-		random:         random,
-		doneCh:         make(chan error, 1),
-		renewCh:        make(chan *RenewOutput, renewBuffer),
-		renewBehavior:  i.RenewBehavior,
+		client:        c,
+		secret:        secret,
+		increment:     i.Increment,
+		random:        random,
+		doneCh:        make(chan error, 1),
+		renewCh:       make(chan *RenewOutput, renewBuffer),
+		renewBehavior: i.RenewBehavior,
 
 		stopped: false,
 		stopCh:  make(chan struct{}),
@@ -254,10 +247,6 @@ type renewFunc func(string, int) (*Secret, error)
 func (r *LifetimeWatcher) doRenew() error {
 	defaultInitialRetryInterval := 10 * time.Second
 	switch {
-	case r.tokenRenewInfo != nil:
-		return r.doRenewWithOptions(true, !r.tokenRenewInfo.Renewable,
-			r.tokenRenewInfo.LeaseDuration, r.tokenRenewInfo.Token,
-			r.client.Auth().Token().RenewTokenAsSelf, defaultInitialRetryInterval)
 	case r.secret.Auth != nil:
 		return r.doRenewWithOptions(true, !r.secret.Auth.Renewable,
 			r.secret.Auth.LeaseDuration, r.secret.Auth.ClientToken,

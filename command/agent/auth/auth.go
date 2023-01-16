@@ -256,7 +256,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		// This should only happen if there's no preloaded token (regular auto-auth login)
 		// or if a preloaded token has expired and is now switching to auto-auth.
 		if secret.Auth == nil {
-			// TODO: Why do I keep getting 403s ;o;
+			// TODO: Sometimes we get 404s if the file in ~/.vault-token
+			// uses an out of date token
 			isTokenFileMethod := path == "auth/token/lookup"
 			if isTokenFileMethod {
 				token, _ := data["token"].(string)
@@ -277,8 +278,6 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				return err
 			}
 		}
-
-		var tokenRenewInfo *api.TokenRenewInfo
 
 		switch {
 		case ah.wrapTTL > 0:
@@ -357,7 +356,13 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 					return err
 				}
 
-				tokenRenewInfo = getTokenRenewInfoFromTokenLookupResponse(secret)
+				duration, _ := secret.Data["ttl"].(json.Number).Int64()
+				renewable, _ := secret.Data["renewable"].(bool)
+				secret.Auth = &api.SecretAuth{
+					ClientToken:   token,
+					LeaseDuration: int(duration),
+					Renewable:     renewable,
+				}
 				ah.logger.Info("authentication successful, sending token to sinks")
 				ah.OutputCh <- token
 				if ah.enableTemplateTokenCh {
@@ -399,8 +404,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		}
 
 		watcher, err = clientToUse.NewLifetimeWatcher(&api.LifetimeWatcherInput{
-			Secret:         secret,
-			TokenRenewInfo: tokenRenewInfo,
+			Secret: secret,
+			// TokenRenewInfo: tokenRenewInfo,
 		})
 		if err != nil {
 			ah.logger.Error("error creating lifetime watcher", "error", err, "backoff", backoffCfg)
