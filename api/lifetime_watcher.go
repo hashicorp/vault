@@ -77,14 +77,15 @@ const (
 type LifetimeWatcher struct {
 	l sync.Mutex
 
-	client        *Client
-	secret        *Secret
-	grace         time.Duration
-	random        *rand.Rand
-	increment     int
-	doneCh        chan error
-	renewCh       chan *RenewOutput
-	renewBehavior RenewBehavior
+	client         *Client
+	secret         *Secret
+	tokenRenewInfo *TokenRenewInfo
+	grace          time.Duration
+	random         *rand.Rand
+	increment      int
+	doneCh         chan error
+	renewCh        chan *RenewOutput
+	renewBehavior  RenewBehavior
 
 	stopped bool
 	stopCh  chan struct{}
@@ -93,10 +94,23 @@ type LifetimeWatcher struct {
 	errLifetimeWatcherNoSecretData error
 }
 
+// TokenRenewInfo is the information to be passed to the LifetimeWatcher
+// for token_file auth
+type TokenRenewInfo struct {
+	Renewable     bool
+	LeaseDuration int
+	Token         string
+}
+
 // LifetimeWatcherInput is used as input to the renew function.
 type LifetimeWatcherInput struct {
 	// Secret is the secret to renew
 	Secret *Secret
+
+	// TokenRenewInfo is for directly renewing a token that was
+	// not the product of an authentication method
+	// This will take precedence over secret, if provided.
+	TokenRenewInfo *TokenRenewInfo
 
 	// DEPRECATED: this does not do anything.
 	Grace time.Duration
@@ -156,13 +170,14 @@ func (c *Client) NewLifetimeWatcher(i *LifetimeWatcherInput) (*LifetimeWatcher, 
 	}
 
 	return &LifetimeWatcher{
-		client:        c,
-		secret:        secret,
-		increment:     i.Increment,
-		random:        random,
-		doneCh:        make(chan error, 1),
-		renewCh:       make(chan *RenewOutput, renewBuffer),
-		renewBehavior: i.RenewBehavior,
+		client:         c,
+		secret:         secret,
+		tokenRenewInfo: i.TokenRenewInfo,
+		increment:      i.Increment,
+		random:         random,
+		doneCh:         make(chan error, 1),
+		renewCh:        make(chan *RenewOutput, renewBuffer),
+		renewBehavior:  i.RenewBehavior,
 
 		stopped: false,
 		stopCh:  make(chan struct{}),
@@ -221,7 +236,8 @@ func (r *LifetimeWatcher) Stop() {
 // Start starts a background process for watching the lifetime of this secret.
 // If renewal is enabled, when the secret has auth data, this attempts to renew
 // the auth (token); When the secret has a lease, this attempts to renew the
-// lease.
+// lease. If the token duration is 0 (infinite) we won't start the lifetime
+// watcher, as there's nothing to renew.
 func (r *LifetimeWatcher) Start() {
 	r.doneCh <- r.doRenew()
 }
@@ -238,6 +254,10 @@ type renewFunc func(string, int) (*Secret, error)
 func (r *LifetimeWatcher) doRenew() error {
 	defaultInitialRetryInterval := 10 * time.Second
 	switch {
+	case r.tokenRenewInfo != nil:
+		return r.doRenewWithOptions(true, !r.tokenRenewInfo.Renewable,
+			r.tokenRenewInfo.LeaseDuration, r.tokenRenewInfo.Token,
+			r.client.Auth().Token().RenewTokenAsSelf, defaultInitialRetryInterval)
 	case r.secret.Auth != nil:
 		return r.doRenewWithOptions(true, !r.secret.Auth.Renewable,
 			r.secret.Auth.LeaseDuration, r.secret.Auth.ClientToken,
@@ -280,7 +300,6 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 			// Can't or won't renew, just keep the same expiration so we exit
 			// when it's reauthentication time
 			remainingLeaseDuration = fallbackLeaseDuration
-
 		default:
 			// Renew the token
 			renewal, err = renew(credString, r.increment)

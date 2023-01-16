@@ -127,3 +127,10 @@ func (k *kubernetesMethod) readJWT() (string, error) {
 
 	return strings.TrimSpace(string(contentBytes)), nil
 }
+
+func (k *kubernetesMethod) extractTokenFromRequest(secret *api.Secret) string {
+	if secret == nil || secret.Auth == nil {
+		return secret.Auth.ClientToken
+	}
+	return ""
+}
