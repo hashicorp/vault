@@ -1749,7 +1749,7 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 
 	mfaFactors, err := parseMfaFactors(mfaCreds)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse MFA factor, %w", err)
 	}
 
 	switch mConfig.Type {
@@ -1914,7 +1914,7 @@ func parseMfaFactors(creds []string) (*MFAFactor, error) {
 		return mfaFactor, nil
 	}
 
-	return mfaFactor, err
+	return mfaFactor, err.ErrorOrNil()
 }
 
 func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {
