@@ -475,12 +475,6 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 		case (!c.Seals[0].Disabled && c.Seals[0].Recover) || (!c.Seals[1].Disabled && c.Seals[1].Recover):
 			return nil, errors.New("seals: migration target seal cannot be in recovery mode")
 		}
-	case 1:
-		// One seal is still not okay if the hosting seal is disabled and a recovery is attempted.
-		if c.Seals[0].Disabled && c.Seals[0].Recover {
-			return nil, errors.New("seals: seal cannot be both disabled and in recovery mode")
-		}
-		// Otherwise this is a migration between an auto seal and shamir or vice versa
 	}
 
 	return c, nil

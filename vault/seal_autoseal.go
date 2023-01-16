@@ -436,13 +436,17 @@ func (d *autoSeal) RecoveryKey(ctx context.Context) ([]byte, error) {
 }
 
 func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
-	pe, err := d.core.physical.Get(ctx, recoveryKeyPath)
+	return getRecoveryKeyInternal(ctx, d.core.physical, d.logger, d.Access)
+}
+
+func getRecoveryKeyInternal(ctx context.Context, storage physical.Backend, logger log.Logger, access *seal.Access) ([]byte, error) {
+	pe, err := storage.Get(ctx, recoveryKeyPath)
 	if err != nil {
-		d.logger.Error("failed to read recovery key", "error", err)
+		logger.Error("failed to read recovery key", "error", err)
 		return nil, fmt.Errorf("failed to read recovery key: %w", err)
 	}
 	if pe == nil {
-		d.logger.Warn("no recovery key found")
+		logger.Warn("no recovery key found")
 		return nil, fmt.Errorf("no recovery key found")
 	}
 
@@ -451,7 +455,7 @@ func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
 	}
 
-	pt, err := d.Decrypt(ctx, blobInfo, nil)
+	pt, err := access.Decrypt(ctx, blobInfo, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt encrypted stored keys: %w", err)
 	}

@@ -387,19 +387,16 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 			results.RecoveryShares = recoveryUnsealKeys
 
-			keysToStore := [][]byte{barrierKey}
-			if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
-				c.logger.Error("failed to store recovery keys", "error", err)
-			}
-
-			wrapper := aeadwrapper.NewShamirWrapper()
-			wrapper.SetAesGcmKeyBytes(recoveryKey)
-			recoverySeal := NewRecoverySeal(&seal.Access{
-				Wrapper: wrapper,
-			})
-			recoverySeal.SetCore(c)
-			if err := recoverySeal.SetStoredKeys(ctx, keysToStore); err != nil {
-				c.logger.Error("failed to store recovery unseal keys", "error", err)
+			if !initParams.RecoveryConfig.DisableUnsealRecovery {
+				wrapper := aeadwrapper.NewShamirWrapper()
+				wrapper.SetAesGcmKeyBytes(recoveryKey)
+				recoverySeal := NewRecoverySeal(&seal.Access{
+					Wrapper: wrapper,
+				})
+				recoverySeal.SetCore(c)
+				if err := recoverySeal.SetStoredKeys(ctx, [][]byte{barrierKey}); err != nil {
+					c.logger.Error("failed to store recovery unseal keys", "error", err)
+				}
 			}
 		}
 	}

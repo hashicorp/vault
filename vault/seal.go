@@ -10,6 +10,10 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+
+	log "github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -86,6 +90,7 @@ type Seal interface {
 type defaultSeal struct {
 	access        *seal.Access
 	config        atomic.Value
+	logger        log.Logger
 	core          *Core
 	unsealKeyPath string
 }
@@ -129,6 +134,10 @@ func (d *defaultSeal) SetAccess(access *seal.Access) {
 
 func (d *defaultSeal) SetCore(core *Core) {
 	d.core = core
+	if d.logger == nil {
+		d.logger = d.core.Logger().Named("defaultseal")
+		d.core.AddLogger(d.logger)
+	}
 }
 
 func (d *defaultSeal) Init(ctx context.Context) error {
@@ -288,7 +297,7 @@ func (d *defaultSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
 }
 
 func (d *defaultSeal) RecoveryKey(ctx context.Context) ([]byte, error) {
-	return nil, fmt.Errorf("recovery not supported")
+	return d.access.Wrapper.(*aead.ShamirWrapper).KeyBytes(ctx)
 }
 
 func (d *defaultSeal) SetRecoveryConfig(ctx context.Context, config *SealConfig) error {
