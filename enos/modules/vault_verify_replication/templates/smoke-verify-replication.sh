@@ -15,7 +15,7 @@ function fail() {
 # Replication status endpoint should have data.mode disabled for OSS release
 status=$(curl -s http://localhost:8200/v1/sys/replication/status)
 if [ "$edition" == "oss" ]; then
-  if [ "$(jq -r '.data.mode' <<< "$status")" != "disabled" ]; then
+  if [ "$(jq -r '.errors[0]' <<< "$status")" != "enterprise-only feature" ]; then
     fail "replication data mode is not disabled for OSS release!"
   fi
 else
