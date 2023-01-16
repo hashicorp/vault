@@ -736,7 +736,7 @@ func (b *LoginMFABackend) sanitizeMFACredsWithLoginEnforcementMethodIDs(ctx cont
 			if ok {
 				sanitizedMfaCreds[mConfig.ID] = val
 			} else {
-				multiError = multierror.Append(multiError, fmt.Errorf("failed to find MFA credentials associated with an MFA method ID %v, method name %v", methodID, mConfig.Name))
+				multiError = multierror.Append(multiError, fmt.Errorf("failed to find MFA credentials associated with an MFA method ID %v, method name %v", methodID, configNS.Path+mConfig.Name))
 			}
 		} else {
 			multiError = multierror.Append(multiError, fmt.Errorf("failed to find the namespace associated with an MFA method ID %v", mConfig.ID))
