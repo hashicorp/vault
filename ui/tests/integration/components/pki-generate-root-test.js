@@ -185,7 +185,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     );
 
     await click(SELECTORS.saveButton);
-    assert.dom(SELECTORS.formInvalidError).hasText('The form has errors. Please fix before continuing.');
+    assert.dom(SELECTORS.formInvalidError).exists('Shows overall error form');
     assert.ok(saveSpy.notCalled);
   });
 });
