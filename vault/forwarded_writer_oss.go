@@ -10,8 +10,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const clusterSentinel = `{{clusterId}}`
-
 // Our forwarded writer has two components: a reference to Core, allowing
 // us to tap into the GRPC client and resolved paths, and lower storage
 // layer to call upon when we don't wish to forward our writes.
@@ -111,9 +109,9 @@ func (w *ForwardedWriter) resolvePath(path string) (string, error) {
 	// This is the source-agnostic path resolution helper. Here we ensure
 	// we've got a forwarded path (one that contains the proper UUID
 	// sentinel) and we fetch this cluster's UUID and update the path.
-	if !strings.Contains(path, clusterSentinel) {
-		return "", fmt.Errorf("invalid path: lacks '%v' sentinel for expansion", clusterSentinel)
+	if !strings.Contains(path, logical.PBPWFClusterSentinel) {
+		return "", fmt.Errorf("invalid path: lacks '%v' sentinel for expansion", logical.PBPWFClusterSentinel)
 	}
 
-	return strings.Replace(path, clusterSentinel, w.clusterID, 1), nil
+	return strings.Replace(path, logical.PBPWFClusterSentinel, w.clusterID, 1), nil
 }
