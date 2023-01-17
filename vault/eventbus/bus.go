@@ -48,7 +48,7 @@ func init() {
 	}
 }
 
-func NewEventBus() (*EventBus, error) {
+func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	broker := eventlogger.NewBroker()
 
 	formatterID, err := uuid.GenerateUUID()
@@ -61,8 +61,12 @@ func NewEventBus() (*EventBus, error) {
 		return nil, err
 	}
 
+	if logger == nil {
+		logger = hclog.Default().Named("events")
+	}
+
 	return &EventBus{
-		logger:          hclog.Default().Named("eventbus"),
+		logger:          logger,
 		broker:          broker,
 		formatterNodeID: formatterNodeID,
 	}, nil
@@ -72,7 +76,10 @@ func NewEventBus() (*EventBus, error) {
 // It is not possible to stop or restart the event bus.
 // It is safe to call Start() multiple times.
 func (bus *EventBus) Start() {
-	bus.started.Store(true)
+	wasStarted := bus.started.Swap(true)
+	if !wasStarted {
+		bus.logger.Info("Starting event system")
+	}
 }
 
 var _ logical.EventSender = (*EventBus)(nil)
