@@ -13,6 +13,7 @@ export default class PkiCertificateBaseSerializer extends ApplicationSerializer 
       // Parse certificate back from the API and add to payload
       const parsedCert = parseCertificate(payload.data.certificate);
       // convert issueDate to same format as other date values
+      // this can be moved into the parseCertificate helper once the old pki implementation is removed
       if (parsedCert.issue_date) {
         parsedCert.issue_date = parsedCert.issue_date.valueOf();
       }

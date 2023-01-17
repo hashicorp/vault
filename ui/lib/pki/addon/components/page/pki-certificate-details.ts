@@ -33,6 +33,7 @@ export default class PkiCertificateDetailsComponent extends Component<Args> {
   @waitFor
   *revoke() {
     try {
+      // the adapter updateRecord method calls the revoke endpoint since it is the only way to update a cert
       yield this.args.model.save();
       this.flashMessages.success('The certificate has been revoked.');
       if (this.args.onRevoke) {
