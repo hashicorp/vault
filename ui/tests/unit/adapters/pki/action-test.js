@@ -20,7 +20,7 @@ module('Unit | Adapter | pki/action', function (hooks) {
     assert.ok(adapter);
   });
 
-  module('formType import', function (hooks) {
+  module('actionType import', function (hooks) {
     hooks.beforeEach(function () {
       this.payload = {
         pem_bundle: `-----BEGIN CERTIFICATE REQUEST-----
@@ -52,7 +52,7 @@ module('Unit | Adapter | pki/action', function (hooks) {
 
       await this.store
         .createRecord('pki/action', this.payload)
-        .save({ adapterOptions: { formType: 'import', useIssuer: false } });
+        .save({ adapterOptions: { actionType: 'import', useIssuer: false } });
     });
 
     test('it calls the correct endpoint when useIssuer = true', async function (assert) {
@@ -64,14 +64,14 @@ module('Unit | Adapter | pki/action', function (hooks) {
 
       await this.store
         .createRecord('pki/action', this.payload)
-        .save({ adapterOptions: { formType: 'import', useIssuer: true } });
+        .save({ adapterOptions: { actionType: 'import', useIssuer: true } });
     });
   });
 
-  module('formType generate-root', function () {
+  module('actionType generate-root', function () {
     test('it calls the correct endpoint when useIssuer = false', async function (assert) {
       assert.expect(4);
-      const adapterOptions = { adapterOptions: { formType: 'generate-root', useIssuer: false } };
+      const adapterOptions = { adapterOptions: { actionType: 'generate-root', useIssuer: false } };
       this.server.post(`${this.backend}/root/generate/internal`, () => {
         assert.ok(true, 'request made correctly when type = internal');
         return {};
@@ -113,7 +113,7 @@ module('Unit | Adapter | pki/action', function (hooks) {
 
     test('it calls the correct endpoint when useIssuer = true', async function (assert) {
       assert.expect(4);
-      const adapterOptions = { adapterOptions: { formType: 'generate-root', useIssuer: true } };
+      const adapterOptions = { adapterOptions: { actionType: 'generate-root', useIssuer: true } };
       this.server.post(`${this.backend}/issuers/generate/root/internal`, () => {
         assert.ok(true, 'request made correctly when type = internal');
         return {};
@@ -154,10 +154,10 @@ module('Unit | Adapter | pki/action', function (hooks) {
     });
   });
 
-  module('formType generate-csr', function () {
+  module('actionType generate-csr', function () {
     test('it calls the correct endpoint when useIssuer = false', async function (assert) {
       assert.expect(4);
-      const adapterOptions = { adapterOptions: { formType: 'generate-csr', useIssuer: false } };
+      const adapterOptions = { adapterOptions: { actionType: 'generate-csr', useIssuer: false } };
       this.server.post(`${this.backend}/intermediate/generate/internal`, () => {
         assert.ok(true, 'request made correctly when type = internal');
         return {};
@@ -199,7 +199,7 @@ module('Unit | Adapter | pki/action', function (hooks) {
 
     test('it calls the correct endpoint when useIssuer = true', async function (assert) {
       assert.expect(4);
-      const adapterOptions = { adapterOptions: { formType: 'generate-csr', useIssuer: true } };
+      const adapterOptions = { adapterOptions: { actionType: 'generate-csr', useIssuer: true } };
       this.server.post(`${this.backend}/issuers/generate/intermediate/internal`, () => {
         assert.ok(true, 'request made correctly when type = internal');
         return {};

@@ -14,7 +14,7 @@ import errorMessage from 'vault/utils/error-message';
  *
  * @example
  * ```js
- * <PkiGenerateRoot @model={{this.model}} @onCancel={{transition-to "vault.cluster"}} @onSave={{transition-to "vault.cluster.secrets"}} @adapterOptions={{hash formType="import" useIssuer=false}} />
+ * <PkiGenerateRoot @model={{this.model}} @onCancel={{transition-to "vault.cluster"}} @onSave={{transition-to "vault.cluster.secrets"}} @adapterOptions={{hash actionType="import" useIssuer=false}} />
  * ```
  *
  * @param {Object} model - pki/action model.

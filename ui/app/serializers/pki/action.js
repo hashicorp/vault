@@ -21,8 +21,8 @@ export default class PkiActionSerializer extends ApplicationSerializer {
     return payload;
   }
 
-  _allowedParamsByType(formType) {
-    switch (formType) {
+  _allowedParamsByType(actionType) {
+    switch (actionType) {
       case 'import':
         return ['pem_bundle'];
       case 'generate-root':

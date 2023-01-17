@@ -23,7 +23,7 @@ export default class PkiConfigureForm extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
-  @tracked formType = '';
+  @tracked actionType = '';
 
   get configTypes() {
     return [
@@ -57,7 +57,7 @@ export default class PkiConfigureForm extends Component<Args> {
     // we want to check capabilities on the newer endpoints (those
     // prefixed with "issuers") and use the old path as fallback
     // if user does not have permissions.
-    switch (this.formType) {
+    switch (this.actionType) {
       case 'import':
         return config.canImportBundle;
       case 'generate-root':

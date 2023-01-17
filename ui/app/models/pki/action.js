@@ -23,10 +23,10 @@ const validations = {
 export default class PkiActionModel extends Model {
   @service secretMountPath;
 
-  /* formType import */
+  /* actionType import */
   @attr('string') pemBundle;
 
-  /* formType generate-root */
+  /* actionType generate-root */
   @attr('string', {
     possibleValues: ['exported', 'internal', 'existing', 'kms'],
     noDefault: true,

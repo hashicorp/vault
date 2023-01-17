@@ -7,12 +7,12 @@ export default class PkiActionAdapter extends ApplicationAdapter {
 
   urlForCreateRecord(modelName, snapshot) {
     const { backend, type } = snapshot.record;
-    const { formType, useIssuer } = snapshot.adapterOptions;
-    if (!backend || !formType) {
+    const { actionType, useIssuer } = snapshot.adapterOptions;
+    if (!backend || !actionType) {
       throw new Error('URL for create record is missing required attributes');
     }
     const baseUrl = `${this.buildURL()}/${encodePath(backend)}`;
-    switch (formType) {
+    switch (actionType) {
       case 'import':
         return useIssuer ? `${baseUrl}/issuers/import/bundle` : `${baseUrl}/config/ca`;
       case 'generate-root':
@@ -22,15 +22,15 @@ export default class PkiActionAdapter extends ApplicationAdapter {
           ? `${baseUrl}/issuers/generate/intermediate/${type}`
           : `${baseUrl}/intermediate/generate/${type}`;
       default:
-        assert('formType must be one of import, generate-root, or generate-csr');
+        assert('actionType must be one of import, generate-root, or generate-csr');
     }
   }
 
   createRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     const url = this.urlForCreateRecord(type.modelName, snapshot);
-    // Override requestType so that we serialize data based on the endpoint
-    const data = serializer.serialize(snapshot, snapshot.adapterOptions.formType);
+    // Send actionType as serializer requestType so that we serialize data based on the endpoint
+    const data = serializer.serialize(snapshot, snapshot.adapterOptions.actionType);
     return this.ajax(url, 'POST', { data });
   }
 }
