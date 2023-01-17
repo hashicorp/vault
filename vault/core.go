@@ -690,6 +690,7 @@ type Core struct {
 	writeForwardedPaths *pathmanager.PathManager
 }
 
+// c.stateLock needs to be held in read mode before calling this function.
 func (c *Core) HAState() consts.HAState {
 	switch {
 	case c.perfStandby:
