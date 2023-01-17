@@ -2208,6 +2208,27 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	return resp, nil
 }
 
+// handleLockedUsersMetricQuery reports the locked user count metrics for this namespace and all child namespaces
+// if mount_accessor in request, returns the locked user metrics for that mount accessor for namespace in ctx
+func (b *SystemBackend) handleLockedUsersMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var mountAccessor string
+	if mountAccessorRaw, ok := d.GetOk("mount_accessor"); ok {
+		mountAccessor = mountAccessorRaw.(string)
+	}
+
+	results, err := b.handleLockedUsersQuery(ctx, mountAccessor)
+	if err != nil {
+		return nil, err
+	}
+	if results == nil {
+		return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
+	}
+
+	return &logical.Response{
+		Data: results,
+	}, nil
+}
+
 // handleUnlockUser is used to unlock user with given mount_accessor and alias_identifier if locked
 func (b *SystemBackend) handleUnlockUser(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	mountAccessor := data.Get("mount_accessor").(string)
@@ -2230,33 +2251,6 @@ func (b *SystemBackend) handleUnlockUser(ctx context.Context, req *logical.Reque
 	}
 
 	return nil, nil
-}
-
-// unlockUser deletes the entry for locked user from storage and userFailedLoginInfo map
-func unlockUser(ctx context.Context, core *Core, mountAccessor string, aliasName string) error {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	lockedUserStoragePath := coreLockedUsersPath + ns.ID + "/" + mountAccessor + "/" + aliasName
-
-	// remove entry for locked user from storage
-	if err := core.barrier.Delete(ctx, lockedUserStoragePath); err != nil {
-		return err
-	}
-
-	loginUserInfoKey := FailedLoginUser{
-		aliasName:     aliasName,
-		mountAccessor: mountAccessor,
-	}
-
-	// remove entry for locked user from userFailedLoginInfo map
-	if err := updateUserFailedLoginInfo(ctx, core, loginUserInfoKey, nil, true); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // handleLease is use to view the metadata for a given LeaseID
@@ -5395,7 +5389,7 @@ the mount.`,
 		"Unlock the locked user with given mount_accessor and alias_identifier.",
 		`
 This path responds to the following HTTP methods.
-    POST sys/lockedusers/:mount_accessor/unlock/:alias_identifier
+    POST sys/locked-users/:mount_accessor/unlock/:alias_identifier
 		Unlocks the user with given mount_accessor and alias_identifier
 		if locked.`,
 	},
@@ -5403,6 +5397,14 @@ This path responds to the following HTTP methods.
 	"mount_accessor": {
 		"MountAccessor is the identifier of the mount entry to which the user belongs",
 		"",
+	},
+
+	"locked_users": {
+		"Report the locked user count metrics",
+		`
+This path responds to the following HTTP methods.
+    GET sys/locked-users
+	Report the locked user count metrics, for current namespace and all child namespaces.`,
 	},
 
 	"alias_identifier": {
