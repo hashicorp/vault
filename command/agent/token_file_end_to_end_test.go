@@ -93,7 +93,8 @@ func testTokenFileEndToEnd(t *testing.T, removeTokenFile bool, expectToken bool)
 	am, err := token_file.NewTokenFileAuthMethod(&auth.AuthConfig{
 		Logger: logger.Named("auth.method"),
 		Config: map[string]interface{}{
-			"token_file_path": tokenFileName,
+			"token_file_path":                 tokenFileName,
+			"remove_token_file_after_reading": removeTokenFile,
 		},
 	})
 	if err != nil {
@@ -188,6 +189,14 @@ func testTokenFileEndToEnd(t *testing.T, removeTokenFile bool, expectToken bool)
 		_, err := os.Stat(tokenFileName)
 		if err != nil {
 			t.Fatal("Token file removed despite remove token file being set to false")
+		}
+	} else {
+		_, err := os.Stat(tokenFileName)
+		if err == nil {
+			t.Fatal("no error returned from stat, indicating the file is still present")
+		}
+		if !os.IsNotExist(err) {
+			t.Fatalf("unexpected error: %v", err)
 		}
 	}
 }

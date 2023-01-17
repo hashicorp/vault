@@ -40,7 +40,6 @@ func NewTokenFileAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		mountPath: "auth/token",
 	}
 
-	// TODO should we default to ~/.vault-token?
 	tokenFilePathRaw, ok := conf.Config["token_file_path"]
 	if !ok {
 		return nil, errors.New("missing 'token_file_path' value")
@@ -75,23 +74,34 @@ func NewTokenFileAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 }
 
 func (a *TokenFileMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
-	// Lstat = symlink safe
-	if _, err := os.Stat(a.tokenFilePath); err == nil {
-		// filepath.evalsymlinks on the path
-		token, err := os.ReadFile(a.tokenFilePath)
-		if err != nil {
-			if a.cachedToken == "" {
-				return "", nil, nil, fmt.Errorf("error reading token file and no cached role ID known: %w", err)
-			}
-			a.logger.Warn("error reading token file", "error", err)
+	_, err := os.Stat(a.tokenFilePath)
+	if err != nil {
+		if a.cachedToken == "" {
+			return "", nil, nil, fmt.Errorf("token file not found and no cached token known: %w", err)
 		}
-		if len(token) == 0 {
-			if a.cachedToken == "" {
-				return "", nil, nil, errors.New("token file empty and no cached token known")
-			}
-			a.logger.Warn("role ID file exists but read empty value, re-using cached value")
-		} else {
-			a.cachedToken = strings.TrimSpace(string(token))
+		a.logger.Warn("token file not found", "error", err)
+	}
+
+	token, err := os.ReadFile(a.tokenFilePath)
+	if err != nil {
+		if a.cachedToken == "" {
+			return "", nil, nil, fmt.Errorf("error reading token file and no cached token known: %w", err)
+		}
+		a.logger.Warn("error reading token file", "error", err)
+	}
+	if len(token) == 0 {
+		if a.cachedToken == "" {
+			return "", nil, nil, errors.New("token file empty and no cached token known")
+		}
+		a.logger.Warn("role ID file exists but read empty value, re-using cached value")
+	} else {
+		a.cachedToken = strings.TrimSpace(string(token))
+	}
+
+	if a.removeTokenFileAfterReading {
+		a.logger.Info("removing token file after reading, because 'remove_token_file_after_reading' is true")
+		if err := os.Remove(a.tokenFilePath); err != nil {
+			a.logger.Error("error removing token file after reading", "error", err)
 		}
 	}
 
@@ -109,9 +119,4 @@ func (a *TokenFileMethod) CredSuccess() {
 }
 
 func (a *TokenFileMethod) Shutdown() {
-}
-
-func IsAuthMethodTokenFile(am auth.AuthMethod) bool {
-	_, ok := am.(*TokenFileMethod)
-	return ok
 }

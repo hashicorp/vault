@@ -169,6 +169,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		var path string
 		var data map[string]interface{}
 		var header http.Header
+		var isTokenFileMethod bool
 
 		switch am.(type) {
 		case AuthMethodWithClient:
@@ -258,7 +259,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		if secret.Auth == nil {
 			// TODO: Sometimes we get 404s if the file in ~/.vault-token
 			// uses an out of date token
-			isTokenFileMethod := path == "auth/token/lookup"
+			isTokenFileMethod = path == "auth/token/lookup"
 			if isTokenFileMethod {
 				token, _ := data["token"].(string)
 				clientToUse.SetToken(token)
@@ -278,6 +279,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				return err
 			}
 		}
+
+		var leaseDuration int
 
 		switch {
 		case ah.wrapTTL > 0:
@@ -357,6 +360,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				}
 
 				duration, _ := secret.Data["ttl"].(json.Number).Int64()
+				leaseDuration = int(duration)
 				renewable, _ := secret.Data["renewable"].(bool)
 				secret.Auth = &api.SecretAuth{
 					ClientToken:   token,
@@ -388,6 +392,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 					return err
 				}
 
+				leaseDuration = secret.LeaseDuration
 				ah.logger.Info("authentication successful, sending token to sinks")
 				ah.OutputCh <- secret.Auth.ClientToken
 				if ah.enableTemplateTokenCh {
@@ -405,7 +410,6 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 		watcher, err = clientToUse.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 			Secret: secret,
-			// TokenRenewInfo: tokenRenewInfo,
 		})
 		if err != nil {
 			ah.logger.Error("error creating lifetime watcher", "error", err, "backoff", backoffCfg)
@@ -417,9 +421,15 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			return err
 		}
 
-		ah.logger.Info("starting renewal process")
 		metrics.IncrCounter([]string{"agent", "auth", "success"}, 1)
-		go watcher.Renew()
+		// We don't want to trigger the renewal process for tokens with
+		// unlimited TTL, such as the root token.
+		if leaseDuration == 0 && isTokenFileMethod {
+			ah.logger.Info("not starting token renewal process, as token has unlimited TTL")
+		} else {
+			ah.logger.Info("starting renewal process")
+			go watcher.Renew()
+		}
 
 	LifetimeWatcherLoop:
 		for {
@@ -446,20 +456,6 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				break LifetimeWatcherLoop
 			}
 		}
-	}
-}
-
-func getTokenRenewInfoFromTokenLookupResponse(secret *api.Secret) *api.TokenRenewInfo {
-	if secret == nil || secret.Data == nil {
-		return nil
-	}
-	renewable, _ := secret.Data["renewable"].(bool)
-	leaseDuration, _ := secret.Data["ttl"].(int)
-	token, _ := secret.Data["id"].(string)
-	return &api.TokenRenewInfo{
-		Renewable:     renewable,
-		LeaseDuration: leaseDuration,
-		Token:         token,
 	}
 }
 
