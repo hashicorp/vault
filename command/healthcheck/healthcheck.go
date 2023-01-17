@@ -136,9 +136,6 @@ func (e *Executor) templatePath(path string) string {
 }
 
 func (e *Executor) FetchIfNotFetched(op logical.Operation, rawPath string) (*PathFetch, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
 	path := e.templatePath(rawPath)
 
 	byOp, present := e.Resources[path]
@@ -166,6 +163,10 @@ func (e *Executor) FetchIfNotFetched(op logical.Operation, rawPath string) (*Pat
 	} else if op != logical.ReadOperation {
 		return nil, fmt.Errorf("unknown operation: %v on %v", op, path)
 	}
+
+	// client.ReadRaw* functions require a manual timeout override
+	ctx, cancel := context.WithTimeout(context.Background(), e.Client.ClientTimeout())
+	defer cancel()
 
 	response, err := e.Client.Logical().ReadRawWithDataWithContext(ctx, path, data)
 	ret.Response = response

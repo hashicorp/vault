@@ -59,9 +59,6 @@ func (c *ReadCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *ReadCommand) Run(args []string) int {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
 	f := c.Flags()
 
 	if err := f.Parse(args, ParseOptionAllowRawFormat(true)); err != nil {
@@ -81,6 +78,10 @@ func (c *ReadCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 2
 	}
+
+	// client.ReadRaw* functions require a manual timeout override
+	ctx, cancel := context.WithTimeout(context.Background(), client.ClientTimeout())
+	defer cancel()
 
 	// Pull our fake stdin if needed
 	stdin := (io.Reader)(os.Stdin)
