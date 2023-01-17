@@ -549,7 +549,7 @@ func TestLoginCommand_Run(t *testing.T) {
 
 		output = ui.OutputWriter.String() + ui.ErrorWriter.String()
 
-		reqIdReg, err := regexp.Compile(`mfa_request_id\s+(?P<name>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?\s+mfa_constraint.*`)
+		reqIdReg := regexp.MustCompile(`mfa_request_id\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s+mfa_constraint`)
 		if err != nil {
 			t.Fatalf("failed to compile regex")
 		}
