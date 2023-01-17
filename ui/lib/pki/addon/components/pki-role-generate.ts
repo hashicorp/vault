@@ -8,6 +8,7 @@ import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 import FlashMessageService from 'vault/services/flash-messages';
 import DownloadService from 'vault/services/download';
+import PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';
 
 interface Args {
   onSuccess: CallableFunction;
@@ -15,26 +16,6 @@ interface Args {
   type: string;
 }
 
-interface PkiCertificateGenerateModel {
-  name: string;
-  backend: string;
-  serialNumber: string;
-  certificate: string;
-  formFields: FormField[];
-  formFieldsGroup: {
-    [k: string]: FormField[];
-  }[];
-  save: () => void;
-  rollbackAttributes: () => void;
-  unloadRecord: () => void;
-  destroyRecord: () => void;
-  canRevoke: boolean;
-}
-interface FormField {
-  name: string;
-  type: string;
-  options: unknown;
-}
 export default class PkiRoleGenerate extends Component<Args> {
   @service declare readonly router: Router;
   @service declare readonly store: Store;

@@ -56,7 +56,6 @@ export default class FormFieldComponent extends Component {
     'ttl',
   ];
   @tracked showInput = false;
-  @tracked file = { value: '' }; // used by the pgp-file component when an attr is editType of 'file'
 
   constructor() {
     super(...arguments);
@@ -116,12 +115,11 @@ export default class FormFieldComponent extends Component {
   }
 
   @action
-  setFile(_, keyFile) {
+  setFile(keyFile) {
     const path = this.valuePath;
     const { value } = keyFile;
     this.args.model.set(path, value);
     this.onChange(path, value);
-    this.file = keyFile;
   }
   @action
   setAndBroadcast(value) {

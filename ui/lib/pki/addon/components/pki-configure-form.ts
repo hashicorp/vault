@@ -1,14 +1,28 @@
 import Component from '@glimmer/component';
+import { inject as service } from '@ember/service';
+// TYPES
+import Store from '@ember-data/store';
+import Router from '@ember/routing/router';
+import FlashMessageService from 'vault/services/flash-messages';
+import PkiConfigModel from 'vault/models/pki/config';
 import { tracked } from '@glimmer/tracking';
+
+interface Args {
+  config: PkiConfigModel;
+}
 
 /**
  * @module PkiConfigureForm
- * PkiConfigureForm components are used to configure a PKI engine mount.
- *
+ * PkiConfigureForm component is used to configure a PKI engine mount.
+ * The component shows three options for configuration and which form
+ * is shown. The sub-forms rendered handle rendering the form itself
+ * and form submission and cancel actions.
  */
-
-export default class PkiConfigureForm extends Component {
-  @tracked configType = '';
+export default class PkiConfigureForm extends Component<Args> {
+  @service declare readonly store: Store;
+  @service declare readonly router: Router;
+  @service declare readonly flashMessages: FlashMessageService;
+  @tracked formType = '';
 
   get configTypes() {
     return [
@@ -34,5 +48,23 @@ export default class PkiConfigureForm extends Component {
           'Generate a new CSR for signing, optionally generating a new private key. No new issuer is created by this call.',
       },
     ];
+  }
+
+  shouldUseIssuerEndpoint() {
+    const { config } = this.args;
+    // To determine which endpoint the config adapter should use,
+    // we want to check capabilities on the newer endpoints (those
+    // prefixed with "issuers") and use the old path as fallback
+    // if user does not have permissions.
+    switch (this.formType) {
+      case 'import':
+        return config.canImportBundle;
+      case 'generate-root':
+        return config.canGenerateIssuerRoot;
+      case 'generate-csr':
+        return config.canGenerateIssuerIntermediate;
+      default:
+        return false;
+    }
   }
 }

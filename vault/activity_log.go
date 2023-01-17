@@ -1590,8 +1590,49 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			return nil, err
 		}
 
-		// Add the current month's namespace data the precomputed query namespaces
-		byNamespaceResponse = append(byNamespaceResponse, byNamespaceResponseCurrent...)
+		// Create a mapping of namespace id to slice index, so that we can efficiently update our results without
+		// having to traverse the entire namespace response slice every time.
+		nsrMap := make(map[string]int)
+		for i, nr := range byNamespaceResponse {
+			nsrMap[nr.NamespaceID] = i
+		}
+
+		// Rather than blindly appending, which will create duplicates, check our existing counts against the current
+		// month counts, and append or update as necessary. We also want to account for mounts and their counts.
+		for _, nrc := range byNamespaceResponseCurrent {
+			if ndx, ok := nsrMap[nrc.NamespaceID]; ok {
+				existingRecord := byNamespaceResponse[ndx]
+
+				// Create a map of the existing mounts, so we don't duplicate them
+				mountMap := make(map[string]*ResponseCounts)
+				for _, erm := range existingRecord.Mounts {
+					mountMap[erm.MountPath] = erm.Counts
+				}
+
+				existingRecord.Counts.EntityClients += nrc.Counts.EntityClients
+				existingRecord.Counts.Clients += nrc.Counts.Clients
+				existingRecord.Counts.DistinctEntities += nrc.Counts.DistinctEntities
+				existingRecord.Counts.NonEntityClients += nrc.Counts.NonEntityClients
+				existingRecord.Counts.NonEntityTokens += nrc.Counts.NonEntityTokens
+
+				// Check the current month mounts against the existing mounts and if there are matches, update counts
+				// accordingly. If there is no match, append the new mount to the existing mounts, so it will be counted
+				// later.
+				for _, nrcMount := range nrc.Mounts {
+					if existingRecordMountCounts, ook := mountMap[nrcMount.MountPath]; ook {
+						existingRecordMountCounts.EntityClients += nrcMount.Counts.EntityClients
+						existingRecordMountCounts.Clients += nrcMount.Counts.Clients
+						existingRecordMountCounts.DistinctEntities += nrcMount.Counts.DistinctEntities
+						existingRecordMountCounts.NonEntityClients += nrcMount.Counts.NonEntityClients
+						existingRecordMountCounts.NonEntityTokens += nrcMount.Counts.NonEntityTokens
+					} else {
+						existingRecord.Mounts = append(existingRecord.Mounts, nrcMount)
+					}
+				}
+			} else {
+				byNamespaceResponse = append(byNamespaceResponse, nrc)
+			}
+		}
 	}
 
 	// Sort clients within each namespace

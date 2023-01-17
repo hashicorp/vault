@@ -1,0 +1,3 @@
+```release-note:improvement
+hcp/connectivity: Only update SCADA session metadata if status changes
+```
