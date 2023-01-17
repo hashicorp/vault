@@ -250,7 +250,7 @@ func (c *AgentCommand) Run(args []string) int {
 		return 0
 	}
 
-	// Ignore any setting of agent's address. This client is used by the agent
+	// Ignore any setting of Agent's address. This client is used by the Agent
 	// to reach out to Vault. This should never loop back to agent.
 	c.flagAgentAddress = ""
 	client, err := c.Client()
@@ -259,6 +259,17 @@ func (c *AgentCommand) Run(args []string) int {
 			"Error fetching client: %v",
 			err))
 		return 1
+	}
+
+	serverHealth, err := client.Sys().Health()
+	if err == nil {
+		// We don't exit on error here, as this is not worth stopping Agent over
+		serverVersion := serverHealth.Version
+		agentVersion := version.GetVersion().VersionNumber()
+		if serverVersion != agentVersion {
+			c.UI.Info("==> Note: Vault Agent version does not match Vault server version. " +
+				fmt.Sprintf("Vault Agent version: %s, Vault server version: %s", agentVersion, serverVersion))
+		}
 	}
 
 	// ctx and cancelFunc are passed to the AuthHandler, SinkServer, and
