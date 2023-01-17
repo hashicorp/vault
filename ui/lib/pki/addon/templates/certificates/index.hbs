@@ -16,7 +16,8 @@
     </ToolbarFilters>
   {{/if}}
 </Toolbar>
-{{#if this.model.certificates.length}}
+
+{{#if this.model.hasConfig}}
   {{#each this.model.certificates as |pkiCertificate|}}
     <LinkedBlock
       class="list-item-row"
@@ -56,7 +57,7 @@
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
     <LinkTo @route="configuration.create">
-      {{! ARG TODO if configuration of engine not setup then direct toward setting that up otherwise replace with new design language }}
+      Configure PKI
     </LinkTo>
   </EmptyState>
 {{/if}}

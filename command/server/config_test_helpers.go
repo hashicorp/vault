@@ -738,6 +738,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"disable_indexing":                    false,
 		"disable_mlock":                       true,
 		"disable_performance_standby":         false,
+		"experiments":                         []string(nil),
 		"plugin_file_uid":                     0,
 		"plugin_file_permissions":             0,
 		"disable_printable_check":             false,
