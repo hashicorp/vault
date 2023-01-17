@@ -257,11 +257,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		// This should only happen if there's no preloaded token (regular auto-auth login)
 		// or if a preloaded token has expired and is now switching to auto-auth.
 		if secret.Auth == nil {
-			isTokenFileMethod = path == "auth/token/lookup"
+			isTokenFileMethod = path == "auth/token/lookup-self"
 			if isTokenFileMethod {
 				token, _ := data["token"].(string)
 				clientToUse.SetToken(token)
-				secret, err = clientToUse.Auth().Token().Lookup(token)
+				secret, err = clientToUse.Auth().Token().LookupSelf()
 			} else {
 				secret, err = clientToUse.Logical().WriteWithContext(ctx, path, data)
 			}
@@ -333,7 +333,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			// We handle the token_file method specially, as it's the only
 			// auth method that isn't actually authenticating, i.e. the secret
 			// returned does not have an Auth struct attached
-			isTokenFileMethod := path == "auth/token/lookup"
+			isTokenFileMethod := path == "auth/token/lookup-self"
 			if isTokenFileMethod {
 				// We still check the response of the request to ensure the token is valid
 				// i.e. if the token is invalid, we will fail in the authentication step

@@ -7,13 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/command/agent/sink/file"
-
-	token_file "github.com/hashicorp/vault/command/agent/auth/token-file"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/auth"
+	token_file "github.com/hashicorp/vault/command/agent/auth/token-file"
+	"github.com/hashicorp/vault/command/agent/sink"
+	"github.com/hashicorp/vault/command/agent/sink/file"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"

@@ -5,9 +5,8 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-
 	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 func TestNewTokenFileAuthMethodEmptyConfig(t *testing.T) {
@@ -75,7 +74,7 @@ func TestNewTokenFileAuthenticate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if path != "auth/token/lookup" {
+	if path != "auth/token/lookup-self" {
 		t.Fatalf("Incorrect path, was %s", path)
 	}
 	if headers != nil {
@@ -122,7 +121,7 @@ func TestNewTokenFileAuthenticateRemoveAfterReading(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if path != "auth/token/lookup" {
+	if path != "auth/token/lookup-self" {
 		t.Fatalf("Incorrect path, was %s", path)
 	}
 	if headers != nil {

@@ -8,13 +8,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
-	"github.com/hashicorp/vault/api"
-
-	"github.com/hashicorp/vault/command/agent/auth"
-
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/auth"
 )
 
 type TokenFileMethod struct {
@@ -105,8 +102,8 @@ func (a *TokenFileMethod) Authenticate(ctx context.Context, client *api.Client) 
 		}
 	}
 
-	// i.e. auth/token/lookup
-	return fmt.Sprintf("%s/lookup", a.mountPath), nil, map[string]interface{}{
+	// i.e. auth/token/lookup-self
+	return fmt.Sprintf("%s/lookup-self", a.mountPath), nil, map[string]interface{}{
 		"token": a.cachedToken,
 	}, nil
 }
