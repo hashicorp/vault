@@ -1105,7 +1105,7 @@ type roleEntry struct {
 	CNValidations                 []string      `json:"cn_validations"`
 	AllowedOtherSANs              []string      `json:"allowed_other_sans"`
 	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers"`
-	AllowedUserIDs                []string      `json:"allowed_user_ids,omitempty"`
+	AllowedUserIDs                []string      `json:"allowed_user_ids"`
 	AllowedURISANs                []string      `json:"allowed_uri_sans"`
 	AllowedURISANsTemplate        bool          `json:"allowed_uri_sans_template"`
 	PolicyIdentifiers             []string      `json:"policy_identifiers"`

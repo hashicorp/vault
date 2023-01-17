@@ -3621,6 +3621,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"code_signing_flag":                  false,
 		"issuer_ref":                         "default",
 		"cn_validations":                     []interface{}{"email", "hostname"},
+		"allowed_user_ids":                   []interface{}{},
 	}
 
 	if diff := deep.Equal(expectedData, resp.Data); len(diff) > 0 {
