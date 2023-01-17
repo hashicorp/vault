@@ -11,12 +11,12 @@ export default class PkiOverviewRoute extends Route {
     return this.window || window;
   }
 
-  async hasConfig() {
+  hasConfig() {
     // When the engine is configured, it creates a default issuer.
     // If the issuers list is empty, we know it hasn't been configured
     const endpoint = `${this.win.origin}/v1/${this.secretMountPath.currentPath}/issuers?list=true`;
 
-    return await this.auth
+    return this.auth
       .ajax(endpoint, 'GET', {})
       .then(() => true)
       .catch(() => false);
