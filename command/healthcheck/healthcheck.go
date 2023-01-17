@@ -25,8 +25,10 @@
 package healthcheck
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -134,6 +136,9 @@ func (e *Executor) templatePath(path string) string {
 }
 
 func (e *Executor) FetchIfNotFetched(op logical.Operation, rawPath string) (*PathFetch, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
 	path := e.templatePath(rawPath)
 
 	byOp, present := e.Resources[path]
@@ -162,7 +167,7 @@ func (e *Executor) FetchIfNotFetched(op logical.Operation, rawPath string) (*Pat
 		return nil, fmt.Errorf("unknown operation: %v on %v", op, path)
 	}
 
-	response, err := e.Client.Logical().ReadRawWithData(path, data)
+	response, err := e.Client.Logical().ReadRawWithDataWithContext(ctx, path, data)
 	ret.Response = response
 	if err != nil {
 		ret.FetchError = err
