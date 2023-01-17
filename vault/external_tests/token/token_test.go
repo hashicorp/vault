@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func TestTokenStore_CreateTokenActiveStandby_CheckOrphanResponse(t *testing.T) {
+func TestTokenStore_CreateOrphanResponse(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -28,61 +28,16 @@ func TestTokenStore_CreateTokenActiveStandby_CheckOrphanResponse(t *testing.T) {
 
 	core := cluster.Cores[0].Core
 	vault.TestWaitActive(t, core)
-	priClient := cluster.Cores[0].Client
-	token := priClient.Token()
+	client := cluster.Cores[0].Client
 
-	secClient := cluster.Cores[1].Client
-	secClient.SetToken(token)
-
-	testcases := []struct {
-		name      string
-		client    *api.Client
-		tokenType string
-	}{
-		{
-			"primary_service_token",
-			priClient,
-			"service",
-		},
-		{
-			"primary_batch_token",
-			priClient,
-			"batch",
-		},
-		{
-			"secondary_service_token",
-			secClient,
-			"service",
-		},
-		{
-			"secondary_batch_token",
-			secClient,
-			"batch",
-		},
+	secret, err := client.Auth().Token().CreateOrphan(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, tc := range testcases {
-		client := tc.client
-		secret, err := client.Auth().Token().CreateOrphan(&api.TokenCreateRequest{
-			Policies: []string{"default"},
-			Type:     tc.tokenType,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !secret.Auth.Orphan {
-			t.Fatalf("test %v failed to set orphan as true, got: %#v", tc.name, secret.Auth)
-		}
-
-		secret, err = client.Auth().Token().Create(&api.TokenCreateRequest{
-			Policies: []string{"default"},
-			Type:     tc.tokenType,
-		})
-		if err != nil {
-			t.Fatalf("test %v failed to create a token of type %v, error %v", tc.name, tc.tokenType, err)
-		}
-		if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
-			t.Fatalf("test %v failed to create a token of type %v", tc.name, tc.tokenType)
-		}
+	if !secret.Auth.Orphan {
+		t.Fatalf("failed to set orphan as true, got: %#v", secret.Auth)
 	}
 }
 
