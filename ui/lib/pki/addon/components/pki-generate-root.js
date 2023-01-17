@@ -92,9 +92,9 @@ export default class PkiGenerateRootComponent extends Component {
   @action
   checkFormValidity() {
     if (this.args.model.validate) {
-      const { isValid, state } = this.args.model.validate();
+      const { isValid, state, invalidFormMessage } = this.args.model.validate();
       this.modelValidations = state;
-      this.invalidFormAlert = isValid ? '' : 'The form has errors. Please fix before continuing.';
+      this.invalidFormAlert = invalidFormMessage;
       return isValid;
     }
     return true;
