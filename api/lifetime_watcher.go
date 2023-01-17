@@ -93,14 +93,6 @@ type LifetimeWatcher struct {
 	errLifetimeWatcherNoSecretData error
 }
 
-// TokenRenewInfo is the information to be passed to the LifetimeWatcher
-// for token_file auth
-type TokenRenewInfo struct {
-	Renewable     bool
-	LeaseDuration int
-	Token         string
-}
-
 // LifetimeWatcherInput is used as input to the renew function.
 type LifetimeWatcherInput struct {
 	// Secret is the secret to renew
@@ -229,8 +221,7 @@ func (r *LifetimeWatcher) Stop() {
 // Start starts a background process for watching the lifetime of this secret.
 // If renewal is enabled, when the secret has auth data, this attempts to renew
 // the auth (token); When the secret has a lease, this attempts to renew the
-// lease. If the token duration is 0 (infinite) we won't start the lifetime
-// watcher, as there's nothing to renew.
+// lease.
 func (r *LifetimeWatcher) Start() {
 	r.doneCh <- r.doRenew()
 }
@@ -289,6 +280,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 			// Can't or won't renew, just keep the same expiration so we exit
 			// when it's reauthentication time
 			remainingLeaseDuration = fallbackLeaseDuration
+
 		default:
 			// Renew the token
 			renewal, err = renew(credString, r.increment)
