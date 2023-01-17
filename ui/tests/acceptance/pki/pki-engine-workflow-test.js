@@ -64,7 +64,7 @@ module('Acceptance | pki workflow', function (hooks) {
   });
 
   test('empty state messages are correct when PKI not configured', async function (assert) {
-    assert.expect(10);
+    assert.expect(17);
     const assertEmptyState = (assert, resource) => {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
       assert
@@ -73,6 +73,7 @@ module('Acceptance | pki workflow', function (hooks) {
           'PKI not configured',
           `${resource} index renders correct empty state title when PKI not configured`
         );
+      assert.dom(SELECTORS.emptyStateLink).hasText('Configure PKI');
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText(
@@ -84,9 +85,8 @@ module('Acceptance | pki workflow', function (hooks) {
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
 
-    // TODO comment in when roles index empty state updated & update assert.expect() number
-    // await click(SELECTORS.rolesTab);
-    // assertEmptyState(assert, 'roles');
+    await click(SELECTORS.rolesTab);
+    assertEmptyState(assert, 'roles');
 
     await click(SELECTORS.issuersTab);
     assertEmptyState(assert, 'issuers');
@@ -109,6 +109,7 @@ module('Acceptance | pki workflow', function (hooks) {
       allow_subdomains=true \
       max_ttl="720h"`,
       ]);
+      await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       const pki_reader_policy = readerPolicy(this.mountPath, 'roles');
       const pki_editor_policy = updatePolicy(this.mountPath, 'roles');
