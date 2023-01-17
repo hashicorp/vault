@@ -79,7 +79,7 @@ func (c *ReadCommand) Run(args []string) int {
 		return 2
 	}
 
-	// client.ReadRaw* functions require a manual timeout override
+	// client.ReadRaw* methods require a manual timeout override
 	ctx, cancel := context.WithTimeout(context.Background(), client.ClientTimeout())
 	defer cancel()
 

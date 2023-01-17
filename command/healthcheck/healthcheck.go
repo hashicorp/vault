@@ -164,7 +164,7 @@ func (e *Executor) FetchIfNotFetched(op logical.Operation, rawPath string) (*Pat
 		return nil, fmt.Errorf("unknown operation: %v on %v", op, path)
 	}
 
-	// client.ReadRaw* functions require a manual timeout override
+	// client.ReadRaw* methods require a manual timeout override
 	ctx, cancel := context.WithTimeout(context.Background(), e.Client.ClientTimeout())
 	defer cancel()
 
