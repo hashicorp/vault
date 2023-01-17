@@ -10,7 +10,7 @@
 />
 {{outlet}}
 <Toolbar>
-  {{#if this.model.certificateModel.length}}
+  {{#if this.model.certificates.length}}
     <ToolbarFilters>
       {{! ARG TODO glimmerize the NavigateInput and refactor so you can use it in an engine }}
     </ToolbarFilters>
@@ -18,7 +18,7 @@
 </Toolbar>
 
 {{#if this.model.hasConfig}}
-  {{#each this.model.certificateModel as |pkiCertificate|}}
+  {{#each this.model.certificates as |pkiCertificate|}}
     <LinkedBlock
       class="list-item-row"
       @params={{array "certificates.certificate.details" pkiCertificate.id}}

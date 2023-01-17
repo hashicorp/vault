@@ -13,7 +13,7 @@ export default class PkiRolesIndexRoute extends PkiOverviewRoute {
     return this.pathHelp.getNewModel('pki/role', this.secretMountPath.currentPath);
   }
 
-  async fetchRoleModel() {
+  async fetchRoles() {
     try {
       return await this.store.query('pki/role', { backend: this.secretMountPath.currentPath });
     } catch (e) {
@@ -28,7 +28,7 @@ export default class PkiRolesIndexRoute extends PkiOverviewRoute {
   model() {
     return hash({
       hasConfig: this.hasConfig(),
-      roleModel: this.fetchRoleModel(),
+      roles: this.fetchRoles(),
       parentModel: this.modelFor('roles'),
     });
   }

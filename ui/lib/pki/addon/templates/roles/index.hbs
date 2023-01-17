@@ -17,8 +17,8 @@
 </Toolbar>
 
 {{#if this.model.hasConfig}}
-  {{#if this.model.roleModel.length}}
-    {{#each this.model.roleModel as |pkiRole|}}
+  {{#if this.model.roles.length}}
+    {{#each this.model.roles as |pkiRole|}}
       <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
         <div class="level is-mobile">
           <div class="level-left">

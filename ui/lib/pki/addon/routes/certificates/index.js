@@ -12,7 +12,7 @@ export default class PkiCertificatesIndexRoute extends PkiOverviewRoute {
     return this.pathHelp.getNewModel('pki/certificate', this.secretMountPath.currentPath);
   }
 
-  async fetchCertificateModel() {
+  async fetchCertificates() {
     try {
       return await this.store.query('pki/certificate', { backend: this.secretMountPath.currentPath });
     } catch (e) {
@@ -27,7 +27,7 @@ export default class PkiCertificatesIndexRoute extends PkiOverviewRoute {
   model() {
     return hash({
       hasConfig: this.hasConfig(),
-      certificateModel: this.fetchCertificateModel(),
+      certificates: this.fetchCertificates(),
       parentModel: this.modelFor('certificates'),
     });
   }
