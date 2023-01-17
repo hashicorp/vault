@@ -447,6 +447,10 @@
         "path": "system/control-group"
       },
       {
+        "title": "<code>/sys/experiments</code>",
+        "path": "system/experiments"
+      },
+      {
         "title": "<code>/sys/generate-recovery-token</code>",
         "path": "system/generate-recovery-token"
       },

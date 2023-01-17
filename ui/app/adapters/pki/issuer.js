@@ -37,6 +37,13 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     });
   }
 
+  updateRecord(store, type, snapshot) {
+    const { backend, issuerId } = snapshot.record;
+    const data = this.serialize(snapshot);
+    const url = this.urlForQuery(backend, issuerId);
+    return this.ajax(url, 'POST', { data });
+  }
+
   query(store, type, query) {
     return this.ajax(this.urlForQuery(query.backend), 'GET', this.optionsForQuery());
   }

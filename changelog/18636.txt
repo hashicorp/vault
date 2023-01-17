@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk: Adding FindResponseSchema test helper to assist with response schema validation in tests
+```
