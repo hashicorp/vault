@@ -32,7 +32,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-test';
-    this.model = this.store.createRecord('pki/config', {
+    this.model = this.store.createRecord('pki/action', {
       role: 'my-role',
     });
     this.onSave = Sinon.spy();
