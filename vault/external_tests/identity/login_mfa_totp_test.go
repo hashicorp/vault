@@ -96,7 +96,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  5,
+		"period":                  testhelpers.TOTPMFAWaitPeriod,
 		"algorithm":               "SHA1",
 		"digits":                  6,
 		"skew":                    1,
@@ -124,24 +124,10 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	userpassPath := fmt.Sprintf("auth/userpass/login/%s", testuser1)
 
 	// MFA single-phase login
-	var secret *api.Secret
-	var err error
-	singlePhaseLoginFunc := func(methodIdentifier string) {
-		// this sleep is to let the TOTP refresh the code
-		time.Sleep(6 * time.Second)
-		totpPasscode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
-
-		userClient1.AddHeader("X-Vault-MFA", fmt.Sprintf("%s:%s", methodIdentifier, totpPasscode))
-		secret, err = userClient1.Logical().WriteWithContext(context.Background(), userpassPath, map[string]interface{}{
-			"password": "testpassword",
-		})
-		if err != nil {
-			t.Fatalf("MFA failed for identifier %s: %v", methodIdentifier, err)
-		}
-
+	verifyLoginRequest := func(secret *api.Secret) {
 		userpassToken := secret.Auth.ClientToken
 		userClient1.SetToken(client.Token())
-		secret, err = userClient1.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
+		secret, err := userClient1.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
 			"token": userpassToken,
 		})
 		if err != nil {
@@ -154,14 +140,42 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		}
 	}
 
+	// helper function to clear the MFA request header
+	clearMFARequestHeaders := func(c *api.Client) {
+		headers := c.Headers()
+		headers.Del("X-Vault-MFA")
+		c.SetHeaders(headers)
+	}
+
+	var secret *api.Secret
+	var err error
+	var methodIdentifier string
+
+	singlePhaseLoginFunc := func() error {
+		totpPasscode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
+		userClient1.AddHeader("X-Vault-MFA", fmt.Sprintf("%s:%s", methodIdentifier, totpPasscode))
+		defer clearMFARequestHeaders(userClient1)
+		secret, err = userClient1.Logical().WriteWithContext(context.Background(), userpassPath, map[string]interface{}{
+			"password": "testpassword",
+		})
+		if err != nil {
+			return fmt.Errorf("MFA failed for identifier %s: %v", methodIdentifier, err)
+		}
+		return nil
+	}
+
 	// single phase login for both method name and method ID
-	singlePhaseLoginFunc(totpConfig["method_name"].(string))
-	singlePhaseLoginFunc(methodID)
+	methodIdentifier = totpConfig["method_name"].(string)
+	testhelpers.RetryUntil(t, 20*time.Second, 100*time.Millisecond, singlePhaseLoginFunc)
+	verifyLoginRequest(secret)
+
+	methodIdentifier = methodID
+	// Need to wait a bit longer to avoid hitting maximum allowed consecutive
+	// failed TOTP validation
+	testhelpers.RetryUntil(t, 20*time.Second, testhelpers.TOTPMFAWaitPeriod*time.Second, singlePhaseLoginFunc)
+	verifyLoginRequest(secret)
 
 	// Two-phase login
-	headers := userClient1.Headers()
-	headers.Del("X-Vault-MFA")
-	userClient1.SetHeaders(headers)
 	secret, err = userClient1.Logical().WriteWithContext(context.Background(), userpassPath, map[string]interface{}{
 		"password": "testpassword",
 	})
@@ -196,26 +210,29 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	}
 
 	// validation
+	var mfaReqID string
 	var totpPasscode1 string
-	validateFunc := func(methodIdentifier string) {
-		time.Sleep(6 * time.Second)
+	mfaValidateFunc := func() error {
 		totpPasscode1 = testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
-
 		secret, err = userClient1.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
-			"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
+			"mfa_request_id": mfaReqID,
 			"mfa_payload": map[string][]string{
 				methodIdentifier: {totpPasscode1},
 			},
 		})
 		if err != nil {
-			t.Fatalf("MFA failed: %v", err)
+			return fmt.Errorf("MFA failed: %v", err)
 		}
-
 		if secret.Auth == nil || secret.Auth.ClientToken == "" {
 			t.Fatalf("successful mfa validation did not return a client token")
 		}
+
+		return nil
 	}
-	validateFunc(methodID)
+
+	methodIdentifier = methodID
+	mfaReqID = secret.Auth.MFARequirement.MFARequestID
+	testhelpers.RetryUntil(t, 20*time.Second, testhelpers.TOTPMFAWaitPeriod*time.Second, mfaValidateFunc)
 
 	// two phase login with method name
 	secret, err = userClient1.Logical().WriteWithContext(context.Background(), userpassPath, map[string]interface{}{
@@ -224,7 +241,10 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("MFA failed: %v", err)
 	}
-	validateFunc(totpConfig["method_name"].(string))
+
+	methodIdentifier = totpConfig["method_name"].(string)
+	mfaReqID = secret.Auth.MFARequirement.MFARequestID
+	testhelpers.RetryUntil(t, 20*time.Second, testhelpers.TOTPMFAWaitPeriod*time.Second, mfaValidateFunc)
 
 	// checking audit log
 	if noop.Req == nil {

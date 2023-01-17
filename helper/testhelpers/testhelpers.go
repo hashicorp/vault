@@ -33,7 +33,9 @@ const (
 	GenerateRecovery
 )
 
-// Generates a root token on the target cluster.
+const TOTPMFAWaitPeriod = 5
+
+// GenerateRoot generates a root token on the target cluster.
 func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
 	t.Helper()
 	token, err := GenerateRootWithError(t, cluster, kind)
@@ -769,7 +771,7 @@ func SetNonRootToken(client *api.Client) error {
 
 // RetryUntil runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
-func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
+func RetryUntil(t testing.T, timeout, sleepTime time.Duration, f func() error) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
 	var err error
@@ -777,7 +779,7 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 		if err = f(); err == nil {
 			return
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(sleepTime)
 	}
 	t.Fatalf("did not complete before deadline, err: %v", err)
 }
@@ -957,7 +959,7 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 	// Configure a default TOTP method
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  20,
+		"period":                  TOTPMFAWaitPeriod,
 		"algorithm":               "SHA256",
 		"digits":                  6,
 		"skew":                    1,
