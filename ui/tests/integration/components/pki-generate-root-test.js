@@ -48,9 +48,10 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     );
 
     // Titles
-    assert.dom('h2').exists({ count: 2 }, 'two H2 titles are visible on page load');
     assert.dom(SELECTORS.mainSectionTitle).hasText('Root parameters');
-    assert.dom(SELECTORS.urlSectionTitle).hasText('Issuer URLs');
+    // TODO: Add this back once URLs section is added
+    // assert.dom('h2').exists({ count: 2 }, 'two H2 titles are visible on page load');
+    // assert.dom(SELECTORS.urlSectionTitle).hasText('Issuer URLs');
 
     assert.dom('[data-test-toggle-group]').exists({ count: 3 }, '3 toggle groups shown');
   });
