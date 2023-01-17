@@ -53,6 +53,7 @@ import (
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
@@ -673,8 +674,12 @@ type Core struct {
 
 	rollbackPeriod time.Duration
 
+	experiments []string
+
 	pendingRemovalMountsAllowed bool
 	expirationRevokeRetryBase   time.Duration
+
+	events *eventbus.EventBus
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -822,6 +827,8 @@ type CoreConfig struct {
 	EffectiveSDKVersion string
 
 	RollbackPeriod time.Duration
+
+	Experiments []string
 
 	PendingRemovalMountsAllowed bool
 
@@ -989,6 +996,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableSSCTokens:               conf.DisableSSCTokens,
 		effectiveSDKVersion:            effectiveSDKVersion,
 		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
+		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 	}
@@ -3880,6 +3888,10 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 	return status, resourceID
 }
 
+func (c *Core) isExperimentEnabled(experiment string) bool {
+	return strutil.StrListContains(c.experiments, experiment)
+}
+
 // ListenerAddresses provides a slice of configured listener addresses
 func (c *Core) ListenerAddresses() ([]string, error) {
 	addresses := make([]string, 0)
@@ -3934,4 +3946,8 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	}
 
 	return raftBackend.GetAutopilotServerState(ctx)
+}
+
+func (c *Core) Events() *eventbus.EventBus {
+	return c.events
 }
