@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
