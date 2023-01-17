@@ -30,6 +30,9 @@ const (
 	// consistencyModeStrong is the configuration value used to tell
 	// consul to use strong consistency.
 	consistencyModeStrong = "strong"
+
+	// nonExistentKey is used as part of a capabilities check against Consul
+	nonExistentKey = "F35C28E1-7035-40BB-B865-6BED9E3A1B28"
 )
 
 // Verify ConsulBackend satisfies the correct interfaces
@@ -237,7 +240,7 @@ func (c *ConsulBackend) ExpandedCapabilitiesAvailable(ctx context.Context) bool 
 	ops := make([]*api.TxnOp, maxEntries)
 	for i := 0; i < maxEntries; i++ {
 		ops[i] = &api.TxnOp{KV: &api.KVTxnOp{
-			Key:  c.path + "some-path-that-hopefully-does-not-exist-abc123",
+			Key:  c.path + nonExistentKey,
 			Verb: api.KVGetOrEmpty,
 		}}
 	}
