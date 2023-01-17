@@ -257,8 +257,6 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		// This should only happen if there's no preloaded token (regular auto-auth login)
 		// or if a preloaded token has expired and is now switching to auto-auth.
 		if secret.Auth == nil {
-			// TODO: Sometimes we get 404s if the file in ~/.vault-token
-			// uses an out of date token
 			isTokenFileMethod = path == "auth/token/lookup"
 			if isTokenFileMethod {
 				token, _ := data["token"].(string)

@@ -78,7 +78,6 @@ func testTokenFileEndToEnd(t *testing.T, removeTokenFile bool, expectToken bool)
 	tokenFileName := tokenFile.Name()
 	tokenFile.Close() // WriteFile doesn't need it open
 	os.WriteFile(tokenFileName, []byte(secret.Auth.ClientToken), 0o666)
-	// os.WriteFile(tokenFileName, []byte(client.Token()), 0o666)
 	defer os.Remove(tokenFileName)
 
 	t.Logf("input token_file_path: %s", tokenFileName)
