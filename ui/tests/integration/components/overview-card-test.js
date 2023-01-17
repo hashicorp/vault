@@ -3,27 +3,32 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-const TOTAL = 15;
-const CARD_TITLE = 'Card Title';
+const CARD_TITLE = 'Card title';
+const ACTION_TEXT = 'View card';
+const SUBTEXT = 'This is subtext for card';
 
 module('Integration | Component overview-card', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.set('total', TOTAL);
     this.set('cardTitle', CARD_TITLE);
-  });
-
-  test('it shows the card total', async function (assert) {
-    await render(hbs`<OverviewCard @total={{this.total}} @cardTitle={{this.cardTitle}}/>`);
-    const titleNumber = this.element.querySelector('.title-number').innerText;
-
-    assert.strictEqual(titleNumber, '15');
+    this.set('actionText', ACTION_TEXT);
+    this.set('subText', SUBTEXT);
   });
 
   test('it returns card title, ', async function (assert) {
-    await render(hbs`<OverviewCard @total={{1}} @cardTitle={{this.cardTitle}}/>`);
+    await render(hbs`<OverviewCard @cardTitle={{this.cardTitle}}/>`);
     const titleText = this.element.querySelector('.title').innerText;
-    assert.strictEqual(titleText, 'Connections');
+    assert.strictEqual(titleText, 'Card title');
+  });
+  test('it returns card subtext, ', async function (assert) {
+    await render(hbs`<OverviewCard @cardTitle={{this.cardTitle}}  @subText={{this.subText}} />`);
+    const titleText = this.element.querySelector('p').innerText;
+    assert.strictEqual(titleText, 'This is subtext for card');
+  });
+  test('it returns card action text', async function (assert) {
+    await render(hbs`<OverviewCard @cardTitle={{this.cardTitle}} @actionText={{this.actionText}}/>`);
+    const titleText = this.element.querySelector('a').innerText;
+    assert.strictEqual(titleText, 'View card ');
   });
 });
