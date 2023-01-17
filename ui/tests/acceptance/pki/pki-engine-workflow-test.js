@@ -1,42 +1,12 @@
-import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
-
-const consoleComponent = create(consoleClass);
-
-const tokenWithPolicy = async function (name, policy) {
-  await consoleComponent.runCommands([
-    `write sys/policies/acl/${name} policy=${btoa(policy)}`,
-    `write -field=client_token auth/token/create policies=${name}`,
-  ]);
-  return consoleComponent.lastLogOutput;
-};
-
-const runCommands = async function (commands) {
-  try {
-    await consoleComponent.runCommands(commands);
-    const res = consoleComponent.lastLogOutput;
-    if (res.includes('Error')) {
-      throw new Error(res);
-    }
-    return res;
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error(
-      `The following occurred when trying to run the command(s):\n ${commands.join('\n')} \n\n ${
-        consoleComponent.lastLogOutput
-      }`
-    );
-    throw error;
-  }
-};
+import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 
 /**
  * This test module should test the PKI workflow, including:
