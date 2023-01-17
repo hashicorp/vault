@@ -31,6 +31,11 @@ export default class PkiActionAdapter extends ApplicationAdapter {
     const url = this.urlForCreateRecord(type.modelName, snapshot);
     // Send actionType as serializer requestType so that we serialize data based on the endpoint
     const data = serializer.serialize(snapshot, snapshot.adapterOptions.actionType);
-    return this.ajax(url, 'POST', { data });
+    return this.ajax(url, 'POST', { data }).then((result) => ({
+      // pki/action endpoints don't correspond with a single specific entity,
+      // so in ember-data we'll map it to the request ID
+      id: result.request_id,
+      ...result,
+    }));
   }
 }
