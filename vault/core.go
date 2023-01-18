@@ -3960,7 +3960,3 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 
 	return raftBackend.GetAutopilotServerState(ctx)
 }
-
-func (c *Core) Events() *eventbus.EventBus {
-	return c.events
-}

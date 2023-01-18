@@ -7,14 +7,14 @@ import (
 )
 
 // NewEvent returns an event with a new, random EID.
-func NewEvent() *EventData {
+func NewEvent() (*EventData, error) {
 	eid, err := uuid.GenerateUUID()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	return &EventData{
 		Eid: eid,
-	}
+	}, nil
 }
 
 // EventType represents a topic, and is a wrapper around eventlogger.EventType.

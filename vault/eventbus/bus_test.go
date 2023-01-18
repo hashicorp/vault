@@ -17,14 +17,19 @@ func TestBusBasics(t *testing.T) {
 
 	eventType := logical.EventType("someType")
 
-	err = bus.Send(ctx, eventType, logical.NewEvent())
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = bus.Send(ctx, eventType, event)
 	if err != ErrNotStarted {
 		t.Errorf("Expected not started error but got: %v", err)
 	}
 
 	bus.Start()
 
-	err = bus.Send(ctx, eventType, logical.NewEvent())
+	err = bus.Send(ctx, eventType, event)
 	if err != nil {
 		t.Errorf("Expected no error sending: %v", err)
 	}
@@ -34,7 +39,10 @@ func TestBusBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	event := logical.NewEvent()
+	event, err = logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = bus.Send(ctx, eventType, event)
 	if err != nil {
@@ -73,8 +81,14 @@ func TestBus2Subscriptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	event1 := logical.NewEvent()
-	event2 := logical.NewEvent()
+	event1, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	event2, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = bus.Send(ctx, eventType2, event2)
 	if err != nil {
