@@ -69,7 +69,7 @@ func testTokenFileEndToEnd(t *testing.T, removeTokenFile bool, expectToken bool)
 		t.Fatal(err)
 	}
 
-	tokenFile, err := os.CreateTemp("", "token_file")
+	tokenFile, err := os.CreateTemp(t.TempDir(), "token_file")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,8 +77,6 @@ func testTokenFileEndToEnd(t *testing.T, removeTokenFile bool, expectToken bool)
 	tokenFile.Close() // WriteFile doesn't need it open
 	os.WriteFile(tokenFileName, []byte(secret.Auth.ClientToken), 0o666)
 	defer os.Remove(tokenFileName)
-
-	t.Logf("input token_file_path: %s", tokenFileName)
 
 	ahConfig := &auth.AuthHandlerConfig{
 		Logger: logger.Named("auth.handler"),
@@ -115,7 +113,7 @@ func testTokenFileEndToEnd(t *testing.T, removeTokenFile bool, expectToken bool)
 
 	// We close these right away because we're just basically testing
 	// permissions and finding a usable file name
-	sinkFile, err := os.CreateTemp("", "auth.tokensink.test.")
+	sinkFile, err := os.CreateTemp(t.TempDir(), "auth.tokensink.test.")
 	if err != nil {
 		t.Fatal(err)
 	}

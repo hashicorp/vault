@@ -90,7 +90,7 @@ func (a *tokenFileMethod) Authenticate(ctx context.Context, client *api.Client) 
 		if a.cachedToken == "" {
 			return "", nil, nil, errors.New("token file empty and no cached token known")
 		}
-		a.logger.Warn("role ID file exists but read empty value, re-using cached value")
+		a.logger.Warn("token file exists but read empty value, re-using cached value")
 	} else {
 		a.cachedToken = strings.TrimSpace(string(token))
 	}

@@ -48,7 +48,7 @@ func TestNewTokenFileEmptyFilePath(t *testing.T) {
 }
 
 func TestNewTokenFileAuthenticate(t *testing.T) {
-	tokenFile, err := os.CreateTemp("", "token_file")
+	tokenFile, err := os.CreateTemp(t.TempDir(), "token_file")
 	tokenFileContents := "super-secret-token"
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestNewTokenFileAuthenticate(t *testing.T) {
 }
 
 func TestNewTokenFileAuthenticateRemoveAfterReading(t *testing.T) {
-	tokenFile, err := os.CreateTemp("", "token_file")
+	tokenFile, err := os.CreateTemp(t.TempDir(), "token_file")
 	tokenFileContents := "super-secret-token"
 	if err != nil {
 		t.Fatal(err)
