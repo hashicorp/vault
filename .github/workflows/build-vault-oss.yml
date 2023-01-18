@@ -37,21 +37,25 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: [custom, linux, xl]
     name: Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ inputs.go-version }}
-      - name: Set up node and yarn
-        uses: actions/setup-node@v3
+          cache: true
+      - uses: actions/download-artifact@v3
         with:
-          node-version: 14
-          cache: yarn
-          cache-dependency-path: ui/yarn.lock
-      - name: Build UI
-        run: make ci-build-ui
+          name: ui.zip
+      - uses: montudor/action-zip@v1
+        with:
+          args: unzip -qq ui.zip -d ui
+      - name: Display structure of downloaded files
+        run: ls -R
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: ui
       - name: Build Vault
         env:
           CGO_ENABLED: ${{ inputs.cgo-enabled }}
