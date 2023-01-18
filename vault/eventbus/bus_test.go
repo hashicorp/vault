@@ -9,7 +9,7 @@ import (
 )
 
 func TestBusBasics(t *testing.T) {
-	bus, err := NewEventBus()
+	bus, err := NewEventBus(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestBusBasics(t *testing.T) {
 }
 
 func TestBus2Subscriptions(t *testing.T) {
-	bus, err := NewEventBus()
+	bus, err := NewEventBus(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

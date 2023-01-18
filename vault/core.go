@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -1246,6 +1247,18 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if c.versionHistory == nil {
 		c.logger.Info("Initializing version history cache for core")
 		c.versionHistory = make(map[string]VaultVersion)
+	}
+
+	// start the event system
+	eventsLogger := conf.Logger.Named("events")
+	c.allLoggers = append(c.allLoggers, eventsLogger)
+	events, err := eventbus.NewEventBus(eventsLogger)
+	if err != nil {
+		return nil, err
+	}
+	c.events = events
+	if c.isExperimentEnabled(experiments.VaultExperimentEventsBeta1) {
+		c.events.Start()
 	}
 
 	return c, nil
