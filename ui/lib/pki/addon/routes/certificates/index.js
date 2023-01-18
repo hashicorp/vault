@@ -5,16 +5,10 @@ import { hash } from 'rsvp';
 export default class PkiCertificatesIndexRoute extends PkiOverviewRoute {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
-
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/certificate', this.secretMountPath.currentPath);
-  }
 
   async fetchCertificates() {
     try {
-      return await this.store.query('pki/certificate', { backend: this.secretMountPath.currentPath });
+      return await this.store.query('pki/certificate/base', { backend: this.secretMountPath.currentPath });
     } catch (e) {
       if (e.httpStatus === 404) {
         return { parentModel: this.modelFor('certificates') };
