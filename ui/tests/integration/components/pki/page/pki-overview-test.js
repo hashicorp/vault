@@ -21,8 +21,8 @@ module('Integration | Component | Page::PkiOverview', function (hooks) {
     this.store.createRecord('pki/role', { name: 'role-0' });
     this.store.createRecord('pki/role', { name: 'role-1' });
     this.store.createRecord('pki/role', { name: 'role-2' });
-    this.store.createRecord('pki/certificate', { serialNumber: '22:2222:22222:2222' });
-    this.store.createRecord('pki/certificate', { serialNumber: '33:3333:33333:3333' });
+    this.store.createRecord('pki/certificate/base', { serialNumber: '22:2222:22222:2222' });
+    this.store.createRecord('pki/certificate/base', { serialNumber: '33:3333:33333:3333' });
 
     this.issuers = this.store.peekAll('pki/issuer');
     this.roles = this.store.peekAll('pki/role');
