@@ -3,6 +3,31 @@ import * as asn1js from 'asn1js';
 import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';
 
+/*
+  We wish to get these OID_VALUES out of this certificate's subject. A
+  subject is a list of RDNs, where each RDN is a (type, value) tuple
+  and where a type is an OID. The OID for CN can be found here:
+     
+     https://datatracker.ietf.org/doc/html/rfc5280#page-112
+  
+  Each value is then encoded as another ASN.1 object; in the case of a
+  CommonName field, this is usually a PrintableString, BMPString, or a
+  UTF8String. Regardless of encoding, it should be present in the
+  valueBlock's value field if it is renderable.
+*/
+
+const OID_VALUES = {
+  common_name: '2.5.4.3', // http://oid-info.com/get/2.5.4.3
+  serial_number: '2.5.4.5', // http://oid-info.com/get/2.5.4.5
+  ou: '2.5.4.11',
+  organization: '2.5.4.10',
+  country: '2.5.4.6',
+  locality: '2.5.4.7',
+  province: '2.5.4.8',
+  street_address: '2.5.4.9',
+  postal_code: '2.5.4.17',
+};
+
 export function parseCertificate(certificateContent) {
   let cert;
   try {
@@ -17,16 +42,13 @@ export function parseCertificate(certificateContent) {
     };
   }
 
-  const { commonName, serialNumber } = parseSubject(cert?.subject?.typesAndValues);
   // Date instances are stored in the value field as the notAfter/notBefore
   // field themselves are Time values.
   const expiryDate = cert?.notAfter?.value;
   const issueDate = cert?.notBefore?.value;
-
   return {
+    ...parseSubject(cert?.subject?.typesAndValues),
     can_parse: true,
-    common_name: commonName,
-    serial_number: serialNumber,
     expiry_date: expiryDate,
     issue_date: issueDate,
     not_valid_after: expiryDate.valueOf(),
@@ -34,33 +56,7 @@ export function parseCertificate(certificateContent) {
   };
 }
 
-export function parsePkiCert([model]) {
-  // model has to be the responseJSON from PKI serializer
-  // return if no certificate or if the "certificate" is actually a CRL
-  if (!model.certificate || model.certificate.includes('BEGIN X509 CRL')) {
-    return;
-  }
-  return parseCertificate(model.certificate);
-}
-
-/*
-  We wish to get the CN element out of this certificate's subject. A
-  subject is a list of RDNs, where each RDN is a (type, value) tuple
-  and where a type is an OID. The OID for CN can be found here:
-     
-     https://datatracker.ietf.org/doc/html/rfc5280#page-112
-  
-  Each value is then encoded as another ASN.1 object; in the case of a
-  CommonName field, this is usually a PrintableString, BMPString, or a
-  UTF8String. Regardless of encoding, it should be present in the
-  valueBlock's value field if it is renderable.
-*/
-
-const OID_VALUES = {
-  commonName: '2.5.4.3', // http://oid-info.com/get/2.5.4.3
-  serialNumber: '2.5.4.5', // http://oid-info.com/get/2.5.4.5
-};
-
+// parses subject and returns value for each key in OID_VALUES
 function parseSubject(subject) {
   const returnValues = (OID) => {
     const values = subject.filter((rdn) => rdn?.type === OID).map((rdn) => rdn?.value?.valueBlock?.value);
@@ -75,6 +71,15 @@ function parseSubject(subject) {
   const subjectValues = {};
   Object.keys(OID_VALUES).forEach((key) => (subjectValues[key] = returnValues(OID_VALUES[key])));
   return subjectValues;
+}
+
+export function parsePkiCert([model]) {
+  // model has to be the responseJSON from PKI serializer
+  // return if no certificate or if the "certificate" is actually a CRL
+  if (!model.certificate || model.certificate.includes('BEGIN X509 CRL')) {
+    return;
+  }
+  return parseCertificate(model.certificate);
 }
 
 export default helper(parsePkiCert);
