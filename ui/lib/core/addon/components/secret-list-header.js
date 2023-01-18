@@ -30,12 +30,6 @@ export default class SecretListHeader extends Component {
   @service router;
   @tracked hideBetaModal;
 
-  // constructor() {
-  //   super(...arguments);
-  //   console.log('engineType', this.args.model.engineType);
-  //   console.log('isEngine', this.args.isEngine);
-  // }
-
   get isKV() {
     return ['kv', 'generic'].includes(this.args.model.engineType);
   }
