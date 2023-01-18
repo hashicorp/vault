@@ -18,12 +18,12 @@ import (
 )
 
 const (
-	revokedPath                   = "revoked/"
-	deltaWALPath                  = "delta-wal/"
-	deltaWALLastBuildSerialName   = "last-build-serial"
-	deltaWALLastBuildSerial       = deltaWALPath + deltaWALLastBuildSerialName
-	deltaWALLastRevokedSerialName = "last-revoked-serial"
-	deltaWALLastRevokedSerial     = deltaWALPath + deltaWALLastRevokedSerialName
+	revokedPath                    = "revoked/"
+	deltaWALLastBuildSerialName    = "last-build-serial"
+	deltaWALLastRevokedSerialName  = "last-revoked-serial"
+	localDeltaWALPath              = "delta-wal/"
+	localDeltaWALLastBuildSerial   = localDeltaWALPath + deltaWALLastBuildSerialName
+	localDeltaWALLastRevokedSerial = localDeltaWALPath + deltaWALLastRevokedSerialName
 )
 
 type revocationInfo struct {
@@ -288,9 +288,9 @@ func (cb *crlBuilder) _doRebuild(sc *storageContext, forceNew bool, ignoreForceF
 	return nil
 }
 
-func (cb *crlBuilder) getPresentDeltaWALForClearing(sc *storageContext) ([]string, error) {
+func (cb *crlBuilder) getPresentLocalDeltaWALForClearing(sc *storageContext) ([]string, error) {
 	// Clearing of the delta WAL occurs after a new complete CRL has been built.
-	walSerials, err := sc.Storage.List(sc.Context, deltaWALPath)
+	walSerials, err := sc.Storage.List(sc.Context, localDeltaWALPath)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching list of delta WAL certificates to clear: %s", err)
 	}
@@ -301,7 +301,7 @@ func (cb *crlBuilder) getPresentDeltaWALForClearing(sc *storageContext) ([]strin
 	return walSerials, nil
 }
 
-func (cb *crlBuilder) clearDeltaWAL(sc *storageContext, walSerials []string) error {
+func (cb *crlBuilder) clearLocalDeltaWAL(sc *storageContext, walSerials []string) error {
 	// Clearing of the delta WAL occurs after a new complete CRL has been built.
 	for _, serial := range walSerials {
 		// Don't remove our special entries!
@@ -309,7 +309,7 @@ func (cb *crlBuilder) clearDeltaWAL(sc *storageContext, walSerials []string) err
 			continue
 		}
 
-		if err := sc.Storage.Delete(sc.Context, deltaWALPath+serial); err != nil {
+		if err := sc.Storage.Delete(sc.Context, localDeltaWALPath+serial); err != nil {
 			return fmt.Errorf("error clearing delta WAL certificate: %s", err)
 		}
 	}
@@ -367,7 +367,7 @@ func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext, override bool
 
 	// Fetch two storage entries to see if we actually need to do this
 	// rebuild, given we're within the window.
-	lastWALEntry, err := sc.Storage.Get(sc.Context, deltaWALLastRevokedSerial)
+	lastWALEntry, err := sc.Storage.Get(sc.Context, localDeltaWALLastRevokedSerial)
 	if err != nil || !override && (lastWALEntry == nil || lastWALEntry.Value == nil) {
 		// If this entry does not exist, we don't need to rebuild the
 		// delta WAL due to the expiration assumption above. There must
@@ -376,7 +376,7 @@ func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext, override bool
 		return err
 	}
 
-	lastBuildEntry, err := sc.Storage.Get(sc.Context, deltaWALLastBuildSerial)
+	lastBuildEntry, err := sc.Storage.Get(sc.Context, localDeltaWALLastBuildSerial)
 	if err != nil {
 		return err
 	}
@@ -592,7 +592,7 @@ func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, 
 		//
 		// Currently we don't store any data in the WAL entry.
 		var walInfo deltaWALInfo
-		walEntry, err := logical.StorageEntryJSON(deltaWALPath+hyphenSerial, walInfo)
+		walEntry, err := logical.StorageEntryJSON(localDeltaWALPath+hyphenSerial, walInfo)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create delta CRL WAL entry")
 		}
@@ -605,7 +605,7 @@ func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, 
 		// should write the last revoked delta WAL entry so we know if we
 		// have new revocations that we should rebuild the delta WAL for.
 		lastRevSerial := lastWALInfo{Serial: colonSerial}
-		lastWALEntry, err := logical.StorageEntryJSON(deltaWALLastRevokedSerial, lastRevSerial)
+		lastWALEntry, err := logical.StorageEntryJSON(localDeltaWALLastRevokedSerial, lastRevSerial)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create last delta CRL WAL entry")
 		}
@@ -769,7 +769,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 	if !isDelta {
 		// After we've confirmed the primary CRLs have built OK, go ahead and
 		// clear the delta CRL WAL and rebuild it.
-		if err := sc.Backend.crlBuilder.clearDeltaWAL(sc, currLocalDeltaSerials); err != nil {
+		if err := sc.Backend.crlBuilder.clearLocalDeltaWAL(sc, currLocalDeltaSerials); err != nil {
 			return fmt.Errorf("error building CRLs: unable to clear Delta WAL: %w", err)
 		}
 		if err := sc.Backend.crlBuilder.rebuildDeltaCRLsHoldingLock(sc, forceNew); err != nil {
@@ -801,7 +801,7 @@ func buildAnyLocalCRLs(
 	// in the future.
 	var lastDeltaSerial string
 	if isDelta {
-		lastWALEntry, err := sc.Storage.Get(sc.Context, deltaWALLastRevokedSerial)
+		lastWALEntry, err := sc.Storage.Get(sc.Context, localDeltaWALLastRevokedSerial)
 		if err != nil {
 			return nil, err
 		}
@@ -821,7 +821,7 @@ func buildAnyLocalCRLs(
 	// visible now, should also be visible on the complete CRL we're writing.
 	var currDeltaCerts []string
 	if !isDelta {
-		currDeltaCerts, err = sc.Backend.crlBuilder.getPresentDeltaWALForClearing(sc)
+		currDeltaCerts, err = sc.Backend.crlBuilder.getPresentLocalDeltaWALForClearing(sc)
 		if err != nil {
 			return nil, fmt.Errorf("error building CRLs: unable to get present delta WAL entries for removal: %w", err)
 		}
@@ -888,7 +888,7 @@ func buildAnyLocalCRLs(
 			// so we can skip extra CRL rebuilds.
 			deltaInfo := lastDeltaInfo{Serial: lastDeltaSerial}
 
-			lastDeltaBuildEntry, err := logical.StorageEntryJSON(deltaWALLastBuildSerial, deltaInfo)
+			lastDeltaBuildEntry, err := logical.StorageEntryJSON(localDeltaWALLastBuildSerial, deltaInfo)
 			if err != nil {
 				return nil, fmt.Errorf("error creating last delta CRL rebuild serial entry: %w", err)
 			}
@@ -1106,7 +1106,7 @@ func getRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuerID]*x50
 
 	listingPath := revokedPath
 	if isDelta {
-		listingPath = deltaWALPath
+		listingPath = localDeltaWALPath
 	}
 
 	revokedSerials, err := sc.Storage.List(sc.Context, listingPath)

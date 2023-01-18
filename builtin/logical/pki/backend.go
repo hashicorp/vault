@@ -98,7 +98,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			LocalStorage: []string{
 				revokedPath,
-				deltaWALPath,
+				localDeltaWALPath,
 				legacyCRLPath,
 				clusterConfigPath,
 				"crls/",
