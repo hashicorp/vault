@@ -59,10 +59,16 @@ const (
 
 // Factory creates a new backend implementing the logical.Backend interface
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	return pkiFactory(ctx, conf, func(b *backend) {})
+}
+
+// pkiFactory allows unit tests to influence the backend factory startup/initialization of a PKI backend.
+func pkiFactory(ctx context.Context, conf *logical.BackendConfig, backendModifier func(b *backend)) (*backend, error) {
 	b := Backend(conf)
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
+	backendModifier(b)
 	return b, nil
 }
 
@@ -248,6 +254,10 @@ type backend struct {
 
 	// Write lock around issuers and keys.
 	issuersLock sync.RWMutex
+
+	// Various calculated times to delay periodic tasks at startup
+	tidyStartupDelayer         time.Time
+	autoBuildCrlStartupDelayer time.Time
 }
 
 type (
@@ -468,7 +478,8 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 	doCRL := func() error {
 		// First attempt to reload the CRL configuration.
-		if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+		config, err := b.crlBuilder.getConfigWithUpdate(sc)
+		if err != nil {
 			return err
 		}
 
@@ -476,6 +487,22 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		// we're not on a standby/secondary node.
 		if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
 			b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+			return nil
+		}
+
+		if b.autoBuildCrlStartupDelayer.IsZero() {
+			gracePeriod, err := time.ParseDuration(config.AutoRebuildGracePeriod)
+			if err != nil {
+				gracePeriod = 12 * time.Hour
+			}
+			min := time.Duration(gracePeriod.Nanoseconds() / 4)
+			max := time.Duration(gracePeriod.Nanoseconds() / 2)
+			b.autoBuildCrlStartupDelayer = calcRandomStartupDelayer(min, max)
+			b.Logger().Info(fmt.Sprintf("autobuild crl will be able to startup after: %v", b.autoBuildCrlStartupDelayer))
+		}
+
+		if time.Now().Before(b.autoBuildCrlStartupDelayer) {
+			b.Logger().Debug(fmt.Sprintf("autobuild crl startup delay has not passed: %v", b.autoBuildCrlStartupDelayer))
 			return nil
 		}
 
@@ -513,6 +540,19 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		}
 
 		if !config.Enabled || config.Interval <= 0*time.Second {
+			return nil
+		}
+
+		if b.tidyStartupDelayer.IsZero() {
+			min := time.Duration(config.Interval.Nanoseconds() / 4)
+			max := time.Duration(config.Interval.Nanoseconds() / 2)
+			b.tidyStartupDelayer = calcRandomStartupDelayer(min, max)
+			b.Logger().Info(fmt.Sprintf("auto tidy startup will be able to startup after: %v", b.tidyStartupDelayer))
+		}
+
+		if time.Now().Before(b.tidyStartupDelayer) {
+			b.Logger().Debug(fmt.Sprintf("auto tidy startup delay has not passed, will be able to startup after: %v",
+				b.tidyStartupDelayer))
 			return nil
 		}
 

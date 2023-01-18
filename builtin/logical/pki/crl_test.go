@@ -897,10 +897,19 @@ func TestAutoRebuild(t *testing.T) {
 	delta := 2 * newPeriod
 
 	// This test requires the periodicFunc to trigger, which requires we stand
-	// up a full test cluster.
+	// up a full test cluster without periodic delays. So leverage the ability to
+	// influence the backend and disable all startup delays.
+	testPkiFactory := func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+		backendModifier := func(b *backend) {
+			b.tidyStartupDelayer = time.Now()
+			b.autoBuildCrlStartupDelayer = time.Now()
+		}
+		return pkiFactory(ctx, conf, backendModifier)
+	}
+
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
+			"pki": testPkiFactory,
 		},
 		// See notes below about usage of /sys/raw for reading cluster
 		// storage without barrier encryption.

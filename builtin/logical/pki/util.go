@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"net/http"
 	"regexp"
 	"strings"
@@ -25,6 +26,9 @@ const (
 	// Constants for If-Modified-Since operation
 	headerIfModifiedSince = "If-Modified-Since"
 	headerLastModified    = "Last-Modified"
+
+	minStartDelay = 1 * time.Minute
+	maxStartDelay = 15 * time.Minute
 )
 
 var (
@@ -33,6 +37,38 @@ var (
 	errIssuerNameIsEmpty = errutil.UserError{Err: "expected non-empty issuer name"}
 	errKeyNameInUse      = errutil.UserError{Err: "key name already in use"}
 )
+
+// calcRandomStartupDelayer: Return a random time in the future that
+// periodic functions can use to reduce/delay load at startup. The minStartDelay
+// and maxStartDelay values will override the passed in min/max if the values
+// are out of those bounds. Passing in 0 for both values disables the timer.
+func calcRandomStartupDelayer(min, max time.Duration) time.Time {
+	now := func() time.Time { return time.Now() }
+	return _calcRandomStartupDelayer(min, max, now)
+}
+
+func _calcRandomStartupDelayer(min, max time.Duration, now func() time.Time) time.Time {
+	if min == 0 && max == 0 {
+		return now()
+	}
+
+	if min < minStartDelay || min > maxStartDelay {
+		min = minStartDelay
+	}
+
+	if max > maxStartDelay {
+		max = maxStartDelay
+	}
+
+	calculatedMax := max.Nanoseconds() - min.Nanoseconds()
+	if calculatedMax <= 0 {
+		// Protection against max < min, or 0 which can't be fed into rand.Int63n
+		return now().Add(min)
+	}
+
+	delay := rand.Int63n(calculatedMax) + min.Nanoseconds()
+	return now().Add(time.Duration(delay))
+}
 
 func serialFromCert(cert *x509.Certificate) string {
 	return serialFromBigInt(cert.SerialNumber)
