@@ -4496,10 +4496,20 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	context := d.Get("context").(string)
 
-	// Set up target document and convert to map[string]interface{} which is what will
-	// be received from plugin backends.
+	// Set up target document
 	doc := framework.NewOASDocument(version.Version)
 
+	// Generic mount paths will primarily be used for code generation purposes.
+	// This will result in parameterized mount paths being returned instead of
+	// hardcoded actual paths. For example /auth/my-auth-method/login would be
+	// replaced with /auth/{my-auth-method_mount_path}/login.
+	//
+	// Note that for this to actually be useful, you have to be using it with
+	// a Vault instance in which you have mounted one of each secrets engine
+	// and auth method of types you are interested in, at paths which identify
+	// their type, and for the KV secrets engine you will probably want to
+	// mount separate kv-v1 and kv-v2 mounts to include the documentation for
+	// each of those APIs.
 	genericMountPaths, _ := d.Get("generic_mount_paths").(bool)
 
 	procMountGroup := func(group, mountPrefix string) error {
@@ -4519,7 +4529,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
-				Data:      map[string]interface{}{"requestResponsePrefix": pluginType, "genericMountPaths": genericMountPaths},
+				Data:      map[string]interface{}{"requestResponsePrefix": pluginType},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
@@ -4557,6 +4567,19 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 				tag = "identity"
 			}
 
+			// When set to the empty string, mountPathParameterName means not to use a parameter at all;
+			// the one variable combines both boolean, and value-to-use-if-true semantics.
+			mountPathParameterName := ""
+			if genericMountPaths {
+				isSingletonMount := (group == "auth" && pluginType == "token") ||
+					(group == "secret" &&
+						(pluginType == "system" || pluginType == "identity" || pluginType == "cubbyhole"))
+
+				if !isSingletonMount {
+					mountPathParameterName = strings.TrimRight(mount, "/") + "_mount_path"
+				}
+			}
+
 			// Merge backend paths with existing document
 			for path, obj := range backendDoc.Paths {
 				path := strings.TrimPrefix(path, "/")
@@ -4573,12 +4596,23 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 					}
 				}
 
-				if genericMountPaths && mount != "sys/" && mount != "identity/" {
-					s := fmt.Sprintf("/%s{mountPath}/%s", mountPrefix, path)
-					doc.Paths[s] = obj
-				} else {
-					doc.Paths["/"+mountPrefix+mount+path] = obj
+				mountForOpenAPI := mount
+
+				if mountPathParameterName != "" {
+					mountForOpenAPI = "{" + mountPathParameterName + "}/"
+
+					obj.Parameters = append(obj.Parameters, framework.OASParameter{
+						Name:        mountPathParameterName,
+						Description: "Path that the backend was mounted at",
+						In:          "path",
+						Schema: &framework.OASSchema{
+							Type: "string",
+						},
+						Required: true,
+					})
 				}
+
+				doc.Paths["/"+mountPrefix+mountForOpenAPI+path] = obj
 			}
 
 			// Merge backend schema components
