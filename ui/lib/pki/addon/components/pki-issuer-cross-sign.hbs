@@ -23,31 +23,36 @@
 </div>
 
 <h3 for="intermediates to cross-sign" class="title is-4">Intermediates</h3>
-<form {{on "submit" (perform this.submit)}} data-test-cross-sign-form>
-  <div class="box is-fullwidth is-sideless">
-    <p class="has-bottom-margin-xl">
-      Intermediates are identified by specifying the mount path and the issuer’s current name, as well as the new name it
-      will have when it is imported to Vault.
-    </p>
-    <ObjectListInput @objectKeys={{this.inputFields}} @onChange={{fn (mut this.formData)}} />
-  </div>
-  <div class="control">
-    <button
-      type="submit"
-      class="button is-primary {{if this.submit.isRunning 'is-loading'}}"
-      disabled={{this.submit.isRunning}}
-      data-test-cross-sign-submit
-    >
-      Cross-sign
-    </button>
-    <button
-      type="button"
-      class="button has-left-margin-s"
-      disabled={{this.submit.isRunning}}
-      {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details")}}
-      data-test-cross-sign-cancel
-    >
-      Cancel
-    </button>
-  </div>
-</form>
+<div class="box is-fullwidth has-only-top-shadow">
+  <p class="has-bottom-margin-xl">
+    Intermediates are identified by specifying the mount path and the issuer’s current name, as well as the new name it will
+    have when it is imported to Vault.
+  </p>
+  {{#if (gt this.signedIssuers.length 0)}}
+    {{! TODO list issuers here }}
+    A list of the signed issuers
+  {{else}}
+    <form {{on "submit" (perform this.submit)}} data-test-cross-sign-form>
+      <ObjectListInput @objectKeys={{this.inputFields}} @onChange={{fn (mut this.formData)}} />
+      <div class="control box is-fullwidth has-only-top-shadow">
+        <button
+          type="submit"
+          class="button is-primary {{if this.submit.isRunning 'is-loading'}}"
+          disabled={{this.submit.isRunning}}
+          data-test-cross-sign-submit
+        >
+          Cross-sign
+        </button>
+        <button
+          type="button"
+          class="button has-left-margin-s"
+          disabled={{this.submit.isRunning}}
+          {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details")}}
+          data-test-cross-sign-cancel
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  {{/if}}
+</div>

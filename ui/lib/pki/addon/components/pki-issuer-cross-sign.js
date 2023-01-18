@@ -37,10 +37,8 @@ import { waitFor } from '@ember/test-waiters';
 
 export default class PkiIssuerCrossSign extends Component {
   @service store;
-  @service flashMessages;
   @tracked formData = [];
   @tracked signedIssuers = [];
-  @tracked erroredCerts = [];
 
   inputFields = [
     { label: 'Mount path', key: 'intermediateMount', placeholder: 'Mount path' },
@@ -52,28 +50,18 @@ export default class PkiIssuerCrossSign extends Component {
   @waitFor
   *submit(e) {
     e.preventDefault();
-    // clear tracked properties
     this.signedIssuers = [];
-    this.erroredCerts = [];
 
-    // iterate through submitted data and cross sign each certificate
+    // iterate through submitted data and cross-sign each certificate
     for (let row = 0; row < this.formData.length; row++) {
       const { intermediateMount, intermediateName, newCertName } = this.formData[row];
       try {
-        const signedCert = yield this.crossSignIntermediate(intermediateMount, intermediateName, newCertName);
-        this.signedIssuers.addObject(signedCert);
+        const issuer = yield this.crossSignIntermediate(intermediateMount, intermediateName, newCertName);
+        this.signedIssuers.addObject({ ...this.formData[row], issuer, hasError: false });
       } catch (error) {
-        this.erroredCerts.addObject(
-          `${newCertName} not mounted at '${intermediateMount}/${intermediateName}': ${errorMessage(error)}`
-        );
+        this.signedIssuers.addObject({ ...this.formData[row], hasError: errorMessage(error) });
         continue;
       }
-    }
-
-    if (this.signedIssuers.length > 0) {
-      this.flashMessages.success(
-        `${this.formData.length > 1 ? 'Certificates' : 'Certificate'} cross-signed successfully`
-      );
     }
   }
 
