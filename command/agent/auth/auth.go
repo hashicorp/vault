@@ -375,6 +375,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				if ah.enableTemplateTokenCh {
 					ah.TemplateTokenCh <- token
 				}
+
+				tokenType := secret.Data["type"].(string)
+				if tokenType == "batch" {
+					ah.logger.Info("note that this token type is batch, and batch tokens cannot be renewed", "ttl", leaseDuration)
+				}
 			} else {
 				if secret == nil || secret.Auth == nil {
 					ah.logger.Error("authentication returned nil auth info", "backoff", backoffCfg)
