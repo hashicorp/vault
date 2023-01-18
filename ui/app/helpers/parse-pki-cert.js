@@ -1,7 +1,6 @@
 import { helper } from '@ember/component/helper';
 import * as asn1js from 'asn1js';
 import { fromBase64, stringToArrayBuffer } from 'pvutils';
-import { Convert } from 'pvtsutils';
 import { Certificate } from 'pkijs';
 
 export function parseCertificate(certificateContent) {
@@ -17,36 +16,13 @@ export function parseCertificate(certificateContent) {
       can_parse: false,
     };
   }
-  // We wish to get the CN element out of this certificate's subject. A
-  // subject is a list of RDNs, where each RDN is a (type, value) tuple
-  // and where a type is an OID. The OID for CN can be found here:
-  //
-  //    http://oid-info.com/get/2.5.4.3
-  //    https://datatracker.ietf.org/doc/html/rfc5280#page-112
-  //
-  // Each value is then encoded as another ASN.1 object; in the case of a
-  // CommonName field, this is usually a PrintableString, BMPString, or a
-  // UTF8String. Regardless of encoding, it should be present in the
-  // valueBlock's value field if it is renderable.
-  const commonNameOID = '2.5.4.3';
-  const commonNames = cert?.subject?.typesAndValues
-    .filter((rdn) => rdn?.type === commonNameOID)
-    .map((rdn) => rdn?.value?.valueBlock?.value);
 
-  // Theoretically, there might be multiple (or no) CommonNames -- but Vault
-  // presently refuses to issue certificates without CommonNames in most
-  // cases. For now, return the first CommonName we find. Alternatively, we
-  // might update our callers to handle multiple, or join them using some
-  // separator like ','.
-  const commonName = commonNames ? (commonNames.length ? commonNames[0] : null) : null;
-
+  const { commonName, serialNumber } = parseSubject(cert?.subject?.typesAndValues);
   // Date instances are stored in the value field as the notAfter/notBefore
   // field themselves are Time values.
   const expiryDate = cert?.notAfter?.value;
   const issueDate = cert?.notBefore?.value;
-  const serialNumber = Convert.ToHex(cert.serialNumber.valueBlock.valueHex)
-    .match(/.{1,2}/g)
-    .join(':');
+
   return {
     can_parse: true,
     common_name: commonName,
@@ -65,6 +41,40 @@ export function parsePkiCert([model]) {
     return;
   }
   return parseCertificate(model.certificate);
+}
+
+/*
+  We wish to get the CN element out of this certificate's subject. A
+  subject is a list of RDNs, where each RDN is a (type, value) tuple
+  and where a type is an OID. The OID for CN can be found here:
+     
+     https://datatracker.ietf.org/doc/html/rfc5280#page-112
+  
+  Each value is then encoded as another ASN.1 object; in the case of a
+  CommonName field, this is usually a PrintableString, BMPString, or a
+  UTF8String. Regardless of encoding, it should be present in the
+  valueBlock's value field if it is renderable.
+*/
+
+const OID_VALUES = {
+  commonName: '2.5.4.3', // http://oid-info.com/get/2.5.4.3
+  serialNumber: '2.5.4.5', // http://oid-info.com/get/2.5.4.5
+};
+
+function parseSubject(subject) {
+  const returnValues = (OID) => {
+    const values = subject.filter((rdn) => rdn?.type === OID).map((rdn) => rdn?.value?.valueBlock?.value);
+    // Theoretically, there might be multiple (or no) CommonNames -- but Vault
+    // presently refuses to issue certificates without CommonNames in most
+    // cases. For now, return the first CommonName we find. Alternatively, we
+    // might update our callers to handle multiple, or join them using some
+    // separator like ','.
+    return values ? (values.length ? values[0] : null) : null;
+  };
+
+  const subjectValues = {};
+  Object.keys(OID_VALUES).forEach((key) => (subjectValues[key] = returnValues(OID_VALUES[key])));
+  return subjectValues;
 }
 
 export default helper(parsePkiCert);
