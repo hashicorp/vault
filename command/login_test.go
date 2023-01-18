@@ -465,7 +465,8 @@ func TestLoginMFASinglePhase(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
-	userClient, entityID, methodID, methodName := testhelpers.SetupLoginMFATOTP(t, client)
+	methodName := "foo"
+	userClient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, methodName)
 	enginePath := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
 
 	runCommand := func(methodIdentifier string) {
@@ -513,7 +514,7 @@ func TestLoginMFATwoPhase(t *testing.T) {
 
 	ui, cmd := testLoginCommand(t)
 
-	userclient, entityID, methodID, _ := testhelpers.SetupLoginMFATOTP(t, client)
+	userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, "")
 	cmd.client = userclient
 
 	_ = testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
@@ -557,7 +558,8 @@ func TestLoginMFATwoPhaseNonInteractiveMethodName(t *testing.T) {
 
 	ui, cmd := testLoginCommand(t)
 
-	userclient, entityID, methodID, methodName := testhelpers.SetupLoginMFATOTP(t, client)
+	methodName := "foo"
+	userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, methodName)
 	cmd.client = userclient
 
 	engineName := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)

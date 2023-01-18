@@ -309,11 +309,6 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 		}
 	}
 
-	// Updating the method config name
-	if mConfig != nil && methodName != "" && mConfig.Name != methodName {
-		mConfig.Name = methodName
-	}
-
 	if mConfig == nil {
 		configID, err := uuid.GenerateUUID()
 		if err != nil {
@@ -323,8 +318,12 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 			ID:          configID,
 			Type:        methodType,
 			NamespaceID: ns.ID,
-			Name:        methodName,
 		}
+	}
+
+	// Updating the method config name
+	if methodName != "" {
+		mConfig.Name = methodName
 	}
 
 	mfaNs, err := i.namespacer.NamespaceByID(ctx, mConfig.NamespaceID)

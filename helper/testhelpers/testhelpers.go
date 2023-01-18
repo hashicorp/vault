@@ -944,7 +944,7 @@ func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) s
 
 // SetupLoginMFATOTP setups up a TOTP MFA using some basic configuration and
 // returns all relevant information to the client.
-func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, string, string) {
+func SetupLoginMFATOTP(t testing.T, client *api.Client, methodName string) (*api.Client, string, string) {
 	t.Helper()
 	// Mount the totp secrets engine
 	SetupTOTPMount(t, client)
@@ -954,7 +954,6 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 
 	// Create a test entity and alias
 	entityClient, entityID, _ := CreateEntityAndAlias(t, client, mountAccessor, "entity1", "testuser1")
-	methodName := "foo"
 
 	// Configure a default TOTP method
 	totpConfig := map[string]interface{}{
@@ -978,7 +977,7 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 	}
 
 	SetupMFALoginEnforcement(t, client, enforcementConfig)
-	return entityClient, entityID, methodID, methodName
+	return entityClient, entityID, methodID
 }
 
 func SkipUnlessEnvVarsSet(t testing.T, envVars []string) {
