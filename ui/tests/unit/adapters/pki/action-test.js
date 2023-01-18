@@ -3,7 +3,7 @@ import { setupTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
-module('Unit | Adapter | pki/config', function (hooks) {
+module('Unit | Adapter | pki/action', function (hooks) {
   setupTest(hooks);
   setupMirage(hooks);
 
@@ -16,11 +16,11 @@ module('Unit | Adapter | pki/config', function (hooks) {
   });
 
   test('it exists', function (assert) {
-    const adapter = this.owner.lookup('adapter:pki/config');
+    const adapter = this.owner.lookup('adapter:pki/action');
     assert.ok(adapter);
   });
 
-  module('formType import', function (hooks) {
+  module('actionType import', function (hooks) {
     hooks.beforeEach(function () {
       this.payload = {
         pem_bundle: `-----BEGIN CERTIFICATE REQUEST-----
@@ -51,8 +51,8 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', this.payload)
-        .save({ adapterOptions: { formType: 'import', useIssuer: false } });
+        .createRecord('pki/action', this.payload)
+        .save({ adapterOptions: { actionType: 'import', useIssuer: false } });
     });
 
     test('it calls the correct endpoint when useIssuer = true', async function (assert) {
@@ -63,15 +63,15 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', this.payload)
-        .save({ adapterOptions: { formType: 'import', useIssuer: true } });
+        .createRecord('pki/action', this.payload)
+        .save({ adapterOptions: { actionType: 'import', useIssuer: true } });
     });
   });
 
-  module('formType generate-root', function () {
+  module('actionType generate-root', function () {
     test('it calls the correct endpoint when useIssuer = false', async function (assert) {
       assert.expect(4);
-      const adapterOptions = { adapterOptions: { formType: 'generate-root', useIssuer: false } };
+      const adapterOptions = { adapterOptions: { actionType: 'generate-root', useIssuer: false } };
       this.server.post(`${this.backend}/root/generate/internal`, () => {
         assert.ok(true, 'request made correctly when type = internal');
         return {};
@@ -90,22 +90,22 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'internal',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'exported',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'existing',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'kms',
         })
         .save(adapterOptions);
@@ -113,7 +113,7 @@ module('Unit | Adapter | pki/config', function (hooks) {
 
     test('it calls the correct endpoint when useIssuer = true', async function (assert) {
       assert.expect(4);
-      const adapterOptions = { adapterOptions: { formType: 'generate-root', useIssuer: true } };
+      const adapterOptions = { adapterOptions: { actionType: 'generate-root', useIssuer: true } };
       this.server.post(`${this.backend}/issuers/generate/root/internal`, () => {
         assert.ok(true, 'request made correctly when type = internal');
         return {};
@@ -132,32 +132,32 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'internal',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'exported',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'existing',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'kms',
         })
         .save(adapterOptions);
     });
   });
 
-  module('formType generate-csr', function () {
+  module('actionType generate-csr', function () {
     test('it calls the correct endpoint when useIssuer = false', async function (assert) {
       assert.expect(4);
-      const adapterOptions = { adapterOptions: { formType: 'generate-csr', useIssuer: false } };
+      const adapterOptions = { adapterOptions: { actionType: 'generate-csr', useIssuer: false } };
       this.server.post(`${this.backend}/intermediate/generate/internal`, () => {
         assert.ok(true, 'request made correctly when type = internal');
         return {};
@@ -176,22 +176,22 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'internal',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'exported',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'existing',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'kms',
         })
         .save(adapterOptions);
@@ -199,7 +199,7 @@ module('Unit | Adapter | pki/config', function (hooks) {
 
     test('it calls the correct endpoint when useIssuer = true', async function (assert) {
       assert.expect(4);
-      const adapterOptions = { adapterOptions: { formType: 'generate-csr', useIssuer: true } };
+      const adapterOptions = { adapterOptions: { actionType: 'generate-csr', useIssuer: true } };
       this.server.post(`${this.backend}/issuers/generate/intermediate/internal`, () => {
         assert.ok(true, 'request made correctly when type = internal');
         return {};
@@ -218,22 +218,22 @@ module('Unit | Adapter | pki/config', function (hooks) {
       });
 
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'internal',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'exported',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'existing',
         })
         .save(adapterOptions);
       await this.store
-        .createRecord('pki/config', {
+        .createRecord('pki/action', {
           type: 'kms',
         })
         .save(adapterOptions);
