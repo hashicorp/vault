@@ -5,6 +5,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -156,6 +157,9 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	var certificate []byte
 	var fullChain []byte
 	var revocationTime int64
+	var revocationIssuerId string
+	var revocationTimeRfc3339 string
+
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
@@ -276,7 +280,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		goto reply
 	}
 
-	certEntry, funcErr = fetchCertBySerial(ctx, b, req, req.Path, serial)
+	certEntry, funcErr = fetchCertBySerial(sc, req.Path, serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:
@@ -304,7 +308,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		certificate = []byte(strings.TrimSpace(string(pem.EncodeToMemory(&block))))
 	}
 
-	revokedEntry, funcErr = fetchCertBySerial(ctx, b, req, "revoked/", serial)
+	revokedEntry, funcErr = fetchCertBySerial(sc, "revoked/", serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:
@@ -322,6 +326,11 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			return logical.ErrorResponse(fmt.Sprintf("Error decoding revocation entry for serial %s: %s", serial, err)), nil
 		}
 		revocationTime = revInfo.RevocationTime
+		revocationIssuerId = revInfo.CertificateIssuer.String()
+
+		if !revInfo.RevocationTimeUTC.IsZero() {
+			revocationTimeRfc3339 = revInfo.RevocationTimeUTC.Format(time.RFC3339Nano)
+		}
 	}
 
 reply:
@@ -354,6 +363,12 @@ reply:
 	default:
 		response.Data["certificate"] = string(certificate)
 		response.Data["revocation_time"] = revocationTime
+		response.Data["revocation_time_rfc3339"] = revocationTimeRfc3339
+		// Only output this field if we have a value for it as it doesn't make sense for a
+		// bunch of code paths that go through here
+		if revocationIssuerId != "" {
+			response.Data["issuer_id"] = revocationIssuerId
+		}
 
 		if len(fullChain) > 0 {
 			response.Data["ca_chain"] = string(fullChain)

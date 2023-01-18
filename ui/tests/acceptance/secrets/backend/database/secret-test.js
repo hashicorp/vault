@@ -23,7 +23,7 @@ const MODEL = {
 };
 
 const mount = async () => {
-  let path = `database-${Date.now()}`;
+  const path = `database-${Date.now()}`;
   await mountSecrets.enable('database', path);
   await settled();
   return path;
@@ -245,7 +245,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
   });
 
   test('can enable the database secrets engine', async function (assert) {
-    let backend = `database-${Date.now()}`;
+    const backend = `database-${Date.now()}`;
     await mountSecrets.enable('database', backend);
     await settled();
     assert.strictEqual(
@@ -266,7 +266,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
   test('Connection create and edit form for each plugin', async function (assert) {
     assert.expect(160);
     const backend = await mount();
-    for (let testCase of connectionTests) {
+    for (const testCase of connectionTests) {
       await connectionPage.visitCreate({ backend });
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create`, 'Correct creation URL');
       assert
@@ -423,7 +423,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       `write sys/policies/acl/test-policy policy=${btoa(CONNECTION_VIEW_ONLY)}`,
       'write -field=client_token auth/token/create policies=test-policy ttl=1h',
     ]);
-    let token = consoleComponent.lastTextOutput;
+    const token = consoleComponent.lastTextOutput;
     await logout.visit();
     await authPage.login(token);
     await connectionPage.visitShow({ backend, id: connection });
@@ -484,7 +484,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
 
   test('root and limited access', async function (assert) {
     this.set('model', MODEL);
-    let backend = 'database';
+    const backend = 'database';
     const NO_ROLES_POLICY = `
       path "database/roles/*" {
         capabilities = ["delete"]
@@ -504,7 +504,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       `write sys/policies/acl/test-policy policy=${btoa(NO_ROLES_POLICY)}`,
       'write -field=client_token auth/token/create policies=test-policy ttl=1h',
     ]);
-    let token = consoleComponent.lastTextOutput;
+    const token = consoleComponent.lastTextOutput;
 
     // test root user flow
     await settled();

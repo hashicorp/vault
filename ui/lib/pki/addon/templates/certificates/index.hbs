@@ -10,14 +10,15 @@
 />
 {{outlet}}
 <Toolbar>
-  {{#if this.model.certificateModel.length}}
+  {{#if this.model.certificates.length}}
     <ToolbarFilters>
       {{! ARG TODO glimmerize the NavigateInput and refactor so you can use it in an engine }}
     </ToolbarFilters>
   {{/if}}
 </Toolbar>
-{{#if this.model.certificateModel.length}}
-  {{#each this.model.certificateModel as |pkiCertificate|}}
+
+{{#if this.model.hasConfig}}
+  {{#each this.model.certificates as |pkiCertificate|}}
     <LinkedBlock
       class="list-item-row"
       @params={{array "certificates.certificate.details" pkiCertificate.id}}
@@ -55,8 +56,8 @@
   {{/each}}
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create.index" @model={{this.model.certificateModel}}>
-      {{! ARG TODO if configuration of engine not setup then direct toward setting that up otherwise replace with new design language }}
+    <LinkTo @route="configuration.create">
+      Configure PKI
     </LinkTo>
   </EmptyState>
 {{/if}}

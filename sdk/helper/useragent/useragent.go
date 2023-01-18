@@ -31,6 +31,15 @@ var (
 // Given comments will be appended to the semicolon-delimited comment section.
 //
 // e.g. Vault/0.10.4 (+https://www.vaultproject.io/; go1.10.1; comment-0; comment-1)
+//
+// Deprecated: use PluginString instead.
+// At one point the user-agent string returned contained the Vault
+// version hardcoded into the vault/sdk/version/ package.  This works for builtin
+// plugins that are compiled into the `vault` binary, in that it correctly described
+// the version of that Vault binary.  It does not work for external plugins: for them,
+// the version will be based on the version stored in the sdk based on the
+// contents of the external plugin's go.mod.  Now that we're no longer updating
+// the version in vault/sdk/version/, it is even less meaningful than ever.
 func String(comments ...string) string {
 	c := append([]string{"+" + projectURL, rt}, comments...)
 	return fmt.Sprintf("Vault/%s (%s)", versionFunc(), strings.Join(c, "; "))

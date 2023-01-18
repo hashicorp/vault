@@ -11,21 +11,22 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // OpenAPI specification (OAS): https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md
 const OASVersion = "3.0.2"
 
 // NewOASDocument returns an empty OpenAPI document.
-func NewOASDocument() *OASDocument {
+func NewOASDocument(version string) *OASDocument {
 	return &OASDocument{
 		Version: OASVersion,
 		Info: OASInfo{
 			Title:       "HashiCorp Vault API",
 			Description: "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
-			Version:     version.GetVersion().Version,
+			Version:     version,
 			License: OASLicense{
 				Name: "Mozilla Public License 2.0",
 				URL:  "https://www.mozilla.org/en-US/MPL/2.0",
@@ -146,6 +147,7 @@ type OASParameter struct {
 
 type OASRequestBody struct {
 	Description string     `json:"description,omitempty"`
+	Required    bool       `json:"required,omitempty"`
 	Content     OASContent `json:"content,omitempty"`
 }
 
@@ -213,9 +215,9 @@ var (
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
-func documentPaths(backend *Backend, requestResponsePrefix string, genericMountPaths bool, doc *OASDocument) error {
+func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
 	for _, p := range backend.Paths {
-		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, genericMountPaths, backend.BackendType, doc); err != nil {
+		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, backend.BackendType, doc); err != nil {
 			return err
 		}
 	}
@@ -224,7 +226,7 @@ func documentPaths(backend *Backend, requestResponsePrefix string, genericMountP
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, genericMountPaths bool, backendType logical.BackendType, doc *OASDocument) error {
+func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, backendType logical.BackendType, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
 
@@ -262,21 +264,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		// Process path and header parameters, which are common to all operations.
 		// Body fields will be added to individual operations.
 		pathFields, bodyFields := splitFields(p.Fields, path)
-
-		if genericMountPaths && requestResponsePrefix != "system" && requestResponsePrefix != "identity" {
-			// Add mount path as a parameter
-			p := OASParameter{
-				Name:        "mountPath",
-				Description: "Path that the backend was mounted at",
-				In:          "path",
-				Schema: &OASSchema{
-					Type: "string",
-				},
-				Required: true,
-			}
-
-			pi.Parameters = append(pi.Parameters, p)
-		}
 
 		for name, field := range pathFields {
 			location := "path"
@@ -388,9 +375,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					requestName := constructRequestName(requestResponsePrefix, path)
+					requestName := constructRequestResponseName(path, requestResponsePrefix, "Request")
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
+						Required: true,
 						Content: OASContent{
 							"application/json": &OASMediaTypeObject{
 								Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", requestName)},
@@ -467,6 +455,41 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 							}
 						}
 					}
+
+					responseSchema := &OASSchema{
+						Type:       "object",
+						Properties: make(map[string]*OASSchema),
+					}
+
+					for name, field := range resp.Fields {
+						openapiField := convertType(field.Type)
+						p := OASSchema{
+							Type:         openapiField.baseType,
+							Description:  cleanString(field.Description),
+							Format:       openapiField.format,
+							Pattern:      openapiField.pattern,
+							Enum:         field.AllowedValues,
+							Default:      field.Default,
+							Deprecated:   field.Deprecated,
+							DisplayAttrs: field.DisplayAttrs,
+						}
+						if openapiField.baseType == "array" {
+							p.Items = &OASSchema{
+								Type: openapiField.items,
+							}
+						}
+						responseSchema.Properties[name] = &p
+					}
+
+					if len(resp.Fields) != 0 {
+						responseName := constructRequestResponseName(path, requestResponsePrefix, "Response")
+						doc.Components.Schemas[responseName] = responseSchema
+						content = OASContent{
+							"application/json": &OASMediaTypeObject{
+								Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", responseName)},
+							},
+						}
+					}
 				}
 
 				op.Responses[code] = &OASResponse{
@@ -491,14 +514,17 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 	return nil
 }
 
-// constructRequestName joins the given prefix with the path elements into a
-// CamelCaseRequest string.
+// constructRequestResponseName joins the given path with prefix & suffix into
+// a CamelCase request or response name.
 //
-// For example, prefix="kv" & path=/config/lease/{name} => KvConfigLeaseRequest
-func constructRequestName(requestResponsePrefix string, path string) string {
+// For example, path=/config/lease/{name}, prefix="secret", suffix="request"
+// will result in "SecretConfigLeaseRequest"
+func constructRequestResponseName(path, prefix, suffix string) string {
 	var b strings.Builder
 
-	b.WriteString(strings.Title(requestResponsePrefix))
+	title := cases.Title(language.English)
+
+	b.WriteString(title.String(prefix))
 
 	// split the path by / _ - separators
 	for _, token := range strings.FieldsFunc(path, func(r rune) bool {
@@ -506,11 +532,11 @@ func constructRequestName(requestResponsePrefix string, path string) string {
 	}) {
 		// exclude request fields
 		if !strings.ContainsAny(token, "{}") {
-			b.WriteString(strings.Title(token))
+			b.WriteString(title.String(token))
 		}
 	}
 
-	b.WriteString("Request")
+	b.WriteString(suffix)
 
 	return b.String()
 }

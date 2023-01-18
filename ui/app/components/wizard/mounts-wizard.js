@@ -2,7 +2,7 @@ import { inject as service } from '@ember/service';
 import { alias, equal } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import { engines } from 'vault/helpers/mountable-secret-engines';
+import { mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 const supportedSecrets = supportedSecretBackends();
@@ -24,7 +24,7 @@ export default Component.extend({
   needsEncryption: equal('mountSubtype', 'transit'),
   stepComponent: alias('wizard.stepComponent'),
   detailsComponent: computed('currentMachine', 'mountSubtype', function () {
-    let suffix = this.currentMachine === 'secrets' ? 'engine' : 'method';
+    const suffix = this.currentMachine === 'secrets' ? 'engine' : 'method';
     return this.mountSubtype ? `wizard/${this.mountSubtype}-${suffix}` : null;
   }),
   isSupported: computed('currentMachine', 'mountSubtype', function () {
@@ -36,7 +36,7 @@ export default Component.extend({
   }),
   mountName: computed('currentMachine', 'mountSubtype', function () {
     if (this.currentMachine === 'secrets') {
-      var secret = engines().find((engine) => {
+      const secret = mountableEngines().find((engine) => {
         return engine.type === this.mountSubtype;
       });
       if (secret) {

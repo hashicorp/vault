@@ -10,7 +10,7 @@ export default ApplicationAdapter.extend({
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
     const { id } = snapshot;
-    let url = this.urlForTransformations(snapshot.record.get('backend'), id);
+    const url = this.urlForTransformations(snapshot.record.get('backend'), id);
 
     return this.ajax(url, 'POST', { data });
   },
@@ -41,7 +41,7 @@ export default ApplicationAdapter.extend({
   },
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }
@@ -57,7 +57,7 @@ export default ApplicationAdapter.extend({
       if (!results[0].value) {
         throw results[0].reason;
       }
-      let resp = {
+      const resp = {
         id,
         name: id,
         backend,

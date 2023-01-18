@@ -55,9 +55,9 @@ export default class SecretEdit extends Component {
       if (!context.args.model || context.args.mode === 'create') {
         return;
       }
-      let backend = context.isV2 ? context.args.model.engine.id : context.args.model.backend;
-      let id = context.args.model.id;
-      let path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
+      const backend = context.isV2 ? context.args.model.engine.id : context.args.model.backend;
+      const id = context.args.model.id;
+      const path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
       return {
         id: path,
       };
@@ -98,7 +98,7 @@ export default class SecretEdit extends Component {
   @or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid') buttonDisabled;
 
   get modelForData() {
-    let { model } = this.args;
+    const { model } = this.args;
     if (!model) return null;
     return this.isV2 ? model.belongsTo('selectedVersion').value() : model;
   }

@@ -12,7 +12,7 @@ export default Component.extend({
   noun: null,
   mode: 'edit',
   modeVerb: computed('mode', function () {
-    let mode = this.mode;
+    const mode = this.mode;
     if (!mode) {
       return '';
     }

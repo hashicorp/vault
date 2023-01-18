@@ -27,9 +27,10 @@ func PrepareTestContainerWithDatabase(t *testing.T, version, dbName string) (fun
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo: "mongo",
-		ImageTag:  version,
-		Ports:     []string{"27017/tcp"},
+		ContainerName: "mongo",
+		ImageRepo:     "docker.mirror.hashicorp.services/library/mongo",
+		ImageTag:      version,
+		Ports:         []string{"27017/tcp"},
 	})
 	if err != nil {
 		t.Fatalf("could not start docker mongo: %s", err)

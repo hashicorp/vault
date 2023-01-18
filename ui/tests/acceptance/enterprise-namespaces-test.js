@@ -21,10 +21,10 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it clears namespaces when you log out', async function (assert) {
-    let ns = 'foo';
+    const ns = 'foo';
     await createNS(ns);
     await shell.runCommands(`write -field=client_token auth/token/create policies=default`);
-    let token = shell.lastLogOutput;
+    const token = shell.lastLogOutput;
     await logout.visit();
     await authPage.login(token);
     assert.dom('[data-test-namespace-toggle]').doesNotExist('does not show the namespace picker');
@@ -32,8 +32,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it shows nested namespaces if you log in with a namspace starting with a /', async function (assert) {
-    let nses = ['beep', 'boop', 'bop'];
-    for (let [i, ns] of nses.entries()) {
+    const nses = ['beep', 'boop', 'bop'];
+    for (const [i, ns] of nses.entries()) {
       await createNS(ns);
       await settled();
       // this is usually triggered when creating a ns in the form, here we'll trigger a reload of the
@@ -43,8 +43,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
         break;
       }
       // the namespace path will include all of the namespaces up to this point
-      let targetNamespace = nses.slice(0, i + 1).join('/');
-      let url = `/vault/secrets?namespace=${targetNamespace}`;
+      const targetNamespace = nses.slice(0, i + 1).join('/');
+      const url = `/vault/secrets?namespace=${targetNamespace}`;
       // check if namespace is in the toggle
       await click('[data-test-namespace-toggle]');
 
@@ -81,7 +81,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       .doesNotExist('Managed namespace toolbar does not exist');
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Root)');
     await fillIn('input#namespace', '/foo');
-    let encodedNamespace = encodeURIComponent('/foo');
+    const encodedNamespace = encodeURIComponent('/foo');
     assert.strictEqual(
       currentURL(),
       `/vault/auth?namespace=${encodedNamespace}&with=token`,

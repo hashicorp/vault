@@ -58,6 +58,10 @@ to specify where the configuration is.
 - `listener` `([Listener][listener]: <required>)` – Configures how
   Vault is listening for API requests.
 
+- `user_lockout` `([UserLockout][user-lockout]: nil)` –
+  Configures the user-lockout behaviour for failed logins. For more information, please see the
+  [user lockout configuration documentation](/docs/configuration/user-lockout). 
+
 - `seal` `([Seal][seal]: nil)` – Configures the seal type to use for
   auto-unsealing, as well as for
   [seal wrapping][sealwrap] as an additional layer of data protection.
@@ -123,26 +127,16 @@ to specify where the configuration is.
   @include 'plugin-file-permissions-check.mdx'
 
 - `plugin_file_uid` `(integer: 0)` – Uid of the plugin directories and plugin binaries if they
-   are owned by an user other than the user running Vault. This only needs to be set if the 
-   file permissions check is enabled via the environment variable `VAULT_ENABLE_FILE_PERMISSIONS_CHECK`.
+  are owned by an user other than the user running Vault. This only needs to be set if the
+  file permissions check is enabled via the environment variable `VAULT_ENABLE_FILE_PERMISSIONS_CHECK`.
 
 - `plugin_file_permissions` `(string: "")` – Octal permission string of the plugin
-   directories and plugin binaries if they have write or execute permissions for group or others.
-   This only needs to be set if the file permissions check is enabled via the environment variable 
-   `VAULT_ENABLE_FILE_PERMISSIONS_CHECK`.
+  directories and plugin binaries if they have write or execute permissions for group or others.
+  This only needs to be set if the file permissions check is enabled via the environment variable
+  `VAULT_ENABLE_FILE_PERMISSIONS_CHECK`.
 
 - `telemetry` `([Telemetry][telemetry]: <none>)` – Specifies the telemetry
   reporting system.
-
-- `log_level` `(string: "")` – Specifies the log level to use; overridden by
-  CLI and env var parameters. On SIGHUP (`sudo kill -s HUP` *pid of vault*), Vault will update the log level to the
-  current value specified here (including overriding the CLI/env var
-  parameters). Not all parts of Vault's logging can have its level be changed
-  dynamically this way; in particular, secrets/auth plugins are currently not
-  updated dynamically. Supported log levels: Trace, Debug, Error, Warn, Info.
-
-- `log_format` `(string: "")` – Specifies the log format to use; overridden by
-  CLI and env var parameters. Supported log formats: "standard", "json".
 
 - `default_lease_ttl` `(string: "768h")` – Specifies the default lease duration
   for tokens and secrets. This is specified using a label suffix like `"30s"` or
@@ -159,9 +153,17 @@ to specify where the configuration is.
   maximum request duration allowed before Vault cancels the request. This can
   be overridden per listener via the `max_request_duration` value.
 
+- `detect_deadlocks` `(string: "")` - Specifies the internal mutex locks that should be monitored for
+potential deadlocks. Currently supported value is `statelock`, which will cause "POTENTIAL DEADLOCK:"
+to be logged when an attempt at a core state lock appears to be deadlocked. Enabling this can have
+a negative effect on performance due to the tracking of each lock attempt.
+
 - `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which
   allows the decryption/encryption of raw data into and out of the security
   barrier. This is a highly privileged endpoint.
+
+- `introspection_endpoint` `(bool: false)` - Enables the `sys/internal/inspect` endpoint
+  which allows users with a root token or sudo privileges to inspect certain subsystems inside Vault.
 
 - `ui` `(bool: false)` – Enables the built-in web UI, which is available on all
   listeners (address + port) at the `/ui` path. Browsers accessing the standard
@@ -186,6 +188,32 @@ to specify where the configuration is.
   Raft node ID of the Vault node that serviced the HTTP request. If Vault is not
   participating in a Raft cluster, this header will be omitted, whether this configuration
   option is enabled or not.
+
+- `log_level` `(string: "info")` - Log verbosity level.
+  Supported values (in order of descending detail) are `trace`, `debug`, `info`, `warn`, and `error`.
+  This can also be specified via the `VAULT_LOG_LEVEL` environment variable.
+
+  ~> Note: On SIGHUP (`sudo kill -s HUP` _pid of vault_), if a valid value is specified, Vault will update the existing log level,
+  overriding (even if specified) both the CLI flag and environment variable.
+
+  ~> Note: Not all parts of Vault's logging can have its log level be changed dynamically this way; in particular,
+  secrets/auth plugins are currently not updated dynamically.
+
+- `log_format` - Equivalent to the [`-log-format` command-line flag](/docs/commands/server#_log_format).
+
+- `log_file` - Equivalent to the [`-log-file` command-line flag](/docs/commands/server#_log_file).
+
+- `log_rotate_duration` - Equivalent to the [`-log-rotate-duration` command-line flag](/docs/commands/server#_log_rotate_duration).
+
+- `log_rotate_bytes` - Equivalent to the [`-log-rotate-bytes` command-line flag](/docs/commands/server#_log_rotate_bytes).
+
+- `log_rotate_max_files` - Equivalent to the [`-log-rotate-max-files` command-line flag](/docs/commands/server#_log_rotate_max_files).
+
+- `experiments` `(string array: [])` - The list of experiments to enable for this node.
+  Experiments should NOT be used in production, and the associated APIs may have backwards
+  incompatible changes between releases. Additional experiments can also be specified via
+  the `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
+  [`-experiment`](/docs/commands/server#experiment) flag.
 
 ### High Availability Parameters
 
@@ -227,7 +255,7 @@ The following parameters are only used with Vault Enterprise
   node will disable this feature when this node is Active or Standby. It's
   recommended to sync this setting across all nodes in the cluster.
 
-- `license_path` `(string: "")` - Path to license file.  This can also be
+- `license_path` `(string: "")` - Path to license file. This can also be
   provided via the environment variable `VAULT_LICENSE_PATH`, or the license
   itself can be provided in the environment variable `VAULT_LICENSE`.
 

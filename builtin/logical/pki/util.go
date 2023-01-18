@@ -28,9 +28,10 @@ const (
 )
 
 var (
-	nameMatcher        = regexp.MustCompile("^" + framework.GenericNameRegex(issuerRefParam) + "$")
-	errIssuerNameInUse = errutil.UserError{Err: "issuer name already in use"}
-	errKeyNameInUse    = errutil.UserError{Err: "key name already in use"}
+	nameMatcher          = regexp.MustCompile("^" + framework.GenericNameRegex(issuerRefParam) + "$")
+	errIssuerNameInUse   = errutil.UserError{Err: "issuer name already in use"}
+	errIssuerNameIsEmpty = errutil.UserError{Err: "expected non-empty issuer name"}
+	errKeyNameInUse      = errutil.UserError{Err: "key name already in use"}
 )
 
 func serialFromCert(cert *x509.Certificate) string {
@@ -159,11 +160,12 @@ func getIssuerName(sc *storageContext, data *framework.FieldData) (string, error
 	issuerNameIface, ok := data.GetOk("issuer_name")
 	if ok {
 		issuerName = strings.TrimSpace(issuerNameIface.(string))
-
+		if len(issuerName) == 0 {
+			return issuerName, errIssuerNameIsEmpty
+		}
 		if strings.ToLower(issuerName) == defaultRef {
 			return issuerName, errutil.UserError{Err: "reserved keyword 'default' can not be used as issuer name"}
 		}
-
 		if !nameMatcher.MatchString(issuerName) {
 			return issuerName, errutil.UserError{Err: "issuer name contained invalid characters"}
 		}
@@ -250,7 +252,7 @@ func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
 
 	headerTimeValue, err := time.Parse(time.RFC1123, headerValue[0])
 	if err != nil {
-		return headerTimeValue, fmt.Errorf("failed to parse given value for '%s' header: %v", headerIfModifiedSince, err)
+		return headerTimeValue, fmt.Errorf("failed to parse given value for '%s' header: %w", headerIfModifiedSince, err)
 	}
 
 	return headerTimeValue, nil

@@ -19,7 +19,7 @@ import (
 
 func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
@@ -35,7 +35,7 @@ func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 
 func TestBackend_CRLConfigUpdate(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Write a legacy config to storage.
 	type legacyConfig struct {
@@ -79,7 +79,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 	for _, tc := range tests {
 		name := fmt.Sprintf("%s-%t-%t", tc.expiry, tc.disable, tc.ocspDisable)
 		t.Run(name, func(t *testing.T) {
-			b, s := createBackendWithStorage(t)
+			b, s := CreateBackendWithStorage(t)
 
 			resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
 				"expiry":                    tc.expiry,
@@ -89,7 +89,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 				"auto_rebuild":              tc.autoRebuild,
 				"auto_rebuild_grace_period": tc.autoRebuildGracePeriod,
 			})
-			requireSuccessNilResponse(t, resp, err)
+			requireSuccessNonNilResponse(t, resp, err)
 
 			resp, err = CBRead(b, s, "config/crl")
 			requireSuccessNonNilResponse(t, resp, err)
@@ -123,7 +123,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 	for _, tc := range badValueTests {
 		name := fmt.Sprintf("bad-%s-%s-%s", tc.expiry, tc.disable, tc.ocspDisable)
 		t.Run(name, func(t *testing.T) {
-			b, s := createBackendWithStorage(t)
+			b, s := CreateBackendWithStorage(t)
 
 			_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
 				"expiry":                    tc.expiry,
@@ -164,7 +164,7 @@ func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
 
 	for index, tc := range testCases {
 		t.Logf("tv %v", index)
-		b, s := createBackendWithStorage(t)
+		b, s := CreateBackendWithStorage(t)
 
 		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 			"ttl":            "40h",
@@ -207,7 +207,7 @@ func TestBackend_CRL_EnableDisableIntermediateWithoutRoot(t *testing.T) {
 }
 
 func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
-	b_root, s_root := createBackendWithStorage(t)
+	b_root, s_root := CreateBackendWithStorage(t)
 
 	resp, err := CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
@@ -218,7 +218,7 @@ func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
 	}
 	rootSerial := resp.Data["serial_number"].(string)
 
-	b_int, s_int := createBackendWithStorage(t)
+	b_int, s_int := CreateBackendWithStorage(t)
 
 	resp, err = CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "intermediate myvault.com",
@@ -371,7 +371,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
@@ -396,7 +396,7 @@ func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 func TestCrlRebuilder(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
@@ -404,18 +404,17 @@ func TestCrlRebuilder(t *testing.T) {
 	_, _, err := sc.writeCaBundle(bundle, "", "")
 	require.NoError(t, err)
 
-	req := &logical.Request{Storage: s}
 	cb := newCRLBuilder(true /* can rebuild and write CRLs */)
 
 	// Force an initial build
-	err = cb.rebuild(ctx, b, req, true)
+	err = cb.rebuild(sc, true)
 	require.NoError(t, err, "Failed to rebuild CRL")
 
 	resp := requestCrlFromBackend(t, s, b)
 	crl1 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 
 	// We shouldn't rebuild within this call.
-	err = cb.rebuildIfForced(ctx, b, req)
+	err = cb.rebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
 	resp = requestCrlFromBackend(t, s, b)
 	crl2 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
@@ -432,7 +431,7 @@ func TestCrlRebuilder(t *testing.T) {
 
 	// This should rebuild the CRL
 	cb.requestRebuildIfActiveNode(b)
-	err = cb.rebuildIfForced(ctx, b, req)
+	err = cb.rebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
 	resp = requestCrlFromBackend(t, s, b)
 	crl3 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
@@ -443,7 +442,7 @@ func TestCrlRebuilder(t *testing.T) {
 func TestBYOC(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -562,7 +561,7 @@ func TestBYOC(t *testing.T) {
 func TestPoP(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -722,7 +721,7 @@ func TestPoP(t *testing.T) {
 func TestIssuerRevocation(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Write a config with auto-rebuilding so that we can verify stuff doesn't
 	// appear on the delta CRL.
@@ -1063,7 +1062,7 @@ func TestAutoRebuild(t *testing.T) {
 	}
 
 	// This serial should exist in the delta WAL section for the mount...
-	resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+	resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + localDeltaWALPath)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data)
@@ -1083,7 +1082,7 @@ func TestAutoRebuild(t *testing.T) {
 		default:
 			// Check and see if there's a storage entry for the last rebuild
 			// serial. If so, validate the delta CRL contains this entry.
-			resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+			resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + localDeltaWALPath)
 			require.NoError(t, err)
 			require.NotNil(t, resp)
 			require.NotEmpty(t, resp.Data)
@@ -1104,7 +1103,7 @@ func TestAutoRebuild(t *testing.T) {
 			}
 
 			// Read the marker and see if its correct.
-			resp, err = client.Logical().Read("sys/raw/logical/" + pkiMount + "/" + deltaWALLastBuildSerial)
+			resp, err = client.Logical().Read("sys/raw/logical/" + pkiMount + "/" + localDeltaWALLastBuildSerial)
 			require.NoError(t, err)
 			if resp == nil {
 				time.Sleep(1 * time.Second)
@@ -1170,7 +1169,7 @@ func TestAutoRebuild(t *testing.T) {
 func TestTidyIssuerAssociation(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{

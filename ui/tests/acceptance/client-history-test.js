@@ -193,12 +193,13 @@ module('Acceptance | clients history tab', function (hooks) {
     );
 
     // query custom end month
+    const customEndDate = subMonths(NEW_DATE, 3);
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
-    if (parseInt(find('[data-test-display-year]').innerText) < NEW_DATE.getFullYear()) {
-      await click('[data-test-future-year]');
+    if (parseInt(find('[data-test-display-year]').innerText) !== customEndDate.getFullYear()) {
+      await click('[data-test-previous-year]');
     }
-    await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LAST_MONTH.getMonth() - 2]}]`));
+    await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[customEndDate.getMonth()]}]`));
 
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert.dom(SELECTORS.monthlyUsageBlock).exists('Shows monthly usage block');
@@ -210,7 +211,7 @@ module('Acceptance | clients history tab', function (hooks) {
       3,
       `line chart plots 3 points to match query`
     );
-    let xAxisLabels = findAll('[data-test-line-chart="x-axis-labels"] g.tick text');
+    const xAxisLabels = findAll('[data-test-line-chart="x-axis-labels"] g.tick text');
     assert
       .dom(xAxisLabels[xAxisLabels.length - 1])
       .hasText(`${format(subMonths(LAST_MONTH, 2), 'M/yy')}`, 'x-axis labels end with queried end month');
@@ -218,8 +219,8 @@ module('Acceptance | clients history tab', function (hooks) {
     // query for single, historical month
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
-    if (parseInt(find('[data-test-display-year]').innerText) < NEW_DATE.getFullYear()) {
-      await click('[data-test-future-year]');
+    if (parseInt(find('[data-test-display-year]').innerText) !== UPGRADE_DATE.getFullYear()) {
+      await click('[data-test-previous-year]');
     }
     await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]}]`));
 

@@ -5,12 +5,12 @@ export default class diff extends Route {
   @service store;
 
   beforeModel() {
-    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     this.backend = backend;
   }
 
   model(params) {
-    let { id } = params;
+    const { id } = params;
     return this.store.queryRecord('secret-v2', {
       backend: this.backend,
       id,

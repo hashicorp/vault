@@ -47,8 +47,32 @@ module "get_local_metadata" {
   source = "./modules/get_local_metadata"
 }
 
+module "generate_secondary_token" {
+  source = "./modules/generate_secondary_token"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "read_license" {
   source = "./modules/read_license"
+}
+
+module "shutdown_node" {
+  source = "./modules/shutdown_node"
+}
+
+module "vault_agent" {
+  source = "./modules/vault_agent"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+
+module "vault_verify_agent_output" {
+  source = "./modules/vault_verify_agent_output"
+
+  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_cluster" {
@@ -61,6 +85,19 @@ module "vault_cluster" {
   project_name      = var.project_name
   ssh_aws_keypair   = var.aws_ssh_keypair_name
   vault_install_dir = var.vault_install_dir
+}
+
+module "vault_get_cluster_ips" {
+  source = "./modules/vault_get_cluster_ips"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_unseal_nodes" {
+  source = "./modules/vault_unseal_nodes"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_upgrade" {
@@ -85,6 +122,27 @@ module "vault_verify_raft_auto_join_voter" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_verify_undo_logs" {
+  source = "./modules/vault_verify_undo_logs"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_verify_replication" {
+  source = "./modules/vault_verify_replication"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_verify_ui" {
+  source = "./modules/vault_verify_ui"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
 module "vault_verify_unsealed" {
   source = "./modules/vault_verify_unsealed"
 
@@ -92,8 +150,40 @@ module "vault_verify_unsealed" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_setup_perf_primary" {
+  source = "./modules/vault_setup_perf_primary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_setup_perf_secondary" {
+  source = "./modules/vault_setup_perf_secondary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_read_data" {
+  source = "./modules/vault_verify_read_data"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_verify_performance_replication" {
+  source = "./modules/vault_verify_performance_replication"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_verify_version" {
   source = "./modules/vault_verify_version"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_verify_write_data" {
+  source = "./modules/vault_verify_write_data"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
