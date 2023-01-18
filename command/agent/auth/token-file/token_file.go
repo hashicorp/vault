@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth"
 )
 
-type TokenFileMethod struct {
+type tokenFileMethod struct {
 	logger    hclog.Logger
 	mountPath string
 
@@ -32,7 +32,7 @@ func NewTokenFileAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("empty config data")
 	}
 
-	a := &TokenFileMethod{
+	a := &tokenFileMethod{
 		logger:    conf.Logger,
 		mountPath: "auth/token",
 	}
@@ -70,7 +70,7 @@ func NewTokenFileAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *TokenFileMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
+func (a *tokenFileMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
 	_, err := os.Stat(a.tokenFilePath)
 	if err != nil {
 		if a.cachedToken == "" {
@@ -108,12 +108,12 @@ func (a *TokenFileMethod) Authenticate(ctx context.Context, client *api.Client) 
 	}, nil
 }
 
-func (a *TokenFileMethod) NewCreds() chan struct{} {
+func (a *tokenFileMethod) NewCreds() chan struct{} {
 	return nil
 }
 
-func (a *TokenFileMethod) CredSuccess() {
+func (a *tokenFileMethod) CredSuccess() {
 }
 
-func (a *TokenFileMethod) Shutdown() {
+func (a *tokenFileMethod) Shutdown() {
 }
