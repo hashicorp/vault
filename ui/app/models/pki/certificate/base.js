@@ -44,8 +44,10 @@ export default class PkiCertificateBaseModel extends Model {
 
   // For importing
   @attr('string') pemBundle;
+  // readonly attrs returned after importing
   @attr importedIssuers;
   @attr importedKeys;
+  @attr mapping;
 
   @lazyCapabilities(apiPath`${'backend'}/revoke`, 'backend') revokePath;
   get canRevoke() {

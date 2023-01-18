@@ -29,7 +29,7 @@
       Intermediates are identified by specifying the mount path and the issuer’s current name, as well as the new name it
       will have when it is imported to Vault.
     </p>
-    <ObjectListInput @objectKeys={{this.formFields}} @onChange={{this.handleChange}} />
+    <ObjectListInput @objectKeys={{this.inputFields}} @onChange={{fn (mut this.formData)}} />
   </div>
   <div class="control">
     <button
