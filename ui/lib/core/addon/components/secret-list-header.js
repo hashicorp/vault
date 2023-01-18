@@ -1,3 +1,7 @@
+import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import localStorage from 'vault/lib/local-storage';
 import Component from '@glimmer/component';
 
 /**
@@ -23,7 +27,38 @@ import Component from '@glimmer/component';
  */
 
 export default class SecretListHeader extends Component {
+  @service router;
+  @tracked hideBetaModal;
+
+  // constructor() {
+  //   super(...arguments);
+  //   console.log('engineType', this.args.model.engineType);
+  //   console.log('isEngine', this.args.isEngine);
+  // }
+
   get isKV() {
     return ['kv', 'generic'].includes(this.args.model.engineType);
+  }
+
+  get isPki() {
+    return this.args.model.engineType === 'pki';
+  }
+
+  get shouldHideBetaModal() {
+    return localStorage.getItem('hideBetaModal');
+  }
+
+  @action
+  transitionToNewPki() {
+    this.router.transitionTo('vault.cluster.secrets.backend.pki.overview', this.args.model.engineType);
+  }
+
+  @action
+  toggleHideBetaModal() {
+    this.hideBetaModal = !this.hideBetaModal;
+
+    this.hideBetaModal
+      ? localStorage.setItem('hideBetaModal', true)
+      : localStorage.removeItem('hideBetaModal');
   }
 }
