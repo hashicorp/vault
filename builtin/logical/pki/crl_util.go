@@ -7,7 +7,6 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 	"math/big"
-	"strings"
 	"sync"
 	"time"
 
@@ -468,7 +467,7 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509
 }
 
 // Revokes a cert, and tries to be smart about error recovery
-func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Response, error) {
+func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, error) {
 	// As this backend is self-contained and this function does not hook into
 	// third parties to manage users or resources, if the mount is tainted,
 	// revocation doesn't matter anyways -- the CRL that would be written will
@@ -477,6 +476,9 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 	if sc.Backend.System().Tainted() {
 		return nil, nil
 	}
+
+	colonSerial := serialFromCert(cert)
+	hyphenSerial := normalizeSerial(colonSerial)
 
 	// Validate that no issuers match the serial number to be revoked. We need
 	// to gracefully degrade to the legacy cert bundle when it is required, as
@@ -490,16 +492,13 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 	// Ensure we don't revoke an issuer via this API; use /issuer/:issuer_ref/revoke
 	// instead.
 	for issuer, certificate := range issuerIDCertMap {
-		colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 		if colonSerial == serialFromCert(certificate) {
 			return logical.ErrorResponse(fmt.Sprintf("adding issuer (id: %v) to its own CRL is not allowed", issuer)), nil
 		}
 	}
 
-	alreadyRevoked := false
 	var revInfo revocationInfo
-
-	revEntry, err := fetchCertBySerial(sc, revokedPath, serial)
+	revEntry, err := fetchCertBySerial(sc, revokedPath, colonSerial)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -510,76 +509,50 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 	}
 	if revEntry != nil {
 		// Set the revocation info to the existing values
-		alreadyRevoked = true
 		err = revEntry.DecodeJSON(&revInfo)
 		if err != nil {
 			return nil, fmt.Errorf("error decoding existing revocation info")
 		}
+
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				"revocation_time": revInfo.RevocationTime,
+			},
+		}
+		if !revInfo.RevocationTimeUTC.IsZero() {
+			resp.Data["revocation_time_rfc3339"] = revInfo.RevocationTimeUTC.Format(time.RFC3339Nano)
+		}
+		return resp, nil
 	}
 
-	if !alreadyRevoked {
-		certEntry, err := fetchCertBySerial(sc, "certs/", serial)
-		if err != nil {
-			switch err.(type) {
-			case errutil.UserError:
-				return logical.ErrorResponse(err.Error()), nil
-			default:
-				return nil, err
-			}
-		}
-		if certEntry == nil {
-			if fromLease {
-				// We can't write to revoked/ or update the CRL anyway because we don't have the cert,
-				// and there's no reason to expect this will work on a subsequent
-				// retry.  Just give up and let the lease get deleted.
-				return nil, nil
-			}
-			return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found", serial)), nil
-		}
-
-		cert, err := x509.ParseCertificate(certEntry.Value)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing certificate: %w", err)
-		}
-		if cert == nil {
-			return nil, fmt.Errorf("got a nil certificate")
-		}
-
-		// Add a little wiggle room because leases are stored with a second
-		// granularity
-		if cert.NotAfter.Before(time.Now().Add(2 * time.Second)) {
-			response := &logical.Response{}
-			response.AddWarning(fmt.Sprintf("certificate with serial %s already expired; refusing to add to CRL", serial))
-			return response, nil
-		}
-
-		// Compatibility: Don't revoke CAs if they had leases. New CAs going
-		// forward aren't issued leases.
-		if cert.IsCA && fromLease {
-			return nil, nil
-		}
-
-		currTime := time.Now()
-		revInfo.CertificateBytes = certEntry.Value
-		revInfo.RevocationTime = currTime.Unix()
-		revInfo.RevocationTimeUTC = currTime.UTC()
-
-		// We may not find an issuer with this certificate; that's fine so
-		// ignore the return value.
-		associateRevokedCertWithIsssuer(&revInfo, cert, issuerIDCertMap)
-
-		revEntry, err = logical.StorageEntryJSON(revokedPath+normalizeSerial(serial), revInfo)
-		if err != nil {
-			return nil, fmt.Errorf("error creating revocation entry")
-		}
-
-		certsCounted := sc.Backend.certsCounted.Load()
-		err = sc.Storage.Put(sc.Context, revEntry)
-		if err != nil {
-			return nil, fmt.Errorf("error saving revoked certificate to new location")
-		}
-		sc.Backend.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
+	// Add a little wiggle room because leases are stored with a second
+	// granularity
+	if cert.NotAfter.Before(time.Now().Add(2 * time.Second)) {
+		response := &logical.Response{}
+		response.AddWarning(fmt.Sprintf("certificate with serial %s already expired; refusing to add to CRL", colonSerial))
+		return response, nil
 	}
+
+	currTime := time.Now()
+	revInfo.CertificateBytes = cert.Raw
+	revInfo.RevocationTime = currTime.Unix()
+	revInfo.RevocationTimeUTC = currTime.UTC()
+
+	// We may not find an issuer with this certificate; that's fine so
+	// ignore the return value.
+	associateRevokedCertWithIsssuer(&revInfo, cert, issuerIDCertMap)
+
+	revEntry, err = logical.StorageEntryJSON(revokedPath+hyphenSerial, revInfo)
+	if err != nil {
+		return nil, fmt.Errorf("error creating revocation entry")
+	}
+
+	certsCounted := sc.Backend.certsCounted.Load()
+	err = sc.Storage.Put(sc.Context, revEntry)
+	if err != nil {
+		return nil, fmt.Errorf("error saving revoked certificate to new location")
+	}
+	sc.Backend.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 
 	// Fetch the config and see if we need to rebuild the CRL. If we have
 	// auto building enabled, we will wait for the next rebuild period to
@@ -603,7 +576,7 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 				return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
 			}
 		}
-	} else if !alreadyRevoked {
+	} else {
 		// Regardless of whether or not we've presently enabled Delta CRLs,
 		// we should always write the Delta WAL in case it is enabled in the
 		// future. We could trigger another full CRL rebuild instead (to avoid
@@ -619,7 +592,7 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 		//
 		// Currently we don't store any data in the WAL entry.
 		var walInfo deltaWALInfo
-		walEntry, err := logical.StorageEntryJSON(deltaWALPath+normalizeSerial(serial), walInfo)
+		walEntry, err := logical.StorageEntryJSON(deltaWALPath+hyphenSerial, walInfo)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create delta CRL WAL entry")
 		}
@@ -631,7 +604,7 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 		// In order for periodic delta rebuild to be mildly efficient, we
 		// should write the last revoked delta WAL entry so we know if we
 		// have new revocations that we should rebuild the delta WAL for.
-		lastRevSerial := lastWALInfo{Serial: serial}
+		lastRevSerial := lastWALInfo{Serial: colonSerial}
 		lastWALEntry, err := logical.StorageEntryJSON(deltaWALLastRevokedSerial, lastRevSerial)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create last delta CRL WAL entry")
@@ -641,15 +614,12 @@ func revokeCert(sc *storageContext, serial string, fromLease bool) (*logical.Res
 		}
 	}
 
-	resp := &logical.Response{
+	return &logical.Response{
 		Data: map[string]interface{}{
-			"revocation_time": revInfo.RevocationTime,
+			"revocation_time":         revInfo.RevocationTime,
+			"revocation_time_rfc3339": revInfo.RevocationTimeUTC.Format(time.RFC3339Nano),
 		},
-	}
-	if !revInfo.RevocationTimeUTC.IsZero() {
-		resp.Data["revocation_time_rfc3339"] = revInfo.RevocationTimeUTC.Format(time.RFC3339Nano)
-	}
-	return resp, nil
+	}, nil
 }
 
 func buildCRLs(sc *storageContext, forceNew bool) error {

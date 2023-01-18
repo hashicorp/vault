@@ -47,19 +47,4 @@ module('Unit | Adapter | pki/certificate/sign', function (hooks) {
 
     await this.store.createRecord('pki/certificate/sign', generateData).save();
   });
-
-  test('it should make request to correct endpoint on delete', async function (assert) {
-    assert.expect(2);
-    this.store.pushPayload('pki/certificate/sign', {
-      modelName: 'pki/certificate/sign',
-      ...this.data,
-    });
-    this.server.post(`${this.backend}/revoke`, (schema, req) => {
-      assert.deepEqual(JSON.parse(req.requestBody), { serial_number: 'my-serial-number' });
-      assert.ok(true, 'request made to correct endpoint on delete');
-      return { data: {} };
-    });
-
-    await this.store.peekRecord('pki/certificate/sign', this.data.serial_number).destroyRecord();
-  });
 });

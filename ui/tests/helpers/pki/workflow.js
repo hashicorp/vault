@@ -1,11 +1,17 @@
 import { SELECTORS as ROLEFORM } from './pki-role-form';
 import { SELECTORS as GENERATECERT } from './pki-role-generate';
+import { SELECTORS as KEYFORM } from './pki-key-form';
+import { SELECTORS as KEYPAGES } from './page/pki-keys';
 import { SELECTORS as ISSUERDETAILS } from './pki-issuer-details';
 
 export const SELECTORS = {
   breadcrumbContainer: '[data-test-breadcrumbs]',
   breadcrumbs: '[data-test-breadcrumbs] li',
   pageTitle: '[data-test-pki-role-page-title]',
+  alertBanner: '[data-test-alert-banner="alert"]',
+  emptyStateTitle: '[data-test-empty-state-title]',
+  emptyStateLink: '.empty-state-actions a',
+  emptyStateMessage: '[data-test-empty-state-message]',
   // TABS
   overviewTab: '[data-test-secret-list-tab="Overview"]',
   rolesTab: '[data-test-secret-list-tab="Roles"]',
@@ -25,6 +31,14 @@ export const SELECTORS = {
   generateCertForm: {
     ...GENERATECERT,
   },
+  // KEYS
+  keyForm: {
+    ...KEYFORM,
+  },
+  keyPages: {
+    ...KEYPAGES,
+  },
+  // ISSUERS
   issuerDetails: {
     title: '[data-test-pki-issuer-page-title]',
     ...ISSUERDETAILS,
