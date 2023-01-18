@@ -175,7 +175,7 @@ type issuerEntry struct {
 	Version              uint                      `json:"version"`
 }
 
-type localCRLConfigEntry struct {
+type internalCRLConfigEntry struct {
 	IssuerIDCRLMap        map[issuerID]crlID  `json:"issuer_id_crl_map"`
 	CRLNumberMap          map[crlID]int64     `json:"crl_number_map"`
 	LastCompleteNumberMap map[crlID]int64     `json:"last_complete_number_map"`
@@ -909,7 +909,7 @@ func areCertificatesEqual(cert1 *x509.Certificate, cert2 *x509.Certificate) bool
 	return bytes.Equal(cert1.Raw, cert2.Raw)
 }
 
-func (sc *storageContext) setLocalCRLConfig(mapping *localCRLConfigEntry) error {
+func (sc *storageContext) setLocalCRLConfig(mapping *internalCRLConfigEntry) error {
 	json, err := logical.StorageEntryJSON(storageLocalCRLConfig, mapping)
 	if err != nil {
 		return err
@@ -918,13 +918,13 @@ func (sc *storageContext) setLocalCRLConfig(mapping *localCRLConfigEntry) error 
 	return sc.Storage.Put(sc.Context, json)
 }
 
-func (sc *storageContext) getLocalCRLConfig() (*localCRLConfigEntry, error) {
+func (sc *storageContext) getLocalCRLConfig() (*internalCRLConfigEntry, error) {
 	entry, err := sc.Storage.Get(sc.Context, storageLocalCRLConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	mapping := &localCRLConfigEntry{}
+	mapping := &internalCRLConfigEntry{}
 	if entry != nil {
 		if err := entry.DecodeJSON(mapping); err != nil {
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode cluster-local CRL configuration: %v", err)}

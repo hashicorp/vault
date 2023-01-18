@@ -907,7 +907,7 @@ func buildAnyCRLsWithCerts(
 	sc *storageContext,
 	issuersConfig *issuerConfigEntry,
 	globalCRLConfig *crlConfig,
-	internalCRLConfig *localCRLConfigEntry,
+	internalCRLConfig *internalCRLConfigEntry,
 	issuers []issuerID,
 	issuerIDEntryMap map[issuerID]*issuerEntry,
 	keySubjectIssuersMap map[keyID]map[string][]issuerID,
