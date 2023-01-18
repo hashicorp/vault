@@ -599,6 +599,15 @@ func collectPathsFromRegexpAST(rx *syntax.Regexp) ([]string, error) {
 func collectPathsFromRegexpASTInternal(rx *syntax.Regexp, appendingTo []*pathCollector) ([]*pathCollector, error) {
 	var err error
 
+	// Depending on the type of this regexp AST node (its Op, i.e. operation), figure out whether it contributes any
+	// characters to the URL path, and whether we need to recurse through child AST nodes.
+	//
+	// Each element of the appendingTo slice tracks a separate path, defined by the alternatives chosen when traversing
+	// the | and ? conditional regexp features, and new elements are added as each of these features are traversed.
+	//
+	// To share this slice across multiple recursive calls of this function, it is passed down as a parameter to each
+	// recursive call, potentially modified throughout this switch block, and passed back up as a return value at the
+	// end of this function - the parent call uses the return value to update its own local variable.
 	switch rx.Op {
 
 	// These AST operations are leaf nodes (no children), that match zero characters, so require no processing at all
