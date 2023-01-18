@@ -65,6 +65,7 @@ export default class App extends Application {
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
+          list: 'vault.cluster.secrets.backend.list-root',
         },
       },
     },
