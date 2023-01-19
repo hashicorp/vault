@@ -30,6 +30,7 @@ type mySQLConnectionProducer struct {
 
 	TLSCertificateKeyData []byte `json:"tls_certificate_key" mapstructure:"tls_certificate_key" structs:"-"`
 	TLSCAData             []byte `json:"tls_ca"              mapstructure:"tls_ca"              structs:"-"`
+	TLSServerName         string `json:"tls_server_name"     mapstructure:"tls_server_name"     structs:"-"`
 
 	// tlsConfigName is a globally unique name that references the TLS config for this instance in the mysql driver
 	tlsConfigName string
@@ -206,6 +207,10 @@ func (c *mySQLConnectionProducer) getTLSAuth() (tlsConfig *tls.Config, err error
 	tlsConfig = &tls.Config{
 		RootCAs:      rootCertPool,
 		Certificates: clientCert,
+	}
+
+	if c.TLSServerName != "" {
+		tlsConfig.ServerName = c.TLSServerName
 	}
 
 	return tlsConfig, nil
