@@ -122,7 +122,7 @@ module('Integration | Component | pki key form', function (hooks) {
   });
 
   test('it should rollback attributes or unload record on cancel', async function (assert) {
-    assert.expect(2);
+    assert.expect(5);
     this.onCancel = () => assert.ok(true, 'onCancel callback fires');
     await render(
       hbs`
@@ -138,35 +138,32 @@ module('Integration | Component | pki key form', function (hooks) {
     await click(SELECTORS.keyCancelButton);
     assert.true(this.model.isDestroyed, 'new model is unloaded on cancel');
 
-    /* COMMENT IN WHEN EDIT IS COMPLETE
-      this.store.pushPayload('pki/key', {
-      modelName: this.modelName,
-      keyName: 'test-key',
+    this.store.pushPayload('pki/key', {
+      modelName: 'pki/key',
+      key_name: 'test-key',
       type: 'exported',
-      keyId: 'some-key-id',
-      keyType: 'rsa',
-      keyBits: '2048',
-    };);
-      this.model = this.store.peekRecord('pki/key', this.data.keyId;
+      key_id: 'some-key-id',
+      key_type: 'rsa',
+      key_bits: '2048',
+    });
+    this.model = this.store.peekRecord('pki/key', 'some-key-id');
 
-      await render(
-        hbs`
+    await render(
+      hbs`
           <PkiKeyForm
             @model={{this.model}}
             @onCancel={{this.onCancel}}
             @onSave={{this.onSave}}
           />
         `,
-        { owner: this.engine }
-      );
+      { owner: this.engine }
+    );
 
-      await fillIn(SELECTORS.keyNameInput, 'new-name');
-      await click(SELECTORS.keyCancelButton);
-      assert.strictEqual(this.model.keyName, undefined, 'Model attributes rolled back on cancel');
-  */
+    await fillIn(SELECTORS.keyNameInput, 'new-name');
+    await click(SELECTORS.keyCancelButton);
+    assert.strictEqual(this.model.keyName, 'test-key', 'Model name rolled back on cancel');
+    await fillIn(SELECTORS.keyNameInput, 'new-name');
+    await click(SELECTORS.keyCreateButton);
+    assert.strictEqual(this.model.keyName, 'new-name', 'Model name correctly save on create');
   });
-
-  /* FUTURE TEST TODO:
-   * it should update key
-   */
 });

@@ -16,8 +16,10 @@ export default class PkiKeyModel extends Model {
   @service secretMountPath;
 
   @attr('string', { detailsLabel: 'Key ID' }) keyId;
-  @attr('string', { subText: 'Optional, human-readable name for this key.' }) keyName;
-  @attr('string') privateKey;
+  @attr('string', {
+    subText: `Optional, human-readable name for this key. The name must be unique across all keys and cannot be 'default'.`,
+  })
+  keyName;
   @attr('string', {
     noDefault: true,
     possibleValues: ['internal', 'exported'],
@@ -38,6 +40,9 @@ export default class PkiKeyModel extends Model {
   })
   keyBits; // no possibleValues because dependent on selected key type
 
+  @attr('string') pemBundle;
+  @attr('string') privateKey;
+
   get backend() {
     return this.secretMountPath.currentPath;
   }
@@ -46,7 +51,7 @@ export default class PkiKeyModel extends Model {
    * Default to show UI elements unless we know they can't access the given path
    */
 
-  @lazyCapabilities(apiPath`${'backend'}/key/${'key_id'}`, 'backend', 'key_id') keyPath;
+  @lazyCapabilities(apiPath`${'backend'}/key/${'keyId'}`, 'backend', 'keyId') keyPath;
   get canRead() {
     return this.keyPath.get('canRead') !== false;
   }

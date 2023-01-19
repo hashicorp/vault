@@ -327,7 +327,7 @@ func TestIdentityStore_LockoutCounterResetTest(t *testing.T) {
 
 // TestIdentityStore_UnlockUserTest tests the user is
 // unlocked if locked  using
-// sys/lockedusers/[mount_accessor]/unlock/[alias-identifier]
+// sys/locked-users/[mount_accessor]/unlock/[alias-identifier]
 func TestIdentityStore_UnlockUserTest(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -393,7 +393,7 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 	}
 
 	// unlock user
-	if _, err = standby.Logical().Write("sys/lockedusers/"+mountAccessor+"/unlock/bsmith", nil); err != nil {
+	if _, err = standby.Logical().Write("sys/locked-users/"+mountAccessor+"/unlock/bsmith", nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -405,7 +405,7 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 	}
 
 	// unlock unlocked user
-	if _, err = active.Logical().Write("sys/lockedusers/mountAccessor/unlock/bsmith", nil); err != nil {
+	if _, err = active.Logical().Write("sys/locked-users/mountAccessor/unlock/bsmith", nil); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -121,7 +121,7 @@ by setting the 'scope' parameter of the reload to 'global'.
 1. Update the database config with the new version. The database secrets
    engine will immediately reload the plugin, using the new version. Any omitted
    config parameters will not be updated.
-    
+
     ```shell-session
     $ vault write database/config/my-db \
         plugin_version=v1.0.1
@@ -178,6 +178,10 @@ transit             v1.12.0+builtin.vault
   to manage schema upgrades and downgrades. Check the plugin release notes for
   any unsupported upgrade or downgrade transitions, especially before moving to
   a new major version or downgrading.
+* Existing Vault [leases](/docs/concepts/lease) and [tokens](/docs/concepts/tokens)
+  are generally unaffected by plugin upgrades and reloads. This is because the lifecycle
+  of leases and tokens is handled by core systems within Vault. The plugin itself only
+  handles renewal and revocation of them when it’s requested by those core systems.
 
 [plugin_reload_api]: /api-docs/system/plugins-reload-backend
 [plugin_registration]: /docs/plugins/plugin-architecture#plugin-registration

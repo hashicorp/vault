@@ -27,73 +27,6 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, string) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("raft dir: %s", raftDir)
-
-	return getRaftWithDir(t, bootstrap, noStoreState, raftDir)
-}
-
-func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
-	id, err := uuid.GenerateUUID()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  fmt.Sprintf("raft-%s", id),
-		Level: hclog.Trace,
-	})
-	logger.Info("raft dir", "dir", raftDir)
-
-	conf := map[string]string{
-		"path":          raftDir,
-		"trailing_logs": "100",
-		"node_id":       id,
-	}
-
-	if noStoreState {
-		conf["doNotStoreLatestState"] = ""
-	}
-
-	backendRaw, err := NewRaftBackend(conf, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	backend := backendRaw.(*RaftBackend)
-
-	if bootstrap {
-		err = backend.Bootstrap([]Peer{
-			{
-				ID:      backend.NodeID(),
-				Address: backend.NodeID(),
-			},
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		err = backend.SetupCluster(context.Background(), SetupOpts{})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		for {
-			if backend.raft.AppliedIndex() >= 2 {
-				break
-			}
-		}
-
-	}
-
-	backend.DisableAutopilot()
-
-	return backend, raftDir
-}
-
 func connectPeers(nodes ...*RaftBackend) {
 	for _, node := range nodes {
 		for _, peer := range nodes {
@@ -220,7 +153,7 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 }
 
 func TestRaft_Backend(t *testing.T) {
-	b, dir := getRaft(t, true, true)
+	b, dir := GetRaft(t, true, true)
 	defer os.RemoveAll(dir)
 
 	physical.ExerciseBackend(t, b)
@@ -316,7 +249,7 @@ func TestRaft_ParseNonVoter(t *testing.T) {
 }
 
 func TestRaft_Backend_LargeKey(t *testing.T) {
-	b, dir := getRaft(t, true, true)
+	b, dir := GetRaft(t, true, true)
 	defer os.RemoveAll(dir)
 
 	key, err := base62.Random(bolt.MaxKeySize + 1)
@@ -344,7 +277,7 @@ func TestRaft_Backend_LargeKey(t *testing.T) {
 }
 
 func TestRaft_Backend_LargeValue(t *testing.T) {
-	b, dir := getRaft(t, true, true)
+	b, dir := GetRaft(t, true, true)
 	defer os.RemoveAll(dir)
 
 	value := make([]byte, defaultMaxEntrySize+1)
@@ -372,7 +305,7 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 // TestRaft_TransactionalBackend_GetTransactions tests that passing a slice of transactions to the
 // raft backend will populate values for any transactions that are Get operations.
 func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
-	b, dir := getRaft(t, true, true)
+	b, dir := GetRaft(t, true, true)
 	defer os.RemoveAll(dir)
 
 	ctx := context.Background()
@@ -429,7 +362,7 @@ func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
 }
 
 func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
-	b, dir := getRaft(t, true, true)
+	b, dir := GetRaft(t, true, true)
 	defer os.RemoveAll(dir)
 
 	value := make([]byte, defaultMaxEntrySize+1)
@@ -468,7 +401,7 @@ func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
 }
 
 func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
-	b, dir := getRaft(t, true, true)
+	b, dir := GetRaft(t, true, true)
 	defer os.RemoveAll(dir)
 
 	value := make([]byte, defaultMaxEntrySize+1)
@@ -503,14 +436,14 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 }
 
 func TestRaft_Backend_ListPrefix(t *testing.T) {
-	b, dir := getRaft(t, true, true)
+	b, dir := GetRaft(t, true, true)
 	defer os.RemoveAll(dir)
 
 	physical.ExerciseBackend_ListPrefix(t, b)
 }
 
 func TestRaft_TransactionalBackend(t *testing.T) {
-	b, dir := getRaft(t, true, true)
+	b, dir := GetRaft(t, true, true)
 	defer os.RemoveAll(dir)
 
 	physical.ExerciseTransactionalBackend(t, b)
@@ -518,9 +451,9 @@ func TestRaft_TransactionalBackend(t *testing.T) {
 
 func TestRaft_HABackend(t *testing.T) {
 	t.Skip()
-	raft, dir := getRaft(t, true, true)
+	raft, dir := GetRaft(t, true, true)
 	defer os.RemoveAll(dir)
-	raft2, dir2 := getRaft(t, false, true)
+	raft2, dir2 := GetRaft(t, false, true)
 	defer os.RemoveAll(dir2)
 
 	// Add raft2 to the cluster
@@ -530,9 +463,9 @@ func TestRaft_HABackend(t *testing.T) {
 }
 
 func TestRaft_Backend_ThreeNode(t *testing.T) {
-	raft1, dir := getRaft(t, true, true)
-	raft2, dir2 := getRaft(t, false, true)
-	raft3, dir3 := getRaft(t, false, true)
+	raft1, dir := GetRaft(t, true, true)
+	raft2, dir2 := GetRaft(t, false, true)
+	raft3, dir3 := GetRaft(t, false, true)
 	defer os.RemoveAll(dir)
 	defer os.RemoveAll(dir2)
 	defer os.RemoveAll(dir3)
@@ -553,9 +486,9 @@ func TestRaft_Backend_ThreeNode(t *testing.T) {
 
 func TestRaft_GetOfflineConfig(t *testing.T) {
 	// Create 3 raft nodes
-	raft1, dir1 := getRaft(t, true, true)
-	raft2, dir2 := getRaft(t, false, true)
-	raft3, dir3 := getRaft(t, false, true)
+	raft1, dir1 := GetRaft(t, true, true)
+	raft2, dir2 := GetRaft(t, false, true)
+	raft3, dir3 := GetRaft(t, false, true)
 	defer os.RemoveAll(dir1)
 	defer os.RemoveAll(dir2)
 	defer os.RemoveAll(dir3)
@@ -591,10 +524,10 @@ func TestRaft_GetOfflineConfig(t *testing.T) {
 
 func TestRaft_Recovery(t *testing.T) {
 	// Create 4 raft nodes
-	raft1, dir1 := getRaft(t, true, true)
-	raft2, dir2 := getRaft(t, false, true)
-	raft3, dir3 := getRaft(t, false, true)
-	raft4, dir4 := getRaft(t, false, true)
+	raft1, dir1 := GetRaft(t, true, true)
+	raft2, dir2 := GetRaft(t, false, true)
+	raft3, dir3 := GetRaft(t, false, true)
+	raft4, dir4 := GetRaft(t, false, true)
 	defer os.RemoveAll(dir1)
 	defer os.RemoveAll(dir2)
 	defer os.RemoveAll(dir3)
@@ -678,9 +611,9 @@ func TestRaft_Recovery(t *testing.T) {
 }
 
 func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
-	raft1, dir := getRaft(t, true, true)
-	raft2, dir2 := getRaft(t, false, true)
-	raft3, dir3 := getRaft(t, false, true)
+	raft1, dir := GetRaft(t, true, true)
+	raft2, dir2 := GetRaft(t, false, true)
+	raft3, dir3 := GetRaft(t, false, true)
 	defer os.RemoveAll(dir)
 	defer os.RemoveAll(dir2)
 	defer os.RemoveAll(dir3)
@@ -700,7 +633,7 @@ func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 }
 
 func TestRaft_Backend_Performance(t *testing.T) {
-	b, dir := getRaft(t, true, false)
+	b, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
 
 	defaultConfig := raft.DefaultConfig()
@@ -756,9 +689,9 @@ func TestRaft_Backend_Performance(t *testing.T) {
 }
 
 func BenchmarkDB_Puts(b *testing.B) {
-	raft, dir := getRaft(b, true, false)
+	raft, dir := GetRaft(b, true, false)
 	defer os.RemoveAll(dir)
-	raft2, dir2 := getRaft(b, true, false)
+	raft2, dir2 := GetRaft(b, true, false)
 	defer os.RemoveAll(dir2)
 
 	bench := func(b *testing.B, s physical.Backend, dataSize int) {
@@ -788,7 +721,7 @@ func BenchmarkDB_Puts(b *testing.B) {
 }
 
 func BenchmarkDB_Snapshot(b *testing.B) {
-	raft, dir := getRaft(b, true, false)
+	raft, dir := GetRaft(b, true, false)
 	defer os.RemoveAll(dir)
 
 	data, err := uuid.GenerateRandomBytes(256 * 1024)

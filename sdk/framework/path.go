@@ -56,12 +56,24 @@ type Path struct {
 	Pattern string
 
 	// Fields is the mapping of data fields to a schema describing that
-	// field. Named captures in the Pattern also map to fields. If a named
-	// capture name matches a PUT body name, the named capture takes
-	// priority.
+	// field.
 	//
-	// Note that only named capture fields are available in every operation,
-	// whereas all fields are available in the Write operation.
+	// Field values are obtained from:
+	//
+	// - Named captures in the Pattern.
+	//
+	// - Parameters in the HTTP request body, for HTTP methods where a
+	//   request body is expected, i.e. PUT/POST/PATCH. The request body is
+	//   typically formatted as JSON, though
+	//   "application/x-www-form-urlencoded" format can also be accepted.
+	//
+	// - Parameters in the HTTP URL query-string, for HTTP methods where
+	//   there is no request body, i.e. GET/LIST/DELETE. The query-string
+	//   is *not* parsed at all for PUT/POST/PATCH requests.
+	//
+	// Should the same field be specified both as a named capture and as
+	// a parameter, the named capture takes precedence, and a warning is
+	// returned.
 	Fields map[string]*FieldSchema
 
 	// Operations is the set of operations supported and the associated OperationsHandler.

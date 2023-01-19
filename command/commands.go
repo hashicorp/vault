@@ -87,6 +87,12 @@ const (
 	// EnvVaultLogLevel is used to specify the log level applied to logging
 	// Supported log levels: Trace, Debug, Error, Warn, Info
 	EnvVaultLogLevel = "VAULT_LOG_LEVEL"
+	// EnvVaultExperiments defines the experiments to enable for a server as a
+	// comma separated list. See experiments.ValidExperiments() for the list of
+	// valid experiments. Not mutable or persisted in storage, only read and
+	// logged at startup _per node_. This was initially introduced for the events
+	// system being developed over multiple release cycles.
+	EnvVaultExperiments = "VAULT_EXPERIMENTS"
 
 	// DisableSSCTokens is an env var used to disable index bearing
 	// token functionality
@@ -259,6 +265,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					UI: serverCmdUi,
 				},
 				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
 			}, nil
 		},
 		"audit": func() (cli.Command, error) {
@@ -523,6 +530,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"path-help": func() (cli.Command, error) {
 			return &PathHelpCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki": func() (cli.Command, error) {
+			return &PKICommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki health-check": func() (cli.Command, error) {
+			return &PKIHealthCheckCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -795,11 +812,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 			return &MonitorCommand{
 				BaseCommand: getBaseCommand(),
 				ShutdownCh:  MakeShutdownCh(),
-			}, nil
-		},
-		"pki health-check": func() (cli.Command, error) {
-			return &PKIHealthCheckCommand{
-				BaseCommand: getBaseCommand(),
 			}, nil
 		},
 	}

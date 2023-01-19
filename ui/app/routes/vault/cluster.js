@@ -131,7 +131,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       return true;
     },
     loading(transition) {
-      if (transition.queryParamsOnly || Ember.testing) {
+      const isSameRoute = transition.from?.name === transition.to?.name;
+      if (isSameRoute || Ember.testing) {
         return;
       }
       // eslint-disable-next-line ember/no-controller-access-in-routes

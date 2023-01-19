@@ -461,6 +461,23 @@ past the issuer_safety_buffer. No keys will be removed as part of this
 operation.`,
 	}
 
+	fields["tidy_move_legacy_ca_bundle"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to move the legacy ca_bundle from
+/config/ca_bundle to /config/ca_bundle.bak. This prevents downgrades
+to pre-Vault 1.11 versions (as older PKI engines do not know about
+the new multi-issuer storage layout), but improves the performance
+on seal wrapped PKI mounts. This will only occur if at least
+issuer_safety_buffer time has occurred after the initial storage
+migration.
+
+This backup is saved in case of an issue in future migrations.
+Operators may consider removing it via sys/raw if they desire.
+The backup will be removed via a DELETE /root call, but note that
+this removes ALL issuers within the mount (and is thus not desirable
+in most operational scenarios).`,
+	}
+
 	fields["safety_buffer"] = &framework.FieldSchema{
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of extra time that must have passed

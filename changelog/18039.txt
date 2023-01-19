@@ -1,0 +1,6 @@
+```release-note:improvement
+plugins: Mark logical database plugins Removed and remove the plugin code.
+```
+```release-note:improvement
+plugins: Mark app-id auth method Removed and remove the plugin code.
+```
