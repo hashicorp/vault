@@ -13,7 +13,7 @@ locals {
     VAULT_TOKEN       = var.vault_root_token
     VAULT_UNSEAL_KEYS = jsonencode(slice(var.vault_unseal_keys, 0, var.vault_recovery_threshold))
   }
-  ui_test_environment = var.ui_test_filter == null ? local.ui_test_environment_base : merge(local.ui_test_environment_base, {
+  ui_test_environment = var.ui_test_filter == null || length(trimspace(var.ui_test_filter)) == 0 ? local.ui_test_environment_base : merge(local.ui_test_environment_base, {
     TEST_FILTER = var.ui_test_filter
   })
   # The environment variables need to be double escaped since the process of rendering them to the

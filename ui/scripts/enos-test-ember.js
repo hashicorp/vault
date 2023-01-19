@@ -45,7 +45,7 @@ const testHelper = require('./test-helper');
   try {
     const testArgs = ['test', '-c', 'testem.enos.js'];
 
-    if (process.env.TEST_FILTER) {
+    if (process.env.TEST_FILTER && process.env.TEST_FILTER.length > 0) {
       testArgs.push('-f=' + process.env.TEST_FILTER);
     }
 
