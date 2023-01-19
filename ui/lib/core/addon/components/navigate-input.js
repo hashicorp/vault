@@ -188,12 +188,16 @@ export default Component.extend(FocusOnInsertMixin, {
 
   actions: {
     handleInput: function (filter) {
-      this.filterDidChange(filter);
+      if (this.filterDidChange) {
+        this.filterDidChange(filter);
+      }
       debounce(this, 'filterUpdated', filter, 200);
     },
 
     setFilterFocused: function (isFocused) {
-      this.filterFocusDidChange(isFocused);
+      if (this.filterFocusDidChange) {
+        this.filterFocusDidChange(isFocused);
+      }
     },
 
     handleKeyPress: function (event) {
