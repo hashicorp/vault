@@ -272,10 +272,12 @@ func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
 type ifModifiedReqType int
 
 const (
-	ifModifiedUnknown  ifModifiedReqType = iota
-	ifModifiedCA                         = iota
-	ifModifiedCRL                        = iota
-	ifModifiedDeltaCRL                   = iota
+	ifModifiedUnknown         ifModifiedReqType = iota
+	ifModifiedCA                                = iota
+	ifModifiedCRL                               = iota
+	ifModifiedDeltaCRL                          = iota
+	ifModifiedUnifiedCRL                        = iota
+	ifModifiedUnifiedDeltaCRL                   = iota
 )
 
 type IfModifiedSinceHelper struct {
@@ -338,6 +340,26 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 
 		lastModified = crlConfig.LastModified
 		if helper.reqType == ifModifiedDeltaCRL {
+			lastModified = crlConfig.DeltaLastModified
+		}
+	case ifModifiedUnifiedCRL, ifModifiedUnifiedDeltaCRL:
+		if sc.Backend.crlBuilder.invalidate.Load() {
+			// When we see the CRL is invalidated, respond with false
+			// regardless of what the local CRL state says. We've likely
+			// renamed some issuers or are about to rebuild a new CRL....
+			//
+			// We do this earlier, ahead of config load, as it saves us a
+			// potential error condition.
+			return false, nil
+		}
+
+		crlConfig, err := sc.getUnifiedCRLConfig()
+		if err != nil {
+			return false, err
+		}
+
+		lastModified = crlConfig.LastModified
+		if helper.reqType == ifModifiedUnifiedDeltaCRL {
 			lastModified = crlConfig.DeltaLastModified
 		}
 	case ifModifiedCA:
