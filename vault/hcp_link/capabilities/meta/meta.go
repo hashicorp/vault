@@ -37,7 +37,6 @@ type hcpLinkMetaHandler struct {
 
 func NewHCPLinkMetaService(scadaProvider scada.SCADAProvider, c *vault.Core, baseLogger hclog.Logger) *hcpLinkMetaHandler {
 	logger := baseLogger.Named(capabilities.MetaCapability)
-	logger.Info("Setting up HCP Link Meta Service")
 
 	grpcServer := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
@@ -78,7 +77,7 @@ func (h *hcpLinkMetaHandler) Start() error {
 		return fmt.Errorf("no listener found for meta capability")
 	}
 
-	h.logger.Info("starting HCP Link Meta Service")
+	h.logger.Info("starting HCP connectivity meta service")
 	// Start the gRPC server
 	go func() {
 		err = h.grpcServer.Serve(metaListener)
@@ -101,7 +100,7 @@ func (h *hcpLinkMetaHandler) Stop() error {
 	// Give some time for existing RPCs to drain.
 	time.Sleep(cluster.ListenerAcceptDeadline)
 
-	h.logger.Info("Tearing down HCP Link Meta Service")
+	h.logger.Info("tearing down HCP connectivity meta service")
 
 	if h.stopCh != nil {
 		close(h.stopCh)
