@@ -48,7 +48,7 @@ export default class PkiCertificateBaseModel extends Model {
 
   // Parsed from cert in serializer
   @attr('number', { formatDate: true }) notValidAfter;
-  @attr('number', { formatDate: true, label: 'Issue date' }) notValidBefore;
+  @attr('number', { formatDate: true }) notValidBefore;
 
   // For importing
   @attr('string') pemBundle;
