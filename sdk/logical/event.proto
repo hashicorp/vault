@@ -26,6 +26,9 @@ message EventData {
     // CloudEvents Source (i.e., Vault cluster) + ID must be unique.
     // Events with the same Source + ID can be assumed to be duplicates
     // by consumers.
+    // Be careful when setting this manually that the ID contains enough
+    // entropy to be unique, or possibly that it is idempotent, such
+    // as a hash of other fields with sufficient uniqueness.
     string id = 1;
     // Arbitrary non-secret data. Optional.
     bytes metadata = 2;
@@ -39,6 +42,7 @@ message EventData {
 // the event type and plugin information.
 message EventReceived {
     EventData event = 1;
-    string event_type = 2;
-    EventPluginInfo plugin_info = 3;
+    string namespace = 2;
+    string event_type = 3;
+    EventPluginInfo plugin_info = 4;
 }
