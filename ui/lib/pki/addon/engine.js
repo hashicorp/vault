@@ -23,7 +23,7 @@ export default class PkiEngine extends Engine {
       'version',
       'wizard',
     ],
-    externalRoutes: ['secrets', 'list'],
+    externalRoutes: ['secrets', 'secretsListRoot'],
   };
 }
 

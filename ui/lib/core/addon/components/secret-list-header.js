@@ -28,7 +28,7 @@ import Component from '@glimmer/component';
 
 export default class SecretListHeader extends Component {
   @service router;
-  @tracked hideBetaModal;
+  @tracked hidePkiBetaModal = false;
 
   get isKV() {
     return ['kv', 'generic'].includes(this.args.model.engineType);
@@ -38,8 +38,8 @@ export default class SecretListHeader extends Component {
     return this.args.model.engineType === 'pki';
   }
 
-  get shouldHideBetaModal() {
-    return localStorage.getItem('hideBetaModal');
+  get shouldHidePkiBetaModal() {
+    return localStorage.getItem('hidePkiBetaModal');
   }
 
   @action
@@ -48,11 +48,11 @@ export default class SecretListHeader extends Component {
   }
 
   @action
-  toggleHideBetaModal() {
-    this.hideBetaModal = !this.hideBetaModal;
+  toggleHidePkiBetaModal() {
+    this.hidePkiBetaModal = !this.hidePkiBetaModal;
 
-    this.hideBetaModal
-      ? localStorage.setItem('hideBetaModal', true)
-      : localStorage.removeItem('hideBetaModal');
+    this.hidePkiBetaModal
+      ? localStorage.setItem('hidePkiBetaModal', true)
+      : localStorage.removeItem('hidePkiBetaModal');
   }
 }
