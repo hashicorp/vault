@@ -29,6 +29,23 @@ const OID_VALUES = {
   postal_code: '2.5.4.17',
 };
 
+const OID_SIGNATURE_ALGO = {
+  '2.16.840.1.101.3.4.3.2': 'MD2-RSA',
+  '1.3.101.112': 'Ed25519',
+  '1.2.840.113549.1.1.2': 'MD2-RSA',
+  '1.2.840.113549.1.1.4': 'MD5-RSA',
+  '1.2.840.10040.4.3': 'DSA-SHA1',
+  '1.2.840.10045.4.1': 'ECDSA-SHA1',
+  '1.2.840.10045.4.3.2': 'ECDSA-SHA256',
+  '1.2.840.10045.4.3.3': 'ECDSA-SHA384',
+  '1.2.840.10045.4.3.4': 'ECDSA-SHA512',
+  '1.2.840.113549.1.1.10': 'RSA-PSS', // 'SHA256-RSAPSS, SHA384-RSAPSS, SHA512-RSAPSS ??
+  '1.2.840.113549.1.1.5': 'SHA1-RSA',
+  '1.2.840.113549.1.1.11': 'SHA256-RSA',
+  '1.2.840.113549.1.1.12': 'SHA384-RSA',
+  '1.2.840.113549.1.1.13': 'SHA512-RSA',
+};
+
 export function parseCertificate(certificateContent) {
   let cert;
   try {
