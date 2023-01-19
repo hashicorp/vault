@@ -111,10 +111,10 @@ require (
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.4-beta1.0.20221117202053-722c59caa2d0
 	github.com/hashicorp/vault-plugin-auth-azure v0.11.2-0.20221108185759-ac6743d5f0f2
 	github.com/hashicorp/vault-plugin-auth-centrify v0.13.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.13.0
+	github.com/hashicorp/vault-plugin-auth-cf v0.12.2-0.20230119135449-d2cf2fba2a98
 	github.com/hashicorp/vault-plugin-auth-gcp v0.13.2-0.20221103133215-2fc20fb9fc44
 	github.com/hashicorp/vault-plugin-auth-jwt v0.14.0
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.8.0
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.5.1-0.20230119135453-f64ecfbe34f8
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.14.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.12.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.8.0
@@ -124,25 +124,25 @@ require (
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.1.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.6.1
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.14.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.10.1-0.20230119135456-9d0ee57246fe
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.6.3-0.20221109203402-f955aedc51bf
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20221101145740-55dbd0ccd1b8
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.13.0
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.7-0.20230119135500-416e11f9bb79
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.0.0-20221215173052-6b1994edb14e
-	github.com/hashicorp/vault-plugin-secrets-kv v0.13.3
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20230119160121-3faac030df2f
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.8.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.9.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1-0.20230119135504-5f620a8cbb76
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.6.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.2
 	github.com/hashicorp/vault/api v1.8.2
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.6.1
+	github.com/hashicorp/vault/sdk v0.7.0
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230106203127-9eaf26716342
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.15.0
-	github.com/jcmturner/gokrb5/v8 v8.4.2
+	github.com/jcmturner/gokrb5/v8 v8.4.3
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
 	github.com/jefferai/jsonx v1.0.0
 	github.com/joyent/triton-go v1.7.1-0.20200416154420-6801d15b779f
@@ -352,7 +352,7 @@ require (
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
-	github.com/jcmturner/gofork v1.0.0 // indirect
+	github.com/jcmturner/gofork v1.7.6 // indirect
 	github.com/jcmturner/goidentity/v6 v6.0.1 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jeffchao/backoff v0.0.0-20140404060208-9d7fd7aa17f2 // indirect
