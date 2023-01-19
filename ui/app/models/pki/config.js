@@ -8,6 +8,13 @@ export default class PkiConfigModel extends Model {
   @attr('string') pemBundle;
   @attr('string') type;
 
+  // For generating and signing a CSR
+  @attr('string') commonName;
+  @attr('string') keyRef; // backend expects param key_ref (can be key name or id), response returns key_id (do something about that?)
+  @attr('string') issuerName;
+  @attr('string') csr;
+  @attr caChain;
+
   get backend() {
     return this.secretMountPath.currentPath;
   }
