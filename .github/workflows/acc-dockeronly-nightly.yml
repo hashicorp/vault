@@ -1,9 +1,13 @@
-name: Acceptance Tests Docker Only
+name: test-go-acceptance-nightly
 
 on:
   # Change to nightly cadence once API-credential-requiring tests are added to the jobs
   workflow_dispatch: 
 
+env:
+  VAULT_ACC: 1
+
+# Currently the jobs here are only for acceptance tests that have no dependencies except for Docker
 jobs:
   plugins-database:
     uses: ./.github/workflows/reusable-run-go-acceptance-test.yml
