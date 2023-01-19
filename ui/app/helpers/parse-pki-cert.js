@@ -2,6 +2,7 @@ import { helper } from '@ember/component/helper';
 import * as asn1js from 'asn1js';
 import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';
+import { getUnixTime } from 'date-fns';
 
 /*
   We wish to get these OID_VALUES out of this certificate's subject. A
@@ -51,8 +52,8 @@ export function parseCertificate(certificateContent) {
     can_parse: true,
     expiry_date: expiryDate, // remove along with old PKI work
     issue_date: issueDate, // remove along with old PKI work
-    not_valid_after: expiryDate.valueOf(),
-    not_valid_before: issueDate.valueOf(),
+    not_valid_after: getUnixTime(expiryDate),
+    not_valid_before: getUnixTime(issueDate),
   };
 }
 
