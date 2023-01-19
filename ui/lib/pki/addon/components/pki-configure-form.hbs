@@ -37,6 +37,7 @@
   {{else if (eq this.actionType "generate-root")}}
     <PkiGenerateRoot
       @model={{@config}}
+      @urls={{@urls}}
       @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}
       @onCancel={{this.cancel}}
       @adapterOptions={{hash actionType="generate-root" useIssuer=@config.canGenerateIssuerRoot}}

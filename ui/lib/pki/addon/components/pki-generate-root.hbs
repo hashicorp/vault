@@ -1,4 +1,4 @@
-<form {{on "submit" this.generateRoot}} data-test-pki-config-generate-root-form>
+<form {{on "submit" (perform this.save)}} data-test-pki-config-generate-root-form>
   <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
   <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-generate-root-title="Root parameters">
     Root parameters
@@ -73,11 +73,34 @@
     {{/if}}
   {{/each-in}}
 
-  {{!-- TODO: this section
-  <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth">
-    <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-generate-root-title="Issuer URLs">Issuer URLs</h2>
-    {{! Updating this area of the form will require a secondary call to issuer/:issuer_ref/update once the initial request is complete }}
-  </fieldset> --}}
+  {{#if @urls}}
+    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth">
+      <h2
+        class="title is-size-5 page-header {{if @urls.canCreate 'has-border-bottom-light' 'is-borderless'}}"
+        data-test-generate-root-title="Issuer URLs"
+      >
+        Issuer URLs
+      </h2>
+      {{#if (and @urls @urls.canCreate)}}
+        {{#each @urls.allFields as |attr|}}
+          {{#if (not (eq attr.name "mountPath"))}}
+            <FormField
+              @attr={{attr}}
+              @mode="create"
+              @model={{@urls}}
+              @showHelpText={{attr.showHelpText}}
+              data-test-urls-field
+            />
+          {{/if}}
+        {{/each}}
+      {{else}}
+        <EmptyState
+          @title="You do not have permissions to set URLs."
+          @message="These are not required but will need to be configured later. You can do this via the CLI or by changing your permissions and returning to this form."
+        />
+      {{/if}}
+    </fieldset>
+  {{/if}}
 
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">

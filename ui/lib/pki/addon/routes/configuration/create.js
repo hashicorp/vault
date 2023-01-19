@@ -4,9 +4,17 @@ import { inject as service } from '@ember/service';
 export default class PkiConfigurationCreateRoute extends Route {
   @service secretMountPath;
   @service store;
+  @service pathHelp;
+
+  beforeModel() {
+    return this.pathHelp.getNewModel('pki/urls', this.secretMountPath.currentPath);
+  }
 
   model() {
-    return this.store.createRecord('pki/action', {});
+    return {
+      config: this.store.createRecord('pki/action'),
+      urls: this.store.createRecord('pki/urls'),
+    };
   }
 
   setupController(controller, resolvedModel) {
