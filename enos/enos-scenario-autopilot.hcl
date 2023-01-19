@@ -325,7 +325,7 @@ scenario "autopilot" {
     depends_on = [
       step.get_updated_vault_cluster_ips,
       step.upgrade_vault_cluster_with_autopilot,
-      step.verify_autopilot_upgraded_vault_cluster
+      step.verify_autopilot_await_server_removal_state
     ]
 
     providers = {
@@ -385,7 +385,7 @@ scenario "autopilot" {
     depends_on = [
       step.remove_old_nodes,
       step.upgrade_vault_cluster_with_autopilot,
-      step.verify_autopilot_upgraded_vault_cluster
+      step.verify_autopilot_idle_state
     ]
 
     providers = {
