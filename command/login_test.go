@@ -93,6 +93,7 @@ func TestCustomPath(t *testing.T) {
 	}
 }
 
+// Do not persist the token to the token helper
 func TestNoStore(t *testing.T) {
 	t.Parallel()
 
