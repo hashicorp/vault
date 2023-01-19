@@ -604,6 +604,7 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 						http.StatusOK: {{
 							// this response has dynamic keys
 							Description: "OK",
+							Fields:      nil,
 						}},
 					},
 				},
@@ -703,7 +704,7 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							// the response keys are dynamic
-							Fields: map[string]*framework.FieldSchema{},
+							Fields: nil,
 						}},
 					},
 				},
