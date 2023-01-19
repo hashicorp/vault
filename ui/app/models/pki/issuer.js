@@ -34,10 +34,6 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   @attr('string') issuerId;
   @attr('string', { displayType: 'masked' }) certificate;
   @attr('string', { displayType: 'masked', label: 'CA Chain' }) caChain;
-  @attr('date', {
-    label: 'Issue date',
-  })
-  notValidBefore;
 
   @attr('string', {
     label: 'Default key ID',

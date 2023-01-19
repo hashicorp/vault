@@ -15,7 +15,6 @@ const certDisplayFields = [
   'certificate',
   'commonName',
   'revocationTime',
-  'issueDate',
   'serialNumber',
   'notValidBefore',
   'notValidAfter',
@@ -48,9 +47,8 @@ export default class PkiCertificateBaseModel extends Model {
   @attr('string') serialNumber;
 
   // Parsed from cert in serializer
-  @attr('date', { formatDate: true }) issueDate;
-  @attr('date', { formatDate: true }) notValidAfter;
-  @attr('date', { formatDate: true }) notValidBefore;
+  @attr('number', { formatDate: true }) notValidAfter;
+  @attr('number', { formatDate: true, label: 'Issue date' }) notValidBefore;
 
   // For importing
   @attr('string') pemBundle;
