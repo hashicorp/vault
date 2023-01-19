@@ -29,6 +29,8 @@ const OID_VALUES = {
   postal_code: '2.5.4.17',
 };
 
+/*
+TODO complete in follow-on PR
 const OID_SIGNATURE_ALGO = {
   '2.16.840.1.101.3.4.3.2': 'MD2-RSA',
   '1.3.101.112': 'Ed25519',
@@ -45,6 +47,7 @@ const OID_SIGNATURE_ALGO = {
   '1.2.840.113549.1.1.12': 'SHA384-RSA',
   '1.2.840.113549.1.1.13': 'SHA512-RSA',
 };
+*/
 
 export function parseCertificate(certificateContent) {
   let cert;
