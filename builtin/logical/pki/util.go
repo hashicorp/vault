@@ -55,6 +55,12 @@ func denormalizeSerial(serial string) string {
 	return strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 }
 
+func serialToBigInt(serial string) (*big.Int, bool) {
+	norm := normalizeSerial(serial)
+	hex := strings.ReplaceAll(norm, "-", "")
+	return big.NewInt(0).SetString(hex, 16)
+}
+
 func kmsRequested(input *inputBundle) bool {
 	return kmsRequestedFromFieldData(input.apiData)
 }

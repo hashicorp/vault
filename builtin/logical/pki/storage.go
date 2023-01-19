@@ -31,6 +31,8 @@ const (
 	legacyCRLPath               = "crl"
 	deltaCRLPath                = "delta-crl"
 	deltaCRLPathSuffix          = "-delta"
+	unifiedCRLPath              = "unified-crl"
+	unifiedCRLPathSuffix        = "-unified"
 
 	autoTidyConfigPath = "config/auto-tidy"
 	clusterConfigPath  = "config/cluster"
