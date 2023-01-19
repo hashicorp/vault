@@ -6,14 +6,19 @@ import (
 	"github.com/hashicorp/go-uuid"
 )
 
+// ID is an alias to GetId() for CloudEvents compatibility.
+func (x *EventData) ID() string {
+	return x.GetId()
+}
+
 // NewEvent returns an event with a new, random EID.
 func NewEvent() (*EventData, error) {
-	eid, err := uuid.GenerateUUID()
+	id, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, err
 	}
 	return &EventData{
-		Eid: eid,
+		Id: id,
 	}, nil
 }
 

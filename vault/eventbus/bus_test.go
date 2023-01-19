@@ -52,7 +52,7 @@ func TestBusBasics(t *testing.T) {
 	timeout := time.After(1 * time.Second)
 	select {
 	case message := <-ch:
-		if message.GetEid() != event.GetEid() {
+		if message.ID() != event.ID() {
 			t.Errorf("Got unexpected message: %+v", message)
 		}
 	case <-timeout:
@@ -102,7 +102,7 @@ func TestBus2Subscriptions(t *testing.T) {
 	timeout := time.After(1 * time.Second)
 	select {
 	case message := <-ch1:
-		if message.GetEid() != event1.GetEid() {
+		if message.ID() != event1.ID() {
 			t.Errorf("Got unexpected message: %v", message)
 		}
 	case <-timeout:
@@ -110,7 +110,7 @@ func TestBus2Subscriptions(t *testing.T) {
 	}
 	select {
 	case message := <-ch2:
-		if message.GetEid() != event2.GetEid() {
+		if message.ID() != event2.ID() {
 			t.Errorf("Got unexpected message: %v", message)
 		}
 	case <-timeout:

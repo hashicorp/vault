@@ -22,17 +22,23 @@ message EventPluginInfo {
 
 // EventData contains event data in a CloudEvents container.
 message EventData {
-    // EID identifies the event, cannot be an empty and is required. The
-    // combination of Source + EID must be unique. Events with the same Source +
-    // ID can be assumed to be duplicates by consumers.
-    // (Named EID to avoid conflict with ID method.)
-    string eid = 1;
-    // If the event if plugin-generated, this contains information on the plugin.
-    EventPluginInfo plugin_info = 2;
+    // ID identifies the event. It is required. The combination of
+    // CloudEvents Source (i.e., Vault cluster) + ID must be unique.
+    // Events with the same Source + ID can be assumed to be duplicates
+    // by consumers.
+    string id = 1;
     // Arbitrary non-secret data. Optional.
-    bytes metadata = 3;
+    bytes metadata = 2;
     // Any IDs that the event relates to, i.e., UUIDs, paths.
-    repeated string entity_ids = 4;
+    repeated string entity_ids = 3;
     // Human-readable note.
-    string note = 5;
+    string note = 4;
+}
+
+// EventReceived is used to consume events and includes additional metadata regarding
+// the event type and plugin information.
+message EventReceived {
+    EventData event = 1;
+    string event_type = 2;
+    EventPluginInfo plugin_info = 3;
 }

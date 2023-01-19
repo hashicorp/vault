@@ -32,15 +32,10 @@ type asyncChanNode struct {
 	ch chan *logical.EventData
 }
 
-var _ eventlogger.Node = (*asyncChanNode)(nil)
-var _ logical.EventSender = (*EventBus)(nil)
-
-type EventDataWrapper logical.EventData
-
-// ID is a wrapped call to GetEid() for CloudEvents compatibility.
-func (data *EventDataWrapper) ID() string {
-	return (*logical.EventData)(data).GetEid()
-}
+var (
+	_ eventlogger.Node    = (*asyncChanNode)(nil)
+	_ logical.EventSender = (*EventBus)(nil)
+)
 
 // Start starts the event bus, allowing events to be written.
 // It is not possible to stop or restart the event bus.
@@ -55,12 +50,11 @@ func (bus *EventBus) Start() {
 // Send sends an event to the event bus and routes it to all relevant subscribers.
 // This function does *not* wait for all subscribers to acknowledge before returning.
 func (bus *EventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
-	wrappedData := (*EventDataWrapper)(data)
 	if !bus.started.Load() {
 		return ErrNotStarted
 	}
-	bus.logger.Info("Sending event", "event", wrappedData)
-	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), wrappedData)
+	bus.logger.Info("Sending event", "event", data)
+	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), data)
 	if err != nil {
 		// if no listeners for this event type are registered, that's okay, the event
 		// will just not be sent anywhere
@@ -160,7 +154,7 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 	// sends to the channel async in another goroutine
 	go func() {
 		select {
-		case node.ch <- (*logical.EventData)(e.Payload.(*EventDataWrapper)):
+		case node.ch <- e.Payload.(*logical.EventData):
 		case <-ctx.Done():
 		}
 	}()
