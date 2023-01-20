@@ -1,6 +1,7 @@
 import { helper } from '@ember/component/helper';
 import * as asn1js from 'asn1js';
 import { fromBase64, stringToArrayBuffer } from 'pvutils';
+import { Convert } from 'pvtsutils';
 import { Certificate } from 'pkijs';
 
 export function parseCertificate(certificateContent) {
@@ -43,9 +44,13 @@ export function parseCertificate(certificateContent) {
   // field themselves are Time values.
   const expiryDate = cert?.notAfter?.value;
   const issueDate = cert?.notBefore?.value;
+  const serialNumber = Convert.ToHex(cert.serialNumber.valueBlock.valueHex)
+    .match(/.{1,2}/g)
+    .join(':');
   return {
     can_parse: true,
     common_name: commonName,
+    serial_number: serialNumber,
     expiry_date: expiryDate,
     issue_date: issueDate,
     not_valid_after: expiryDate.valueOf(),

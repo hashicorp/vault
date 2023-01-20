@@ -4,7 +4,7 @@ import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-key-details';
+import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-keys';
 
 module('Integration | Component | pki key details page', function (hooks) {
   setupRenderingTest(hooks);

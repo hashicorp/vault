@@ -1,1 +1,18 @@
-route: issuers.issuer.details
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-pki-issuer-page-title>
+      <Icon @name="file-text" @size="24" class="has-text-grey-light" />
+      View issuer certificate
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<Page::PkiIssuerDetails
+  @issuer={{this.model}}
+  @canRotate={{this.model.canRotateIssuer}}
+  @canCrossSign={{this.model.canCrossSign}}
+  @canSignIntermediate={{this.model.canSignIntermediate}}
+  @canConfigure={{this.model.canConfigure}}
+/>

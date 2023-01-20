@@ -11,7 +11,15 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
  * attributes and adapter methods.
  */
 
-const certDisplayFields = ['certificate', 'commonName', 'serialNumber', 'notValidAfter', 'notValidBefore'];
+const certDisplayFields = [
+  'certificate',
+  'commonName',
+  'revocationTime',
+  'issueDate',
+  'serialNumber',
+  'notValidBefore',
+  'notValidAfter',
+];
 
 @withFormFields(certDisplayFields)
 export default class PkiCertificateBaseModel extends Model {
@@ -31,16 +39,23 @@ export default class PkiCertificateBaseModel extends Model {
 
   // Attrs that come back from API POST request
   @attr() caChain;
-  @attr('string') certificate;
+  @attr('string', { masked: true }) certificate;
   @attr('number') expiration;
+  @attr('number', { formatDate: true }) revocationTime;
   @attr('string') issuingCa;
   @attr('string') privateKey;
   @attr('string') privateKeyType;
   @attr('string') serialNumber;
 
   // Parsed from cert in serializer
-  @attr('date') notValidAfter;
-  @attr('date') notValidBefore;
+  @attr('number', { formatDate: true }) issueDate;
+  @attr('number', { formatDate: true }) notValidAfter;
+  @attr('number', { formatDate: true }) notValidBefore;
+
+  // For importing
+  @attr('string') pemBundle;
+  @attr importedIssuers;
+  @attr importedKeys;
 
   @lazyCapabilities(apiPath`${'backend'}/revoke`, 'backend') revokePath;
   get canRevoke() {
