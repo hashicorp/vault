@@ -2801,10 +2801,14 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	return nil
 }
 
+// With the addition of unseal recovery mode, we need a more subtle check for whether a Seal is an auto
+// seal, as it may be a Shamir seal in due to recovery mode but would otherwise have been an auto seal.
 func isAutoSeal(seal Seal) bool {
 	return seal.RecoveryKeySupported() || isUnsealRecoverySeal(seal)
 }
 
+// Returns whether a seal is a recovery seal, e.g. a shamir seal pointing at the root key encrypted by
+// recovery keys rather than the seal wrapper.
 func isUnsealRecoverySeal(seal Seal) bool {
 	if ds, ok := seal.(*defaultSeal); ok {
 		return ds.unsealKeyPath == recoveryUnsealKeyPath
