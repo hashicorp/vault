@@ -1,6 +1,6 @@
 #!/bin/bash
 
-undo_logs_status="${vault_undo_logs_status}"
+undo_logs_status="${VAULT_UNDO_LOGS_STATUS}"
 
 function fail() {
 	echo "$1" 1>&2

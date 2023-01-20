@@ -105,3 +105,69 @@ Refer to [Blocked Audit Devices](https://learn.hashicorp.com/tutorials/vault/blo
 
 Audit devices also have a full HTTP API. Please see the [Audit device API
 docs](/api-docs/system/audit) for more details.
+
+## Common configuration options
+
+- `elide_list_responses` `(bool: false)` - See [Eliding list response
+  bodies](docs/audit#eliding-list-response-bodies) below.
+
+- `format` `(string: "json")` - Allows selecting the output format. Valid values
+  are `"json"` and `"jsonx"`, which formats the normal log entries as XML.
+
+- `hmac_accessor` `(bool: true)` - If enabled, enables the hashing of token
+  accessor.
+
+- `log_raw` `(bool: false)` - If enabled, logs the security sensitive
+  information without hashing, in the raw format.
+
+- `prefix` `(string: "")` - A customizable string prefix to write before the
+  actual log line.
+
+## Eliding list response bodies
+
+Some Vault responses can be very large. Primarily, this affects list operations -
+as Vault lacks pagination in its APIs, listing a very large collection can result
+in a response that is tens of megabytes long. Some audit backends are unable to
+process individual audit records of larger sizes.
+
+The contents of the response for a list operation is often not very interesting;
+most contain only a "keys" field, containing a list of IDs. Select API endpoints
+additionally return a "key_info" field, a map from ID to some additional
+information about the list entry - `identity/entity/id/` is an example of this.
+Even in this case, the response to a list operation is usually less-confidential
+or public information, for which having the full response in the audit logs is of
+lesser importance.
+
+The `elide_list_responses` audit option provides the flexibility to not write the
+full list response data from the audit log, to mitigate the creation of very long
+individual audit records.
+
+When enabled, it affects only audit records of `type=response` and
+`request.operation=list`. The values of `response.data.keys` and
+`response.data.key_info` will be replaced with a simple integer, recording how
+many entries were contained in the list (`keys`) or map (`key_info`) - therefore
+even with this feature enabled, it is still possible to see how many items were
+returned by a list operation.
+
+This extra processing only affects the response data fields `keys` and `key_info`,
+and only when they have the expected data types - in the event a list response
+contains data outside of the usual conventions that apply to Vault list responses,
+it will be left as is by this feature.
+
+Here is an example of an audit record that has been processed by this feature
+(formatted with extra whitespace, and with fields not relevant to the example
+omitted):
+```json
+{
+  "type": "response",
+  "request": {
+    "operation": "list"
+  },
+  "response": {
+    "data": {
+      "key_info": 4,
+      "keys": 4
+    }
+  }
+}
+```

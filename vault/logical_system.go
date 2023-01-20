@@ -4503,6 +4503,8 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	// be received from plugin backends.
 	doc := framework.NewOASDocument(version.Version)
 
+	genericMountPaths, _ := d.Get("generic_mount_paths").(bool)
+
 	procMountGroup := func(group, mountPrefix string) error {
 		for mount, entry := range resp.Data[group].(map[string]interface{}) {
 
@@ -4520,7 +4522,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
-				Data:      map[string]interface{}{"requestResponsePrefix": pluginType},
+				Data:      map[string]interface{}{"requestResponsePrefix": pluginType, "genericMountPaths": genericMountPaths},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
@@ -4574,16 +4576,12 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 					}
 				}
 
-				var docPath string
-				if mount == "kv/" {
-					docPath = fmt.Sprintf("/%s{secret_mount_path}/%s", mountPrefix, path)
-				} else if mount != "sys/" && mount != "identity/" {
-					docPath = fmt.Sprintf("/%s{%s_mount_path}/%s", mountPrefix, strings.TrimRight(mount, "/"), path)
+				if genericMountPaths && mount != "sys/" && mount != "identity/" {
+					s := fmt.Sprintf("/%s{mountPath}/%s", mountPrefix, path)
+					doc.Paths[s] = obj
 				} else {
-					docPath = fmt.Sprintf("/%s%s%s", mountPrefix, mount, path)
+					doc.Paths["/"+mountPrefix+mount+path] = obj
 				}
-
-				doc.Paths[docPath] = obj
 			}
 
 			// Merge backend schema components
@@ -5093,7 +5091,9 @@ func sanitizePath(path string) string {
 		path += "/"
 	}
 
-	path = strings.TrimPrefix(path, "/")
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
 
 	return path
 }
@@ -5144,6 +5144,17 @@ This path responds to the following HTTP methods.
     DELETE /
         Clears the CORS configuration and disables acceptance of CORS requests.
 		`,
+	},
+	"config/group-policy-application": {
+		"Configures how policies in groups should be applied, accepting 'within_namespace_hierarchy' (default) and 'any'," +
+			"which will allow policies to grant permissions in groups outside of those sharing a namespace hierarchy.",
+		`
+This path responds to the following HTTP methods.
+    GET /
+        Returns the current group policy application mode.
+    POST /
+        Sets the current group_policy_application_mode to either 'within_namespace_hierarchy' or 'any'.
+        `,
 	},
 	"config/ui/headers": {
 		"Configures response headers that should be returned from the UI.",
