@@ -224,27 +224,6 @@ scenario "autopilot" {
     }
   }
 
-  step "get_updated_vault_cluster_ips" {
-    module = module.vault_get_cluster_ips
-    depends_on = [
-      step.create_vault_cluster,
-      step.get_vault_cluster_ips,
-      step.upgrade_vault_cluster_with_autopilot
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      vault_instances       = step.create_vault_cluster.vault_instances
-      vault_install_dir     = local.vault_install_dir
-      added_vault_instances = step.upgrade_vault_cluster_with_autopilot.vault_instances
-      vault_root_token      = step.create_vault_cluster.vault_root_token
-      node_public_ip        = step.get_vault_cluster_ips.leader_public_ip
-    }
-  }
-
   step "verify_vault_unsealed" {
     module = module.vault_verify_unsealed
     depends_on = [
@@ -280,26 +259,6 @@ scenario "autopilot" {
     }
   }
 
-  step "verify_read_test_data" {
-    module = module.vault_verify_read_data
-    depends_on = [
-      step.get_updated_vault_cluster_ips,
-      step.verify_write_test_data,
-      step.upgrade_vault_cluster_with_autopilot,
-      step.verify_raft_auto_join_voter
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      node_public_ips      = step.get_updated_vault_cluster_ips.follower_public_ips
-      vault_instance_count = 6
-      vault_install_dir    = local.vault_install_dir
-    }
-  }
-
   step "verify_autopilot_await_server_removal_state" {
     module = module.vault_verify_autopilot
     depends_on = [
@@ -317,6 +276,47 @@ scenario "autopilot" {
       vault_install_dir               = local.vault_install_dir
       vault_instances                 = step.upgrade_vault_cluster_with_autopilot.vault_instances
       vault_root_token                = step.create_vault_cluster.vault_root_token
+    }
+  }
+
+  step "get_updated_vault_cluster_ips" {
+    module = module.vault_get_cluster_ips
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_vault_cluster_ips,
+      step.upgrade_vault_cluster_with_autopilot
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances       = step.create_vault_cluster.vault_instances
+      vault_install_dir     = local.vault_install_dir
+      added_vault_instances = step.upgrade_vault_cluster_with_autopilot.vault_instances
+      vault_root_token      = step.create_vault_cluster.vault_root_token
+      node_public_ip        = step.get_vault_cluster_ips.leader_public_ip
+    }
+  }
+
+  step "verify_read_test_data" {
+    module = module.vault_verify_read_data
+    depends_on = [
+      step.get_updated_vault_cluster_ips,
+      step.verify_write_test_data,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_raft_auto_join_voter
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      node_public_ips      = step.get_updated_vault_cluster_ips.follower_public_ips
+      vault_instance_count = 6
+      vault_install_dir    = local.vault_install_dir
     }
   }
 
