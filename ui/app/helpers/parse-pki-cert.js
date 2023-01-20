@@ -26,7 +26,8 @@ export function parseCertificate(certificateContent) {
   // for cross-signing
   const { alt_names, uri_sans } = parseExtensions(cert?.extensions);
   const [signature_bits, use_pss] = mapSignatureBits(cert?.signatureAlgorithm);
-  const exclude_cn_from_sans = !alt_names?.includes(subjectParams?.common_name) ? true : false;
+  const exclude_cn_from_sans =
+    alt_names?.length > 0 && !alt_names?.includes(subjectParams?.common_name) ? true : false;
   const ttl = `${differenceInHours(expiryDate, issueDate)}h`;
 
   return {
@@ -36,8 +37,8 @@ export function parseCertificate(certificateContent) {
     issue_date: issueDate, // remove along with old PKI work
     not_valid_after: getUnixTime(expiryDate),
     not_valid_before: getUnixTime(issueDate),
-    alt_names: alt_names.join(', '),
-    uri_sans: uri_sans.join(', '),
+    alt_names: alt_names?.join(', '),
+    uri_sans: uri_sans?.join(', '),
     signature_bits,
     use_pss,
     exclude_cn_from_sans,
@@ -119,7 +120,7 @@ function parseSubject(subject) {
     // presently refuses to issue certificates without CommonNames in most
     // cases. For now, return the first CommonName we find. Alternatively, we
     // might update our callers to handle multiple and return a string array
-    return values ? (values.length ? values[0] : null) : null;
+    return values ? (values?.length ? values[0] : null) : null;
   };
   const subjectValues = {};
   Object.keys(SUBJECT_OIDs).forEach((key) => (subjectValues[key] = returnValues(SUBJECT_OIDs[key])));
