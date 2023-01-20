@@ -77,7 +77,7 @@ func (h *hcpLinkMetaHandler) Start() error {
 		return fmt.Errorf("no listener found for meta capability")
 	}
 
-	h.logger.Info("starting HCP connectivity meta service")
+	h.logger.Info("starting HCP meta capability")
 	// Start the gRPC server
 	go func() {
 		err = h.grpcServer.Serve(metaListener)
@@ -100,7 +100,7 @@ func (h *hcpLinkMetaHandler) Stop() error {
 	// Give some time for existing RPCs to drain.
 	time.Sleep(cluster.ListenerAcceptDeadline)
 
-	h.logger.Info("tearing down HCP connectivity meta service")
+	h.logger.Info("tearing down HCP meta capability")
 
 	if h.stopCh != nil {
 		close(h.stopCh)
