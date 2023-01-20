@@ -2906,11 +2906,19 @@ func TestSystemBackend_keyStatus(t *testing.T) {
 
 func TestSystemBackend_rotateConfig(t *testing.T) {
 	b := testSystemBackend(t)
+	paths := b.(*SystemBackend).sealPaths()
 	req := logical.TestRequest(t, logical.ReadOperation, "rotate/config")
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 1, req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"max_operations": absoluteOperationMaximum,
@@ -2930,11 +2938,23 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 1, req2.Operation),
+		resp,
+		true,
+	)
 
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 1, req.Operation),
+		resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"max_operations": int64(3221225472),
