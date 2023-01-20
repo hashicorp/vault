@@ -30,4 +30,4 @@ jobs:
         with:
           name: ${{ inputs.name }}-output
           path: ${{ inputs.name }}.txt
-          retention-days: 7
+          retention-days: 2
