@@ -16,7 +16,6 @@ on:
 jobs:
   go-test:
     runs-on: ubuntu-latest
-    needs: product-metadata
     steps:
       - uses: actions/checkout@v3
       - id: get-metadata
