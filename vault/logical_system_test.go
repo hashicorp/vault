@@ -3306,12 +3306,19 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 
 func TestSystemBackend_ToolsRandom(t *testing.T) {
 	b := testSystemBackend(t)
+	paths := b.(*SystemBackend).toolsPaths()
 	req := logical.TestRequest(t, logical.UpdateOperation, "tools/random")
 
-	_, err := b.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 1, req.Operation),
+		resp,
+		true,
+	)
 
 	doRequest := func(req *logical.Request, errExpected bool, format string, numBytes int) {
 		t.Helper()
@@ -3328,7 +3335,15 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 					t.Fatalf("bad: got error response: %#v", *resp)
 				}
 				return nil
+			} else {
+				schema.ValidateResponse(
+					t,
+					schema.FindResponseSchema(t, paths, 1, req.Operation),
+					resp,
+					true,
+				)
 			}
+
 			if resp.IsError() {
 				t.Fatalf("bad: got error response: %#v", *resp)
 			}
