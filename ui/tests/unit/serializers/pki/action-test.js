@@ -68,6 +68,7 @@ module('Unit | Serializer | pki/action', function (hooks) {
         foo: 'bar',
       });
       const expectedResult = {
+        ...this.withDefaults,
         issuer_name: 'my issuer',
         foo: 'bar',
       };

@@ -106,7 +106,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await fillIn(SELECTORS.configuration.typeField, 'exported');
       await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
       await fillIn(SELECTORS.configuration.inputByName('issuerName'), 'my-first-issuer');
-      await click(SELECTORS.configuration.saveButton);
+      await click(SELECTORS.configuration.generateRootSave);
 
       assert
         .dom(SELECTORS.issuerDetails.title)

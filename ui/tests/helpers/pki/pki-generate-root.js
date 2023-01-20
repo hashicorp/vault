@@ -9,8 +9,8 @@ export const SELECTORS = {
   typeField: '[data-test-input="type"]',
   inputByName: (name) => `[data-test-input="${name}"]`,
   fieldByName: (name) => `[data-test-field="${name}"]`,
-  saveButton: '[data-test-pki-generate-root-save]',
-  cancelButton: '[data-test-pki-generate-root-cancel]',
+  generateRootSave: '[data-test-pki-generate-root-save]',
+  generateRootCancel: '[data-test-pki-generate-root-cancel]',
   formInvalidError: '[data-test-pki-generate-root-validation-error]',
   urlsSection: '[data-test-urls-section]',
 };
