@@ -15,7 +15,7 @@ module('Integration | Component | pki-configure-form', function (hooks) {
   setupEngine(hooks, 'pki');
 
   test('it renders', async function (assert) {
-    await render(hbs`<PkiConfigureForm />`, { owner: this.engine });
+    await render(hbs`<PkiConfigureForm @config={{this.config}} />`, { owner: this.engine });
 
     assert.dom(SELECTORS.option).exists({ count: 3 }, 'Three configuration options are shown');
     assert.dom(SELECTORS.cancelButton).exists('Cancel link is shown');
