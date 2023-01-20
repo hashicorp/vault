@@ -1632,7 +1632,11 @@ func (c *Core) sealMigrated(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
-	if c.seal.BarrierType() != c.migrationInfo.seal.BarrierType() {
+	// If the types of the seals differ, e.g. auto->shamir or shamir->auto, we're done.  BUT,
+	// with an auto seal in recovery mode as the migration seal, they will match even though
+	// the migration seal was really an auto seal
+	if c.seal.BarrierType() != c.migrationInfo.seal.BarrierType() ||
+		(isAutoSeal(c.migrationInfo.seal) && c.seal.BarrierType() == wrapping.WrapperTypeShamir) {
 		return true, nil
 	}
 
