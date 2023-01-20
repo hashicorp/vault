@@ -199,6 +199,10 @@ func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, p
 	return resp.Password, nil
 }
 
+func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
+	return "", fmt.Errorf("cannot call ClusterID from a plugin backend")
+}
+
 type gRPCSystemViewServer struct {
 	pb.UnimplementedSystemViewServer
 
