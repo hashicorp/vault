@@ -71,7 +71,7 @@ module('Integration | Component | secret-list-header', function (hooks) {
     }
   });
 
-  test('it should render return to old pki', async function (assert) {
+  test('it should render return to old pki from new pki', async function (assert) {
     const backends = supportedSecretBackends();
     assert.expect(backends.length);
 
@@ -92,9 +92,37 @@ module('Integration | Component | secret-list-header', function (hooks) {
       if (type === 'pki') {
         assert.dom(newPkiButtonSelector).hasText('Return to old PKI');
       } else {
-        assert
-          .dom(newPkiButtonSelector)
-          .doesNotExist(`Version badge does not render for ${type} engine type`);
+        assert.dom(newPkiButtonSelector).doesNotExist(`No return to old pki exists`);
+      }
+    }
+  });
+
+  test('it should show the pki modal when New PKI UI available button is clicked', async function (assert) {
+    const backends = supportedSecretBackends();
+    const numExpects = backends.length + 1;
+    assert.expect(numExpects);
+
+    this.server.post('/sys/capabilities-self', () => {});
+
+    for (const type of backends) {
+      const data = this.server.create('secret-engine', 2, { type });
+      this.model = mirageToModels(data);
+      await render(hbs`
+        <SecretListHeader
+          @model={{this.model}}
+        />
+        <div id="modal-wormhole"></div>
+      `);
+      const oldPkiButtonSelector = '[data-test-old-pki-beta-button]';
+      const cancelPkiBetaModal = '[data-test-cancel-pki-beta-modal]';
+
+      if (type === 'pki') {
+        await click(oldPkiButtonSelector);
+        assert.dom('.modal.is-active').exists('Pki beta modal is open');
+        await click(cancelPkiBetaModal);
+        assert.dom('.modal').exists('Pki beta modal is closed');
+      } else {
+        assert.dom(oldPkiButtonSelector).doesNotExist(`No return to old pki exists`);
       }
     }
   });

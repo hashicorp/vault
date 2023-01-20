@@ -42,6 +42,10 @@ export default class SecretListHeader extends Component {
     return localStorage.getItem('hidePkiBetaModal');
   }
 
+  get windowOrigin() {
+    return window.location.origin;
+  }
+
   @action
   transitionToNewPki() {
     this.router.transitionTo('vault.cluster.secrets.backend.pki.overview', this.args.model.engineType);
