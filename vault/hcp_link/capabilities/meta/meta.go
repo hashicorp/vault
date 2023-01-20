@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -114,7 +115,14 @@ func (h *hcpLinkMetaHandler) Stop() error {
 	return nil
 }
 
-func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *meta.ListNamespacesRequest) (*meta.ListNamespacesResponse, error) {
+func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *meta.ListNamespacesRequest) (retResp *meta.ListNamespacesResponse, retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Error("panic serving list namespaces request", "error", r, "stacktrace", string(debug.Stack()))
+			retErr = fmt.Errorf("internal server error")
+		}
+	}()
+
 	children := h.wrappedCore.ListNamespaces(true)
 
 	var namespaces []string
@@ -127,7 +135,14 @@ func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *meta.ListN
 	}, nil
 }
 
-func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMountsRequest) (*meta.ListMountsResponse, error) {
+func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMountsRequest) (retResp *meta.ListMountsResponse, retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Error("panic serving list mounts request", "error", r, "stacktrace", string(debug.Stack()))
+			retErr = fmt.Errorf("internal server error")
+		}
+	}()
+
 	mountEntries, err := h.wrappedCore.ListMounts()
 	if err != nil {
 		return nil, fmt.Errorf("unable to list secret mounts: %w", err)
@@ -159,7 +174,14 @@ func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMount
 	}, nil
 }
 
-func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsRequest) (*meta.ListAuthResponse, error) {
+func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsRequest) (retResp *meta.ListAuthResponse, retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Error("panic serving list auths request", "error", r, "stacktrace", string(debug.Stack()))
+			retErr = fmt.Errorf("internal server error")
+		}
+	}()
+
 	authEntries, err := h.wrappedCore.ListAuths()
 	if err != nil {
 		return nil, fmt.Errorf("unable to list auth mounts: %w", err)
@@ -191,7 +213,14 @@ func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsR
 	}, nil
 }
 
-func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.GetClusterStatusRequest) (*meta.GetClusterStatusResponse, error) {
+func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.GetClusterStatusRequest) (retResp *meta.GetClusterStatusResponse, retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Error("panic serving cluster status request", "error", r, "stacktrace", string(debug.Stack()))
+			retErr = fmt.Errorf("internal server error")
+		}
+	}()
+
 	if h.wrappedCore.HAStateWithLock() != consts.Active {
 		return nil, fmt.Errorf("node not active")
 	}
