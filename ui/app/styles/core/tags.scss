@@ -18,6 +18,11 @@
     min-width: 0;
     width: 12px;
   }
+
+  &.is-success {
+    background-color: $green-100;
+    color: $green-700;
+  }
 }
 
 .tag.is-outlined {
