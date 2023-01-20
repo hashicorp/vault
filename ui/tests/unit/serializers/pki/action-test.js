@@ -61,6 +61,11 @@ module('Unit | Serializer | pki/action', function (hooks) {
     test('it serializes only params with values', function (assert) {
       const store = this.owner.lookup('service:store');
       const record = store.createRecord('pki/action', {
+        excludeCnFromSans: false,
+        format: 'pem',
+        maxPathLength: -1,
+        notBeforeDuration: '30s',
+        privateKeyFormat: 'der',
         type: 'external', // only used for endpoint in adapter
         customTtl: '40m', // UI-only value
         issuerName: 'my issuer',
@@ -69,8 +74,10 @@ module('Unit | Serializer | pki/action', function (hooks) {
       });
       const expectedResult = {
         ...this.withDefaults,
+        key_bits: '0',
+        key_ref: 'default',
+        key_type: 'rsa',
         issuer_name: 'my issuer',
-        foo: 'bar',
       };
 
       // without passing `actionType` it will not compare against an allowlist
