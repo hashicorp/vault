@@ -119,7 +119,7 @@ func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *meta.ListN
 	defer func() {
 		if r := recover(); r != nil {
 			h.logger.Error("panic serving list namespaces request", "error", r, "stacktrace", string(debug.Stack()))
-			retErr = fmt.Errorf("internal server error")
+			retErr = vault.ErrInternalError
 		}
 	}()
 
@@ -139,7 +139,7 @@ func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMount
 	defer func() {
 		if r := recover(); r != nil {
 			h.logger.Error("panic serving list mounts request", "error", r, "stacktrace", string(debug.Stack()))
-			retErr = fmt.Errorf("internal server error")
+			retErr = vault.ErrInternalError
 		}
 	}()
 
@@ -178,7 +178,7 @@ func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsR
 	defer func() {
 		if r := recover(); r != nil {
 			h.logger.Error("panic serving list auths request", "error", r, "stacktrace", string(debug.Stack()))
-			retErr = fmt.Errorf("internal server error")
+			retErr = vault.ErrInternalError
 		}
 	}()
 
@@ -217,7 +217,7 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 	defer func() {
 		if r := recover(); r != nil {
 			h.logger.Error("panic serving cluster status request", "error", r, "stacktrace", string(debug.Stack()))
-			retErr = fmt.Errorf("internal server error")
+			retErr = vault.ErrInternalError
 		}
 	}()
 

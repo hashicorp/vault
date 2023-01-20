@@ -115,7 +115,7 @@ func (h *hcpLinkControlHandler) PurgePolicy(ctx context.Context, req *link_contr
 	defer func() {
 		if r := recover(); r != nil {
 			h.logger.Error("panic serving purge policy request", "error", r, "stacktrace", string(debug.Stack()))
-			retErr = fmt.Errorf("internal server error")
+			retErr = vault.ErrInternalError
 		}
 	}()
 
