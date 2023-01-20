@@ -64,7 +64,6 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				"key_size":                uint(10),
 				"qr_size":                 100,
 				"max_validation_attempts": 1,
-				"method_name":             "totp",
 			},
 			"issuer",
 			"zCorp",
@@ -79,7 +78,6 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				"secret_key":      "lol-secret",
 				"integration_key": "integration-key",
 				"api_hostname":    "some-hostname",
-				"method_name":     "duo",
 			},
 			"api_hostname",
 			"api-updated.duosecurity.com",
@@ -94,7 +92,6 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				"base_url":       "example.com",
 				"org_name":       "my-org",
 				"api_token":      "lol-token",
-				"method_name":    "okta",
 			},
 			"org_name",
 			"dev-62954466-updated",
@@ -107,7 +104,6 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 			map[string]interface{}{
 				"mount_accessor":       mountAccessor,
 				"settings_file_base64": "I0F1dG8tR2VuZXJhdGVkIGZyb20gUGluZ09uZSwgZG93bmxvYWRlZCBieSBpZD1bU1NPXSBlbWFpbD1baGFtaWRAaGFzaGljb3JwLmNvbV0KI1dlZCBEZWMgMTUgMTM6MDg6NDQgTVNUIDIwMjEKdXNlX2Jhc2U2NF9rZXk9YlhrdGMyVmpjbVYwTFd0bGVRPT0KdXNlX3NpZ25hdHVyZT10cnVlCnRva2VuPWxvbC10b2tlbgppZHBfdXJsPWh0dHBzOi8vaWRweG55bDNtLnBpbmdpZGVudGl0eS5jb20vcGluZ2lkCm9yZ19hbGlhcz1sb2wtb3JnLWFsaWFzCmFkbWluX3VybD1odHRwczovL2lkcHhueWwzbS5waW5naWRlbnRpdHkuY29tL3BpbmdpZAphdXRoZW50aWNhdG9yX3VybD1odHRwczovL2F1dGhlbnRpY2F0b3IucGluZ29uZS5jb20vcGluZ2lkL3BwbQ==",
-				"method_name":          "pingid",
 			},
 			"settings_file_base64",
 			"I0F1dG8tR2VuZXJhdGVkIGZyb20gUGluZ09uZSwgZG93bmxvYWRlZCBieSBpZD1bU1NPXSBlbWFpbD1baGFtaWRAaGFzaGljb3JwLmNvbV0KI1dlZCBEZWMgMTUgMTM6MDg6NDQgTVNUIDIwMjEKdXNlX2Jhc2U2NF9rZXk9YlhrdGMyVmpjbVYwTFd0bGVRPT0KdXNlX3NpZ25hdHVyZT10cnVlCnRva2VuPWxvbC10b2tlbgppZHBfdXJsPWh0dHBzOi8vaWRweG55bDNtLnBpbmdpZGVudGl0eS5jb20vcGluZ2lkL3VwZGF0ZWQKb3JnX2FsaWFzPWxvbC1vcmctYWxpYXMKYWRtaW5fdXJsPWh0dHBzOi8vaWRweG55bDNtLnBpbmdpZGVudGl0eS5jb20vcGluZ2lkCmF1dGhlbnRpY2F0b3JfdXJsPWh0dHBzOi8vYXV0aGVudGljYXRvci5waW5nb25lLmNvbS9waW5naWQvcHBt",
@@ -130,33 +126,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				t.Fatal("method id is empty")
 			}
 
-			// creating an MFA config with the same name should not return a new method ID
-			resp, err = client.Logical().Write(myPath, tc.configData)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if methodId != resp.Data["method_id"] {
-				t.Fatal("trying to create a new MFA config with the same name should not result in a new MFA config")
-			}
-
-			// create a new MFA config name
-			originalName := tc.configData["method_name"]
-			tc.configData["method_name"] = "newName"
-			resp, err = client.Logical().Write(myPath, tc.configData)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			myNewPath := fmt.Sprintf("%s/%s", myPath, methodId)
-
-			// Updating an existing MFA config with another config's name
-			resp, err = client.Logical().Write(myNewPath, tc.configData)
-			if err == nil {
-				t.Fatalf("expected a failure for configuring an MFA method with an existing MFA method name, %v", err)
-			}
-
-			// reverting the original method name
-			tc.configData["method_name"] = originalName
 
 			// read it back
 			resp, err = client.Logical().Read(myNewPath)
@@ -176,23 +146,12 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				t.Fatalf("namespace path was not empty, it was %s", resp.Data["namespace_path"])
 			}
 
-			if resp.Data["name"] != tc.methodName {
-				t.Fatalf("method name %s was not the expected one %s", resp.Data["method_name"], tc.methodName)
-			}
-
 			// listing should show it
 			resp, err = client.Logical().List(myPath)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			var foundID bool
-			for _, id := range resp.Data["keys"].([]interface{}) {
-				if id.(string) == methodId {
-					foundID = true
-				}
-			}
-			if !foundID {
+			if resp.Data["keys"].([]interface{})[0] != methodId {
 				t.Fatalf("expected %q in the list of method ids but it wasn't there", methodId)
 			}
 
@@ -236,13 +195,6 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				t.Fatal("expected response id to match existing method id but it didn't")
 			}
 
-			// update the name with an invalid namespace prefix should fail
-			tc.configData["method_name"] = "ns1/foo"
-			_, err = client.Logical().Write(myNewPath, tc.configData)
-			if err == nil || !strings.Contains(err.Error(), "invalid underlying namespace ns1/ for method name foo") {
-				t.Fatal(err)
-			}
-
 			// delete with invalid path should fail
 			_, err = client.Logical().Delete(invalidPath)
 			if err == nil {
@@ -259,6 +211,124 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 			resp, err = client.Logical().Read(myNewPath)
 			if !(resp == nil && err == nil) {
 				t.Fatal("expected a 404 but didn't get one")
+			}
+		})
+	}
+}
+
+func TestLoginMFAMethodName(t *testing.T) {
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+	client := cluster.Cores[0].Client
+
+	// Enable userpass authentication
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatalf("failed to enable userpass auth: %v", err)
+	}
+
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mountAccessor := auths["userpass/"].Accessor
+
+	testCases := []struct {
+		methodType string
+		configData map[string]interface{}
+	}{
+		{
+			"totp",
+			map[string]interface{}{
+				"issuer":      "yCorp",
+				"method_name": "totp-method",
+			},
+		},
+		{
+			"duo",
+			map[string]interface{}{
+				"mount_accessor":  mountAccessor,
+				"secret_key":      "lol-secret",
+				"integration_key": "integration-key",
+				"api_hostname":    "some-hostname",
+				"method_name":     "duo-method",
+			},
+		},
+		{
+			"okta",
+			map[string]interface{}{
+				"mount_accessor": mountAccessor,
+				"base_url":       "example.com",
+				"org_name":       "my-org",
+				"api_token":      "lol-token",
+				"method_name":    "okta-method",
+			},
+		},
+		{
+			"pingid",
+			map[string]interface{}{
+				"mount_accessor":       mountAccessor,
+				"settings_file_base64": "I0F1dG8tR2VuZXJhdGVkIGZyb20gUGluZ09uZSwgZG93bmxvYWRlZCBieSBpZD1bU1NPXSBlbWFpbD1baGFtaWRAaGFzaGljb3JwLmNvbV0KI1dlZCBEZWMgMTUgMTM6MDg6NDQgTVNUIDIwMjEKdXNlX2Jhc2U2NF9rZXk9YlhrdGMyVmpjbVYwTFd0bGVRPT0KdXNlX3NpZ25hdHVyZT10cnVlCnRva2VuPWxvbC10b2tlbgppZHBfdXJsPWh0dHBzOi8vaWRweG55bDNtLnBpbmdpZGVudGl0eS5jb20vcGluZ2lkCm9yZ19hbGlhcz1sb2wtb3JnLWFsaWFzCmFkbWluX3VybD1odHRwczovL2lkcHhueWwzbS5waW5naWRlbnRpdHkuY29tL3BpbmdpZAphdXRoZW50aWNhdG9yX3VybD1odHRwczovL2F1dGhlbnRpY2F0b3IucGluZ29uZS5jb20vcGluZ2lkL3BwbQ==",
+				"method_name":          "pingid-method",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.methodType, func(t *testing.T) {
+			// create a new method config
+			myPath := fmt.Sprintf("identity/mfa/method/%s", tc.methodType)
+			resp, err := client.Logical().Write(myPath, tc.configData)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			methodId := resp.Data["method_id"]
+			if methodId == "" {
+				t.Fatal("method id is empty")
+			}
+
+			// creating an MFA config with the same name should not return a new method ID
+			resp, err = client.Logical().Write(myPath, tc.configData)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if methodId != resp.Data["method_id"] {
+				t.Fatal("trying to create a new MFA config with the same name should not result in a new MFA config")
+			}
+
+			// create a new MFA config name
+			tc.configData["method_name"] = "newName"
+			resp, err = client.Logical().Write(myPath, tc.configData)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			myNewPath := fmt.Sprintf("%s/%s", myPath, methodId)
+
+			// Updating an existing MFA config with another config's name
+			resp, err = client.Logical().Write(myNewPath, tc.configData)
+			if err == nil {
+				t.Fatalf("expected a failure for configuring an MFA method with an existing MFA method name, %v", err)
+			}
+
+			// update the name with an invalid namespace prefix should fail
+			tc.configData["method_name"] = "ns1/foo"
+			_, err = client.Logical().Write(myNewPath, tc.configData)
+			if err == nil || !strings.Contains(err.Error(), "invalid underlying namespace ns1/ for method name foo") {
+				t.Fatal(err)
 			}
 		})
 	}

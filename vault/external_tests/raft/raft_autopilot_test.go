@@ -455,7 +455,7 @@ func TestRaft_VotersStayVoters(t *testing.T) {
 		}
 		return nil
 	}
-	testhelpers.RetryUntil(t, 10*time.Second, 100*time.Millisecond, errIfNonVotersExist)
+	testhelpers.RetryUntil(t, 10*time.Second, errIfNonVotersExist)
 
 	// Core0 is the leader, sealing it will both cause an election - and the
 	// new leader won't have seen any heartbeats initially - and create a "down"

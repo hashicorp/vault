@@ -33,8 +33,6 @@ const (
 	GenerateRecovery
 )
 
-const TOTPMFAWaitPeriod = 5
-
 // GenerateRoot generates a root token on the target cluster.
 func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
 	t.Helper()
@@ -769,9 +767,9 @@ func SetNonRootToken(client *api.Client) error {
 	return nil
 }
 
-// RetryUntil runs f until it returns a nil result or the timeout is reached.
+// RetryUntilAtCadence runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
-func RetryUntil(t testing.T, timeout, sleepTime time.Duration, f func() error) {
+func RetryUntilAtCadence(t testing.T, timeout, sleepTime time.Duration, f func() error) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
 	var err error
@@ -780,6 +778,21 @@ func RetryUntil(t testing.T, timeout, sleepTime time.Duration, f func() error) {
 			return
 		}
 		time.Sleep(sleepTime)
+	}
+	t.Fatalf("did not complete before deadline, err: %v", err)
+}
+
+// RetryUntil runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var err error
+	for time.Now().Before(deadline) {
+		if err = f(); err == nil {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
 	t.Fatalf("did not complete before deadline, err: %v", err)
 }
@@ -944,7 +957,7 @@ func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) s
 
 // SetupLoginMFATOTP setups up a TOTP MFA using some basic configuration and
 // returns all relevant information to the client.
-func SetupLoginMFATOTP(t testing.T, client *api.Client, methodName string) (*api.Client, string, string) {
+func SetupLoginMFATOTP(t testing.T, client *api.Client, methodName string, waitPeriod int) (*api.Client, string, string) {
 	t.Helper()
 	// Mount the totp secrets engine
 	SetupTOTPMount(t, client)
@@ -958,7 +971,7 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client, methodName string) (*api
 	// Configure a default TOTP method
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  TOTPMFAWaitPeriod,
+		"period":                  waitPeriod,
 		"algorithm":               "SHA256",
 		"digits":                  6,
 		"skew":                    1,

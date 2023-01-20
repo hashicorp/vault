@@ -467,12 +467,13 @@ func TestLoginMFASinglePhase(t *testing.T) {
 	defer closer()
 
 	methodName := "foo"
-	userClient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, methodName)
+	waitPeriod := 5
+	userClient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, methodName, waitPeriod)
 	enginePath := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
 
 	runCommand := func(methodIdentifier string) {
 		// the time required for the totp engine to generate a new code
-		time.Sleep(testhelpers.TOTPMFAWaitPeriod * time.Second)
+		time.Sleep(time.Duration(waitPeriod) * time.Second)
 		totpCode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath)
 		ui, cmd := testLoginCommand(t)
 		cmd.client = userClient
@@ -515,7 +516,7 @@ func TestLoginMFATwoPhase(t *testing.T) {
 
 	ui, cmd := testLoginCommand(t)
 
-	userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, "")
+	userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, "", 5)
 	cmd.client = userclient
 
 	_ = testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
@@ -560,7 +561,8 @@ func TestLoginMFATwoPhaseNonInteractiveMethodName(t *testing.T) {
 	ui, cmd := testLoginCommand(t)
 
 	methodName := "foo"
-	userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, methodName)
+	waitPeriod := 5
+	userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, methodName, waitPeriod)
 	cmd.client = userclient
 
 	engineName := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
@@ -589,7 +591,7 @@ func TestLoginMFATwoPhaseNonInteractiveMethodName(t *testing.T) {
 
 	validateFunc := func(methodIdentifier string) {
 		// the time required for the totp engine to generate a new code
-		time.Sleep(testhelpers.TOTPMFAWaitPeriod * time.Second)
+		time.Sleep(time.Duration(waitPeriod) * time.Second)
 		totpPasscode1 := "passcode=" + testhelpers.GetTOTPCodeFromEngine(t, client, engineName)
 
 		secret, err := cmd.client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{

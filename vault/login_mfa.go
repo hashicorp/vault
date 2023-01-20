@@ -1883,37 +1883,35 @@ type MFAFactor struct {
 
 func parseMfaFactors(creds []string) (*MFAFactor, error) {
 	mfaFactor := &MFAFactor{}
-	var err *multierror.Error
 
 	for _, cred := range creds {
 		switch {
 		case cred == "": // for the case of push notification
 			continue
 		case strings.HasPrefix(cred, "passcode="):
+			if mfaFactor.passcode != "" {
+				return nil, fmt.Errorf("found multiple passcodes for the same MFA method")
+			}
+
 			splits := strings.SplitN(cred, "=", 2)
+			if splits[1] == "" {
+				return nil, fmt.Errorf("invalid passcode")
+			}
+
 			mfaFactor.passcode = splits[1]
 		case strings.Contains(cred, "="):
-			err = multierror.Append(err, fmt.Errorf("found an invalid MFA cred: %v", cred))
+			return nil, fmt.Errorf("found an invalid MFA cred: %v", cred)
 		default:
 			// a non-empty cred that does not match the above
 			// means it is a passcode
+			if mfaFactor.passcode != "" {
+				return nil, fmt.Errorf("found multiple passcodes for the same MFA method")
+			}
 			mfaFactor.passcode = cred
 		}
-
-		// currently, we only support passcode. Although we probably gain
-		// very little improvement in performance, it still makes sense
-		// to break the for loop
-		if mfaFactor.passcode != "" {
-			break
-		}
 	}
 
-	// don't return an error unless all entries were invalid
-	if mfaFactor.passcode != "" {
-		return mfaFactor, nil
-	}
-
-	return mfaFactor, err.ErrorOrNil()
+	return mfaFactor, nil
 }
 
 func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {

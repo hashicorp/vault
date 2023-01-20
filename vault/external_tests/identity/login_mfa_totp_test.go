@@ -93,10 +93,10 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	// Creating two users in the userpass auth mount
 	userClient1, entityID1, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, entity1, testuser1)
 	userClient2, entityID2, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, entity2, testuser2)
-
+	waitPeriod := 5
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  testhelpers.TOTPMFAWaitPeriod,
+		"period":                  waitPeriod,
 		"algorithm":               "SHA1",
 		"digits":                  6,
 		"skew":                    1,
@@ -166,13 +166,13 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 	// single phase login for both method name and method ID
 	methodIdentifier = totpConfig["method_name"].(string)
-	testhelpers.RetryUntil(t, 20*time.Second, 100*time.Millisecond, singlePhaseLoginFunc)
+	testhelpers.RetryUntilAtCadence(t, 20*time.Second, 100*time.Millisecond, singlePhaseLoginFunc)
 	verifyLoginRequest(secret)
 
 	methodIdentifier = methodID
 	// Need to wait a bit longer to avoid hitting maximum allowed consecutive
 	// failed TOTP validation
-	testhelpers.RetryUntil(t, 20*time.Second, testhelpers.TOTPMFAWaitPeriod*time.Second, singlePhaseLoginFunc)
+	testhelpers.RetryUntilAtCadence(t, 20*time.Second, time.Duration(waitPeriod)*time.Second, singlePhaseLoginFunc)
 	verifyLoginRequest(secret)
 
 	// Two-phase login
@@ -232,7 +232,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 	methodIdentifier = methodID
 	mfaReqID = secret.Auth.MFARequirement.MFARequestID
-	testhelpers.RetryUntil(t, 20*time.Second, testhelpers.TOTPMFAWaitPeriod*time.Second, mfaValidateFunc)
+	testhelpers.RetryUntilAtCadence(t, 20*time.Second, time.Duration(waitPeriod)*time.Second, mfaValidateFunc)
 
 	// two phase login with method name
 	secret, err = userClient1.Logical().WriteWithContext(context.Background(), userpassPath, map[string]interface{}{
@@ -244,7 +244,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 	methodIdentifier = totpConfig["method_name"].(string)
 	mfaReqID = secret.Auth.MFARequirement.MFARequestID
-	testhelpers.RetryUntil(t, 20*time.Second, testhelpers.TOTPMFAWaitPeriod*time.Second, mfaValidateFunc)
+	testhelpers.RetryUntilAtCadence(t, 20*time.Second, time.Duration(waitPeriod)*time.Second, mfaValidateFunc)
 
 	// checking audit log
 	if noop.Req == nil {
