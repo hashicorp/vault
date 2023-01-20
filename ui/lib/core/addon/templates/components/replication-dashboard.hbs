@@ -61,6 +61,13 @@
   {{/if}}
   {{#unless this.isSummaryDashboard}}
     <ReplicationTableRows @replicationDetails={{this.replicationDetails}} @clusterMode={{this.clusterMode}} />
-    <ReplicationDocLink data-test-replication-doc-link />
+    <div class="replication helper-text float-right" data-test-replication-doc-link>
+      <p class="has-text-grey">
+        We have additional time series telemetry that can be found
+        <DocLink @path="/vault/tutorials/monitoring/monitor-replication#key-monitoring-metrics">
+          in our documentation.
+        </DocLink>
+      </p>
+    </div>
   {{/unless}}
 </div>

@@ -104,6 +104,14 @@ const MOUNTABLE_SECRET_ENGINES = [
     type: 'totp',
     category: 'generic',
   },
+  {
+    displayName: 'Kubernetes',
+    value: 'kubernetes',
+    type: 'kubernetes',
+    engineRoute: 'kubernetes.overview',
+    category: 'generic',
+    glyph: 'kubernetes-color',
+  },
 ];
 
 export function mountableEngines() {
