@@ -573,6 +573,12 @@ message GeneratePasswordFromPolicyReply {
 	string password = 1;
 }
 
+message ClusterInfoReply {
+	string cluster_name = 1;
+	string cluster_id = 2;
+	string err = 3;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -625,6 +631,9 @@ service SystemView {
 
 	// GeneratePasswordFromPolicy generates a password from an existing password policy
 	rpc GeneratePasswordFromPolicy(GeneratePasswordFromPolicyRequest) returns (GeneratePasswordFromPolicyReply);
+
+	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
+	rpc ClusterInfo(Empty) returns (ClusterInfoReply);
 }
 
 message Connection {
