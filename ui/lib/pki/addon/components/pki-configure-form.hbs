@@ -2,7 +2,7 @@
   <div class="columns">
     {{#each this.configTypes as |option|}}
       <div class="column is-flex">
-        <label for={{option.key}} class="box-label is-column {{if (eq this.configType option.key) 'is-selected'}}">
+        <label for={{option.key}} class="box-label is-column {{if (eq this.actionType option.key) 'is-selected'}}">
           <div>
             <h3 class="box-label-header title is-6">
               <Icon @size="24" @name={{option.icon}} />
@@ -16,9 +16,9 @@
             <RadioButton
               id={{option.key}}
               name="pki-config-type"
-              @value={{this.configType}}
-              @groupValue={{this.replicationMode}}
-              @onChange={{fn (mut this.configType) option.key}}
+              @value={{option.key}}
+              @groupValue={{this.actionType}}
+              @onChange={{fn (mut this.actionType) option.key}}
               data-test-pki-config-option={{option.key}}
             />
             <label for={{option.key}}></label>
@@ -27,10 +27,22 @@
       </div>
     {{/each}}
   </div>
-  {{#if (eq this.configType "import")}}
-    <PkiConfig::Import />
-  {{else if this.configType}}
-    {{! TODO: Forms }}
+  {{#if (eq this.actionType "import")}}
+    <PkiCaCertificateImport
+      @model={{@config}}
+      @onCancel={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
+      @onSave={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
+      @adapterOptions={{hash actionType=this.actionType useIssuer=@config.canImportBundle}}
+    />
+  {{else if (eq this.actionType "generate-root")}}
+    <PkiGenerateRoot
+      @model={{@config}}
+      @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}
+      @onCancel={{this.cancel}}
+      @adapterOptions={{hash actionType="generate-root" useIssuer=@config.canGenerateIssuerRoot}}
+    />
+  {{else if (eq this.actionType "generate-csr")}}
+    <code>POST /intermediate/generate/:type ~or~ /issuers/generate/intermediate/:type</code>
   {{else}}
     <EmptyState @title="Choose an option" @message="To see configuration options, choose your desired output above." />
     <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -38,9 +50,9 @@
         <button type="button" class="button is-primary" disabled={{true}} data-test-pki-config-save>
           Done
         </button>
-        <LinkTo @route="overview" class="button has-left-margin-s" data-test-pki-config-cancel>
+        <button type="button" class="button has-left-margin-s" {{on "click" this.cancel}} data-test-pki-config-cancel>
           Cancel
-        </LinkTo>
+        </button>
       </div>
     </div>
   {{/if}}
