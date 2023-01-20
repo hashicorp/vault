@@ -26,9 +26,6 @@ on:
         options:
           - raft
           - consul
-  push:
-    branches:
-      - mbaum/qt-304
 
 jobs:
   get-metadata:
@@ -116,26 +113,22 @@ jobs:
           ENOS_VAR_ui_run_tests: false
         # Continue once and retry to handle occasional blips when creating infrastructure.
         continue-on-error: true
-        run: enos scenario launch --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:raft
-#        run: enos scenario launch --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
+        run: enos scenario launch --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
       - name: Retry Setup Cluster
         id: setup_cluster_retry
         if: steps.setup_cluster.outcome == 'failure'
         env:
           ENOS_VAR_ui_run_tests: false
-        run: enos scenario launch --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:raft
-#        run: enos scenario launch --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
+        run: enos scenario launch --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
       - name: Run UI Tests
         id: run_ui_tests
         env:
           ENOS_VAR_ui_test_filter: ${{ inputs.test_filter }}
-        run: enos scenario run --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:raft
-#        run: enos scenario run --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
+        run: enos scenario run --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
       - name: Ensure scenario has been destroyed
         if: ${{ always() }}
         continue-on-error: true
-        run: enos scenario destroy --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:raft
-#        run: enos scenario destroy --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
+        run: enos scenario destroy --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
       - name: Clean up Enos runtime directories
         if: ${{ always() }}
         run: |
