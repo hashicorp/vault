@@ -1,6 +1,7 @@
 package command
 
 import (
+	"flag"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,66 +11,81 @@ func TestLogFlags_ValuesProvider(t *testing.T) {
 	cases := map[string]struct {
 		flagKey   string
 		envVarKey string
-		current   string
-		fallback  string
-		want      string
+		wantValue string
+		wantFound bool
 	}{
-		"only-fallback": {
-			flagKey:   "invalid",
-			envVarKey: "invalid",
-			current:   "",
-			fallback:  "foo",
-			want:      "foo",
-		},
-		"only-config": {
-			flagKey:   "invalid",
-			envVarKey: "invalid",
-			current:   "bar",
-			fallback:  "",
-			want:      "bar",
-		},
 		"flag-missing": {
 			flagKey:   "invalid",
 			envVarKey: "valid-env-var",
-			current:   "my-config-value1",
-			fallback:  "",
-			want:      "envVarValue",
+			wantValue: "envVarValue",
+			wantFound: true,
 		},
 		"envVar-missing": {
 			flagKey:   "valid-flag",
 			envVarKey: "invalid",
-			current:   "my-config-value1",
-			fallback:  "",
-			want:      "flagValue",
+			wantValue: "flagValue",
+			wantFound: true,
 		},
 		"all-present": {
 			flagKey:   "valid-flag",
 			envVarKey: "valid-env-var",
-			current:   "my-config-value1",
-			fallback:  "foo",
-			want:      "flagValue",
+			wantValue: "flagValue",
+			wantFound: true,
+		},
+		"all-missing": {
+			flagKey:   "invalid",
+			envVarKey: "invalid",
+			wantValue: "",
+			wantFound: false,
 		},
 	}
 
-	// Sneaky little fake provider
-	fakeProvider := func(key string) (string, bool) {
-		switch key {
-		case "valid-flag":
-			return "flagValue", true
-		case "valid-env-var":
-			return "envVarValue", true
+	// Sneaky little fake providers
+	flagFaker := func(key string) (flag.Value, bool) {
+		var result fakeFlag
+		var found bool
+
+		if key == "valid-flag" {
+			result.Set("flagValue")
+			found = true
 		}
 
-		return "", false
+		return &result, found
+	}
+
+	envFaker := func(key string) (string, bool) {
+		var found bool
+		var result string
+
+		if key == "valid-env-var" {
+			result = "envVarValue"
+			found = true
+		}
+
+		return result, found
 	}
 
 	vp := valuesProvider{
-		flagProvider:   fakeProvider,
-		envVarProvider: fakeProvider,
+		flagProvider:   flagFaker,
+		envVarProvider: envFaker,
 	}
 
-	for _, tc := range cases {
-		got := vp.getAggregatedConfigValue(tc.flagKey, tc.envVarKey, tc.current, tc.fallback)
-		assert.Equal(t, tc.want, got)
+	for name, tc := range cases {
+		val, found := vp.overrideValue(tc.flagKey, tc.envVarKey)
+		assert.Equal(t, tc.wantFound, found, name)
+		assert.Equal(t, tc.wantValue, val, name)
 	}
+}
+
+type fakeFlag struct {
+	value string
+}
+
+func (v *fakeFlag) String() string {
+	return v.value
+}
+
+func (v *fakeFlag) Set(raw string) error {
+	v.value = raw
+	return nil
 }

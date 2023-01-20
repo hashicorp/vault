@@ -3,6 +3,11 @@ import { inject as service } from '@ember/service';
 
 export default class PkiConfigurationCreateRoute extends Route {
   @service secretMountPath;
+  @service store;
+
+  model() {
+    return this.store.createRecord('pki/action', {});
+  }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);

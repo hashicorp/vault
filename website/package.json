@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "author": "HashiCorp",
   "devDependencies": {
-    "@hashicorp/platform-cli": "^1.2.0",
+    "@hashicorp/platform-cli": "^2.5.1",
     "dart-linkcheck": "2.0.15",
     "next": "^12.3.1",
     "prettier": "2.2.1",

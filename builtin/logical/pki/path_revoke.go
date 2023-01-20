@@ -9,11 +9,9 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -138,7 +136,7 @@ func pathRotateDeltaCRL(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *logical.Request, certPem string) (string, bool, []byte, error) {
+func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *logical.Request, certPem string) (string, bool, *x509.Certificate, error) {
 	// This function handles just the verification of the certificate against
 	// the global issuer set, checking whether or not it is importable.
 	//
@@ -208,7 +206,7 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 			// imported this certificate, likely when we issued it. We don't
 			// need to re-verify the signature as we assume it was already
 			// verified when it was imported.
-			return serial, false, certEntry.Value, nil
+			return serial, false, certReferenceStored, nil
 		}
 	}
 
@@ -242,13 +240,13 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 	}
 
 	if foundMatchingIssuer {
-		return serial, true, certReference.Raw, nil
+		return serial, true, certReference, nil
 	}
 
 	return serial, false, nil, errutil.UserError{Err: "unable to verify signature on presented cert from any present issuer in this mount; certificates from previous CAs will need to have their issuing CA and key re-imported if revocation is necessary"}
 }
 
-func (b *backend) pathRevokeWriteHandleKey(ctx context.Context, req *logical.Request, cert []byte, keyPem string) error {
+func (b *backend) pathRevokeWriteHandleKey(req *logical.Request, certReference *x509.Certificate, keyPem string) error {
 	if keyPem == "" {
 		// The only way to get here should be via the /revoke endpoint;
 		// validate the path one more time and return an error if necessary.
@@ -259,12 +257,6 @@ func (b *backend) pathRevokeWriteHandleKey(ctx context.Context, req *logical.Req
 		// Otherwise, we don't need to validate the key and thus can return
 		// with success.
 		return nil
-	}
-
-	// Parse the certificate for reference.
-	certReference, err := x509.ParseCertificate(cert)
-	if err != nil {
-		return errutil.UserError{Err: fmt.Sprintf("certificate could not be parsed: %v", err)}
 	}
 
 	// Now parse the key's PEM block.
@@ -347,16 +339,25 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 		}
 	}
 
+	writeCert := false
+	var cert *x509.Certificate
 	var serial string
-	if haveSerial {
+
+	sc := b.makeStorageContext(ctx, req.Storage)
+
+	if haveCert {
+		var err error
+		serial, writeCert, cert, err = b.pathRevokeWriteHandleCertificate(ctx, req, rawCertificate.(string))
+		if err != nil {
+			return nil, err
+		}
+	} else {
 		// Easy case: this cert should be in storage already.
 		serial = rawSerial.(string)
 		if len(serial) == 0 {
 			return logical.ErrorResponse("The serial number must be provided"), nil
 		}
 
-		// Here, fetch the certificate from disk to validate we can revoke it.
-		sc := b.makeStorageContext(ctx, req.Storage)
 		certEntry, err := fetchCertBySerial(sc, "certs/", serial)
 		if err != nil {
 			switch err.(type) {
@@ -366,67 +367,43 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 				return nil, err
 			}
 		}
-		if certEntry == nil {
-			return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found or was already revoked", serial)), nil
-		}
 
-		// Now, if the user provided a key, we'll have to make sure the key
-		// and stored certificate match.
-		if err := b.pathRevokeWriteHandleKey(ctx, req, certEntry.Value, keyPem); err != nil {
-			return nil, err
+		if certEntry != nil {
+			cert, err = x509.ParseCertificate(certEntry.Value)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing certificate: %w", err)
+			}
 		}
-	} else {
-		// Otherwise, we've gotta parse the certificate from the request and
-		// then import it into cluster-local storage. Before writing the
-		// certificate (and forwarding), we want to verify this certificate
-		// was actually signed by one of our present issuers.
-		var err error
-		var writeCert bool
-		var certBytes []byte
-		serial, writeCert, certBytes, err = b.pathRevokeWriteHandleCertificate(ctx, req, rawCertificate.(string))
+	}
+
+	if cert == nil {
+		return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found or was already revoked", serial)), nil
+	}
+
+	// Before we write the certificate, we've gotta verify the request in
+	// the event of a PoP-based revocation scheme; we don't want to litter
+	// storage with issued-but-not-revoked certificates.
+	if err := b.pathRevokeWriteHandleKey(req, cert, keyPem); err != nil {
+		return nil, err
+	}
+
+	// At this point, a forward operation will occur if we're on a standby
+	// node as we're now attempting to write the bytes of the cert out to
+	// disk.
+	if writeCert {
+		err := req.Storage.Put(ctx, &logical.StorageEntry{
+			Key:   "certs/" + normalizeSerial(serial),
+			Value: cert.Raw,
+		})
 		if err != nil {
 			return nil, err
 		}
-
-		// Before we write the certificate, we've gotta verify the request in
-		// the event of a PoP-based revocation scheme; we don't want to litter
-		// storage with issued-but-not-revoked certificates.
-		if err := b.pathRevokeWriteHandleKey(ctx, req, certBytes, keyPem); err != nil {
-			return nil, err
-		}
-
-		// At this point, a forward operation will occur if we're on a standby
-		// node as we're now attempting to write the bytes of the cert out to
-		// disk.
-		if writeCert {
-			err = req.Storage.Put(ctx, &logical.StorageEntry{
-				Key:   "certs/" + serial,
-				Value: certBytes,
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		// Finally, we have a valid serial number to use for BYOC revocation!
 	}
-
-	// Assumption: this check is cheap. Call this twice, in the cert-import
-	// case, to allow cert verification to get rejected on the standby node,
-	// but we still need it to protect the serial number case.
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
-		return nil, logical.ErrReadOnly
-	}
-
-	// We store and identify by lowercase colon-separated hex, but other
-	// utilities use dashes and/or uppercase, so normalize
-	serial = strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	sc := b.makeStorageContext(ctx, req.Storage)
-	return revokeCert(sc, serial, false)
+	return revokeCert(sc, cert)
 }
 
 func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {

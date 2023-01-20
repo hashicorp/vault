@@ -4,6 +4,25 @@ import ApplicationSerializer from '../application';
 export default class PkiIssuerSerializer extends ApplicationSerializer {
   primaryKey = 'issuer_id';
 
+  constructor() {
+    super(...arguments);
+    // remove following attrs from serialization
+    const attrs = [
+      'caChain',
+      'certificate',
+      'commonName',
+      'issuerId',
+      'keyId',
+      'notValidAfter',
+      'notValidBefore',
+      'serialNumber',
+    ];
+    this.attrs = attrs.reduce((attrObj, attr) => {
+      attrObj[attr] = { serialize: false };
+      return attrObj;
+    }, {});
+  }
+
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (payload.data.certificate) {
       // Parse certificate back from the API and add to payload

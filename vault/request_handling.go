@@ -111,6 +111,11 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 			return nil, nil, err
 		}
 
+		policyApplicationMode, err := c.GetGroupPolicyApplicationMode(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
 		// Filter and add the policies to the resultant set
 		for nsID, nsPolicies := range groupPolicies {
 			ns, err := NamespaceByID(ctx, nsID, c)
@@ -120,8 +125,13 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 			if ns == nil {
 				return nil, nil, namespace.ErrNoNamespace
 			}
-			if tokenNS.Path != ns.Path && !ns.HasParent(tokenNS) {
-				continue
+			// If we're only applying policies to namespaces within the same
+			// hierarchy, then skip any policies not found in the same
+			// hierarchy
+			if policyApplicationMode == groupPolicyApplicationModeWithinNamespaceHierarchy {
+				if tokenNS.Path != ns.Path && !ns.HasParent(tokenNS) {
+					continue
+				}
 			}
 			nsPolicies = strutil.RemoveDuplicates(nsPolicies, false)
 			if len(nsPolicies) != 0 {
@@ -786,7 +796,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	}
 
 	if walState.LocalIndex != 0 || walState.ReplicatedIndex != 0 {
-		walState.ClusterID = c.clusterID.Load()
+		walState.ClusterID = c.ClusterID()
 		if walState.LocalIndex == 0 {
 			if c.perfStandby {
 				walState.LocalIndex = LastRemoteWAL(c)
@@ -2334,7 +2344,7 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 		return plainToken.Random, nil
 	}
 
-	requiredWalState := &logical.WALState{ClusterID: c.clusterID.Load(), LocalIndex: plainToken.LocalIndex, ReplicatedIndex: 0}
+	requiredWalState := &logical.WALState{ClusterID: c.ClusterID(), LocalIndex: plainToken.LocalIndex, ReplicatedIndex: 0}
 	if c.HasWALState(requiredWalState, isPerfStandby) {
 		return plainToken.Random, nil
 	}

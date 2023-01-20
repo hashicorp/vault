@@ -10,6 +10,7 @@ export const SELECTORS = {
   pageTitle: '[data-test-pki-role-page-title]',
   alertBanner: '[data-test-alert-banner="alert"]',
   emptyStateTitle: '[data-test-empty-state-title]',
+  emptyStateLink: '.empty-state-actions a',
   emptyStateMessage: '[data-test-empty-state-message]',
   // TABS
   overviewTab: '[data-test-secret-list-tab="Overview"]',
