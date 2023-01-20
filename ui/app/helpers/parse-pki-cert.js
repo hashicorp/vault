@@ -21,9 +21,6 @@ export function parseCertificate(certificateContent) {
   const subjectParams = parseSubject(cert?.subject?.typesAndValues);
   const expiryDate = cert?.notAfter?.value;
   const issueDate = cert?.notBefore?.value;
-
-  // TODO wrap to catch errors, only parse if cross-signing?
-  // for cross-signing
   const { alt_names, uri_sans } = parseExtensions(cert?.extensions);
   const [signature_bits, use_pss] = mapSignatureBits(cert?.signatureAlgorithm);
   const exclude_cn_from_sans =
@@ -70,7 +67,14 @@ const SUBJECT_OIDs = {
 };
 const EXTENSION_OIDs = {
   key_usage: '2.5.29.15',
-  subject_alt_name: '2.5.29.17',
+  subject_alt_name: '2.5.29.17', // contains info about SAN_TYPES below
+  basic_constraints: '2.5.29.19', // contains max_path_length
+  name_constraints: '2.5.29.30', // contains permitted_dns_domains
+};
+// these are allowed ext oids, but not parsed and passed to cross-signed certs
+const IGNORED_OIDs = {
+  subject_key_identifier: '2.5.29.14',
+  authority_key_identifier: '2.5.29.35',
 };
 // SubjectAltName/GeneralName types (scroll up to page 38) https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.7
 const SAN_TYPES = {
@@ -130,17 +134,54 @@ function parseSubject(subject) {
 function parseExtensions(extensions) {
   if (!extensions) return {};
 
+  const allowedOids = Object.values({ ...EXTENSION_OIDs, ...IGNORED_OIDs });
+  if (extensions.any((ext) => !allowedOids.includes(ext.extnID))) {
+    return new Error('certificate contains unparsable OIDs');
+  }
+
+  // make each extension its own key/value pair
   const values = {};
   for (const attrName in EXTENSION_OIDs) {
-    values[attrName] = extensions.find((ext) => ext?.extnID === EXTENSION_OIDs[attrName])?.parsedValue;
+    values[attrName] = extensions.find((ext) => ext.extnID === EXTENSION_OIDs[attrName])?.parsedValue;
   }
 
   if (values.subject_alt_name) {
-    for (const attrName in SAN_TYPES) {
-      values[attrName] = values.subject_alt_name?.altNames
-        .filter((gn) => gn.type === Number(SAN_TYPES[attrName]))
-        .map((gn) => gn.value);
+    const sans = values.subject_alt_name?.altNames;
+    switch (sans) {
+      case !sans:
+        return new Error('certificate contains unparsable subjectAltName values');
+      case sans.any((san) => !Object.values(SAN_TYPES).includes(san.type)):
+        return new Error('subjectAltName contains unparsable types');
+      default:
+        Object.keys(SAN_TYPES).forEach((attrName) => {
+          values[attrName] = sans
+            .filter((gn) => gn.type === Number(SAN_TYPES[attrName]))
+            .map((gn) => gn.value);
+        });
     }
+  }
+
+  if (values.name_constraints) {
+    const nameConstraints = values.name_constraints;
+    switch (nameConstraints) {
+      case Object.keys(nameConstraints).includes('excludedSubtrees'):
+        return new Error('nameConstraints contains excludedSubtrees');
+      case nameConstraints.permittedSubtrees.any((subtree) => subtree.minimum !== 0):
+        return new Error('nameConstraints permittedSubtree contains non-zero minimums');
+      case nameConstraints.permittedSubtrees.any((subtree) => subtree.maximum):
+        return new Error('nameConstraints permittedSubtree contains maximum');
+      case nameConstraints.permittedSubtrees.any((subtree) => subtree.base.type !== 2):
+        return new Error('nameConstraints permittedSubtree can only contain dnsName (type 2)');
+      case nameConstraints.permittedSubtrees.every((p) => p.base.constructor.name === 'GeneralName'):
+        values.permitted_dns_domains = nameConstraints.permittedSubtrees.map((gn) => gn.value);
+        break;
+      default:
+        return new Error('error parsing nameConstraints');
+    }
+  }
+
+  if (values.basic_constraints) {
+    values.max_path_length = values.basic_constraints?.parsedValue?.pathLenConstraint;
   }
 
   if (values.ip_sans) {
@@ -152,6 +193,8 @@ function parseExtensions(extensions) {
   }
 
   delete values.subject_alt_name;
+  delete values.basic_constraints;
+  delete values.name_constraints;
   return values;
   /*
   values is an object with keys from EXTENSION_OIDs and SAN_TYPES
