@@ -4,6 +4,7 @@ import { waitFor } from '@ember/test-waiters';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
+import { keyParamsByType } from 'pki/utils/action-params';
 import errorMessage from 'vault/utils/error-message';
 
 /**
@@ -51,12 +52,7 @@ export default class PkiGenerateRootComponent extends Component {
   get keyParamFields() {
     const { type } = this.args.model;
     if (!type) return null;
-    let fields = ['keyName', 'keyType', 'keyBits'];
-    if (type === 'existing') {
-      fields = ['keyRef'];
-    } else if (type === 'kms') {
-      fields = ['keyName', 'managedKeyName', 'managedKeyId'];
-    }
+    const fields = keyParamsByType(type);
     return fields.map((fieldName) => {
       return this.args.model.allFields.find((attr) => attr.name === fieldName);
     });
@@ -121,7 +117,7 @@ export default class PkiGenerateRootComponent extends Component {
   }
 
   async setUrls() {
-    if (!this.args.urls || !this.args.urls.canSet) return;
+    if (!this.args.urls || !this.args.urls.canSet || !this.args.urls.hasDirtyAttributes) return;
     return this.args.urls.save();
   }
 }

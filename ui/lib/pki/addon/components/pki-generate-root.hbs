@@ -74,21 +74,21 @@
   {{/each-in}}
 
   {{#if @urls}}
-    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth">
+    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-section>
       <h2
         class="title is-size-5 page-header {{if @urls.canCreate 'has-border-bottom-light' 'is-borderless'}}"
         data-test-generate-root-title="Issuer URLs"
       >
         Issuer URLs
       </h2>
-      {{#if (and @urls @urls.canCreate)}}
+      {{#if @urls.canSet}}
         {{#each @urls.allFields as |attr|}}
           {{#if (not (eq attr.name "mountPath"))}}
             <FormField
               @attr={{attr}}
               @mode="create"
               @model={{@urls}}
-              @showHelpText={{attr.showHelpText}}
+              @showHelpText={{attr.options.showHelpText}}
               data-test-urls-field
             />
           {{/if}}

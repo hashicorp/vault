@@ -1,19 +1,15 @@
 import Model, { attr } from '@ember-data/model';
-import { service } from '@ember/service';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 @withFormFields()
 export default class PkiUrlsModel extends Model {
-  @service secretMountPath;
+  // This model uses the backend value as the model ID
   get useOpenAPI() {
     return true;
   }
-  getHelpUrl(backend) {
-    return `/v1/${backend}/config/urls?help=1`;
-  }
-  get backend() {
-    return this.id;
+  getHelpUrl(backendPath) {
+    return `/v1/${backendPath}/config/urls?help=1`;
   }
 
   @attr({
@@ -27,10 +23,18 @@ export default class PkiUrlsModel extends Model {
   @attr({
     label: 'CRL distribution points',
     subText: 'Specifies the URL values for the CRL Distribution Points field.',
+    showHelpText: false,
   })
   crlDistributionPoints;
 
-  @lazyCapabilities(apiPath`${'backend'}/config/urls`, 'backend') urlsPath;
+  @attr({
+    label: 'OSCP Servers',
+    subText: 'Specifies the URL values for the OCSP Servers field.',
+    showHelpText: false,
+  })
+  ocspServers;
+
+  @lazyCapabilities(apiPath`${'id'}/config/urls`, 'id') urlsPath;
 
   get canSet() {
     return this.urlsPath.get('canCreate') !== false;

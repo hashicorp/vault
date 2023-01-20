@@ -4,11 +4,17 @@ import ApplicationAdapter from '../application';
 export default class PkiUrlsAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  urlForCreateRecord(modelName, snapshot) {
-    const { backend } = snapshot.record;
-    if (!backend) {
-      throw new Error('Backend required on model for URL');
-    }
+  _url(backend) {
     return `${this.buildURL()}/${encodePath(backend)}/config/urls`;
+  }
+
+  urlForCreateRecord(modelName, snapshot) {
+    return this._url(snapshot.record.id);
+  }
+  urlForFindRecord(id) {
+    return this._url(id);
+  }
+  urlForUpdateRecord(store, type, snapshot) {
+    return this._url(snapshot.record.id);
   }
 }
