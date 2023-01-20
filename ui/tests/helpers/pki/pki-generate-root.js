@@ -7,6 +7,7 @@ export const SELECTORS = {
   toggleGroupDescription: '[data-test-toggle-group-description]',
   formField: '[data-test-field]',
   typeField: '[data-test-input="type"]',
+  inputByName: (name) => `[data-test-input="${name}"]`,
   fieldByName: (name) => `[data-test-field="${name}"]`,
   saveButton: '[data-test-pki-generate-root-save]',
   cancelButton: '[data-test-pki-generate-root-cancel]',

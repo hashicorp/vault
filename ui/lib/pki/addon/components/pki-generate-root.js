@@ -22,11 +22,11 @@ import errorMessage from 'vault/utils/error-message';
  *
  * @param {Object} model - pki/action model.
  * @callback onCancel - Callback triggered when cancel button is clicked, after model is unloaded
- * @callback onSave - Callback triggered after model save success.
  * @param {Object} adapterOptions - object passed as adapterOptions on the model.save method
  */
 export default class PkiGenerateRootComponent extends Component {
   @service flashMessages;
+  @service router;
   @tracked showGroup = null;
   @tracked modelValidations = null;
   @tracked errorBanner = '';
@@ -106,10 +106,13 @@ export default class PkiGenerateRootComponent extends Component {
     if (!continueSave) return;
     try {
       yield this.setUrls();
-      yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
+      const result = yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
       this.flashMessages.success('Successfully generated root.');
-      // TODO: redirect to config.resultingIssuer
-      this.args.onSave();
+      this.router.transitionTo(
+        'vault.cluster.secrets.backend.pki.issuers.issuer.details',
+        result.backend,
+        result.issuerId
+      );
     } catch (e) {
       this.errorBanner = errorMessage(e);
       this.invalidFormAlert = 'There was a problem generating the root.';
