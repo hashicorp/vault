@@ -361,31 +361,49 @@ func addWarnings(resp *logical.Response, warnings []string) *logical.Response {
 	return resp
 }
 
+// revocationQueue is a type for allowing invalidateFunc to continue operating
+// quickly, while letting periodicFunc slowly sort through all open
+// revocations to process. In particular, we do not wish to be holding this
+// lock while periodicFunc is running, so iteration returns a full copy of
+// the data in this queue. We use a map from serial->[]clusterId, allowing us
+// to quickly insert and remove items, without using a slice of tuples. One
+// serial might be present on two clusters, if two clusters both have the cert
+// stored locally (e.g., via BYOC), which would result in two confirmation
+// entries and thus dictating the need for []clusterId. This also lets us
+// avoid having duplicate entries.
 type revocationQueue struct {
 	_l    sync.Mutex
 	queue map[string][]string
 }
 
-func (q *revocationQueue) initialize() {
-	if q.queue == nil {
-		q.queue = make(map[string][]string)
+func newRevocationQueue() *revocationQueue {
+	return &revocationQueue{
+		queue: make(map[string][]string),
 	}
 }
 
 func (q *revocationQueue) Add(items ...*revocationQueueEntry) {
 	q._l.Lock()
 	defer q._l.Unlock()
-	q.initialize()
 
 	for _, item := range items {
-		q.queue[item.Serial] = append(q.queue[item.Serial], item.Cluster)
+		var found bool
+		for _, cluster := range q.queue[item.Serial] {
+			if cluster == item.Cluster {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			q.queue[item.Serial] = append(q.queue[item.Serial], item.Cluster)
+		}
 	}
 }
 
 func (q *revocationQueue) Remove(item *revocationQueueEntry) {
 	q._l.Lock()
 	defer q._l.Unlock()
-	q.initialize()
 
 	clusters, present := q.queue[item.Serial]
 	if !present {
@@ -408,17 +426,19 @@ func (q *revocationQueue) Remove(item *revocationQueueEntry) {
 	q.queue[item.Serial] = result
 }
 
+// As this doesn't depend on any internal state, it should not be called
+// unless it is OK to remove any items added since the last Iterate()
+// function call.
 func (q *revocationQueue) RemoveAll() {
 	q._l.Lock()
 	defer q._l.Unlock()
 
-	q.queue = nil
+	q.queue = make(map[string][]string)
 }
 
 func (q *revocationQueue) Iterate() []*revocationQueueEntry {
 	q._l.Lock()
 	defer q._l.Unlock()
-	q.initialize()
 
 	// Heuristic: by storing by serial, occasionally we'll get double entires
 	// if it was already revoked, but otherwise we'll be off by fewer when

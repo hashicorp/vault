@@ -97,8 +97,8 @@ type crlBuilder struct {
 	// Global revocation queue entries get accepted by the invalidate func
 	// and passed to the crlBuilder for processing.
 	haveInitializedQueue bool
-	revQueue             revocationQueue
-	removalQueue         revocationQueue
+	revQueue             *revocationQueue
+	removalQueue         *revocationQueue
 }
 
 const (
@@ -117,6 +117,8 @@ func newCRLBuilder(canRebuild bool) *crlBuilder {
 		dirty:                 atomic2.NewBool(true),
 		config:                defaultCrlConfig,
 		invalidate:            atomic2.NewBool(false),
+		revQueue:              newRevocationQueue(),
+		removalQueue:          newRevocationQueue(),
 	}
 }
 
