@@ -13,4 +13,5 @@ export const SELECTORS = {
   generateRootCancel: '[data-test-pki-generate-root-cancel]',
   formInvalidError: '[data-test-pki-generate-root-validation-error]',
   urlsSection: '[data-test-urls-section]',
+  urlField: '[data-test-urls-section] [data-test-input]',
 };

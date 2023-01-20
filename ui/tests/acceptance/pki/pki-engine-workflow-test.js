@@ -103,6 +103,10 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.configuration.emptyState).exists({ count: 1 }, 'Shows empty state by default');
       await click(SELECTORS.configuration.optionByKey('generate-root'));
       assert.dom(SELECTORS.configuration.emptyState).doesNotExist();
+      // The URLs section is populated based on params returned from OpenAPI. This test will break when
+      // the backend adds fields. We should update the count accordingly.
+      assert.dom(SELECTORS.configuration.urlField).exists({ count: 4 });
+      // Fill in form
       await fillIn(SELECTORS.configuration.typeField, 'exported');
       await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
       await fillIn(SELECTORS.configuration.inputByName('issuerName'), 'my-first-issuer');
