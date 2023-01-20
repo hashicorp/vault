@@ -20,7 +20,6 @@ type tokenFileMethod struct {
 
 	cachedToken                 string
 	tokenFilePath               string
-	followSymlinks              bool
 	removeTokenFileAfterReading bool
 }
 
@@ -56,15 +55,6 @@ func NewTokenFileAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 			return nil, fmt.Errorf("error parsing 'remove_token_file_after_reading' value: %w", err)
 		}
 		a.removeTokenFileAfterReading = removeTokenFileAfterReading
-	}
-
-	followSymlinksRaw, ok := conf.Config["follow_symlinks"]
-	if ok {
-		followSymlinks, err := parseutil.ParseBool(followSymlinksRaw)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing 'follow_symlinks' value: %w", err)
-		}
-		a.followSymlinks = followSymlinks
 	}
 
 	return a, nil
