@@ -31,20 +31,24 @@
     <PkiCaCertificateImport
       @model={{@config}}
       @onCancel={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
-      @onSave={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
+      @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}
       @adapterOptions={{hash actionType=this.actionType useIssuer=@config.canImportBundle}}
     />
   {{else if (eq this.actionType "generate-root")}}
     <PkiGenerateRoot
       @model={{@config}}
-      @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}
+      @urls={{@urls}}
       @onCancel={{this.cancel}}
       @adapterOptions={{hash actionType="generate-root" useIssuer=@config.canGenerateIssuerRoot}}
     />
   {{else if (eq this.actionType "generate-csr")}}
     <code>POST /intermediate/generate/:type ~or~ /issuers/generate/intermediate/:type</code>
   {{else}}
-    <EmptyState @title="Choose an option" @message="To see configuration options, choose your desired output above." />
+    <EmptyState
+      @title="Choose an option"
+      @message="To see configuration options, choose your desired output above."
+      data-test-configuration-empty-state
+    />
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
         <button type="button" class="button is-primary" disabled={{true}} data-test-pki-config-save>
