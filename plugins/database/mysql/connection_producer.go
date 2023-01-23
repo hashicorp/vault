@@ -113,7 +113,7 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 
 	if verifyConnection {
 		if _, err = c.Connection(ctx); err != nil {
-			return nil, fmt.Errorf("error verifying connection connection: %w", err)
+			return nil, fmt.Errorf("error verifying - connection: %w", err)
 		}
 
 		if err := c.db.PingContext(ctx); err != nil {
