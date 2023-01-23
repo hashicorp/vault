@@ -1786,6 +1786,15 @@ func getUnifiedRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuer
 		return nil, nil, fmt.Errorf("failed to list clusters for unified CRL building: %w", err)
 	}
 
+	// We wish to prevent duplicate revocations on separate clusters from
+	// being added multiple times to the CRL. While we can't guarantee these
+	// are the same certificate, it doesn't matter as (as long as they have
+	// the same issuer), it'd imply issuance of two certs with the same
+	// serial which'd be an intentional violation of RFC 5280 before importing
+	// an issuer into Vault, and would be highly unlikely within Vault, due
+	// to 120-bit random serial numbers.
+	foundSerials := make(map[string]bool)
+
 	// Then for every cluster, we find its revoked certificates...
 	for _, clusterId := range clusterIds {
 		if !strings.HasSuffix(clusterId, "/") {
@@ -1835,9 +1844,15 @@ func getUnifiedRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuer
 
 			revEntry.RevocationTime = xRevEntry.RevocationTimeUTC
 
+			if found, inFoundMap := foundSerials[normalizeSerial(serial)]; found && inFoundMap {
+				// Serial has already been added to the CRL.
+				continue
+			}
+			foundSerials[normalizeSerial(serial)] = true
+
 			// Finally, add it to the correct mapping.
 			_, present := issuerIDCertMap[xRevEntry.CertificateIssuer]
-			if present {
+			if !present {
 				unassignedCerts = append(unassignedCerts, revEntry)
 			} else {
 				revokedCertsMap[xRevEntry.CertificateIssuer] = append(revokedCertsMap[xRevEntry.CertificateIssuer], revEntry)
