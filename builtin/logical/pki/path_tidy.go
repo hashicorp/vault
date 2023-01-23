@@ -725,9 +725,7 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 				return fmt.Errorf("error reading revocation request (%v) to tidy: %w", ePath, err)
 			}
 
-			now := time.Now()
-			afterBuffer := now.Add(-1 * config.QueueSafetyBuffer)
-			if revRequest.RequestedAt.After(afterBuffer) {
+			if time.Since(revRequest.RequestedAt) > config.QueueSafetyBuffer {
 				continue
 			}
 
