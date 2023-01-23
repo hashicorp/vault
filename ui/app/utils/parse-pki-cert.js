@@ -10,6 +10,13 @@ import {
   SIGNATURE_ALGORITHM_OIDs,
 } from './parse-pki-cert-oids';
 
+/* 
+ It may be helpful to visualize a certificate's SEQUENCE structure alongside this parsing file.
+ You can do so by decoding a certificate here: https://lapo.it/asn1js/#
+
+ A certificate is encoded in ASN.1 data - a SEQUENCE is how you define structures in ASN.1.
+ GeneralNames, Extension, AlgorithmIdentifier are all examples of SEQUENCEs 
+*/
 export function parseCertificate(certificateContent) {
   let cert;
   try {
@@ -54,7 +61,7 @@ export function parsePkiCert(model) {
   return parseCertificate(model.certificate);
 }
 
-function formatValues(subject, extension) {
+export function formatValues(subject, extension) {
   const { subjValues, subjErrors } = subject;
   const { extValues, extErrors } = extension;
   const parsing_errors = [...subjErrors, ...extErrors];
@@ -79,8 +86,8 @@ function formatValues(subject, extension) {
 
 //* PARSING HELPERS
 /*
-  We wish to get these OID_VALUES out of this certificate's subject. A
-  subject is a list of RDNs, where each RDN is a (type, value) tuple
+  We wish to get each SUBJECT_OIDs (see utils/parse-pki-cert-oids.js) out of this certificate's subject. 
+  A subject is a list of RDNs, where each RDN is a (type, value) tuple
   and where a type is an OID. The OID for CN can be found here:
      
      https://datatracker.ietf.org/doc/html/rfc5280#page-112
@@ -90,7 +97,7 @@ function formatValues(subject, extension) {
   UTF8String. Regardless of encoding, it should be present in the
   valueBlock's value field if it is renderable.
 */
-function parseSubject(subject) {
+export function parseSubject(subject) {
   if (!subject) return {};
   const values = {};
   const errors = [];
@@ -109,7 +116,7 @@ function parseSubject(subject) {
   return { subjValues: values, subjErrors: errors };
 }
 
-function parseExtensions(extensions) {
+export function parseExtensions(extensions) {
   if (!extensions) return {};
 
   const values = {};
@@ -126,21 +133,32 @@ function parseExtensions(extensions) {
 
   if (values.subject_alt_name) {
     // we only support SANs of type 2 (altNames), 6 (uri) and 7 (ipAddress)
+    const supportedTypes = Object.values(SAN_TYPES);
+    const supportedNames = Object.keys(SAN_TYPES);
     const sans = values.subject_alt_name?.altNames;
     if (!sans) {
       errors.push(new Error('certificate contains unsupported subjectAltName values'));
-    } else if (sans.any((san) => !Object.values(SAN_TYPES).includes(san.type))) {
+    } else if (sans.any((san) => !supportedTypes.includes(san.type))) {
+      // pass along error that unsupported values exist
       errors.push(new Error('subjectAltName contains unsupported types'));
-    } else if (sans.every((san) => Object.values(SAN_TYPES).includes(san.type))) {
-      Object.keys(SAN_TYPES).forEach((attrName) => {
+      // still check and parse any supported values
+      if (sans.any((san) => supportedTypes.includes(san.type))) {
+        supportedNames.forEach((attrName) => {
+          values[attrName] = sans
+            .filter((gn) => gn.type === Number(SAN_TYPES[attrName]))
+            .map((gn) => gn.value);
+        });
+      }
+    } else if (sans.every((san) => supportedTypes.includes(san.type))) {
+      supportedNames.forEach((attrName) => {
         values[attrName] = sans.filter((gn) => gn.type === Number(SAN_TYPES[attrName])).map((gn) => gn.value);
       });
     } else {
-      // add conditional if SOME parsable values exist?
       errors.push(new Error('unsupported subjectAltName values'));
     }
   }
 
+  // permitted_dns_domains
   if (values.name_constraints) {
     // we only support Name Constraints of dnsName (type 2), this value lives in the permittedSubtree of the Name Constraints sequence
     // permittedSubtrees contain an array of subtree objects, each object has a 'base' key and EITHER a 'minimum' or 'maximum' key
@@ -154,10 +172,15 @@ function parseExtensions(extensions) {
       errors.push(new Error('nameConstraints permittedSubtree contains maximum'));
     } else if (nameConstraints.permittedSubtrees.any((subtree) => subtree.base.type !== 2)) {
       errors.push(new Error('nameConstraints permittedSubtree can only contain dnsName (type 2)'));
-    } else if (nameConstraints.permittedSubtrees.every((p) => p.base.constructor.name === 'GeneralName')) {
+      // still check and parse any supported values
+      if (nameConstraints.permittedSubtrees.any((subtree) => subtree.base.type === 2)) {
+        values.permitted_dns_domains = nameConstraints.permittedSubtrees
+          .filter((gn) => gn.base.type === 2)
+          .map((gn) => gn.base.value);
+      }
+    } else if (nameConstraints.permittedSubtrees.every((subtree) => subtree.base.type === 2)) {
       values.permitted_dns_domains = nameConstraints.permittedSubtrees.map((gn) => gn.base.value);
     } else {
-      // add conditional if SOME parsable values exist?
       errors.push(new Error('unsupported nameConstraints values'));
     }
   }

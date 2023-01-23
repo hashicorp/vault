@@ -6,6 +6,7 @@ import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';
 import { addHours, fromUnixTime, isSameDay } from 'date-fns';
 import errorMessage from 'vault/utils/error-message';
+import { SAN_TYPES } from 'vault/utils/parse-pki-cert-oids';
 
 module('Integration | Util | parse pki certificate', function (hooks) {
   setupTest(hooks);
@@ -17,6 +18,14 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     // contains unsupported subject and extension oids
     this.unsupportedSANS = `-----BEGIN CERTIFICATE-----\nMIIEjDCCA3SgAwIBAgIUD4EeORgh/i+ZZFOk8KsGKQPWsoIwDQYJKoZIhvcNAQEL\nBQAwgZIxMTAvBgNVBAMMKGZhbmN5LWNlcnQtdW5zdXBwb3J0ZWQtc3Viai1hbmQt\nZXh0LW9pZHMxCzAJBgNVBAYTAlVTMQ8wDQYDVQQIDAZLYW5zYXMxDzANBgNVBAcM\nBlRvcGVrYTESMBAGA1UECgwJQWNtZSwgSW5jMRowGAYJKoZIhvcNAQkBFgtmb29A\nYmFyLmNvbTAeFw0yMzAxMjMxODQ3MjNaFw0zMzAxMjAxODQ3MjNaMIGSMTEwLwYD\nVQQDDChmYW5jeS1jZXJ0LXVuc3VwcG9ydGVkLXN1YmotYW5kLWV4dC1vaWRzMQsw\nCQYDVQQGEwJVUzEPMA0GA1UECAwGS2Fuc2FzMQ8wDQYDVQQHDAZUb3Bla2ExEjAQ\nBgNVBAoMCUFjbWUsIEluYzEaMBgGCSqGSIb3DQEJARYLZm9vQGJhci5jb20wggEi\nMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDyYH5qS7krfZ2tA5uZsY2qXbTb\ntGNG1BsyDhZ/qqVlQybjDsHJZwNUbpfhBcCLaKyAwH1R9n54NOOOn6bYgfKWTgy3\nL7224YDAqYe7Y/GPjgI2MRvRfn6t2xzQxtJ0l0k8LeyNcwhiqYLQyOOfDdc127fm\nW40r2nmhLpH0i9e2I/YP1HQ+ldVgVBqeUTntgVSBfrQF56v9mAcvvHEa5sdHqmX4\nJ2lhWTnx9jqb7NZxCem76BlX1Gt5TpP3Ym2ZFVQI9fuPK4O8JVhk1KBCmIgR3Ft+\nPpFUs/c41EMunKJNzveYrInSDScaC6voIJpK23nMAiM1HckLfUUc/4UojD+VAgMB\nAAGjgdcwgdQwHQYDVR0OBBYEFH7tt4enejKTZtYjUKUUx6PXyzlgMB8GA1UdIwQY\nMBaAFH7tt4enejKTZtYjUKUUx6PXyzlgMA4GA1UdDwEB/wQEAwIFoDAgBgNVHSUB\nAf8EFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwEgYDVR0TAQH/BAgwBgEB/wIBCjBM\nBgNVHREERTBDhwTAngEmhgx1cmlTdXBwb3J0ZWSCEWRucy1OYW1lU3VwcG9ydGVk\noBoGAyoDBKATDBFleGFtcGxlIG90aGVybmFtZTANBgkqhkiG9w0BAQsFAAOCAQEA\nP6ckVJgbcJue+MK3RVDuG+Mh7dl89ynC7NwpQFRjLVZQuoMHZT/dcLlVeFejVXu5\nR+IPLmQU6NV7JAmy4zGap8awf12QTy3g410ecrSF94WWlu8bPoekfUnnP+kfzLPH\nCUAkRKxWDSRKX5C8cMMxacVBBaBIayuusLcHkHmxLLDw34PFzyz61gtZOJq7JYnD\nhU9YsNh6bCDmnBDBsDMOI7h8lBRQwTiWVoSD9YNVvFiY29YvFbJQGdh+pmBtf7E+\n1B/0t5NbvqlQSbhMM0QgYFhuCxr3BGNob7kRjgW4i+oh+Nc5ptA5q70QMaYudqRS\nd8SYWhRdxmH3qcHNPcR1iw==\n-----END CERTIFICATE-----`;
     this.getErrorMessages = (certErrors) => certErrors.map((error) => errorMessage(error));
+    this.certSchema = (cert) => {
+      const cert_base64 = cert.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
+      const cert_der = fromBase64(cert_base64);
+      const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
+      return new Certificate({ schema: cert_asn1.result });
+    };
+    this.supportedCert = this.certSchema(this.pkiCert);
+    this.unsupportedCert = this.certSchema(this.unsupportedSANS);
   });
 
   test('it parses a certificate with supported values', async function (assert) {
@@ -82,9 +91,21 @@ module('Integration | Util | parse pki certificate', function (hooks) {
   });
 
   test('it returns parsing_errors when certificate has unsupported values', async function (assert) {
-    assert.expect(1);
+    assert.expect(2);
     const parsedCert = parseCertificate(this.unsupportedSANS);
     const parsingErrors = this.getErrorMessages(parsedCert.parsing_errors);
+
+    assert.propContains(
+      parsedCert,
+      {
+        alt_names: 'dns-NameSupported',
+        common_name: 'fancy-cert-unsupported-subj-and-ext-oids',
+        ip_sans: 'OCTET STRING : C09E0126', // when parsed, should be 192.158.1.38
+        parsing_errors: [{}, {}, {}],
+        uri_sans: 'uriSupported',
+      },
+      'supported values are present when unsupported values exist'
+    );
     assert.propEqual(
       parsingErrors,
       [
@@ -96,51 +117,35 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     );
   });
 
-  test('it returns attr as null if nonexistent', async function (assert) {
+  test('it returns attr with a null value if nonexistent', async function (assert) {
     assert.expect(1);
     const parsedCert = parseCertificate(this.onlyCn);
-    assert.propEqual(
+    assert.propContains(
       parsedCert,
       {
         alt_names: 'common-name.com',
-        can_parse: true,
         common_name: 'common-name.com',
         country: null,
-        exclude_cn_from_sans: false,
-        expiry_date: {},
         ip_sans: null,
-        issue_date: {},
         locality: null,
         max_path_length: undefined,
-        not_valid_after: 1677028859,
-        not_valid_before: 1674264029,
         organization: null,
         ou: null,
-        parsing_errors: [],
         postal_code: null,
         province: null,
         serial_number: null,
-        signature_bits: '256',
         street_address: null,
-        ttl: '768h',
         uri_sans: null,
-        use_pss: false,
       },
       'it contains expected attrs'
     );
   });
 
-  test('the helper parseSubject returns expected object', async function (assert) {
-    const certSchema = (cert) => {
-      const cert_base64 = cert.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
-      const cert_der = fromBase64(cert_base64);
-      const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
-      return new Certificate({ schema: cert_asn1.result });
-    };
-
-    const supportedCert = certSchema(this.pkiCert);
+  test('the helper parseSubject returns object with correct key/value pairs', async function (assert) {
+    assert.expect(3);
+    const supportedSubj = parseSubject(this.supportedCert.subject.typesAndValues);
     assert.propEqual(
-      parseSubject(supportedCert.subject.typesAndValues),
+      supportedSubj,
       {
         subjErrors: [],
         subjValues: {
@@ -157,13 +162,62 @@ module('Integration | Util | parse pki certificate', function (hooks) {
       },
       'it returns supported subject values'
     );
-    const unsupportedCert = certSchema(this.unsupportedSANS);
-    const parsedSubject = parseSubject(unsupportedCert.subject.typesAndValues);
+
+    const unsupportedSubj = parseSubject(this.unsupportedCert.subject.typesAndValues);
     assert.propEqual(
-      this.getErrorMessages(parsedSubject.subjErrors),
+      this.getErrorMessages(unsupportedSubj.subjErrors),
       ['certificate contains unsupported subject OIDs'],
       'it returns subject errors'
     );
-    assert.ok(parsedSubject.subjErrors[0] instanceof Error, 'subjErrors contain error objects');
+    assert.ok(
+      unsupportedSubj.subjErrors.every((e) => e instanceof Error),
+      'subjErrors contain error objects'
+    );
+  });
+
+  test('the helper parseExtensions returns object with correct key/value pairs', async function (assert) {
+    assert.expect(9);
+    // assert supported extensions return correct type
+    const supportedExtensions = parseExtensions(this.supportedCert.extensions);
+    let { extValues, extErrors } = supportedExtensions;
+    for (const keyName in SAN_TYPES) {
+      assert.ok(Array.isArray(extValues[keyName]), `${keyName} is an array`);
+    }
+    assert.ok(Array.isArray(extValues.permitted_dns_domains), 'permitted_dns_domains is an array');
+    assert.ok(Number.isInteger(extValues.max_path_length), 'max_path_length is an integer');
+    // TODO add assertion for key_usage
+    assert.strictEqual(extErrors.length, 0, 'no extension errors');
+
+    // assert unsupported extensions return errors
+    const unsupportedExt = parseExtensions(this.unsupportedCert.extensions);
+    ({ extValues, extErrors } = unsupportedExt);
+    assert.propEqual(
+      this.getErrorMessages(extErrors),
+      ['certificate contains unsupported extension OIDs', 'subjectAltName contains unsupported types'],
+      'it returns extension errors'
+    );
+    assert.ok(
+      extErrors.every((e) => e instanceof Error),
+      'subjErrors contain error objects'
+    );
+    assert.ok(Number.isInteger(extValues.max_path_length), 'max_path_length is an integer');
+  });
+
+  test('the helper formatValues returns object with correct types', async function (assert) {
+    assert.expect(1);
+    const supportedSubj = parseSubject(this.supportedCert.subject.typesAndValues);
+    const supportedExtensions = parseExtensions(this.supportedCert.extensions);
+    assert.propContains(
+      formatValues(supportedSubj, supportedExtensions),
+      {
+        alt_names: 'altname1, altname2',
+        ip_sans: 'OCTET STRING : C09E0126', // when parsed, should be 192.158.1.38
+        permitted_dns_domains: 'dnsname1.com, dsnname2.com',
+        uri_sans: 'testuri1, testuri2',
+        parsing_errors: [],
+        exclude_cn_from_sans: true,
+      },
+      `values for ${Object.keys(SAN_TYPES).join(', ')} are comma separated strings (and no longer arrays)`
+    );
   });
 });

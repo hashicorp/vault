@@ -25,7 +25,7 @@ export const IGNORED_OIDs = {
   authority_key_identifier: '2.5.29.35',
 };
 
-// SubjectAltName/GeneralName types (scroll up to page 38) https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.7
+// SubjectAltName/GeneralName types (scroll up to page 38 -> https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.7 )
 export const SAN_TYPES = {
   alt_names: 2, // dNSName
   uri_sans: 6, // uniformResourceIdentifier
