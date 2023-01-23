@@ -43,6 +43,10 @@ func serialFromBigInt(serial *big.Int) string {
 	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
 }
 
+func normalizeSerialFromBigInt(serial *big.Int) string {
+	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), "-"))
+}
+
 func normalizeSerial(serial string) string {
 	return strings.ReplaceAll(strings.ToLower(serial), ":", "-")
 }

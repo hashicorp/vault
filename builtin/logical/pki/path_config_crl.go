@@ -15,32 +15,34 @@ const latestCrlConfigVersion = 1
 
 // CRLConfig holds basic CRL configuration information
 type crlConfig struct {
-	Version                int    `json:"version"`
-	Expiry                 string `json:"expiry"`
-	Disable                bool   `json:"disable"`
-	OcspDisable            bool   `json:"ocsp_disable"`
-	AutoRebuild            bool   `json:"auto_rebuild"`
-	AutoRebuildGracePeriod string `json:"auto_rebuild_grace_period"`
-	OcspExpiry             string `json:"ocsp_expiry"`
-	EnableDelta            bool   `json:"enable_delta"`
-	DeltaRebuildInterval   string `json:"delta_rebuild_interval"`
-	UseGlobalQueue         bool   `json:"cross_cluster_revocation"`
-	UnifiedCRL             bool   `json:"unified_crl"`
+	Version                   int    `json:"version"`
+	Expiry                    string `json:"expiry"`
+	Disable                   bool   `json:"disable"`
+	OcspDisable               bool   `json:"ocsp_disable"`
+	AutoRebuild               bool   `json:"auto_rebuild"`
+	AutoRebuildGracePeriod    string `json:"auto_rebuild_grace_period"`
+	OcspExpiry                string `json:"ocsp_expiry"`
+	EnableDelta               bool   `json:"enable_delta"`
+	DeltaRebuildInterval      string `json:"delta_rebuild_interval"`
+	UseGlobalQueue            bool   `json:"cross_cluster_revocation"`
+	UnifiedCRL                bool   `json:"unified_crl"`
+	UnifiedCRLOnExistingPaths bool   `json:"unified_crl_on_existing_paths"`
 }
 
 // Implicit default values for the config if it does not exist.
 var defaultCrlConfig = crlConfig{
-	Version:                latestCrlConfigVersion,
-	Expiry:                 "72h",
-	Disable:                false,
-	OcspDisable:            false,
-	OcspExpiry:             "12h",
-	AutoRebuild:            false,
-	AutoRebuildGracePeriod: "12h",
-	EnableDelta:            false,
-	DeltaRebuildInterval:   "15m",
-	UseGlobalQueue:         false,
-	UnifiedCRL:             false,
+	Version:                   latestCrlConfigVersion,
+	Expiry:                    "72h",
+	Disable:                   false,
+	OcspDisable:               false,
+	OcspExpiry:                "12h",
+	AutoRebuild:               false,
+	AutoRebuildGracePeriod:    "12h",
+	EnableDelta:               false,
+	DeltaRebuildInterval:      "15m",
+	UseGlobalQueue:            false,
+	UnifiedCRL:                false,
+	UnifiedCRLOnExistingPaths: false,
 }
 
 func pathConfigCRL(b *backend) *framework.Path {
@@ -97,6 +99,12 @@ also enabling unified versions of OCSP and CRLs if their respective features are
 disable for CRLs and ocsp_disable for OCSP.`,
 				Default: "false",
 			},
+			"unified_crl_on_existing_paths": {
+				Type: framework.TypeBool,
+				Description: `If set to true, 
+existing CRL and OCSP paths will return the unified CRL instead of a response based on cluster-local data`,
+				Default: "false",
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -123,20 +131,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 		return nil, err
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"expiry":                    config.Expiry,
-			"disable":                   config.Disable,
-			"ocsp_disable":              config.OcspDisable,
-			"ocsp_expiry":               config.OcspExpiry,
-			"auto_rebuild":              config.AutoRebuild,
-			"auto_rebuild_grace_period": config.AutoRebuildGracePeriod,
-			"enable_delta":              config.EnableDelta,
-			"delta_rebuild_interval":    config.DeltaRebuildInterval,
-			"cross_cluster_revocation":  config.UseGlobalQueue,
-			"unified_crl":               config.UnifiedCRL,
-		},
-	}, nil
+	return genResponseFromCrlConfig(config), nil
 }
 
 func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -209,6 +204,14 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.UnifiedCRL = unifiedCrlRaw.(bool)
 	}
 
+	if unifiedCrlOnExistingPathsRaw, ok := d.GetOk("unified_crl_on_existing_paths"); ok {
+		config.UnifiedCRLOnExistingPaths = unifiedCrlOnExistingPathsRaw.(bool)
+	}
+
+	if config.UnifiedCRLOnExistingPaths && !config.UnifiedCRL {
+		return logical.ErrorResponse("unified_crl_on_existing_paths cannot be enabled if unified_crl is disabled"), nil
+	}
+
 	expiry, _ := time.ParseDuration(config.Expiry)
 	if config.AutoRebuild {
 		gracePeriod, _ := time.ParseDuration(config.AutoRebuildGracePeriod)
@@ -238,6 +241,10 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("Global, cross-cluster revocation queue can only be enabled on Vault Enterprise."), nil
 	}
 
+	if !constants.IsEnterprise && config.UnifiedCRL {
+		return logical.ErrorResponse("unified_crl can only be enabled on Vault Enterprise"), nil
+	}
+
 	entry, err := logical.StorageEntryJSON("config/crl", config)
 	if err != nil {
 		return nil, err
@@ -264,20 +271,25 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		}
 	}
 
+	return genResponseFromCrlConfig(config), nil
+}
+
+func genResponseFromCrlConfig(config *crlConfig) *logical.Response {
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"expiry":                    config.Expiry,
-			"disable":                   config.Disable,
-			"ocsp_disable":              config.OcspDisable,
-			"ocsp_expiry":               config.OcspExpiry,
-			"auto_rebuild":              config.AutoRebuild,
-			"auto_rebuild_grace_period": config.AutoRebuildGracePeriod,
-			"enable_delta":              config.EnableDelta,
-			"delta_rebuild_interval":    config.DeltaRebuildInterval,
-			"cross_cluster_revocation":  config.UseGlobalQueue,
-			"unified_crl":               config.UnifiedCRL,
+			"expiry":                        config.Expiry,
+			"disable":                       config.Disable,
+			"ocsp_disable":                  config.OcspDisable,
+			"ocsp_expiry":                   config.OcspExpiry,
+			"auto_rebuild":                  config.AutoRebuild,
+			"auto_rebuild_grace_period":     config.AutoRebuildGracePeriod,
+			"enable_delta":                  config.EnableDelta,
+			"delta_rebuild_interval":        config.DeltaRebuildInterval,
+			"cross_cluster_revocation":      config.UseGlobalQueue,
+			"unified_crl":                   config.UnifiedCRL,
+			"unified_crl_on_existing_paths": config.UnifiedCRLOnExistingPaths,
 		},
-	}, nil
+	}
 }
 
 const pathConfigCRLHelpSyn = `
