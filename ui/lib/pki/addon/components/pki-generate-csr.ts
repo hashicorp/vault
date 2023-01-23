@@ -1,0 +1,70 @@
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import Router from '@ember/routing/router';
+import FlashMessageService from 'vault/services/flash-messages';
+import PkiActionModel from 'vault/models/pki/action';
+import errorMessage from 'vault/utils/error-message';
+
+interface Args {
+  model: PkiActionModel;
+  useIssuer: boolean;
+  onSave: CallableFunction;
+  onCancel: CallableFunction;
+}
+
+export default class PkiGenerateIntermediateComponent extends Component<Args> {
+  @service declare readonly router: Router;
+  @service declare readonly flashMessages: FlashMessageService;
+
+  @tracked modelValidations = null;
+  @tracked error: string | null = null;
+  @tracked alert: string | null = null;
+
+  formFields;
+
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    this.formFields = expandAttributeMeta(this.args.model, [
+      'type',
+      'commonName',
+      'excludeCnFromSans',
+      'format',
+      'serialNumber',
+      'addBasicConstraints',
+    ]);
+  }
+
+  @action
+  cancel() {
+    this.args.model.unloadRecord();
+    this.args.onCancel();
+  }
+
+  @task
+  @waitFor
+  *save(event: Event) {
+    event.preventDefault();
+    try {
+      const { model, onSave } = this.args;
+      const { isValid, state, invalidFormMessage } = model.validate();
+      if (isValid) {
+        yield model.save({
+          adapterOptions: { actionType: 'generate-csr', useIssuer: model.canGenerateIssuerIntermediate },
+        });
+        this.flashMessages.success('Successfully generated CSR.');
+        onSave();
+      } else {
+        this.modelValidations = state;
+        this.alert = invalidFormMessage;
+      }
+    } catch (e) {
+      this.error = errorMessage(e);
+      this.alert = 'There was a problem generating the CSR.';
+    }
+  }
+}

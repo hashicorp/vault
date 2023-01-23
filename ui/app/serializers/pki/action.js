@@ -22,39 +22,41 @@ export default class PkiActionSerializer extends ApplicationSerializer {
   }
 
   _allowedParamsByType(actionType) {
+    const generateProps = [
+      'alt_names',
+      'common_name',
+      'country',
+      'exclude_cn_from_sans',
+      'format',
+      'ip_sans',
+      'issuer_name',
+      'key_bits',
+      'key_name',
+      'key_ref',
+      'key_type',
+      'locality',
+      'managed_key_id',
+      'managed_key_name',
+      'not_after',
+      'not_before_duration',
+      'organization',
+      'other_sans',
+      'ou',
+      'permitted_dns_domains',
+      'postal_code',
+      'private_key_format',
+      'province',
+      'serial_number',
+      'street_address',
+      'type',
+    ];
     switch (actionType) {
       case 'import':
         return ['pem_bundle'];
       case 'generate-root':
-        return [
-          'alt_names',
-          'common_name',
-          'country',
-          'exclude_cn_from_sans',
-          'format',
-          'ip_sans',
-          'issuer_name',
-          'key_bits',
-          'key_name',
-          'key_ref',
-          'key_type',
-          'locality',
-          'managed_key_id',
-          'managed_key_name',
-          'max_path_length',
-          'not_after',
-          'not_before_duration',
-          'organization',
-          'other_sans',
-          'ou',
-          'permitted_dns_domains',
-          'postal_code',
-          'private_key_format',
-          'province',
-          'serial_number',
-          'street_address',
-          'type',
-        ];
+        return [...generateProps, 'max_path_length'];
+      case 'generate-csr':
+        return generateProps;
       default:
         // if type doesn't match, serialize all
         return null;

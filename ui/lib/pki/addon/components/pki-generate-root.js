@@ -29,11 +29,6 @@ export default class PkiGenerateRootComponent extends Component {
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
 
-  @action
-  toggleGroup(group, isOpen) {
-    this.showGroup = isOpen ? group : null;
-  }
-
   get defaultFields() {
     return [
       'type',
@@ -46,47 +41,11 @@ export default class PkiGenerateRootComponent extends Component {
       'maxPathLength',
     ];
   }
-  get keyParamFields() {
-    const { type } = this.args.model;
-    if (!type) return null;
-    let fields = ['keyName', 'keyType', 'keyBits'];
-    if (type === 'existing') {
-      fields = ['keyRef'];
-    } else if (type === 'kms') {
-      fields = ['keyName', 'managedKeyName', 'managedKeyId'];
-    }
-    return fields.map((fieldName) => {
-      return this.args.model.allFields.find((attr) => attr.name === fieldName);
-    });
-  }
 
   @action cancel() {
     // Generate root form will always have a new model
     this.args.model.unloadRecord();
     this.args.onCancel();
-  }
-
-  get groups() {
-    return {
-      'Key parameters': this.keyParamFields,
-      'Subject Alternative Name (SAN) Options': [
-        'excludeCnFromSans',
-        'serialNumber',
-        'altNames',
-        'ipSans',
-        'uriSans',
-        'otherSans',
-      ],
-      'Additional subject fields': [
-        'ou',
-        'organization',
-        'country',
-        'locality',
-        'province',
-        'streetAddress',
-        'postalCode',
-      ],
-    };
   }
 
   @action
