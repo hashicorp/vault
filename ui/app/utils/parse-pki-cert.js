@@ -1,4 +1,3 @@
-import { helper } from '@ember/component/helper';
 import * as asn1js from 'asn1js';
 import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';
@@ -46,7 +45,7 @@ export function parseCertificate(certificateContent) {
   };
 }
 
-export function parsePkiCert([model]) {
+export function parsePkiCert(model) {
   // model has to be the responseJSON from PKI serializer
   // return if no certificate or if the "certificate" is actually a CRL
   if (!model.certificate || model.certificate.includes('BEGIN X509 CRL')) {
@@ -205,5 +204,3 @@ function mapSignatureBits(sigAlgo) {
   }
   return [SIGNATURE_ALGORITHM_OIDs[algorithmId], false];
 }
-
-export default helper(parsePkiCert);

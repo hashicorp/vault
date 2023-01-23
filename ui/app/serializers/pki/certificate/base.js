@@ -1,4 +1,4 @@
-import { parseCertificate } from 'vault/helpers/parse-pki-cert';
+import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import ApplicationSerializer from '../../application';
 
 export default class PkiCertificateBaseSerializer extends ApplicationSerializer {

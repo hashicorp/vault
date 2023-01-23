@@ -1,7 +1,6 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-// import { parseCertificate } from 'vault/utils/parse-pki-cert';
-import { parseCertificate } from 'vault/helpers/parse-pki-cert';
+import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import { addHours, fromUnixTime, isSameDay } from 'date-fns';
 import errorMessage from 'vault/utils/error-message';
 
