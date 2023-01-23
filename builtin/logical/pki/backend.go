@@ -480,19 +480,21 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		if !strings.HasSuffix(key, "/confirmed") {
 			cluster := split[len(split)-2]
 			serial := split[len(split)-1]
-			// Only process confirmations on the perf primary.
 			b.crlBuilder.addCertForRevocationCheck(cluster, serial)
 		} else {
 			if len(split) >= 3 {
 				cluster := split[len(split)-3]
 				serial := split[len(split)-2]
+				// Only process confirmations on the perf primary. The
+				// performance secondaries cannot remove other clusters'
+				// entries, and so do not need to track them (only to
+				// ignore them). On performance primary nodes though,
+				// we do want to track them to remove them.
 				if !isNotPerfPrimary {
 					b.crlBuilder.addCertForRevocationRemoval(cluster, serial)
 				}
 			}
 		}
-
-		b.Logger().Debug("got replicated cross-cluster revocation: " + key)
 	}
 }
 
