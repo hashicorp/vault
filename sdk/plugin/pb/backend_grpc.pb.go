@@ -642,6 +642,8 @@ type SystemViewClient interface {
 	GroupsForEntity(ctx context.Context, in *EntityInfoArgs, opts ...grpc.CallOption) (*GroupsForEntityReply, error)
 	// GeneratePasswordFromPolicy generates a password from an existing password policy
 	GeneratePasswordFromPolicy(ctx context.Context, in *GeneratePasswordFromPolicyRequest, opts ...grpc.CallOption) (*GeneratePasswordFromPolicyReply, error)
+	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
+	ClusterInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ClusterInfoReply, error)
 }
 
 type systemViewClient struct {
@@ -760,6 +762,15 @@ func (c *systemViewClient) GeneratePasswordFromPolicy(ctx context.Context, in *G
 	return out, nil
 }
 
+func (c *systemViewClient) ClusterInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ClusterInfoReply, error) {
+	out := new(ClusterInfoReply)
+	err := c.cc.Invoke(ctx, "/pb.SystemView/ClusterInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SystemViewServer is the server API for SystemView service.
 // All implementations must embed UnimplementedSystemViewServer
 // for forward compatibility
@@ -802,6 +813,8 @@ type SystemViewServer interface {
 	GroupsForEntity(context.Context, *EntityInfoArgs) (*GroupsForEntityReply, error)
 	// GeneratePasswordFromPolicy generates a password from an existing password policy
 	GeneratePasswordFromPolicy(context.Context, *GeneratePasswordFromPolicyRequest) (*GeneratePasswordFromPolicyReply, error)
+	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
+	ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error)
 	mustEmbedUnimplementedSystemViewServer()
 }
 
@@ -844,6 +857,9 @@ func (UnimplementedSystemViewServer) GroupsForEntity(context.Context, *EntityInf
 }
 func (UnimplementedSystemViewServer) GeneratePasswordFromPolicy(context.Context, *GeneratePasswordFromPolicyRequest) (*GeneratePasswordFromPolicyReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GeneratePasswordFromPolicy not implemented")
+}
+func (UnimplementedSystemViewServer) ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClusterInfo not implemented")
 }
 func (UnimplementedSystemViewServer) mustEmbedUnimplementedSystemViewServer() {}
 
@@ -1074,6 +1090,24 @@ func _SystemView_GeneratePasswordFromPolicy_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemView_ClusterInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemViewServer).ClusterInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pb.SystemView/ClusterInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemViewServer).ClusterInfo(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SystemView_ServiceDesc is the grpc.ServiceDesc for SystemView service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1128,6 +1162,10 @@ var SystemView_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GeneratePasswordFromPolicy",
 			Handler:    _SystemView_GeneratePasswordFromPolicy_Handler,
+		},
+		{
+			MethodName: "ClusterInfo",
+			Handler:    _SystemView_ClusterInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

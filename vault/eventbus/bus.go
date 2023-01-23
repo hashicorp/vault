@@ -29,10 +29,41 @@ type EventBus struct {
 
 type asyncChanNode struct {
 	// TODO: add bounded deque buffer of *any
-	ch chan any
+	ch chan *logical.EventData
 }
 
-var _ eventlogger.Node = &asyncChanNode{}
+var (
+	_ eventlogger.Node    = (*asyncChanNode)(nil)
+	_ logical.EventSender = (*EventBus)(nil)
+)
+
+// Start starts the event bus, allowing events to be written.
+// It is not possible to stop or restart the event bus.
+// It is safe to call Start() multiple times.
+func (bus *EventBus) Start() {
+	wasStarted := bus.started.Swap(true)
+	if !wasStarted {
+		bus.logger.Info("Starting event system")
+	}
+}
+
+// Send sends an event to the event bus and routes it to all relevant subscribers.
+// This function does *not* wait for all subscribers to acknowledge before returning.
+func (bus *EventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
+	if !bus.started.Load() {
+		return ErrNotStarted
+	}
+	bus.logger.Info("Sending event", "event", data)
+	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), data)
+	if err != nil {
+		// if no listeners for this event type are registered, that's okay, the event
+		// will just not be sent anywhere
+		if strings.Contains(strings.ToLower(err.Error()), "no graph for eventtype") {
+			return nil
+		}
+	}
+	return err
+}
 
 func init() {
 	// TODO: maybe this should relate to the Vault core somehow?
@@ -72,38 +103,7 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	}, nil
 }
 
-// Start starts the event bus, allowing events to be written.
-// It is not possible to stop or restart the event bus.
-// It is safe to call Start() multiple times.
-func (bus *EventBus) Start() {
-	wasStarted := bus.started.Swap(true)
-	if !wasStarted {
-		bus.logger.Info("Starting event system")
-	}
-}
-
-var _ logical.EventSender = (*EventBus)(nil)
-
-// Send sends an event to the event bus and routes it to all relevant subscribers.
-// This function does *not* wait for all subscribers to acknowledge before returning.
-// TODO: use schema once it is defined
-func (bus *EventBus) Send(ctx context.Context, eventType logical.EventType, s any) error {
-	if !bus.started.Load() {
-		return ErrNotStarted
-	}
-	bus.logger.Info("Sending event", "event", s)
-	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), s)
-	if err != nil {
-		// if no listeners for this event type are registered, that's okay, the event
-		// will just not be sent anywhere
-		if strings.Contains(strings.ToLower(err.Error()), "no graph for eventtype") {
-			return nil
-		}
-	}
-	return err
-}
-
-func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (chan any, error) {
+func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (chan *logical.EventData, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -140,7 +140,7 @@ func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (
 
 func newAsyncNode() *asyncChanNode {
 	return &asyncChanNode{
-		ch: make(chan any),
+		ch: make(chan *logical.EventData),
 	}
 }
 
@@ -154,7 +154,7 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 	// sends to the channel async in another goroutine
 	go func() {
 		select {
-		case node.ch <- e.Payload:
+		case node.ch <- e.Payload.(*logical.EventData):
 		case <-ctx.Done():
 		}
 	}()
