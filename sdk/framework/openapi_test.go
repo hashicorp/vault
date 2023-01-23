@@ -665,8 +665,6 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 		t.Fatal(err)
 	}
 
-	t.Log(string(docJSON))
-
 	// Compare json by first decoding, then comparing with a deep equality check.
 	var expected, actual interface{}
 	if err := jsonutil.DecodeJSON(docJSON, &actual); err != nil {

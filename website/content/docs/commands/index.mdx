@@ -272,7 +272,9 @@ this file at any time to "logout" of Vault.
 
 The CLI reads the following environment variables to set behavioral defaults.
 This can alleviate the need to repetitively type a flag. Flags always take
-precedence over the environment variables.
+precedence over the environment variables. Each of the following environment 
+variables must be set on the Vault process.  In Vault 1.13+, all environment 
+variables available to the Vault process will be logged during startup.
 
 ### `VAULT_TOKEN`
 
@@ -330,6 +332,11 @@ precedence over [#VAULT_LICENSE_PATH](#vault_license_path) and
 
 [Enterprise, Server only] Specify a path to a license on disk to use for this node.
 This takes precedence over [license_path in config](/docs/configuration#license_path).
+
+### `VAULT_LOG_LEVEL`
+
+Set the Vault server's log level. The supported values are `trace`, `debug`,
+`info`, `warn`, and `err`. The default log leve is `info`.
 
 ### `VAULT_MAX_RETRIES`
 

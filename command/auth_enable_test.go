@@ -49,18 +49,6 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			"",
 			2,
 		},
-		{
-			"deprecated builtin with standard mount",
-			[]string{"app-id"},
-			"mount entry associated with pending removal builtin",
-			2,
-		},
-		{
-			"deprecated builtin with different mount",
-			[]string{"-path=/tmp", "app-id"},
-			"mount entry associated with pending removal builtin",
-			2,
-		},
 	}
 
 	for _, tc := range cases {
