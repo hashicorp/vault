@@ -5,7 +5,6 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
 import PkiActionModel from 'vault/models/pki/action';
 import errorMessage from 'vault/utils/error-message';
@@ -18,7 +17,6 @@ interface Args {
 }
 
 export default class PkiGenerateIntermediateComponent extends Component<Args> {
-  @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked modelValidations = null;
