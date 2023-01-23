@@ -261,41 +261,7 @@ type backend struct {
 	issuersLock sync.RWMutex
 }
 
-type (
-	tidyStatusState int
-	roleOperation   func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
-)
-
-const (
-	tidyStatusInactive   tidyStatusState = iota
-	tidyStatusStarted                    = iota
-	tidyStatusFinished                   = iota
-	tidyStatusError                      = iota
-	tidyStatusCancelling                 = iota
-	tidyStatusCancelled                  = iota
-)
-
-type tidyStatus struct {
-	// Parameters used to initiate the operation
-	safetyBuffer       int
-	issuerSafetyBuffer int
-	tidyCertStore      bool
-	tidyRevokedCerts   bool
-	tidyRevokedAssocs  bool
-	tidyExpiredIssuers bool
-	tidyBackupBundle   bool
-	pauseDuration      string
-
-	// Status
-	state                   tidyStatusState
-	err                     error
-	timeStarted             time.Time
-	timeFinished            time.Time
-	message                 string
-	certStoreDeletedCount   uint
-	revokedCertDeletedCount uint
-	missingIssuerCertCount  uint
-}
+type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
 
 const backendHelp = `
 The PKI backend dynamically generates X509 server and client certificates.

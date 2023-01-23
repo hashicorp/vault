@@ -19,6 +19,39 @@ import (
 
 var tidyCancelledError = errors.New("tidy operation cancelled")
 
+type tidyStatusState int
+
+const (
+	tidyStatusInactive   tidyStatusState = iota
+	tidyStatusStarted                    = iota
+	tidyStatusFinished                   = iota
+	tidyStatusError                      = iota
+	tidyStatusCancelling                 = iota
+	tidyStatusCancelled                  = iota
+)
+
+type tidyStatus struct {
+	// Parameters used to initiate the operation
+	safetyBuffer       int
+	issuerSafetyBuffer int
+	tidyCertStore      bool
+	tidyRevokedCerts   bool
+	tidyRevokedAssocs  bool
+	tidyExpiredIssuers bool
+	tidyBackupBundle   bool
+	pauseDuration      string
+
+	// Status
+	state                   tidyStatusState
+	err                     error
+	timeStarted             time.Time
+	timeFinished            time.Time
+	message                 string
+	certStoreDeletedCount   uint
+	revokedCertDeletedCount uint
+	missingIssuerCertCount  uint
+}
+
 type tidyConfig struct {
 	Enabled            bool          `json:"enabled"`
 	Interval           time.Duration `json:"interval_duration"`
