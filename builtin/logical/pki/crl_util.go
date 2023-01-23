@@ -508,9 +508,7 @@ func (cb *crlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotP
 				cb.revQueue.Add(entry)
 			} else if !isNotPerfPrimary {
 				cb.removalQueue.Add(entry)
-			} else {
-				sc.Backend.Logger().Debug(fmt.Sprintf("ignoring confirmed revoked serial %v: %v vs %v ", serial, err, removalEntry))
-			}
+			} // Else, this is a confirmation but we're on a perf secondary so ignore it.
 
 			// Overwrite the error; we don't really care about its contents
 			// at this step.
@@ -543,12 +541,27 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 	removalQueue := cb.removalQueue.Iterate()
 
 	sc.Backend.Logger().Debug(fmt.Sprintf("gathered %v revocations and %v confirmation entries", len(revQueue), len(removalQueue)))
+
 	crlConfig, err := cb.getConfigWithUpdate(sc)
 	if err != nil {
 		return err
 	}
+
+	ourClusterId, err := sc.Backend.System().ClusterID(sc.Context)
+	if err != nil {
+		return fmt.Errorf("unable to fetch clusterID to ignore local revocation entries: %w", err)
+	}
+
 	for _, req := range revQueue {
-		sc.Backend.Logger().Debug(fmt.Sprintf("handling revocation request: %v", req))
+		// Regardless of whether we're on the perf primary or a secondary
+		// cluster, we can safely ignore revocation requests originating
+		// from our node, because we've already checked them once (when
+		// they were created).
+		if ourClusterId != "" && ourClusterId == req.Cluster {
+			continue
+		}
+
+		// Fetch the revocation entry to ensure it exists.
 		rPath := crossRevocationPrefix + req.Cluster + "/" + req.Serial
 		entry, err := sc.Storage.Get(sc.Context, rPath)
 		if err != nil {
@@ -562,7 +575,6 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 		}
 
 		resp, err := tryRevokeCertBySerial(sc, crlConfig, req.Serial)
-		sc.Backend.Logger().Debug(fmt.Sprintf("checked local revocation entry: %v / %v", resp, err))
 		if err == nil && resp != nil && !resp.IsError() && resp.Data != nil && resp.Data["state"].(string) == "revoked" {
 			if isNotPerfPrimary {
 				// Write a revocation queue removal entry.
@@ -597,7 +609,9 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 	}
 
 	if isNotPerfPrimary {
-		sc.Backend.Logger().Debug(fmt.Sprintf("not on perf primary so done; ignoring any revocation confirmations"))
+		sc.Backend.Logger().Debug(fmt.Sprintf("not on perf primary so ignoring any revocation confirmations"))
+
+		// See note in pki/backend.go; this should be empty.
 		cb.removalQueue.RemoveAll()
 		cb.haveInitializedQueue = true
 		return nil
@@ -609,7 +623,6 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 	}
 
 	for _, entry := range removalQueue {
-		sc.Backend.Logger().Debug(fmt.Sprintf("handling revocation confirmation: %v", entry))
 		// First remove the revocation request.
 		for cIndex, cluster := range clusters {
 			eEntry := crossRevocationPrefix + cluster + entry.Serial
