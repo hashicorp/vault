@@ -240,11 +240,21 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	}
 
 	if !constants.IsEnterprise && config.UseGlobalQueue {
-		return logical.ErrorResponse("Global, cross-cluster revocation queue can only be enabled on Vault Enterprise."), nil
+		return logical.ErrorResponse("Global, cross-cluster revocation queue (cross_cluster_revocation) can only be enabled on Vault Enterprise."), nil
 	}
 
 	if !constants.IsEnterprise && config.UnifiedCRL {
 		return logical.ErrorResponse("unified_crl can only be enabled on Vault Enterprise"), nil
+	}
+
+	isLocalMount := b.System().LocalMount()
+	if isLocalMount && config.UseGlobalQueue {
+		return logical.ErrorResponse("Global, cross-cluster revocation queue (cross_cluster_revocation) cannot be enabled on local mounts."),
+			nil
+	}
+
+	if isLocalMount && config.UnifiedCRL {
+		return logical.ErrorResponse("unified_crl cannot be enabled on local mounts."), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("config/crl", config)
