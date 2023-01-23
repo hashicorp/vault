@@ -91,9 +91,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"issuer/+/pem",
 				"issuer/+/der",
 				"issuer/+/json",
-				"issuers/", // LIST operations append a '/' to the requested path
-				"ocsp",     // OCSP POST
-				"ocsp/*",   // OCSP GET
+				"issuers/",       // LIST operations append a '/' to the requested path
+				"ocsp",           // OCSP POST
+				"ocsp/*",         // OCSP GET
+				"unified-ocsp",   // Unified OCSP POST
+				"unified-ocsp/*", // Unified OCSP GET
 			},
 
 			LocalStorage: []string{
@@ -187,6 +189,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// OCSP APIs
 			buildPathOcspGet(&b),
 			buildPathOcspPost(&b),
+			buildPathUnifiedOcspGet(&b),
+			buildPathUnifiedOcspPost(&b),
 
 			// CRL Signing
 			pathResignCrls(&b),

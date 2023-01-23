@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -1277,6 +1278,15 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	// This sets the default value to prevent issues in downstream code.
 	if result.Expiry == "" {
 		result.Expiry = defaultCrlConfig.Expiry
+	}
+
+	if !constants.IsEnterprise && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
+		// An end user must have had Enterprise, enabled the unified config args and then downgraded to OSS.
+		sc.Backend.Logger().Warn("Not running Vault Enterprise, " +
+			"disabling unified_crl, unified_crl_on_existing_paths and cross_cluster_revocation config flags.")
+		result.UnifiedCRLOnExistingPaths = false
+		result.UnifiedCRL = false
+		result.UseGlobalQueue = false
 	}
 
 	return &result, nil
