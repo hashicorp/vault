@@ -43,4 +43,9 @@ export const SELECTORS = {
     title: '[data-test-pki-issuer-page-title]',
     ...ISSUERDETAILS,
   },
+  //CONFIGURATION
+  configuration: {
+    pkiBetaBanner: '[data-test-pki-configuration-banner]',
+    pkiBetaBannerLink: '[data-test-pki-configuration-banner] a',
+  },
 };
