@@ -30,6 +30,7 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
     return false;
   }
 
+  @attr isDefault; // readonly
   @attr('string') issuerId;
   @attr('string', { displayType: 'masked' }) certificate;
   @attr('string', { displayType: 'masked', label: 'CA Chain' }) caChain;

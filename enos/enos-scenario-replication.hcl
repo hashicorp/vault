@@ -119,7 +119,7 @@ scenario "replication" {
     }
 
     variables {
-      ami_id      = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      ami_id      = step.create_vpc.ami_ids["ubuntu"]["amd64"]
       common_tags = local.tags
       consul_release = {
         edition = var.backend_edition
@@ -171,7 +171,7 @@ scenario "replication" {
     }
 
     variables {
-      ami_id      = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      ami_id      = step.create_vpc.ami_ids["ubuntu"]["amd64"]
       common_tags = local.tags
       consul_release = {
         edition = var.backend_edition

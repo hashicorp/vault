@@ -26,6 +26,8 @@
     "ember-wormhole": "*",
     "escape-string-regexp": "*",
     "@hashicorp/ember-flight-icons": "*",
-    "@hashicorp/flight-icons": "*"
+    "@hashicorp/flight-icons": "*",
+    "codemirror": "*",
+    "ember-modifier": "*"
   }
 }
