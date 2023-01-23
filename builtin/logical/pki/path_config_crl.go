@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -23,6 +24,7 @@ type crlConfig struct {
 	OcspExpiry             string `json:"ocsp_expiry"`
 	EnableDelta            bool   `json:"enable_delta"`
 	DeltaRebuildInterval   string `json:"delta_rebuild_interval"`
+	UseGlobalQueue         bool   `json:"cross_cluster_revocation"`
 }
 
 // Implicit default values for the config if it does not exist.
@@ -36,6 +38,7 @@ var defaultCrlConfig = crlConfig{
 	AutoRebuildGracePeriod: "12h",
 	EnableDelta:            false,
 	DeltaRebuildInterval:   "15m",
+	UseGlobalQueue:         false,
 }
 
 func pathConfigCRL(b *backend) *framework.Path {
@@ -80,6 +83,11 @@ the NextUpdate field); defaults to 12 hours`,
 				Description: `The time between delta CRL rebuilds if a new revocation has occurred. Must be shorter than the CRL expiry. Defaults to 15m.`,
 				Default:     "15m",
 			},
+			"cross_cluster_revocation": {
+				Type: framework.TypeBool,
+				Description: `Whether to enable a global, cross-cluster revocation queue.
+Must be used with auto_rebuild=true.`,
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -116,6 +124,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 			"auto_rebuild_grace_period": config.AutoRebuildGracePeriod,
 			"enable_delta":              config.EnableDelta,
 			"delta_rebuild_interval":    config.DeltaRebuildInterval,
+			"cross_cluster_revocation":  config.UseGlobalQueue,
 		},
 	}, nil
 }
@@ -182,6 +191,10 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.DeltaRebuildInterval = deltaRebuildInterval
 	}
 
+	if useGlobalQueue, ok := d.GetOk("cross_cluster_revocation"); ok {
+		config.UseGlobalQueue = useGlobalQueue.(bool)
+	}
+
 	expiry, _ := time.ParseDuration(config.Expiry)
 	if config.AutoRebuild {
 		gracePeriod, _ := time.ParseDuration(config.AutoRebuildGracePeriod)
@@ -197,8 +210,18 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		}
 	}
 
-	if config.EnableDelta && !config.AutoRebuild {
-		return logical.ErrorResponse("Delta CRLs cannot be enabled when auto rebuilding is disabled as the complete CRL is always regenerated!"), nil
+	if !config.AutoRebuild {
+		if config.EnableDelta {
+			return logical.ErrorResponse("Delta CRLs cannot be enabled when auto rebuilding is disabled as the complete CRL is always regenerated!"), nil
+		}
+
+		if config.UseGlobalQueue {
+			return logical.ErrorResponse("Global, cross-cluster revocation queue cannot be enabled when auto rebuilding is disabled as the local cluster may not have the certificate entry!"), nil
+		}
+	}
+
+	if !constants.IsEnterprise && config.UseGlobalQueue {
+		return logical.ErrorResponse("Global, cross-cluster revocation queue can only be enabled on Vault Enterprise."), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("config/crl", config)

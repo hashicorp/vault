@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -28,6 +29,21 @@ func pathListCertsRevoked(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathListRevokedHelpSyn,
 		HelpDescription: pathListRevokedHelpDesc,
+	}
+}
+
+func pathListCertsRevocationQueue(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "certs/revocation-queue/?$",
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathListRevocationQueueHandler,
+			},
+		},
+
+		HelpSynopsis:    pathListRevocationQueueHelpSyn,
+		HelpDescription: pathListRevocationQueueHelpDesc,
 	}
 }
 
@@ -315,9 +331,47 @@ func (b *backend) pathRevokeWriteHandleKey(req *logical.Request, certReference *
 	return nil
 }
 
+func (b *backend) maybeRevokeCrossCluster(ctx context.Context, sc *storageContext, serial string) (*logical.Response, error) {
+	config, err := b.crlBuilder.getConfigWithUpdate(sc)
+	if err != nil {
+		return nil, err
+	}
+
+	if !config.UseGlobalQueue {
+		return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found or was already revoked", serial)), nil
+	}
+
+	// Here, we have to use the global revocation queue as the cert
+	// was not found on this current cluster.
+	currTime := time.Now()
+	nSerial := normalizeSerial(serial)
+	queueReq := revocationRequest{
+		RequestedAt: currTime,
+	}
+	path := crossRevocationPath + nSerial
+
+	reqEntry, err := logical.StorageEntryJSON(path, queueReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create storage entry for cross-cluster revocation request: %w", err)
+	}
+
+	if err := sc.Storage.Put(ctx, reqEntry); err != nil {
+		return nil, fmt.Errorf("error persisting cross-cluster revocation request: %w\nThis may occur when the active node of the primary performance replication cluster is unavailable.", err)
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"state": "pending",
+		},
+	}
+	resp.AddWarning("Revocation request was not found on this present node. This request will be in a pending state until the PR cluster which issued this certificate sees the request and revokes the certificate. If no online cluster has this certificate, the request will eventually be removed without revoking any certificates.")
+	return resp, nil
+}
+
 func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData, _ *roleEntry) (*logical.Response, error) {
 	rawSerial, haveSerial := data.GetOk("serial_number")
 	rawCertificate, haveCert := data.GetOk("certificate")
+	sc := b.makeStorageContext(ctx, req.Storage)
 
 	if !haveSerial && !haveCert {
 		return logical.ErrorResponse("The serial number or certificate to revoke must be provided."), nil
@@ -342,8 +396,6 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	writeCert := false
 	var cert *x509.Certificate
 	var serial string
-
-	sc := b.makeStorageContext(ctx, req.Storage)
 
 	if haveCert {
 		var err error
@@ -373,6 +425,9 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 			if err != nil {
 				return nil, fmt.Errorf("error parsing certificate: %w", err)
 			}
+		} else if keyPem == "" {
+			// Cross-cluster revocation can only happen without PoP currently.
+			return b.maybeRevokeCrossCluster(ctx, sc, serial)
 		}
 	}
 
@@ -477,6 +532,57 @@ func (b *backend) pathListRevokedCertsHandler(ctx context.Context, request *logi
 	return logical.ListResponse(revokedCerts), nil
 }
 
+func (b *backend) pathListRevocationQueueHandler(ctx context.Context, request *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	var responseKeys []string
+	responseInfo := make(map[string]interface{})
+
+	sc := b.makeStorageContext(ctx, request.Storage)
+
+	clusters, err := sc.Storage.List(sc.Context, crossRevocationPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list cross-cluster revocation queue participating clusters: %w", err)
+	}
+
+	for cIndex, cluster := range clusters {
+		cluster = cluster[0 : len(cluster)-1]
+		cPath := crossRevocationPrefix + cluster + "/"
+		serials, err := sc.Storage.List(sc.Context, cPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list cross-cluster revocation queue entries for cluster %v (%v): %w", cluster, cIndex, err)
+		}
+
+		for _, serial := range serials {
+			// Always strip the slash out; it indicates the presence of
+			// a confirmed revocation, which we add to the main serial's
+			// entry.
+			hasSlash := serial[len(serial)-1] == '/'
+			if hasSlash {
+				serial = serial[0 : len(serial)-1]
+			}
+
+			var data map[string]interface{}
+			rawData, isPresent := responseInfo[serial]
+			if !isPresent {
+				data = map[string]interface{}{}
+				responseKeys = append(responseKeys, serial)
+			} else {
+				data = rawData.(map[string]interface{})
+			}
+
+			if hasSlash {
+				data["confirmed"] = true
+				data["confirmation_cluster"] = cluster
+			} else {
+				data["requesting_cluster"] = cluster
+			}
+
+			responseInfo[serial] = data
+		}
+	}
+
+	return logical.ListResponseWithInfo(responseKeys, responseInfo), nil
+}
+
 const pathRevokeHelpSyn = `
 Revoke a certificate by serial number or with explicit certificate.
 
@@ -511,4 +617,13 @@ List all revoked serial numbers within the local cluster
 
 const pathListRevokedHelpDesc = `
 Returns a list of serial numbers for revoked certificates in the local cluster. 
+`
+
+const pathListRevocationQueueHelpSyn = `
+List all pending, cross-cluster revocations known to the local cluster.
+`
+
+const pathListRevocationQueueHelpDesc = `
+Returns a detailed list containing serial number, requesting cluster, and
+optionally a confirming cluster.
 `

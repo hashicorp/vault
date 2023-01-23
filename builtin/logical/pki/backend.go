@@ -115,6 +115,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 				legacyCertBundleBackupPath,
 				keyPrefix,
 			},
+
+			WriteForwardedStorage: []string{
+				crossRevocationPath,
+			},
 		},
 
 		Paths: []*framework.Path{
@@ -138,6 +142,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathRevoke(&b),
 			pathRevokeWithKey(&b),
 			pathListCertsRevoked(&b),
+			pathListCertsRevocationQueue(&b),
 			pathTidy(&b),
 			pathTidyCancel(&b),
 			pathTidyStatus(&b),
@@ -430,6 +435,9 @@ func (b *backend) updatePkiStorageVersion(ctx context.Context, grabIssuersLock b
 }
 
 func (b *backend) invalidate(ctx context.Context, key string) {
+	isNotPerfPrimary := b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
+
 	switch {
 	case strings.HasPrefix(key, legacyMigrationBundleLogKey):
 		// This is for a secondary cluster to pick up that the migration has completed
@@ -460,6 +468,25 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		b.crlBuilder.markConfigDirty()
 	case key == storageIssuerConfig:
 		b.crlBuilder.invalidateCRLBuildTime()
+	case strings.HasPrefix(key, crossRevocationPrefix):
+		split := strings.Split(key, "/")
+
+		if !strings.HasSuffix(key, "/confirmed") {
+			cluster := split[len(split)-2]
+			serial := split[len(split)-1]
+			// Only process confirmations on the perf primary.
+			b.crlBuilder.addCertForRevocationCheck(cluster, serial)
+		} else {
+			if len(split) >= 3 {
+				cluster := split[len(split)-3]
+				serial := split[len(split)-2]
+				if !isNotPerfPrimary {
+					b.crlBuilder.addCertForRevocationRemoval(cluster, serial)
+				}
+			}
+		}
+
+		b.Logger().Debug("got replicated cross-cluster revocation: " + key)
 	}
 }
 
@@ -477,6 +504,11 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
 			b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
 			return nil
+		}
+
+		// First handle any global revocation queue entries.
+		if err := b.crlBuilder.processRevocationQueue(sc); err != nil {
+			return err
 		}
 
 		// Check if we're set to auto rebuild and a CRL is set to expire.

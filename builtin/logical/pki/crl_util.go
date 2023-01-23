@@ -13,12 +13,15 @@ import (
 	atomic2 "go.uber.org/atomic"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
 	revokedPath                    = "revoked/"
+	crossRevocationPrefix          = "cross-revocation-queue/"
+	crossRevocationPath            = crossRevocationPrefix + "{{clusterId}}/"
 	deltaWALLastBuildSerialName    = "last-build-serial"
 	deltaWALLastRevokedSerialName  = "last-revoked-serial"
 	localDeltaWALPath              = "delta-wal/"
@@ -31,6 +34,20 @@ type revocationInfo struct {
 	RevocationTime    int64     `json:"revocation_time"`
 	RevocationTimeUTC time.Time `json:"revocation_time_utc"`
 	CertificateIssuer issuerID  `json:"issuer_id"`
+}
+
+type revocationRequest struct {
+	RequestedAt time.Time `json:"requested_at"`
+}
+
+type revocationConfirmed struct {
+	RevokedAt string `json:"revoked_at"`
+	Source    string `json:"source"`
+}
+
+type revocationQueueEntry struct {
+	Cluster string
+	Serial  string
 }
 
 type (
@@ -76,6 +93,12 @@ type crlBuilder struct {
 	// Whether to invalidate our LastModifiedTime due to write on the
 	// global issuance config.
 	invalidate *atomic2.Bool
+
+	// Global revocation queue entries get accepted by the invalidate func
+	// and passed to the crlBuilder for processing.
+	haveInitializedQueue bool
+	revQueue             *revocationQueue
+	removalQueue         *revocationQueue
 }
 
 const (
@@ -94,6 +117,8 @@ func newCRLBuilder(canRebuild bool) *crlBuilder {
 		dirty:                 atomic2.NewBool(true),
 		config:                defaultCrlConfig,
 		invalidate:            atomic2.NewBool(false),
+		revQueue:              newRevocationQueue(),
+		removalQueue:          newRevocationQueue(),
 	}
 }
 
@@ -422,6 +447,187 @@ func (cb *crlBuilder) rebuildDeltaCRLsHoldingLock(sc *storageContext, forceNew b
 	return buildAnyCRLs(sc, forceNew, true /* building delta */)
 }
 
+func (cb *crlBuilder) addCertForRevocationCheck(cluster, serial string) {
+	entry := &revocationQueueEntry{
+		Cluster: cluster,
+		Serial:  serial,
+	}
+	cb.revQueue.Add(entry)
+}
+
+func (cb *crlBuilder) addCertForRevocationRemoval(cluster, serial string) {
+	entry := &revocationQueueEntry{
+		Cluster: cluster,
+		Serial:  serial,
+	}
+	cb.removalQueue.Add(entry)
+}
+
+func (cb *crlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotPerfPrimary bool) error {
+	// Assume holding lock.
+	if cb.haveInitializedQueue {
+		return nil
+	}
+
+	sc.Backend.Logger().Debug(fmt.Sprintf("gathering first time existing revocations"))
+
+	clusters, err := sc.Storage.List(sc.Context, crossRevocationPrefix)
+	if err != nil {
+		return fmt.Errorf("failed to list cross-cluster revocation queue participating clusters: %w", err)
+	}
+
+	sc.Backend.Logger().Debug(fmt.Sprintf("found %v clusters: %v", len(clusters), clusters))
+
+	for cIndex, cluster := range clusters {
+		cluster = cluster[0 : len(cluster)-1]
+		cPath := crossRevocationPrefix + cluster + "/"
+		serials, err := sc.Storage.List(sc.Context, cPath)
+		if err != nil {
+			return fmt.Errorf("failed to list cross-cluster revocation queue entries for cluster %v (%v): %w", cluster, cIndex, err)
+		}
+
+		sc.Backend.Logger().Debug(fmt.Sprintf("found %v serials for cluster %v: %v", len(serials), cluster, serials))
+
+		for _, serial := range serials {
+			if serial[len(serial)-1] == '/' {
+				serial = serial[0 : len(serial)-1]
+			}
+
+			ePath := cPath + serial
+			eConfirmPath := ePath + "/confirmed"
+			removalEntry, err := sc.Storage.Get(sc.Context, eConfirmPath)
+
+			entry := &revocationQueueEntry{
+				Cluster: cluster,
+				Serial:  serial,
+			}
+
+			// No removal entry yet; add to regular queue. Otherwise, slate it
+			// for removal if we're a perfPrimary.
+			if err != nil || removalEntry == nil {
+				cb.revQueue.Add(entry)
+			} else if !isNotPerfPrimary {
+				cb.removalQueue.Add(entry)
+			} else {
+				sc.Backend.Logger().Debug(fmt.Sprintf("ignoring confirmed revoked serial %v: %v vs %v ", serial, err, removalEntry))
+			}
+
+			// Overwrite the error; we don't really care about its contents
+			// at this step.
+			err = nil
+		}
+	}
+
+	return nil
+}
+
+func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
+	sc.Backend.Logger().Debug(fmt.Sprintf("starting to process revocation requests"))
+
+	isNotPerfPrimary := sc.Backend.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!sc.Backend.System().LocalMount() && sc.Backend.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
+
+	// Before revoking certificates, we need to hold the lock for certificate
+	// storage. This prevents any parallel revocations and prevents us from
+	// multiple places. We do this before grabbing the contents of the
+	// revocation queues themselves, to ensure we interleave well with other
+	// invocations of this function and avoid duplicate work.
+	sc.Backend.revokeStorageLock.Lock()
+	defer sc.Backend.revokeStorageLock.Unlock()
+
+	if err := cb.maybeGatherQueueForFirstProcess(sc, isNotPerfPrimary); err != nil {
+		return fmt.Errorf("failed to gather first queue: %v", err)
+	}
+
+	revQueue := cb.revQueue.Iterate()
+	removalQueue := cb.removalQueue.Iterate()
+
+	sc.Backend.Logger().Debug(fmt.Sprintf("gathered %v revocations and %v confirmation entries", len(revQueue), len(removalQueue)))
+
+	for _, req := range revQueue {
+		sc.Backend.Logger().Debug(fmt.Sprintf("handling revocation request: %v", req))
+		rPath := crossRevocationPrefix + req.Cluster + "/" + req.Serial
+		entry, err := sc.Storage.Get(sc.Context, rPath)
+		if err != nil {
+			return fmt.Errorf("failed to read cross-cluster revocation queue entry: %w", err)
+		}
+		if entry == nil {
+			// Skipping this entry; it was likely an incorrect invalidation
+			// caused by the primary cluster removing the confirmation.
+			cb.revQueue.Remove(req)
+			continue
+		}
+
+		resp, err := tryRevokeCertBySerial(sc, req.Serial)
+		sc.Backend.Logger().Debug(fmt.Sprintf("checked local revocation entry: %v / %v", resp, err))
+		if err == nil && resp != nil && !resp.IsError() && resp.Data != nil && resp.Data["state"].(string) == "revoked" {
+			if isNotPerfPrimary {
+				// Write a revocation queue removal entry.
+				confirmed := revocationConfirmed{
+					RevokedAt: resp.Data["revocation_time_rfc3339"].(string),
+					Source:    req.Cluster,
+				}
+				path := crossRevocationPath + req.Serial + "/confirmed"
+				confirmedEntry, err := logical.StorageEntryJSON(path, confirmed)
+				if err != nil {
+					return fmt.Errorf("failed to create storage entry for cross-cluster revocation confirmed response: %w", err)
+				}
+
+				if err := sc.Storage.Put(sc.Context, confirmedEntry); err != nil {
+					return fmt.Errorf("error persisting cross-cluster revocation confirmation: %w\nThis may occur when the active node of the primary performance replication cluster is unavailable.", err)
+				}
+			} else {
+				// Since we're the active node of the primary cluster, go ahead
+				// and just remove it.
+				path := crossRevocationPrefix + req.Cluster + "/" + req.Serial
+				if err := sc.Storage.Delete(sc.Context, path); err != nil {
+					return fmt.Errorf("failed to delete processed revocation request: %w", err)
+				}
+			}
+		} else if err != nil {
+			// Because we fake being from a lease, we get the guarantee that
+			// err == nil == resp if the cert was already revoked; this means
+			// this err should actually be fatal.
+			return err
+		}
+		cb.revQueue.Remove(req)
+	}
+
+	if isNotPerfPrimary {
+		sc.Backend.Logger().Debug(fmt.Sprintf("not on perf primary so done; ignoring any revocation confirmations"))
+		cb.removalQueue.RemoveAll()
+		cb.haveInitializedQueue = true
+		return nil
+	}
+
+	clusters, err := sc.Storage.List(sc.Context, crossRevocationPrefix)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range removalQueue {
+		sc.Backend.Logger().Debug(fmt.Sprintf("handling revocation confirmation: %v", entry))
+		// First remove the revocation request.
+		for cIndex, cluster := range clusters {
+			eEntry := crossRevocationPrefix + cluster + entry.Serial
+			if err := sc.Storage.Delete(sc.Context, eEntry); err != nil {
+				return fmt.Errorf("failed to delete potential cross-cluster revocation entry for cluster %v (%v) and serial %v: %w", cluster, cIndex, entry.Serial, err)
+			}
+		}
+
+		// Then remove the confirmation.
+		if err := sc.Storage.Delete(sc.Context, crossRevocationPrefix+entry.Cluster+"/"+entry.Serial+"/confirmed"); err != nil {
+			return fmt.Errorf("failed to delete cross-cluster revocation confirmation entry for cluster %v and serial %v: %w", entry.Cluster, entry.Serial, err)
+		}
+
+		cb.removalQueue.Remove(entry)
+	}
+
+	cb.haveInitializedQueue = true
+
+	return nil
+}
+
 // Helper function to fetch a map of issuerID->parsed cert for revocation
 // usage. Unlike other paths, this needs to handle the legacy bundle
 // more gracefully than rejecting it outright.
@@ -464,6 +670,31 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509
 	}
 
 	return issuerIDCertMap, nil
+}
+
+// Revoke a certificate from a given serial number if it is present in local
+// storage.
+func tryRevokeCertBySerial(sc *storageContext, serial string) (*logical.Response, error) {
+	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
+	if err != nil {
+		switch err.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(err.Error()), nil
+		default:
+			return nil, err
+		}
+	}
+
+	if certEntry == nil {
+		return nil, nil
+	}
+
+	cert, err := x509.ParseCertificate(certEntry.Value)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing certificate: %w", err)
+	}
+
+	return revokeCert(sc, cert)
 }
 
 // Revokes a cert, and tries to be smart about error recovery
@@ -517,6 +748,7 @@ func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, 
 		resp := &logical.Response{
 			Data: map[string]interface{}{
 				"revocation_time": revInfo.RevocationTime,
+				"state":           "revoked",
 			},
 		}
 		if !revInfo.RevocationTimeUTC.IsZero() {
@@ -618,6 +850,7 @@ func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, 
 		Data: map[string]interface{}{
 			"revocation_time":         revInfo.RevocationTime,
 			"revocation_time_rfc3339": revInfo.RevocationTimeUTC.Format(time.RFC3339Nano),
+			"state":                   "revoked",
 		},
 	}, nil
 }
