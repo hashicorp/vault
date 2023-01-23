@@ -683,6 +683,10 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 		return fmt.Errorf("failed to list cross-cluster revocation queue participating clusters: %w", err)
 	}
 
+	// Grab locks as we're potentially modifying revocation-related storage.
+	b.revokeStorageLock.Lock()
+	defer b.revokeStorageLock.Unlock()
+
 	for cIndex, cluster := range clusters {
 		cluster = cluster[0 : len(cluster)-1]
 		cPath := crossRevocationPrefix + cluster + "/"
@@ -702,7 +706,9 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 
 			// Check for pause duration to reduce resource consumption.
 			if config.PauseDuration > (0 * time.Second) {
+				b.revokeStorageLock.Unlock()
 				time.Sleep(config.PauseDuration)
+				b.revokeStorageLock.Lock()
 			}
 
 			ePath := cPath + serial
@@ -729,6 +735,19 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 			if err := sc.Storage.Delete(sc.Context, ePath); err != nil {
 				return fmt.Errorf("error deleting revocation request (%v): %w", ePath, err)
 			}
+
+			// Assumption: there should never be a need to remove this from
+			// the processing queue on this node. We're on the active primary,
+			// so our writes don't cause invalidations. This means we'd have
+			// to have slated it for deletion very quickly after it'd been
+			// sent (i.e., inside of the 1-minute boundary that periodicFunc
+			// executes at). While this is possible, because we grab the
+			// revocationStorageLock above, we can't execute interleaved
+			// with that periodicFunc, so the periodicFunc would've had to
+			// finished before we actually did this deletion (or it wouldn't
+			// have ignored this serial because our deletion would've
+			// happened prior to it reading the storage entry). Thus we should
+			// be safe to ignore the revocation queue removal here.
 		}
 	}
 
