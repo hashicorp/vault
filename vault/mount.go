@@ -1654,6 +1654,14 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,
+		Events: c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
+			MountClass:    consts.PluginTypeSecrets.String(),
+			MountAccessor: entry.Accessor,
+			MountPath:     entry.Path,
+			Plugin:        entry.Type,
+			PluginVersion: entry.RunningVersion,
+			Version:       entry.Version,
+		}),
 	}
 
 	ctx = context.WithValue(ctx, "core_number", c.coreNumber)

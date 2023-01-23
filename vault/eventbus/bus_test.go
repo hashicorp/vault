@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -34,7 +35,7 @@ func TestBusBasics(t *testing.T) {
 		t.Errorf("Expected no error sending: %v", err)
 	}
 
-	ch, err := bus.Subscribe(ctx, eventType)
+	ch, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +53,7 @@ func TestBusBasics(t *testing.T) {
 	timeout := time.After(1 * time.Second)
 	select {
 	case message := <-ch:
-		if message.ID() != event.ID() {
+		if message.Event.ID() != event.ID() {
 			t.Errorf("Got unexpected message: %+v", message)
 		}
 	case <-timeout:
@@ -71,12 +72,12 @@ func TestBus2Subscriptions(t *testing.T) {
 	eventType2 := logical.EventType("someType2")
 	bus.Start()
 
-	ch1, err := bus.Subscribe(ctx, eventType1)
+	ch1, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ch2, err := bus.Subscribe(ctx, eventType2)
+	ch2, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +103,7 @@ func TestBus2Subscriptions(t *testing.T) {
 	timeout := time.After(1 * time.Second)
 	select {
 	case message := <-ch1:
-		if message.ID() != event1.ID() {
+		if message.Event.ID() != event1.ID() {
 			t.Errorf("Got unexpected message: %v", message)
 		}
 	case <-timeout:
@@ -110,7 +111,7 @@ func TestBus2Subscriptions(t *testing.T) {
 	}
 	select {
 	case message := <-ch2:
-		if message.ID() != event2.ID() {
+		if message.Event.ID() != event2.ID() {
 			t.Errorf("Got unexpected message: %v", message)
 		}
 	case <-timeout:

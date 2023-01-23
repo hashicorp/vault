@@ -994,6 +994,14 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,
+		Events: c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
+			MountClass:    consts.PluginTypeCredential.String(),
+			MountAccessor: entry.Accessor,
+			MountPath:     entry.Path,
+			Plugin:        entry.Type,
+			PluginVersion: entry.RunningVersion,
+			Version:       entry.Version,
+		}),
 	}
 
 	b, err := f(ctx, config)

@@ -92,6 +92,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 
 	storage := newGRPCStorageClient(brokeredClient)
 	sysView := newGRPCSystemView(brokeredClient)
+	events := newGRPCEventsClient(brokeredClient)
 
 	config := &logical.BackendConfig{
 		StorageView: storage,
@@ -99,6 +100,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 		System:      sysView,
 		Config:      args.Config,
 		BackendUUID: args.BackendUUID,
+		Events:      events,
 	}
 
 	// Call the underlying backend factory after shims have been created

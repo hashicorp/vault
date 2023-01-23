@@ -11,10 +11,14 @@ import (
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var ErrNotStarted = errors.New("event broker has not been started")
+var (
+	ErrNotStarted          = errors.New("event broker has not been started")
+	contextEventPluginInfo = struct{}{}
+)
 
 var cloudEventsFormatterFilter *cloudevents.FormatterFilter
 
@@ -27,14 +31,21 @@ type EventBus struct {
 	formatterNodeID eventlogger.NodeID
 }
 
+type pluginEventBus struct {
+	bus        *EventBus
+	namespace  *namespace.Namespace
+	pluginInfo *logical.EventPluginInfo
+}
+
 type asyncChanNode struct {
-	// TODO: add bounded deque buffer of *any
-	ch chan *logical.EventData
+	// TODO: add bounded deque buffer of *EventReceived
+	ch chan *logical.EventReceived
 }
 
 var (
 	_ eventlogger.Node    = (*asyncChanNode)(nil)
 	_ logical.EventSender = (*EventBus)(nil)
+	_ logical.EventSender = (*pluginEventBus)(nil)
 )
 
 // Start starts the event bus, allowing events to be written.
@@ -50,11 +61,30 @@ func (bus *EventBus) Start() {
 // Send sends an event to the event bus and routes it to all relevant subscribers.
 // This function does *not* wait for all subscribers to acknowledge before returning.
 func (bus *EventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
+	var nspace string
+	ns, err := namespace.FromContext(ctx)
+	if err == namespace.ErrNoNamespace {
+	} else if err != nil {
+		return err
+	} else {
+		nspace = ns.ID
+	}
 	if !bus.started.Load() {
 		return ErrNotStarted
 	}
+	pluginInfo, ok := ctx.Value(contextEventPluginInfo).(*logical.EventPluginInfo)
+	if !ok {
+		pluginInfo = nil
+	}
+
 	bus.logger.Info("Sending event", "event", data)
-	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), data)
+	eventReceived := &logical.EventReceived{
+		Event:      data,
+		Namespace:  nspace,
+		EventType:  string(eventType),
+		PluginInfo: pluginInfo,
+	}
+	_, err = bus.broker.Send(ctx, eventlogger.EventType(eventType), eventReceived)
 	if err != nil {
 		// if no listeners for this event type are registered, that's okay, the event
 		// will just not be sent anywhere
@@ -63,6 +93,22 @@ func (bus *EventBus) Send(ctx context.Context, eventType logical.EventType, data
 		}
 	}
 	return err
+}
+
+func (bus *EventBus) WithPlugin(namespace *namespace.Namespace, eventPluginInfo *logical.EventPluginInfo) *pluginEventBus {
+	return &pluginEventBus{
+		bus:        bus,
+		namespace:  namespace,
+		pluginInfo: eventPluginInfo,
+	}
+}
+
+// Send sends an event to the event bus and routes it to all relevant subscribers.
+// This function does *not* wait for all subscribers to acknowledge before returning.
+func (bus *pluginEventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
+	ctx = namespace.ContextWithNamespace(ctx, bus.namespace)
+	ctx = context.WithValue(ctx, contextEventPluginInfo, bus.pluginInfo)
+	return bus.bus.Send(ctx, eventType, data)
 }
 
 func init() {
@@ -103,7 +149,23 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	}, nil
 }
 
-func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (chan *logical.EventData, error) {
+func nsEventTypeJoin(ns *namespace.Namespace, eventType logical.EventType) eventlogger.EventType {
+	if ns == nil {
+		ns = namespace.RootNamespace
+	}
+	return eventlogger.EventType(namespace.Canonicalize(ns.Path) + string(eventType))
+}
+
+func nsEventTypeSplit(eventType eventlogger.EventType) (string, logical.EventType) {
+	parts := strings.Split(string(eventType), "/")
+	ns := "/"
+	if len(parts) > 1 {
+		ns = strings.Join(parts[:len(parts)-1], "/")
+	}
+	return namespace.Canonicalize(ns), logical.EventType(parts[len(parts)-1])
+}
+
+func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, eventType logical.EventType) (chan *logical.EventReceived, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -127,7 +189,7 @@ func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (
 
 	pipeline := eventlogger.Pipeline{
 		PipelineID: eventlogger.PipelineID(pipelineID),
-		EventType:  eventlogger.EventType(eventType),
+		EventType:  nsEventTypeJoin(ns, eventType),
 		NodeIDs:    nodes,
 	}
 	err = bus.broker.RegisterPipeline(pipeline)
@@ -140,7 +202,7 @@ func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (
 
 func newAsyncNode() *asyncChanNode {
 	return &asyncChanNode{
-		ch: make(chan *logical.EventData),
+		ch: make(chan *logical.EventReceived),
 	}
 }
 
@@ -154,7 +216,7 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 	// sends to the channel async in another goroutine
 	go func() {
 		select {
-		case node.ch <- e.Payload.(*logical.EventData):
+		case node.ch <- e.Payload.(*logical.EventReceived):
 		case <-ctx.Done():
 		}
 	}()
