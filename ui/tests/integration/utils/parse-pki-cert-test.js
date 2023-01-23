@@ -1,6 +1,9 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import { parseCertificate } from 'vault/utils/parse-pki-cert';
+import { parseCertificate, parseExtensions, parseSubject, formatValues } from 'vault/utils/parse-pki-cert';
+import * as asn1js from 'asn1js';
+import { fromBase64, stringToArrayBuffer } from 'pvutils';
+import { Certificate } from 'pkijs';
 import { addHours, fromUnixTime, isSameDay } from 'date-fns';
 import errorMessage from 'vault/utils/error-message';
 
@@ -13,6 +16,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     this.onlyCn = `-----BEGIN CERTIFICATE-----\nMIIDQTCCAimgAwIBAgIUVQy58VgdVpAK9c8SfS31idSv6FUwDQYJKoZIhvcNAQEL\nBQAwGjEYMBYGA1UEAxMPY29tbW9uLW5hbWUuY29tMB4XDTIzMDEyMTAxMjAyOVoX\nDTIzMDIyMjAxMjA1OVowGjEYMBYGA1UEAxMPY29tbW9uLW5hbWUuY29tMIIBIjAN\nBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2UboO5ngHpO/y7ysj6lS9C/YTt0U\nK76LVgBsQlKe4BD1cVQblR/e4cHwAWs4pEEBoV0FXiEq8Gl+8yPeOX3d3Rsd0d4g\nz6xqdwPCl7Gku9JbjIOlsiECeRjNtRiBnIQAl4iCr/i59PvtMIrxcjMPLAOFdm0M\nmRzrDeabqGKoRBcsqcNBN8osrwVuyrg65Di87lUgmtVnWAp6YOztb/1YjOnSJKPN\nwh9adTLUOmT4AXweFeiTwJuEd84aBtBnoNxc4gl5vhdqsn2yAsk0C6F1wdGA/ROQ\n+I57BsEb0iyHWncX6mQje+NCThyCGaKUC4SQxzY0I03LqrVvBIQtVCcyIwIDAQAB\no38wfTAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQU\nCysygW7q23WnJvHH2WfrDlAr/a0wHwYDVR0jBBgwFoAUCysygW7q23WnJvHH2Wfr\nDlAr/a0wGgYDVR0RBBMwEYIPY29tbW9uLW5hbWUuY29tMA0GCSqGSIb3DQEBCwUA\nA4IBAQDPco+FIHXczf0HTwFAmIVu4HKaeIwDsVPxoUqqWEix8AyCsB5uqpKZasby\nedlrdBohM4dnoV+VmV0de04y95sdo3Ot60hm/czLog3tHg4o7AmfA7saS+5hCL1M\nCJWqoJHRFo0hOWJHpLJRWz5DqRZWspASoVozLOYyjRD+tNBjO5hK4FtaG6eri38t\nOpTt7sdInVODlntpNuuCVprPpHGj4kPOcViQULoFQq5fwyadpdjqSXmEGlt0to5Y\nMbTb4Jhj0HywgO53BUUmMzzY9idXh/8A7ThrM5LtqhxaYHLVhyeo+5e0mgiXKp+n\nQ8Uh4TNNTCvOUlAHycZNaxYTlEPn\n-----END CERTIFICATE-----`;
     // contains unsupported subject and extension oids
     this.unsupportedSANS = `-----BEGIN CERTIFICATE-----\nMIIEjDCCA3SgAwIBAgIUD4EeORgh/i+ZZFOk8KsGKQPWsoIwDQYJKoZIhvcNAQEL\nBQAwgZIxMTAvBgNVBAMMKGZhbmN5LWNlcnQtdW5zdXBwb3J0ZWQtc3Viai1hbmQt\nZXh0LW9pZHMxCzAJBgNVBAYTAlVTMQ8wDQYDVQQIDAZLYW5zYXMxDzANBgNVBAcM\nBlRvcGVrYTESMBAGA1UECgwJQWNtZSwgSW5jMRowGAYJKoZIhvcNAQkBFgtmb29A\nYmFyLmNvbTAeFw0yMzAxMjMxODQ3MjNaFw0zMzAxMjAxODQ3MjNaMIGSMTEwLwYD\nVQQDDChmYW5jeS1jZXJ0LXVuc3VwcG9ydGVkLXN1YmotYW5kLWV4dC1vaWRzMQsw\nCQYDVQQGEwJVUzEPMA0GA1UECAwGS2Fuc2FzMQ8wDQYDVQQHDAZUb3Bla2ExEjAQ\nBgNVBAoMCUFjbWUsIEluYzEaMBgGCSqGSIb3DQEJARYLZm9vQGJhci5jb20wggEi\nMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDyYH5qS7krfZ2tA5uZsY2qXbTb\ntGNG1BsyDhZ/qqVlQybjDsHJZwNUbpfhBcCLaKyAwH1R9n54NOOOn6bYgfKWTgy3\nL7224YDAqYe7Y/GPjgI2MRvRfn6t2xzQxtJ0l0k8LeyNcwhiqYLQyOOfDdc127fm\nW40r2nmhLpH0i9e2I/YP1HQ+ldVgVBqeUTntgVSBfrQF56v9mAcvvHEa5sdHqmX4\nJ2lhWTnx9jqb7NZxCem76BlX1Gt5TpP3Ym2ZFVQI9fuPK4O8JVhk1KBCmIgR3Ft+\nPpFUs/c41EMunKJNzveYrInSDScaC6voIJpK23nMAiM1HckLfUUc/4UojD+VAgMB\nAAGjgdcwgdQwHQYDVR0OBBYEFH7tt4enejKTZtYjUKUUx6PXyzlgMB8GA1UdIwQY\nMBaAFH7tt4enejKTZtYjUKUUx6PXyzlgMA4GA1UdDwEB/wQEAwIFoDAgBgNVHSUB\nAf8EFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwEgYDVR0TAQH/BAgwBgEB/wIBCjBM\nBgNVHREERTBDhwTAngEmhgx1cmlTdXBwb3J0ZWSCEWRucy1OYW1lU3VwcG9ydGVk\noBoGAyoDBKATDBFleGFtcGxlIG90aGVybmFtZTANBgkqhkiG9w0BAQsFAAOCAQEA\nP6ckVJgbcJue+MK3RVDuG+Mh7dl89ynC7NwpQFRjLVZQuoMHZT/dcLlVeFejVXu5\nR+IPLmQU6NV7JAmy4zGap8awf12QTy3g410ecrSF94WWlu8bPoekfUnnP+kfzLPH\nCUAkRKxWDSRKX5C8cMMxacVBBaBIayuusLcHkHmxLLDw34PFzyz61gtZOJq7JYnD\nhU9YsNh6bCDmnBDBsDMOI7h8lBRQwTiWVoSD9YNVvFiY29YvFbJQGdh+pmBtf7E+\n1B/0t5NbvqlQSbhMM0QgYFhuCxr3BGNob7kRjgW4i+oh+Nc5ptA5q70QMaYudqRS\nd8SYWhRdxmH3qcHNPcR1iw==\n-----END CERTIFICATE-----`;
+    this.getErrorMessages = (certErrors) => certErrors.map((error) => errorMessage(error));
   });
 
   test('it parses a certificate with supported values', async function (assert) {
@@ -80,7 +84,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
   test('it returns parsing_errors when certificate has unsupported values', async function (assert) {
     assert.expect(1);
     const parsedCert = parseCertificate(this.unsupportedSANS);
-    const parsingErrors = parsedCert.parsing_errors.map((error) => errorMessage(error));
+    const parsingErrors = this.getErrorMessages(parsedCert.parsing_errors);
     assert.propEqual(
       parsingErrors,
       [
@@ -124,5 +128,42 @@ module('Integration | Util | parse pki certificate', function (hooks) {
       },
       'it contains expected attrs'
     );
+  });
+
+  test('the helper parseSubject returns expected object', async function (assert) {
+    const certSchema = (cert) => {
+      const cert_base64 = cert.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
+      const cert_der = fromBase64(cert_base64);
+      const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
+      return new Certificate({ schema: cert_asn1.result });
+    };
+
+    const supportedCert = certSchema(this.pkiCert);
+    assert.propEqual(
+      parseSubject(supportedCert.subject.typesAndValues),
+      {
+        subjErrors: [],
+        subjValues: {
+          common_name: 'common-name.com',
+          country: 'France',
+          locality: 'Paris',
+          organization: 'Widget',
+          ou: 'Finance',
+          postal_code: '123456',
+          province: 'Champagne',
+          serial_number: 'cereal1292',
+          street_address: '234 sesame',
+        },
+      },
+      'it returns supported subject values'
+    );
+    const unsupportedCert = certSchema(this.unsupportedSANS);
+    const parsedSubject = parseSubject(unsupportedCert.subject.typesAndValues);
+    assert.propEqual(
+      this.getErrorMessages(parsedSubject.subjErrors),
+      ['certificate contains unsupported subject OIDs'],
+      'it returns subject errors'
+    );
+    assert.ok(parsedSubject.subjErrors[0] instanceof Error, 'subjErrors contain error objects');
   });
 });
