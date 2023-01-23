@@ -50,6 +50,7 @@ type tidyStatus struct {
 	certStoreDeletedCount   uint
 	revokedCertDeletedCount uint
 	missingIssuerCertCount  uint
+	revQueueDeletedCount    uint
 }
 
 type tidyConfig struct {
@@ -779,6 +780,7 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 			// have ignored this serial because our deletion would've
 			// happened prior to it reading the storage entry). Thus we should
 			// be safe to ignore the revocation queue removal here.
+			b.tidyStatusIncRevQueueCount()
 		}
 	}
 
@@ -832,6 +834,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"missing_issuer_cert_count":             nil,
 			"current_cert_store_count":              nil,
 			"current_revoked_cert_count":            nil,
+			"revocation_queue_deleted_count":        nil,
 		},
 	}
 
@@ -852,6 +855,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
 	resp.Data["revoked_cert_deleted_count"] = b.tidyStatus.revokedCertDeletedCount
 	resp.Data["missing_issuer_cert_count"] = b.tidyStatus.missingIssuerCertCount
+	resp.Data["revocation_queue_deleted_count"] = b.tidyStatus.revQueueDeletedCount
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
@@ -1086,6 +1090,13 @@ func (b *backend) tidyStatusIncMissingIssuerCertCount() {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus.missingIssuerCertCount++
+}
+
+func (b *backend) tidyStatusIncRevQueueCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.revQueueDeletedCount++
 }
 
 const pathTidyHelpSyn = `
