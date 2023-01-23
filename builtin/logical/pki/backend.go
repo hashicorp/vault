@@ -121,6 +121,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			WriteForwardedStorage: []string{
 				crossRevocationPath,
 				unifiedRevocationWritePathPrefix,
+				unifiedDeltaWALPath,
 			},
 		},
 
