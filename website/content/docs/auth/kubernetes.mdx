@@ -81,7 +81,7 @@ management tool.
 1. Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use
   `kubectl cluster-info` to validate the Kubernetes host address and TCP port.
   For the list of available configuration options, please see the
-  [API documentation](/api/auth/kubernetes).
+  [API documentation](/api-docs/auth/kubernetes).
 
   ```bash
   vault write auth/kubernetes/config \
@@ -112,7 +112,7 @@ management tool.
   namespace and it gives it the default policy.
 
   For the complete list of configuration options, please see the [API
-  documentation](/api/auth/kubernetes).
+  documentation](/api-docs/auth/kubernetes).
 
 ## Kubernetes 1.21
 
@@ -262,28 +262,18 @@ unable to check this value directly, you can run the following and look for the
 `"iss"` field to find the required value:
 
 ```bash
-kubectl proxy &
-curl --silent http://127.0.0.1:8001/api/v1/namespaces/default/serviceaccounts/default/token \
-  -H "Content-Type: application/json" \
-  -X POST \
-  -d '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
+echo '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
+  | kubectl create -f- --raw /api/v1/namespaces/default/serviceaccounts/default/token \
   | jq -r '.status.token' \
   | cut -d . -f2 \
   | base64 -D
-
-# Kill the background proxy process when you're done
-kill %%
 ```
 
 Most clusters will also have that information available at the
 `.well-known/openid-configuration` endpoint:
 
 ```bash
-kubectl proxy &
-curl --silent http://127.0.0.1:8001/.well-known/openid-configuration | jq -r .issuer
-
-# Kill the background proxy process when you're done
-kill %%
+kubectl get --raw /.well-known/openid-configuration | jq -r .issuer
 ```
 
 This value is then used when configuring Kubernetes auth, e.g.:
@@ -326,18 +316,18 @@ subjects:
 ## API
 
 The Kubernetes Auth Plugin has a full HTTP API. Please see the
-[API docs](/api/auth/kubernetes) for more details.
+[API docs](/api-docs/auth/kubernetes) for more details.
 
 [k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#tokenreview-v1-authentication-k8s-io
 
 ## Code Example
 
-The following code snippet demonstrates the Kubernetes auth method to authenticate
+The following example demonstrates the Kubernetes auth method to authenticate
 with Vault.
 
-<CodeTabs heading="kubernetes auth example">
+<CodeTabs>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```go
 package main
@@ -408,7 +398,7 @@ func getSecretWithKubernetesAuth() (string, error) {
 ```
 </CodeBlockConfig>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```cs
 using System;
@@ -420,7 +410,7 @@ using VaultSharp.V1.Commons;
 
 namespace Examples
 {
-    public class KubernetesAuthExample 
+    public class KubernetesAuthExample
     {
         const string DefaultTokenPath = "path/to/service-account-token";
 
@@ -442,19 +432,19 @@ namespace Examples
 
             // Get the path to service account token or fall back on default path
             string pathToToken = String.IsNullOrEmpty(Environment.GetEnvironmentVariable("SA_TOKEN_PATH")) ? DefaultTokenPath : Environment.GetEnvironmentVariable("SA_TOKEN_PATH");
-            string jwt = File.ReadAllText(pathToToken); 
+            string jwt = File.ReadAllText(pathToToken);
 
             IAuthMethodInfo authMethod = new KubernetesAuthMethodInfo(roleName, jwt);
             var vaultClientSettings = new VaultClientSettings(vaultAddr, authMethod);
 
-            IVaultClient vaultClient = new VaultClient(vaultClientSettings); 
+            IVaultClient vaultClient = new VaultClient(vaultClientSettings);
 
             // We can retrieve the secret after creating our VaultClient object
             Secret<SecretData> kv2Secret = null;
             kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
-            
+
             var password = kv2Secret.Data.Data["password"];
-            
+
             return password.ToString();
         }
     }

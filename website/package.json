@@ -61,7 +61,7 @@
     "directory": "website"
   },
   "scripts": {
-    "build": "next build",
+    "build": "./scripts/website-build.sh",
     "dynamic": "NODE_ENV=production next build && next start",
     "export": "next export",
     "format": "next-hashicorp format",
@@ -70,7 +70,7 @@
     "linkcheck": "linkcheck https://www.vaultproject.io",
     "lint": "next-hashicorp lint",
     "postinstall": "simple-git-hooks",
-    "start": "next-remote-watch './content/**/*.mdx'",
+    "start": "./scripts/website-start.sh",
     "static": "npm run build && npm run export && cp _redirects out/."
   },
   "simple-git-hooks": {

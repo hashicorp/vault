@@ -45,6 +45,8 @@ export default function (server) {
       [mfa_constraints, methods] = generator([m('okta'), m('totp')], [m('totp')]); // 2 constraints 1 passcode/1 non-passcode 1 non-passcode
     } else if (user === 'mfa-j') {
       [mfa_constraints, methods] = generator([m('pingid')]); // use to test push failures
+    } else if (user === 'mfa-k') {
+      [mfa_constraints, methods] = generator([m('duo', true)]); // test duo passcode and prepending passcode= to user input
     }
     const numbers = (length) =>
       Math.random()
@@ -130,7 +132,8 @@ export default function (server) {
         // validate totp passcode
         const passcode = mfa_payload[constraintId][0];
         if (method.uses_passcode) {
-          if (passcode !== 'test') {
+          const expectedPasscode = method.type === 'duo' ? 'passcode=test' : 'test';
+          if (passcode !== expectedPasscode) {
             const error =
               passcode === 'used'
                 ? 'code already used; new code is available in 30 seconds'

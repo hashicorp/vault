@@ -70,11 +70,11 @@ module('Integration | Component | masked input', function (hooks) {
     assert.dom('.masked-value').hasClass('masked-font');
   });
 
-  test('it shortens long outputs when displayOnly and masked', async function (assert) {
+  test('it shortens all outputs when displayOnly and masked', async function (assert) {
     this.set('value', '123456789-123456789-123456789');
     await render(hbs`{{masked-input value=value displayOnly=true}}`);
     let maskedValue = document.querySelector('.masked-value').innerText;
-    assert.equal(maskedValue.length, 20);
+    assert.equal(maskedValue.length, 11);
 
     await component.toggleMasked();
     let unMaskedValue = document.querySelector('.masked-value').innerText;

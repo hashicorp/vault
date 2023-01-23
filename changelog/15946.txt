@@ -1,0 +1,3 @@
+```release-note:bug
+core/seal: Fix possible keyring truncation when using the file backend.
+```

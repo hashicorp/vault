@@ -137,6 +137,19 @@ type ParsedCSRBundle struct {
 	CSR             *x509.CertificateRequest
 }
 
+func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
+	// We look at the public key types to work-around limitations/typing of managed keys.
+	switch signer.Public().(type) {
+	case *rsa.PublicKey:
+		return RSAPrivateKey
+	case *ecdsa.PublicKey:
+		return ECPrivateKey
+	case ed25519.PublicKey:
+		return Ed25519PrivateKey
+	}
+	return UnknownPrivateKey
+}
+
 // ToPEMBundle converts a string-based certificate bundle
 // to a PEM-based string certificate bundle in trust path
 // order, leaf certificate first

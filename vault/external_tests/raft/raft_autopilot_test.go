@@ -42,6 +42,9 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
+		PhysicalFactoryConfig: map[string]interface{}{
+			"performance_multiplier": "5",
+		},
 	})
 	defer cluster.Cleanup()
 
@@ -54,6 +57,23 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	require.Equal(t, "core-0", state.Servers["core-0"].ID)
 	require.Equal(t, "alive", state.Servers["core-0"].NodeStatus)
 	require.Equal(t, "leader", state.Servers["core-0"].Status)
+
+	writeConfig := func(config map[string]interface{}, expectError bool) {
+		resp, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", config)
+		if expectError {
+			require.Error(t, err)
+			return
+		}
+		require.NoError(t, err)
+		require.Nil(t, resp)
+	}
+
+	writableConfig := map[string]interface{}{
+		"last_contact_threshold":    "5s",
+		"max_trailing_logs":         100,
+		"server_stabilization_time": "10s",
+	}
+	writeConfig(writableConfig, false)
 
 	config, err := client.Sys().RaftAutopilotConfiguration()
 	require.NoError(t, err)
@@ -126,6 +146,25 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	state, err = client.Sys().RaftAutopilotState()
 	require.NoError(t, err)
 	require.Equal(t, []string{"core-0", "core-1", "core-2"}, state.Voters)
+
+	// Now make sure that after we seal and unseal a node, the current leader
+	// remains leader, and that the cluster becomes healthy again.
+	leader := state.Leader
+	testhelpers.EnsureCoreSealed(t, cluster.Cores[1])
+	time.Sleep(10 * time.Second)
+	testhelpers.EnsureCoreUnsealed(t, cluster, cluster.Cores[1])
+
+	deadline := time.Now().Add(2 * time.Minute)
+	for time.Now().Before(deadline) {
+		state, err = client.Sys().RaftAutopilotState()
+		require.NoError(t, err)
+		if state.Healthy && state.Leader == leader {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	require.Equal(t, true, state.Healthy)
+	require.Equal(t, leader, state.Leader)
 }
 
 func TestRaft_Autopilot_Configuration(t *testing.T) {

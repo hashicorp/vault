@@ -1,0 +1,3 @@
+```release-note:bug
+sdk: Fix OpenApi spec generator to properly convert TypeInt64 to OAS supported int64
+```

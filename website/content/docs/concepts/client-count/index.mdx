@@ -35,7 +35,7 @@ When anything authenticates to Vault, be it a user, application, machine, etc., 
 
 ## But wait, there’s more...
 
-Want to take full advantage of the Vault identity system and how clients are counted? The Vault identity system also has [Entity Aliases](https://www.vaultproject.io/api/secret/identity/entity-alias) and [Identity Groups](https://www.vaultproject.io/api-docs/secret/identity/group-alias).
+Want to take full advantage of the Vault identity system and how clients are counted? The Vault identity system also has [Entity Aliases](/api-docs/secret/identity/entity-alias) and [Identity Groups](/api-docs/secret/identity/group-alias).
 
 ![Vault Identity Entities and Aliases](https://www.datocms-assets.com/2885/1617325026-vault-clients-identity-entity-aliases.png)
 
@@ -90,23 +90,23 @@ How does this relate to Vault clients? As outlined above, and as an example, if 
 | **Auth method**                                                                                  | **Name reported by auth method**                                                   |
 | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
 | **[AliCloud](https://www.vaultproject.io/docs/auth/alicloud)**                                   | Principal ID                                                                       |
-| **[AppRole](https://www.vaultproject.io/api-docs/auth/approle#create-update-approle)**           | Role ID                                                                            |
+| **[AppRole](/api-docs/auth/approle#create-update-approle)**           | Role ID                                                                            |
 | **[AWS IAM](https://www.vaultproject.io/docs/auth/aws#iam-auth-method)**                         | Configurable via iam_alias to one of: Role ID (default), IAM unique ID, Full ARN   |
 | **[AWS EC2](https://www.vaultproject.io/docs/auth/aws#ec2-auth-method)**                         | Configurable via ec2_alias to one of: Role ID (default), EC2 instance ID, AMI ID   |
-| **[Azure](https://www.vaultproject.io/api-docs/auth/azure#create-role)**                         | Subject (from JWT claim)                                                           |
+| **[Azure](/api-docs/auth/azure#create-role)**                         | Subject (from JWT claim)                                                           |
 | **[Cloud Foundry](https://www.vaultproject.io/docs/auth/cf)**                                    | App ID                                                                             |
 | **[GitHub](https://www.vaultproject.io/docs/auth/github)**                                       | User login name associated with token                                              |
-| **[Google Cloud](https://www.vaultproject.io/api-docs/auth/gcp#create-role)**                    | Configurable via iam_alias to one of: Role ID (default), Service account unique ID |
-| **[JWT/OIDC](https://www.vaultproject.io/api-docs/auth/jwt#create-role)**                        | Configurable via user_claim to one of the presented claims (no default value)      |
+| **[Google Cloud](/api-docs/auth/gcp#create-role)**                    | Configurable via iam_alias to one of: Role ID (default), Service account unique ID |
+| **[JWT/OIDC](/api-docs/auth/jwt#create-role)**                        | Configurable via user_claim to one of the presented claims (no default value)      |
 | **[Kerberos](https://www.vaultproject.io/docs/auth/kerberos)**                                   | Username                                                                           |
-| **[Kubernetes](https://www.vaultproject.io/api-docs/auth/kubernetes#create-role)**               | Service account UID                                                                |
+| **[Kubernetes](/api-docs/auth/kubernetes#create-role)**               | Service account UID                                                                |
 | **[LDAP](https://www.vaultproject.io/docs/auth/ldap)**                                           | Username                                                                           |
-| **[OCI](https://www.vaultproject.io/api-docs/auth/oci#create-role)**                             | Rolename                                                                           |
-| **[Okta](https://www.vaultproject.io/api-docs/auth/okta#register-user)**                         | Username                                                                           |
+| **[OCI](/api-docs/auth/oci#create-role)**                             | Rolename                                                                           |
+| **[Okta](/api-docs/auth/okta#register-user)**                         | Username                                                                           |
 | **[RADIUS](https://www.vaultproject.io/docs/auth/radius)**                                       | Username                                                                           |
-| **[TLS Certificate](https://www.vaultproject.io/api-docs/auth/cert#create-ca-certificate-role)** | Subject CommonName                                                                 |
+| **[TLS Certificate](/api-docs/auth/cert#create-ca-certificate-role)** | Subject CommonName                                                                 |
 | **[Token](https://www.vaultproject.io/docs/auth/token)**                                         | entity_alias, if provided (Note: please ensure that entity_alias is always used)   |
-| **[Username/Password](https://www.vaultproject.io/api-docs/auth/userpass#create-update-user)**   | Username                                                                           |
+| **[Username/Password](/api-docs/auth/userpass#create-update-user)**   | Username                                                                           |
 
 ## Considerations with CI/CD
 
@@ -213,7 +213,7 @@ entity_id           n/a
 
 To reduce the number of non-entity tokens in use, consider switching to an authentication method such as
 [AppRole](/docs/auth/approle) instead of handing out directly-created tokens. Ensure that entities and
-[entity aliases](/api/secret/identity/entity-alias) exist for all login methods used to create batch tokens.
+[entity aliases](/api-docs/secret/identity/entity-alias) exist for all login methods used to create batch tokens.
 
 ### Tracking non-entity tokens
 
@@ -242,7 +242,7 @@ request; this can happen if the request is unauthenticated, or made with a root 
 
 ## API and Permissions
 
-Please see [Client Count API](/api/system/internal-counters#client-count) for more details. Note that this API is marked as
+Please see [Client Count API](/api-docs/system/internal-counters#client-count) for more details. Note that this API is marked as
 "internal" so its behavior or format may change without warning. The UI is the preferred means of interacting with the
 client count feature.
 

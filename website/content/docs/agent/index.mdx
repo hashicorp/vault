@@ -209,7 +209,7 @@ Here are the options for the `retry` stanza:
   A value of `-1` disables retries. The environment variable `VAULT_MAX_RETRIES`
   overrides this setting.
 
-There are a couple of subtleties to be aware of here. First, requests originating
+There are a few subtleties to be aware of here. First, requests originating
 from the proxy cache will only be retried if they resulted in specific HTTP
 result codes: any 50x code except 501 ("not implemented"), as well as 412
 ("precondition failed"); 412 is used in Vault Enterprise 1.7+ to indicate a
@@ -289,7 +289,7 @@ Configuration](#example-configuration) section for an example configuration.)
 
 An example configuration, with very contrived values, follows:
 
-```python
+```hcl
 pid_file = "./pidfile"
 
 vault {
@@ -332,6 +332,10 @@ cache {
 listener "unix" {
   address = "/path/to/socket"
   tls_disable = true
+
+  agent_api {
+    enable_quit = true
+  }
 }
 
 listener "tcp" {

@@ -1,0 +1,2 @@
+```release-note:bug
+ui: Fix kv deleting the latest version when not allowed to soft delete (and delete a specific version of a secret)

@@ -1,0 +1,102 @@
+---
+layout: api
+page_title: /sys/loggers - HTTP API
+description: The `/sys/loggers` endpoint is used modify the verbosity level of logging.
+---
+
+# `/sys/loggers`
+
+The `/sys/loggers` endpoint is used modify the verbosity level of logging.
+
+## Modify verbosity level of all loggers
+
+| Method  | Path           |
+| :------ | :------------- |
+| `POST`  | `/sys/loggers` |
+
+### Parameters
+
+- `level` `(string: <required>)` – Specifies the log verbosity level to be set for all loggers.
+Supported values (in order of detail) are `"trace"`, `"debug"`, `"info"`, `"warn"`, and `"error"`.
+
+### Sample Payload
+
+```json
+{
+  "level": "debug",
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/loggers
+```
+
+## Modify verbosity level of a single logger
+
+| Method  | Path                 |
+| :------ | :------------------- |
+| `POST`  | `/sys/loggers/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the logger to be modified (e.g. `audit`, `core`, `expiration`).
+- `level` `(string: <required>)` – Specifies the log verbosity level to be set for the provided logger.
+Supported values (in order of detail) are `"trace"`, `"debug"`, `"info"`, `"warn"`, and `"error"`.
+
+### Sample Payload
+
+```json
+{
+  "level": "debug",
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/loggers/core
+```
+
+## Revert verbosity of all loggers to configured level
+
+| Method    | Path           |
+| :-------- | :------------- |
+| `DELETE`  | `/sys/loggers` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/loggers
+```
+
+## Revert verbosity of a single logger to configured level
+
+| Method    | Path                 |
+| :-------- | :------------------- |
+| `DELETE`  | `/sys/loggers/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the logger to be modified (e.g. `audit`, `core`, `expiration`).
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/loggers/core
+```

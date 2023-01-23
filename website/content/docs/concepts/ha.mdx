@@ -174,8 +174,7 @@ mode, including [Consul](/docs/configuration/storage/consul),
 change over time, and the [configuration page](/docs/configuration) should be
 referenced.
 
-The [Consul backend](/docs/configuration/storage/consul) is the recommended HA backend, as it is used in production
-by HashiCorp and its customers with commercial support.
+HashiCorp recommends [Vault Integrated Storage](/docs/configuration/storage/raft) as the default HA backend for new deployments of Vault. [Consul Storage Backend](/docs/configuration/storage/consul) is also a supported option and used by many production deployments. See the [comparison chart](/docs/configuration/storage#integrated-storage-vs-consul-as-vault-storage) for help deciding which option is best for you.
 
 If you're interested in implementing another backend or adding HA support to
 another backend, we'd love your contributions. Adding HA support requires

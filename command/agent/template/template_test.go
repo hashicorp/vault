@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -229,6 +230,7 @@ func TestServerRun(t *testing.T) {
 
 	testCases := map[string]struct {
 		templateMap        map[string]*templateTest
+		expectedValues     *secretRender
 		expectError        bool
 		exitOnRetryFailure bool
 	}{
@@ -318,6 +320,22 @@ func TestServerRun(t *testing.T) {
 			expectError:        true,
 			exitOnRetryFailure: true,
 		},
+		"with sprig functions": {
+			templateMap: map[string]*templateTest{
+				"render_01": {
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContentsWithSprigFunctions),
+					},
+				},
+			},
+			expectedValues: &secretRender{
+				Username: "APPUSER",
+				Password: "passphrase",
+				Version:  "3",
+			},
+			expectError:        false,
+			exitOnRetryFailure: true,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -379,13 +397,15 @@ func TestServerRun(t *testing.T) {
 
 			// verify test file exists and has the content we're looking for
 			var fileCount int
+			var errs []string
 			for _, template := range templatesToRender {
 				if template.Destination == nil {
 					t.Fatal("nil template destination")
 				}
 				content, err := os.ReadFile(*template.Destination)
 				if err != nil {
-					t.Fatal(err)
+					errs = append(errs, err.Error())
+					continue
 				}
 				fileCount++
 
@@ -393,12 +413,22 @@ func TestServerRun(t *testing.T) {
 				if err := json.Unmarshal(content, &secret); err != nil {
 					t.Fatal(err)
 				}
-				if secret.Username != "appuser" || secret.Password != "password" || secret.Version != "3" {
-					t.Fatalf("secret didn't match: %#v", secret)
+				var expectedValues secretRender
+				if tc.expectedValues != nil {
+					expectedValues = *tc.expectedValues
+				} else {
+					expectedValues = secretRender{
+						Username: "appuser",
+						Password: "password",
+						Version:  "3",
+					}
+				}
+				if secret != expectedValues {
+					t.Fatalf("secret didn't match, expected: %#v, got: %#v", expectedValues, secret)
 				}
 			}
-			if fileCount != len(templatesToRender) {
-				t.Fatalf("mismatch file to template: (%d) / (%d)", fileCount, len(templatesToRender))
+			if len(errs) != 0 {
+				t.Fatalf("Failed to find the expected files. Expected %d, got %d\n\t%s", len(templatesToRender), fileCount, strings.Join(errs, "\n\t"))
 			}
 		})
 	}
@@ -525,6 +555,16 @@ var templateContentsPermDenied = `
 {
 {{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
 {{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
+{{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
+}
+{{ end }}
+`
+
+var templateContentsWithSprigFunctions = `
+{{ with secret "kv/myapp/config"}}
+{
+{{ if .Data.data.username}}"username":"{{ .Data.data.username | sprig_upper }}",{{ end }}
+{{ if .Data.data.password }}"password":"{{ .Data.data.password | sprig_replace "word" "phrase" }}",{{ end }}
 {{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
 }
 {{ end }}

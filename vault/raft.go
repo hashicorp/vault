@@ -72,72 +72,74 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		return nil
 	}
 
-	// Retrieve the raft TLS information
-	raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
-	if err != nil {
-		return err
-	}
-
 	var creating bool
 	var raftTLS *raft.TLSKeyring
-	switch raftTLSEntry {
-	case nil:
-		// If this is HA-only and no TLS keyring is found, that means the
-		// cluster has not been bootstrapped or joined. We return early here in
-		// this case. If we return here, the raft object has not been instantiated,
-		// and a bootstrap call should be made.
-		if c.isRaftHAOnly() {
-			c.logger.Trace("skipping raft backend setup during unseal, no bootstrap operation has been started yet")
-			return nil
-		}
-
-		// If we did not find a TLS keyring we will attempt to create one here.
-		// This happens after a storage migration process. This node is also
-		// marked to start as leader so we can write the new TLS Key. This is an
-		// error condition if there are already multiple nodes in the cluster,
-		// and the below storage write will fail. If the cluster is somehow in
-		// this state the unseal will fail and a cluster recovery will need to
-		// be done.
-		creating = true
-		raftTLSKey, err := raft.GenerateTLSKey(c.secureRandomReader)
+	if !raftBackend.Initialized() {
+		// Retrieve the raft TLS information
+		raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
 		if err != nil {
 			return err
 		}
 
-		raftTLS = &raft.TLSKeyring{
-			Keys:        []*raft.TLSKey{raftTLSKey},
-			ActiveKeyID: raftTLSKey.ID,
+		switch raftTLSEntry {
+		case nil:
+			// If this is HA-only and no TLS keyring is found, that means the
+			// cluster has not been bootstrapped or joined. We return early here in
+			// this case. If we return here, the raft object has not been instantiated,
+			// and a bootstrap call should be made.
+			if c.isRaftHAOnly() {
+				c.logger.Trace("skipping raft backend setup during unseal, no bootstrap operation has been started yet")
+				return nil
+			}
+
+			// If we did not find a TLS keyring we will attempt to create one here.
+			// This happens after a storage migration process. This node is also
+			// marked to start as leader so we can write the new TLS Key. This is an
+			// error condition if there are already multiple nodes in the cluster,
+			// and the below storage write will fail. If the cluster is somehow in
+			// this state the unseal will fail and a cluster recovery will need to
+			// be done.
+			creating = true
+			raftTLSKey, err := raft.GenerateTLSKey(c.secureRandomReader)
+			if err != nil {
+				return err
+			}
+
+			raftTLS = &raft.TLSKeyring{
+				Keys:        []*raft.TLSKey{raftTLSKey},
+				ActiveKeyID: raftTLSKey.ID,
+			}
+		default:
+			raftTLS = new(raft.TLSKeyring)
+			if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
+				return err
+			}
 		}
-	default:
-		raftTLS = new(raft.TLSKeyring)
-		if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
+
+		hasState, err := raftBackend.HasState()
+		if err != nil {
 			return err
 		}
-	}
 
-	hasState, err := raftBackend.HasState()
-	if err != nil {
-		return err
-	}
+		// This can be hit on follower nodes that got their config updated to use
+		// raft for HA-only before they are joined to the cluster. Since followers
+		// in this case use shared storage, it doesn't return early from the TLS
+		// case above, but there's not raft state yet for the backend to call
+		// raft.SetupCluster.
+		if !hasState {
+			c.logger.Trace("skipping raft backend setup during unseal, no raft state found")
+			return nil
+		}
 
-	// This can be hit on follower nodes that got their config updated to use
-	// raft for HA-only before they are joined to the cluster. Since followers
-	// in this case use shared storage, it doesn't return early from the TLS
-	// case above, but there's not raft state yet for the backend to call
-	// raft.SetupCluster.
-	if !hasState {
-		c.logger.Trace("skipping raft backend setup during unseal, no raft state found")
-		return nil
-	}
+		raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 
-	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
-
-	if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
-		TLSKeyring:      raftTLS,
-		ClusterListener: c.getClusterListener(),
-		StartAsLeader:   creating,
-	}); err != nil {
-		return err
+		if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
+			TLSKeyring:      raftTLS,
+			ClusterListener: c.getClusterListener(),
+			StartAsLeader:   creating,
+		}); err != nil {
+			return err
+		}
 	}
 
 	defer func() {
@@ -219,6 +221,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 
 	c.raftTLSRotationStopCh = make(chan struct{})
 	logger := c.logger.Named("raft")
+	c.AddLogger(logger)
 
 	if c.isRaftHAOnly() {
 		return c.raftTLSRotateDirect(ctx, logger, c.raftTLSRotationStopCh)
@@ -473,27 +476,33 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		return errors.New("no active raft TLS key found")
 	}
 
+	getNextRotationTime := func(next time.Time) time.Time {
+		now := time.Now()
+
+		// active key's CreatedTime + raftTLSRotationPeriod might be in
+		// the past (meaning it is ready to be rotated) which will cause
+		// NewTicker to panic when used with time.Until, prevent this by
+		// pushing out rotation time into very near future
+		if next.Before(now) {
+			return now.Add(1 * time.Minute)
+		}
+
+		// push out to ensure proposed time does not elapse
+		return next.Add(10 * time.Second)
+	}
+
 	// Start the process in a go routine
 	go func() {
-		nextRotationTime := activeKey.CreatedTime.Add(raftTLSRotationPeriod)
+		nextRotationTime := getNextRotationTime(activeKey.CreatedTime.Add(raftTLSRotationPeriod))
 
 		keyCheckInterval := time.NewTicker(1 * time.Minute)
 		defer keyCheckInterval.Stop()
 
-		var backoff bool
 		// ticker is used to prevent memory leak of using time.After in
 		// for - select pattern.
 		ticker := time.NewTicker(time.Until(nextRotationTime))
 		defer ticker.Stop()
 		for {
-			// If we encountered and error we should try to create the key
-			// again.
-			if backoff {
-				nextRotationTime = time.Now().Add(10 * time.Second)
-				backoff = false
-			}
-
-			ticker.Reset(time.Until(nextRotationTime))
 			select {
 			case <-keyCheckInterval.C:
 				err := checkCommitted()
@@ -505,11 +514,12 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 				next, err := rotateKeyring()
 				if err != nil {
 					logger.Error("failed to rotate TLS key", "error", err)
-					backoff = true
-					continue
+					nextRotationTime = time.Now().Add(10 * time.Second)
+				} else {
+					nextRotationTime = getNextRotationTime(next)
 				}
 
-				nextRotationTime = next
+				ticker.Reset(time.Until(nextRotationTime))
 
 			case <-stopCh:
 				return
@@ -819,11 +829,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return false, errors.New("raft backend not in use")
 	}
 
-	if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
-		c.logger.Error("failed to set desired suffrage for this node", "error", err)
-		return false, nil
-	}
-
 	init, err := c.InitializedLocally(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to check if core is initialized: %w", err)
@@ -903,7 +908,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		// need to block until the node is unsealed, unless retry is set to
 		// false.
 		if c.seal.BarrierType() == wrapping.Shamir && !c.isRaftHAOnly() {
-			c.raftInfo = raftInfo
+			c.raftInfo.Store(raftInfo)
 			if err := c.seal.SetBarrierConfig(ctx, raftInfo.leaderBarrierConfig); err != nil {
 				return err
 			}
@@ -913,7 +918,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			}
 
 			// Wait until unseal keys are supplied
-			c.raftInfo.joinInProgress = true
+			raftInfo.joinInProgress = true
+			c.raftInfo.Store(raftInfo)
 			if atomic.LoadUint32(c.postUnsealStarted) != 1 {
 				return errors.New("waiting for unseal keys to be supplied")
 			}
@@ -926,7 +932,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 		if c.seal.BarrierType() == wrapping.Shamir && !isRaftHAOnly {
 			// Reset the state
-			c.raftInfo = nil
+			c.raftInfo.Store((*raftInformation)(nil))
 
 			// In case of Shamir unsealing, inform the unseal process that raft join is completed
 			close(c.raftJoinDoneCh)
@@ -947,10 +953,21 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		if err != nil {
 			return fmt.Errorf("failed to check if core is initialized: %w", err)
 		}
-		if init && !isRaftHAOnly {
+
+		// InitializedLocally will return non-nil before HA backends are
+		// initialized. c.Initialized(ctx) checks InitializedLocally first, so
+		// we can't use that generically for both cases. Instead check
+		// raftBackend.Initialized() directly for the HA-Only case.
+		if (!isRaftHAOnly && init) || (isRaftHAOnly && raftBackend.Initialized()) {
 			c.logger.Info("returning from raft join as the node is initialized")
 			return nil
 		}
+
+		if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
+			c.logger.Error("failed to set desired suffrage for this node", "error", err)
+			return nil
+		}
+
 		challengeCh := make(chan *raftInformation)
 		var expandedJoinInfos []*raft.LeaderJoinInfo
 		for _, leaderInfo := range leaderInfos {
@@ -985,15 +1002,19 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 		select {
 		case <-ctx.Done():
+			err = ctx.Err()
 		case raftInfo := <-challengeCh:
 			if raftInfo != nil {
 				err = answerChallenge(ctx, raftInfo)
 				if err == nil {
 					return nil
 				}
+			} else {
+				// Return an error so we can retry_join
+				err = fmt.Errorf("failed to get raft challenge")
 			}
 		}
-		return fmt.Errorf("timed out on raft join: %w", ctx.Err())
+		return err
 	}
 
 	switch retryFailures {
@@ -1245,7 +1266,7 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 }
 
 func (c *Core) isRaftUnseal() bool {
-	return c.raftInfo != nil
+	return c.raftInfo.Load().(*raftInformation) != nil
 }
 
 type answerRespData struct {

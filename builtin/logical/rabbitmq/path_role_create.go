@@ -74,7 +74,6 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate username: %w", err)
 	}
-	fmt.Printf("username: %s\n", username)
 
 	password, err := b.generatePassword(ctx, config.PasswordPolicy)
 	if err != nil {

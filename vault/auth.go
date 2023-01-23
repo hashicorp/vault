@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -825,16 +825,19 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		path := credentialRoutePrefix + entry.Path
 		err = c.router.Mount(backend, path, entry, view)
 		if err != nil {
-			c.logger.Error("failed to mount auth entry", "path", entry.Path, "error", err)
+			c.logger.Error("failed to mount auth entry", "path", entry.Path, "namespace", entry.Namespace(), "error", err)
 			return errLoadAuthFailed
 		}
 
 		if c.logger.IsInfo() {
-			c.logger.Info("successfully enabled credential backend", "type", entry.Type, "path", entry.Path)
+			c.logger.Info("successfully enabled credential backend", "type", entry.Type, "path", entry.Path, "namespace", entry.Namespace())
 		}
 
 		// Ensure the path is tainted if set in the mount table
 		if entry.Tainted {
+			// Calculate any namespace prefixes here, because when Taint() is called, there won't be
+			// a namespace to pull from the context. This is similar to what we do above in c.router.Mount().
+			path = entry.Namespace().Path + path
 			c.router.Taint(ctx, path)
 		}
 

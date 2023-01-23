@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
@@ -79,6 +80,12 @@ const (
 	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
 	// MfaAuthResponse when the value is not specified in the server config
 	defaultMFAAuthResponseTTL = 300 * time.Second
+
+	// defaultMaxTOTPValidateAttempts is the default value for the number
+	// of failed attempts to validate a request subject to TOTP MFA. If the
+	// number of failed totp passcode validations exceeds this max value, the
+	// user needs to wait until a fresh totp passcode is generated.
+	defaultMaxTOTPValidateAttempts = 5
 
 	// ForwardSSCTokenToActive is the value that must be set in the
 	// forwardToActive to trigger forwarding if a perf standby encounters
@@ -251,8 +258,9 @@ type Core struct {
 	postUnsealStarted *uint32
 
 	// raftInfo will contain information required for this node to join as a
-	// peer to an existing raft cluster
-	raftInfo *raftInformation
+	// peer to an existing raft cluster. This is marked atomic to prevent data
+	// races and casted to raftInformation wherever it is used.
+	raftInfo *atomic.Value
 
 	// migrationInfo is used during (and possibly after) a seal migration.
 	// This contains information about the seal we are migrating *from*.  Even
@@ -398,6 +406,9 @@ type Core struct {
 	// e.g. testing
 	baseLogger log.Logger
 	logger     log.Logger
+
+	// log level provided by config, CLI flag, or env
+	logLevel string
 
 	// Disables the trace display for Sentinel checks
 	sentinelTraceDisabled bool
@@ -649,6 +660,8 @@ type CoreConfig struct {
 
 	SecureRandomReader io.Reader
 
+	LogLevel string
+
 	Logger log.Logger
 
 	// Disables the trace display for Sentinel checks
@@ -828,6 +841,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		standbyStopCh:        new(atomic.Value),
 		baseLogger:           conf.Logger,
 		logger:               conf.Logger.Named("core"),
+		logLevel:             conf.LogLevel,
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
@@ -860,6 +874,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rawConfig:                      new(atomic.Value),
 		recoveryMode:                   conf.RecoveryMode,
 		postUnsealStarted:              new(uint32),
+		raftInfo:                       new(atomic.Value),
 		raftJoinDoneCh:                 make(chan struct{}),
 		clusterHeartbeatInterval:       clusterHeartbeatInterval,
 		activityLogConfig:              conf.ActivityLogConfig,
@@ -897,6 +912,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	c.clusterAddr.Store(conf.ClusterAddr)
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
+
+	c.raftInfo.Store((*raftInformation)(nil))
 
 	switch conf.ClusterCipherSuites {
 	case "tls13", "tls12":
@@ -1005,6 +1022,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+
+	if c.loginMFABackend.mfaLogger != nil {
+		c.AddLogger(c.loginMFABackend.mfaLogger)
+	}
 
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
@@ -1328,7 +1349,9 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 		}
 	}
 
-	switch c.raftInfo.joinInProgress {
+	raftInfo := c.raftInfo.Load().(*raftInformation)
+
+	switch raftInfo.joinInProgress {
 	case true:
 		// JoinRaftCluster is already trying to perform a join based on retry_join configuration.
 		// Inform that routine that unseal key validation is complete so that it can continue to
@@ -1342,11 +1365,11 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 	default:
 		// This is the case for manual raft join. Send the answer to the leader node and
 		// wait for data to start streaming in.
-		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
+		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), raftInfo); err != nil {
 			return err
 		}
 		// Reset the state
-		c.raftInfo = nil
+		c.raftInfo.Store((*raftInformation)(nil))
 	}
 
 	go func() {
@@ -1420,13 +1443,15 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	var config *SealConfig
 	var err error
 
+	raftInfo := c.raftInfo.Load().(*raftInformation)
+
 	switch {
 	case seal.RecoveryKeySupported():
 		config, err = seal.RecoveryConfig(ctx)
 	case c.isRaftUnseal():
 		// Ignore follower's seal config and refer to leader's barrier
 		// configuration.
-		config = c.raftInfo.leaderBarrierConfig
+		config = raftInfo.leaderBarrierConfig
 	default:
 		config, err = seal.BarrierConfig(ctx)
 	}
@@ -2107,7 +2132,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
-	c.setupCachedMFAResponseAuth()
 
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
@@ -2129,9 +2153,14 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.loadIdentityStoreArtifacts(ctx); err != nil {
 			return err
 		}
-		if err := loadMFAConfigs(ctx, c); err != nil {
+		if err := loadPolicyMFAConfigs(ctx, c); err != nil {
 			return err
 		}
+		c.setupCachedMFAResponseAuth()
+		if err := c.loadLoginMFAConfigs(ctx); err != nil {
+			return err
+		}
+
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
@@ -2246,6 +2275,9 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
 	}
 	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
+	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
+		c.systemBackend.mfaBackend.usedCodes = cache.New(0, 30*time.Second)
+	}
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -2290,10 +2322,6 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
-	// Clear any cached auth response
-	c.mfaResponseAuthQueueLock.Lock()
-	c.mfaResponseAuthQueue = nil
-	c.mfaResponseAuthQueueLock.Unlock()
 
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
@@ -2321,7 +2349,13 @@ func (c *Core) preSeal() error {
 		seal.StopHealthCheck()
 	}
 
-	c.loginMFABackend.usedCodes = nil
+	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
+		c.systemBackend.mfaBackend.usedCodes = nil
+	}
+	if err := c.teardownLoginMFA(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error tearing down login MFA, error: %w", err))
+	}
+
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")
@@ -2772,6 +2806,19 @@ func (c *Core) SetLogLevel(level log.Level) {
 	}
 }
 
+func (c *Core) SetLogLevelByName(name string, level log.Level) error {
+	c.allLoggersLock.RLock()
+	defer c.allLoggersLock.RUnlock()
+	for _, logger := range c.allLoggers {
+		if logger.Name() == name {
+			logger.SetLevel(level)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("logger %q does not exist", name)
+}
+
 // SetConfig sets core's config object to the newly provided config.
 func (c *Core) SetConfig(conf *server.Config) {
 	c.rawConfig.Store(conf)
@@ -3033,6 +3080,31 @@ type LicenseState struct {
 	State      string
 	ExpiryTime time.Time
 	Terminated bool
+}
+
+func (c *Core) loadLoginMFAConfigs(ctx context.Context) error {
+	eConfigs := make([]*mfa.MFAEnforcementConfig, 0)
+	allNamespaces := c.collectNamespaces()
+	for _, ns := range allNamespaces {
+		err := c.loginMFABackend.loadMFAMethodConfigs(ctx, ns)
+		if err != nil {
+			return fmt.Errorf("error loading MFA method Config, namespaceid %s, error: %w", ns.ID, err)
+		}
+
+		loadedConfigs, err := c.loginMFABackend.loadMFAEnforcementConfigs(ctx, ns)
+		if err != nil {
+			return fmt.Errorf("error loading MFA enforcement Config, namespaceid %s, error: %w", ns.ID, err)
+		}
+
+		eConfigs = append(eConfigs, loadedConfigs...)
+	}
+
+	for _, conf := range eConfigs {
+		if err := c.loginMFABackend.loginMFAMethodExistenceCheck(conf); err != nil {
+			c.loginMFABackend.mfaLogger.Error("failed to find all MFA methods that exist in MFA enforcement configs", "configID", conf.ID, "namespaceID", conf.NamespaceID, "error", err.Error())
+		}
+	}
+	return nil
 }
 
 type MFACachedAuthResponse struct {

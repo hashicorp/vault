@@ -115,13 +115,13 @@ var (
 )
 
 var defaultExemptPaths = []string{
-	"/v1/sys/generate-recovery-token/attempt",
-	"/v1/sys/generate-recovery-token/update",
-	"/v1/sys/generate-root/attempt",
-	"/v1/sys/generate-root/update",
-	"/v1/sys/health",
-	"/v1/sys/seal-status",
-	"/v1/sys/unseal",
+	"sys/generate-recovery-token/attempt",
+	"sys/generate-recovery-token/update",
+	"sys/generate-root/attempt",
+	"sys/generate-root/update",
+	"sys/health",
+	"sys/seal-status",
+	"sys/unseal",
 }
 
 // Access provides information to reach back to the quota checker.
@@ -163,7 +163,15 @@ type Manager struct {
 
 	logger     log.Logger
 	metricSink *metricsutil.ClusterMetricSink
-	lock       *sync.RWMutex
+
+	// quotaLock is a lock for manipulating quotas and anything not covered by a more specific lock
+	quotaLock *sync.RWMutex
+
+	// quotaConfigLock is a lock for accessing config items, such as RateLimitExemptPaths
+	quotaConfigLock *sync.RWMutex
+
+	// dbAndCacheLock is a lock for db and path caches that need to be reset during Reset()
+	dbAndCacheLock *sync.RWMutex
 }
 
 // Quota represents the common properties of every quota type
@@ -257,7 +265,9 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 		metricSink:           ms,
 		rateLimitPathManager: pathmanager.New(),
 		config:               new(Config),
-		lock:                 new(sync.RWMutex),
+		quotaLock:            new(sync.RWMutex),
+		quotaConfigLock:      new(sync.RWMutex),
+		dbAndCacheLock:       new(sync.RWMutex),
 	}
 
 	manager.init(walkFunc)
@@ -267,8 +277,10 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 
 // SetQuota adds or updates a quota rule.
 func (m *Manager) SetQuota(ctx context.Context, qType string, quota Quota, loading bool) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	m.dbAndCacheLock.RLock()
+	defer m.quotaLock.Unlock()
+	defer m.dbAndCacheLock.RUnlock()
 	return m.setQuotaLocked(ctx, qType, quota, loading)
 }
 
@@ -339,9 +351,14 @@ func (m *Manager) setQuotaLockedWithTxn(ctx context.Context, qType string, quota
 
 // QuotaNames returns the names of all the quota rules for a given type
 func (m *Manager) QuotaNames(qType Type) ([]string, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.dbAndCacheLock.RLock()
+	defer m.dbAndCacheLock.RUnlock()
 
+	return m.quotaNamesLocked(qType)
+}
+
+// quotaNamesLocked returns the names of all the quota rules for a given type, and must be called with the lock
+func (m *Manager) quotaNamesLocked(qType Type) ([]string, error) {
 	txn := m.db.Txn(false)
 	iter, err := txn.Get(qType.String(), indexID)
 	if err != nil {
@@ -356,8 +373,8 @@ func (m *Manager) QuotaNames(qType Type) ([]string, error) {
 
 // QuotaByID queries for a quota rule in the db for a given quota ID
 func (m *Manager) QuotaByID(qType string, id string) (Quota, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.dbAndCacheLock.RLock()
+	defer m.dbAndCacheLock.RUnlock()
 
 	txn := m.db.Txn(false)
 
@@ -374,9 +391,14 @@ func (m *Manager) QuotaByID(qType string, id string) (Quota, error) {
 
 // QuotaByName queries for a quota rule in the db for a given quota name
 func (m *Manager) QuotaByName(qType string, name string) (Quota, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.dbAndCacheLock.RLock()
+	defer m.dbAndCacheLock.RUnlock()
 
+	return m.quotaByNameLocked(qType, name)
+}
+
+// quotaByNameLocked queries for a quota rule in the db for a given quota name, and must be called with the lock
+func (m *Manager) quotaByNameLocked(qType string, name string) (Quota, error) {
 	txn := m.db.Txn(false)
 
 	quotaRaw, err := txn.First(qType, indexName, name)
@@ -392,8 +414,8 @@ func (m *Manager) QuotaByName(qType string, name string) (Quota, error) {
 
 // QuotaByFactors returns the quota rule that matches the provided factors
 func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath string) (Quota, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.dbAndCacheLock.RLock()
+	defer m.dbAndCacheLock.RUnlock()
 
 	// nsPath would have been made non-empty during insertion. Use non-empty value
 	// during query as well.
@@ -430,8 +452,8 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath s
 
 // QueryQuota returns the most specific applicable quota for a given request.
 func (m *Manager) QueryQuota(req *Request) (Quota, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.dbAndCacheLock.RLock()
+	defer m.dbAndCacheLock.RUnlock()
 
 	return m.queryQuota(nil, req)
 }
@@ -518,8 +540,10 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 
 // DeleteQuota removes a quota rule from the db for a given name
 func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	m.dbAndCacheLock.RLock()
+	defer m.quotaLock.Unlock()
+	defer m.dbAndCacheLock.RUnlock()
 
 	txn := m.db.Txn(true)
 	defer txn.Abort()
@@ -583,8 +607,8 @@ func (m *Manager) ApplyQuota(ctx context.Context, req *Request) (Response, error
 // SetEnableRateLimitAuditLogging updates the operator preference regarding the
 // audit logging behavior.
 func (m *Manager) SetEnableRateLimitAuditLogging(val bool) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	defer m.quotaLock.Unlock()
 	m.setEnableRateLimitAuditLoggingLocked(val)
 }
 
@@ -595,8 +619,8 @@ func (m *Manager) setEnableRateLimitAuditLoggingLocked(val bool) {
 // SetEnableRateLimitResponseHeaders updates the operator preference regarding
 // the rate limit quota HTTP header behavior.
 func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaConfigLock.Lock()
+	defer m.quotaConfigLock.Unlock()
 	m.setEnableRateLimitResponseHeadersLocked(val)
 }
 
@@ -609,8 +633,8 @@ func (m *Manager) setEnableRateLimitResponseHeadersLocked(val bool) {
 // SetRateLimitExemptPaths will wipe out the existing path manager and set the
 // paths based on the provided argument.
 func (m *Manager) SetRateLimitExemptPaths(vals []string) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaConfigLock.Lock()
+	defer m.quotaConfigLock.Unlock()
 	m.setRateLimitExemptPathsLocked(vals)
 }
 
@@ -626,8 +650,8 @@ func (m *Manager) setRateLimitExemptPathsLocked(vals []string) {
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
 // logging of request rejections due to rate limiting quota rule violations.
 func (m *Manager) RateLimitAuditLoggingEnabled() bool {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.quotaConfigLock.RLock()
+	defer m.quotaConfigLock.RUnlock()
 
 	return m.config.EnableRateLimitAuditLogging
 }
@@ -635,27 +659,18 @@ func (m *Manager) RateLimitAuditLoggingEnabled() bool {
 // RateLimitResponseHeadersEnabled returns if the quota configuration allows for
 // rate limit quota HTTP headers to be added to responses.
 func (m *Manager) RateLimitResponseHeadersEnabled() bool {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.quotaConfigLock.RLock()
+	defer m.quotaConfigLock.RUnlock()
 
 	return m.config.EnableRateLimitResponseHeaders
-}
-
-// RateLimitExemptPaths returns the list of exempt paths from all rate limit
-// resource quotas from the Manager's configuration.
-func (m *Manager) RateLimitExemptPaths() []string {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
-	return m.config.RateLimitExemptPaths
 }
 
 // RateLimitPathExempt returns a boolean dictating if a given path is exempt from
 // any rate limit quota. If not rate limit path manager is defined, false is
 // returned.
 func (m *Manager) RateLimitPathExempt(path string) bool {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.quotaConfigLock.RLock()
+	defer m.quotaConfigLock.RUnlock()
 
 	if m.rateLimitPathManager == nil {
 		return false
@@ -671,8 +686,10 @@ func (m *Manager) Config() *Config {
 
 // Reset will clear all the quotas from the db and clear the lease path cache.
 func (m *Manager) Reset() error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	defer m.quotaLock.Unlock()
+	m.dbAndCacheLock.Lock()
+	defer m.dbAndCacheLock.Unlock()
 
 	err := m.resetCache()
 	if err != nil {
@@ -686,6 +703,23 @@ func (m *Manager) Reset() error {
 
 // Must be called with the lock held
 func (m *Manager) resetCache() error {
+	names, err := m.quotaNamesLocked(TypeRateLimit)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		quota, err := m.quotaByNameLocked(TypeRateLimit.String(), name)
+		if err != nil {
+			return err
+		}
+		if quota != nil {
+			rlq := quota.(*RateLimitQuota)
+			err = rlq.store.Close(context.Background())
+			if err != nil {
+				return err
+			}
+		}
+	}
 	db, err := memdb.NewMemDB(dbSchema())
 	if err != nil {
 		return err
@@ -865,8 +899,12 @@ func Load(ctx context.Context, storage logical.Storage, qType, name string) (Quo
 // Setup loads the quota configuration and all the quota rules into the
 // quota manager.
 func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStandby, isDRSecondary bool) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	m.quotaConfigLock.Lock()
+	m.dbAndCacheLock.Lock()
+	defer m.quotaLock.Unlock()
+	defer m.quotaConfigLock.Unlock()
+	defer m.dbAndCacheLock.Unlock()
 
 	m.storage = storage
 	m.ctx = ctx
@@ -954,8 +992,10 @@ func QuotaStoragePath(quotaType, name string) string {
 // took place. Quota manager will trigger the quota specific updates including
 // the mount path update and the namespace update
 func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPathDetails) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	m.dbAndCacheLock.RLock()
+	defer m.quotaLock.Unlock()
+	defer m.dbAndCacheLock.RUnlock()
 
 	// Grab a write transaction, as we want to save the updated quota in memdb
 	txn := m.db.Txn(true)
@@ -1019,8 +1059,10 @@ func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPat
 // or secret engine disabling. This should only be called on the primary cluster
 // node.
 func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath string) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.quotaLock.Lock()
+	m.dbAndCacheLock.RLock()
+	defer m.quotaLock.Unlock()
+	defer m.dbAndCacheLock.RUnlock()
 
 	txn := m.db.Txn(true)
 	defer txn.Abort()

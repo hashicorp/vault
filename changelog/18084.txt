@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/azure: add WAL to clean up role assignments if errors occur
+```

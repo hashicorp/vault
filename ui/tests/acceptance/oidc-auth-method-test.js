@@ -19,7 +19,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       auth: { client_token: 'root' },
     }));
     // ensure clean state
-    sessionStorage.removeItem('selectedAuth');
+    localStorage.removeItem('selectedAuth');
   });
   hooks.afterEach(function () {
     this.openStub.restore();

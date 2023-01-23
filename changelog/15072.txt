@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix panic caused by parsing JSON integers for fields defined as comma-delimited integers
+```

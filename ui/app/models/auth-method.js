@@ -116,9 +116,9 @@ export default attachCapabilities(ModelExport, {
   deletePath: apiPath`sys/auth/${'id'}`,
   configPath: function (context) {
     if (context.type === 'aws') {
-      return apiPath`auth/${'id'}/config/client`;
+      return apiPath`auth/${'id'}/config/client`.call(this, context);
     } else {
-      return apiPath`auth/${'id'}/config`;
+      return apiPath`auth/${'id'}/config`.call(this, context);
     }
   },
 });

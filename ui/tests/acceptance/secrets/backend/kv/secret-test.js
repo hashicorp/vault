@@ -29,6 +29,18 @@ let writeSecret = async function (backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
+let deleteEngine = async function (enginePath, assert) {
+  await logout.visit();
+  await authPage.login();
+  await consoleComponent.runCommands([`delete sys/mounts/${enginePath}`]);
+  const response = consoleComponent.lastLogOutput;
+  assert.equal(
+    response,
+    `Success! Data deleted (if it existed) at: sys/mounts/${enginePath}`,
+    'Engine successfully deleted'
+  );
+};
+
 module('Acceptance | secrets/secret/create', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -253,6 +265,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
 
     await click('.linked-block');
 
+    await click('button.button.masked-input-toggle');
     assert.dom('[data-test-masked-input]').hasText('bar', 'renders secret on the secret version show page');
     assert.equal(
       currentURL(),
@@ -526,18 +539,17 @@ module('Acceptance | secrets/secret/create', function (hooks) {
   });
 
   test('version 2 with no access to data but access to metadata shows metadata tab', async function (assert) {
+    assert.expect(5);
     let enginePath = 'kv-metadata-access-only';
-    let secretPath = 'kv-metadata-access-only-secret-name';
+    let secretPath = 'nested/kv-metadata-access-only-secret-name';
     const V2_POLICY = `
-      path "${enginePath}/metadata/*" {
-        capabilities = ["read", "update", "list"]
+      path "${enginePath}/metadata/nested/*" {
+        capabilities = ["read", "update"]
       }
     `;
     await consoleComponent.runCommands([
       `write sys/mounts/${enginePath} type=kv options=version=2`,
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
-      // delete any kv previously written here so that tests can be re-run
-      `delete ${enginePath}/metadata/${secretPath}`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
 
@@ -546,15 +558,15 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await logout.visit();
     await authPage.login(userToken);
     await settled();
-    await click(`[data-test-auth-backend-link=${enginePath}]`);
-
-    await click(`[data-test-secret-link=${secretPath}]`);
-
+    await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
     assert.dom('[data-test-empty-state-title]').hasText('You do not have permission to read this secret.');
+    assert.dom('[data-test-secret-metadata-tab]').exists('Metadata tab exists');
     await editPage.metadataTab();
     await settled();
     assert.dom('[data-test-empty-state-title]').hasText('No custom metadata');
     assert.dom('[data-test-add-custom-metadata]').exists('it shows link to edit metadata');
+
+    await deleteEngine(enginePath, assert);
   });
 
   test('version 2: with metadata no read or list but with delete access and full access to the data endpoint', async function (assert) {
@@ -601,7 +613,6 @@ module('Acceptance | secrets/secret/create', function (hooks) {
         'They do not have list access so when logged in under the restricted policy they see the get-credentials-card'
       );
 
-    // this fails in IE11 on browserstack so going directly to URL
     await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
 
     await assert

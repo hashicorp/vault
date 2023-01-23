@@ -786,7 +786,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
 		}
 
-		fromEntity, err := i.MemDBEntityByID(fromEntityID, false)
+		fromEntity, err := i.MemDBEntityByID(fromEntityID, true)
 		if err != nil {
 			return nil, err
 		}

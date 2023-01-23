@@ -16,9 +16,9 @@ signed by Azure Active Directory for the configured tenant.
 This method supports authentication for system-assigned and user-assigned
 managed identities. See [Azure Managed Service Identity (MSI)](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/overview) for more information about these resources.
 
-~> System-assigned identities are unique to every virtual machine in Azure. If the 
-virtual machines using Azure auth are recreated frequently, using system-assigned 
-identities could result in a lot of Vault entities. For environments with high ephemeral 
+~> System-assigned identities are unique to every virtual machine in Azure. If the
+virtual machines using Azure auth are recreated frequently, using system-assigned
+identities could result in a lot of Vault entities. For environments with high ephemeral
 workloads, user-assigned identities are recommended.
 
 ## Prerequisites:
@@ -42,7 +42,7 @@ The next sections review how the authN/Z workflows work. If you
 have already reviewed these sections, here are some quick links to:
 
 - [Usage](/docs/secrets/azure#usage)
-- [API documentation](/api/auth/azure) docs.
+- [API documentation](/api-docs/auth/azure) docs.
 
 ## Authentication
 
@@ -139,7 +139,7 @@ tool.
    authentication type, as well as overall constraints and configuration for
    the generated auth tokens.
 
-   For the complete list of role options, please see the [API documentation](/api/auth/azure).
+   For the complete list of role options, please see the [API documentation](/api-docs/auth/azure).
 
 ### Via the API
 
@@ -211,16 +211,16 @@ AZURE_GO_SDK_LOG_LEVEL=DEBUG
 
 ## API
 
-The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/api/auth/azure) for more details.
+The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/api-docs/auth/azure) for more details.
 
 ## Code Example
 
-The following code snippet demonstrates the Azure auth method to authenticate
+The following example demonstrates the Azure auth method to authenticate
 with Vault.
 
-<CodeTabs heading="azure auth example">
+<CodeTabs>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```go
 package main
@@ -283,7 +283,7 @@ func getSecretWithAzureAuth() (string, error) {
 ```
 </CodeBlockConfig>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```cs
 using System;

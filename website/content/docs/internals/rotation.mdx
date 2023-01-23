@@ -17,7 +17,7 @@ to split the root key into 5 shares, any 3 of which are required to reconstruct 
 key. The root key is used to protect the encryption key, which is ultimately used to protect
 data written to the storage backend.
 
-[![Vault Shamir Secret Sharing Algorithm](/img/vault-shamir-secret-sharing.svg)](/img/vault-shamir-secret-sharing.svg)
+![Key Rotate](/img/vault-key-rotate.png)
 
 To support key rotation, we need to support changing the unseal keys, root key, and the
 backend encryption key. We split this into two separate operations, `rekey` and `rotate`.

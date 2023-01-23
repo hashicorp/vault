@@ -8,17 +8,17 @@ import "C"
 // without implementation in any imported or built library. This results in
 // a linker err if the above build constraints are satisfied:
 //
-//   /home/cipherboy/GitHub/cipherboy/vault-enterprise/helper/constants/fips_build_check.go:10: undefined reference to `github.com/hashicorp/vault/helper/constants.VaultFIPSBuildRequiresVersionAgnosticTagAndOneVersionTag'
+//	/home/cipherboy/GitHub/cipherboy/vault-enterprise/helper/constants/fips_build_check.go:10: undefined reference to `github.com/hashicorp/vault/helper/constants.VaultFIPSBuildRequiresVersionAgnosticTagAndOneVersionTag'
 //
 // This indicates that a build error has occurred due to mismatched tags.
 //
 // In particular, we use this to enforce the following restrictions on build
 // tags:
 //
-//  - If a versioned fips_140_* tag is specified, the unversioned tag must
-//    also be.
-//  - If the unversioned tag is specified, a versioned tag must be.
-//  - Both versioned flags cannot be specified at the same time.
+//   - If a versioned fips_140_* tag is specified, the unversioned tag must
+//     also be.
+//   - If the unversioned tag is specified, a versioned tag must be.
+//   - Both versioned flags cannot be specified at the same time.
 //
 // In the unlikely event that a FFI implementation for this function exists
 // in the future, it should be renamed to a new function which does not
