@@ -1115,6 +1115,20 @@ func (c *TestClusterCore) stop() error {
 	return nil
 }
 
+func (c *TestClusterCore) GrabRollbackLock() {
+	// Ensure we don't hold this lock while there are in flight rollbacks.
+	c.rollback.inflightAll.Wait()
+	c.rollback.inflightLock.Lock()
+}
+
+func (c *TestClusterCore) ReleaseRollbackLock() {
+	c.rollback.inflightLock.Unlock()
+}
+
+func (c *TestClusterCore) TriggerRollbacks() {
+	c.rollback.triggerRollbacks()
+}
+
 func (c *TestCluster) Cleanup() {
 	c.Logger.Info("cleaning up vault cluster")
 	if tl, ok := c.Logger.(*TestLogger); ok {

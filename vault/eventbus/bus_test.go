@@ -17,14 +17,19 @@ func TestBusBasics(t *testing.T) {
 
 	eventType := logical.EventType("someType")
 
-	err = bus.Send(ctx, eventType, "message")
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = bus.Send(ctx, eventType, event)
 	if err != ErrNotStarted {
 		t.Errorf("Expected not started error but got: %v", err)
 	}
 
 	bus.Start()
 
-	err = bus.Send(ctx, eventType, "sent but never received")
+	err = bus.Send(ctx, eventType, event)
 	if err != nil {
 		t.Errorf("Expected no error sending: %v", err)
 	}
@@ -34,7 +39,12 @@ func TestBusBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.Send(ctx, eventType, "message2")
+	event, err = logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = bus.Send(ctx, eventType, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -42,8 +52,8 @@ func TestBusBasics(t *testing.T) {
 	timeout := time.After(1 * time.Second)
 	select {
 	case message := <-ch:
-		if message != "message2" {
-			t.Errorf("Got unexpected message: %v", message)
+		if message.ID() != event.ID() {
+			t.Errorf("Got unexpected message: %+v", message)
 		}
 	case <-timeout:
 		t.Error("Timeout waiting for message")
@@ -71,11 +81,20 @@ func TestBus2Subscriptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.Send(ctx, eventType2, "message2")
+	event1, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	event2, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = bus.Send(ctx, eventType2, event2)
 	if err != nil {
 		t.Error(err)
 	}
-	err = bus.Send(ctx, eventType1, "message1")
+	err = bus.Send(ctx, eventType1, event1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -83,18 +102,18 @@ func TestBus2Subscriptions(t *testing.T) {
 	timeout := time.After(1 * time.Second)
 	select {
 	case message := <-ch1:
-		if message != "message1" {
+		if message.ID() != event1.ID() {
 			t.Errorf("Got unexpected message: %v", message)
 		}
 	case <-timeout:
-		t.Error("Timeout waiting for message1")
+		t.Error("Timeout waiting for event1")
 	}
 	select {
 	case message := <-ch2:
-		if message != "message2" {
+		if message.ID() != event2.ID() {
 			t.Errorf("Got unexpected message: %v", message)
 		}
 	case <-timeout:
-		t.Error("Timeout waiting for message2")
+		t.Error("Timeout waiting for event2")
 	}
 }
