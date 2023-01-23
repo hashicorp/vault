@@ -1883,7 +1883,10 @@ func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *
 		return fmt.Errorf("failed to get Duo configuration for method %q", mConfig.Name)
 	}
 
-	passcode := mfaFactors.passcode
+	var passcode string
+	if mfaFactors != nil {
+		passcode = mfaFactors.passcode
+	}
 
 	client := duoapi.NewDuoApi(
 		duoConfig.IntegrationKey,
