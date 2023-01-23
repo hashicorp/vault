@@ -309,6 +309,8 @@ func TestLoginMFAMethodName(t *testing.T) {
 				t.Fatal("trying to create a new MFA config with the same name should not result in a new MFA config")
 			}
 
+			originalName := tc.configData["method_name"]
+
 			// create a new MFA config name
 			tc.configData["method_name"] = "newName"
 			resp, err = client.Logical().Write(myPath, tc.configData)
@@ -324,10 +326,10 @@ func TestLoginMFAMethodName(t *testing.T) {
 				t.Fatalf("expected a failure for configuring an MFA method with an existing MFA method name, %v", err)
 			}
 
-			// update the name with an invalid namespace prefix should fail
-			tc.configData["method_name"] = "ns1/foo"
+			// Create a method with a / in the name
+			tc.configData["method_name"] = fmt.Sprintf("ns1/%s", originalName)
 			_, err = client.Logical().Write(myNewPath, tc.configData)
-			if err == nil || !strings.Contains(err.Error(), "invalid underlying namespace ns1/ for method name foo") {
+			if err != nil {
 				t.Fatal(err)
 			}
 		})

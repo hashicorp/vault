@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -270,11 +269,7 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 	}
 
 	methodID := d.Get("method_id").(string)
-
-	methodName, err := i.mfaBackend.sanitizeMethodNameSameNamespace(ns, d.Get("method_name").(string))
-	if err != nil {
-		return nil, err
-	}
+	methodName := d.Get("method_name").(string)
 
 	b := i.mfaBackend
 	b.mfaLock.Lock()
@@ -673,38 +668,6 @@ func (b *LoginMFABackend) loginMFAMethodExistenceCheck(eConfig *mfa.MFAEnforceme
 	}
 
 	return aggErr.ErrorOrNil()
-}
-
-// sanitizeMethodNameSameNamespace returns the name without the namespace.
-// The method name could contain the namespace path.
-// If the namespace is specified in the name, check if the namespace
-// matches the request namespace. If so, trim the namespace path and
-// return the name. If it does not match the request namespace,
-// return an error. If the namespace path is not included in the name,
-// nothing happens.
-func (b *LoginMFABackend) sanitizeMethodNameSameNamespace(ns *namespace.Namespace, name string) (string, error) {
-	if name == "" {
-		return "", nil
-	}
-
-	if !strings.Contains(name, "/") {
-		return name, nil
-	}
-
-	if ns == nil {
-		return "", fmt.Errorf("namespace cannot be nil")
-	}
-
-	// method name
-	methodName := path.Base(name)
-	// namespace path in method name
-	methodNamespacePath := strings.TrimSuffix(name, methodName)
-
-	if ns.Path != methodNamespacePath {
-		return "", fmt.Errorf("invalid underlying namespace %s for method name %s", methodNamespacePath, methodName)
-	}
-
-	return methodName, nil
 }
 
 // sanitizeMFACredsWithLoginEnforcementMethodIDs updates the MFACred map
