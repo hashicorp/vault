@@ -722,7 +722,10 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 	defer b.revokeStorageLock.Unlock()
 
 	for cIndex, cluster := range clusters {
-		cluster = cluster[0 : len(cluster)-1]
+		if cluster[len(cluster)-1] == '/' {
+			cluster = cluster[0 : len(cluster)-1]
+		}
+
 		cPath := crossRevocationPrefix + cluster + "/"
 		serials, err := sc.Storage.List(sc.Context, cPath)
 		if err != nil {
@@ -730,19 +733,50 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 		}
 
 		for _, serial := range serials {
-			// Confirmation entries _should_ be handled by this cluster's
-			// processRevocationQueue(...) invocation; if not, when the plugin
-			// reloads, maybeGatherQueueForFirstProcess(...) will remove all
-			// stale confirmation requests.
-			if serial[len(serial)-1] == '/' {
-				continue
-			}
-
 			// Check for pause duration to reduce resource consumption.
 			if config.PauseDuration > (0 * time.Second) {
 				b.revokeStorageLock.Unlock()
 				time.Sleep(config.PauseDuration)
 				b.revokeStorageLock.Lock()
+			}
+
+			// Confirmation entries _should_ be handled by this cluster's
+			// processRevocationQueue(...) invocation; if not, when the plugin
+			// reloads, maybeGatherQueueForFirstProcess(...) will remove all
+			// stale confirmation requests. However, we don't want to force an
+			// operator to reload their in-use plugin, so allow tidy to also
+			// clean up confirmation values without reloading.
+			if serial[len(serial)-1] == '/' {
+				// Check if we have a confirmed entry.
+				confirmedPath := cPath + serial + "confirmed"
+				removalEntry, err := sc.Storage.Get(sc.Context, confirmedPath)
+				if err != nil {
+					return fmt.Errorf("error reading revocation confirmation (%v) during tidy: %w", confirmedPath, err)
+				}
+				if removalEntry == nil {
+					continue
+				}
+
+				// Remove potential revocation requests from all clusters.
+				for _, subCluster := range clusters {
+					if subCluster[len(subCluster)-1] == '/' {
+						subCluster = subCluster[0 : len(subCluster)-1]
+					}
+
+					reqPath := subCluster + "/" + serial[0:len(serial)-1]
+					if err := sc.Storage.Delete(sc.Context, reqPath); err != nil {
+						return fmt.Errorf("failed to remove confirmed revocation request on candidate cluster (%v): %w", reqPath, err)
+					}
+				}
+
+				// Then delete the confirmation.
+				if err := sc.Storage.Delete(sc.Context, confirmedPath); err != nil {
+					return fmt.Errorf("failed to remove confirmed revocation confirmation (%v): %w", confirmedPath, err)
+				}
+
+				// No need to handle a revocation request at this path: it can't
+				// still exist on this cluster after we deleted it above.
+				continue
 			}
 
 			ePath := cPath + serial
