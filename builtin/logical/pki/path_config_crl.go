@@ -25,6 +25,7 @@ type crlConfig struct {
 	EnableDelta            bool   `json:"enable_delta"`
 	DeltaRebuildInterval   string `json:"delta_rebuild_interval"`
 	UseGlobalQueue         bool   `json:"cross_cluster_revocation"`
+	UnifiedCRL             bool   `json:"unified_crl"`
 }
 
 // Implicit default values for the config if it does not exist.
@@ -39,6 +40,7 @@ var defaultCrlConfig = crlConfig{
 	EnableDelta:            false,
 	DeltaRebuildInterval:   "15m",
 	UseGlobalQueue:         false,
+	UnifiedCRL:             false,
 }
 
 func pathConfigCRL(b *backend) *framework.Path {
@@ -88,6 +90,13 @@ the NextUpdate field); defaults to 12 hours`,
 				Description: `Whether to enable a global, cross-cluster revocation queue.
 Must be used with auto_rebuild=true.`,
 			},
+			"unified_crl": {
+				Type: framework.TypeBool,
+				Description: `If set to true enables global replication of revocation entries,
+also enabling unified versions of OCSP and CRLs if their respective features are enabled.
+disable for CRLs and ocsp_disable for OCSP.`,
+				Default: "false",
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -125,6 +134,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 			"enable_delta":              config.EnableDelta,
 			"delta_rebuild_interval":    config.DeltaRebuildInterval,
 			"cross_cluster_revocation":  config.UseGlobalQueue,
+			"unified_crl":               config.UnifiedCRL,
 		},
 	}, nil
 }
@@ -195,6 +205,10 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.UseGlobalQueue = useGlobalQueue.(bool)
 	}
 
+	if unifiedCrlRaw, ok := d.GetOk("unified_crl"); ok {
+		config.UnifiedCRL = unifiedCrlRaw.(bool)
+	}
+
 	expiry, _ := time.ParseDuration(config.Expiry)
 	if config.AutoRebuild {
 		gracePeriod, _ := time.ParseDuration(config.AutoRebuildGracePeriod)
@@ -260,6 +274,8 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 			"auto_rebuild_grace_period": config.AutoRebuildGracePeriod,
 			"enable_delta":              config.EnableDelta,
 			"delta_rebuild_interval":    config.DeltaRebuildInterval,
+			"cross_cluster_revocation":  config.UseGlobalQueue,
+			"unified_crl":               config.UnifiedCRL,
 		},
 	}, nil
 }

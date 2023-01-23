@@ -543,7 +543,10 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 	removalQueue := cb.removalQueue.Iterate()
 
 	sc.Backend.Logger().Debug(fmt.Sprintf("gathered %v revocations and %v confirmation entries", len(revQueue), len(removalQueue)))
-
+	crlConfig, err := cb.getConfigWithUpdate(sc)
+	if err != nil {
+		return err
+	}
 	for _, req := range revQueue {
 		sc.Backend.Logger().Debug(fmt.Sprintf("handling revocation request: %v", req))
 		rPath := crossRevocationPrefix + req.Cluster + "/" + req.Serial
@@ -558,7 +561,7 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 			continue
 		}
 
-		resp, err := tryRevokeCertBySerial(sc, req.Serial)
+		resp, err := tryRevokeCertBySerial(sc, crlConfig, req.Serial)
 		sc.Backend.Logger().Debug(fmt.Sprintf("checked local revocation entry: %v / %v", resp, err))
 		if err == nil && resp != nil && !resp.IsError() && resp.Data != nil && resp.Data["state"].(string) == "revoked" {
 			if isNotPerfPrimary {
@@ -674,7 +677,7 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509
 
 // Revoke a certificate from a given serial number if it is present in local
 // storage.
-func tryRevokeCertBySerial(sc *storageContext, serial string) (*logical.Response, error) {
+func tryRevokeCertBySerial(sc *storageContext, config *crlConfig, serial string) (*logical.Response, error) {
 	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
 	if err != nil {
 		switch err.(type) {
@@ -694,11 +697,11 @@ func tryRevokeCertBySerial(sc *storageContext, serial string) (*logical.Response
 		return nil, fmt.Errorf("error parsing certificate: %w", err)
 	}
 
-	return revokeCert(sc, cert)
+	return revokeCert(sc, config, cert)
 }
 
 // Revokes a cert, and tries to be smart about error recovery
-func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, error) {
+func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (*logical.Response, error) {
 	// As this backend is self-contained and this function does not hook into
 	// third parties to manage users or resources, if the mount is tainted,
 	// revocation doesn't matter anyways -- the CRL that would be written will
@@ -786,12 +789,23 @@ func revokeCert(sc *storageContext, cert *x509.Certificate) (*logical.Response, 
 	}
 	sc.Backend.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 
-	// Fetch the config and see if we need to rebuild the CRL. If we have
-	// auto building enabled, we will wait for the next rebuild period to
-	// actually rebuild it.
-	config, err := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
-	if err != nil {
-		return nil, fmt.Errorf("error building CRL: while updating config: %w", err)
+	// If this flag is enabled after the fact, existing local entries will be published to
+	// the unified storage space through a periodic function.
+	if config.UnifiedCRL {
+		entry := &unifiedRevocationEntry{
+			SerialNumber:      colonSerial,
+			CertExpiration:    cert.NotAfter,
+			RevocationTimeUTC: revInfo.RevocationTimeUTC,
+			CertificateIssuer: revInfo.CertificateIssuer,
+		}
+
+		ignoreErr := writeUnifiedRevocationEntry(sc, entry)
+		if ignoreErr != nil {
+			// Just log the error if we fail to write across clusters, a separate background
+			// thread will reattempt it later on as we have the local write done.
+			sc.Backend.Logger().Debug("Failed to write unified revocation entry",
+				"serial_number", colonSerial, "error", ignoreErr)
+		}
 	}
 
 	if !config.AutoRebuild {

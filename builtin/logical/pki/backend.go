@@ -118,6 +118,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			WriteForwardedStorage: []string{
 				crossRevocationPath,
+				unifiedRevocationWritePathPrefix,
 			},
 		},
 
@@ -143,6 +144,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathRevokeWithKey(&b),
 			pathListCertsRevoked(&b),
 			pathListCertsRevocationQueue(&b),
+			pathListUnifiedRevoked(&b),
 			pathTidy(&b),
 			pathTidyCancel(&b),
 			pathTidyStatus(&b),
