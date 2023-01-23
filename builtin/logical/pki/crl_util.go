@@ -411,9 +411,25 @@ func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext, override bool
 	// until our next complete CRL build.
 	cb.lastDeltaRebuildCheck = now
 
-	// XXX: handle checking whether or not unified Delta CRL needs to be
-	// rebuilt.
+	rebuildLocal, err := cb._shouldRebuildLocalCRLs(sc, override)
+	if err != nil {
+		return err
+	}
 
+	rebuildUnified, err := cb._shouldRebuildUnifiedCRLs(sc, override)
+	if err != nil {
+		return err
+	}
+
+	if !rebuildLocal && !rebuildUnified {
+		return nil
+	}
+
+	// Finally, we must've needed to do the rebuild. Execute!
+	return cb.rebuildDeltaCRLsHoldingLock(sc, false)
+}
+
+func (cb *crlBuilder) _shouldRebuildLocalCRLs(sc *storageContext, override bool) (bool, error) {
 	// Fetch two storage entries to see if we actually need to do this
 	// rebuild, given we're within the window.
 	lastWALEntry, err := sc.Storage.Get(sc.Context, localDeltaWALLastRevokedSerial)
@@ -422,12 +438,12 @@ func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext, override bool
 		// delta WAL due to the expiration assumption above. There must
 		// not have been any new revocations. Since err should be nil
 		// in this case, we can safely return it.
-		return err
+		return false, err
 	}
 
 	lastBuildEntry, err := sc.Storage.Get(sc.Context, localDeltaWALLastBuildSerial)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if !override && lastBuildEntry != nil && lastBuildEntry.Value != nil {
@@ -440,24 +456,76 @@ func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext, override bool
 		// guard.
 		var walInfo lastWALInfo
 		if err := lastWALEntry.DecodeJSON(&walInfo); err != nil {
-			return err
+			return false, err
 		}
 
 		var deltaInfo lastDeltaInfo
 		if err := lastBuildEntry.DecodeJSON(&deltaInfo); err != nil {
-			return err
+			return false, err
 		}
 
 		// Here, everything decoded properly and we know that no new certs
 		// have been revoked since we built this last delta CRL. We can exit
 		// without rebuilding then.
 		if walInfo.Serial == deltaInfo.Serial {
-			return nil
+			return false, nil
 		}
 	}
 
-	// Finally, we must've needed to do the rebuild. Execute!
-	return cb.rebuildDeltaCRLsHoldingLock(sc, false)
+	return true, nil
+}
+
+func (cb *crlBuilder) _shouldRebuildUnifiedCRLs(sc *storageContext, override bool) (bool, error) {
+	// Unified CRL can only be built by the main cluster.
+	b := sc.Backend
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		return false, nil
+	}
+
+	// Fetch two storage entries to see if we actually need to do this
+	// rebuild, given we're within the window.
+	lastWALEntry, err := sc.Storage.Get(sc.Context, unifiedDeltaWALLastRevokedSerial)
+	if err != nil || !override && (lastWALEntry == nil || lastWALEntry.Value == nil) {
+		// If this entry does not exist, we don't need to rebuild the
+		// delta WAL due to the expiration assumption above. There must
+		// not have been any new revocations. Since err should be nil
+		// in this case, we can safely return it.
+		return false, err
+	}
+
+	lastBuildEntry, err := sc.Storage.Get(sc.Context, unifiedDeltaWALLastBuildSerial)
+	if err != nil {
+		return false, err
+	}
+
+	if !override && lastBuildEntry != nil && lastBuildEntry.Value != nil {
+		// If the last build entry doesn't exist, we still want to build a
+		// new delta WAL, since this could be our very first time doing so.
+		//
+		// Otherwise, here, now that we know it exists, we want to check this
+		// value against the other value. Since we previously guarded the WAL
+		// entry being non-empty, we're good to decode everything within this
+		// guard.
+		var walInfo lastWALInfo
+		if err := lastWALEntry.DecodeJSON(&walInfo); err != nil {
+			return false, err
+		}
+
+		var deltaInfo lastDeltaInfo
+		if err := lastBuildEntry.DecodeJSON(&deltaInfo); err != nil {
+			return false, err
+		}
+
+		// Here, everything decoded properly and we know that no new certs
+		// have been revoked since we built this last delta CRL. We can exit
+		// without rebuilding then.
+		if walInfo.Serial == deltaInfo.Serial {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func (cb *crlBuilder) rebuildDeltaCRLs(sc *storageContext, forceNew bool) error {
