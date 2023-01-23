@@ -1,3 +1,5 @@
+import { underscore } from '@ember/string';
+import { keyParamsByType } from 'pki/utils/action-params';
 import ApplicationSerializer from '../application';
 
 export default class PkiActionSerializer extends ApplicationSerializer {
@@ -9,7 +11,7 @@ export default class PkiActionSerializer extends ApplicationSerializer {
   serialize(snapshot, requestType) {
     const data = super.serialize(snapshot);
     // requestType is a custom value specified from the pki/action adapter
-    const allowedPayloadAttributes = this._allowedParamsByType(requestType);
+    const allowedPayloadAttributes = this._allowedParamsByType(requestType, snapshot.record.type);
     if (!allowedPayloadAttributes) return data;
 
     const payload = {};
@@ -21,7 +23,8 @@ export default class PkiActionSerializer extends ApplicationSerializer {
     return payload;
   }
 
-  _allowedParamsByType(actionType) {
+  _allowedParamsByType(actionType, type) {
+    const keyFields = keyParamsByType(type).map((attrName) => underscore(attrName).toLowerCase());
     switch (actionType) {
       case 'import':
         return ['pem_bundle'];
@@ -34,13 +37,7 @@ export default class PkiActionSerializer extends ApplicationSerializer {
           'format',
           'ip_sans',
           'issuer_name',
-          'key_bits',
-          'key_name',
-          'key_ref',
-          'key_type',
           'locality',
-          'managed_key_id',
-          'managed_key_name',
           'max_path_length',
           'not_after',
           'not_before_duration',
@@ -53,7 +50,9 @@ export default class PkiActionSerializer extends ApplicationSerializer {
           'province',
           'serial_number',
           'street_address',
+          'ttl',
           'type',
+          ...keyFields,
         ];
       default:
         // if type doesn't match, serialize all
