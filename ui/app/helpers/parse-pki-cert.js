@@ -3,6 +3,13 @@ import * as asn1js from 'asn1js';
 import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';
 import { differenceInHours, getUnixTime } from 'date-fns';
+import {
+  EXTENSION_OIDs,
+  SUBJECT_OIDs,
+  IGNORED_OIDs,
+  SAN_TYPES,
+  SIGNATURE_ALGORITHM_OIDs,
+} from './parse-pki-cert-oids';
 
 export function parseCertificate(certificateContent) {
   let cert;
@@ -17,33 +24,29 @@ export function parseCertificate(certificateContent) {
       can_parse: false,
     };
   }
+  const subjectValues = parseSubject(cert?.subject?.typesAndValues);
+  const extensionValues = parseExtensions(cert?.extensions);
+  const [signature_bits, use_pss] = mapSignatureBits(cert?.signatureAlgorithm);
 
-  const subjectParams = parseSubject(cert?.subject?.typesAndValues);
   const expiryDate = cert?.notAfter?.value;
   const issueDate = cert?.notBefore?.value;
-  const { alt_names, uri_sans } = parseExtensions(cert?.extensions);
-  const [signature_bits, use_pss] = mapSignatureBits(cert?.signatureAlgorithm);
-  const exclude_cn_from_sans =
-    alt_names?.length > 0 && !alt_names?.includes(subjectParams?.common_name) ? true : false;
   const ttl = `${differenceInHours(expiryDate, issueDate)}h`;
+  const formattedCertParams = formatValues(subjectValues, extensionValues);
 
   return {
-    ...subjectParams,
+    ...formattedCertParams,
     can_parse: true,
     expiry_date: expiryDate, // remove along with old PKI work
     issue_date: issueDate, // remove along with old PKI work
     not_valid_after: getUnixTime(expiryDate),
     not_valid_before: getUnixTime(issueDate),
-    alt_names: alt_names?.join(', '),
-    uri_sans: uri_sans?.join(', '),
     signature_bits,
     use_pss,
-    exclude_cn_from_sans,
     ttl,
   };
 }
 
-export function parsePkiCert([model]) {
+export function parsePkiCert(model) {
   // model has to be the responseJSON from PKI serializer
   // return if no certificate or if the "certificate" is actually a CRL
   if (!model.certificate || model.certificate.includes('BEGIN X509 CRL')) {
@@ -52,58 +55,30 @@ export function parsePkiCert([model]) {
   return parseCertificate(model.certificate);
 }
 
-//* PARSING HELPERS [lookup OIDs: http://oid-info.com/basic-search.htm]
+function formatValues(subject, extension) {
+  const { subjValues, subjErrors } = subject;
+  const { extValues, extErrors } = extension;
+  const parsing_errors = [...subjErrors, ...extErrors];
+  const exclude_cn_from_sans =
+    extValues.alt_names?.length > 0 && !extValues.alt_names?.includes(subjValues?.common_name) ? true : false;
+  // now that we've finished parsing data, join all extension arrays
+  for (const ext in extValues) {
+    if (Array.isArray(extValues[ext])) {
+      extValues[ext] = extValues[ext].length !== 0 ? extValues[ext].join(', ') : null;
+    }
+  }
 
-const SUBJECT_OIDs = {
-  common_name: '2.5.4.3',
-  serial_number: '2.5.4.5',
-  ou: '2.5.4.11',
-  organization: '2.5.4.10',
-  country: '2.5.4.6',
-  locality: '2.5.4.7',
-  province: '2.5.4.8',
-  street_address: '2.5.4.9',
-  postal_code: '2.5.4.17',
-};
-const EXTENSION_OIDs = {
-  key_usage: '2.5.29.15',
-  subject_alt_name: '2.5.29.17', // contains info about SAN_TYPES below
-  basic_constraints: '2.5.29.19', // contains max_path_length
-  name_constraints: '2.5.29.30', // contains permitted_dns_domains
-};
-// these are allowed ext oids, but not parsed and passed to cross-signed certs
-const IGNORED_OIDs = {
-  subject_key_identifier: '2.5.29.14',
-  authority_key_identifier: '2.5.29.35',
-};
-// SubjectAltName/GeneralName types (scroll up to page 38) https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.7
-const SAN_TYPES = {
-  alt_names: 2, // dNSName
-  uri_sans: 6, // uniformResourceIdentifier
-  ip_sans: 7, // iPAddress - OCTET STRING
-};
-const SIGNATURE_ALGORITHM_OIDs = {
-  '1.2.840.113549.1.1.2': '0', // MD2-RSA
-  '1.2.840.113549.1.1.4': '0', // MD5-RSA
-  '1.2.840.113549.1.1.5': '0', // SHA1-RSA
-  '1.2.840.113549.1.1.11': '256', // SHA256-RSA
-  '1.2.840.113549.1.1.12': '384', // SHA384-RSA
-  '1.2.840.113549.1.1.13': '512', // SHA512-RSA
-  '1.2.840.113549.1.1.10': {
-    // RSA-PSS have additional OIDs that need to be mapped
-    '2.16.840.1.101.3.4.2.1': '256', // SHA-256
-    '2.16.840.1.101.3.4.2.2': '384', // SHA-384
-    '2.16.840.1.101.3.4.2.3': '512', // SHA-512
-  },
-  '1.2.840.10040.4.3': '0', // DSA-SHA1
-  '2.16.840.1.101.3.4.3.2': '256', // DSA-SHA256
-  '1.2.840.10045.4.1': '0', // ECDSA-SHA1
-  '1.2.840.10045.4.3.2': '256', // ECDSA-SHA256
-  '1.2.840.10045.4.3.3': '384', // ECDSA-SHA384
-  '1.2.840.10045.4.3.4': '512', // ECDSA-SHA512
-  '1.3.101.112': '0', // Ed25519
-};
+  // TODO remove this deletion when key_usage is parsed, update test
+  delete extValues.key_usage;
+  return {
+    ...subjValues,
+    ...extValues,
+    parsing_errors,
+    exclude_cn_from_sans,
+  };
+}
 
+//* PARSING HELPERS
 /*
   We wish to get these OID_VALUES out of this certificate's subject. A
   subject is a list of RDNs, where each RDN is a (type, value) tuple
@@ -118,6 +93,11 @@ const SIGNATURE_ALGORITHM_OIDs = {
 */
 function parseSubject(subject) {
   if (!subject) return {};
+  const values = {};
+  const errors = [];
+  if (subject.any((rdn) => !Object.values(SUBJECT_OIDs).includes(rdn.type))) {
+    errors.push(new Error('certificate contains unsupported subject OIDs'));
+  }
   const returnValues = (OID) => {
     const values = subject.filter((rdn) => rdn?.type === OID).map((rdn) => rdn?.value?.valueBlock?.value);
     // Theoretically, there might be multiple (or no) CommonNames -- but Vault
@@ -126,62 +106,65 @@ function parseSubject(subject) {
     // might update our callers to handle multiple and return a string array
     return values ? (values?.length ? values[0] : null) : null;
   };
-  const subjectValues = {};
-  Object.keys(SUBJECT_OIDs).forEach((key) => (subjectValues[key] = returnValues(SUBJECT_OIDs[key])));
-  return subjectValues;
+  Object.keys(SUBJECT_OIDs).forEach((key) => (values[key] = returnValues(SUBJECT_OIDs[key])));
+  return { subjValues: values, subjErrors: errors };
 }
 
 function parseExtensions(extensions) {
   if (!extensions) return {};
 
+  const values = {};
+  const errors = [];
   const allowedOids = Object.values({ ...EXTENSION_OIDs, ...IGNORED_OIDs });
   if (extensions.any((ext) => !allowedOids.includes(ext.extnID))) {
-    return new Error('certificate contains unparsable OIDs');
+    errors.push(new Error('certificate contains unsupported extension OIDs'));
   }
 
   // make each extension its own key/value pair
-  const values = {};
   for (const attrName in EXTENSION_OIDs) {
     values[attrName] = extensions.find((ext) => ext.extnID === EXTENSION_OIDs[attrName])?.parsedValue;
   }
 
   if (values.subject_alt_name) {
+    // we only support SANs of type 2 (altNames), 6 (uri) and 7 (ipAddress)
     const sans = values.subject_alt_name?.altNames;
-    switch (sans) {
-      case !sans:
-        return new Error('certificate contains unparsable subjectAltName values');
-      case sans.any((san) => !Object.values(SAN_TYPES).includes(san.type)):
-        return new Error('subjectAltName contains unparsable types');
-      default:
-        Object.keys(SAN_TYPES).forEach((attrName) => {
-          values[attrName] = sans
-            .filter((gn) => gn.type === Number(SAN_TYPES[attrName]))
-            .map((gn) => gn.value);
-        });
+    if (!sans) {
+      errors.push(new Error('certificate contains unsupported subjectAltName values'));
+    } else if (sans.any((san) => !Object.values(SAN_TYPES).includes(san.type))) {
+      errors.push(new Error('subjectAltName contains unsupported types'));
+    } else if (sans.every((san) => Object.values(SAN_TYPES).includes(san.type))) {
+      Object.keys(SAN_TYPES).forEach((attrName) => {
+        values[attrName] = sans.filter((gn) => gn.type === Number(SAN_TYPES[attrName])).map((gn) => gn.value);
+      });
+    } else {
+      // add conditional if SOME parsable values exist?
+      errors.push(new Error('unsupported subjectAltName values'));
     }
   }
 
   if (values.name_constraints) {
+    // we only support Name Constraints of dnsName (type 2), this value lives in the permittedSubtree of the Name Constraints sequence
+    // permittedSubtrees contain an array of subtree objects, each object has a 'base' key and EITHER a 'minimum' or 'maximum' key
+    // GeneralSubtree { "base": {   "type": 2,  "value": "dnsname1.com" }, minimum: 0 }
     const nameConstraints = values.name_constraints;
-    switch (nameConstraints) {
-      case Object.keys(nameConstraints).includes('excludedSubtrees'):
-        return new Error('nameConstraints contains excludedSubtrees');
-      case nameConstraints.permittedSubtrees.any((subtree) => subtree.minimum !== 0):
-        return new Error('nameConstraints permittedSubtree contains non-zero minimums');
-      case nameConstraints.permittedSubtrees.any((subtree) => subtree.maximum):
-        return new Error('nameConstraints permittedSubtree contains maximum');
-      case nameConstraints.permittedSubtrees.any((subtree) => subtree.base.type !== 2):
-        return new Error('nameConstraints permittedSubtree can only contain dnsName (type 2)');
-      case nameConstraints.permittedSubtrees.every((p) => p.base.constructor.name === 'GeneralName'):
-        values.permitted_dns_domains = nameConstraints.permittedSubtrees.map((gn) => gn.value);
-        break;
-      default:
-        return new Error('error parsing nameConstraints');
+    if (Object.keys(nameConstraints).includes('excludedSubtrees')) {
+      errors.push(new Error('nameConstraints contains excludedSubtrees'));
+    } else if (nameConstraints.permittedSubtrees.any((subtree) => subtree.minimum !== 0)) {
+      errors.push(new Error('nameConstraints permittedSubtree contains non-zero minimums'));
+    } else if (nameConstraints.permittedSubtrees.any((subtree) => subtree.maximum)) {
+      errors.push(new Error('nameConstraints permittedSubtree contains maximum'));
+    } else if (nameConstraints.permittedSubtrees.any((subtree) => subtree.base.type !== 2)) {
+      errors.push(new Error('nameConstraints permittedSubtree can only contain dnsName (type 2)'));
+    } else if (nameConstraints.permittedSubtrees.every((p) => p.base.constructor.name === 'GeneralName')) {
+      values.permitted_dns_domains = nameConstraints.permittedSubtrees.map((gn) => gn.base.value);
+    } else {
+      // add conditional if SOME parsable values exist?
+      errors.push(new Error('unsupported nameConstraints values'));
     }
   }
 
   if (values.basic_constraints) {
-    values.max_path_length = values.basic_constraints?.parsedValue?.pathLenConstraint;
+    values.max_path_length = values.basic_constraints?.pathLenConstraint;
   }
 
   if (values.ip_sans) {
@@ -195,13 +178,15 @@ function parseExtensions(extensions) {
   delete values.subject_alt_name;
   delete values.basic_constraints;
   delete values.name_constraints;
-  return values;
+  return { extValues: values, extErrors: errors };
   /*
   values is an object with keys from EXTENSION_OIDs and SAN_TYPES
   values = {
-    "key_usage": BitString
     "alt_names": string[],
     "uri_sans": string[],
+    "permitted_dns_domains": string[],
+    "max_path_length": int,
+    "key_usage": BitString, <- to-be-parsed
     "ip_sans": OctetString[], <- currently array of OctetStrings to-be-parsed
   }
   */
