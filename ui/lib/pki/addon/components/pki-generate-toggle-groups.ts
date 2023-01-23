@@ -21,16 +21,9 @@ export default class PkiGenerateToggleGroupsComponent extends Component<Args> {
   }
 
   get groups() {
-    return {
+    const groups = {
       'Key parameters': this.keyParamFields,
-      'Subject Alternative Name (SAN) Options': [
-        'excludeCnFromSans',
-        'serialNumber',
-        'altNames',
-        'ipSans',
-        'uriSans',
-        'otherSans',
-      ],
+      'Subject Alternative Name (SAN) Options': ['altNames', 'ipSans', 'uriSans', 'otherSans'],
       'Additional subject fields': [
         'ou',
         'organization',
@@ -41,6 +34,11 @@ export default class PkiGenerateToggleGroupsComponent extends Component<Args> {
         'postalCode',
       ],
     };
+    // excludeCnFromSans and serialNumber are present in default fields for generate-csr -- only include for other types
+    if (this.args.model.actionType !== 'generate-csr') {
+      groups['Subject Alternative Name (SAN) Options'].unshift('excludeCnFromSans', 'serialNumber');
+    }
+    return groups;
   }
 
   @action

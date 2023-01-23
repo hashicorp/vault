@@ -25,37 +25,41 @@ export default class PkiActionSerializer extends ApplicationSerializer {
 
   _allowedParamsByType(actionType, type) {
     const keyFields = keyParamsByType(type).map((attrName) => underscore(attrName).toLowerCase());
-    const generateProps = [
+    const commonProps = [
       'alt_names',
       'common_name',
       'country',
       'exclude_cn_from_sans',
       'format',
       'ip_sans',
-      'issuer_name',
       'locality',
-      'not_after',
-      'not_before_duration',
       'organization',
       'other_sans',
       'ou',
-      'permitted_dns_domains',
       'postal_code',
-      'private_key_format',
       'province',
       'serial_number',
       'street_address',
-      'ttl',
       'type',
+      'uri_sans',
       ...keyFields,
     ];
     switch (actionType) {
       case 'import':
         return ['pem_bundle'];
       case 'generate-root':
-        return [...generateProps, 'max_path_length'];
+        return [
+          ...commonProps,
+          'issuer_name',
+          'max_path_length',
+          'not_after',
+          'not_before_duration',
+          'permitted_dns_domains',
+          'private_key_format',
+          'ttl',
+        ];
       case 'generate-csr':
-        return generateProps;
+        return [...commonProps, 'add_basic_constraints'];
       default:
         // if type doesn't match, serialize all
         return null;

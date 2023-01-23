@@ -2,7 +2,7 @@ import PkiIssuersIndexRoute from '.';
 
 export default class PkiIssuersGenerateIntermediateRoute extends PkiIssuersIndexRoute {
   model() {
-    return this.store.createRecord('pki/action');
+    return this.store.createRecord('pki/action', { actionType: 'generate-csr' });
   }
 
   setupController(controller, resolvedModel) {
