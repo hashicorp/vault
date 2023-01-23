@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { keyParamsByType } from 'pki/utils/action-params';
 import PkiActionModel from 'vault/models/pki/action';
 
 interface Args {
@@ -13,14 +14,9 @@ export default class PkiGenerateToggleGroupsComponent extends Component<Args> {
   get keyParamFields() {
     const { type } = this.args.model;
     if (!type) return null;
-    let fields = ['keyName', 'keyType', 'keyBits'];
-    if (type === 'existing') {
-      fields = ['keyRef'];
-    } else if (type === 'kms') {
-      fields = ['keyName', 'managedKeyName', 'managedKeyId'];
-    }
+    const fields = keyParamsByType(type);
     return fields.map((fieldName) => {
-      return this.args.model.allFields.find((field) => field.name === fieldName);
+      return this.args.model.allFields.find((attr) => attr.name === fieldName);
     });
   }
 
