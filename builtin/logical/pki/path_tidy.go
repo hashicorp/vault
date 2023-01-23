@@ -19,6 +19,40 @@ import (
 
 var tidyCancelledError = errors.New("tidy operation cancelled")
 
+type tidyStatusState int
+
+const (
+	tidyStatusInactive   tidyStatusState = iota
+	tidyStatusStarted                    = iota
+	tidyStatusFinished                   = iota
+	tidyStatusError                      = iota
+	tidyStatusCancelling                 = iota
+	tidyStatusCancelled                  = iota
+)
+
+type tidyStatus struct {
+	// Parameters used to initiate the operation
+	safetyBuffer       int
+	issuerSafetyBuffer int
+	tidyCertStore      bool
+	tidyRevokedCerts   bool
+	tidyRevokedAssocs  bool
+	tidyExpiredIssuers bool
+	tidyBackupBundle   bool
+	pauseDuration      string
+
+	// Status
+	state                   tidyStatusState
+	err                     error
+	timeStarted             time.Time
+	timeFinished            time.Time
+	message                 string
+	certStoreDeletedCount   uint
+	revokedCertDeletedCount uint
+	missingIssuerCertCount  uint
+	revQueueDeletedCount    uint
+}
+
 type tidyConfig struct {
 	Enabled            bool          `json:"enabled"`
 	Interval           time.Duration `json:"interval_duration"`
@@ -683,8 +717,15 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 		return fmt.Errorf("failed to list cross-cluster revocation queue participating clusters: %w", err)
 	}
 
+	// Grab locks as we're potentially modifying revocation-related storage.
+	b.revokeStorageLock.Lock()
+	defer b.revokeStorageLock.Unlock()
+
 	for cIndex, cluster := range clusters {
-		cluster = cluster[0 : len(cluster)-1]
+		if cluster[len(cluster)-1] == '/' {
+			cluster = cluster[0 : len(cluster)-1]
+		}
+
 		cPath := crossRevocationPrefix + cluster + "/"
 		serials, err := sc.Storage.List(sc.Context, cPath)
 		if err != nil {
@@ -692,17 +733,50 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 		}
 
 		for _, serial := range serials {
+			// Check for pause duration to reduce resource consumption.
+			if config.PauseDuration > (0 * time.Second) {
+				b.revokeStorageLock.Unlock()
+				time.Sleep(config.PauseDuration)
+				b.revokeStorageLock.Lock()
+			}
+
 			// Confirmation entries _should_ be handled by this cluster's
 			// processRevocationQueue(...) invocation; if not, when the plugin
 			// reloads, maybeGatherQueueForFirstProcess(...) will remove all
-			// stale confirmation requests.
+			// stale confirmation requests. However, we don't want to force an
+			// operator to reload their in-use plugin, so allow tidy to also
+			// clean up confirmation values without reloading.
 			if serial[len(serial)-1] == '/' {
-				continue
-			}
+				// Check if we have a confirmed entry.
+				confirmedPath := cPath + serial + "confirmed"
+				removalEntry, err := sc.Storage.Get(sc.Context, confirmedPath)
+				if err != nil {
+					return fmt.Errorf("error reading revocation confirmation (%v) during tidy: %w", confirmedPath, err)
+				}
+				if removalEntry == nil {
+					continue
+				}
 
-			// Check for pause duration to reduce resource consumption.
-			if config.PauseDuration > (0 * time.Second) {
-				time.Sleep(config.PauseDuration)
+				// Remove potential revocation requests from all clusters.
+				for _, subCluster := range clusters {
+					if subCluster[len(subCluster)-1] == '/' {
+						subCluster = subCluster[0 : len(subCluster)-1]
+					}
+
+					reqPath := subCluster + "/" + serial[0:len(serial)-1]
+					if err := sc.Storage.Delete(sc.Context, reqPath); err != nil {
+						return fmt.Errorf("failed to remove confirmed revocation request on candidate cluster (%v): %w", reqPath, err)
+					}
+				}
+
+				// Then delete the confirmation.
+				if err := sc.Storage.Delete(sc.Context, confirmedPath); err != nil {
+					return fmt.Errorf("failed to remove confirmed revocation confirmation (%v): %w", confirmedPath, err)
+				}
+
+				// No need to handle a revocation request at this path: it can't
+				// still exist on this cluster after we deleted it above.
+				continue
 			}
 
 			ePath := cPath + serial
@@ -719,9 +793,7 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 				return fmt.Errorf("error reading revocation request (%v) to tidy: %w", ePath, err)
 			}
 
-			now := time.Now()
-			afterBuffer := now.Add(-1 * config.QueueSafetyBuffer)
-			if revRequest.RequestedAt.After(afterBuffer) {
+			if time.Since(revRequest.RequestedAt) > config.QueueSafetyBuffer {
 				continue
 			}
 
@@ -729,6 +801,20 @@ func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Reques
 			if err := sc.Storage.Delete(sc.Context, ePath); err != nil {
 				return fmt.Errorf("error deleting revocation request (%v): %w", ePath, err)
 			}
+
+			// Assumption: there should never be a need to remove this from
+			// the processing queue on this node. We're on the active primary,
+			// so our writes don't cause invalidations. This means we'd have
+			// to have slated it for deletion very quickly after it'd been
+			// sent (i.e., inside of the 1-minute boundary that periodicFunc
+			// executes at). While this is possible, because we grab the
+			// revocationStorageLock above, we can't execute interleaved
+			// with that periodicFunc, so the periodicFunc would've had to
+			// finished before we actually did this deletion (or it wouldn't
+			// have ignored this serial because our deletion would've
+			// happened prior to it reading the storage entry). Thus we should
+			// be safe to ignore the revocation queue removal here.
+			b.tidyStatusIncRevQueueCount()
 		}
 	}
 
@@ -782,6 +868,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"missing_issuer_cert_count":             nil,
 			"current_cert_store_count":              nil,
 			"current_revoked_cert_count":            nil,
+			"revocation_queue_deleted_count":        nil,
 		},
 	}
 
@@ -802,6 +889,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
 	resp.Data["revoked_cert_deleted_count"] = b.tidyStatus.revokedCertDeletedCount
 	resp.Data["missing_issuer_cert_count"] = b.tidyStatus.missingIssuerCertCount
+	resp.Data["revocation_queue_deleted_count"] = b.tidyStatus.revQueueDeletedCount
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
@@ -1036,6 +1124,13 @@ func (b *backend) tidyStatusIncMissingIssuerCertCount() {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus.missingIssuerCertCount++
+}
+
+func (b *backend) tidyStatusIncRevQueueCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.revQueueDeletedCount++
 }
 
 const pathTidyHelpSyn = `

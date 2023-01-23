@@ -1269,7 +1269,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 	c.events = events
-	if c.isExperimentEnabled(experiments.VaultExperimentEventsBeta1) {
+	if c.isExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
 		c.events.Start()
 	}
 

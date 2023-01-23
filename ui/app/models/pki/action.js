@@ -151,6 +151,8 @@ export default class PkiActionModel extends Model {
   @attr('string') ttl;
   @attr('date') notAfter;
 
+  @attr('string', { readOnly: true }) issuerId; // returned from generate-root action
+
   get backend() {
     return this.secretMountPath.currentPath;
   }
