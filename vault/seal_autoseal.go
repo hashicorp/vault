@@ -435,6 +435,10 @@ func (d *autoSeal) RecoveryKey(ctx context.Context) ([]byte, error) {
 	return d.getRecoveryKeyInternal(ctx)
 }
 
+func (d *autoSeal) UnsealRecoveryKey(ctx context.Context) ([]byte, error) {
+	return nil, fmt.Errorf("unseal recovery not supported")
+}
+
 func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
 	return getRecoveryKeyInternal(ctx, d.core.physical, d.logger, d.Access)
 }

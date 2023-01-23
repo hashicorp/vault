@@ -1709,7 +1709,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 	c.logger.Info("seal migration initiated")
 
 	switch {
-	case isAutoSeal(c.migrationInfo.seal) && c.seal.RecoveryKeySupported():
+	case c.migrationInfo.seal.RecoveryKeySupported() && c.seal.RecoveryKeySupported():
 		c.logger.Info("migrating from one auto-unseal to another", "from",
 			c.migrationInfo.seal.BarrierType(), "to", c.seal.BarrierType())
 
@@ -1732,6 +1732,27 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 			return fmt.Errorf("error setting new barrier key information during migrate: %w", err)
 		}
 
+	case isUnsealRecoverySeal(c.migrationInfo.seal) && c.seal.RecoveryKeySupported():
+		c.logger.Info("migrating from one auto-unseal to another", "from",
+			c.migrationInfo.seal.BarrierType(), "to", c.seal.BarrierType())
+
+		recoveryKey, err := c.migrationInfo.seal.UnsealRecoveryKey(ctx)
+		if err != nil {
+			return fmt.Errorf("error getting recovery key to set on new seal: %w", err)
+		}
+
+		if err := c.seal.SetRecoveryKey(ctx, recoveryKey); err != nil {
+			return fmt.Errorf("error setting new recovery key information during migrate: %w", err)
+		}
+
+		barrierKeys, err := c.migrationInfo.seal.GetStoredKeys(ctx)
+		if err != nil {
+			return fmt.Errorf("error getting stored keys to set on new seal: %w", err)
+		}
+
+		if err := c.seal.SetStoredKeys(ctx, barrierKeys); err != nil {
+			return fmt.Errorf("error setting new barrier key information during migrate: %w", err)
+		}
 	case isAutoSeal(c.migrationInfo.seal):
 		c.logger.Info("migrating from one auto-unseal to shamir", "from", c.migrationInfo.seal.BarrierType())
 		// Auto to Shamir, since recovery key isn't supported on new seal
