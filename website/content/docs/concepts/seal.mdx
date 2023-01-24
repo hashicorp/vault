@@ -98,23 +98,22 @@ to decrypt the root key Vault read from storage.
 
 ![Auto Unseal](/img/vault-auto-unseal.png)
 
-There are certain operations in Vault besides unsealing that
-require a quorum of users to perform, e.g. generating a root token. When
-using a Shamir seal the unseal keys must be provided to authorize these
-operations. When using Auto Unseal these operations require _recovery
-keys_ instead.
+There are certain operations in Vault that require a quorum of users to 
+perform, e.g. generating a root token. When using a Shamir seal the unseal
+keys must be provided to authorize these operations. When using Auto Unseal 
+these operations require _recovery keys_ instead.
 
 Just as the initialization process with a Shamir seal yields unseal keys,
 initializing with an Auto Unseal yields recovery keys.
-
--> **Note:** Recovery keys cannot decrypt the root key, and thus are not
-sufficient to unseal Vault if the Auto Unseal mechanism isn't working. They
-are purely an authorization mechanism.
 
 It is still possible to seal a Vault node using the API. In this case Vault
 will remain sealed until restarted, or the unseal API is used, which with Auto
 Unseal requires the recovery key fragments instead of the unseal key fragments
 that would be provided with Shamir. The process remains the same.
+
+If an Auto Unseal method has failed, Vault may be explicitly placed in 
+[Unseal Recovery Mode](#unseal-recovery-mode) via a configuration option to
+unseal using recovery keys.
 
 For a list of examples and supported providers, please see the
 [seal documentation](/docs/configuration/seal).
@@ -145,6 +144,8 @@ and their API equivalents in the [/sys/init](/api-docs/system/init) endpoint:
   key shares. This value is equivalent to the `recovery_pgp_keys` value in the
   API endpoint, although as with `pgp_keys` the object in the API endpoint is
   an array, not a string.
+- `disable-unseal-recovery`: If true, Vault will not be able to be unsealed
+  using recovery keys.
 
 Additionally, Vault will refuse to initialize if the option has not been set to
 generate a key, and no key is found. See
@@ -171,6 +172,17 @@ Via the API, the rekey operation is performed with the same parameters as the
 endpoint](/api-docs/system/rekey); however, the
 API prefix for this operation is at `/sys/rekey-recovery-key` rather than
 `/sys/rekey`.
+
+### Unseal Recovery Mode
+
+Auto seals that have failed or whose keys have been lost may in an emergency 
+be unsealed using the recovery keys by placing the seal in Unseal Recovery Mode.
+To do this, edit the seal stanza for the auto-seal, adding the option 
+`recovery_keys_fallback = "true"`.  Then, using the recovery keys, unseal vault 
+as if it was a Shamir seal.  This is possible if the cluster was initialized in 
+version 1.13 or above, and `unseal-recovery-disabled` was not true at the time 
+of initialization, _or_ [/sys/seal/initialize-unseal-recovery](/api-docs/system/seal-init-unseal-recovery) 
+was subsequently called.
 
 ## Seal Migration
 
@@ -272,6 +284,9 @@ to perform the migration. All unseal commands must specify the `-migrate` flag.
 Once the required threshold of recovery keys are entered, the recovery keys
 will be migrated to be used as unseal keys.
 
+Note that you may also migrate from an Auto Unseal in 
+[unseal recovery mode](#unseal-recovery-mode)
+
 #### Migration From Auto Unseal to Auto Unseal
 
 ~> **NOTE**: Migration between same Auto Unseal types is supported in Vault
@@ -301,3 +316,4 @@ When the quorum of nodes are back up, Raft will elect a leader and the leader
 node that will perform the migration. The migrated information will be replicated to
 all other cluster peers and when the peers eventually become the leader,
 migration will not happen again on the peer nodes.
+r
