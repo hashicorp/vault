@@ -19,14 +19,9 @@
         Cancel
       </button>
     </div>
-    {{#if this.error}}
+    {{#if this.alert}}
       <div class="control">
-        <AlertInline
-          @type="danger"
-          @paddingTop={{true}}
-          @message="There was a problem generating the CSR."
-          @mimicRefresh={{true}}
-        />
+        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
       </div>
     {{/if}}
   </div>

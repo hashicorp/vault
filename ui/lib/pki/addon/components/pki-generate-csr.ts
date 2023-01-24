@@ -43,17 +43,25 @@ export default class PkiGenerateIntermediateComponent extends Component<Args> {
     this.args.onCancel();
   }
 
+  async getCapability(): Promise<boolean> {
+    try {
+      const issuerCapabilities = await this.args.model.generateIssuerCsrPath;
+      return issuerCapabilities.get('canCreate') === true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   @task
   @waitFor
-  *save(event: Event) {
+  *save(event: Event): Generator<Promise<boolean | PkiActionModel>> {
     event.preventDefault();
     try {
       const { model, onSave } = this.args;
       const { isValid, state, invalidFormMessage } = model.validate();
       if (isValid) {
-        yield model.save({
-          adapterOptions: { actionType: 'generate-csr', useIssuer: model.canGenerateIssuerIntermediate },
-        });
+        const useIssuer = yield this.getCapability();
+        yield model.save({ adapterOptions: { actionType: 'generate-csr', useIssuer } });
         this.flashMessages.success('Successfully generated CSR.');
         onSave();
       } else {
