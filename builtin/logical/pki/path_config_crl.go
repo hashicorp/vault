@@ -184,6 +184,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.AutoRebuildGracePeriod = autoRebuildGracePeriod
 	}
 
+	oldEnableDelta := config.EnableDelta
 	if enableDeltaRaw, ok := d.GetOk("enable_delta"); ok {
 		config.EnableDelta = enableDeltaRaw.(bool)
 	}
@@ -200,6 +201,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.UseGlobalQueue = useGlobalQueue.(bool)
 	}
 
+	oldUnifiedCRL := config.UnifiedCRL
 	if unifiedCrlRaw, ok := d.GetOk("unified_crl"); ok {
 		config.UnifiedCRL = unifiedCrlRaw.(bool)
 	}
@@ -238,11 +240,25 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	}
 
 	if !constants.IsEnterprise && config.UseGlobalQueue {
-		return logical.ErrorResponse("Global, cross-cluster revocation queue can only be enabled on Vault Enterprise."), nil
+		return logical.ErrorResponse("Global, cross-cluster revocation queue (cross_cluster_revocation) can only be enabled on Vault Enterprise."), nil
 	}
 
 	if !constants.IsEnterprise && config.UnifiedCRL {
 		return logical.ErrorResponse("unified_crl can only be enabled on Vault Enterprise"), nil
+	}
+
+	isLocalMount := b.System().LocalMount()
+	if isLocalMount && config.UseGlobalQueue {
+		return logical.ErrorResponse("Global, cross-cluster revocation queue (cross_cluster_revocation) cannot be enabled on local mounts."),
+			nil
+	}
+
+	if isLocalMount && config.UnifiedCRL {
+		return logical.ErrorResponse("unified_crl cannot be enabled on local mounts."), nil
+	}
+
+	if !config.AutoRebuild && config.UnifiedCRL {
+		return logical.ErrorResponse("unified_crl=true requires auto_rebuild=true, as unified CRLs cannot be rebuilt on every revocation."), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("config/crl", config)
@@ -257,9 +273,11 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	b.crlBuilder.markConfigDirty()
 	b.crlBuilder.reloadConfigIfRequired(sc)
 
-	if oldDisable != config.Disable || (oldAutoRebuild && !config.AutoRebuild) {
+	if oldDisable != config.Disable || (oldAutoRebuild && !config.AutoRebuild) || (oldEnableDelta != config.EnableDelta) || (oldUnifiedCRL != config.UnifiedCRL) {
 		// It wasn't disabled but now it is (or equivalently, we were set to
-		// auto-rebuild and we aren't now), so rotate the CRL.
+		// auto-rebuild and we aren't now or equivalently, we changed our
+		// mind about delta CRLs and need a new complete one or equivalently,
+		// we changed our mind about unified CRLs), rotate the CRLs.
 		crlErr := b.crlBuilder.rebuild(sc, true)
 		if crlErr != nil {
 			switch crlErr.(type) {

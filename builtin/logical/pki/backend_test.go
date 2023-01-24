@@ -5483,17 +5483,17 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		lastHeaders = client.Headers()
 	}
 
-	time.Sleep(4 * time.Second)
-
-	beforeDeltaRotation := time.Now().Add(-2 * time.Second)
-
 	// Finally, rebuild the delta CRL and ensure that only that is
-	// invalidated. We first need to enable it though.
+	// invalidated. We first need to enable it though, and wait for
+	// all CRLs to rebuild.
 	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
 		"auto_rebuild": true,
 		"enable_delta": true,
 	})
 	require.NoError(t, err)
+	time.Sleep(4 * time.Second)
+	beforeDeltaRotation := time.Now().Add(-2 * time.Second)
+
 	resp, err = client.Logical().Read("pki/crl/rotate-delta")
 	require.NoError(t, err)
 	require.NotNil(t, resp)
