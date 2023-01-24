@@ -795,9 +795,11 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 	opCount := new(int32)
 
 	clusterAddr := ""
+	ticker := time.NewTicker(leaderCheckInterval)
+	defer ticker.Stop()
 	for {
 		select {
-		case <-time.After(leaderCheckInterval):
+		case <-ticker.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -841,9 +843,11 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 	isRaft := raftBackend != nil
 
 	opCount := new(int32)
+	ticker := time.NewTicker(keyRotateCheckInterval)
+	defer ticker.Stop()
 	for {
 		select {
-		case <-time.After(keyRotateCheckInterval):
+		case <-ticker.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -1021,6 +1025,8 @@ func (c *Core) scheduleUpgradeCleanup(ctx context.Context) error {
 
 // acquireLock blocks until the lock is acquired, returning the leaderLostCh
 func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan struct{} {
+	ticker := time.NewTicker(lockRetryInterval)
+	defer ticker.Stop()
 	for {
 		// Attempt lock acquisition
 		leaderLostCh, err := lock.Lock(stopCh)
@@ -1031,7 +1037,7 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 		// Retry the acquisition
 		c.logger.Error("failed to acquire lock", "error", err)
 		select {
-		case <-time.After(lockRetryInterval):
+		case <-ticker.C:
 		case <-stopCh:
 			return nil
 		}
