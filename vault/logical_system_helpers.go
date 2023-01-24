@@ -61,27 +61,150 @@ var (
 	}
 
 	entPaths = func(b *SystemBackend) []*framework.Path {
-		return []*framework.Path{
-			{
-				Pattern: "replication/status",
+		buildEnterpriseOnlyPaths := func(paths map[string][]logical.Operation) []*framework.Path {
+			var results []*framework.Path
+			for pattern, operations := range paths {
+				operationsMap := map[logical.Operation]framework.OperationHandler{}
 
-				DisplayAttrs: &framework.DisplayAttributes{
-					OperationPrefix: "replication",
-					OperationVerb:   "status",
-				},
+				for _, operation := range operations {
+					operationsMap[operation] = &framework.PathOperation{
+						Callback: func(context.Context, *logical.Request, *framework.FieldData) (*logical.Response, error) {
+							return logical.ErrorResponse("enterprise-only feature"), logical.ErrUnsupportedPath
+						},
+					}
+				}
 
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-						resp := &logical.Response{
-							Data: map[string]interface{}{
-								"mode": "disabled",
-							},
-						}
-						return resp, nil
-					},
-				},
-			},
+				results = append(results, &framework.Path{
+					Pattern:    pattern,
+					Operations: operationsMap,
+				})
+			}
+
+			return results
 		}
+
+		var paths []*framework.Path
+
+		// license paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"license/status$": {logical.ReadOperation},
+		})...)
+
+		// group-policy-application paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"config/group-policy-application$": {logical.ReadOperation, logical.UpdateOperation},
+		})...)
+
+		// namespaces paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"namespaces/?$": {logical.ListOperation},
+			"namespaces/api-lock/lock" + framework.OptionalParamRegex("path"):   {logical.UpdateOperation},
+			"namespaces/api-lock/unlock" + framework.OptionalParamRegex("path"): {logical.UpdateOperation},
+			"namespaces/(?P<path>.+?)": {logical.DeleteOperation, logical.PatchOperation, logical.ReadOperation, logical.UpdateOperation},
+		})...)
+
+		// replication paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"replication/performance/primary/enable":                                               {logical.UpdateOperation},
+			"replication/dr/primary/enable":                                                        {logical.UpdateOperation},
+			"replication/performance/primary/demote":                                               {logical.UpdateOperation},
+			"replication/dr/primary/demote":                                                        {logical.UpdateOperation},
+			"replication/performance/primary/disable":                                              {logical.UpdateOperation},
+			"replication/dr/primary/disable":                                                       {logical.UpdateOperation},
+			"replication/performance/primary/secondary-token":                                      {logical.UpdateOperation},
+			"replication/dr/primary/secondary-token":                                               {logical.UpdateOperation},
+			"replication/performance/primary/revoke-secondary":                                     {logical.UpdateOperation},
+			"replication/dr/primary/revoke-secondary":                                              {logical.UpdateOperation},
+			"replication/performance/secondary/generate-public-key":                                {logical.UpdateOperation},
+			"replication/dr/secondary/generate-public-key":                                         {logical.UpdateOperation},
+			"replication/performance/secondary/enable":                                             {logical.UpdateOperation},
+			"replication/dr/secondary/enable":                                                      {logical.UpdateOperation},
+			"replication/performance/secondary/promote":                                            {logical.UpdateOperation},
+			"replication/dr/secondary/promote":                                                     {logical.UpdateOperation},
+			"replication/performance/secondary/disable":                                            {logical.UpdateOperation},
+			"replication/dr/secondary/disable":                                                     {logical.UpdateOperation},
+			"replication/dr/secondary/operation-token/delete":                                      {logical.UpdateOperation},
+			"replication/performance/secondary/update-primary":                                     {logical.UpdateOperation},
+			"replication/dr/secondary/update-primary":                                              {logical.UpdateOperation},
+			"replication/dr/secondary/license/status":                                              {logical.ReadOperation},
+			"replication/dr/secondary/config/reload/(?P<subsystem>.+)":                             {logical.UpdateOperation},
+			"replication/recover":                                                                  {logical.UpdateOperation},
+			"replication/dr/secondary/recover":                                                     {logical.UpdateOperation},
+			"replication/dr/secondary/reindex":                                                     {logical.UpdateOperation},
+			"replication/reindex":                                                                  {logical.UpdateOperation},
+			"replication/status":                                                                   {logical.ReadOperation},
+			"replication/dr/status":                                                                {logical.ReadOperation},
+			"replication/performance/status":                                                       {logical.ReadOperation},
+			"replication/primary/enable":                                                           {logical.UpdateOperation},
+			"replication/primary/demote":                                                           {logical.UpdateOperation},
+			"replication/primary/disable":                                                          {logical.UpdateOperation},
+			"replication/primary/secondary-token":                                                  {logical.UpdateOperation},
+			"replication/performance/primary/paths-filter/" + framework.GenericNameRegex("id"):     {logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+			"replication/performance/primary/dynamic-filter/" + framework.GenericNameRegex("id"):   {logical.ReadOperation},
+			"replication/primary/revoke-secondary":                                                 {logical.UpdateOperation},
+			"replication/secondary/enable":                                                         {logical.UpdateOperation},
+			"replication/secondary/promote":                                                        {logical.UpdateOperation},
+			"replication/secondary/disable":                                                        {logical.UpdateOperation},
+			"replication/secondary/update-primary":                                                 {logical.UpdateOperation},
+			"replication/performance/secondary/dynamic-filter/" + framework.GenericNameRegex("id"): {logical.ReadOperation},
+		})...)
+
+		// seal paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"sealwrap/rewrap": {logical.ReadOperation, logical.UpdateOperation},
+		})...)
+
+		// mfa paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"mfa/method/?": {logical.ListOperation},
+			"mfa/method/totp/" + framework.GenericNameRegex("name") + "/generate$":       {logical.ReadOperation},
+			"mfa/method/totp/" + framework.GenericNameRegex("name") + "/admin-generate$": {logical.UpdateOperation},
+			"mfa/method/totp/" + framework.GenericNameRegex("name") + "/admin-destroy$":  {logical.UpdateOperation},
+			"mfa/method/totp/" + framework.GenericNameRegex("name"):                      {logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+			"mfa/method/okta/" + framework.GenericNameRegex("name"):                      {logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+			"mfa/method/duo/" + framework.GenericNameRegex("name"):                       {logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+			"mfa/method/pingid/" + framework.GenericNameRegex("name"):                    {logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+		})...)
+
+		// control-group paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"control-group/authorize": {logical.UpdateOperation},
+			"control-group/request":   {logical.UpdateOperation},
+			"config/control-group":    {logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+		})...)
+
+		// sentinel paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"policies/rgp/?$":           {logical.ListOperation},
+			"policies/rgp/(?P<name>.+)": {logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+			"policies/egp/?$":           {logical.ListOperation},
+			"policies/egp/(?P<name>.+)": {logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+		})...)
+
+		// plugins reload status paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"plugins/reload/backend/status$": {logical.ReadOperation},
+		})...)
+
+		// quotas paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"quotas/lease-count/?$": {logical.ListOperation},
+			"quotas/lease-count/" + framework.GenericNameRegex("name"): {logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+		})...)
+
+		// raft auto-snapshot paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"storage/raft/snapshot-auto/config/":                                      {logical.ListOperation},
+			"storage/raft/snapshot-auto/config/" + framework.GenericNameRegex("name"): {logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+		})...)
+
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
+			"managed-keys/" + framework.GenericNameRegex("type") + "/?":                                                    {logical.ListOperation},
+			"managed-keys/" + framework.GenericNameRegex("type") + "/" + framework.GenericNameRegex("name"):                {logical.CreateOperation, logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+			"managed-keys/" + framework.GenericNameRegex("type") + "/" + framework.GenericNameRegex("name") + "/test/sign": {logical.CreateOperation, logical.UpdateOperation},
+		})...)
+
+		return paths
 	}
 	handleGlobalPluginReload = func(context.Context, *Core, string, string, []string) error {
 		return nil
