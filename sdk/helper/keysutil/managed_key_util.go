@@ -8,6 +8,12 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+type ManagedKeyParameters struct {
+	ManagedKeySystemView logical.ManagedKeySystemView
+	BackendUUID          string
+	Context              context.Context
+}
+
 var errEntOnly = errors.New("managed keys are supported within enterprise edition only")
 
 func (p *Policy) decryptWithManagedKey(params *ManagedKeyParameters, keyEntry KeyEntry, ciphertext []byte, nonce []byte) (plaintext []byte, err error) {
@@ -28,8 +34,4 @@ func (p *Policy) verifyWithManagedKey(params *ManagedKeyParameters, options *Sig
 
 func (p *Policy) HMACWithManagedKey(ctx context.Context, ver int, managedKeySystemView logical.ManagedKeySystemView, backendUUID string, algorithm string, data []byte) (hmacBytes []byte, err error) {
 	return nil, errEntOnly
-}
-
-func GetManagedKeyUUID(params *ManagedKeyParameters, keyName string, keyId string) (uuid string, err error) {
-	return "", errEntOnly
 }

@@ -109,12 +109,6 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-type ManagedKeyParameters struct {
-	ManagedKeySystemView logical.ManagedKeySystemView
-	BackendUUID          string
-	Context              context.Context
-}
-
 type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {

@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -209,23 +208,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	if polReq.KeyType == keysutil.KeyType_MANAGED_KEY {
-		managedKeyView, ok := b.System().(logical.ManagedKeySystemView)
-		if !ok {
-			return nil, errors.New("unsupported system view")
-		}
-
-		polReq.ManagedKeySystemView = managedKeyView
-		polReq.BackendUUID = b.backendUUID
-
-		keyId, err := keysutil.GetManagedKeyUUID(
-			&keysutil.ManagedKeyParameters{
-				ManagedKeySystemView: managedKeyView,
-				BackendUUID:          b.backendUUID,
-				Context:              ctx,
-			},
-			managedKeyName,
-			managedKeyId)
-
+		keyId, err := GetManagedKeyUUID(ctx, b, managedKeyName, managedKeyId)
 		if err != nil {
 			return nil, err
 		}

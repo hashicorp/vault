@@ -2,7 +2,6 @@ package transit
 
 import (
 	"context"
-	"errors"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -58,20 +57,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 
 	var keyId string
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
-		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
-		if !ok {
-			return nil, errors.New("unsupported system view")
-		}
-
-		keyId, err = keysutil.GetManagedKeyUUID(
-			&keysutil.ManagedKeyParameters{
-				ManagedKeySystemView: managedKeySystemView,
-				BackendUUID:          b.backendUUID,
-				Context:              ctx,
-			},
-			managedKeyName,
-			managedKeyId)
-
+		keyId, err = GetManagedKeyUUID(ctx, b, managedKeyName, managedKeyId)
 		if err != nil {
 			return nil, err
 		}

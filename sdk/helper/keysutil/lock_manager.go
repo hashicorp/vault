@@ -62,12 +62,6 @@ type PolicyRequest struct {
 
 	// The UUID of the managed key, if using one
 	ManagedKeyUUID string
-
-	// ManagedKeySystemView is used to access managed keys if the policy is using one
-	ManagedKeySystemView logical.ManagedKeySystemView
-
-	// BackendUUID is the UUID of the backend, used for accessing managed keys
-	BackendUUID string
 }
 
 type LockManager struct {
