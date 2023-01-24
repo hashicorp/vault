@@ -1,3 +1,3 @@
 ```release-note:improvement
-secrets/transit: Return correct responses when creating a key.
+secrets/transit: Return a warning in key creation when the key already existed.
 ```
