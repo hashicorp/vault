@@ -79,7 +79,7 @@
             <InfoTableRow
               @label={{or attr.options.label (humanize (dasherize attr.name))}}
               @value={{get @issuer attr.name}}
-              @formatDate={{if (eq attr.type "date") "MMM d yyyy HH:mm:ss a zzzz"}}
+              @formatDate={{if attr.options.formatDate "MMM d yyyy HH:mm:ss a zzzz"}}
               @alwaysRender={{true}}
             />
           {{/if}}
