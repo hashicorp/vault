@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -270,11 +269,7 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 	}
 
 	methodID := d.Get("method_id").(string)
-
-	methodName, err := i.mfaBackend.sanitizeMethodNameSameNamespace(ns, d.Get("method_name").(string))
-	if err != nil {
-		return nil, err
-	}
+	methodName := d.Get("method_name").(string)
 
 	b := i.mfaBackend
 	b.mfaLock.Lock()
@@ -293,16 +288,20 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 	}
 
 	// check if an MFA method configuration exists with that method name
-	if mConfig == nil && methodName != "" {
-		mConfig, err = b.MemDBMFAConfigByName(ctx, methodName)
+	if methodName != "" {
+		namedMfaConfig, err := b.MemDBMFAConfigByName(ctx, methodName)
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	// Updating the method config name
-	if mConfig != nil && methodName != "" && mConfig.Name != methodName {
-		mConfig.Name = methodName
+		if namedMfaConfig != nil {
+			if mConfig == nil {
+				mConfig = namedMfaConfig
+			} else {
+				if mConfig.ID != namedMfaConfig.ID {
+					return nil, fmt.Errorf("a login MFA method configuration with the method name %s already exists", methodName)
+				}
+			}
+		}
 	}
 
 	if mConfig == nil {
@@ -314,8 +313,12 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 			ID:          configID,
 			Type:        methodType,
 			NamespaceID: ns.ID,
-			Name:        methodName,
 		}
+	}
+
+	// Updating the method config name
+	if methodName != "" {
+		mConfig.Name = methodName
 	}
 
 	mfaNs, err := i.namespacer.NamespaceByID(ctx, mConfig.NamespaceID)
@@ -667,38 +670,6 @@ func (b *LoginMFABackend) loginMFAMethodExistenceCheck(eConfig *mfa.MFAEnforceme
 	return aggErr.ErrorOrNil()
 }
 
-// sanitizeMethodNameSameNamespace returns the name without the namespace.
-// The method name could contain the namespace path.
-// If the namespace is specified in the name, check if the namespace
-// matches the request namespace. If so, trim the namespace path and
-// return the name. If it does not match the request namespace,
-// return an error. If the namespace path is not included in the name,
-// nothing happens.
-func (b *LoginMFABackend) sanitizeMethodNameSameNamespace(ns *namespace.Namespace, name string) (string, error) {
-	if name == "" {
-		return "", nil
-	}
-
-	if ns == nil {
-		return "", fmt.Errorf("namespace cannot be nil")
-	}
-
-	if !strings.Contains(name, "/") {
-		return name, nil
-	}
-
-	// method name
-	methodName := path.Base(name)
-	// namespace path in method name
-	methodNamespacePath := strings.TrimSuffix(name, methodName)
-
-	if ns.Path != methodNamespacePath {
-		return "", fmt.Errorf("invalid underlying namespace %s for method name %s", methodNamespacePath, methodName)
-	}
-
-	return methodName, nil
-}
-
 // sanitizeMFACredsWithLoginEnforcementMethodIDs updates the MFACred map
 // looping through the matched login enforcement configurations, and
 // replacing MFA method names with MFA method IDs
@@ -715,27 +686,22 @@ func (b *LoginMFABackend) sanitizeMFACredsWithLoginEnforcementMethodIDs(ctx cont
 		if err != nil {
 			return nil, err
 		}
-		// method name in the MFACredsMap could be just the method full name,
-		// i.e., namespace path+name, or just the name without namespace.
-		// let's check for both cases.
-		val, ok = mfaCredsMap[mConfig.Name]
-		if ok {
-			sanitizedMfaCreds[mConfig.ID] = val
-		} else {
-			configNS, err := NamespaceByID(ctx, mConfig.NamespaceID, b.Core)
-			if err != nil {
-				return nil, err
-			}
-			if configNS != nil {
-				val, ok = mfaCredsMap[configNS.Path+mConfig.Name]
-				if ok {
-					sanitizedMfaCreds[mConfig.ID] = val
-				} else {
-					multiError = multierror.Append(multiError, fmt.Errorf("failed to find MFA credentials associated with an MFA method ID %v, method name %v", methodID, mConfig.Name))
-				}
+		// method name in the MFACredsMap should be the method full name,
+		// i.e., namespacePath+name. This is because, a user in a child
+		// namespace can reference an MFA method ID in a parent namespace
+		configNS, err := NamespaceByID(ctx, mConfig.NamespaceID, b.Core)
+		if err != nil {
+			return nil, err
+		}
+		if configNS != nil {
+			val, ok = mfaCredsMap[configNS.Path+mConfig.Name]
+			if ok {
+				sanitizedMfaCreds[mConfig.ID] = val
 			} else {
-				multiError = multierror.Append(multiError, fmt.Errorf("failed to find the namespace associated with an MFA method"))
+				multiError = multierror.Append(multiError, fmt.Errorf("failed to find MFA credentials associated with an MFA method ID %v, method name %v", methodID, configNS.Path+mConfig.Name))
 			}
+		} else {
+			multiError = multierror.Append(multiError, fmt.Errorf("failed to find the namespace associated with an MFA method ID %v", mConfig.ID))
 		}
 	}
 
@@ -1743,6 +1709,11 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 		}
 	}
 
+	mfaFactors, err := parseMfaFactors(mfaCreds)
+	if err != nil {
+		return fmt.Errorf("failed to parse MFA factor, %w", err)
+	}
+
 	switch mConfig.Type {
 	case mfaMethodTypeTOTP:
 		// Get the MFA secret data required to validate the supplied credentials
@@ -1754,17 +1725,13 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 			return fmt.Errorf("MFA secret for method name %q not present in entity %q", mConfig.Name, entity.ID)
 		}
 
-		if mfaCreds == nil {
-			return fmt.Errorf("MFA credentials not supplied")
-		}
-
-		return c.validateTOTP(ctx, mfaCreds, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
+		return c.validateTOTP(ctx, mfaFactors, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
 
 	case mfaMethodTypeOkta:
 		return c.validateOkta(ctx, mConfig, finalUsername)
 
 	case mfaMethodTypeDuo:
-		return c.validateDuo(ctx, mfaCreds, mConfig, finalUsername, reqConnectionRemoteAddress)
+		return c.validateDuo(ctx, mfaFactors, mConfig, finalUsername, reqConnectionRemoteAddress)
 
 	case mfaMethodTypePingID:
 		return c.validatePingID(ctx, mConfig, finalUsername)
@@ -1873,23 +1840,52 @@ func formatUsername(format string, alias *identity.Alias, entity *identity.Entit
 	return username
 }
 
-func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {
+type MFAFactor struct {
+	passcode string
+}
+
+func parseMfaFactors(creds []string) (*MFAFactor, error) {
+	mfaFactor := &MFAFactor{}
+
+	for _, cred := range creds {
+		switch {
+		case cred == "": // for the case of push notification
+			continue
+		case strings.HasPrefix(cred, "passcode="):
+			if mfaFactor.passcode != "" {
+				return nil, fmt.Errorf("found multiple passcodes for the same MFA method")
+			}
+
+			splits := strings.SplitN(cred, "=", 2)
+			if splits[1] == "" {
+				return nil, fmt.Errorf("invalid passcode")
+			}
+
+			mfaFactor.passcode = splits[1]
+		case strings.Contains(cred, "="):
+			return nil, fmt.Errorf("found an invalid MFA cred: %v", cred)
+		default:
+			// a non-empty cred that does not match the above
+			// means it is a passcode
+			if mfaFactor.passcode != "" {
+				return nil, fmt.Errorf("found multiple passcodes for the same MFA method")
+			}
+			mfaFactor.passcode = cred
+		}
+	}
+
+	return mfaFactor, nil
+}
+
+func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {
 	duoConfig := mConfig.GetDuoConfig()
 	if duoConfig == nil {
 		return fmt.Errorf("failed to get Duo configuration for method %q", mConfig.Name)
 	}
 
-	passcode := ""
-	for _, cred := range creds {
-		if strings.HasPrefix(cred, "passcode") {
-			splits := strings.SplitN(cred, "=", 2)
-			if len(splits) != 2 {
-				return fmt.Errorf("invalid credential %q", cred)
-			}
-			if splits[0] == "passcode" {
-				passcode = splits[1]
-			}
-		}
+	var passcode string
+	if mfaFactors != nil {
+		passcode = mfaFactors.passcode
 	}
 
 	client := duoapi.NewDuoApi(
@@ -2338,21 +2334,18 @@ func (c *Core) validatePingID(ctx context.Context, mConfig *mfa.Config, username
 	return nil
 }
 
-func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
-	if len(creds) == 0 {
-		return fmt.Errorf("missing TOTP passcode")
+func (c *Core) validateTOTP(ctx context.Context, mfaFactors *MFAFactor, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
+	if mfaFactors.passcode == "" {
+		return fmt.Errorf("MFA credentials not supplied")
 	}
-
-	if len(creds) > 1 {
-		return fmt.Errorf("more than one TOTP passcode supplied")
-	}
+	passcode := mfaFactors.passcode
 
 	totpSecret := entityMethodSecret.GetTOTPSecret()
 	if totpSecret == nil {
 		return fmt.Errorf("entity does not contain the TOTP secret")
 	}
 
-	usedName := fmt.Sprintf("%s_%s", configID, creds[0])
+	usedName := fmt.Sprintf("%s_%s", configID, passcode)
 
 	_, ok := usedCodes.Get(usedName)
 	if ok {
@@ -2399,7 +2392,7 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 		Algorithm: otplib.Algorithm(int(totpSecret.Algorithm)),
 	}
 
-	valid, err := totplib.ValidateCustom(creds[0], key, time.Now(), validateOpts)
+	valid, err := totplib.ValidateCustom(passcode, key, time.Now(), validateOpts)
 	if err != nil && err != otplib.ErrValidateInputInvalidLength {
 		return errwrap.Wrapf("failed to validate TOTP passcode: {{err}}", err)
 	}

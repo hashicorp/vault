@@ -3940,6 +3940,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"tidy_revoked_certs":                    true,
 			"tidy_revoked_cert_issuer_associations": false,
 			"tidy_expired_issuers":                  false,
+			"tidy_move_legacy_ca_bundle":            false,
 			"pause_duration":                        "0s",
 			"state":                                 "Finished",
 			"error":                                 nil,
@@ -3951,6 +3952,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"missing_issuer_cert_count":             json.Number("0"),
 			"current_cert_store_count":              json.Number("0"),
 			"current_revoked_cert_count":            json.Number("0"),
+			"revocation_queue_deleted_count":        json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -5082,6 +5084,16 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://example.com/ca", "https://backup.example.com/ca"})
 	require.Equal(t, leafCert.OCSPServer, []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"})
 	require.Equal(t, leafCert.CRLDistributionPoints, []string{"https://example.com/crl", "https://backup.example.com/crl"})
+
+	// Validate that we can set an issuer name and remove it.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuer_name": "my-issuer",
+	})
+	require.NoError(t, err)
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuer_name": "",
+	})
+	require.NoError(t, err)
 }
 
 func TestIssuersWithoutCRLBits(t *testing.T) {
@@ -5471,17 +5483,17 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		lastHeaders = client.Headers()
 	}
 
-	time.Sleep(4 * time.Second)
-
-	beforeDeltaRotation := time.Now().Add(-2 * time.Second)
-
 	// Finally, rebuild the delta CRL and ensure that only that is
-	// invalidated. We first need to enable it though.
+	// invalidated. We first need to enable it though, and wait for
+	// all CRLs to rebuild.
 	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
 		"auto_rebuild": true,
 		"enable_delta": true,
 	})
 	require.NoError(t, err)
+	time.Sleep(4 * time.Second)
+	beforeDeltaRotation := time.Now().Add(-2 * time.Second)
+
 	resp, err = client.Logical().Read("pki/crl/rotate-delta")
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -5971,13 +5983,14 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 
 	// Setting templated AIAs should succeed.
 	_, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
-		"path": "http://localhost:8200/v1/pki",
+		"path":     "http://localhost:8200/v1/pki",
+		"aia_path": "http://localhost:8200/cdn/pki",
 	})
 	require.NoError(t, err)
 
 	aiaData := map[string]interface{}{
 		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
-		"issuing_certificates":    "{{cluster_path}}/issuer/{{issuer_id}}/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
 		"ocsp_servers":            "{{cluster_path}}/ocsp",
 		"enable_templating":       true,
 	}
@@ -6023,7 +6036,7 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	// Validate the AIA info is correctly templated.
 	cert := parseCert(t, resp.Data["certificate"].(string))
 	require.Equal(t, cert.OCSPServer, []string{"http://localhost:8200/v1/pki/ocsp"})
-	require.Equal(t, cert.IssuingCertificateURL, []string{"http://localhost:8200/v1/pki/issuer/" + issuerId + "/der"})
+	require.Equal(t, cert.IssuingCertificateURL, []string{"http://localhost:8200/cdn/pki/issuer/" + issuerId + "/der"})
 	require.Equal(t, cert.CRLDistributionPoints, []string{"http://localhost:8200/v1/pki/issuer/" + issuerId + "/crl/der"})
 
 	// Modify our issuer to set custom AIAs: these URLs are bad.

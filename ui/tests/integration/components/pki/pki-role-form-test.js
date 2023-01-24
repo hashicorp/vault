@@ -107,7 +107,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     const groupBoxHeight = find('[data-test-toggle-div="Key usage"]').clientHeight;
     assert.strictEqual(
       groupBoxHeight,
-      518,
+      567,
       'renders the correct height of the box element if the component is rending as a flexbox'
     );
     await click(SELECTORS.roleCreateButton);

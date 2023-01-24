@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -13,6 +15,8 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, s := createBackendWithStorage(t)
+
+	paths := []*framework.Path{pathLogin(b)}
 
 	// Create a role with secret ID binding disabled and only bound cidr list
 	// enabled
@@ -64,6 +68,12 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	if resp.Auth.BoundCIDRs[0].String() != "10.0.0.0/8" {
 		t.Fatalf("bad: %s", resp.Auth.BoundCIDRs[0].String())
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation),
+		resp,
+		true,
+	)
 
 	// Override with a secret-id value, verify it doesn't pass
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -120,12 +130,20 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	if resp.Auth.BoundCIDRs[0].String() != "10.0.0.0/24" {
 		t.Fatalf("bad: %s", resp.Auth.BoundCIDRs[0].String())
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation),
+		resp,
+		true,
+	)
 }
 
 func TestAppRole_RoleLogin(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+
+	paths := []*framework.Path{pathLogin(b)}
 
 	createRole(t, b, storage, "role1", "a,b,c")
 	roleRoleIDReq := &logical.Request{
@@ -187,6 +205,13 @@ func TestAppRole_RoleLogin(t *testing.T) {
 	if val := loginResp.Auth.Alias.Metadata["role_name"]; val != "role1" {
 		t.Fatalf("expected metadata.alias.role_name to equal 'role1', got: %v", val)
 	}
+
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, loginReq.Operation),
+		resp,
+		true,
+	)
 
 	// Test renewal
 	renewReq := generateRenewRequest(storage, loginResp.Auth)
@@ -307,6 +332,8 @@ func TestAppRole_RoleResolve(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
+	paths := []*framework.Path{pathLogin(b)}
+
 	role := "role1"
 	createRole(t, b, storage, role, "a,b,c")
 	roleRoleIDReq := &logical.Request{
@@ -353,6 +380,13 @@ func TestAppRole_RoleResolve(t *testing.T) {
 	if resp.Data["role"] != role {
 		t.Fatalf("Role was not as expected. Expected %s, received %s", role, resp.Data["role"])
 	}
+
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, loginReq.Operation),
+		resp,
+		true,
+	)
 }
 
 func TestAppRole_RoleDoesNotExist(t *testing.T) {
