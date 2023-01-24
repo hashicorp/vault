@@ -173,7 +173,7 @@ endpoint](/api-docs/system/rekey); however, the
 API prefix for this operation is at `/sys/rekey-recovery-key` rather than
 `/sys/rekey`.
 
-### Unseal Recovery Mode
+## Unseal Recovery Mode
 
 Auto seals that have failed or whose keys have been lost may in an emergency 
 be unsealed using the recovery keys by placing the seal in Unseal Recovery Mode.
@@ -181,7 +181,7 @@ To do this, edit the seal stanza for the auto-seal, adding the option
 `recovery_keys_fallback = "true"`.  Then, using the recovery keys, unseal vault 
 as if it was a Shamir seal.  This is possible if the cluster was initialized in 
 version 1.13 or above, and `unseal-recovery-disabled` was not true at the time 
-of initialization, _or_ [/sys/seal/initialize-unseal-recovery](/api-docs/system/seal-init-unseal-recovery) 
+of initialization, _or_ [/sys/init-unseal-recovery](/api-docs/system/init-unseal-recovery) 
 was subsequently called.
 
 ## Seal Migration
