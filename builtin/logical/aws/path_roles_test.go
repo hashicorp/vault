@@ -392,8 +392,13 @@ func TestRoleEntryValidationAssumedRoleCred(t *testing.T) {
 		RoleArns:        []string{"arn:aws:iam::123456789012:role/SomeRole"},
 		PolicyArns:      []string{adminAccessPolicyARN},
 		PolicyDocument:  allowAllPolicyDocument,
-		DefaultSTSTTL:   2,
-		MaxSTSTTL:       3,
+		ExternalID:      "my-ext-id",
+		SessionTags: map[string]string{
+			"Key1": "Value1",
+			"Key2": "Value2",
+		},
+		DefaultSTSTTL: 2,
+		MaxSTSTTL:     3,
 	}
 	if err := roleEntry.validate(); err != nil {
 		t.Errorf("bad: valid roleEntry %#v failed validation: %v", roleEntry, err)
