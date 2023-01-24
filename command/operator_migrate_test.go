@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -55,14 +56,51 @@ func TestMigration(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		cmd := OperatorMigrateCommand{
+			logger: log.NewNullLogger(),
+		}
+		if err := cmd.migrateAll(context.Background(), from, to, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := compareStoredData(to, data, ""); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("Concurrent migration", func(t *testing.T) {
+		data := generateData()
+
+		fromFactory := physicalBackends["file"]
+
+		folder := filepath.Join(t.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+
+		confFrom := map[string]string{
+			"path": folder,
+		}
+
+		from, err := fromFactory(confFrom, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := storeData(from, data); err != nil {
+			t.Fatal(err)
+		}
+
+		toFactory := physicalBackends["inmem"]
+		confTo := map[string]string{}
+		to, err := toFactory(confTo, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		cmd := OperatorMigrateCommand{
 			logger: log.NewNullLogger(),
 		}
-		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
+
+		if err := cmd.migrateAll(context.Background(), from, to, 10); err != nil {
 			t.Fatal(err)
 		}
-
 		if err := compareStoredData(to, data, ""); err != nil {
 			t.Fatal(err)
 		}
@@ -99,7 +137,7 @@ func TestMigration(t *testing.T) {
 			logger:    log.NewNullLogger(),
 			flagStart: start,
 		}
-		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
+		if err := cmd.migrateAll(context.Background(), from, to, 1); err != nil {
 			t.Fatal(err)
 		}
 
@@ -192,6 +230,7 @@ storage_destination "dest_type2" {
   path = "dest_path"
 }`)
 	})
+
 	t.Run("DFS Scan", func(t *testing.T) {
 		s, _ := physicalBackends["inmem"](map[string]string{}, nil)
 
@@ -204,9 +243,16 @@ storage_destination "dest_type2" {
 
 		l := randomLister{s}
 
-		var out []string
-		dfsScan(context.Background(), l, func(ctx context.Context, path string) error {
-			out = append(out, path)
+		type SafeAppend struct {
+			out  []string
+			lock sync.Mutex
+		}
+		outKeys := SafeAppend{}
+		dfsScan(context.Background(), l, 10, func(ctx context.Context, path string) error {
+			outKeys.lock.Lock()
+			defer outKeys.lock.Unlock()
+
+			outKeys.out = append(outKeys.out, path)
 			return nil
 		})
 
@@ -218,8 +264,11 @@ storage_destination "dest_type2" {
 			keys = append(keys, key)
 		}
 		sort.Strings(keys)
-		if !reflect.DeepEqual(keys, out) {
-			t.Fatalf("expected equal: %v, %v", keys, out)
+		outKeys.lock.Lock()
+		sort.Strings(outKeys.out)
+		outKeys.lock.Unlock()
+		if !reflect.DeepEqual(keys, outKeys.out) {
+			t.Fatalf("expected equal: %v, %v", keys, outKeys.out)
 		}
 	})
 }
