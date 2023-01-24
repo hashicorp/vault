@@ -109,11 +109,17 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
+type ManagedKeyParameters struct {
+	ManagedKeySystemView logical.ManagedKeySystemView
+	BackendUUID          string
+	Context              context.Context
+}
+
 type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -121,7 +127,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -129,7 +135,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -183,6 +189,8 @@ func (kt KeyType) String() string {
 		return "rsa-4096"
 	case KeyType_HMAC:
 		return "hmac"
+	case KeyType_MANAGED_KEY:
+		return "managed_key"
 	}
 
 	return "[unknown]"
@@ -220,6 +228,8 @@ type KeyEntry struct {
 	// This is deprecated (but still filled) in favor of the value above which
 	// is more precise
 	DeprecatedCreationTime int64 `json:"creation_time"`
+
+	ManagedKeyUUID string `json:"managed_key_id,omitempty"`
 }
 
 // deprecatedKeyEntryMap is used to allow JSON marshal/unmarshal
@@ -419,8 +429,6 @@ type Policy struct {
 
 	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
 	AllowImportedKeyRotation bool
-
-	ManagedKeyName string `json:"managed_key_name,omitempty"`
 }
 
 func (p *Policy) Lock(exclusive bool) {
@@ -852,14 +860,14 @@ func (p *Policy) convergentVersion(ver int) int {
 }
 
 func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, error) {
-	return p.EncryptWithFactory(ver, context, nonce, value, nil)
+	return p.EncryptWithFactory(ver, context, nonce, value, nil, nil)
 }
 
 func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
-	return p.DecryptWithFactory(context, nonce, value, nil)
+	return p.DecryptWithFactory(context, nonce, value, nil, nil)
 }
 
-func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factories ...interface{}) (string, error) {
+func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, managedKeyParams *ManagedKeyParameters, factories ...interface{}) (string, error) {
 	if !p.Type.DecryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
@@ -962,6 +970,13 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA decrypt the ciphertext: %v", err)}
 		}
+	case KeyType_MANAGED_KEY:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+
+		plain, err = p.decryptWithManagedKey(managedKeyParams, keyEntry, decoded, nonce)
 
 	default:
 		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
@@ -997,7 +1012,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 		Marshaling:    marshaling,
 		SaltLength:    rsa.PSSSaltLengthAuto,
 		SigAlgorithm:  sigAlgorithm,
-	})
+	}, nil)
 }
 
 func (p *Policy) minRSAPSSSaltLength() int {
@@ -1014,7 +1029,7 @@ func (p *Policy) validRSAPSSSaltLength(priv *rsa.PrivateKey, hash crypto.Hash, s
 	return p.minRSAPSSSaltLength() <= saltLength && saltLength <= p.maxRSAPSSSaltLength(priv, hash)
 }
 
-func (p *Policy) SignWithOptions(ver int, context, input []byte, options *SigningOptions) (*SigningResult, error) {
+func (p *Policy) SignWithOptions(ver int, context, input []byte, options *SigningOptions, managedKeyParams *ManagedKeyParameters) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -1160,6 +1175,17 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
 
+	case KeyType_MANAGED_KEY:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return nil, err
+		}
+
+		sig, err = p.signWithManagedKey(managedKeyParams, options, keyEntry, input)
+		if err != nil {
+			return nil, err
+		}
+
 	default:
 		return nil, fmt.Errorf("unsupported key type %v", p.Type)
 	}
@@ -1186,10 +1212,10 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 		Marshaling:    marshaling,
 		SaltLength:    rsa.PSSSaltLengthAuto,
 		SigAlgorithm:  sigAlgorithm,
-	})
+	}, nil)
 }
 
-func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, options *SigningOptions) (bool, error) {
+func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, options *SigningOptions, managedKeyParams *ManagedKeyParameters) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -1333,6 +1359,14 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 
 		return err == nil, nil
 
+	case KeyType_MANAGED_KEY:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return false, err
+		}
+
+		return p.verifyWithManagedKey(managedKeyParams, options, keyEntry, input, sigBytes)
+
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
@@ -1467,7 +1501,7 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 
 // Rotate rotates the policy and persists it to storage.
 // If the rotation partially fails, the policy state will be restored.
-func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader io.Reader) (retErr error) {
+func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader io.Reader, managedKeyUUID string) (retErr error) {
 	priorLatestVersion := p.LatestVersion
 	priorMinDecryptionVersion := p.MinDecryptionVersion
 	var priorKeys keyEntryMap
@@ -1491,7 +1525,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		}
 	}()
 
-	if err := p.RotateInMemory(randReader); err != nil {
+	if err := p.RotateInMemory(ctx, randReader, managedKeyUUID); err != nil {
 		return err
 	}
 
@@ -1500,7 +1534,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 }
 
 // RotateInMemory rotates the policy but does not persist it to storage.
-func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
+func (p *Policy) RotateInMemory(ctx context.Context, randReader io.Reader, managedKeyUUID string) (retErr error) {
 	now := time.Now()
 	entry := KeyEntry{
 		CreationTime:           now,
@@ -1584,6 +1618,8 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		if err != nil {
 			return err
 		}
+	case KeyType_MANAGED_KEY:
+		entry.ManagedKeyUUID = managedKeyUUID
 	}
 
 	if p.ConvergentEncryption {
@@ -1863,7 +1899,7 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 	return plain, nil
 }
 
-func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, factories ...interface{}) (string, error) {
+func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, managedKeyParams *ManagedKeyParameters, factories ...interface{}) (string, error) {
 	if !p.Type.EncryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
 	}
@@ -1959,6 +1995,16 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
+		}
+	case KeyType_MANAGED_KEY:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+
+		ciphertext, err = p.encryptWithManagedKey(managedKeyParams, keyEntry, plaintext, nonce, ver)
+		if err != nil {
+			return "", err
 		}
 
 	default:

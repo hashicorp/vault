@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -416,12 +417,26 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 		}
 
+		var managedKeyParameters *keysutil.ManagedKeyParameters
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				return nil, errors.New("unsupported system view")
+			}
+
+			managedKeyParameters = &keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			}
+		}
+
 		sig, err := p.SignWithOptions(ver, context, input, &keysutil.SigningOptions{
 			HashAlgorithm: hashAlgorithm,
 			Marshaling:    marshaling,
 			SaltLength:    saltLength,
 			SigAlgorithm:  sigAlgorithm,
-		})
+		}, managedKeyParameters)
 		if err != nil {
 			if batchInputRaw != nil {
 				response[i].Error = err.Error()
@@ -638,13 +653,28 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 				continue
 			}
 		}
+		var managedKeyParameters *keysutil.ManagedKeyParameters
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				return nil, errors.New("unsupported system view")
+			}
 
-		valid, err := p.VerifySignatureWithOptions(context, input, sig, &keysutil.SigningOptions{
+			managedKeyParameters = &keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			}
+		}
+
+		signingOptions := &keysutil.SigningOptions{
 			HashAlgorithm: hashAlgorithm,
 			Marshaling:    marshaling,
 			SaltLength:    saltLength,
 			SigAlgorithm:  sigAlgorithm,
-		})
+		}
+
+		valid, err := p.VerifySignatureWithOptions(context, input, sig, signingOptions, managedKeyParameters)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

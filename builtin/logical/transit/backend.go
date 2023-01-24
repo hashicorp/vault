@@ -73,6 +73,8 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 		PeriodicFunc: b.periodicFunc,
 	}
 
+	b.backendUUID = conf.BackendUUID
+
 	// determine cacheSize to use. Defaults to 0 which means unlimited
 	cacheSize := 0
 	useCache := !conf.System.CachingDisabled()
@@ -106,6 +108,7 @@ type backend struct {
 	cacheSizeChanged     bool
 	checkAutoRotateAfter time.Time
 	autoRotateOnce       sync.Once
+	backendUUID          string
 }
 
 func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error) {
@@ -268,7 +271,7 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, ke
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("automatically rotating key", "key", key)
 		}
-		return p.Rotate(ctx, req.Storage, b.GetRandomReader())
+		return p.Rotate(ctx, req.Storage, b.GetRandomReader(), "")
 
 	}
 	return nil

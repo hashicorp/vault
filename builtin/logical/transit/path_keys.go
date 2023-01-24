@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -108,6 +109,14 @@ key.`,
 				Default:     0,
 				Description: fmt.Sprintf("The key size in bytes for the algorithm.  Only applies to HMAC and must be no fewer than %d bytes and no more than %d", keysutil.HmacMinKeySize, keysutil.HmacMaxKeySize),
 			},
+			"managed_key_name": {
+				Type:        framework.TypeString,
+				Description: "The name of the managed key to use for this transit key",
+			},
+			"managed_key_id": {
+				Type:        framework.TypeString,
+				Description: "The UUID of the managed key to use for this transit key",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -139,6 +148,8 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	exportable := d.Get("exportable").(bool)
 	allowPlaintextBackup := d.Get("allow_plaintext_backup").(bool)
 	autoRotatePeriod := time.Second * time.Duration(d.Get("auto_rotate_period").(int))
+	managedKeyName := d.Get("managed_key_name").(string)
+	managedKeyId := d.Get("managed_key_id").(string)
 
 	if autoRotatePeriod != 0 && autoRotatePeriod < time.Hour {
 		return logical.ErrorResponse("auto rotate period must be 0 to disable or at least an hour"), nil
@@ -182,6 +193,8 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_RSA4096
 	case "hmac":
 		polReq.KeyType = keysutil.KeyType_HMAC
+	case "managed_key":
+		polReq.KeyType = keysutil.KeyType_MANAGED_KEY
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -193,6 +206,31 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 			return logical.ErrorResponse(fmt.Sprintf("invalid key_size %d", keySize)), logical.ErrInvalidRequest
 		}
 		polReq.KeySize = keySize
+	}
+
+	if polReq.KeyType == keysutil.KeyType_MANAGED_KEY {
+		managedKeyView, ok := b.System().(logical.ManagedKeySystemView)
+		if !ok {
+			return nil, errors.New("unsupported system view")
+		}
+
+		polReq.ManagedKeySystemView = managedKeyView
+		polReq.BackendUUID = b.backendUUID
+
+		keyId, err := keysutil.GetManagedKeyUUID(
+			&keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeyView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			},
+			managedKeyName,
+			managedKeyId)
+
+		if err != nil {
+			return nil, err
+		}
+
+		polReq.ManagedKeyUUID = keyId
 	}
 
 	p, upserted, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
