@@ -23,6 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -4050,4 +4052,44 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	}
 
 	return raftBackend.GetAutopilotServerState(ctx)
+}
+
+func (c *Core) InitializeUnsealRecovery(ctx context.Context) error {
+	if !c.seal.RecoveryKeySupported() {
+		return errutil.UserError{"unseal recovery only supported when using an auto-seal with recovery keys"}
+	}
+
+	// Technically the unseal recovery entry may already exist, but go ahead and re-create it, as that may be
+	// useful in some scenarios, such as the unlikely case an operator downgrades, rekeys, and upgrades.
+	barrierKeys, err := c.seal.GetStoredKeys(ctx)
+	if err != nil {
+		return err
+	}
+	if len(barrierKeys) != 1 {
+		return fmt.Errorf("expected a single barrier key, found %d", len(barrierKeys))
+	}
+
+	recoveryKey, err := c.seal.RecoveryKey(ctx)
+	if err != nil {
+		return err
+	}
+	if err := c.initializeUnsealRecovery(ctx, recoveryKey, barrierKeys[0]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Core) initializeUnsealRecovery(ctx context.Context, recoveryKey, barrierKey []byte) error {
+	wrapper := aeadwrapper.NewShamirWrapper()
+	if err := wrapper.SetAesGcmKeyBytes(recoveryKey); err != nil {
+		return fmt.Errorf("failed to store recover unseal keys: %v", err)
+	}
+	recoverySeal := NewRecoverySeal(&vaultseal.Access{
+		Wrapper: wrapper,
+	})
+	recoverySeal.SetCore(c)
+	if err := recoverySeal.SetStoredKeys(ctx, [][]byte{barrierKey}); err != nil {
+		return fmt.Errorf("failed to store recover unseal keys: %v", err)
+	}
+	return nil
 }
