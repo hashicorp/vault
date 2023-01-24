@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,31 +18,6 @@ import (
 )
 
 func TestTokenFileEndToEnd(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		removeTokenFile bool
-		expectToken     bool
-	}{
-		// default behaviour => token expected
-		{false, true},
-		{true, true},
-	}
-
-	for _, tc := range testCases {
-		secretFileAction := "preserve"
-		if tc.removeTokenFile {
-			secretFileAction = "remove"
-		}
-		tc := tc // capture range variable
-		t.Run(fmt.Sprintf("%s_removeTokenFile, expectToken=%v", secretFileAction, tc.expectToken), func(t *testing.T) {
-			t.Parallel()
-			testTokenFileEndToEnd(t, tc.removeTokenFile, tc.expectToken)
-		})
-	}
-}
-
-func testTokenFileEndToEnd(t *testing.T, removeTokenFile bool, expectToken bool) {
 	var err error
 	logger := logging.NewVaultLogger(log.Trace)
 	coreConfig := &vault.CoreConfig{
@@ -89,8 +63,7 @@ func testTokenFileEndToEnd(t *testing.T, removeTokenFile bool, expectToken bool)
 	am, err := token_file.NewTokenFileAuthMethod(&auth.AuthConfig{
 		Logger: logger.Named("auth.method"),
 		Config: map[string]interface{}{
-			"token_file_path":                 tokenFileName,
-			"remove_token_file_after_reading": removeTokenFile,
+			"token_file_path": tokenFileName,
 		},
 	})
 	if err != nil {
@@ -167,32 +140,20 @@ func testTokenFileEndToEnd(t *testing.T, removeTokenFile bool, expectToken bool)
 		t.Fatal("expected notexist err")
 	}
 
-	if expectToken {
-		// Wait 2 seconds for the env variables to be detected and an auth to be generated.
-		time.Sleep(time.Second * 2)
+	// Wait 2 seconds for the env variables to be detected and an auth to be generated.
+	time.Sleep(time.Second * 2)
 
-		token, err := readToken(tokenSinkFileName)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if token.Token == "" {
-			t.Fatal("expected token but didn't receive it")
-		}
+	token, err := readToken(tokenSinkFileName)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	if !removeTokenFile {
-		_, err := os.Stat(tokenFileName)
-		if err != nil {
-			t.Fatal("Token file removed despite remove token file being set to false")
-		}
-	} else {
-		_, err := os.Stat(tokenFileName)
-		if err == nil {
-			t.Fatal("no error returned from stat, indicating the file is still present")
-		}
-		if !os.IsNotExist(err) {
-			t.Fatalf("unexpected error: %v", err)
-		}
+	if token.Token == "" {
+		t.Fatal("expected token but didn't receive it")
+	}
+
+	_, err = os.Stat(tokenFileName)
+	if err != nil {
+		t.Fatal("Token file removed")
 	}
 }

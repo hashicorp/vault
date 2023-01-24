@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 )
@@ -18,9 +17,8 @@ type tokenFileMethod struct {
 	logger    hclog.Logger
 	mountPath string
 
-	cachedToken                 string
-	tokenFilePath               string
-	removeTokenFileAfterReading bool
+	cachedToken   string
+	tokenFilePath string
 }
 
 func NewTokenFileAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
@@ -48,15 +46,6 @@ func NewTokenFileAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("'token_file_path' value is empty")
 	}
 
-	removeTokenFileAfterReadingRaw, ok := conf.Config["remove_token_file_after_reading"]
-	if ok {
-		removeTokenFileAfterReading, err := parseutil.ParseBool(removeTokenFileAfterReadingRaw)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing 'remove_token_file_after_reading' value: %w", err)
-		}
-		a.removeTokenFileAfterReading = removeTokenFileAfterReading
-	}
-
 	return a, nil
 }
 
@@ -75,13 +64,6 @@ func (a *tokenFileMethod) Authenticate(ctx context.Context, client *api.Client) 
 		a.logger.Warn("token file exists but read empty value, re-using cached value")
 	} else {
 		a.cachedToken = strings.TrimSpace(string(token))
-	}
-
-	if a.removeTokenFileAfterReading {
-		a.logger.Info("removing token file after reading, because 'remove_token_file_after_reading' is true")
-		if err := os.Remove(a.tokenFilePath); err != nil {
-			a.logger.Error("error removing token file after reading", "error", err)
-		}
 	}
 
 	// i.e. auth/token/lookup-self
