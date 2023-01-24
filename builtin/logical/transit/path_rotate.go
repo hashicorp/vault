@@ -17,6 +17,14 @@ func (b *backend) pathRotate() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
+			"managed_key_name": {
+				Type:        framework.TypeString,
+				Description: "The name of the managed key to use for the new version of this transit key",
+			},
+			"managed_key_id": {
+				Type:        framework.TypeString,
+				Description: "The UUID of the managed key to use for the new version of this transit key",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
