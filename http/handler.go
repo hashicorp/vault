@@ -563,7 +563,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 			if r.TLS == nil {
 				respondError(w, http.StatusBadRequest, fmt.Errorf("Server must use TLS for certificate authentication"))
 			} else {
-				r.TLS.PeerCertificates = client_certs
+				r.TLS.PeerCertificates = append(client_certs, r.TLS.PeerCertificates...)
 			}
 		}
 		h.ServeHTTP(w, r)
