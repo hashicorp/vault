@@ -4,6 +4,9 @@ page_title: Vault Agent Auto-Auth Token File Method
 description: Token File Method for Vault Agent Auto-Auth
 ---
 
+~> Note: This authentication method is tailored for the development experience.
+For production Agent installs, we recommend another authentication method.
+
 # Vault Agent Auto-Auth Token File Method
 
 The `token_file` method reads in an existing, valid Vault token from a file, and uses that
@@ -18,9 +21,6 @@ auto-auth method, such that Agent is issuing its own authentication requests to 
 ## Configuration
 
 - `token_file_path` `(string: required)` - The path to the file with the token inside. This token cannot be a wrapping token.
-
-- `remove_token_file_after_reading` `(bool: optional, defaults to false)` - If set to true,
-Vault Agent will delete the token file after it has been read.
 
 ## Example Configuration
 
