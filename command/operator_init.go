@@ -29,10 +29,11 @@ type OperatorInitCommand struct {
 	flagRootTokenPGPKey string
 
 	// Auto Unseal
-	flagRecoveryShares    int
-	flagRecoveryThreshold int
-	flagRecoveryPGPKeys   []string
-	flagStoredShares      int
+	flagRecoveryShares        int
+	flagRecoveryThreshold     int
+	flagRecoveryPGPKeys       []string
+	flagStoredShares          int
+	flagDisableUnsealRecovery bool
 
 	// Consul
 	flagConsulAuto    bool
@@ -147,6 +148,13 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Target:  &c.flagStoredShares,
 		Default: -1,
 		Usage:   "DEPRECATED: This flag does nothing. It will be removed in Vault 1.3.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "disable-unseal-recovery",
+		Target:  &c.flagDisableUnsealRecovery,
+		Default: false,
+		Usage:   "If disabled, unsealing Vault using recovery keys is not possible.",
 	})
 
 	// Consul Options
@@ -280,9 +288,10 @@ func (c *OperatorInitCommand) Run(args []string) int {
 		PGPKeys:         c.flagPGPKeys,
 		RootTokenPGPKey: c.flagRootTokenPGPKey,
 
-		RecoveryShares:    c.flagRecoveryShares,
-		RecoveryThreshold: c.flagRecoveryThreshold,
-		RecoveryPGPKeys:   c.flagRecoveryPGPKeys,
+		RecoveryShares:         c.flagRecoveryShares,
+		RecoveryThreshold:      c.flagRecoveryThreshold,
+		RecoveryPGPKeys:        c.flagRecoveryPGPKeys,
+		UnsealRecoveryDisabled: c.flagDisableUnsealRecovery,
 	}
 
 	// Check auto mode

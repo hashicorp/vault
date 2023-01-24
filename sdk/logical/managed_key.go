@@ -16,6 +16,7 @@ const (
 	KeyUsageVerify
 	KeyUsageWrap
 	KeyUsageUnwrap
+	KeyUsageGenerateRandom
 )
 
 type ManagedKey interface {
@@ -115,5 +116,5 @@ type ManagedKeyRandomSource interface {
 	ManagedKey
 
 	// GetRandomBytes returns a number (specified by the count parameter) of random bytes sourced from the target managed key.
-	GetRandomBytes(ctx context.Context, count int) ([]byte, error)
+	GetRandomBytes(count int) ([]byte, error)
 }

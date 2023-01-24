@@ -482,12 +482,16 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 		return c, e
 	}
 
-	if len(c.Seals) == 2 {
+	switch len(c.Seals) {
+	case 2:
+		// Two seals indicates a seal migration, but one and only one must be disabled
 		switch {
 		case c.Seals[0].Disabled && c.Seals[1].Disabled:
 			return nil, errors.New("seals: two seals provided but both are disabled")
 		case !c.Seals[0].Disabled && !c.Seals[1].Disabled:
 			return nil, errors.New("seals: two seals provided but neither is disabled")
+		case (!c.Seals[0].Disabled && c.Seals[0].Recover) || (!c.Seals[1].Disabled && c.Seals[1].Recover):
+			return nil, errors.New("seals: migration target seal cannot be in recovery mode")
 		}
 	}
 

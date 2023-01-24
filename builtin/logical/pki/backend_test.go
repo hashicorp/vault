@@ -3952,6 +3952,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"missing_issuer_cert_count":             json.Number("0"),
 			"current_cert_store_count":              json.Number("0"),
 			"current_revoked_cert_count":            json.Number("0"),
+			"revocation_queue_deleted_count":        json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -5482,17 +5483,17 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		lastHeaders = client.Headers()
 	}
 
-	time.Sleep(4 * time.Second)
-
-	beforeDeltaRotation := time.Now().Add(-2 * time.Second)
-
 	// Finally, rebuild the delta CRL and ensure that only that is
-	// invalidated. We first need to enable it though.
+	// invalidated. We first need to enable it though, and wait for
+	// all CRLs to rebuild.
 	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
 		"auto_rebuild": true,
 		"enable_delta": true,
 	})
 	require.NoError(t, err)
+	time.Sleep(4 * time.Second)
+	beforeDeltaRotation := time.Now().Add(-2 * time.Second)
+
 	resp, err = client.Logical().Read("pki/crl/rotate-delta")
 	require.NoError(t, err)
 	require.NotNil(t, resp)

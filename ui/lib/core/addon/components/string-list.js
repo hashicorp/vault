@@ -20,7 +20,6 @@ import { next } from '@ember/runloop';
  * @param {string} type=array - Optional type for inputValue.
  * @param {string} attrName - We use this to check the type so we can modify the tooltip content.
  * @param {string} subText - Text below the label.
- * @param {boolean} hideFormSection - If true do not add form-section class on surrounding div.
  */
 
 export default class StringList extends Component {

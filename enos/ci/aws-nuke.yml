@@ -118,7 +118,7 @@ presets:
         - "rds-monitoring-role -> AmazonRDSEnhancedMonitoringRole"
       IAMUserPolicy:
         - "github_actions-vault_ci -> AssumeServiceUserRole"
-
+        - "github_actions-vault_enterprise_ci -> AssumeServiceUserRole"
 
 resource-types:
   # Run against everything, excluding these:

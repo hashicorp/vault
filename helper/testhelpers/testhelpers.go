@@ -33,7 +33,7 @@ const (
 	GenerateRecovery
 )
 
-// Generates a root token on the target cluster.
+// GenerateRoot generates a root token on the target cluster.
 func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
 	t.Helper()
 	token, err := GenerateRootWithError(t, cluster, kind)
@@ -767,6 +767,21 @@ func SetNonRootToken(client *api.Client) error {
 	return nil
 }
 
+// RetryUntilAtCadence runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+func RetryUntilAtCadence(t testing.T, timeout, sleepTime time.Duration, f func() error) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var err error
+	for time.Now().Before(deadline) {
+		if err = f(); err == nil {
+			return
+		}
+		time.Sleep(sleepTime)
+	}
+	t.Fatalf("did not complete before deadline, err: %v", err)
+}
+
 // RetryUntil runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
 func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
@@ -942,7 +957,7 @@ func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) s
 
 // SetupLoginMFATOTP setups up a TOTP MFA using some basic configuration and
 // returns all relevant information to the client.
-func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, string) {
+func SetupLoginMFATOTP(t testing.T, client *api.Client, methodName string, waitPeriod int) (*api.Client, string, string) {
 	t.Helper()
 	// Mount the totp secrets engine
 	SetupTOTPMount(t, client)
@@ -956,13 +971,14 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 	// Configure a default TOTP method
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  20,
+		"period":                  waitPeriod,
 		"algorithm":               "SHA256",
 		"digits":                  6,
 		"skew":                    1,
 		"key_size":                20,
 		"qr_size":                 200,
 		"max_validation_attempts": 5,
+		"method_name":             methodName,
 	}
 	methodID := SetupTOTPMethod(t, client, totpConfig)
 
