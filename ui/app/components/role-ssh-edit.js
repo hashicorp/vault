@@ -9,7 +9,7 @@ export default RoleEdit.extend({
   actions: {
     updateTtl(path, val) {
       const model = this.model;
-      let valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
+      const valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
       model.set(path, valueToSet);
     },
   },

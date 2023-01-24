@@ -3,17 +3,12 @@ package pki
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/sha512"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"hash"
 	"io"
 	"strings"
 	"testing"
@@ -25,7 +20,7 @@ import (
 )
 
 // Setup helpers
-func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
+func CreateBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -52,64 +47,10 @@ func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
 }
 
 // Signing helpers
-func requireSignedBy(t *testing.T, cert *x509.Certificate, key crypto.PublicKey) {
-	switch typedKey := key.(type) {
-	case *rsa.PublicKey:
-		requireRSASignedBy(t, cert, typedKey)
-	case *ecdsa.PublicKey:
-		requireECDSASignedBy(t, cert, typedKey)
-	case ed25519.PublicKey:
-		requireED25519SignedBy(t, cert, typedKey)
-	default:
-		require.Fail(t, "unknown public key type %#v", key)
+func requireSignedBy(t *testing.T, cert *x509.Certificate, signingCert *x509.Certificate) {
+	if err := cert.CheckSignatureFrom(signingCert); err != nil {
+		t.Fatalf("signature verification failed: %v", err)
 	}
-}
-
-func requireRSASignedBy(t *testing.T, cert *x509.Certificate, key *rsa.PublicKey) {
-	require.Contains(t, []x509.SignatureAlgorithm{x509.SHA256WithRSA, x509.SHA512WithRSA},
-		cert.SignatureAlgorithm, "only sha256 signatures supported")
-
-	var hasher hash.Hash
-	var hashAlgo crypto.Hash
-
-	switch cert.SignatureAlgorithm {
-	case x509.SHA256WithRSA:
-		hasher = sha256.New()
-		hashAlgo = crypto.SHA256
-	case x509.SHA512WithRSA:
-		hasher = sha512.New()
-		hashAlgo = crypto.SHA512
-	}
-
-	hasher.Write(cert.RawTBSCertificate)
-	hashData := hasher.Sum(nil)
-
-	err := rsa.VerifyPKCS1v15(key, hashAlgo, hashData, cert.Signature)
-	require.NoError(t, err, "the certificate was not signed by the expected public rsa key.")
-}
-
-func requireECDSASignedBy(t *testing.T, cert *x509.Certificate, key *ecdsa.PublicKey) {
-	require.Contains(t, []x509.SignatureAlgorithm{x509.ECDSAWithSHA256, x509.ECDSAWithSHA512},
-		cert.SignatureAlgorithm, "only ecdsa signatures supported")
-
-	var hasher hash.Hash
-	switch cert.SignatureAlgorithm {
-	case x509.ECDSAWithSHA256:
-		hasher = sha256.New()
-	case x509.ECDSAWithSHA512:
-		hasher = sha512.New()
-	}
-
-	hasher.Write(cert.RawTBSCertificate)
-	hashData := hasher.Sum(nil)
-
-	verify := ecdsa.VerifyASN1(key, hashData, cert.Signature)
-	require.True(t, verify, "the certificate was not signed by the expected public ecdsa key.")
-}
-
-func requireED25519SignedBy(t *testing.T, cert *x509.Certificate, key ed25519.PublicKey) {
-	require.Equal(t, x509.PureEd25519, cert.SignatureAlgorithm)
-	ed25519.Verify(key, cert.RawTBSCertificate, cert.Signature)
 }
 
 // Certificate helper
@@ -273,12 +214,21 @@ func requireFieldsSetInResp(t *testing.T, resp *logical.Response, fields ...stri
 
 func requireSuccessNonNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
 	require.NoError(t, err, msgAndArgs...)
-	require.False(t, resp.IsError(), msgAndArgs...)
+	if resp.IsError() {
+		errContext := fmt.Sprintf("Expected successful response but got error: %v", resp.Error())
+		require.Falsef(t, resp.IsError(), errContext, msgAndArgs...)
+	}
 	require.NotNil(t, resp, msgAndArgs...)
 }
 
 func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
 	require.NoError(t, err, msgAndArgs...)
-	require.False(t, resp.IsError(), msgAndArgs...)
-	require.Nil(t, resp, msgAndArgs...)
+	if resp.IsError() {
+		errContext := fmt.Sprintf("Expected successful response but got error: %v", resp.Error())
+		require.Falsef(t, resp.IsError(), errContext, msgAndArgs...)
+	}
+	if resp != nil {
+		msg := fmt.Sprintf("expected nil response but got: %v", resp)
+		require.Nilf(t, resp, msg, msgAndArgs...)
+	}
 }

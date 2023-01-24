@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -298,6 +299,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLoggersRead,
+					Summary:  "Read the log level for all existing loggers.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersWrite,
 					Summary:  "Modify the log level for all existing loggers.",
@@ -322,6 +327,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameRead,
+					Summary:  "Read the log level for a single logger.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameWrite,
 					Summary:  "Modify the log level of a single logger.",
@@ -563,9 +572,21 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 					Type: framework.TypeString,
 				},
 			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleAuditHash,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleAuditHash,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"hash": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
@@ -579,6 +600,13 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditTable,
 					Summary:  "List the enabled audit devices.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							// this response has dynamic keys
+							Description: "OK",
+							Fields:      nil,
+						}},
+					},
 				},
 			},
 
@@ -617,10 +645,20 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAudit,
 					Summary:  "Enable a new audit device at the supplied path.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDisableAudit,
 					Summary:  "Disable the audit device at the given path.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 
@@ -644,14 +682,31 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderUpdate,
 					Summary:  "Enable auditing of a header.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderDelete,
 					Summary:  "Disable auditing of the given request header.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderRead,
 					Summary:  "List the information for the given request header.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// the response keys are dynamic
+							Fields: nil,
+						}},
+					},
 				},
 			},
 
@@ -666,6 +721,17 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeadersRead,
 					Summary:  "List the request headers that are configured to be audited.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"headers": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -959,15 +1025,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation:   b.pathInternalOpenAPI,
 				logical.UpdateOperation: b.pathInternalOpenAPI,
 			},
-		},
-		{
-			Pattern: "internal/specs/openapi",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalOpenAPI,
-					Summary:  "Generate an OpenAPI 3 document of all mounted paths.",
-				},
-			},
+			HelpSynopsis: "Generate an OpenAPI 3 document of all mounted paths.",
 		},
 		{
 			Pattern: "internal/ui/feature-flags",
@@ -1062,6 +1120,28 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-entities"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) introspectionPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "internal/inspect/router/" + framework.GenericNameRegex("tag"),
+			Fields: map[string]*framework.FieldSchema{
+				"tag": {
+					Type:        framework.TypeString,
+					Description: "Name of subtree being observed",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalInspectRouter,
+					Summary:  "Expose the route entry and mount entry tables present in the router",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-inspect-router"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-inspect-router"][1]),
 		},
 	}
 }
@@ -1542,6 +1622,14 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["token_type"][0]),
 				},
+				"user_lockout_config": {
+					Type:        framework.TypeMap,
+					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
+				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -1600,7 +1688,7 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["auth_options"][0]),
 				},
-				"version": {
+				"plugin_version": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},
@@ -1921,6 +2009,14 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
 				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
+				"user_lockout_config": {
+					Type:        framework.TypeMap,
+					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
+				},
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1975,7 +2071,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["mount_options"][0]),
 				},
-				"version": {
+				"plugin_version": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},
@@ -2008,6 +2104,65 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["mounts"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) experimentPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "experiments$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadExperiments,
+					Summary:  "Returns the available and enabled experiments",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["experiments"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["experiments"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) lockedUserPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "locked-users/(?P<mount_accessor>.+?)/unlock/(?P<alias_identifier>.+)",
+			Fields: map[string]*framework.FieldSchema{
+				"mount_accessor": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
+				},
+				"alias_identifier": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["alias_identifier"][0]),
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleUnlockUser,
+					Summary:  "Unlocks the user with given mount_accessor and alias_identifier",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
+		},
+		{
+			Pattern: "locked-users",
+			Fields: map[string]*framework.FieldSchema{
+				"mount_accessor": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLockedUsersMetricQuery,
+					Summary:  "Report the locked user count metrics, for this namespace and all child namespaces.",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["locked_users"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["locked_users"][1]),
 		},
 	}
 }

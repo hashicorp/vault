@@ -51,9 +51,10 @@ export default ApplicationAdapter.extend({
     let data = serializer.serialize(snapshot);
     const path = snapshot.attr('path');
     // for kv2 we make two network requests
+    data.config.id = path; // config relationship needs an id so use path for now
     if (data.type === 'kv' && data.options.version === 2) {
       // data has both data for sys mount and the config, we need to separate them
-      let splitObjects = splitObject(data, ['max_versions', 'delete_version_after', 'cas_required']);
+      const splitObjects = splitObject(data, ['max_versions', 'delete_version_after', 'cas_required']);
       let configData;
       [configData, data] = splitObjects;
 
@@ -115,13 +116,13 @@ export default ApplicationAdapter.extend({
   },
 
   saveAWSRoot(store, type, snapshot) {
-    let { data } = snapshot.adapterOptions;
+    const { data } = snapshot.adapterOptions;
     const path = encodePath(snapshot.id);
     return this.ajax(`/v1/${path}/config/root`, 'POST', { data });
   },
 
   saveAWSLease(store, type, snapshot) {
-    let { data } = snapshot.adapterOptions;
+    const { data } = snapshot.adapterOptions;
     const path = encodePath(snapshot.id);
     return this.ajax(`/v1/${path}/config/lease`, 'POST', { data });
   },

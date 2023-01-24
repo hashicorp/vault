@@ -35,6 +35,10 @@ type batchResponseHMACItem struct {
 	// For batch processing to successfully mimic previous handling for simple 'input',
 	// both output values are needed - though 'err' should never be serialized.
 	err error
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" mapstructure:"reference"`
 }
 
 func (b *backend) pathHMAC() *framework.Path {
@@ -78,6 +82,14 @@ Defaults to "sha2-256".`,
 				Description: `The version of the key to use for generating the HMAC.
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be processed in a single batch. When this parameter
+is set, if the parameter 'input' is also set, it will be ignored.
+Any batch output will preserve the order of the batch input.`,
 			},
 		},
 
@@ -201,6 +213,10 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}
@@ -362,6 +378,10 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}

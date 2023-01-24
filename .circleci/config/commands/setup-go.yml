@@ -13,11 +13,12 @@ parameters:
     default: github.com/hashicorp/*
 steps:
   - run:
-      working_directory: ~/
       name: Setup Go
       command: |
+        GO_VERSION=$(cat .go-version)
         [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
         # Install Go
+        cd ~
         curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
         sudo rm -rf /usr/local/go
         sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"

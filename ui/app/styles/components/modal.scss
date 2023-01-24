@@ -1,5 +1,5 @@
 .modal-background {
-  background: rgb(235, 238, 242, 0.9);
+  background: rgba(235, 238, 242, 0.9);
 }
 
 .modal-card {
@@ -7,6 +7,7 @@
   border: 1px solid $grey-light;
   max-height: calc(100vh - 70px);
   margin-top: 60px;
+  min-width: calc(100vw * 0.3);
 
   &-head {
     border-radius: 0;

@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -451,6 +452,9 @@ func testLoadConfigFile(t *testing.T) {
 		EnableRawEndpoint:    true,
 		EnableRawEndpointRaw: true,
 
+		EnableIntrospectionEndpoint:    true,
+		EnableIntrospectionEndpointRaw: true,
+
 		DisableSealWrap:    true,
 		DisableSealWrapRaw: true,
 
@@ -531,6 +535,37 @@ func testUnknownFieldValidation(t *testing.T) {
 		if !found {
 			t.Fatalf("could not find expected error: %v", ex.String())
 		}
+	}
+}
+
+// testUnknownFieldValidationJson tests that this valid json config does not result in
+// errors. Prior to VAULT-8519, it reported errors even with a valid config that was
+// parsed properly.
+func testUnknownFieldValidationJson(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_small.json")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	errors := config.Validate("./test-fixtures/config_small.json")
+	if errors != nil {
+		t.Fatal(errors)
+	}
+}
+
+// testUnknownFieldValidationHcl tests that this valid hcl config does not result in
+// errors. Prior to VAULT-8519, the json version of this config reported errors even
+// with a valid config that was parsed properly.
+// In short, this ensures the same for HCL as we test in testUnknownFieldValidationJson
+func testUnknownFieldValidationHcl(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_small.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	errors := config.Validate("./test-fixtures/config_small.hcl")
+	if errors != nil {
+		t.Fatal(errors)
 	}
 }
 
@@ -703,12 +738,15 @@ func testConfig_Sanitized(t *testing.T) {
 		"disable_indexing":                    false,
 		"disable_mlock":                       true,
 		"disable_performance_standby":         false,
+		"experiments":                         []string(nil),
 		"plugin_file_uid":                     0,
 		"plugin_file_permissions":             0,
 		"disable_printable_check":             false,
 		"disable_sealwrap":                    true,
 		"raw_storage_endpoint":                true,
+		"introspection_endpoint":              false,
 		"disable_sentinel_trace":              true,
+		"detect_deadlocks":                    "",
 		"enable_ui":                           true,
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
@@ -859,6 +897,67 @@ listener "tcp" {
 	if diff := deep.Equal(config, *expected); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+func testParseUserLockouts(t *testing.T) {
+	obj, _ := hcl.Parse(strings.TrimSpace(`
+	user_lockout "all" {
+		lockout_duration = "40m"
+		lockout_counter_reset = "45m"
+		disable_lockout = "false"
+	}
+	  user_lockout "userpass" {
+	     lockout_threshold = "100"
+	     lockout_duration = "20m"
+	  }
+	  user_lockout "ldap" {
+		disable_lockout = "true"
+	 }`))
+
+	config := Config{
+		SharedConfig: &configutil.SharedConfig{},
+	}
+	list, _ := obj.Node.(*ast.ObjectList)
+	objList := list.Filter("user_lockout")
+	configutil.ParseUserLockouts(config.SharedConfig, objList)
+
+	sort.Slice(config.SharedConfig.UserLockouts[:], func(i, j int) bool {
+		return config.SharedConfig.UserLockouts[i].Type < config.SharedConfig.UserLockouts[j].Type
+	})
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			UserLockouts: []*configutil.UserLockout{
+				{
+					Type:                "all",
+					LockoutThreshold:    5,
+					LockoutDuration:     2400000000000,
+					LockoutCounterReset: 2700000000000,
+					DisableLockout:      false,
+				},
+				{
+					Type:                "userpass",
+					LockoutThreshold:    100,
+					LockoutDuration:     1200000000000,
+					LockoutCounterReset: 2700000000000,
+					DisableLockout:      false,
+				},
+				{
+					Type:                "ldap",
+					LockoutThreshold:    5,
+					LockoutDuration:     2400000000000,
+					LockoutCounterReset: 2700000000000,
+					DisableLockout:      true,
+				},
+			},
+		},
+	}
+
+	sort.Slice(expected.SharedConfig.UserLockouts[:], func(i, j int) bool {
+		return expected.SharedConfig.UserLockouts[i].Type < expected.SharedConfig.UserLockouts[j].Type
+	})
+	config.Prune()
+	require.Equal(t, config, *expected)
 }
 
 func testParseSockaddrTemplate(t *testing.T) {

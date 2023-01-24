@@ -145,10 +145,13 @@ $ curl \
     - 3072
     - 4096
 
-- `force_rw_session` `(string: "false")`: Force all operations to open up
+- `force_rw_session` `(string: "false")` - Force all operations to open up
   a read-write session to the HSM. This is a boolean expressed as a string (e.g.
   `"true"`). This key is mainly to work around a limitation within AWS's CloudHSM v5
   pkcs11 implementation.
+
+- `max_parallel` `(int: 1)` - The number of concurrent requests that may be in
+  flight to the HSM at any given time.
 
 #### AWS KMS Parameters
 - `type` `(string: "awskms")` - To select an AWS KMS backend, the type parameter must be set to `awskms`.
@@ -211,7 +214,42 @@ $ curl \
 - `key_bits` `(string: <required if allow_generate_key is true>)`: The size in bits for an RSA key.
    This field is required when `key_type` is `RSA`. Supported values are `2048`, `3072`, and `4096`.
 
-- `key_type` `(string: <required>)`: The type of key to use. At this time only supported value is `RSA`.
+- `key_type` `(string: <required>)`: The type of key to use. At this time only supported value is `RSA-HSM`.
+
+#### GCP Cloud KMS Parameters
+- `type` `(string: "gcpckms")` - To select an GCP Cloud KMS backend, the type parameter must be set to `gcpckms`.
+
+- `credentials` `(string: <required>)`: The path of the credential file to use for authenticating to GCP.
+  This can also be provided in the `GOOGLE_CREDENTIALS` or `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
+
+- `crypto_key` `(string: <required>)`: The name of the GCP Cloud KMS key. If there is no existing key
+  and `allow_generate_key` is `true`, Vault will generate a key with this name.
+
+- `crypto_key_version` `(string: "1")`: The version of the key to use.
+
+- `key_ring` `(string: <required>)`: The name of the key ring in GCP Cloud KMS. This needs to be created
+  prior to key creation.
+
+- `project` `(string: <required>)`: The ID of the GCP project. This can also be provided with
+  the `GOOGLE_PROJECT` environment variable.
+
+- `region` `(string: <required>)`: The region where the key ring was created. This can also be provided
+  with the `GOOGLE_REGION` environment variable.
+
+- `algorithm` `(string: <required>)`: The signature algorithm to be used with the key. Supported
+  values for signature algorithms are:
+  - `EC_SIGN_P256_SHA256`
+  - `EC_SIGN_P384_SHA384`
+  - `RSA_SIGN_PSS_2048_SHA256`
+  - `RSA_SIGN_PSS_3072_SHA256`
+  - `RSA_SIGN_PSS_4096_SHA256`
+  - `RSA_SIGN_PSS_4096_SHA512`
+  - `RSA_SIGN_PKCS1_2048_SHA256`
+  - `RSA_SIGN_PKCS1_3072_SHA256`
+  - `RSA_SIGN_PKCS1_4096_SHA256`
+  - `RSA_SIGN_PKCS1_4096_SHA512`
+
+  For more information, see the GCP Cloud KMS [documentation for signing algorithms](https://cloud.google.com/kms/docs/algorithms).
 
 ## Read managed key
 
@@ -260,8 +298,7 @@ $ curl \
 ## Test Sign with a managed key
 
 This endpoint allows an operator to validate that a managed key configuration works
-by signing and verifying some randomly generated data. No values can be provided to sign,
-nor are signed or verified data returned to the caller. If the call returns a successful HTTP
+by signing and verifying some randomly generated data. If the call returns a successful HTTP
 status code, the configuration can be considered valid.
 
 ~> **Note**: if key generation is allowed and no existing key can be found, this call will generate the key
@@ -273,7 +310,21 @@ status code, the configuration can be considered valid.
 ### Parameters
 - `name` `(string: <required>)` - The lowercase name identifying the key.
 
-- `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
+- `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms`, `azurekeyvault`, or `gcpckms`.
+
+- `use_pss` `(bool: false)` - Use RSA PSS signatures within the signing/verification api calls.
+
+- `hash_algorithm` `(string: sha2-256)` - Use the following hashing algorithm within the signing/verification api calls.
+  The supported values are
+   - sha1
+   - sha2-224
+   - sha2-256
+   - sha2-384
+   - sha2-512
+   - sha3-224
+   - sha3-256
+   - sha3-384
+   - sha3-512
 
 ### Sample Request
 

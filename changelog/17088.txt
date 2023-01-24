@@ -1,0 +1,3 @@
+```release-note:improvement
+plugins: Adding version to plugin GRPC interface
+```

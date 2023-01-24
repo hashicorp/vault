@@ -18,7 +18,7 @@ export const validationHandler = (schema, req) => {
       return new Response(404, {}, { errors: ['MFA Request ID not found'] });
     }
     // validate request body
-    for (let constraintId in mfa_payload) {
+    for (const constraintId in mfa_payload) {
       // ensure ids were passed in map
       const method = mfaRequest.methods.find(({ id }) => id === constraintId);
       if (!method) {
@@ -31,14 +31,15 @@ export const validationHandler = (schema, req) => {
       // validate totp passcode
       const passcode = mfa_payload[constraintId][0];
       if (method.uses_passcode) {
-        if (passcode !== 'test') {
+        const expectedPasscode = method.type === 'duo' ? 'passcode=test' : 'test';
+        if (passcode !== expectedPasscode) {
           const error =
             {
               used: 'code already used; new code is available in 30 seconds',
               limit:
                 'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 15 seconds',
             }[passcode] || 'failed to validate';
-          console.log(error);
+          console.log(error); // eslint-disable-line
           return new Response(403, {}, { errors: [error] });
         }
       } else if (passcode) {
@@ -48,7 +49,7 @@ export const validationHandler = (schema, req) => {
     }
     return authResponses[mfa_request_id];
   } catch (error) {
-    console.log(error);
+    console.log(error); // eslint-disable-line
     return new Response(500, {}, { errors: ['Mirage Handler Error: /sys/mfa/validate'] });
   }
 };
@@ -92,12 +93,10 @@ export default function (server) {
       [mfa_constraints, methods] = generator([m('okta'), m('totp')], [m('totp')]); // 2 constraints 1 passcode/1 non-passcode 1 non-passcode
     } else if (user === 'mfa-j') {
       [mfa_constraints, methods] = generator([m('pingid')]); // use to test push failures
+    } else if (user === 'mfa-k') {
+      [mfa_constraints, methods] = generator([m('duo', true)]); // test duo passcode and prepending passcode= to user input
     }
-    const numbers = (length) =>
-      Math.random()
-        .toString()
-        .substring(2, length + 2);
-    const mfa_request_id = `${numbers(8)}-${numbers(4)}-${numbers(4)}-${numbers(4)}-${numbers(12)}`;
+    const mfa_request_id = crypto.randomUUID();
     const mfa_requirement = {
       mfa_request_id,
       mfa_constraints,

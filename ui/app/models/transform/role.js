@@ -9,7 +9,7 @@ const ModelExport = Model.extend({
   idPrefix: 'role/',
   // the id prefixed with `role/` so we can use it as the *secret param for the secret show route
   idForNav: computed('id', 'idPrefix', function () {
-    let modelId = this.id || '';
+    const modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
@@ -22,16 +22,16 @@ const ModelExport = Model.extend({
   }),
   transformations: attr('array', {
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     label: 'Transformations',
     models: ['transform'],
     onlyAllowExisting: true,
-    subLabel: 'Transformations',
     subText: 'Select which transformations this role will have access to. It must already exist.',
   }),
 
   attrs: computed('transformations', function () {
-    let keys = ['name', 'transformations'];
+    const keys = ['name', 'transformations'];
     return expandAttributeMeta(this, keys);
   }),
 

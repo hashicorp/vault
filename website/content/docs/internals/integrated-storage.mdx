@@ -164,7 +164,7 @@ counted as voters before they are capable of voting.
 
 As of Vault 1.7, a dead server cleanup capability is available. With this feature 
 enabled, unhealthy nodes are automatically removed from the Raft cluster without 
-manual operator intervention. This is enabled via the [Autopilot API](https://www.vaultproject.io/api/system/storage/raftautopilot).
+manual operator intervention. This is enabled via the [Autopilot API](/api-docs/system/storage/raftautopilot).
 If you wish to decommission a node manually, this can be done with the 
 `remove peer` [command](/docs/commands/operator/raft#remove-peer).
 
@@ -197,7 +197,7 @@ close to the leader before adding additional nodes. Raft indexes are visible via
 ### Deployment Table
 
 Below is a table that shows quorum size and failure tolerance for various
-cluster sizes. The recommended deployment is either 3 or 5 servers. A single
+cluster sizes. The recommended deployment consists of a minimum of 5 or more servers that are odd in their total (5, 7, etc). A single
 server deployment is _**highly**_ discouraged as data loss is inevitable in a
 failure scenario.
 

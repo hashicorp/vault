@@ -38,11 +38,11 @@ The Step-up Enterprise MFA will co-exist with the newly introduced Login MFA sta
 | [Okta Auth MFA](/docs/auth/okta#mfa)           | This is MFA as part of [Okta Auth method](/docs/auth/okta) in Vault OSS, where MFA is enforced by Okta on login. MFA must be satisfied for authentication to be successful. This is different from the Okta MFA method used with Login MFA and Step-up Enterprise MFA. CLI/API login are supported. | MFA is managed externally by Okta | Supported in Vault OSS        |
 | [Step-up Enterprise MFA](/docs/enterprise/mfa) | MFA in Vault Enterprise provides MFA for login and for step-up access to sensitive resources in Vault. Supports CLI/API based login, and ACL/Sentinel policies.                                                                                                                                     | MFA is managed by Vault           | Supported in Vault Enterprise |
 
-~> **Note**: [The Legacy MFA](/docs/auth/mfa) is a **deprecated** MFA workflow in Vault OSS. Refer [here](#q-what-is-the-legacy-mfa-feature) for more details.
+~> **Note**: [The Legacy MFA](/docs/v1.10.x/auth/mfa) is a **deprecated** MFA workflow in Vault OSS. Refer [here](#q-what-is-the-legacy-mfa-feature) for more details.
 
 ### Q: What is the Legacy MFA feature?
 
-[Legacy MFA](/docs/auth/mfa) is functionality that was available in Vault OSS, prior to introducing MFA in the Enterprise version. This is now a deprecated feature. Please see the [Vault Feature Deprecation Notice and Plans](/docs/deprecation) for detailed product plans around deprecated features. We plan to remove Legacy MFA in 1.11.
+[Legacy MFA](/docs/v1.10.x/auth/mfa) is functionality that was available in Vault OSS, prior to introducing MFA in the Enterprise version. This is now a deprecated feature. Please see the [Vault Feature Deprecation Notice and Plans](/docs/deprecation) for detailed product plans around deprecated features. We plan to remove Legacy MFA in 1.11.
 
 ### Q: Will HCP Vault support MFA?
 

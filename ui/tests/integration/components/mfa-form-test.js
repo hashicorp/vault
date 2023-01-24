@@ -101,7 +101,7 @@ module('Integration | Component | mfa-form', function (hooks) {
       const json = JSON.parse(req.requestBody);
       const payload = {
         mfa_request_id: 'test-mfa-id',
-        mfa_payload: { [oktaConstraint.id]: [], [duoConstraint.id]: ['test-code'] },
+        mfa_payload: { [oktaConstraint.id]: [], [duoConstraint.id]: ['passcode=test-code'] },
       };
       assert.deepEqual(json, payload, 'Correct mfa payload passed to validate endpoint');
       return {};
@@ -116,7 +116,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     });
 
     this.onSuccess = (resp) =>
-      assert.equal(resp, 'test response', 'Response is returned in onSuccess callback');
+      assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
     await render(hbs`
       <Mfa::MfaForm
@@ -157,7 +157,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     });
 
     this.onSuccess = (resp) =>
-      assert.equal(resp, 'test response', 'Response is returned in onSuccess callback');
+      assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
     await render(hbs`
       <Mfa::MfaForm
@@ -177,7 +177,7 @@ module('Integration | Component | mfa-form', function (hooks) {
         'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 15 seconds',
     };
     const codes = ['used', 'limit'];
-    for (let code of codes) {
+    for (const code of codes) {
       this.owner.lookup('service:auth').reopen({
         totpValidate() {
           throw { errors: [messages[code]] };

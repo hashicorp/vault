@@ -1,0 +1,4 @@
+For enterprise customers, HashiCorp provides official support for Vault's Integrated Storage and Consul as storage backends. Vault Enterprise customers are strongly
+recommended to use these supported storage backends for best outcomes. Version 1.12.0 of Vault Enterprise will not start if configured to use a storage backend
+other than Integrated Storage or Consul. This was meant to protect against issues caused by using unsupported backends that do not support transactional storage.
+Version 1.12.2 modified this behavior to instead log a warning when unsupported storage backends are used, while ensuring that Vault will start.

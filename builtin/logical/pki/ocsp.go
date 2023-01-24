@@ -13,6 +13,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -67,8 +68,16 @@ var (
 )
 
 func buildPathOcspGet(b *backend) *framework.Path {
+	return buildOcspGetWithPath(b, "ocsp/"+framework.MatchAllRegex(ocspReqParam))
+}
+
+func buildPathUnifiedOcspGet(b *backend) *framework.Path {
+	return buildOcspGetWithPath(b, "unified-ocsp/"+framework.MatchAllRegex(ocspReqParam))
+}
+
+func buildOcspGetWithPath(b *backend, pattern string) *framework.Path {
 	return &framework.Path{
-		Pattern: "ocsp/" + framework.MatchAllRegex(ocspReqParam),
+		Pattern: pattern,
 		Fields: map[string]*framework.FieldSchema{
 			ocspReqParam: {
 				Type:        framework.TypeString,
@@ -87,8 +96,16 @@ func buildPathOcspGet(b *backend) *framework.Path {
 }
 
 func buildPathOcspPost(b *backend) *framework.Path {
+	return buildOcspPostWithPath(b, "ocsp")
+}
+
+func buildPathUnifiedOcspPost(b *backend) *framework.Path {
+	return buildOcspPostWithPath(b, "unified-ocsp")
+}
+
+func buildOcspPostWithPath(b *backend, pattern string) *framework.Path {
 	return &framework.Path{
-		Pattern: "ocsp",
+		Pattern: pattern,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.ocspHandler,
@@ -103,7 +120,7 @@ func buildPathOcspPost(b *backend) *framework.Path {
 func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, request.Storage)
 	cfg, err := b.crlBuilder.getConfigWithUpdate(sc)
-	if err != nil || cfg.OcspDisable {
+	if err != nil || cfg.OcspDisable || (isUnifiedOcspPath(request) && !cfg.UnifiedCRL) {
 		return OcspUnauthorizedResponse, nil
 	}
 
@@ -117,12 +134,14 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 		return OcspMalformedResponse, nil
 	}
 
-	ocspStatus, err := getOcspStatus(sc, request, ocspReq)
+	useUnifiedStorage := canUseUnifiedStorage(request, cfg)
+
+	ocspStatus, err := getOcspStatus(sc, ocspReq, useUnifiedStorage)
 	if err != nil {
 		return logAndReturnInternalError(b, err), nil
 	}
 
-	caBundle, err := lookupOcspIssuer(sc, ocspReq, ocspStatus.issuerID)
+	caBundle, issuer, err := lookupOcspIssuer(sc, ocspReq, ocspStatus.issuerID)
 	if err != nil {
 		if errors.Is(err, ErrUnknownIssuer) {
 			// Since we were not able to find a matching issuer for the incoming request
@@ -140,7 +159,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 		return logAndReturnInternalError(b, err), nil
 	}
 
-	byteResp, err := genResponse(cfg, caBundle, ocspStatus, ocspReq.HashAlgorithm)
+	byteResp, err := genResponse(cfg, caBundle, ocspStatus, ocspReq.HashAlgorithm, issuer.RevocationSigAlg)
 	if err != nil {
 		return logAndReturnInternalError(b, err), nil
 	}
@@ -152,6 +171,20 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 			logical.HTTPRawBody:     byteResp,
 		},
 	}, nil
+}
+
+func canUseUnifiedStorage(req *logical.Request, cfg *crlConfig) bool {
+	if isUnifiedOcspPath(req) {
+		return true
+	}
+
+	// We are operating on the existing /pki/ocsp path, both of these fields need to be enabled
+	// for us to use the unified path.
+	return cfg.UnifiedCRL && cfg.UnifiedCRLOnExistingPaths
+}
+
+func isUnifiedOcspPath(req *logical.Request) bool {
+	return strings.HasPrefix(req.Path, "unified-ocsp")
 }
 
 func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.Request) *logical.Response {
@@ -188,7 +221,7 @@ func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.R
 		ocspStatus:   ocsp.Unknown,
 	}
 
-	byteResp, err := genResponse(cfg, caBundle, info, ocspReq.HashAlgorithm)
+	byteResp, err := genResponse(cfg, caBundle, info, ocspReq.HashAlgorithm, issuer.RevocationSigAlg)
 	if err != nil {
 		return logAndReturnInternalError(sc.Backend, err)
 	}
@@ -218,7 +251,15 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 		return base64.StdEncoding.DecodeString(base64Req)
 	case logical.UpdateOperation:
 		// POST bodies should contain the binary form of the DER request.
+		// NOTE: Writing an empty update request to Vault causes a nil request.HTTPRequest, and that object
+		//       says that it is possible for its Body element to be nil as well, so check both just in case.
+		if request.HTTPRequest == nil {
+			return nil, errors.New("no data in request")
+		}
 		rawBody := request.HTTPRequest.Body
+		if rawBody == nil {
+			return nil, errors.New("no data in request body")
+		}
 		defer rawBody.Close()
 
 		requestBytes, err := io.ReadAll(io.LimitReader(rawBody, maximumRequestSize))
@@ -231,7 +272,7 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 		}
 		return requestBytes, nil
 	default:
-		return nil, fmt.Errorf("unsupported request method: %s", request.HTTPRequest.Method)
+		return nil, fmt.Errorf("unsupported request method: %s", request.Operation)
 	}
 }
 
@@ -244,8 +285,8 @@ func logAndReturnInternalError(b *backend, err error) *logical.Response {
 	return OcspInternalErrorResponse
 }
 
-func getOcspStatus(sc *storageContext, request *logical.Request, ocspReq *ocsp.Request) (*ocspRespInfo, error) {
-	revEntryRaw, err := fetchCertBySerialBigInt(sc.Context, sc.Backend, request, revokedPath, ocspReq.SerialNumber)
+func getOcspStatus(sc *storageContext, ocspReq *ocsp.Request, useUnifiedStorage bool) (*ocspRespInfo, error) {
+	revEntryRaw, err := fetchCertBySerialBigInt(sc, revokedPath, ocspReq.SerialNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -264,15 +305,27 @@ func getOcspStatus(sc *storageContext, request *logical.Request, ocspReq *ocsp.R
 		info.ocspStatus = ocsp.Revoked
 		info.revocationTimeUTC = &revEntry.RevocationTimeUTC
 		info.issuerID = revEntry.CertificateIssuer // This might be empty if the CRL hasn't been rebuilt
+	} else if useUnifiedStorage {
+		dashSerial := normalizeSerialFromBigInt(ocspReq.SerialNumber)
+		unifiedEntry, err := getUnifiedRevocationBySerial(sc, dashSerial)
+		if err != nil {
+			return nil, err
+		}
+
+		if unifiedEntry != nil {
+			info.ocspStatus = ocsp.Revoked
+			info.revocationTimeUTC = &unifiedEntry.RevocationTimeUTC
+			info.issuerID = unifiedEntry.CertificateIssuer
+		}
 	}
 
 	return &info, nil
 }
 
-func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer issuerID) (*certutil.ParsedCertBundle, error) {
+func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer issuerID) (*certutil.ParsedCertBundle, *issuerEntry, error) {
 	reqHash := req.HashAlgorithm
 	if !reqHash.Available() {
-		return nil, x509.ErrUnsupportedAlgorithm
+		return nil, nil, x509.ErrUnsupportedAlgorithm
 	}
 
 	// This will prime up issuerIds, with either the optRevokedIssuer value if set
@@ -280,7 +333,7 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 	// a list of all our issuers in this mount.
 	issuerIds, err := lookupIssuerIds(sc, optRevokedIssuer)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	matchedButNoUsage := false
@@ -294,7 +347,7 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 				// This skips either bad issuer ids, or root certs with no keys that we can't use.
 				continue
 			}
-			return nil, err
+			return nil, nil, err
 		}
 
 		// Make sure the client and Vault are talking about the same issuer, otherwise
@@ -302,7 +355,7 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 		// we should not respond back in the affirmative about.
 		matches, err := doesRequestMatchIssuer(parsedBundle, req)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		if matches {
@@ -314,16 +367,16 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 				continue
 			}
 
-			return parsedBundle, nil
+			return parsedBundle, issuer, nil
 		}
 	}
 
 	if matchedButNoUsage {
 		// We matched an issuer but it did not have an OCSP signing usage set so bail.
-		return nil, ErrMissingOcspUsage
+		return nil, nil, ErrMissingOcspUsage
 	}
 
-	return nil, ErrUnknownIssuer
+	return nil, nil, ErrUnknownIssuer
 }
 
 func getOcspIssuerParsedBundle(sc *storageContext, issuerId issuerID) (*certutil.ParsedCertBundle, *issuerEntry, error) {
@@ -364,6 +417,7 @@ func lookupIssuerIds(sc *storageContext, optRevokedIssuer issuerID) ([]issuerID,
 }
 
 func doesRequestMatchIssuer(parsedBundle *certutil.ParsedCertBundle, req *ocsp.Request) (bool, error) {
+	// issuer name hashing taken from golang.org/x/crypto/ocsp.
 	var pkInfo struct {
 		Algorithm pkix.AlgorithmIdentifier
 		PublicKey asn1.BitString
@@ -383,20 +437,40 @@ func doesRequestMatchIssuer(parsedBundle *certutil.ParsedCertBundle, req *ocsp.R
 	return bytes.Equal(req.IssuerKeyHash, issuerKeyHash) && bytes.Equal(req.IssuerNameHash, issuerNameHash), nil
 }
 
-func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash) ([]byte, error) {
+func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
 	curTime := time.Now()
 	duration, err := time.ParseDuration(cfg.OcspExpiry)
 	if err != nil {
 		return nil, err
 	}
+
+	// x/crypto/ocsp lives outside of the standard library's crypto/x509 and includes
+	// ripped-off variants of many internal structures and functions. These
+	// lack support for PSS signatures altogether, so if we have revSigAlg
+	// that uses PSS, downgrade it to PKCS#1v1.5. This fixes the lack of
+	// support in x/ocsp, at the risk of OCSP requests failing due to lack
+	// of PKCS#1v1.5 (in say, PKCS#11 HSMs or GCP).
+	//
+	// Other restrictions, such as hash function selection, will still work
+	// however.
+	switch revSigAlg {
+	case x509.SHA256WithRSAPSS:
+		revSigAlg = x509.SHA256WithRSA
+	case x509.SHA384WithRSAPSS:
+		revSigAlg = x509.SHA384WithRSA
+	case x509.SHA512WithRSAPSS:
+		revSigAlg = x509.SHA512WithRSA
+	}
+
 	template := ocsp.Response{
-		IssuerHash:      reqHash,
-		Status:          info.ocspStatus,
-		SerialNumber:    info.serialNumber,
-		ThisUpdate:      curTime,
-		NextUpdate:      curTime.Add(duration),
-		Certificate:     caBundle.Certificate,
-		ExtraExtensions: []pkix.Extension{},
+		IssuerHash:         reqHash,
+		Status:             info.ocspStatus,
+		SerialNumber:       info.serialNumber,
+		ThisUpdate:         curTime,
+		NextUpdate:         curTime.Add(duration),
+		Certificate:        caBundle.Certificate,
+		ExtraExtensions:    []pkix.Extension{},
+		SignatureAlgorithm: revSigAlg,
 	}
 
 	if info.ocspStatus == ocsp.Revoked {

@@ -61,7 +61,7 @@
       </div>
     </div>
   {{else}}
-    <form {{action "saveCA" on="submit"}} data-test-generate-root-cert="true">
+    <form {{action "saveCA" on="submit"}} aria-label="ca form" data-test-generate-root-cert="true">
       <NamespaceReminder @mode="save" @noun="PKI change" />
       <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
       <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
@@ -136,7 +136,7 @@
     <h2 data-test-title class="title is-3">Sign intermediate</h2>
     <NamespaceReminder @mode="save" @noun="PKI change" />
     <MessageError @model={{this.model}} @errors={{this.errors}} />
-    <form {{action "saveCA" on="submit"}} data-test-sign-intermediate-form="true">
+    <form {{action "saveCA" on="submit"}} data-test-sign-intermediate-form="true" aria-label="sign intermediate form">
       <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
@@ -164,7 +164,11 @@
   <p class="has-text-grey-dark">
     Submit a signed CA certificate corresponding to a generated private key.
   </p>
-  <form {{action "saveCA" "setSignedIntermediate" on="submit"}} data-test-set-signed-intermediate-form="true">
+  <form
+    {{action "saveCA" "setSignedIntermediate" on="submit"}}
+    aria-label="set signed intermediate form"
+    data-test-set-signed-intermediate-form="true"
+  >
     <div class="field">
       <label for="certificate" class="is-label">
         Signed Intermediate Certificate
@@ -204,9 +208,9 @@
   </p>
   {{#each this.downloadHrefs as |dl|}}
     <div class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
-      <a data-test-ca-download-link href={{dl.url}} download={{dl.name}}>
+      <ExternalLink @href={{dl.url}} @sameTab={{true}} download={{dl.name}} data-test-ca-download-link>
         {{dl.display}}
-      </a>
+      </ExternalLink>
     </div>
   {{/each}}
 

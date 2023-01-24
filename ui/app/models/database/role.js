@@ -12,14 +12,13 @@ export default Model.extend({
     label: 'Role name',
   }),
   database: attr('array', {
-    label: '',
+    label: 'Connection name',
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
     models: ['database/connection'],
     selectLimit: 1,
     onlyAllowExisting: true,
-    subLabel: 'Database name',
-    subText: 'The database for which credentials will be generated.',
+    subText: 'The database connection for which credentials will be generated.',
   }),
   type: attr('string', {
     label: 'Type of role',
@@ -85,7 +84,7 @@ export default Model.extend({
   /* FIELD ATTRIBUTES */
   get fieldAttrs() {
     // Main fields on edit/create form
-    let fields = ['name', 'database', 'type'];
+    const fields = ['name', 'database', 'type'];
     return expandAttributeMeta(this, fields);
   },
 
@@ -101,7 +100,7 @@ export default Model.extend({
 
   roleSettingAttrs: computed(function () {
     // logic for which get displayed is on DatabaseRoleSettingForm
-    let allRoleSettingFields = [
+    const allRoleSettingFields = [
       'default_ttl',
       'max_ttl',
       'username',

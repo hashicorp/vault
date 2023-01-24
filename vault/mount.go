@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -68,6 +70,13 @@ const (
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
+)
+
+// DeprecationStatus errors
+var (
+	errMountDeprecated     = errors.New("mount entry associated with deprecated builtin")
+	errMountPendingRemoval = errors.New("mount entry associated with pending removal builtin")
+	errMountRemoved        = errors.New("mount entry associated with removed builtin")
 )
 
 var (
@@ -330,10 +339,9 @@ type MountEntry struct {
 	synthesizedConfigCache sync.Map
 
 	// version info
-	Version        string `json:"version,omitempty"`         // The semantic version of the mounted plugin, e.g. v1.2.3.
-	Sha            string `json:"sha,omitempty"`             // The SHA256 sum of the plugin binary.
-	RunningVersion string `json:"running_version,omitempty"` // The semantic version of the mounted plugin as reported by the plugin.
-	RunningSha     string `json:"running_sha,omitempty"`
+	Version        string `json:"plugin_version,omitempty"`         // The semantic version of the mounted plugin, e.g. v1.2.3.
+	RunningVersion string `json:"running_plugin_version,omitempty"` // The semantic version of the mounted plugin as reported by the plugin.
+	RunningSha256  string `json:"running_sha256,omitempty"`
 }
 
 // MountConfig is used to hold settable options
@@ -348,11 +356,26 @@ type MountConfig struct {
 	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 logical.TokenType     `json:"token_type,omitempty" structs:"token_type" mapstructure:"token_type"`
 	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
+	UserLockoutConfig         *UserLockoutConfig    `json:"user_lockout_config,omitempty" mapstructure:"user_lockout_config"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//
 	// Deprecated: MountEntry.Type should be used instead for Vault 1.0.0 and beyond.
 	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+}
+
+type UserLockoutConfig struct {
+	LockoutThreshold    uint64        `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`
+	LockoutDuration     time.Duration `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`
+	LockoutCounterReset time.Duration `json:"lockout_counter_reset,omitempty" structs:"lockout_counter_reset" mapstructure:"lockout_counter_reset"`
+	DisableLockout      bool          `json:"disable_lockout,omitempty" structs:"disable_lockout" mapstructure:"disable_lockout"`
+}
+
+type APIUserLockoutConfig struct {
+	LockoutThreshold            string `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`
+	LockoutDuration             string `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`
+	LockoutCounterResetDuration string `json:"lockout_counter_reset_duration,omitempty" structs:"lockout_counter_reset_duration" mapstructure:"lockout_counter_reset_duration"`
+	DisableLockout              *bool  `json:"lockout_disable,omitempty" structs:"lockout_disable" mapstructure:"lockout_disable"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
@@ -367,11 +390,23 @@ type APIMountConfig struct {
 	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 string                `json:"token_type" structs:"token_type" mapstructure:"token_type"`
 	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
+	UserLockoutConfig         *UserLockoutConfig    `json:"user_lockout_config,omitempty" mapstructure:"user_lockout_config"`
+	PluginVersion             string                `json:"plugin_version,omitempty" mapstructure:"plugin_version"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//
 	// Deprecated: MountEntry.Type should be used instead for Vault 1.0.0 and beyond.
 	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+}
+
+type FailedLoginUser struct {
+	aliasName     string
+	mountAccessor string
+}
+
+type FailedLoginInfo struct {
+	count               uint
+	lastFailedLoginTime int
 }
 
 // Clone returns a deep copy of the mount entry
@@ -441,6 +476,16 @@ func (e *MountEntry) SyncCache() {
 	}
 }
 
+func (entry *MountEntry) Deserialize() map[string]interface{} {
+	return map[string]interface{}{
+		"mount_path":      entry.Path,
+		"mount_namespace": entry.Namespace().Path,
+		"uuid":            entry.UUID,
+		"accessor":        entry.Accessor,
+		"mount_type":      entry.Type,
+	}
+}
+
 func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
 	// Decode into mount table
 	mountTable := new(MountTable)
@@ -461,12 +506,6 @@ func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, e
 		if ns == nil {
 			c.logger.Error("namespace on mount entry not found", "namespace_id", entry.NamespaceID, "mount_path", entry.Path, "mount_description", entry.Description)
 			continue
-		}
-
-		// Immediately shutdown the core if deprecated mounts are detected and VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
-		if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeUnknown); err != nil {
-			c.logger.Error("shutting down core", "error", err)
-			c.Shutdown()
 		}
 
 		entry.namespace = ns
@@ -582,8 +621,16 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	// Sync values to the cache
 	entry.SyncCache()
 
+	// Resolution to absolute storage paths (versus uuid-relative) needs
+	// to happen prior to calling into the forwarded writer. Thus we
+	// intercept writes just before they hit barrier storage.
+	forwarded, err := c.NewForwardedWriter(ctx, c.barrier, entry.Local)
+	if err != nil {
+		return fmt.Errorf("error creating forwarded writer: %v", err)
+	}
+
 	viewPath := entry.ViewPath()
-	view := NewBarrierView(c.barrier, viewPath)
+	view := NewBarrierView(forwarded, viewPath)
 
 	// Singleton mounts cannot be filtered manually on a per-secondary basis
 	// from replication.
@@ -608,7 +655,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	var backend logical.Backend
 	sysView := c.mountEntrySysView(entry)
 
-	backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
+	backend, entry.RunningSha256, err = c.newLogicalBackend(ctx, entry, sysView, view)
 	if err != nil {
 		return err
 	}
@@ -621,6 +668,15 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if backendType != logical.TypeLogical {
 		if entry.Type != "kv" && entry.Type != "system" && entry.Type != "cubbyhole" {
 			return fmt.Errorf(`unknown backend type: "%s"`, entry.Type)
+		}
+	}
+
+	// update the entry running version with the configured version, which was verified during registration.
+	entry.RunningVersion = entry.Version
+	if entry.RunningVersion == "" {
+		// don't set the running version to a builtin if it is running as an external plugin
+		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
 		}
 	}
 
@@ -666,7 +722,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type)
+		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type, "version", entry.Version)
 	}
 	return nil
 }
@@ -678,8 +734,12 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 		return consts.PluginTypeUnknown
 	}
 
+	if !versions.IsBuiltinVersion(entry.RunningVersion) {
+		return consts.PluginTypeUnknown
+	}
+
 	builtinPluginType := func(name string, pluginType consts.PluginType) (consts.PluginType, bool) {
-		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, "")
+		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, entry.RunningVersion)
 		if err == nil && plugin != nil && plugin.Builtin {
 			return plugin.Type, true
 		}
@@ -800,14 +860,14 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 			return err
 		}
 
-	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+	case entry.Local, !c.IsPerfSecondary():
 		// Have writable storage, remove the whole thing
 		if err := logical.ClearViewWithLogging(ctx, view, c.logger.Named("secrets.deletion").With("namespace", ns.ID, "path", path)); err != nil {
 			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
 			return err
 		}
 
-	case !entry.Local && c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+	case !entry.Local && c.IsPerfSecondary():
 		if err := clearIgnoredPaths(ctx, c, backend, viewPath); err != nil {
 			return err
 		}
@@ -911,14 +971,12 @@ func (c *Core) taintMountEntry(ctx context.Context, nsID, mountPath string, upda
 }
 
 // handleDeprecatedMountEntry handles the Deprecation Status of the specified
-// mount entry's builtin engine as follows:
-//
-// * Supported - do nothing
-// * Deprecated - log a warning about builtin deprecation
-// * PendingRemoval - log an error about builtin deprecation and return an error
-// if VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
-// * Removed - log an error about builtin deprecation and return an error
+// mount entry's builtin engine. Warnings are appended to the returned response
+// and logged. Errors are returned with a nil response to be processed by the
+// caller.
 func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (*logical.Response, error) {
+	resp := &logical.Response{}
+
 	if c.builtinRegistry == nil || entry == nil {
 		return nil, nil
 	}
@@ -936,28 +994,22 @@ func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry
 
 	status, ok := c.builtinRegistry.DeprecationStatus(t, pluginType)
 	if ok {
-		resp := &logical.Response{}
-		// Deprecation sublogger with some identifying information
-		dl := c.logger.With("name", t, "type", pluginType, "status", status, "path", entry.Path)
-		errDeprecatedMount := fmt.Errorf("mount entry associated with %s builtin", status)
-
 		switch status {
 		case consts.Deprecated:
-			dl.Warn(errDeprecatedMount.Error())
-			resp.AddWarning(errDeprecatedMount.Error())
+			c.logger.Warn("mounting deprecated builtin", "name", t, "type", pluginType, "path", entry.Path)
+			resp.AddWarning(errMountDeprecated.Error())
 			return resp, nil
 
 		case consts.PendingRemoval:
-			dl.Error(errDeprecatedMount.Error())
-			if allow := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allow == "" {
-				return nil, fmt.Errorf("could not mount %q: %w", t, errDeprecatedMount)
+			if c.pendingRemovalMountsAllowed {
+				c.Logger().Info("mount allowed by environment variable", "env", consts.EnvVaultAllowPendingRemovalMounts)
+				resp.AddWarning(errMountPendingRemoval.Error())
+				return resp, nil
 			}
-			resp.AddWarning(errDeprecatedMount.Error())
-			c.Logger().Info("mount allowed by environment variable", "env", consts.VaultAllowPendingRemovalMountsEnv)
-			return resp, nil
+			return nil, errMountPendingRemoval
 
 		case consts.Removed:
-			return nil, fmt.Errorf("could not mount %s: %w", t, errDeprecatedMount)
+			return nil, errMountRemoved
 		}
 	}
 	return nil, nil
@@ -1101,9 +1153,9 @@ func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.Moun
 	return nil
 }
 
-// From an input path that has a relative namespace heirarchy followed by a mount point, return the full
+// From an input path that has a relative namespace hierarchy followed by a mount point, return the full
 // namespace of the mount point, along with the mount point without the namespace related prefix.
-// For example, in a heirarchy ns1/ns2/ns3/secret-mount, when currNs is ns1 and path is ns2/ns3/secret-mount,
+// For example, in a hierarchy ns1/ns2/ns3/secret-mount, when currNs is ns1 and path is ns2/ns3/secret-mount,
 // this returns the namespace object for ns1/ns2/ns3/, and the string "secret-mount"
 func (c *Core) splitNamespaceAndMountFromPath(currNs, path string) namespace.MountPathDetails {
 	fullPath := currNs + path
@@ -1221,7 +1273,7 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 		// ensure this comes over. If we upgrade first, we simply don't
 		// create the mount, so we won't conflict when we sync. If this is
 		// local (e.g. cubbyhole) we do still add it.
-		if !foundRequired && (!c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || requiredMount.Local) {
+		if !foundRequired && (!c.IsPerfSecondary() || requiredMount.Local) {
 			c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 			needPersist = true
 		}
@@ -1262,8 +1314,13 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 			entry.NamespaceID = namespace.RootNamespaceID
 			needPersist = true
 		}
-	}
 
+		// Don't store built-in version in the mount table, to make upgrades smoother.
+		if versions.IsBuiltinVersion(entry.Version) {
+			entry.Version = ""
+			needPersist = true
+		}
+	}
 	// Done if we have restored the mount table and we don't need
 	// to persist
 	if !needPersist {
@@ -1285,13 +1342,6 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 		return fmt.Errorf("invalid table type given, not persisting")
 	}
 
-	for _, entry := range table.Entries {
-		if entry.Table != table.Type {
-			c.logger.Error("given entry to persist in mount table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
-			return fmt.Errorf("invalid mount entry found, not persisting")
-		}
-	}
-
 	nonLocalMounts := &MountTable{
 		Type: mountTableType,
 	}
@@ -1301,6 +1351,11 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 	}
 
 	for _, entry := range table.Entries {
+		if entry.Table != table.Type {
+			c.logger.Error("given entry to persist in mount table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
+			return fmt.Errorf("invalid mount entry found, not persisting")
+		}
+
 		if entry.Local {
 			localMounts.Entries = append(localMounts.Entries, entry)
 		} else {
@@ -1377,8 +1432,16 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Initialize the backend, special casing for system
 		barrierPath := entry.ViewPath()
 
-		// Create a barrier view using the UUID
-		view := NewBarrierView(c.barrier, barrierPath)
+		// Resolution to absolute storage paths (versus uuid-relative) needs
+		// to happen prior to calling into the forwarded writer. Thus we
+		// intercept writes just before they hit barrier storage.
+		forwarded, err := c.NewForwardedWriter(ctx, c.barrier, entry.Local)
+		if err != nil {
+			return fmt.Errorf("error creating forwarded writer: %v", err)
+		}
+
+		// Create a barrier storage view using the UUID
+		view := NewBarrierView(forwarded, barrierPath)
 
 		// Singleton mounts cannot be filtered manually on a per-secondary basis
 		// from replication
@@ -1408,13 +1471,11 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		var backend logical.Backend
 		// Create the new backend
 		sysView := c.mountEntrySysView(entry)
-		backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
+		backend, entry.RunningSha256, err = c.newLogicalBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create mount entry", "path", entry.Path, "error", err)
-			if !c.builtinRegistry.Contains(entry.Type, consts.PluginTypeSecrets) {
-				// If we encounter an error instantiating the backend due to an error,
-				// skip backend initialization but register the entry to the mount table
-				// to preserve storage and path.
+
+			if c.isMountable(ctx, entry, consts.PluginTypeSecrets) {
 				c.logger.Warn("skipping plugin-based mount entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
@@ -1422,6 +1483,31 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		}
 		if backend == nil {
 			return fmt.Errorf("created mount entry of type %q is nil", entry.Type)
+		}
+
+		// update the entry running version with the configured version, which was verified during registration.
+		entry.RunningVersion = entry.Version
+		if entry.RunningVersion == "" {
+			// don't set the running version to a builtin if it is running as an external plugin
+			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
+			}
+		}
+
+		// Do not start up deprecated builtin plugins. If this is a major
+		// upgrade, stop unsealing and shutdown. If we've already mounted this
+		// plugin, proceed with unsealing and skip backend initialization.
+		if versions.IsBuiltinVersion(entry.RunningVersion) {
+			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets)
+			if c.isMajorVersionFirstMount(ctx) && err != nil {
+				go c.ShutdownCoreError(fmt.Errorf("could not mount %q: %w", entry.Type, err))
+				return errLoadMountsFailed
+			} else if err != nil {
+				c.logger.Error("skipping deprecated mount entry", "name", entry.Type, "path", entry.Path, "error", err)
+				backend.Cleanup(ctx)
+				backend = nil
+				goto ROUTER_MOUNT
+			}
 		}
 
 		{
@@ -1460,20 +1546,21 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			// Bind locally
 			localEntry := entry
 			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				postUnsealLogger := c.logger.With("type", localEntry.Type, "version", localEntry.RunningVersion, "path", localEntry.Path)
 				if backend == nil {
-					c.logger.Error("skipping initialization on nil backend", "path", localEntry.Path)
+					postUnsealLogger.Error("skipping initialization for nil backend", "path", localEntry.Path)
 					return
 				}
 
 				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
 				if err != nil {
-					c.logger.Error("failed to initialize mount entry", "path", localEntry.Path, "error", err)
+					postUnsealLogger.Error("failed to initialize mount backend", "error", err)
 				}
 			})
 		}
 
 		if c.logger.IsInfo() {
-			c.logger.Info("successfully mounted backend", "type", entry.Type, "path", entry.Path)
+			c.logger.Info("successfully mounted", "type", entry.Type, "version", entry.RunningVersion, "path", entry.Path, "namespace", entry.Namespace())
 		}
 
 		// Ensure the path is tainted if set in the mount table
@@ -1512,25 +1599,30 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	return nil
 }
 
-// newLogicalBackend is used to create and configure a new logical backend by name
-func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView logical.SystemView, view logical.Storage) (logical.Backend, error) {
+// newLogicalBackend is used to create and configure a new logical backend by name.
+// It also returns the SHA256 of the plugin, if available.
+func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView logical.SystemView, view logical.Storage) (logical.Backend, string, error) {
 	t := entry.Type
 	if alias, ok := mountAliases[t]; ok {
 		t = alias
 	}
 
+	var runningSha string
 	f, ok := c.logicalBackends[t]
 	if !ok {
 		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeSecrets, entry.Version)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		if plug == nil {
 			errContext := t
 			if entry.Version != "" {
 				errContext += fmt.Sprintf(", version=%s", entry.Version)
 			}
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
+			return nil, "", fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
+		}
+		if len(plug.Sha256) > 0 {
+			runningSha = hex.EncodeToString(plug.Sha256)
 		}
 
 		f = plugin.Factory
@@ -1567,14 +1659,14 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	ctx = context.WithValue(ctx, "core_number", c.coreNumber)
 	b, err := f(ctx, config)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if b == nil {
-		return nil, fmt.Errorf("nil backend of type %q returned from factory", t)
+		return nil, "", fmt.Errorf("nil backend of type %q returned from factory", t)
 	}
 	addLicenseCallback(c, b)
 
-	return b, nil
+	return b, runningSha, nil
 }
 
 // defaultMountTable creates a default mount table
@@ -1609,6 +1701,7 @@ func (c *Core) defaultMountTable() *MountTable {
 			Options: map[string]string{
 				"version": "2",
 			},
+			RunningVersion: versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 		}
 		table.Entries = append(table.Entries, kvMount)
 	}
@@ -1643,6 +1736,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Accessor:         cubbyholeAccessor,
 		Local:            true,
 		BackendAwareUUID: cubbyholeBackendUUID,
+		RunningVersion:   versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 	}
 
 	sysUUID, err := uuid.GenerateUUID()
@@ -1669,6 +1763,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Accept"},
 		},
+		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
 	identityUUID, err := uuid.GenerateUUID()
@@ -1694,6 +1789,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Authorization"},
 		},
+		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

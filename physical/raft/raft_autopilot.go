@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
 	"go.uber.org/atomic"
 )
@@ -287,12 +286,14 @@ type Delegate struct {
 	// dl is a lock dedicated for guarding delegate's fields
 	dl               sync.RWMutex
 	inflightRemovals map[raft.ServerID]bool
+	emptyVersionLogs map[raft.ServerID]struct{}
 }
 
 func newDelegate(b *RaftBackend) *Delegate {
 	return &Delegate{
 		RaftBackend:      b,
 		inflightRemovals: make(map[raft.ServerID]bool),
+		emptyVersionLogs: make(map[raft.ServerID]struct{}),
 	}
 }
 
@@ -398,12 +399,29 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			continue
 		}
 
+		// If version isn't found in the state, fake it using the version from the leader so that autopilot
+		// doesn't demote the node to a non-voter, just because of a missed heartbeat.
+		currentServerID := raft.ServerID(id)
+		followerVersion := state.Version
+		leaderVersion := d.effectiveSDKVersion
+		d.dl.Lock()
+		if followerVersion == "" {
+			if _, ok := d.emptyVersionLogs[currentServerID]; !ok {
+				d.logger.Trace("received empty Vault version in heartbeat state. faking it with the leader version for now", "id", id, "leader version", leaderVersion)
+				d.emptyVersionLogs[currentServerID] = struct{}{}
+			}
+			followerVersion = leaderVersion
+		} else {
+			delete(d.emptyVersionLogs, currentServerID)
+		}
+		d.dl.Unlock()
+
 		server := &autopilot.Server{
-			ID:          raft.ServerID(id),
+			ID:          currentServerID,
 			Name:        id,
 			RaftVersion: raft.ProtocolVersionMax,
 			Meta:        d.meta(state),
-			Version:     state.Version,
+			Version:     followerVersion,
 			Ext:         d.autopilotServerExt(state),
 		}
 
@@ -428,7 +446,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			UpgradeVersion: d.EffectiveVersion(),
 			RedundancyZone: d.RedundancyZone(),
 		}),
-		Version:  version.GetVersion().Version,
+		Version:  d.effectiveSDKVersion,
 		Ext:      d.autopilotServerExt(nil),
 		IsLeader: true,
 	}
@@ -522,11 +540,32 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 	tickerCh := b.followerHeartbeatTicker.C
 	b.l.RUnlock()
 
+	followerGauge := func(peerID string, suffix string, value float32) {
+		labels := []metrics.Label{
+			{
+				Name:  "peer_id",
+				Value: peerID,
+			},
+		}
+		metrics.SetGaugeWithLabels([]string{"raft_storage", "follower", suffix}, value, labels)
+	}
 	for range tickerCh {
 		b.l.RLock()
-		if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
-			b.followerStates.l.RLock()
-			for _, state := range b.followerStates.followers {
+		if b.raft == nil {
+			// We could be racing with teardown, which will stop the ticker
+			// but that doesn't guarantee that we won't reach this line with a nil
+			// b.raft.
+			b.l.RUnlock()
+			return
+		}
+		b.followerStates.l.RLock()
+		myAppliedIndex := b.raft.AppliedIndex()
+		for peerID, state := range b.followerStates.followers {
+			timeSinceLastHeartbeat := time.Now().Sub(state.LastHeartbeat) / time.Millisecond
+			followerGauge(peerID, "last_heartbeat_ms", float32(timeSinceLastHeartbeat))
+			followerGauge(peerID, "applied_index_delta", float32(myAppliedIndex-state.AppliedIndex))
+
+			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
 				if state.LastHeartbeat.IsZero() || state.IsDead.Load() {
 					continue
 				}
@@ -535,8 +574,8 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 					state.IsDead.Store(true)
 				}
 			}
-			b.followerStates.l.RUnlock()
 		}
+		b.followerStates.l.RUnlock()
 		b.l.RUnlock()
 	}
 }

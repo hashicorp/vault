@@ -257,3 +257,67 @@ For the UI to be able to use the client count feature, it needs `read` permissio
 
 For the UI to be able to modify the configuration settings, it additionally needs `update` permission to
 `sys/internal/counters/config`.
+
+## New Clients For Current Month
+
+The billing period for the activity log API can be specified to include the current month 
+for the end date. For more information, please refer to the 
+[the internal counters API docs](/api-docs/system/internal-counters.mdx) documentation.
+
+When the end date is the current month, the `new_clients` counts will be an approximation of the  
+number of new clients for the month, and not an exact value. Note that the `new_clients` counts for the rest 
+of the months will be accurate. 
+
+### Why An Approximation?
+
+The `new_clients` counts for the current month is an approximation to improve API 
+performance and make the UI usable. To give an exact value for the current month's
+new clients, client IDs need to be de-duplicated with the previous months' client IDs, 
+which is a time and i/o intensive process. 
+
+### Approximation Details And Accuracy Testing Results
+
+The `new_clients` approximation is calculated by using a [hyperloglog algorithm](https://en.wikipedia.org/wiki/HyperLogLog)
+to approximate the cardinality of the total number of clients within the billing period, and the cardinality 
+of the total number of clients within the billing period not including the current month. The returned value 
+is the difference between these two numbers.
+
+The hyperloglog library used for the cardinality estimate is [axiomhq](https://github.com/axiomhq/hyperloglog),
+with fourteen registers and the use of sparse representations, when applicable. Some accurate estimates can be found 
+in this library's [README](https://github.com/axiomhq/hyperloglog#readme). These are accuracy results
+for the cardinality of the multiset, which is the total number of clients within a billing period. The accuracy 
+estimate for the number of new clients can be far lower, depending on the discrepancy between the number of 
+clients in the current month and the number of clients in the billing period. 
+
+If we call the number of clients for the current month C and the number of clients in the billing period B, we 
+have found that in general, if C << B, the approximation can be imprecise, and the further the difference between
+C and B grows, the more imprecise the approximation will be. Furthermore, the closer C is to 0, the more imprecise
+the approximation can be. Also, the more months in the billing period, the less accurate the approximation can be. 
+
+The maximum observed error rate ((found new clients)/(expected new clients)) with testing for 10,000 clients and under
+was 30%, with most cases yielding an error rate of 5-10%. 
+
+A table with a few randomly selected values for C and B are listed below for the purposes of predictive analysis.
+
+| Current Month Clients      | Total Months' Clients | Accuracy     |
+| :---                       |    :----:             |        ---:  |
+|           7                |         10            |      100%    |
+|           20               |         600           |      100%    |
+|           20               |         1000          |      100%    |
+|           20               |         6000          |      90%     |
+|           20               |         10000         |      90%     |
+|           200              |         600           |      100%    |
+|           200              |         10000         |      93%     |
+|           400              |         6000          |      95%     |
+|           2000             |         10000         |      96%     |
+
+Some multi-month (over 2 months) and multi-segment tests are below: 
+
+| Current Month Clients      | Total Months' Clients | Accuracy     |
+| :---                       |    :----:             |        ---:  |
+|           20               |         15            |      100%    |
+|           20               |         100           |      100%    |
+|           20               |         1000          |      100%    |
+|           20               |         10000         |      70%     |
+|           200              |         10000         |      94%     |
+|           2000             |         10000         |      98%     |

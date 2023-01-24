@@ -14,10 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
+
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-kms-wrapping/entropy"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -90,6 +91,9 @@ type Backend struct {
 
 	// BackendType is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
+
+	// RunningVersion is the optional version that will be self-reported
+	RunningVersion string
 
 	logger  log.Logger
 	system  logical.SystemView
@@ -428,6 +432,13 @@ func (b *Backend) Type() logical.BackendType {
 	return b.BackendType
 }
 
+// Version returns the plugin version information
+func (b *Backend) PluginVersion() logical.PluginVersion {
+	return logical.PluginVersion{
+		Version: b.RunningVersion,
+	}
+}
+
 // Route looks up the path that would be used for a given path string.
 func (b *Backend) Route(path string) *Path {
 	result, _ := b.route(path)
@@ -528,16 +539,18 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	// names in the OAS document.
 	requestResponsePrefix := req.GetString("requestResponsePrefix")
 
-	// Generic mount paths will primarily be used for code generation purposes.
-	// This will result in dynamic mount paths being placed instead of
-	// hardcoded default paths. For example /auth/approle/login would be replaced
-	// with /auth/{mountPath}/login. This will be replaced for all secrets
-	// engines and auth methods that are enabled.
-	genericMountPaths, _ := req.Get("genericMountPaths").(bool)
-
 	// Build OpenAPI response for the entire backend
-	doc := NewOASDocument()
-	if err := documentPaths(b, requestResponsePrefix, genericMountPaths, doc); err != nil {
+	vaultVersion := "unknown"
+	if b.System() != nil {
+		env, err := b.System().PluginEnv(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		vaultVersion = env.VaultVersion
+	}
+
+	doc := NewOASDocument(vaultVersion)
+	if err := documentPaths(b, requestResponsePrefix, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
 

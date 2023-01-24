@@ -27,7 +27,7 @@ const authAccessor = async function (path) {
 };
 
 const setupUser = async function () {
-  let authMethodPath = `userpass-${new Date().getTime()}`;
+  const authMethodPath = `userpass-${new Date().getTime()}`;
   await authAccessor(authMethodPath);
 };
 

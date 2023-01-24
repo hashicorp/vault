@@ -42,69 +42,69 @@ module('Unit | Service | permissions', function (hooks) {
   });
 
   test('sets paths properly', async function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     await service.getPaths.perform();
     assert.deepEqual(service.get('exactPaths'), PERMISSIONS_RESPONSE.data.exact_paths);
     assert.deepEqual(service.get('globPaths'), PERMISSIONS_RESPONSE.data.glob_paths);
   });
 
   test('returns true if a policy includes access to an exact path', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     service.set('exactPaths', PERMISSIONS_RESPONSE.data.exact_paths);
     assert.true(service.hasPermission('foo'));
   });
 
   test('returns true if a paths prefix is included in the policys exact paths', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     service.set('exactPaths', PERMISSIONS_RESPONSE.data.exact_paths);
     assert.true(service.hasPermission('bar'));
   });
 
   test('it returns true if a policy includes access to a glob path', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     service.set('globPaths', PERMISSIONS_RESPONSE.data.glob_paths);
     assert.true(service.hasPermission('baz/biz/hi'));
   });
 
   test('it returns true if a policy includes access to the * glob path', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     const splatPath = { '': {} };
     service.set('globPaths', splatPath);
     assert.true(service.hasPermission('hi'));
   });
 
   test('it returns false if the matched path includes the deny capability', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     service.set('globPaths', PERMISSIONS_RESPONSE.data.glob_paths);
     assert.false(service.hasPermission('boo'));
   });
 
   test('it returns true if passed path does not end in a slash but globPath does', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     service.set('globPaths', PERMISSIONS_RESPONSE.data.glob_paths);
     assert.true(service.hasPermission('ends/in/slash'), 'matches without slash');
     assert.true(service.hasPermission('ends/in/slash/'), 'matches with slash');
   });
 
   test('it returns false if a policy does not includes access to a path', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     assert.false(service.hasPermission('danger'));
   });
 
   test('sets the root token', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     service.setPaths({ data: { root: true } });
     assert.true(service.canViewAll);
   });
 
   test('returns true with the root token', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     service.set('canViewAll', true);
     assert.true(service.hasPermission('hi'));
   });
 
   test('it returns true if a policy has the specified capabilities on a path', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     service.set('exactPaths', PERMISSIONS_RESPONSE.data.exact_paths);
     service.set('globPaths', PERMISSIONS_RESPONSE.data.glob_paths);
     assert.true(service.hasPermission('bar/bee', ['create', 'list']));
@@ -112,7 +112,7 @@ module('Unit | Service | permissions', function (hooks) {
   });
 
   test('it returns false if a policy does not have the specified capabilities on a path', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     service.set('exactPaths', PERMISSIONS_RESPONSE.data.exact_paths);
     service.set('globPaths', PERMISSIONS_RESPONSE.data.glob_paths);
     assert.false(service.hasPermission('bar/bee', ['create', 'delete']));
@@ -120,7 +120,7 @@ module('Unit | Service | permissions', function (hooks) {
   });
 
   test('defaults to show all items when policy cannot be found', async function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     this.server.get('/v1/sys/internal/ui/resultant-acl', () => {
       return [403, { 'Content-Type': 'application/json' }];
     });
@@ -129,7 +129,7 @@ module('Unit | Service | permissions', function (hooks) {
   });
 
   test('returns the first allowed nav route for policies', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     const policyPaths = {
       'sys/policies/acl': {
         capabilities: ['deny'],
@@ -139,11 +139,11 @@ module('Unit | Service | permissions', function (hooks) {
       },
     };
     service.set('exactPaths', policyPaths);
-    assert.equal(service.navPathParams('policies').models[0], 'rgp');
+    assert.strictEqual(service.navPathParams('policies').models[0], 'rgp');
   });
 
   test('returns the first allowed nav route for access', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     const accessPaths = {
       'sys/auth': {
         capabilities: ['deny'],
@@ -158,7 +158,7 @@ module('Unit | Service | permissions', function (hooks) {
   });
 
   test('hasNavPermission returns true if a policy includes the required capabilities for at least one path', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     const accessPaths = {
       'sys/auth': {
         capabilities: ['deny'],
@@ -172,7 +172,7 @@ module('Unit | Service | permissions', function (hooks) {
   });
 
   test('hasNavPermission returns false if a policy does not include the required capabilities for at least one path', function (assert) {
-    let service = this.owner.lookup('service:permissions');
+    const service = this.owner.lookup('service:permissions');
     const accessPaths = {
       'sys/auth': {
         capabilities: ['deny'],
@@ -190,7 +190,7 @@ module('Unit | Service | permissions', function (hooks) {
       path: 'marketing',
     });
     this.owner.register('service:namespace', namespaceService);
-    let service = this.owner.lookup('service:permissions');
-    assert.equal(service.pathNameWithNamespace('sys/auth'), 'marketing/sys/auth');
+    const service = this.owner.lookup('service:permissions');
+    assert.strictEqual(service.pathNameWithNamespace('sys/auth'), 'marketing/sys/auth');
   });
 });

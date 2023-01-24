@@ -104,7 +104,9 @@ Previously, KMIP did not support certain operations such as import, decrypt, enc
 
 ## Known issues
 
-There are no known issues documented for this release.
+When you use Vault 1.11.0+ as a Consul's Connect CA, you may encounter an issue generating the leaf certificates ([GH-15525](https://github.com/hashicorp/consul/pull/15525)). Upgrade your [Consul version that includes the fix](https://support.hashicorp.com/hc/en-us/articles/11308460105491#01GMC24E6PPGXMRX8DMT4HZYTW) to avoid running into this problem. 
+
+-> Refer to this [Knowledge Base article](https://support.hashicorp.com/hc/en-us/articles/11308460105491) for more details.
 
 ## Feature Deprecations and EOL
 

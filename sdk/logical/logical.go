@@ -131,9 +131,48 @@ type Paths struct {
 	// should be seal wrapped with extra encryption. It is exact matching
 	// unless it ends with '/' in which case it will be treated as a prefix.
 	SealWrapStorage []string
+
+	// WriteForwardedStorage are storage paths that, when running on a PR
+	// Secondary cluster, cause a GRPC call up to the PR Primary cluster's
+	// active node to handle storage.Put(...) and storage.Delete(...) events.
+	// These paths MUST include a {{clusterId}} literal, which the write layer
+	// will resolve to this cluster's UUID ("replication set" identifier).
+	// storage.List(...) and storage.Get(...) operations occur from the
+	// locally replicated data set, but can use path template expansion to be
+	// identifier agnostic.
+	//
+	// These paths require careful considerations by developers to use. In
+	// particular, writes on secondary clusters will not appear (when a
+	// corresponding read is issued immediately after a write) until the
+	// replication from primary->secondary has occurred. This replication
+	// triggers an InvalidateKey(...) call on the secondary, which can be
+	// used to detect the write has finished syncing. However, this will
+	// likely occur after the request has finished, so it is important to
+	// not block on this occurring.
+	//
+	// On standby nodes, like all storage write operations, this will trigger
+	// an ErrReadOnly return.
+	WriteForwardedStorage []string
 }
 
 type Auditor interface {
 	AuditRequest(ctx context.Context, input *LogInput) error
 	AuditResponse(ctx context.Context, input *LogInput) error
 }
+
+// Externaler allows us to check if a backend is running externally (i.e., over GRPC)
+type Externaler interface {
+	IsExternal() bool
+}
+
+type PluginVersion struct {
+	Version string
+}
+
+// PluginVersioner is an optional interface to return version info.
+type PluginVersioner interface {
+	// PluginVersion returns the version for the backend
+	PluginVersion() PluginVersion
+}
+
+var EmptyPluginVersion = PluginVersion{""}

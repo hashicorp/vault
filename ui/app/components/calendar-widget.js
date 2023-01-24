@@ -41,7 +41,7 @@ class CalendarWidget extends Component {
     return this.displayYear === this.currentYear;
   }
   get disablePastYear() {
-    let startYear = parseInt(this.args.startTimeDisplay.split(' ')[1]);
+    const startYear = parseInt(this.args.startTimeDisplay.split(' ')[1]);
     return this.displayYear === startYear; // if on startYear then don't let them click back to the year prior
   }
   get widgetMonths() {
@@ -88,7 +88,7 @@ class CalendarWidget extends Component {
         const year = this.args.endTimeDisplay.split(' ')[1];
         setYear = parseInt(year);
       } catch (e) {
-        console.debug('Error resetting display year', e);
+        console.debug('Error resetting display year', e); // eslint-disable-line
       }
     }
     this.displayYear = setYear;
@@ -98,7 +98,7 @@ class CalendarWidget extends Component {
   @action
   addTooltip() {
     if (this.disablePastYear) {
-      let previousYear = Number(this.displayYear) - 1;
+      const previousYear = Number(this.displayYear) - 1;
       this.tooltipText = `${previousYear} is unavailable because it is before your billing start month. Change your billing start month to a date in ${previousYear} to see data for this year.`; // set tooltip text
       this.tooltipTarget = '#previous-year';
     }

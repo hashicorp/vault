@@ -1,4 +1,4 @@
-import { click, fillIn, find, findAll, currentURL, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, currentURL, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/policies/index';
@@ -23,13 +23,14 @@ module('Acceptance | policies (old)', function (hooks) {
 
     await fillIn('[data-test-policy-input="name"]', policyName);
     await click('[data-test-policy-save]');
-    const errors = await waitUntil(() => findAll('[data-test-error]'));
-    assert.equal(errors.length, 1, 'renders error messages on save');
+    assert
+      .dom('[data-test-error]')
+      .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
     find('.CodeMirror').CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');
 
     await waitUntil(() => currentURL() === `/vault/policy/acl/${encodeURIComponent(policyLower)}`);
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/policy/acl/${encodeURIComponent(policyLower)}`,
       'navigates to policy show on successful save'
@@ -51,7 +52,11 @@ module('Acceptance | policies (old)', function (hooks) {
 
     await click('[data-test-confirm-button]');
     await waitUntil(() => currentURL() === `/vault/policies/acl`);
-    assert.equal(currentURL(), `/vault/policies/acl`, 'navigates to policy list on successful deletion');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/policies/acl`,
+      'navigates to policy list on successful deletion'
+    );
     assert
       .dom(`[data-test-policy-item="${policyLower}"]`)
       .doesNotExist('deleted policy is not shown in the list');

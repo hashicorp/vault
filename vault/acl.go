@@ -260,7 +260,11 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			if pc.Permissions.ControlGroup != nil {
 				if len(pc.Permissions.ControlGroup.Factors) > 0 {
 					if existingPerms.ControlGroup == nil {
-						existingPerms.ControlGroup = pc.Permissions.ControlGroup
+						cg, err := pc.Permissions.ControlGroup.Clone()
+						if err != nil {
+							return nil, err
+						}
+						existingPerms.ControlGroup = cg
 					} else {
 						existingPerms.ControlGroup.Factors = append(existingPerms.ControlGroup.Factors, pc.Permissions.ControlGroup.Factors...)
 					}
@@ -715,7 +719,9 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 		if !ret.ACLResults.Allowed {
 			return ret
 		}
-		if !ret.RootPrivs && opts.RootPrivsRequired {
+		// Since HelpOperation was fast-pathed inside AllowOperation, RootPrivs will not have been populated in this
+		// case, so we need to special-case that here as well, or we'll block HelpOperation on all sudo-protected paths.
+		if !ret.RootPrivs && opts.RootPrivsRequired && req.Operation != logical.HelpOperation {
 			return ret
 		}
 	}

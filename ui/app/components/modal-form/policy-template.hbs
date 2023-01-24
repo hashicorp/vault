@@ -1,0 +1,76 @@
+{{#if this.policy.policyType}}
+  <nav class="tabs">
+    <ul>
+      <li class={{unless this.showExamplePolicy "active"}}>
+        <button
+          data-test-tab-your-policy
+          type="button"
+          name="form"
+          class="link link-plain tab has-text-weight-semibold {{unless this.showExamplePolicy ' is-active'}}"
+          {{on "click" (fn (mut this.showExamplePolicy) false)}}
+        >
+          Your Policy
+        </button>
+      </li>
+      <li class={{if this.showExamplePolicy "active"}}>
+        <button
+          data-test-tab-example-policy
+          type="button"
+          name="form"
+          class="link link-plain tab has-text-weight-semibold {{if this.showExamplePolicy ' is-active'}}"
+          {{on "click" (fn (mut this.showExamplePolicy) true)}}
+        >
+          Example Policy
+        </button>
+      </li>
+    </ul>
+  </nav>
+{{/if}}
+{{#if this.showExamplePolicy}}
+  <div class="has-bottom-margin-s">
+    {{#if (eq this.policy.policyType "acl")}}
+      <p>
+        ACL Policies are written in Hashicorp Configuration Language (
+        <ExternalLink @href="https://github.com/hashicorp/hcl">HCL</ExternalLink>
+        ) or JSON and describe which paths in Vault a user or machine is allowed to access. Here is an example policy:
+      </p>
+    {{else}}
+      <p class="has-bottom-margin-s">
+        Role Governing Policies (RGPs) are tied to client tokens or identities which is similar to
+        <DocLink @path="/vault/tutorials/policies/policies">ACL policies</DocLink>. They use
+        <DocLink @path="/vault/docs/enterprise/sentinel">Sentinel</DocLink>
+        as a language framework to enable fine-grained policy decisions.
+      </p>
+      <p>
+        Here is an example policy that uses RGP to restrict access to the
+        <code class="tag is-marginless is-paddingless">admin</code>
+        policy such that a user named James or has the
+        <code class="tag is-marginless is-paddingless">Team Lead</code>
+        role can manage the
+        <code class="tag is-marginless is-paddingless">admin</code>
+        policy:
+      </p>
+    {{/if}}
+  </div>
+  <JsonEditor
+    @value={{get this.policyTemplates this.policy.policyType}}
+    @mode="ruby"
+    @readOnly={{true}}
+    @showToolbar={{true}}
+  />
+{{else}}
+  <Select
+    @name="policyType"
+    @label="Type"
+    @options={{this.policyOptions}}
+    @isFullwidth={{true}}
+    @selectedValue={{this.policy.policyType}}
+    @onChange={{this.setPolicyType}}
+    @noDefault={{true}}
+  />
+  {{#if this.policy.policyType}}
+    <PolicyForm @onSave={{this.onSave}} @model={{this.policy}} @onCancel={{@onCancel}} />
+  {{else}}
+    <EmptyState @title="No policy type selected" @message="Select a policy type to continue creating." />
+  {{/if}}
+{{/if}}

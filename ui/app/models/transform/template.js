@@ -7,7 +7,7 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 const M = Model.extend({
   idPrefix: 'template/',
   idForNav: computed('id', 'idPrefix', function () {
-    let modelId = this.id || '';
+    const modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
@@ -26,6 +26,7 @@ const M = Model.extend({
     subText:
       'Alphabet defines a set of characters (UTF-8) that is used for FPE to determine the validity of plaintext and ciphertext values. You can choose a built-in one, or create your own.',
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     label: 'Alphabet',
     models: ['transform/alphabet'],
@@ -36,7 +37,7 @@ const M = Model.extend({
   backend: attr('string', { readOnly: true }),
 
   readAttrs: computed(function () {
-    let keys = ['name', 'pattern', 'encodeFormat', 'decodeFormats', 'alphabet'];
+    const keys = ['name', 'pattern', 'encodeFormat', 'decodeFormats', 'alphabet'];
     return expandAttributeMeta(this, keys);
   }),
   writeAttrs: computed(function () {

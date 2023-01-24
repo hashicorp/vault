@@ -28,7 +28,7 @@ module('Integration | Component | StatText', function (hooks) {
     this.set('value', 604099);
     await settled();
 
-    let formattedNumber = '604,099';
+    const formattedNumber = '604,099';
     assert.dom('.stat-value').hasText(formattedNumber, 'renders correctly formatted integer value');
   });
 });

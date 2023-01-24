@@ -70,6 +70,7 @@ var Formatters = map[string]Formatter{
 	"yaml":   YamlFormatter{},
 	"yml":    YamlFormatter{},
 	"pretty": PrettyFormatter{},
+	"raw":    RawFormatter{},
 }
 
 func Format(ui cli.Ui) string {
@@ -121,6 +122,27 @@ func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 		}
 	}
 
+	ui.Output(string(b))
+	return nil
+}
+
+// An output formatter for raw output of the original request object
+type RawFormatter struct{}
+
+func (r RawFormatter) Format(data interface{}) ([]byte, error) {
+	byte_data, ok := data.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("This command does not support the -format=raw option; only `vault read` does.")
+	}
+
+	return byte_data, nil
+}
+
+func (r RawFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	b, err := r.Format(data)
+	if err != nil {
+		return err
+	}
 	ui.Output(string(b))
 	return nil
 }
@@ -380,6 +402,9 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 	if status.LastWAL != 0 {
 		out = append(out, fmt.Sprintf("Last WAL | %d", status.LastWAL))
 	}
+	if len(status.Warnings) > 0 {
+		out = append(out, fmt.Sprintf("Warnings | %v", status.Warnings))
+	}
 
 	ui.Output(tableOutput(out, &columnize.Config{
 		Delim: "|",
@@ -532,6 +557,9 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 				for _, constraint := range constraintSet.Any {
 					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_id %s %s", k, constraint.Type, hopeDelim, constraint.ID))
 					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_uses_passcode %s %t", k, constraint.Type, hopeDelim, constraint.UsesPasscode))
+					if constraint.Name != "" {
+						out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_name %s %s", k, constraint.Type, hopeDelim, constraint.Name))
+					}
 				}
 			}
 		} else { // Token information only makes sense if no further MFA requirement (i.e. if we actually have a token)

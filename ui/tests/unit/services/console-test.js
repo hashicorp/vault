@@ -9,16 +9,20 @@ module('Unit | Service | console', function (hooks) {
   hooks.afterEach(function () {});
 
   test('#sanitizePath', function (assert) {
-    assert.equal(sanitizePath(' /foo/bar/baz/ '), 'foo/bar/baz', 'removes spaces and slashs on either side');
-    assert.equal(sanitizePath('//foo/bar/baz/'), 'foo/bar/baz', 'removes more than one slash');
+    assert.strictEqual(
+      sanitizePath(' /foo/bar/baz/ '),
+      'foo/bar/baz',
+      'removes spaces and slashs on either side'
+    );
+    assert.strictEqual(sanitizePath('//foo/bar/baz/'), 'foo/bar/baz', 'removes more than one slash');
   });
 
   test('#ensureTrailingSlash', function (assert) {
-    assert.equal(ensureTrailingSlash('foo/bar'), 'foo/bar/', 'adds trailing slash');
-    assert.equal(ensureTrailingSlash('baz/'), 'baz/', 'keeps trailing slash if there is one');
+    assert.strictEqual(ensureTrailingSlash('foo/bar'), 'foo/bar/', 'adds trailing slash');
+    assert.strictEqual(ensureTrailingSlash('baz/'), 'baz/', 'keeps trailing slash if there is one');
   });
 
-  let testCases = [
+  const testCases = [
     {
       method: 'read',
       args: ['/sys/health', {}],
@@ -73,8 +77,8 @@ module('Unit | Service | console', function (hooks) {
 
   test('it reads, writes, lists, deletes', function (assert) {
     assert.expect(18);
-    let ajax = sinon.stub();
-    let uiConsole = this.owner.factoryFor('service:console').create({
+    const ajax = sinon.stub();
+    const uiConsole = this.owner.factoryFor('service:console').create({
       adapter() {
         return {
           buildURL(url) {
@@ -87,9 +91,9 @@ module('Unit | Service | console', function (hooks) {
 
     testCases.forEach((testCase) => {
       uiConsole[testCase.method](...testCase.args);
-      let [url, verb, options] = ajax.lastCall.args;
-      assert.equal(url, testCase.expectedURL, `${testCase.method}: uses trimmed passed url`);
-      assert.equal(verb, testCase.expectedVerb, `${testCase.method}: uses the correct verb`);
+      const [url, verb, options] = ajax.lastCall.args;
+      assert.strictEqual(url, testCase.expectedURL, `${testCase.method}: uses trimmed passed url`);
+      assert.strictEqual(verb, testCase.expectedVerb, `${testCase.method}: uses the correct verb`);
       assert.deepEqual(options, testCase.expectedOptions, `${testCase.method}: uses the correct options`);
     });
   });

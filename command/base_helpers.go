@@ -296,7 +296,8 @@ func parseFlagFile(raw string) (string, error) {
 func generateFlagWarnings(args []string) string {
 	var trailingFlags []string
 	for _, arg := range args {
-		if !strings.HasPrefix(arg, "-") {
+		// "-" can be used where a file is expected to denote stdin.
+		if !strings.HasPrefix(arg, "-") || arg == "-" {
 			continue
 		}
 
@@ -320,4 +321,21 @@ func generateFlagWarnings(args []string) string {
 	} else {
 		return ""
 	}
+}
+
+func generateFlagErrors(f *FlagSets, opts ...ParseOptions) error {
+	if Format(f.ui) == "raw" {
+		canUseRaw := false
+		for _, opt := range opts {
+			if value, ok := opt.(ParseOptionAllowRawFormat); ok {
+				canUseRaw = bool(value)
+			}
+		}
+
+		if !canUseRaw {
+			return fmt.Errorf("This command does not support the -format=raw option.")
+		}
+	}
+
+	return nil
 }

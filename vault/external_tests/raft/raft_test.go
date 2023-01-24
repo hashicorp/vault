@@ -45,9 +45,10 @@ type RaftClusterOpts struct {
 	Seal                           vault.Seal
 	VersionMap                     map[int]string
 	RedundancyZoneMap              map[int]string
+	EffectiveSDKVersionMap         map[int]string
 }
 
-func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
+func raftCluster(t testing.TB, ropts *RaftClusterOpts) (*vault.TestCluster, *vault.TestClusterOptions) {
 	if ropts == nil {
 		ropts = &RaftClusterOpts{}
 	}
@@ -70,6 +71,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	opts.NumCores = ropts.NumCores
 	opts.VersionMap = ropts.VersionMap
 	opts.RedundancyZoneMap = ropts.RedundancyZoneMap
+	opts.EffectiveSDKVersionMap = ropts.EffectiveSDKVersionMap
 
 	teststorage.RaftBackendSetup(conf, &opts)
 
@@ -80,7 +82,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), conf, &opts)
 	cluster.Start()
 	vault.TestWaitActive(benchhelpers.TBtoT(t), cluster.Cores[0].Core)
-	return cluster
+	return cluster, &opts
 }
 
 func TestRaft_BoltDBMetrics(t *testing.T) {
@@ -320,7 +322,7 @@ func TestRaft_Join(t *testing.T) {
 
 func TestRaft_RemovePeer(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, nil)
+	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -393,7 +395,7 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			cluster := raftCluster(t, tc.ropts)
+			cluster, _ := raftCluster(t, tc.ropts)
 			defer cluster.Cleanup()
 
 			for i, c := range cluster.Cores {
@@ -430,7 +432,7 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 
 func TestRaft_Configuration(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, nil)
+	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -477,7 +479,7 @@ func TestRaft_Configuration(t *testing.T) {
 
 func TestRaft_ShamirUnseal(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, nil)
+	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -489,7 +491,7 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 
 func TestRaft_SnapshotAPI(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, nil)
+	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
@@ -553,7 +555,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		NumCores: 1,
 		Seal:     autoSeal,
 	})
@@ -658,7 +660,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
+			cluster, _ := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -859,7 +861,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
+			cluster, _ := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -1046,7 +1048,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 
 func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, nil)
+	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
@@ -1092,7 +1094,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 
 	// Cluster 2
 	{
-		cluster2 := raftCluster(t, nil)
+		cluster2, _ := raftCluster(t, nil)
 		defer cluster2.Cleanup()
 
 		leaderClient := cluster2.Cores[0].Client
@@ -1139,7 +1141,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 }
 
 func BenchmarkRaft_SingleNode(b *testing.B) {
-	cluster := raftCluster(b, nil)
+	cluster, _ := raftCluster(b, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client

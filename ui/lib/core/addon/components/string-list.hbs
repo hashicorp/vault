@@ -7,12 +7,17 @@
   ...attributes
 >
   {{#if @label}}
-    <label class="title is-label" data-test-string-list-label="true">
+    <label class="is-label" data-test-string-list-label="true">
       {{@label}}
       {{#if this.helpText}}
         <InfoTooltip>{{this.helpText}}</InfoTooltip>
       {{/if}}
     </label>
+    {{#if @subText}}
+      <p class="sub-text">
+        {{@subText}}
+      </p>
+    {{/if}}
   {{/if}}
   {{#if @warning}}
     <AlertBanner @type="warning" @message={{@warning}} />

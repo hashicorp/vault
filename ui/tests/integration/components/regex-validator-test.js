@@ -9,10 +9,10 @@ module('Integration | Component | regex-validator', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders input and validation messages', async function (assert) {
-    let attr = EmberObject.create({
+    const attr = EmberObject.create({
       name: 'example',
     });
-    let spy = sinon.spy();
+    const spy = sinon.spy();
     this.set('onChange', spy);
     this.set('attr', attr);
     this.set('value', '(\\d{4})');
@@ -20,10 +20,10 @@ module('Integration | Component | regex-validator', function (hooks) {
 
     await render(
       hbs`<RegexValidator
-        @onChange={{onChange}}
-        @attr={{attr}}
-        @value={{value}}
-        @labelString={{labelString}}
+        @onChange={{this.onChange}}
+        @attr={{this.attr}}
+        @value={{this.value}}
+        @labelString={{this.labelString}}
       />`
     );
     assert.dom('.regex-label label').hasText('Regex Example', 'Label is correct');

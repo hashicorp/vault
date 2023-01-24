@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -112,6 +113,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 
 			return nil
 		},
+		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
 	iStore.oidcCache = newOIDCCache(cache.NoExpiration, cache.NoExpiration)
@@ -168,6 +170,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "mfa/method/totp" + genericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
+				"method_name": {
+					Type:        framework.TypeString,
+					Description: `The unique name identifier for this MFA method.`,
+				},
 				"method_id": {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
@@ -296,6 +302,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "mfa/method/okta" + genericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
+				"method_name": {
+					Type:        framework.TypeString,
+					Description: `The unique name identifier for this MFA method.`,
+				},
 				"method_id": {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
@@ -352,6 +362,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "mfa/method/duo" + genericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
+				"method_name": {
+					Type:        framework.TypeString,
+					Description: `The unique name identifier for this MFA method.`,
+				},
 				"method_id": {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
@@ -408,6 +422,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "mfa/method/pingid" + genericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
+				"method_name": {
+					Type:        framework.TypeString,
+					Description: `The unique name identifier for this MFA method.`,
+				},
 				"method_id": {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,

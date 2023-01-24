@@ -6,26 +6,30 @@
       {{/if}}
     </label>
     <div class="file has-name is-fullwidth">
-      <label class="file-label">
-        <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-file-input />
-        <span class="file-cta button">
+      <div class="file-label" aria-label="Choose a file">
+        <input id="file-input" class="file-input" type="file" onchange={{action "pickedFile"}} data-test-file-input />
+        <label for="file-input" class="file-cta button">
           <Icon @name="upload" class="has-light-grey-text" />
           Choose a file…
-        </span>
+        </label>
         <span class="file-name has-text-grey-dark" data-test-text-file-input-label={{true}}>
-          {{or this.fileName "No file chosen"}}
+          {{or this.filename "No file chosen"}}
         </span>
-        {{#if this.fileName}}
-          {{! template-lint-configure no-nested-interactive "warn" }}
-          <button type="button" class="file-delete-button" {{action "clearFile"}} data-test-text-clear>
+        {{#if this.filename}}
+          <button
+            type="button"
+            class="file-delete-button"
+            aria-label="Clear file selection"
+            {{action "clearFile"}}
+            data-test-text-clear
+          >
             <Icon @name="x-circle" />
           </button>
-          {{! template-lint-configure no-nested-interactive "on" }}
         {{/if}}
-      </label>
+      </div>
     </div>
   </div>
-  {{#if this.fileName}}
+  {{#if this.filename}}
     <p class="help has-text-grey">
       This file is
       {{this.fileSize}}
