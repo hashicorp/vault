@@ -1,0 +1,27 @@
+---
+layout: api
+page_title: /sys/init-unseal-recovery - HTTP API
+description: The `/sys/init-unseal-recovery` endpoint is used to establish unseal with recovery keys.
+---
+
+# `/sys/init-unseal-recovery`
+
+The `/sys/init-unseal-recovery` endpoint is used to enable the unsealing of
+Vault via recovery keys for clusters that were initialized prior to version 1.13.
+This feature can only be used if using an automatic unseal mechanism with recovery
+keys.  Once successful, auto-seals can be placed in [unseal recovery mode](/docs/concepts/seal.mdx).
+
+
+| Method | Path                         |
+| :----- | :--------------------------- |
+| `POST` | `/sys/init-unseal-recovery`  |
+
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/init-unseal-recovery
+```
