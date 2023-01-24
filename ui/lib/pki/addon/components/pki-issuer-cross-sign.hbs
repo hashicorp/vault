@@ -5,8 +5,56 @@
     have when it is imported to Vault.
   </p>
   {{#if (gt this.signedIssuers.length 0)}}
-    {{! TODO list issuers here }}
-    A list of the signed issuers
+    <div class="is-flex-start">
+      {{#each this.inputFields as |column|}}
+        <div class="is-flex-1 basis-0 has-text-grey has-bottom-margin-xs">
+          <h2 data-test-info-table-label={{column.key}}>
+            {{column.label}}
+            {{#if column.helpText}}
+              <InfoTooltip @verticalPosition="above" @horizontalPosition="center">{{column.helpText}}</InfoTooltip>
+            {{/if}}
+          </h2>
+        </div>
+      {{/each}}
+    </div>
+    <div class="box is-fullwidth has-only-top-shadow">
+      {{#each this.signedIssuers as |crossSignRow|}}
+        <div class="box no-top-shadow no-padding-bottom no-padding-top">
+          <div class="is-flex-start">
+            <Icon
+              @name={{if crossSignRow.hasError "alert-circle-fill" "check-circle"}}
+              class={{if crossSignRow.hasError "has-text-danger" "has-text-success"}}
+            />
+            {{#each (map-by "key" this.inputFields) as |columnAttr|}}
+              {{#let (get crossSignRow columnAttr) as |data|}}
+                <div class="is-flex-1 basis-0 has-bottom-margin-xs">
+                  {{#if (eq columnAttr "intermediateMount")}}
+                    <LinkTo class="has-text-black has-text-weight-semibold" @route="overview" @model={{data}}>
+                      {{data}}
+                    </LinkTo>
+                  {{else if crossSignRow.hasError}}
+                    <span class="has-text-grey has-text-weight-semibold">
+                      {{data}}
+                    </span>
+                  {{else}}
+                    <LinkToExternal
+                      class="has-text-black has-text-weight-semibold"
+                      @route="externalMountIssuer"
+                      @models={{array (get crossSignRow "intermediateMount") data.issuerId}}
+                    >
+                      {{data.issuerName}}
+                    </LinkToExternal>
+                  {{/if}}
+                </div>
+              {{/let}}
+            {{/each}}
+          </div>
+          {{#if crossSignRow.hasError}}
+            <AlertInline class="is-flex-full" @sizeSmall={{true}} @type="danger" @message={{crossSignRow.hasError}} />
+          {{/if}}
+        </div>
+      {{/each}}
+    </div>
   {{else}}
     <form {{on "submit" (perform this.submit)}} data-test-cross-sign-form>
       <ObjectListInput @objectKeys={{this.inputFields}} @onChange={{fn (mut this.formData)}} />

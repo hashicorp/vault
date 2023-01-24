@@ -11,12 +11,12 @@ import { waitFor } from '@ember/test-waiters';
  * The component reads an existing intermediate issuer, cross-signs it with a parent issuer and imports the new
  * issuer into an existing intermediate mount using three inputs from the user:
  * intermediateMount (the mount where the issuer to be cross signed lives)
- * intermediateName (the name of the intermediate issuer, located in the above mount)
- * newCertName (the name of the to-be-cross-signed intermediate issuer)
+ * intermediateIssuer (the name of the intermediate issuer, located in the above mount)
+ * newCrossSignedIssuer (the name of the to-be-cross-signed intermediate issuer)
  *
  * The requests involved and how those inputs are used:
  * 1. Read an existing intermediate issuer
- *    -> GET /:intermediateMount/issuer/:intermediateName
+ *    -> GET /:intermediateMount/issuer/:intermediateIssuer
  * 2. Create a new CSR based on this existing issuer ID
  *    -> POST /:intermediateMount/intermediate/generate/existing
  * 3. Sign it with the new parent issuer, minting a new certificate.
@@ -25,7 +25,7 @@ import { waitFor } from '@ember/test-waiters';
  *    -> POST /:intermediateMount/issuers/import/bundle
  * 5. Read the imported issuer
  *    -> GET /:intermediateMount/issuer/:issuer_id
- * 5. Update this issuer with the newCertName
+ * 5. Update this issuer with the newCrossSignedIssuer
  *    -> POST /:intermediateMount/issuer/:issuer_id
  *
  * @example
@@ -41,9 +41,24 @@ export default class PkiIssuerCrossSign extends Component {
   @tracked signedIssuers = [];
 
   inputFields = [
-    { label: 'Mount path', key: 'intermediateMount', placeholder: 'Mount path' },
-    { label: "Issuer's current name", key: 'intermediateName', placeholder: 'Current issuer name' },
-    { label: 'New issuer name', key: 'newCertName', placeholder: 'Enter a new issuer name' },
+    {
+      label: 'Mount path',
+      key: 'intermediateMount',
+      placeholder: 'Mount path',
+      helpText: 'The mount in which your new certificate can be found.',
+    },
+    {
+      label: "Issuer's current name",
+      key: 'intermediateIssuer',
+      placeholder: 'Current issuer name',
+      helpText: 'The API name of the previous intermediate which was cross-signed.',
+    },
+    {
+      label: 'New issuer name',
+      key: 'newCrossSignedIssuer',
+      placeholder: 'Enter a new issuer name',
+      helpText: `This is your new issuer’s name in the API.`,
+    },
   ];
 
   @task
@@ -54,10 +69,16 @@ export default class PkiIssuerCrossSign extends Component {
 
     // iterate through submitted data and cross-sign each certificate
     for (let row = 0; row < this.formData.length; row++) {
-      const { intermediateMount, intermediateName, newCertName } = this.formData[row];
+      const { intermediateMount, intermediateIssuer, newCrossSignedIssuer } = this.formData[row];
       try {
-        const issuer = yield this.crossSignIntermediate(intermediateMount, intermediateName, newCertName);
-        this.signedIssuers.addObject({ ...this.formData[row], issuer, hasError: false });
+        // returns data from existing and newly cross-signed issuers
+        // { intermediateIssuer: existingIssuer, newCrossSignedIssuer: crossSignedIssuer, intermediateMount: intMount }
+        const data = yield this.crossSignIntermediate(
+          intermediateMount,
+          intermediateIssuer,
+          newCrossSignedIssuer
+        );
+        this.signedIssuers.addObject({ ...data, hasError: false });
       } catch (error) {
         this.signedIssuers.addObject({ ...this.formData[row], hasError: errorMessage(error) });
         continue;
@@ -66,7 +87,7 @@ export default class PkiIssuerCrossSign extends Component {
   }
 
   @action
-  async crossSignIntermediate(intMount, intName, newCertName) {
+  async crossSignIntermediate(intMount, intName, newCrossSignedIssuer) {
     // 1. Fetch issuer we want to sign
     const existingIssuer = await this.store.queryRecord('pki/issuer', {
       backend: intMount,
@@ -113,8 +134,12 @@ export default class PkiIssuerCrossSign extends Component {
 
     // 5. Fetch issuer imported above by issuer_id, name and save
     const crossSignedIssuer = await this.store.queryRecord('pki/issuer', { backend: intMount, id: issuerId });
-    crossSignedIssuer.issuerName = newCertName;
+    crossSignedIssuer.issuerName = newCrossSignedIssuer;
     crossSignedIssuer.save({ adapterOptions: { mount: intMount } });
-    return crossSignedIssuer;
+    return {
+      intermediateIssuer: existingIssuer,
+      newCrossSignedIssuer: crossSignedIssuer,
+      intermediateMount: intMount,
+    };
   }
 }

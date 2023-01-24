@@ -73,6 +73,9 @@
 }
 .is-flex-1 {
   flex-grow: 1;
+  &.basis-0 {
+    flex-basis: 0;
+  }
 }
 .is-flex-wrap {
   flex-flow: row wrap;
