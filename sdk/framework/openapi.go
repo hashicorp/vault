@@ -215,9 +215,9 @@ var (
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
-func documentPaths(backend *Backend, requestResponsePrefix string, genericMountPaths bool, doc *OASDocument) error {
+func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
 	for _, p := range backend.Paths {
-		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, genericMountPaths, backend.BackendType, doc); err != nil {
+		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, backend.BackendType, doc); err != nil {
 			return err
 		}
 	}
@@ -226,7 +226,7 @@ func documentPaths(backend *Backend, requestResponsePrefix string, genericMountP
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, genericMountPaths bool, backendType logical.BackendType, doc *OASDocument) error {
+func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, backendType logical.BackendType, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
 
@@ -264,21 +264,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		// Process path and header parameters, which are common to all operations.
 		// Body fields will be added to individual operations.
 		pathFields, bodyFields := splitFields(p.Fields, path)
-
-		if genericMountPaths && requestResponsePrefix != "system" && requestResponsePrefix != "identity" {
-			// Add mount path as a parameter
-			p := OASParameter{
-				Name:        "mountPath",
-				Description: "Path that the backend was mounted at",
-				In:          "path",
-				Schema: &OASSchema{
-					Type: "string",
-				},
-				Required: true,
-			}
-
-			pi.Parameters = append(pi.Parameters, p)
-		}
 
 		for name, field := range pathFields {
 			location := "path"

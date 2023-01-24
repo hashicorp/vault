@@ -10,8 +10,14 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func addPathCheckers(*Core, *MountEntry, logical.Backend, string)             {}
-func removePathCheckers(*Core, *MountEntry, string)                           {}
+func addPathCheckers(c *Core, entry *MountEntry, backend logical.Backend, viewPath string) {
+	c.addBackendWriteForwardedPaths(backend, viewPath)
+}
+
+func removePathCheckers(c *Core, entry *MountEntry, viewPath string) {
+	c.writeForwardedPaths.RemovePathPrefix(viewPath)
+}
+
 func addAuditPathChecker(*Core, *MountEntry, *BarrierView, string)            {}
 func removeAuditPathChecker(*Core, *MountEntry)                               {}
 func addFilterablePath(*Core, string)                                         {}

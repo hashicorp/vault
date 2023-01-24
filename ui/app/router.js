@@ -154,6 +154,7 @@ Router.map(function () {
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
+          this.mount('kubernetes');
           if (config.environment !== 'production') {
             this.mount('pki');
           }

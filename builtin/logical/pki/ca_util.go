@@ -185,7 +185,7 @@ func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (s
 	if kmsRequestedFromFieldData(data) {
 		keyId, err := getManagedKeyId(data)
 		if err != nil {
-			return "", 0, errors.New("unable to determine managed key id" + err.Error())
+			return "", 0, errors.New("unable to determine managed key id: " + err.Error())
 		}
 
 		pubKeyManagedKey, err := getManagedKeyPublicKey(sc.Context, sc.Backend, keyId)

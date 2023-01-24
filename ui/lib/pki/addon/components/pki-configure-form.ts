@@ -4,11 +4,12 @@ import { inject as service } from '@ember/service';
 import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
-import PkiConfigModel from 'vault/models/pki/config';
 import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+import PkiActionModel from 'vault/models/pki/action';
 
 interface Args {
-  config: PkiConfigModel;
+  config: PkiActionModel;
 }
 
 /**
@@ -22,7 +23,7 @@ export default class PkiConfigureForm extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
-  @tracked formType = '';
+  @tracked actionType = '';
 
   get configTypes() {
     return [
@@ -56,7 +57,7 @@ export default class PkiConfigureForm extends Component<Args> {
     // we want to check capabilities on the newer endpoints (those
     // prefixed with "issuers") and use the old path as fallback
     // if user does not have permissions.
-    switch (this.formType) {
+    switch (this.actionType) {
       case 'import':
         return config.canImportBundle;
       case 'generate-root':
@@ -66,5 +67,10 @@ export default class PkiConfigureForm extends Component<Args> {
       default:
         return false;
     }
+  }
+
+  @action cancel() {
+    this.args.config.rollbackAttributes();
+    this.router.transitionTo('vault.cluster.secrets.backend.pki.overview');
   }
 }

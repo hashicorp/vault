@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -110,7 +111,14 @@ func (h *hcpLinkControlHandler) Stop() error {
 	return nil
 }
 
-func (h *hcpLinkControlHandler) PurgePolicy(ctx context.Context, req *link_control.PurgePolicyRequest) (*link_control.PurgePolicyResponse, error) {
+func (h *hcpLinkControlHandler) PurgePolicy(ctx context.Context, req *link_control.PurgePolicyRequest) (retResp *link_control.PurgePolicyResponse, retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Error("panic serving purge policy request", "error", r, "stacktrace", string(debug.Stack()))
+			retErr = vault.ErrInternalError
+		}
+	}()
+
 	standby, perfStandby := h.wrappedCore.StandbyStates()
 	// only purging an active node, perf/standby nodes should purge
 	// automatically
