@@ -16,7 +16,13 @@ import {
 
  A certificate is encoded in ASN.1 data - a SEQUENCE is how you define structures in ASN.1.
  GeneralNames, Extension, AlgorithmIdentifier are all examples of SEQUENCEs 
-*/
+
+ * Error handling: 
+{ can_parse: false } -> returned if the external library cannot convert the certificate 
+{ parsing_errors: [] } -> returned if the certificate was converted, but there's ANY problem parsing certificate details. 
+ This means we cannot cross-sign in the UI and prompt the user to do so manually using the CLI.
+ */
+
 export function parseCertificate(certificateContent) {
   let cert;
   try {
@@ -25,29 +31,33 @@ export function parseCertificate(certificateContent) {
     const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
     cert = new Certificate({ schema: cert_asn1.result });
   } catch (error) {
-    console.debug('DEBUG: Parsing Certificate', error); // eslint-disable-line
-    return {
-      can_parse: false,
-    };
+    console.debug('DEBUG: Converting Certificate', error); // eslint-disable-line
+    return { can_parse: false };
   }
-  const subjectValues = parseSubject(cert?.subject?.typesAndValues);
-  const extensionValues = parseExtensions(cert?.extensions);
-  const [signature_bits, use_pss] = mapSignatureBits(cert?.signatureAlgorithm);
+
+  let parsedCertificateValues;
+  try {
+    const subjectValues = parseSubject(cert?.subject?.typesAndValues);
+    const extensionValues = parseExtensions(cert?.extensions);
+    const [signature_bits, use_pss] = mapSignatureBits(cert?.signatureAlgorithm);
+    const formattedValues = formatValues(subjectValues, extensionValues);
+    parsedCertificateValues = { ...formattedValues, signature_bits, use_pss };
+  } catch (error) {
+    console.debug('DEBUG: Parsing Certificate', error); // eslint-disable-line
+    parsedCertificateValues = { parsing_errors: [new Error('error parsing certificate values')] };
+  }
 
   const expiryDate = cert?.notAfter?.value;
   const issueDate = cert?.notBefore?.value;
   const ttl = `${differenceInHours(expiryDate, issueDate)}h`;
-  const formattedCertParams = formatValues(subjectValues, extensionValues);
 
   return {
-    ...formattedCertParams,
+    ...parsedCertificateValues,
     can_parse: true,
     expiry_date: expiryDate, // remove along with old PKI work
     issue_date: issueDate, // remove along with old PKI work
     not_valid_after: getUnixTime(expiryDate),
     not_valid_before: getUnixTime(issueDate),
-    signature_bits,
-    use_pss,
     ttl,
   };
 }
@@ -62,6 +72,9 @@ export function parsePkiCert(model) {
 }
 
 export function formatValues(subject, extension) {
+  if (!subject || !extension) {
+    return { parsing_errors: [new Error('error formatting certificate values')] };
+  }
   const { subjValues, subjErrors } = subject;
   const { extValues, extErrors } = extension;
   const parsing_errors = [...subjErrors, ...extErrors];
@@ -98,7 +111,7 @@ export function formatValues(subject, extension) {
   valueBlock's value field if it is renderable.
 */
 export function parseSubject(subject) {
-  if (!subject) return {};
+  if (!subject) return null;
   const values = {};
   const errors = [];
   if (subject.any((rdn) => !Object.values(SUBJECT_OIDs).includes(rdn.type))) {
@@ -117,8 +130,7 @@ export function parseSubject(subject) {
 }
 
 export function parseExtensions(extensions) {
-  if (!extensions) return {};
-
+  if (!extensions) return null;
   const values = {};
   const errors = [];
   const allowedOids = Object.values({ ...EXTENSION_OIDs, ...IGNORED_OIDs });

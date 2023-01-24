@@ -7,7 +7,13 @@ import { Certificate } from 'pkijs';
 import { addHours, fromUnixTime, isSameDay } from 'date-fns';
 import errorMessage from 'vault/utils/error-message';
 import { SAN_TYPES } from 'vault/utils/parse-pki-cert-oids';
-import { loadedCert, pssTrueCert, skeletonCert, unsupportedOids } from 'vault/tests/helpers/pki/values';
+import {
+  certWithoutCN,
+  loadedCert,
+  pssTrueCert,
+  skeletonCert,
+  unsupportedOids,
+} from 'vault/tests/helpers/pki/values';
 
 module('Integration | Util | parse pki certificate', function (hooks) {
   setupTest(hooks);
@@ -215,6 +221,48 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         exclude_cn_from_sans: true,
       },
       `values for ${Object.keys(SAN_TYPES).join(', ')} are comma separated strings (and no longer arrays)`
+    );
+  });
+
+  test('it fails silently when passed null', async function (assert) {
+    assert.expect(3);
+    const parsedCert = parseCertificate(certWithoutCN);
+    assert.propEqual(
+      parsedCert,
+      {
+        can_parse: true,
+        common_name: null,
+        country: null,
+        exclude_cn_from_sans: false,
+        expiry_date: {},
+        issue_date: {},
+        locality: null,
+        max_path_length: 10,
+        not_valid_after: 1989876490,
+        not_valid_before: 1674516490,
+        organization: null,
+        ou: null,
+        parsing_errors: [{}, {}],
+        postal_code: null,
+        province: null,
+        serial_number: null,
+        signature_bits: '256',
+        street_address: null,
+        ttl: '87600h',
+        use_pss: false,
+      },
+      'it parses a cert without CN'
+    );
+    const parsingErrors = this.getErrorMessages(parsedCert.parsing_errors);
+    assert.propEqual(
+      parsingErrors,
+      ['certificate contains unsupported subject OIDs', 'certificate contains unsupported extension OIDs'],
+      'it returns correct errors'
+    );
+    assert.propEqual(
+      formatValues(null, null),
+      { parsing_errors: [Error('error parsing certificate')] },
+      'it returns error if unable to format values'
     );
   });
 });
