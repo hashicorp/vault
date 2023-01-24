@@ -20,40 +20,16 @@
         Sign Intermediate
       </ToolbarLink>
     {{/if}}
-    <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-      <D.Trigger class={{concat "toolbar-link" (if D.isOpen " is-active")}} @htmlTag="button" data-test-issuer-download>
-        Download
-        <Chevron @direction="down" @isButton={{true}} />
-      </D.Trigger>
-      <D.Content @defaultClass="popup-menu-content">
-        <nav class="box menu" aria-label="download options">
-          <ul class="menu-list">
-            <li class="action">
-              <DownloadButton
-                class="link link-plain has-text-weight-semibold is-ghost"
-                @filename={{@issuer.id}}
-                @data={{or @pem @issuer.certificate}}
-                @extension="pem"
-              >
-                PEM
-              </DownloadButton>
-            </li>
-            {{#if @der}}
-              <li class="action">
-                <DownloadButton
-                  class="link link-plain has-text-weight-semibold is-ghost"
-                  @filename={{@issuer.id}}
-                  @data={{@der}}
-                  @extension="der"
-                >
-                  DER
-                </DownloadButton>
-              </li>
-            {{/if}}
-          </ul>
-        </nav>
-      </D.Content>
-    </BasicDropdown>
+    <DownloadButton
+      class="toolbar-link"
+      @filename={{@issuer.id}}
+      @data={{@issuer.certificate}}
+      @extension="pem"
+      data-test-issuer-download
+    >
+      Download
+      <Chevron @direction="down" @isButton={{true}} />
+    </DownloadButton>
     {{#if @canConfigure}}
       <ToolbarLink @route="issuers.issuer.edit" @issuer={{@issuer.id}} data-test-pki-issuer-configure>
         Configure
