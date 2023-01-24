@@ -105,7 +105,7 @@ func (c *OperatorMigrateCommand) Flags() *FlagSets {
 		Name:    "parallel",
 		Default: 1,
 		Target:  &c.flagParallel,
-		Usage: "Use lightweight threads (goroutines) when migrating. Can speed up the migration " +
+		Usage: "Number of parallel migration threads (goroutines) to use when migrating. Can speed up the migration " +
 			"process on slow backends but uses more resources.",
 	})
 
