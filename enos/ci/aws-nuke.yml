@@ -1,0 +1,395 @@
+regions:
+- eu-north-1
+- ap-south-1
+- eu-west-3
+- eu-west-2
+- eu-west-1
+- ap-northeast-3
+- ap-northeast-2
+- ap-northeast-1
+- sa-east-1
+- ca-central-1
+- ap-southeast-1
+- ap-southeast-2
+- eu-central-1
+- us-east-1
+- us-east-2
+- us-west-1
+- us-west-2
+- global
+
+account-blocklist:
+ - 1234567890
+
+accounts:
+  # replaced in CI
+  ACCOUNT_NUM:
+    presets:
+      - default
+      - olderthan
+      - honeybee
+      - enos
+
+presets:
+  default:
+    # Ignores default VPC resources
+    filters:
+      EC2VPC:
+        - property: IsDefault
+          value: "true"
+      EC2RouteTable:
+        - property: DefaultVPC
+          value: "true"
+      EC2DHCPOption:
+        - property: DefaultVPC
+          value: "true"
+      EC2InternetGateway:
+        - property: DefaultVPC
+          value: "true"
+      EC2Subnet:
+        - property: DefaultVPC
+          value: "true"
+      EC2InternetGatewayAttachment:
+        - property: DefaultVPC
+          value: "true"
+  olderthan:
+    # Filters resources by age (when available)
+    # TIME_LIMIT replaced in CI
+    filters:
+      EC2Instance:
+        - property: LaunchTime
+          type: dateOlderThan
+          value: "TIME_LIMIT"
+      EC2NetworkACL:
+      EC2RouteTable:
+      EC2SecurityGroup:
+      EC2Subnet:
+      EC2Volume:
+      EC2VPC:
+        - property: tag:cloud-nuke-first-seen
+          type: dateOlderThan
+          value: "TIME_LIMIT"
+      ELBv2:
+        - property: tag:cloud-nuke-first-seen
+          type: dateOlderThan
+          value: "TIME_LIMIT"
+      ELBv2TargetGroup:
+      EC2NetworkInterface:
+      EC2InternetGateway:
+      EC2InternetGatewayAttachment:
+      RDSInstance:
+        - property: InstanceCreateTime
+          type: dateOlderThan
+          value: "TIME_LIMIT"
+
+  honeybee:
+    # Cloudsec
+    filters:
+      IAMRole:
+        - property: tag:hc-config-as-code
+          value: "honeybee"
+      IAMRolePolicy:
+        - property: tag:role:hc-config-as-code
+          value: "honeybee"
+      IAMRolePolicyAttachment:
+        - property: tag:role:hc-config-as-code
+          value: "honeybee"
+
+  enos:
+    # Existing CI to be cleaned up later
+    filters:
+      LambdaFunction:
+        - property: Name
+          value: "enos_cleanup"
+      IAMRole:
+        - property: Name
+          type: glob
+          value: "github_actions-*"
+        - property: Name
+          value: "rds-monitoring-role"
+      IAMRolePolicy:
+        - property: role:RoleName
+          type: glob
+          value: "github_actions*"
+        - property: role:RoleName
+          type: glob
+          value: "rds-*"
+      IAMRolePolicyAttachment:
+        - "rds-monitoring-role -> AmazonRDSEnhancedMonitoringRole"
+      IAMUserPolicy:
+        - "github_actions-vault_ci -> AssumeServiceUserRole"
+        - "github_actions-vault_enterprise_ci -> AssumeServiceUserRole"
+
+resource-types:
+  # Run against everything, excluding these:
+  excludes:
+    # Avoid cloudsec things
+    - IAMUser
+    - IAMPolicy
+    - IAMUserAccessKey
+    - S3Object
+    - S3Bucket
+    - EC2KeyPair
+    - CloudWatchEventsTarget
+    - CloudWatchEventsRule
+    - CloudWatchLogsLogGroup
+    - ConfigServiceConfigurationRecorder
+    - ConfigServiceConfigRule
+    - ConfigServiceDeliveryChannel
+    - CloudTrailTrail
+    - RDSSnapshot
+    - RDSClusterSnapshot
+    - WAFWebACL
+    - WAFv2WebACL
+    - WAFRegionalWebACL
+    - GuardDutyDetector
+
+    # Unused services, filtering these speeds up runs and
+    # removes errors about things we don't have enabled
+    - ACMCertificate
+    - ACMPCACertificateAuthority
+    - ACMPCACertificateAuthorityState
+    - AMGWorkspace
+    - AMPWorkspace
+    - APIGatewayAPIKey
+    - APIGatewayClientCertificate
+    - APIGatewayDomainName
+    - APIGatewayRestAPI
+    - APIGatewayUsagePlan
+    - APIGatewayV2API
+    - APIGatewayV2VpcLink
+    - APIGatewayVpcLink
+    - AWS::AppFlow::ConnectorProfile
+    - AWS::AppFlow::Flow
+    - AWS::AppRunner::Service
+    - AWS::ApplicationInsights::Application
+    - AWS::Backup::Framework
+    - AWS::MWAA::Environment
+    - AWS::NetworkFirewall::Firewall
+    - AWS::NetworkFirewall::FirewallPolicy
+    - AWS::NetworkFirewall::RuleGroup
+    - AWS::Synthetics::Canary
+    - AWS::Timestream::Database
+    - AWS::Timestream::ScheduledQuery
+    - AWS::Timestream::Table
+    - AWS::Transfer::Workflow
+    - AWSBackupPlan
+    - AWSBackupRecoveryPoint
+    - AWSBackupSelection
+    - AWSBackupVault
+    - AWSBackupVaultAccessPolicy
+    - AccessAnalyzer
+    - AppMeshMesh
+    - AppMeshRoute
+    - AppMeshVirtualGateway
+    - AppMeshVirtualNode
+    - AppMeshVirtualRouter
+    - AppMeshVirtualService
+    - AppStreamDirectoryConfig
+    - AppStreamFleet
+    - AppStreamFleetState
+    - AppStreamImage
+    - AppStreamImageBuilder
+    - AppStreamImageBuilderWaiter
+    - AppStreamStack
+    - AppStreamStackFleetAttachment
+    - AppSyncGraphqlAPI
+    - ApplicationAutoScalingScalableTarget
+    - ArchiveRule
+    - AthenaNamedQuery
+    - AthenaWorkGroup
+    - BatchComputeEnvironment
+    - BatchComputeEnvironmentState
+    - BatchJobQueue
+    - BatchJobQueueState
+    - BillingCostandUsageReport
+    - Budget
+    - Cloud9Environment
+    - CloudDirectoryDirectory
+    - CloudDirectorySchema
+    - CodeArtifactDomain
+    - CodeArtifactRepository
+    - CodeBuildProject
+    - CodeCommitRepository
+    - CodeDeployApplication
+    - CodePipelinePipeline
+    - CodeStarConnection
+    - CodeStarNotificationRule
+    - CodeStarProject
+    - CognitoIdentityPool
+    - CognitoIdentityProvider
+    - CognitoUserPool
+    - CognitoUserPoolClient
+    - CognitoUserPoolDomain
+    - ComprehendDocumentClassifier
+    - ComprehendDominantLanguageDetectionJob
+    - ComprehendEndpoint
+    - ComprehendEntitiesDetectionJob
+    - ComprehendEntityRecognizer
+    - ComprehendKeyPhrasesDetectionJob
+    - ComprehendSentimentDetectionJob
+    - ConfigServiceConfigRule
+    - ConfigServiceConfigurationRecorder
+    - ConfigServiceDeliveryChannel
+    - DAXCluster
+    - DAXParameterGroup
+    - DAXSubnetGroup
+    - DataPipelinePipeline
+    - DatabaseMigrationServiceCertificate
+    - DatabaseMigrationServiceEndpoint
+    - DatabaseMigrationServiceEventSubscription
+    - DatabaseMigrationServiceReplicationInstance
+    - DatabaseMigrationServiceReplicationTask
+    - DatabaseMigrationServiceSubnetGroup
+    - DeviceFarmProject
+    - DirectoryServiceDirectory
+    - EC2ClientVpnEndpointAttachment
+    - EC2ClientVpnEndpoint
+    - EC2DefaultSecurityGroupRule
+    - FMSNotificationChannel
+    - FMSPolicy
+    - FSxBackup
+    - FSxFileSystem
+    - FirehoseDeliveryStream
+    - GlobalAccelerator
+    - GlobalAcceleratorEndpointGroup
+    - GlobalAcceleratorListener
+    - GlueClassifier
+    - GlueConnection
+    - GlueCrawler
+    - GlueDatabase
+    - GlueDevEndpoint
+    - GlueJob
+    - GlueTrigger
+    - Inspector2
+    - InspectorAssessmentRun
+    - InspectorAssessmentTarget
+    - InspectorAssessmentTemplate
+    - IoTAuthorizer
+    - IoTCACertificate
+    - IoTCertificate
+    - IoTJob
+    - IoTOTAUpdate
+    - IoTPolicy
+    - IoTRoleAlias
+    - IoTStream
+    - IoTThing
+    - IoTThingGroup
+    - IoTThingType
+    - IoTThingTypeState
+    - IoTTopicRule
+    - KendraIndex
+    - KinesisAnalyticsApplication
+    - KinesisStream
+    - KinesisVideoProject
+    - LexBot
+    - LexIntent
+    - LexModelBuildingServiceBotAlias
+    - LexSlotType
+    - LifecycleHook
+    - LightsailDisk
+    - LightsailDomain
+    - LightsailInstance
+    - LightsailKeyPair
+    - LightsailLoadBalancer
+    - LightsailStaticIP
+    - MQBroker
+    - MSKCluster
+    - MSKConfiguration
+    - MachineLearningBranchPrediction
+    - MachineLearningDataSource
+    - MachineLearningEvaluation
+    - MachineLearningMLModel
+    - Macie
+    - MediaConvertJobTemplate
+    - MediaConvertPreset
+    - MediaConvertQueue
+    - MediaLiveChannel
+    - MediaLiveInput
+    - MediaLiveInputSecurityGroup
+    - MediaPackageChannel
+    - MediaPackageOriginEndpoint
+    - MediaStoreContainer
+    - MediaStoreDataItems
+    - MediaTailorConfiguration
+    - MobileProject
+    - NeptuneCluster
+    - NeptuneInstance
+    - NetpuneSnapshot
+    - OpsWorksApp
+    - OpsWorksCMBackup
+    - OpsWorksCMServer
+    - OpsWorksCMServerState
+    - OpsWorksInstance
+    - OpsWorksLayer
+    - OpsWorksUserProfile
+    - QLDBLedger
+    - RoboMakerRobotApplication
+    - RoboMakerSimulationApplication
+    - RoboMakerSimulationJob
+    - SESConfigurationSet
+    - SESIdentity
+    - SESReceiptFilter
+    - SESReceiptRuleSet
+    - SESTemplate
+    - SSMActivation
+    - SSMAssociation
+    - SSMDocument
+    - SSMMaintenanceWindow
+    - SSMParameter
+    - SSMPatchBaseline
+    - SSMResourceDataSync
+    - SageMakerApp
+    - SageMakerDomain
+    - SageMakerEndpoint
+    - SageMakerEndpointConfig
+    - SageMakerModel
+    - SageMakerNotebookInstance
+    - SageMakerNotebookInstanceLifecycleConfig
+    - SageMakerNotebookInstanceState
+    - SageMakerUserProfiles
+    - ServiceCatalogConstraintPortfolioAttachment
+    - ServiceCatalogPortfolio
+    - ServiceCatalogPortfolioProductAttachment
+    - ServiceCatalogPortfolioShareAttachment
+    - ServiceCatalogPrincipalPortfolioAttachment
+    - ServiceCatalogProduct
+    - ServiceCatalogProvisionedProduct
+    - ServiceCatalogTagOption
+    - ServiceCatalogTagOptionPortfolioAttachment
+    - ServiceDiscoveryInstance
+    - ServiceDiscoveryNamespace
+    - ServiceDiscoveryService
+    - SimpleDBDomain
+    - StorageGatewayFileShare
+    - StorageGatewayGateway
+    - StorageGatewayTape
+    - StorageGatewayVolume
+    - TransferServer
+    - TransferServerUser
+    - WAFRegionalByteMatchSet
+    - WAFRegionalByteMatchSetIP
+    - WAFRegionalIPSet
+    - WAFRegionalIPSetIP
+    - WAFRegionalRateBasedRule
+    - WAFRegionalRateBasedRulePredicate
+    - WAFRegionalRegexMatchSet
+    - WAFRegionalRegexMatchTuple
+    - WAFRegionalRegexPatternSet
+    - WAFRegionalRegexPatternString
+    - WAFRegionalRule
+    - WAFRegionalRuleGroup
+    - WAFRegionalRulePredicate
+    - WAFRegionalWebACL
+    - WAFRegionalWebACLRuleAttachment
+    - WAFRule
+    - WAFWebACL
+    - WAFWebACLRuleAttachment
+    - WAFv2IPSet
+    - WAFv2RegexPatternSet
+    - WAFv2RuleGroup
+    - WAFv2WebACL
+    - WorkLinkFleet
+    - WorkSpacesWorkspace
+    - XRayGroup
+    - XRaySamplingRule

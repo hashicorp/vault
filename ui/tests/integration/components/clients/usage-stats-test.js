@@ -18,7 +18,9 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
     assert
       .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
       .hasText('0', 'Value defaults to zero');
-    assert.dom('a').hasAttribute('href', 'https://learn.hashicorp.com/tutorials/vault/usage-metrics');
+    assert
+      .dom('a')
+      .hasAttribute('href', 'https://developer.hashicorp.com/vault/tutorials/monitoring/usage-metrics');
   });
 
   test('it renders with data', async function (assert) {
