@@ -267,12 +267,12 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 	var te *logical.TokenEntry
 	var entity *identity.Entity
 	var identityPolicies map[string][]string
-	var err error
 
 	// Even if unauth, if a token is provided, there's little reason not to
 	// gather as much info as possible for the audit log and to e.g. control
 	// trace mode for EGPs.
 	if !unauth || (unauth && req.ClientToken != "") {
+		var err error
 		acl, te, entity, identityPolicies, err = c.fetchACLTokenEntryAndEntity(ctx, req)
 		// In the unauth case we don't want to fail the command, since it's
 		// unauth, we just have no information to attach to the request, so
@@ -431,9 +431,12 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		auth.PolicyResults.GrantingPolicies = append(auth.PolicyResults.GrantingPolicies, authResults.SentinelResults.GrantingPolicies...)
 	}
 
-	// If it is an authenticated ( i.e with vault token ) request, increment client count
+	// If it is an authenticated ( i.e. with vault token ) request, increment client count
 	if !unauth && c.activityLog != nil {
-		c.activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+		err := c.activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+		if err != nil {
+			return auth, te, err
+		}
 	}
 	return auth, te, nil
 }

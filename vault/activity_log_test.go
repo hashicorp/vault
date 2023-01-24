@@ -126,7 +126,10 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	}
 
 	id, isTWE := te.CreateClientID()
-	a.HandleTokenUsage(context.Background(), te, id, isTWE)
+	err := a.HandleTokenUsage(context.Background(), te, id, isTWE)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	a.fragmentLock.Lock()
 	if a.fragment != nil {
@@ -143,7 +146,10 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	}
 
 	id, isTWE = teNew.CreateClientID()
-	a.HandleTokenUsage(context.Background(), teNew, id, isTWE)
+	err = a.HandleTokenUsage(context.Background(), teNew, id, isTWE)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	a.fragmentLock.Lock()
 	if a.fragment != nil {
@@ -371,12 +377,18 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	idNonEntity, isTWE := tokenEntryOne.CreateClientID()
 
 	for i := 0; i < 3; i++ {
-		a.HandleTokenUsage(ctx, &tokenEntryOne, idNonEntity, isTWE)
+		err := a.HandleTokenUsage(ctx, &tokenEntryOne, idNonEntity, isTWE)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	idEntity, isTWE := entityEntry.CreateClientID()
 	for i := 0; i < 2; i++ {
-		a.HandleTokenUsage(ctx, &entityEntry, idEntity, isTWE)
+		err := a.HandleTokenUsage(ctx, &entityEntry, idEntity, isTWE)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	err := a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
