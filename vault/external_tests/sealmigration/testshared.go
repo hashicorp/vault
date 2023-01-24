@@ -141,6 +141,8 @@ func ParamTestSealMigrationTransitToShamir_Recovery(t *testing.T, logger hclog.L
 
 	// Disable the transit seal, forcing recovery
 	tss.Cleanup()
+	tss = nil
+
 	// conf := cluster.Cores[0].GetCoreConfigInternal()
 	// conf.Seals[0].Recover = true
 
@@ -165,11 +167,6 @@ func ParamTestSealMigrationTransitToShamir_Recovery(t *testing.T, logger hclog.L
 
 	cluster.Cleanup()
 	storage.Cleanup(t, cluster)
-
-	// Now that migration is done, we can nuke the transit server, since we
-	// can unseal without it.
-	tss.Cleanup()
-	tss = nil
 
 	// Run the backend with shamir.  Note that the recovery keys are now the
 	// barrier keys.

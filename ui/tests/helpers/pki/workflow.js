@@ -48,6 +48,8 @@ export const SELECTORS = {
   configuration: {
     title: '[data-test-pki-configuration-page-title]',
     emptyState: '[data-test-configuration-empty-state]',
+    pkiBetaBanner: '[data-test-pki-configuration-banner]',
+    pkiBetaBannerLink: '[data-test-pki-configuration-banner] a',
     ...CONFIGURATION,
   },
 };
