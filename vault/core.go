@@ -1751,7 +1751,10 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("error getting recovery key to set on new seal: %w", err)
 		}
-		return c.migrateAutoToAuto(ctx, recoveryKey)
+
+		if err := c.migrateAutoToAuto(ctx, recoveryKey); err != nil {
+			return err
+		}
 	case isUnsealRecoverySeal(c.migrationInfo.seal) && c.seal.RecoveryKeySupported():
 		c.logger.Info("migrating from one auto-unseal to another", "from",
 			c.migrationInfo.seal.BarrierType(), "to", c.seal.BarrierType())
@@ -1761,7 +1764,9 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 			return fmt.Errorf("error getting recovery key to set on new seal: %w", err)
 		}
 
-		return c.migrateAutoToAuto(ctx, recoveryKey)
+		if err := c.migrateAutoToAuto(ctx, recoveryKey); err != nil {
+			return err
+		}
 	case isUnsealRecoverySeal(c.migrationInfo.seal):
 		c.logger.Info("migrating from one auto-unseal to shamir", "from", c.migrationInfo.seal.BarrierType())
 		// Auto to Shamir, since recovery key isn't supported on new seal
@@ -1771,7 +1776,9 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 			return fmt.Errorf("error getting recovery key to set on new seal: %w", err)
 		}
 
-		return c.migrateAutoToShamir(ctx, recoveryKey)
+		if err := c.migrateAutoToShamir(ctx, recoveryKey); err != nil {
+			return err
+		}
 	case isAutoSeal(c.migrationInfo.seal):
 		c.logger.Info("migrating from one auto-unseal to shamir", "from", c.migrationInfo.seal.BarrierType())
 		// Auto to Shamir, since recovery key isn't supported on new seal
@@ -1781,8 +1788,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 			return fmt.Errorf("error getting recovery key to set on new seal: %w", err)
 		}
 
-		err = c.migrateAutoToShamir(ctx, recoveryKey)
-		if err != nil {
+		if err := c.migrateAutoToShamir(ctx, recoveryKey); err != nil {
 			return err
 		}
 	case c.seal.RecoveryKeySupported():
