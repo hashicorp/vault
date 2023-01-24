@@ -770,7 +770,6 @@ type CreationParameters struct {
 	Subject                       pkix.Name
 	DNSNames                      []string
 	EmailAddresses                []string
-	UserId                        string
 	IPAddresses                   []net.IP
 	URIs                          []*url.URL
 	OtherSANs                     map[string][]string
@@ -1014,3 +1013,6 @@ func CreatePolicyInformationExtensionFromStorageStrings(policyIdentifiers []stri
 		Value:    asn1Bytes,
 	}, nil
 }
+
+// Subject Attribute OIDs
+var SubjectPilotUserIDAttributeOID = asn1.ObjectIdentifier{0, 9, 2342, 19200300, 100, 1, 1}
