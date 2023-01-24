@@ -2,43 +2,20 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     <NamespaceReminder @mode={{"create"}} @noun="signed intermediate" />
-    {{#each @model.formFieldGroups as |fieldGroup|}}
-      {{#each-in fieldGroup as |group fields|}}
-
-        {{#if (eq group "default")}}
-          {{#each fields as |attr|}}
-            <FormField
-              data-test-field={{attr}}
-              @attr={{attr}}
-              @model={{@model}}
-              @modelValidations={{this.modelValidations}}
-              @showHelpText={{false}}
-            >
-              <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
-            </FormField>
-          {{/each}}
-        {{else}}
-          {{#let (camelize (concat "show" group)) as |prop|}}
-            <ToggleButton
-              @isOpen={{get this prop}}
-              @openLabel={{concat "Hide " group}}
-              @closedLabel={{group}}
-              @onClick={{fn (mut (get this prop))}}
-              class="is-block"
-              data-test-toggle-group={{group}}
-            />
-            {{#if (get this prop)}}
-              <div class="box is-marginless">
-                {{#each fields as |attr|}}
-                  <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
-                {{/each}}
-              </div>
-            {{/if}}
-          {{/let}}
-
-        {{/if}}
-      {{/each-in}}
+    {{#each @model.formFields as |attr|}}
+      <FormField
+        data-test-field={{attr}}
+        @attr={{attr}}
+        @model={{@model}}
+        @modelValidations={{this.modelValidations}}
+        @showHelpText={{false}}
+      >
+        {{! attr customTtl has editType yield and will show this component }}
+        <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+      </FormField>
     {{/each}}
+
+    <PkiGenerateToggleGroups @model={{@model}} @groups={{this.groups}} />
   </div>
   <div class="has-top-padding-s">
     <button
