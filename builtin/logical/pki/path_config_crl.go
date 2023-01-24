@@ -257,6 +257,10 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("unified_crl cannot be enabled on local mounts."), nil
 	}
 
+	if !config.AutoRebuild && config.UnifiedCRL {
+		return logical.ErrorResponse("unified_crl=true requires auto_rebuild=true, as unified CRLs cannot be rebuilt on every revocation."), nil
+	}
+
 	entry, err := logical.StorageEntryJSON("config/crl", config)
 	if err != nil {
 		return nil, err
