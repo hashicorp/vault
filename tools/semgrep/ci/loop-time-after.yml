@@ -1,0 +1,14 @@
+rules:
+  - id: loop-time-after
+    pattern: |
+      for {
+        select {
+          case <-time.After(...):
+            ...
+        }
+        ...
+      }
+    message: <-time.After() used in for loop, consider using a ticker instead
+    languages:
+      - go
+    severity: WARNING
