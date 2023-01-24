@@ -65,7 +65,6 @@ export default class PkiIssuerCrossSign extends Component {
     }
   }
 
-  // TODO use pki/action model when changes are merged
   @action
   async crossSignIntermediate(intMount, intName, newCertName) {
     // 1. Fetch issuer we want to sign
@@ -74,22 +73,21 @@ export default class PkiIssuerCrossSign extends Component {
       id: intName,
     });
 
-    // TODO address 'realm of possibilities' for values from existingIssuer
-    // parse params from the existing issuer that need to be passed along to newly signed issuer
-    // will happen in the parse-pki-cert helper?
-
     // 2. Create the new CSR
     const newCsr = await this.store
-      .createRecord('pki/config', {
+      .createRecord('pki/action', {
         keyRef: existingIssuer.keyId,
         commonName: existingIssuer.commonName,
+        type: 'existing',
       })
-      .save({ adapterOptions: { actionType: 'generate-csr', mount: intMount } })
+      .save({
+        adapterOptions: { actionType: 'generate-csr', mount: intMount, useIssuer: false },
+      })
       .then(({ csr }) => csr);
 
     // 3. Sign newCSR with correct parent to create cross-signed cert
     const signedCaChain = await this.store
-      .createRecord('pki/config', {
+      .createRecord('pki/action', {
         csr: newCsr,
         commonName: existingIssuer.commonName,
       })
