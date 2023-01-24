@@ -61,14 +61,6 @@ func NewTokenFileAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 }
 
 func (a *tokenFileMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
-	_, err := os.Stat(a.tokenFilePath)
-	if err != nil {
-		if a.cachedToken == "" {
-			return "", nil, nil, fmt.Errorf("token file not found and no cached token known: %w", err)
-		}
-		a.logger.Warn("token file not found", "error", err)
-	}
-
 	token, err := os.ReadFile(a.tokenFilePath)
 	if err != nil {
 		if a.cachedToken == "" {

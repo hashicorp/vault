@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -69,7 +70,7 @@ func testTokenFileEndToEnd(t *testing.T, removeTokenFile bool, expectToken bool)
 		t.Fatal(err)
 	}
 
-	tokenFile, err := os.CreateTemp(t.TempDir(), "token_file")
+	tokenFile, err := os.Create(filepath.Join(t.TempDir(), "token_file"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +114,7 @@ func testTokenFileEndToEnd(t *testing.T, removeTokenFile bool, expectToken bool)
 
 	// We close these right away because we're just basically testing
 	// permissions and finding a usable file name
-	sinkFile, err := os.CreateTemp(t.TempDir(), "auth.tokensink.test.")
+	sinkFile, err := os.Create(filepath.Join(t.TempDir(), "auth.tokensink.test."))
 	if err != nil {
 		t.Fatal(err)
 	}
