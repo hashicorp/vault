@@ -87,12 +87,6 @@ func (b *SystemBackend) loginMFAPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"error": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-							},
 						}},
 					},
 					Summary:                   "Validates the login for the given MFA methods. Upon successful validation, it returns an auth response containing the client token",

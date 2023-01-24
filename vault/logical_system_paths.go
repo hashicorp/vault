@@ -304,7 +304,6 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary: "Read the log level for all existing loggers.",
@@ -348,7 +347,6 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary: "Read the log level for a single logger.",
@@ -1043,10 +1041,6 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"reload_id": {
-								Type:     framework.TypeString,
-								Required: true,
-							},
-							logical.HTTPRawBody: {
 								Type:     framework.TypeString,
 								Required: true,
 							},
@@ -1766,20 +1760,6 @@ func (b *SystemBackend) metricsPath() *framework.Path {
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							logical.HTTPContentType: {
-								Type:     framework.TypeString,
-								Required: true,
-							},
-							logical.HTTPRawBody: {
-								Type:     framework.TypeString,
-								Required: true,
-							},
-							logical.HTTPStatusCode: {
-								Type:     framework.TypeInt,
-								Required: true,
-							},
-						},
 					}},
 				},
 			},
@@ -2569,7 +2549,6 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 				},
@@ -2706,7 +2685,6 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary: "Enable a new secrets engine at the given path.",
@@ -2716,12 +2694,6 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"error": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-							},
 						}},
 					},
 					Summary: "Disable the mount point specified at the given path.",

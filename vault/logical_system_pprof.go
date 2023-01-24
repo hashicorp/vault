@@ -23,7 +23,6 @@ func (b *SystemBackend) pprofPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary: "Returns an HTML page listing the available profiles.",
@@ -42,7 +41,6 @@ render pages.`,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary:     "Returns the running program's command line.",
@@ -59,7 +57,6 @@ render pages.`,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary:     "Returns stack traces of all current goroutines.",
@@ -76,7 +73,6 @@ render pages.`,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary:     "Returns a sampling of memory allocations of live object.",
@@ -93,7 +89,6 @@ render pages.`,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary:     "Returns a sampling of all past memory allocations.",
@@ -110,7 +105,6 @@ render pages.`,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 
@@ -128,7 +122,6 @@ render pages.`,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary:     "Returns stack traces that led to blocking on synchronization primitives",
@@ -145,7 +138,6 @@ render pages.`,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary:     "Returns stack traces of holders of contended mutexes",
@@ -169,12 +161,6 @@ render pages.`,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"error": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-							},
 						}},
 					},
 					Summary:     "Returns a pprof-formatted cpu profile payload.",
@@ -191,7 +177,6 @@ render pages.`,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields:      map[string]*framework.FieldSchema{},
 						}},
 					},
 					Summary:     "Returns the program counters listed in the request.",
@@ -216,12 +201,6 @@ render pages.`,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"error": {
-									Type:     framework.TypeString,
-									Required: false,
-								},
-							},
 						}},
 					},
 					Summary:     "Returns the execution trace in binary form.",
