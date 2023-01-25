@@ -136,10 +136,10 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 					c.UI.Error(fmt.Sprintf("Failed to Read List of Issuers within Mount %v: %v", path, err))
 					return 1
 				}
-				issuersMap := rawIssuersResp.Data["keys"]
-				if issuersMap == nil {
-					continue // TODO: Add a Warning Here
+				if rawIssuersResp.Data == nil {
+					continue // TODO: Empty Issuers Response this throws an error
 				}
+				issuersMap := rawIssuersResp.Data["keys"]
 				certList := issuersMap.([]interface{})
 				for _, certId := range certList {
 					if len(issued) == 0 {
