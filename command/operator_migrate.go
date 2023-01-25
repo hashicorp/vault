@@ -105,7 +105,7 @@ func (c *OperatorMigrateCommand) Flags() *FlagSets {
 		Name:    "max-parallel",
 		Default: 1,
 		Target:  &c.flagMaxParallel,
-		Usage: "Specifies the maximum number of lightweight threads (goroutines) that may be used when migrating. " +
+		Usage: "Specifies the maximum number of parallel migration threads (goroutines) that may be used when migrating. " +
 			"This can speed up the migration process on slow backends but uses more resources.",
 	})
 
