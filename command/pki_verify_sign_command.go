@@ -76,7 +76,7 @@ func (c *PKIVerifySignCommand) Run(args []string) int {
 
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to obtain client: %v", err))
+		c.UI.Error(fmt.Sprintf("Failed to obtain client: %s", err))
 		return 1
 	}
 
@@ -111,9 +111,16 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 	if err != nil {
 		return fmt.Errorf("error: unable to fetch issuer %v: %w", issuerPath, err), nil
 	}
-	caChainRaw := issuedCertResp.Data["ca_chain"].([]interface{})
-	caChain := make([]string, len(caChainRaw))
-	for i, cert := range caChainRaw {
+	if len(issuedPath) <= 2 {
+		return fmt.Errorf(fmt.Sprintf("%v", issuedPath)), nil
+	}
+	caChainRaw := issuedCertResp.Data["ca_chain"]
+	if caChainRaw == nil {
+		return fmt.Errorf("no ca_chain information on %v", issuedPath), nil
+	}
+	caChainCast := caChainRaw.([]interface{})
+	caChain := make([]string, len(caChainCast))
+	for i, cert := range caChainCast {
 		caChain[i] = cert.(string)
 	}
 	issuedCertPem := issuedCertResp.Data["certificate"].(string)
@@ -121,7 +128,7 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 	if err != nil {
 		return err, nil
 	}
-	parentKeyId := issuerCertBundle.Certificate.AuthorityKeyId
+	parentKeyId := issuedCertBundle.Certificate.AuthorityKeyId
 
 	// Check the Chain-Match
 	rootCertPool := x509.NewCertPool()
