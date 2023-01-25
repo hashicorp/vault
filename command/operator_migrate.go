@@ -41,7 +41,7 @@ type OperatorMigrateCommand struct {
 	flagLogLevel     string
 	flagStart        string
 	flagReset        bool
-	flagParallel     int
+	flagMaxParallel  int
 	logger           log.Logger
 	ShutdownCh       chan struct{}
 }
@@ -102,11 +102,11 @@ func (c *OperatorMigrateCommand) Flags() *FlagSets {
 	})
 
 	f.IntVar(&IntVar{
-		Name:    "parallel",
+		Name:    "max-parallel",
 		Default: 1,
-		Target:  &c.flagParallel,
-		Usage: "Use lightweight threads (goroutines) when migrating. Can speed up the migration " +
-			"process on slow backends but uses more resources.",
+		Target:  &c.flagMaxParallel,
+		Usage: "Specifies the maximum number of lightweight threads (goroutines) that may be used when migrating. " +
+			"This can speed up the migration process on slow backends but uses more resources.",
 	})
 
 	f.StringVar(&StringVar{
@@ -137,7 +137,6 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 1
 	}
-
 	c.flagLogLevel = strings.ToLower(c.flagLogLevel)
 	validLevels := []string{"trace", "debug", "info", "warn", "error"}
 	if !strutil.StrListContains(validLevels, c.flagLogLevel) {
@@ -146,13 +145,8 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 	}
 	c.logger = logging.NewVaultLogger(log.LevelFromString(c.flagLogLevel))
 
-	if c.flagParallel < 1 || c.flagParallel > math.MaxInt32 {
-		c.UI.Error(fmt.Sprintf("Argument to flag -parallel must be between 1 and %d", math.MaxInt32))
-		return 1
-	}
-
-	if (c.flagStart != "") && c.flagParallel > 1 {
-		c.UI.Error("Flags -start and -parallel are both supplied, but cannot be used together")
+	if c.flagMaxParallel < 1 {
+		c.UI.Error(fmt.Sprintf("Argument to flag -max-parallel must be between 1 and %d", math.MaxInt32))
 		return 1
 	}
 
@@ -185,7 +179,7 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 }
 
 // migrate attempts to instantiate the source and destinations backends,
-// and then invoke the migration the the root of the keyspace.
+// and then invoke the migration the root of the keyspace.
 func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 	from, err := c.newBackend(config.StorageSource.Type, config.StorageSource.Config)
 	if err != nil {
@@ -230,7 +224,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 	doneCh := make(chan error)
 	go func() {
-		doneCh <- c.migrateAll(ctx, from, to, c.flagParallel)
+		doneCh <- c.migrateAll(ctx, from, to, c.flagMaxParallel)
 	}()
 
 	select {

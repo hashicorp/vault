@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -36,8 +35,8 @@ func TestMigration(t *testing.T) {
 
 		fromFactory := physicalBackends["file"]
 
-		folder := filepath.Join(os.TempDir(), testhelpers.RandomWithPrefix("migrator"))
-		defer os.RemoveAll(folder)
+		folder := filepath.Join(t.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+
 		confFrom := map[string]string{
 			"path": folder,
 		}
@@ -120,8 +119,7 @@ func TestMigration(t *testing.T) {
 		}
 
 		toFactory := physicalBackends["file"]
-		folder := filepath.Join(os.TempDir(), testhelpers.RandomWithPrefix("migrator"))
-		defer os.RemoveAll(folder)
+		folder := filepath.Join(t.TempDir(), testhelpers.RandomWithPrefix("migrator"))
 		confTo := map[string]string{
 			"path": folder,
 		}
@@ -146,11 +144,50 @@ func TestMigration(t *testing.T) {
 		}
 	})
 
+	t.Run("Start option (parallel)", func(t *testing.T) {
+		data := generateData()
+
+		fromFactory := physicalBackends["inmem"]
+		confFrom := map[string]string{}
+		from, err := fromFactory(confFrom, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := storeData(from, data); err != nil {
+			t.Fatal(err)
+		}
+
+		toFactory := physicalBackends["file"]
+		folder := filepath.Join(t.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+		confTo := map[string]string{
+			"path": folder,
+		}
+
+		to, err := toFactory(confTo, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		const start = "m"
+
+		cmd := OperatorMigrateCommand{
+			logger:    log.NewNullLogger(),
+			flagStart: start,
+		}
+		if err := cmd.migrateAll(context.Background(), from, to, 10); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := compareStoredData(to, data, start); err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("Config parsing", func(t *testing.T) {
 		cmd := new(OperatorMigrateCommand)
 
-		cfgName := filepath.Join(os.TempDir(), testhelpers.RandomWithPrefix("migrator"))
-		ioutil.WriteFile(cfgName, []byte(`
+		cfgName := filepath.Join(t.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+		os.WriteFile(cfgName, []byte(`
 storage_source "src_type" {
   path = "src_path"
 }
@@ -158,7 +195,6 @@ storage_source "src_type" {
 storage_destination "dest_type" {
   path = "dest_path"
 }`), 0o644)
-		defer os.Remove(cfgName)
 
 		expCfg := &migratorConfig{
 			StorageSource: &server.Storage{
@@ -183,7 +219,7 @@ storage_destination "dest_type" {
 		}
 
 		verifyBad := func(cfg string) {
-			ioutil.WriteFile(cfgName, []byte(cfg), 0o644)
+			os.WriteFile(cfgName, []byte(cfg), 0o644)
 			_, err := cmd.loadMigratorConfig(cfgName)
 			if err == nil {
 				t.Fatalf("expected error but none received from: %v", cfg)
