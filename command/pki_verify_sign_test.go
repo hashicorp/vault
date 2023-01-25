@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/vault/api"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/api"
 )
 
 func TestPKIVerifySign(t *testing.T) {
@@ -116,7 +117,6 @@ func TestPKIVerifySign(t *testing.T) {
 		}
 
 	}
-
 }
 
 func execPKIVerifyJson(t *testing.T, client *api.Client, expectErrorUnmarshalling bool, expectErrorOut bool, callArgs []string) (map[string]interface{}, string) {
@@ -421,7 +421,6 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 	}); err != nil || resp == nil {
 		t.Fatalf("error naming issuer %v", err)
 	}
-
 }
 
 func verifyExpectedJson(expectedResults map[string]bool, results map[string]interface{}) (isMatch bool, error string) {
