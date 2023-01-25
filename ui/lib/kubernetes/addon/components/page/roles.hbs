@@ -1,0 +1,76 @@
+<TabPageHeader @model={{@backend}} @filterRoles={{true}} @rolesFilterValue={{@filterValue}} @breadcrumbs={{@breadcrumbs}}>
+  <ToolbarLink @route="roles.create" @type="add" data-test-toolbar-roles-action>
+    Create role
+  </ToolbarLink>
+</TabPageHeader>
+
+{{#if (not @config)}}
+  <ConfigCta />
+{{else if (not @roles)}}
+  {{#if @filterValue}}
+    <EmptyState @title="There are no roles matching &quot;{{@filterValue}}&quot;" />
+  {{else}}
+    <EmptyState
+      data-test-config-cta
+      @title="No roles yet"
+      @message="When created, roles will be listed here. Create a role to start generating service account tokens."
+    >
+      <LinkTo class="has-top-margin-xs" @route="roles.create">
+        Create role
+      </LinkTo>
+    </EmptyState>
+  {{/if}}
+{{else}}
+  <div class="has-bottom-margin-s">
+    {{#each @roles as |role|}}
+      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role.details" role.name}} as |Item|>
+        <Item.content>
+          <Icon @name="user" />
+          <span data-test-role={{role.name}}>{{role.name}}</span>
+        </Item.content>
+        <Item.menu as |Menu|>
+          {{#if role.rolesPath.isLoading}}
+            <li class="action">
+              <button disabled type="button" class="link button is-loading is-transparent">
+                loading
+              </button>
+            </li>
+          {{else}}
+            <li class="action">
+              <LinkTo
+                class="has-text-black has-text-weight-semibold"
+                data-test-details
+                @route="roles.role.details"
+                @model={{role}}
+                @disabled={{eq role.canRead false}}
+              >
+                Details
+              </LinkTo>
+            </li>
+            <li class="action">
+              <LinkTo
+                class="has-text-black has-text-weight-semibold"
+                data-test-edit
+                @route="roles.role.edit"
+                @model={{role}}
+                @disabled={{not role.canEdit}}
+              >
+                Edit
+              </LinkTo>
+            </li>
+            <li class="action">
+              <Menu.Message
+                data-test-delete
+                @id={{role.id}}
+                @triggerText="Delete"
+                @title="Are you sure?"
+                @message="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
+                @onConfirm={{fn this.onDelete role}}
+              />
+            </li>
+          {{/if}}
+        </Item.menu>
+      </ListItem>
+    {{/each}}
+  </div>
+{{/if}}

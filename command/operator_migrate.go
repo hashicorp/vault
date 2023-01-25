@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/url"
 	"os"
 	"sort"
@@ -22,6 +23,7 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -39,6 +41,7 @@ type OperatorMigrateCommand struct {
 	flagLogLevel     string
 	flagStart        string
 	flagReset        bool
+	flagMaxParallel  int
 	logger           log.Logger
 	ShutdownCh       chan struct{}
 }
@@ -98,6 +101,14 @@ func (c *OperatorMigrateCommand) Flags() *FlagSets {
 		Usage:  "Reset the migration lock. No migration will occur.",
 	})
 
+	f.IntVar(&IntVar{
+		Name:    "max-parallel",
+		Default: 10,
+		Target:  &c.flagMaxParallel,
+		Usage: "Specifies the maximum number of parallel migration threads (goroutines) that may be used when migrating. " +
+			"This can speed up the migration process on slow backends but uses more resources.",
+	})
+
 	f.StringVar(&StringVar{
 		Name:       "log-level",
 		Target:     &c.flagLogLevel,
@@ -126,7 +137,6 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 1
 	}
-
 	c.flagLogLevel = strings.ToLower(c.flagLogLevel)
 	validLevels := []string{"trace", "debug", "info", "warn", "error"}
 	if !strutil.StrListContains(validLevels, c.flagLogLevel) {
@@ -134,6 +144,11 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 		return 1
 	}
 	c.logger = logging.NewVaultLogger(log.LevelFromString(c.flagLogLevel))
+
+	if c.flagMaxParallel < 1 {
+		c.UI.Error(fmt.Sprintf("Argument to flag -max-parallel must be between 1 and %d", math.MaxInt))
+		return 1
+	}
 
 	if c.flagConfig == "" {
 		c.UI.Error("Must specify exactly one config path using -config")
@@ -164,7 +179,7 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 }
 
 // migrate attempts to instantiate the source and destinations backends,
-// and then invoke the migration the the root of the keyspace.
+// and then invoke the migration the root of the keyspace.
 func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 	from, err := c.newBackend(config.StorageSource.Type, config.StorageSource.Config)
 	if err != nil {
@@ -209,7 +224,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 	doneCh := make(chan error)
 	go func() {
-		doneCh <- c.migrateAll(ctx, from, to)
+		doneCh <- c.migrateAll(ctx, from, to, c.flagMaxParallel)
 	}()
 
 	select {
@@ -225,8 +240,8 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 }
 
 // migrateAll copies all keys in lexicographic order.
-func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
-	return dfsScan(ctx, from, func(ctx context.Context, path string) error {
+func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend, maxParallel int) error {
+	return dfsScan(ctx, from, maxParallel, func(ctx context.Context, path string) error {
 		if path < c.flagStart || path == storageMigrationLock || path == vault.CoreLockPath {
 			return nil
 		}
@@ -365,10 +380,20 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 
 // dfsScan will invoke cb with every key from source.
 // Keys will be traversed in lexicographic, depth-first order.
-func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.Context, path string) error) error {
+func dfsScan(ctx context.Context, source physical.Backend, maxParallel int, cb func(ctx context.Context, path string) error) error {
 	dfs := []string{""}
 
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.SetLimit(maxParallel)
+
 	for l := len(dfs); l > 0; l = len(dfs) {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		key := dfs[len(dfs)-1]
 		if key == "" || strings.HasSuffix(key, "/") {
 			children, err := source.List(ctx, key)
@@ -385,19 +410,14 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 				}
 			}
 		} else {
-			err := cb(ctx, key)
-			if err != nil {
-				return err
-			}
+			// Pooling
+			eg.Go(func() error {
+				return cb(ctx, key)
+			})
 
 			dfs = dfs[:len(dfs)-1]
 		}
-
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-		}
 	}
-	return nil
+
+	return eg.Wait()
 }

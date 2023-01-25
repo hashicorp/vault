@@ -208,7 +208,7 @@ var (
 	altRootsRe       = regexp.MustCompile(`^\(([\w\-_]+(?:\|[\w\-_]+)+)\)(/.*)$`) // Pattern starting with alts, e.g. "(root1|root2)/(?P<name>regex)"
 	cleanCharsRe     = regexp.MustCompile("[()^$?]")                              // Set of regex characters that will be stripped during cleaning
 	cleanSuffixRe    = regexp.MustCompile(`/\?\$?$`)                              // Path suffix patterns that will be stripped during cleaning
-	nonWordRe        = regexp.MustCompile(`[^a-zA-Z0-9]+`)                        // Match a sequence of non-word characters
+	nonWordRe        = regexp.MustCompile(`[^\w]+`)                               // Match a sequence of non-word characters
 	pathFieldsRe     = regexp.MustCompile(`{(\w+)}`)                              // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
 	reqdRe           = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)                // Capture required parameters, e.g. "(?P<name>regex)"
 	wsRe             = regexp.MustCompile(`\s+`)                                  // Match whitespace, to be compressed during cleaning
@@ -264,26 +264,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		// Process path and header parameters, which are common to all operations.
 		// Body fields will be added to individual operations.
 		pathFields, bodyFields := splitFields(p.Fields, path)
-
-		defaultMountPath := requestResponsePrefix
-		if requestResponsePrefix == "kv" {
-			defaultMountPath = "secret"
-		}
-
-		if defaultMountPath != "system" && defaultMountPath != "identity" {
-			p := OASParameter{
-				Name:        fmt.Sprintf("%s_mount_path", defaultMountPath),
-				Description: "Path where the backend was mounted; the endpoint path will be offset by the mount path",
-				In:          "path",
-				Schema: &OASSchema{
-					Type:    "string",
-					Default: defaultMountPath,
-				},
-				Required: false,
-			}
-
-			pi.Parameters = append(pi.Parameters, p)
-		}
 
 		for name, field := range pathFields {
 			location := "path"
@@ -785,9 +765,6 @@ func cleanResponse(resp *logical.Response) *cleanedResponse {
 //
 // An optional user-provided suffix ("context") may also be appended.
 func (d *OASDocument) CreateOperationIDs(context string) {
-	// title caser
-	title := cases.Title(language.English)
-
 	opIDCount := make(map[string]int)
 	var paths []string
 
@@ -814,12 +791,9 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 				continue
 			}
 
-			// Discard "_mount_path" from any {thing_mount_path} parameters
-			path = strings.Replace(path, "_mount_path", "", 1)
-
 			// Space-split on non-words, title case everything, recombine
 			opID := nonWordRe.ReplaceAllString(strings.ToLower(path), " ")
-			opID = title.String(opID)
+			opID = strings.Title(opID)
 			opID = method + strings.ReplaceAll(opID, " ", "")
 
 			// deduplicate operationIds. This is a safeguard, since generated IDs should

@@ -1,3 +1,3 @@
-import Route from '@ember/routing/route';
+import PkiIssuerDetailsRoute from './details';
 
-export default class PkiIssuerEditRoute extends Route {}
+export default class PkiIssuerEditRoute extends PkiIssuerDetailsRoute {}

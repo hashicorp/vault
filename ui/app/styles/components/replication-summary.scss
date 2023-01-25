@@ -6,4 +6,9 @@
   .helper-text {
     font-weight: normal;
   }
+
+  .float-right {
+    margin: $spacing-s 0 $spacing-l 0;
+    float: right;
+  }
 }

@@ -25,7 +25,7 @@ type FieldData struct {
 	Schema map[string]*FieldSchema
 }
 
-// Validate cycles through raw data and validate conversions in
+// Validate cycles through raw data and validates conversions in
 // the schema, so we don't get an error/panic later when
 // trying to get data out.  Data not in the schema is not
 // an error at this point, so we don't worry about it.
@@ -47,6 +47,40 @@ func (d *FieldData) Validate() error {
 			}
 		default:
 			return fmt.Errorf("unknown field type %q for field %q", schema.Type, field)
+		}
+	}
+
+	return nil
+}
+
+// ValidateStrict cycles through raw data and validates conversions in the
+// schema. In addition to the checks done by Validate, this function ensures
+// that the raw data has all of the schema's required fields and does not
+// have any fields outside of the schema. It will return a non-nil error if:
+//
+//  1. a conversion (parsing of the field's value) fails
+//  2. a raw field does not exist in the schema (unless the schema is nil)
+//  3. a required schema field is missing from the raw data
+//
+// This function is currently used for validating response schemas in tests.
+func (d *FieldData) ValidateStrict() error {
+	// the schema is nil, nothing to validate
+	if d.Schema == nil {
+		return nil
+	}
+
+	for field := range d.Raw {
+		if _, _, err := d.GetOkErr(field); err != nil {
+			return fmt.Errorf("field %q: %w", field, err)
+		}
+	}
+
+	for field, schema := range d.Schema {
+		if !schema.Required {
+			continue
+		}
+		if _, ok := d.Raw[field]; !ok {
+			return fmt.Errorf("missing required field %q", field)
 		}
 	}
 

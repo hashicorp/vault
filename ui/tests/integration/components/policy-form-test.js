@@ -1,8 +1,8 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import Sinon from 'sinon';
+import sinon from 'sinon';
 import Pretender from 'pretender';
 
 const SELECTORS = {
@@ -21,8 +21,8 @@ module('Integration | Component | policy-form', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('policy/acl');
-    this.onSave = Sinon.spy();
-    this.onCancel = Sinon.spy();
+    this.onSave = sinon.spy();
+    this.onCancel = sinon.spy();
     this.server = new Pretender(function () {
       this.put('/v1/sys/policies/acl/bad-policy', () => {
         return [
@@ -44,15 +44,11 @@ module('Integration | Component | policy-form', function (hooks) {
   });
 
   test('it renders the form for new ACL policy', async function (assert) {
-    const saveSpy = Sinon.spy();
-    const model = this.store.createRecord('policy/acl');
     const policy = `
     path "secret/*" {
       capabilities = [ "create", "read", "update", "list" ]
     }
     `;
-    this.set('model', model);
-    this.set('onSave', saveSpy);
     await render(hbs`
     <PolicyForm
       @model={{this.model}}
@@ -67,14 +63,13 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
     await fillIn(`${SELECTORS.policyEditor} textarea`, policy);
     assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
-    assert.ok(saveSpy.notCalled);
+    assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.saveButton).hasText('Create policy');
     await click(SELECTORS.saveButton);
-    assert.ok(saveSpy.calledOnceWith(this.model));
+    assert.ok(this.onSave.calledOnceWith(this.model));
   });
 
   test('it renders the form for new RGP policy', async function (assert) {
-    const saveSpy = Sinon.spy();
     const model = this.store.createRecord('policy/rgp');
     const policy = `
     path "secret/*" {
@@ -82,7 +77,6 @@ module('Integration | Component | policy-form', function (hooks) {
     }
     `;
     this.set('model', model);
-    this.set('onSave', saveSpy);
     await render(hbs`
     <PolicyForm
       @model={{this.model}}
@@ -97,13 +91,18 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
     await fillIn(`${SELECTORS.policyEditor} textarea`, policy);
     assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
-    assert.ok(saveSpy.notCalled);
+    assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.saveButton).hasText('Create policy');
     await click(SELECTORS.saveButton);
-    assert.ok(saveSpy.calledOnceWith(this.model));
+    assert.ok(this.onSave.calledOnceWith(this.model));
   });
 
-  test('it toggles upload on new policy', async function (assert) {
+  test('it toggles to upload a new policy and uploads file', async function (assert) {
+    const policy = `
+    path "auth/token/lookup-self" {
+      capabilities = ["read"]
+    }`;
+    this.file = new File([policy], 'test-policy.hcl');
     await render(hbs`
     <PolicyForm
       @model={{this.model}}
@@ -117,10 +116,13 @@ module('Integration | Component | policy-form', function (hooks) {
     await click(SELECTORS.uploadFileToggle);
     assert.dom(SELECTORS.policyUpload).exists({ count: 1 }, 'Policy upload is shown after toggle');
     assert.dom(SELECTORS.policyEditor).doesNotExist('Policy editor is not shown');
+    await triggerEvent(SELECTORS.policyUpload, 'change', { files: [this.file] });
+    assert.dom(SELECTORS.nameInput).hasValue('test-policy', 'it fills in policy name');
+    await click(SELECTORS.saveButton);
+    assert.propEqual(this.onSave.lastCall.args[0].policy, policy, 'policy content saves in correct format');
   });
 
   test('it renders the form to edit existing ACL policy', async function (assert) {
-    const saveSpy = Sinon.spy();
     const model = this.store.createRecord('policy/acl', {
       name: 'bar',
       policy: 'some policy content',
@@ -128,7 +130,6 @@ module('Integration | Component | policy-form', function (hooks) {
     model.save();
 
     this.set('model', model);
-    this.set('onSave', saveSpy);
     await render(hbs`
     <PolicyForm
       @model={{this.model}}
@@ -145,13 +146,12 @@ module('Integration | Component | policy-form', function (hooks) {
       'updated-some policy content',
       'Policy editor updates policy value on model'
     );
-    assert.ok(saveSpy.notCalled);
+    assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.saveButton).hasText('Save', 'Save button text is correct');
     await click(SELECTORS.saveButton);
-    assert.ok(saveSpy.calledOnceWith(this.model));
+    assert.ok(this.onSave.calledOnceWith(this.model));
   });
   test('it renders the form to edit existing RGP policy', async function (assert) {
-    const saveSpy = Sinon.spy();
     const model = this.store.createRecord('policy/rgp', {
       name: 'bar',
       policy: 'some policy content',
@@ -159,7 +159,6 @@ module('Integration | Component | policy-form', function (hooks) {
     model.save();
 
     this.set('model', model);
-    this.set('onSave', saveSpy);
     await render(hbs`
     <PolicyForm
       @model={{this.model}}
@@ -176,20 +175,18 @@ module('Integration | Component | policy-form', function (hooks) {
       'updated-some policy content',
       'Policy editor updates policy value on model'
     );
-    assert.ok(saveSpy.notCalled);
+    assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.saveButton).hasText('Save', 'Save button text is correct');
     await click(SELECTORS.saveButton);
-    assert.ok(saveSpy.calledOnceWith(this.model));
+    assert.ok(this.onSave.calledOnceWith(this.model));
   });
   test('it shows the error message on form when save fails', async function (assert) {
-    const saveSpy = Sinon.spy();
     const model = this.store.createRecord('policy/acl', {
       name: 'bad-policy',
       policy: 'some policy content',
     });
 
     this.set('model', model);
-    this.set('onSave', saveSpy);
     await render(hbs`
     <PolicyForm
       @model={{this.model}}
@@ -198,7 +195,7 @@ module('Integration | Component | policy-form', function (hooks) {
     />
     `);
     await click(SELECTORS.saveButton);
-    assert.ok(saveSpy.notCalled);
+    assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.error).includesText('An error occurred');
   });
 });

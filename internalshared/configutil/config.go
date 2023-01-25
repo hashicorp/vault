@@ -38,12 +38,14 @@ type SharedConfig struct {
 	// LogFormat specifies the log format. Valid values are "standard" and
 	// "json". The values are case-insenstive. If no log format is specified,
 	// then standard format will be used.
-	LogFormat         string `hcl:"log_format"`
-	LogLevel          string `hcl:"log_level"`
-	LogFile           string `hcl:"log_file"`
-	LogRotateBytes    string `hcl:"log_rotate_bytes"`
-	LogRotateDuration string `hcl:"log_rotate_duration"`
-	LogRotateMaxFiles string `hcl:"log_rotate_max_files"`
+	LogFormat            string      `hcl:"log_format"`
+	LogLevel             string      `hcl:"log_level"`
+	LogFile              string      `hcl:"log_file"`
+	LogRotateDuration    string      `hcl:"log_rotate_duration"`
+	LogRotateBytes       int         `hcl:"log_rotate_bytes"`
+	LogRotateBytesRaw    interface{} `hcl:"log_rotate_bytes"`
+	LogRotateMaxFiles    int         `hcl:"log_rotate_max_files"`
+	LogRotateMaxFilesRaw interface{} `hcl:"log_rotate_max_files"`
 
 	PidFile string `hcl:"pid_file"`
 

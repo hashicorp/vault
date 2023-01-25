@@ -38,7 +38,7 @@
           </ToolbarActions>
         </Toolbar>
         {{#if this.showFileUpload}}
-          <TextFile @inputOnly={{true}} @file={{this.file}} @onChange={{this.setPolicyFromFile}} />
+          <TextFile @uploadOnly={{true}} @onChange={{this.setPolicyFromFile}} />
         {{else}}
           <JsonEditor
             @title="Policy"
@@ -74,7 +74,6 @@
       {{uppercase @model.policyType}}
       policies can be found
       <DocLink
-        @host="https://developer.hashicorp.com"
         @path={{if
           (eq @model.policyType "acl")
           "/vault/docs/concepts/policies#capabilities"
