@@ -152,6 +152,16 @@ The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 of the ca_chain field.`,
 	}
 
+	fields["user_ids"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `The requested user_ids value to place in the subject,
+if any, in a comma-delimited list. Restricted by allowed_user_ids.
+Any values are added with OID 0.9.2342.19200300.100.1.1.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "User ID(s)",
+		},
+	}
+
 	fields = addIssuerRefField(fields)
 
 	return fields
