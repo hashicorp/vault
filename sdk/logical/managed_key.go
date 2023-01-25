@@ -3,7 +3,6 @@ package logical
 import (
 	"context"
 	"crypto"
-	"crypto/cipher"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"io"
 )
