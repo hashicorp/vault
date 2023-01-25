@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/cipher"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"io"
 )
 
@@ -101,7 +102,8 @@ type ManagedSigningKey interface {
 
 type ManagedEncryptingKey interface {
 	ManagedKey
-	GetAEAD(iv []byte) (cipher.AEAD, error)
+	Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) ([]byte, error)
+	Decrypt(ctx context.Context, ciphertext []byte, options ...wrapping.Option) ([]byte, error)
 }
 
 type ManagedMACKey interface {
