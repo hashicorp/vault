@@ -5,14 +5,15 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 import { waitFor } from '@ember/test-waiters';
+import { parseCertificate } from 'vault/utils/parse-pki-cert';
 /**
  * @module PkiIssuerCrossSign
- * PkiIssuerCrossSign components render from a parent issuer's details page to cross-sign an intermediate issuer.
+ * PkiIssuerCrossSign components render from a parent issuer's details page to cross-sign an intermediate issuer (from a different mount).
  * The component reads an existing intermediate issuer, cross-signs it with a parent issuer and imports the new
- * issuer into an existing intermediate mount using three inputs from the user:
- * intermediateMount (the mount where the issuer to be cross signed lives)
+ * issuer into the existing intermediate mount using three inputs from the user:
+ * intermediateMount (the mount path where the issuer to be cross signed lives)
  * intermediateIssuer (the name of the intermediate issuer, located in the above mount)
- * newCrossSignedIssuer (the name of the to-be-cross-signed intermediate issuer)
+ * newCrossSignedIssuer (the name of the to-be-cross-signed, new issuer)
  *
  * The requests involved and how those inputs are used:
  * 1. Read an existing intermediate issuer
@@ -80,8 +81,11 @@ export default class PkiIssuerCrossSign extends Component {
         );
         this.signedIssuers.addObject({ ...data, hasError: false });
       } catch (error) {
-        this.signedIssuers.addObject({ ...this.formData[row], hasError: errorMessage(error) });
-        continue;
+        this.signedIssuers.addObject({
+          ...this.formData[row],
+          hasError: errorMessage(error),
+          manualSign: error.cause ? error.cause.map((e) => e.message).join(', ') : null,
+        });
       }
     }
   }
@@ -94,12 +98,23 @@ export default class PkiIssuerCrossSign extends Component {
       id: intName,
     });
 
+    // Translate certificate values to API parameters to pass along: CSR -> Signed CSR -> Cross-Signed issuer
+    // some of these values do not apply to a CSR, but pass anyway. If there is any issue parsing the certificate,
+    // (ex. the certificate contains unsupported values) direct user to manually cross-sign via CLI
+    const certData = parseCertificate(existingIssuer.certificate);
+    if (certData.parsing_errors.length > 0) {
+      throw new Error('Certificate must be manually cross-signed using the CLI.', {
+        cause: certData.parsing_errors,
+      });
+    }
+
     // 2. Create the new CSR
     const newCsr = await this.store
       .createRecord('pki/action', {
         keyRef: existingIssuer.keyId,
         commonName: existingIssuer.commonName,
         type: 'existing',
+        ...certData,
       })
       .save({
         adapterOptions: { actionType: 'generate-csr', mount: intMount, useIssuer: false },
@@ -111,6 +126,7 @@ export default class PkiIssuerCrossSign extends Component {
       .createRecord('pki/action', {
         csr: newCsr,
         commonName: existingIssuer.commonName,
+        ...certData,
       })
       .save({
         adapterOptions: {
