@@ -16,11 +16,11 @@ type ManagedKeyParameters struct {
 
 var errEntOnly = errors.New("managed keys are supported within enterprise edition only")
 
-func (p *Policy) decryptWithManagedKey(params *ManagedKeyParameters, keyEntry KeyEntry, ciphertext []byte, nonce []byte) (plaintext []byte, err error) {
+func (p *Policy) decryptWithManagedKey(params *ManagedKeyParameters, keyEntry KeyEntry, ciphertext []byte, nonce []byte, aad []byte) (plaintext []byte, err error) {
 	return nil, errEntOnly
 }
 
-func (p *Policy) encryptWithManagedKey(params *ManagedKeyParameters, keyEntry KeyEntry, plaintext []byte, nonce []byte, ver int) (ciphertext []byte, err error) {
+func (p *Policy) encryptWithManagedKey(params *ManagedKeyParameters, keyEntry KeyEntry, plaintext []byte, nonce []byte, aad []byte) (ciphertext []byte, err error) {
 	return nil, errEntOnly
 }
 

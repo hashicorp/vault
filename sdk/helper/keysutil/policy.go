@@ -153,7 +153,7 @@ func (kt KeyType) DerivationSupported() bool {
 
 func (kt KeyType) AssociatedDataSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -969,8 +969,21 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, managed
 		if err != nil {
 			return "", err
 		}
+		var aad []byte
+		for _, f := range factories {
+			switch factory := f.(type) {
+			case AssociatedDataFactory:
+				aad, err = factory.GetAssociatedData()
+				if err != nil {
+					return "", err
+				}
+			}
+		}
 
-		plain, err = p.decryptWithManagedKey(managedKeyParams, keyEntry, decoded, nonce)
+		plain, err = p.decryptWithManagedKey(managedKeyParams, keyEntry, decoded, nonce, aad)
+		if err != nil {
+			return "", err
+		}
 
 	default:
 		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
@@ -1996,7 +2009,18 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 			return "", err
 		}
 
-		ciphertext, err = p.encryptWithManagedKey(managedKeyParams, keyEntry, plaintext, nonce, ver)
+		var aad []byte
+		for _, f := range factories {
+			switch factory := f.(type) {
+			case AssociatedDataFactory:
+				aad, err = factory.GetAssociatedData()
+				if err != nil {
+					return "", nil
+				}
+			}
+		}
+
+		ciphertext, err = p.encryptWithManagedKey(managedKeyParams, keyEntry, plaintext, nonce, aad)
 		if err != nil {
 			return "", err
 		}
