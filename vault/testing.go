@@ -214,7 +214,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.DisableSSCTokens = opts.DisableSSCTokens
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
-	conf.Experiments = []string{experiments.VaultExperimentEventsBeta1}
+	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
