@@ -233,10 +233,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		if errors.Is(err, errUnsupportableRegexpOperationForOpenAPI) {
 			// Pattern cannot be transformed into sensible OpenAPI paths. In this case, we override the later
 			// processing to use the regexp, as is, as the path, and behave as if Unpublished was set on every
-			// operation (meaning the operations will not be represented in the OpenAPI document). This is partly for
-			// consistency with the previous implementation, and partly so that we retain the feature of allowing a
-			// human reading the OpenAPI document to notice that, yes, a path handler does exist, even though it was
-			// not able to contribute actual OpenAPI operations.
+			// operation (meaning the operations will not be represented in the OpenAPI document).
+			//
+			// This allows a human reading the OpenAPI document to notice that, yes, a path handler does exist,
+			// even though it was not able to contribute actual OpenAPI operations.
 			forceUnpublished = true
 			paths = []string{p.Pattern}
 		} else {
