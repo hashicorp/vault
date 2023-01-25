@@ -9,6 +9,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -360,6 +362,7 @@ func TestIntegration_CSRGeneration(t *testing.T) {
 func TestIntegration_AutoIssuer(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
+	paths := []*framework.Path{pathConfigIssuers(b)}
 
 	// Generate two roots. The first should become default under the existing
 	// behavior; when we update the config and generate a second, it should
@@ -371,6 +374,7 @@ func TestIntegration_AutoIssuer(t *testing.T) {
 		"issuer_name": "root-1",
 		"key_type":    "ec",
 	})
+
 	requireSuccessNonNilResponse(t, resp, err)
 	issuerIdOne := resp.Data["issuer_id"]
 	require.NotEmpty(t, issuerIdOne)
@@ -381,12 +385,15 @@ func TestIntegration_AutoIssuer(t *testing.T) {
 	requireSuccessNonNilResponse(t, resp, err)
 	require.Equal(t, issuerIdOne, resp.Data["default"])
 
+	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.ReadOperation), resp, true)
+
 	// Enable the new config option.
-	_, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
+	resp, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
 		"default":                       issuerIdOne,
 		"default_follows_latest_issuer": true,
 	})
 	require.NoError(t, err)
+	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation), resp, true)
 
 	// Now generate the second root; it should become default.
 	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
