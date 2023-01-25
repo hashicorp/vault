@@ -113,7 +113,7 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to obtain client: %w", err))
+		c.UI.Error(fmt.Sprintf("Failed to obtain client: %s", err))
 		return 1
 	}
 
@@ -136,7 +136,7 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 					c.UI.Error(fmt.Sprintf("Failed to Read List of Issuers within Mount %v: %v", path, err))
 					return 1
 				}
-				if rawIssuersResp.Data == nil {
+				if rawIssuersResp == nil {
 					continue // TODO: Empty Issuers Response this throws an error
 				}
 				issuersMap := rawIssuersResp.Data["keys"]
