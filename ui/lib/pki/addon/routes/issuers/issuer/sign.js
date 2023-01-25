@@ -13,7 +13,7 @@ export default class PkiIssuerSignRoute extends Route {
 
   model() {
     const { issuer_ref } = this.paramsFor('issuers/issuer');
-    return this.store.createRecord('pki/sign-intermediate', { id: issuer_ref });
+    return this.store.createRecord('pki/sign-intermediate', { issuerRef: issuer_ref });
   }
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
@@ -22,7 +22,7 @@ export default class PkiIssuerSignRoute extends Route {
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: backend, route: 'overview' },
       { label: 'issuers', route: 'issuers.index' },
-      { label: resolvedModel.id, route: 'issuers.issuer.details' },
+      { label: resolvedModel.issuerRef, route: 'issuers.issuer.details' },
       { label: 'sign intermediate' },
     ];
   }

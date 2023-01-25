@@ -17,6 +17,8 @@ export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
     return `/v1/${backend}/issuer/example/sign-intermediate?help=1`;
   }
 
+  @attr issuerRef;
+
   @attr({
     label: 'CSR',
     editType: 'textarea',
@@ -87,4 +89,10 @@ export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
     possibleValues: ['0', '256', '384', '512'],
   })
   signatureBits;
+
+  // Read-only attributes returned on response
+  @attr('string', { masked: true }) certificate;
+  @attr('string', { masked: true, label: 'Issuing CA' }) issuingCa;
+  @attr({ masked: true, label: 'CA Chain' }) caChain;
+  @attr serialNumber;
 }
