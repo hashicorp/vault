@@ -161,6 +161,7 @@ func parseStartEndTimes(a *ActivityLog, d *framework.FieldData) (time.Time, time
 	return startTime, endTime, nil
 }
 
+// This endpoint is not used by the UI. The UI's "export" feature is entirely client-side.
 func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	a := b.Core.activityLog
 	if a == nil {

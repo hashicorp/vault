@@ -43,7 +43,7 @@ var (
 )
 
 type HCPLinkVault struct {
-	l            sync.Mutex
+	l            sync.RWMutex
 	LinkStatus   internal.WrappedCoreHCPLinkStatus
 	scadaConfig  *scada.Config
 	linkConfig   *linkConfig.Config
@@ -212,7 +212,7 @@ func (h *HCPLinkVault) start() error {
 
 	h.running = true
 
-	h.logger.Info("started HCP Link")
+	h.logger.Info("established connection to HCP")
 
 	return nil
 }
@@ -222,12 +222,18 @@ func (h *HCPLinkVault) start() error {
 // API. In addition, it checks replication status of Vault and sets that in
 // Scada provider metadata status
 func (h *HCPLinkVault) reportStatus() {
+	h.l.RLock()
+	stopCh := h.stopCh
+	h.l.RUnlock()
+
+	var currentNodeStatus string
+
 	ticker := time.NewTicker(SetLinkStatusCadence)
 	defer ticker.Stop()
 	for {
 		// Check for a shutdown
 		select {
-		case <-h.stopCh:
+		case <-stopCh:
 			h.logger.Trace("returning from reporting link/node status")
 			return
 		case <-ticker.C:
@@ -249,7 +255,11 @@ func (h *HCPLinkVault) reportStatus() {
 				nodeStatus = activeStatus
 			}
 
-			h.linkConfig.SCADAProvider.UpdateMeta(map[string]string{metaDataNodeStatus: nodeStatus})
+			// Only update SCADA session metadata if status has changed
+			if currentNodeStatus != nodeStatus {
+				currentNodeStatus = nodeStatus
+				h.linkConfig.SCADAProvider.UpdateMeta(map[string]string{metaDataNodeStatus: currentNodeStatus})
+			}
 		}
 	}
 }
@@ -323,7 +333,7 @@ func (h *HCPLinkVault) Shutdown() error {
 		h.stopCh = nil
 	}
 
-	h.logger.Info("tearing down HCP Link")
+	h.logger.Info("tearing down connection to HCP")
 
 	var retErr *multierror.Error
 

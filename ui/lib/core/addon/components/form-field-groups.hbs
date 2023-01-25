@@ -1,4 +1,4 @@
-{{#each @model.fieldGroups as |fieldGroup|}}
+{{#each (get @model this.fieldGroups) as |fieldGroup|}}
   {{#each-in fieldGroup as |group fields|}}
     {{#if (or (not @renderGroup) (and @renderGroup (eq group @renderGroup)))}}
       {{#if (eq group "default")}}
