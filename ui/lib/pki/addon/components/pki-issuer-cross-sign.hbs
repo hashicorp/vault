@@ -59,7 +59,7 @@
           </div>
           {{#if crossSignRow.hasError}}
             <AlertBanner
-              @type={{if crossSignRow.hasUnsupportedParams "warning" "danger"}}
+              @type="danger"
               @title={{if crossSignRow.hasUnsupportedParams crossSignRow.hasError "Cross-sign failed"}}
               @message={{if crossSignRow.hasUnsupportedParams crossSignRow.hasUnsupportedParams crossSignRow.hasError}}
               @marginless={{true}}
