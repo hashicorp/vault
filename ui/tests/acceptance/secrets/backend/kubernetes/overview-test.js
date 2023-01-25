@@ -6,6 +6,7 @@ import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
 import { visit, click, currentRouteName } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
+import { SELECTORS } from 'vault/tests/helpers/kubernetes/overview';
 
 module('Acceptance | kubernetes | overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -41,7 +42,7 @@ module('Acceptance | kubernetes | overview', function (hooks) {
     assert.expect(1);
     this.createScenario();
     await this.visitOverview();
-    await click('[data-test-roles-card] .is-no-underline');
+    await click(SELECTORS.rolesCardLink);
     this.validateRoute(assert, 'roles.index', 'Transitions to roles route on View Roles click');
   });
 
@@ -49,7 +50,7 @@ module('Acceptance | kubernetes | overview', function (hooks) {
     assert.expect(1);
     this.createScenario(false);
     await this.visitOverview();
-    await click('[data-test-roles-card] .is-no-underline');
+    await click(SELECTORS.rolesCardLink);
     this.validateRoute(assert, 'roles.create', 'Transitions to roles route on Create Roles click');
   });
 
