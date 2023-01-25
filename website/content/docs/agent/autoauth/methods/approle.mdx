@@ -8,7 +8,7 @@ description: AppRole Method for Vault Agent Auto-Auth
 
 The `approle` method reads in a role ID and a secret ID from files and sends
 the values to the [AppRole Auth
-method](/docs/auth/approle).
+method](/vault/docs/auth/approle).
 
 The method caches values and it is safe to delete the role ID/secret ID files
 after they have been read. In fact, by default, after reading the secret ID,
@@ -32,15 +32,15 @@ cached.
 
 - `secret_id_response_wrapping_path` `(string: optional)` - If set, the value
   at `secret_id_file_path` will be expected to be a [Response-Wrapping
-  Token](/docs/concepts/response-wrapping)
+  Token](/vault/docs/concepts/response-wrapping)
   containing the output of the secret ID retrieval endpoint for the role (e.g.
   `auth/approle/role/webservers/secret-id`) and the creation path for the
   response-wrapping token must match the value set here.
 
 ## Example Configuration
 
-An example configuration, using approle to enable [auto-auth](/docs/agent/autoauth)
-and creating both a plaintext token sink and a [response-wrapped token sink file](/docs/agent/autoauth#wrap_ttl), follows:
+An example configuration, using approle to enable [auto-auth](/vault/docs/agent/autoauth)
+and creating both a plaintext token sink and a [response-wrapped token sink file](/vault/docs/agent/autoauth#wrap_ttl), follows:
 
 ```hcl
 pid_file = "./pidfile"

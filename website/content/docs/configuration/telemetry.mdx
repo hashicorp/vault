@@ -10,7 +10,7 @@ description: |-
 
 The `telemetry` stanza specifies various configurations for Vault to publish
 metrics to upstream systems. Available Vault metrics can be found in the
-[Telemetry internals documentation](/docs/internals/telemetry).
+[Telemetry internals documentation](/vault/docs/internals/telemetry).
 
 ```hcl
 telemetry {
@@ -29,7 +29,7 @@ The following options are available on all telemetry configurations.
 
 - `usage_gauge_period` `(string: "10m")` - Specifies the interval at which high-cardinality
   usage data is collected, such as token counts, entity counts, and secret counts.
-   A value of "none" disables the collection.  Uses [duration format strings](/docs/concepts/duration-format).
+   A value of "none" disables the collection.  Uses [duration format strings](/vault/docs/concepts/duration-format).
 - `maximum_gauge_cardinality` `(int: 500)` - The maximum cardinality of gauge labels.
 - `disable_hostname` `(bool: false)` - Specifies if gauge values should be
   prefixed with the local hostname.
@@ -42,7 +42,7 @@ The following options are available on all telemetry configurations.
   Note that leases are put into buckets by rounding. For example, if `lease_metrics_epsilon` is set to 1h and
   lease A expires 25 minutes from now, and lease B expires 35 minutes from now, then lease A will be in the first
   bucket, which corresponds to 0-30 minutes, and lease B will be in the second bucket, which corresponds to 31-90
-  minutes. Uses [duration format strings](/docs/concepts/duration-format).
+  minutes. Uses [duration format strings](/vault/docs/concepts/duration-format).
 - `num_lease_metrics_buckets` `(int: 168)` - The number of expiry buckets for leases. For the default value, for
   example, 168 value labels for the `vault.expire.leases.by_expiration` metric will be reported, where each value
   each bucket is separated in time by the `lease_metrics_epsilon` parameter. For the default 1 hour value of
@@ -263,4 +263,4 @@ Metrics from Vault can be found in [Metrics Explorer](https://cloud.google.com/m
 All those metrics are shown with a resource type of `generic_task`, and the metric name
 is prefixed with `custom.googleapis.com/go-metrics/`.
 
-[telemetry-tcp]: /docs/configuration/listener/tcp#telemetry-parameters
+[telemetry-tcp]: /vault/docs/configuration/listener/tcp#telemetry-parameters

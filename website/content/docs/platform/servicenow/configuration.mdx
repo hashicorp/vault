@@ -32,10 +32,10 @@ To consume Vault credentials from your MID server, you will need to:
 
 The credential resolver supports reading credentials from the following secret engines:
 
-* [Active Directory](/docs/secrets/ad)
-* [AWS](/docs/secrets/aws)
-* [K/V v1](/docs/secrets/kv/kv-v1)
-* [K/V v2](/docs/secrets/kv/kv-v2)
+* [Active Directory](/vault/docs/secrets/ad)
+* [AWS](/vault/docs/secrets/aws)
+* [K/V v1](/vault/docs/secrets/kv/kv-v1)
+* [K/V v2](/vault/docs/secrets/kv/kv-v2)
 
 When creating K/V secrets, you must use the following keys for each component
 to ensure it is correctly mapped to ServiceNow's credential fields:
@@ -79,7 +79,7 @@ In the ServiceNow UI:
   * Fill in a meaningful name
   * Set "Credential ID" to the path in Vault where your secret is located, e.g.
     for a KV v2 secret engine mounted at "secret", you might have a secret stored
-    under "ssh": `secret/data/ssh`. Check the [API docs](/api-docs/secret/) for
+    under "ssh": `secret/data/ssh`. Check the [API docs](/vault/api-docs/secret/) for
     your secret engine if you are unsure of the path to use
   * **Optional:** Click "Test credential" and select a MID server and a target
     to test against to test everything is working

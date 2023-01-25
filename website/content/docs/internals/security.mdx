@@ -95,8 +95,8 @@ All server-to-server traffic between Vault instances within a cluster (i.e,
 high availability, enterprise replication or integrated storage) uses
 mutually-authenticated TLS to ensure the confidentiality and integrity of data
 in transit. Nodes are authenticated prior to joining the cluster by an
-[unseal challenge](/docs/concepts/integrated-storage#vault-networking-recap) or
-a [one-time-use activation token](/docs/enterprise/replication#security-model).
+[unseal challenge](/vault/docs/concepts/integrated-storage#vault-networking-recap) or
+a [one-time-use activation token](/vault/docs/enterprise/replication#security-model).
 
 The storage backends used by Vault are also untrusted by design. Vault uses a
 security barrier for all requests made to the backend. The security barrier
@@ -141,7 +141,7 @@ client), the highest access level permitted is used. For example, if the
 "ops" policy permits read access to the "ops/" path, then the user gets the
 union of those. Policy is matched using the most specific defined policy, which
 may be an exact match or the longest-prefix match glob pattern. See
-[Policy Syntax](/docs/concepts/policies#policy-syntax) for more details.
+[Policy Syntax](/vault/docs/concepts/policies#policy-syntax) for more details.
 
 Certain operations are only permitted by "root" users, which is a distinguished
 policy built into Vault. This is similar to the concept of a root user on a
