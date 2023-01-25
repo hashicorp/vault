@@ -123,7 +123,10 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		out := expandPattern(test.inPattern)
+		out, err := expandPattern(test.inPattern)
+		if err != nil {
+			t.Fatal(err)
+		}
 		sort.Strings(out)
 		if !reflect.DeepEqual(out, test.outPathlets) {
 			t.Fatalf("Test %d: Expected %v got %v", i, test.outPathlets, out)
