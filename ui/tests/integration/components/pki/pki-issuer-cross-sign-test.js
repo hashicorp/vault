@@ -1,10 +1,12 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
+import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | pki-issuer-cross-sign', function (hooks) {
   setupRenderingTest(hooks);
+  setupEngine(hooks, 'pki'); // https://github.com/ember-engines/ember-engines/pull/653
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
@@ -16,7 +18,12 @@ module('Integration | Component | pki-issuer-cross-sign', function (hooks) {
 
   // TODO finish
   test('it renders', async function (assert) {
-    await render(hbs`<PkiIssuerCrossSign @parentIssuer={{this.model}} />`);
+    await render(
+      hbs`
+    <PkiIssuerCrossSign @parentIssuer={{this.model}} />
+    `,
+      { owner: this.engine }
+    );
     assert.dom(this.element).exists();
   });
 });
