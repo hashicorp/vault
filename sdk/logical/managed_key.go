@@ -3,8 +3,9 @@ package logical
 import (
 	"context"
 	"crypto"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"io"
+
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
 
 type KeyUsage int
