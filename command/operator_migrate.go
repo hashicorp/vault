@@ -103,7 +103,7 @@ func (c *OperatorMigrateCommand) Flags() *FlagSets {
 
 	f.IntVar(&IntVar{
 		Name:    "max-parallel",
-		Default: 1,
+		Default: 10,
 		Target:  &c.flagMaxParallel,
 		Usage: "Specifies the maximum number of parallel migration threads (goroutines) that may be used when migrating. " +
 			"This can speed up the migration process on slow backends but uses more resources.",

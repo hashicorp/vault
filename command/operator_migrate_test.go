@@ -18,7 +18,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -35,7 +34,7 @@ func TestMigration(t *testing.T) {
 
 		fromFactory := physicalBackends["file"]
 
-		folder := filepath.Join(t.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+		folder := t.TempDir()
 
 		confFrom := map[string]string{
 			"path": folder,
@@ -72,7 +71,7 @@ func TestMigration(t *testing.T) {
 
 		fromFactory := physicalBackends["file"]
 
-		folder := filepath.Join(t.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+		folder := t.TempDir()
 
 		confFrom := map[string]string{
 			"path": folder,
@@ -119,7 +118,7 @@ func TestMigration(t *testing.T) {
 		}
 
 		toFactory := physicalBackends["file"]
-		folder := filepath.Join(t.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+		folder := t.TempDir()
 		confTo := map[string]string{
 			"path": folder,
 		}
@@ -158,7 +157,7 @@ func TestMigration(t *testing.T) {
 		}
 
 		toFactory := physicalBackends["file"]
-		folder := filepath.Join(t.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+		folder := t.TempDir()
 		confTo := map[string]string{
 			"path": folder,
 		}
@@ -185,8 +184,7 @@ func TestMigration(t *testing.T) {
 
 	t.Run("Config parsing", func(t *testing.T) {
 		cmd := new(OperatorMigrateCommand)
-
-		cfgName := filepath.Join(t.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+		cfgName := filepath.Join(t.TempDir(), "migrator")
 		os.WriteFile(cfgName, []byte(`
 storage_source "src_type" {
   path = "src_path"
