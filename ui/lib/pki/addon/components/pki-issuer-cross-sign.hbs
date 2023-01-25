@@ -54,16 +54,21 @@
             {{/each}}
           </div>
           {{#if crossSignRow.hasError}}
-            <AlertInline
-              class="is-flex-full has-side-padding-s"
-              @isMarginless={{true}}
-              @type={{if crossSignRow.manualSign "warning" "danger"}}
-            >
-              {{crossSignRow.hasError}}
-              {{#if crossSignRow.manualSign}}
-                <code class="tag is-small">{{crossSignRow.manualSign}}</code>
-              {{/if}}
-            </AlertInline>
+            {{#if crossSignRow.manualSign}}
+              <AlertBanner
+                @type="warning"
+                @title={{crossSignRow.hasError}}
+                @message={{crossSignRow.manualSign}}
+                @marginless={{true}}
+              />
+            {{else}}
+              <AlertInline
+                class="is-flex-full has-side-padding-s"
+                @isMarginless={{true}}
+                @type="danger"
+                @message={{crossSignRow.hasError}}
+              />
+            {{/if}}
           {{/if}}
         </div>
       {{/each}}
