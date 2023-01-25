@@ -16,31 +16,26 @@
         }}</h2>
     </OverviewCard>
     <OverviewCard @cardTitle="Generate credentials" @subText="Quickly generate credentials by typing the role name.">
-      <form
-        aria-label="generate credentials"
-        {{on "submit" this.generateCredential}}
-        data-test-selectable-card="Generate credentials"
-      >
-        <div class="has-top-margin-m is-flex">
-          <SearchSelect
-            class="is-flex-1"
-            @placeholder="Type to find a role..."
-            @disallowNewItems={{true}}
-            @options={{this.roleOptions}}
-            @selectLimit="1"
-            @fallbackComponent="input-search"
-            @onChange={{this.selectRole}}
-          />
-          <button
-            class="button has-left-margin-s"
-            type="submit"
-            disabled={{not this.selectedRole}}
-            data-test-generate-credential-button
-          >
-            Generate
-          </button>
-        </div>
-      </form>
+      <div class="has-top-margin-m is-flex">
+        <SearchSelect
+          class="is-flex-1"
+          @placeholder="Type to find a role..."
+          @disallowNewItems={{true}}
+          @options={{this.roleOptions}}
+          @selectLimit="1"
+          @fallbackComponent="input-search"
+          @onChange={{this.selectRole}}
+        />
+        <button
+          class="button has-left-margin-s"
+          type="button"
+          disabled={{not this.selectedRole}}
+          {{on "click" this.generateCredential}}
+          data-test-generate-credential-button
+        >
+          Generate
+        </button>
+      </div>
     </OverviewCard>
   </div>
 {{else}}

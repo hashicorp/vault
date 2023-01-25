@@ -32,8 +32,7 @@ export default class OverviewPageComponent extends Component {
   }
 
   @action
-  generateCredential(event) {
-    event.preventDefault();
+  generateCredential() {
     this.router.transitionTo(
       'vault.cluster.secrets.backend.kubernetes.roles.role.credentials',
       this.selectedRole
