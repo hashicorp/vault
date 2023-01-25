@@ -90,7 +90,7 @@ export default class PkiIssuerCrossSign extends Component {
         this.signedIssuers.addObject({
           ...this.formData[row],
           hasError: errorMessage(error),
-          manualSign: error.cause ? error.cause.map((e) => e.message).join(', ') : null,
+          hasUnsupportedParams: error.cause ? error.cause.map((e) => e.message).join(', ') : null,
         });
       }
     }

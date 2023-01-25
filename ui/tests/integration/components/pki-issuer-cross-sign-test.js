@@ -7,6 +7,7 @@ module('Integration | Component | pki-issuer-cross-sign', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('pki/issuer', {
       issuerId: 'dcc69709-0056-b008-2ad1-a939cfae0c2a',
       issuerName: 'my-parent-issuer-name',

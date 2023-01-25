@@ -6,7 +6,7 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
 
   _getBackend(snapshot) {
     const { record, adapterOptions } = snapshot;
-    return adapterOptions?.mount ? adapterOptions.mount : record.backend;
+    return adapterOptions?.mount || record.backend;
   }
 
   optionsForQuery(id) {

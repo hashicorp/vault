@@ -7,7 +7,11 @@
   {{#if this.signedIssuers}}
     <h2 class="title is-5">Cross-signing complete ({{this.statusCount}})</h2>
     <p class="has-bottom-margin-xl">
-      The next step is to update the manual chain for each of your new certificates listed below, and the existing issuer.
+      The next step is to
+      <DocLink class="has-font-weight-normal" @path="/vault/docs/secrets/pki/rotation-primitives#notes-on-manual_chain">
+        update the manual_chain<Icon @name="docs-link" />
+      </DocLink>
+      for each of your new certificates listed below,w and the existing issuer.
     </p>
     <div class="is-flex-start">
       {{#each this.inputFields as |column|}}
@@ -54,21 +58,12 @@
             {{/each}}
           </div>
           {{#if crossSignRow.hasError}}
-            {{#if crossSignRow.manualSign}}
-              <AlertBanner
-                @type="warning"
-                @title={{crossSignRow.hasError}}
-                @message={{crossSignRow.manualSign}}
-                @marginless={{true}}
-              />
-            {{else}}
-              <AlertInline
-                class="is-flex-full has-side-padding-s"
-                @isMarginless={{true}}
-                @type="danger"
-                @message={{crossSignRow.hasError}}
-              />
-            {{/if}}
+            <AlertBanner
+              @type={{if crossSignRow.hasUnsupportedParams "warning" "danger"}}
+              @title={{if crossSignRow.hasUnsupportedParams crossSignRow.hasError "Cross-sign failed"}}
+              @message={{if crossSignRow.hasUnsupportedParams crossSignRow.hasUnsupportedParams crossSignRow.hasError}}
+              @marginless={{true}}
+            />
           {{/if}}
         </div>
       {{/each}}
