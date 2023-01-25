@@ -642,27 +642,30 @@ func parseOtherSANs(others []string) (map[string][]string, error) {
 	return result, nil
 }
 
-// Returns bool stating whether UserId is Valid
-func isValidateUserId(data *inputBundle, userId string) bool {
+// Returns bool stating whether the given UserId is Valid
+func validateUserId(data *inputBundle, userId string) bool {
 	allowedList := data.role.AllowedUserIDs
 
-	if len(allowedList) > 0 {
+	if len(allowedList) == 0 {
+		// Nothing is allowed.
+		return false
+	}
 
-		if strutil.StrListContainsCaseInsensitive(allowedList, userId) {
-			return true
+	if strutil.StrListContainsCaseInsensitive(allowedList, userId) {
+		return true
+	}
+
+	for _, rolePattern := range allowedList {
+		if rolePattern == "" {
+			continue
 		}
 
-		for _, rolePattern := range data.role.AllowedUserIDs {
-			if rolePattern == "" {
-				continue
-			}
-
-			if strings.Contains(rolePattern, "*") && glob.Glob(rolePattern, userId) {
-				return true
-			}
+		if strings.Contains(rolePattern, "*") && glob.Glob(rolePattern, userId) {
+			return true
 		}
 	}
 
+	// No matches.
 	return false
 }
 
@@ -1415,29 +1418,39 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		}
 	}
 
-	userId := ""
-	{
-		ridUserID := data.apiData.Get("serial_number").(string)
+	// Add UserIDs into the Subject, if the request type supports it.
+	if _, present := data.apiData.Schema["user_ids"]; present {
+		rawUserIDs := data.apiData.Get("user_ids").([]string)
 
-		// only take userID from CSR if one was not supplied via API
-		if ridUserID == "" && csr != nil {
-			for _, extension := range csr.Extensions {
-				if extension.Id.Equal(asn1.ObjectIdentifier{0, 9, 2342, 19200300, 100, 1, 1}) {
-					ridUserID = string(extension.Value)
+		// Only take UserIDs from CSR if one was not supplied via API.
+		if len(rawUserIDs) == 0 && csr != nil {
+			for _, attr := range csr.Subject.Names {
+				if attr.Type.Equal(certutil.SubjectPilotUserIDAttributeOID) {
+					switch aValue := attr.Value.(type) {
+					case string:
+						rawUserIDs = append(rawUserIDs, aValue)
+					case []byte:
+						rawUserIDs = append(rawUserIDs, string(aValue))
+					default:
+						return nil, nil, errutil.UserError{Err: "unknown type for user_id attribute in CSR's Subject"}
+					}
 				}
 			}
 		}
 
-		// Check for bad userIDs
-		if ridUserID != "" {
-			isValidUserID := isValidateUserId(data, ridUserID)
-			if !isValidUserID {
-				return nil, nil, errutil.UserError{Err: fmt.Sprintf(
-					"user id %s not allowed by this role", ridUserID)}
+		// Check for bad userIDs and add to the subject.
+		if len(rawUserIDs) > 0 {
+			for _, value := range rawUserIDs {
+				if !validateUserId(data, value) {
+					return nil, nil, errutil.UserError{Err: fmt.Sprintf("user_id %v is not allowed by this role", value)}
+				}
+
+				subject.ExtraNames = append(subject.ExtraNames, pkix.AttributeTypeAndValue{
+					Type:  certutil.SubjectPilotUserIDAttributeOID,
+					Value: value,
+				})
 			}
 		}
-
-		userId = ridUserID
 	}
 
 	creation := &certutil.CreationBundle{
@@ -1447,7 +1460,6 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			EmailAddresses:                strutil.RemoveDuplicates(emailAddresses, false),
 			IPAddresses:                   ipAddresses,
 			URIs:                          URIs,
-			UserId:                        userId,
 			OtherSANs:                     otherSANs,
 			KeyType:                       data.role.KeyType,
 			KeyBits:                       data.role.KeyBits,
