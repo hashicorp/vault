@@ -4,10 +4,11 @@ page_title: Vault Agent Auto-Auth Token File Method
 description: Token File Method for Vault Agent Auto-Auth
 ---
 
-~> Note: This authentication method is tailored for the development experience.
-For production Agent installs, we recommend another authentication method.
-
 # Vault Agent Auto-Auth Token File Method
+
+~> Note: This authentication method is tailored for the development experience,
+and to facilitate getting started with Vault Agent. Vault Agent should never be configured to use
+this auth method in a production environment.
 
 The `token_file` method reads in an existing, valid Vault token from a file, and uses that
 token in lieu of authenticating itself. While it's a first class auto-auth method for all intents
@@ -15,7 +16,7 @@ and purposes, it naturally doesn't authenticate itself, as it requires a token f
 other auto-auth methods, Agent will attempt to renew the token, as appropriate.
 
 This auto-auth method is especially useful when testing Vault Agent without needing to set up
-any authentication methods in Vault. For long-running Agent processes, we'd recommend another
+any authentication methods in Vault. For long-running Agent processes, we strongly recommend another
 auto-auth method, such that Agent is issuing its own authentication requests to Vault.
 
 ## Configuration
