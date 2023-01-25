@@ -4,7 +4,7 @@
     Intermediates are identified by specifying the mount path and the issuer’s current name, as well as the new name it will
     have when it is imported to Vault.
   </p>
-  {{#if (gt this.signedIssuers.length 0)}}
+  {{#if this.signedIssuers}}
     <div class="is-flex-start">
       {{#each this.inputFields as |column|}}
         <div class="is-flex-1 basis-0 has-text-grey has-bottom-margin-xs">
@@ -19,7 +19,7 @@
     </div>
     <div class="box is-fullwidth has-only-top-shadow">
       {{#each this.signedIssuers as |crossSignRow|}}
-        <div class="box no-top-shadow no-padding-bottom no-padding-top">
+        <div class="box is-marginless no-top-shadow has-slim-padding">
           <div class="is-flex-start">
             <Icon
               @name={{if crossSignRow.hasError "alert-circle-fill" "check-circle"}}
@@ -50,7 +50,16 @@
             {{/each}}
           </div>
           {{#if crossSignRow.hasError}}
-            <AlertInline class="is-flex-full" @sizeSmall={{true}} @type="danger" @message={{crossSignRow.hasError}} />
+            <AlertInline
+              class="is-flex-full has-side-padding-s"
+              @isMarginless={{true}}
+              @type={{if crossSignRow.manualSign "warning" "danger"}}
+            >
+              {{crossSignRow.hasError}}
+              {{#if crossSignRow.manualSign}}
+                <code class="tag is-small">{{crossSignRow.manualSign}}</code>
+              {{/if}}
+            </AlertInline>
           {{/if}}
         </div>
       {{/each}}
