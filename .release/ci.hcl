@@ -11,6 +11,7 @@ project "vault" {
     release_branches = [
       "main",
       "release/**",
+      "test-prepare-workflow"
     ]
   }
 }
