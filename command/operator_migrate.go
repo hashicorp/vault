@@ -382,11 +382,7 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 // Keys will be traversed in lexicographic, depth-first order.
 func dfsScan(ctx context.Context, source physical.Backend, maxParallel int, cb func(ctx context.Context, path string) error) error {
 	dfs := []string{""}
-	if maxParallel < 1 {
-		maxParallel = 1
-	}
 
-	permitPool := physical.NewPermitPool(maxParallel)
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.SetLimit(maxParallel)
 
@@ -416,8 +412,6 @@ func dfsScan(ctx context.Context, source physical.Backend, maxParallel int, cb f
 		} else {
 			// Pooling
 			eg.Go(func() error {
-				permitPool.Acquire()
-				defer permitPool.Release()
 				return cb(ctx, key)
 			})
 

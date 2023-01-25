@@ -137,3 +137,6 @@ The following flags are available for the `operator migrate` command.
   which may be used to migrate data in parallel. This can potentially speed up migration on slower backends at
   the cost of more resources (e.g. CPU, memory). Permitted values range from greater than `1` to the maximum value
   for an `integer`, and when supplied parallel migration will be attempted.
+
+  ~> Note: The maximum number of concurrent requests handled by a storage backend is ultimately governed by the
+  storage backend configuration setting, which enforces a maximum number of concurrent requests (`max_parallel`).
