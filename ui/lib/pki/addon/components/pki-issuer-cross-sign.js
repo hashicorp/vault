@@ -62,6 +62,12 @@ export default class PkiIssuerCrossSign extends Component {
     },
   ];
 
+  get statusCount() {
+    const error = this.signedIssuers.filter((issuer) => issuer.hasError).length;
+    const success = this.signedIssuers.length - error;
+    return `${success} successful, ${error} ${error === 1 ? 'error' : 'errors'}`;
+  }
+
   @task
   @waitFor
   *submit(e) {
@@ -157,5 +163,11 @@ export default class PkiIssuerCrossSign extends Component {
       newCrossSignedIssuer: crossSignedIssuer,
       intermediateMount: intMount,
     };
+  }
+
+  @action
+  reset() {
+    this.signedIssuers = [];
+    this.formData = [];
   }
 }
