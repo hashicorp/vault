@@ -146,7 +146,7 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 	c.logger = logging.NewVaultLogger(log.LevelFromString(c.flagLogLevel))
 
 	if c.flagMaxParallel < 1 {
-		c.UI.Error(fmt.Sprintf("Argument to flag -max-parallel must be between 1 and %d", math.MaxInt32))
+		c.UI.Error(fmt.Sprintf("Argument to flag -max-parallel must be between 1 and %d", math.MaxInt))
 		return 1
 	}
 
