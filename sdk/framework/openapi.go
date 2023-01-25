@@ -227,9 +227,21 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 	}
 
 	// Convert optional parameters into distinct patterns to be processed independently.
+	forceUnpublished := false
 	paths, err := expandPattern(p.Pattern)
 	if err != nil {
-		return err
+		if errors.Is(err, errUnsupportableRegexpOperationForOpenAPI) {
+			// Pattern cannot be transformed into sensible OpenAPI paths. In this case, we override the later
+			// processing to use the regexp, as is, as the path, and behave as if Unpublished was set on every
+			// operation (meaning the operations will not be represented in the OpenAPI document). This is partly for
+			// consistency with the previous implementation, and partly so that we retain the feature of allowing a
+			// human reading the OpenAPI document to notice that, yes, a path handler does exist, even though it was
+			// not able to contribute actual OpenAPI operations.
+			forceUnpublished = true
+			paths = []string{p.Pattern}
+		} else {
+			return err
+		}
 	}
 
 	for _, path := range paths {
@@ -299,7 +311,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		// with descriptions, properties and examples from the framework.Path data.
 		for opType, opHandler := range operations {
 			props := opHandler.Properties()
-			if props.Unpublished {
+			if props.Unpublished || forceUnpublished {
 				continue
 			}
 
@@ -560,11 +572,6 @@ func expandPattern(pattern string) ([]string, error) {
 
 	paths, err := collectPathsFromRegexpAST(rx)
 	if err != nil {
-		if errors.Is(err, errUnsupportableRegexpOperationForOpenAPI) {
-			// Pattern cannot be transformed into sensible OpenAPI paths, so drop it entirely.
-			// See lengthier comment inside collectPathsFromRegexpASTInternal below for more detailed discussion.
-			return nil, nil
-		}
 		return nil, err
 	}
 
