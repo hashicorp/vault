@@ -901,6 +901,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 			// thread will reattempt it later on as we have the local write done.
 			sc.Backend.Logger().Debug("Failed to write unified revocation entry, will re-attempt later",
 				"serial_number", colonSerial, "error", ignoreErr)
+			sc.Backend.unifiedTransferStatus.forceRun()
 		}
 	}
 

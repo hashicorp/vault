@@ -2,8 +2,6 @@ package pki
 
 import (
 	"context"
-	"crypto/x509"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -243,7 +241,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.possibleDoubleCountedSerials = make([]string, 0, 250)
 	b.possibleDoubleCountedRevokedSerials = make([]string, 0, 250)
 
-	b.unifiedCertTransferRunning = atomic.Bool{}
+	b.unifiedTransferStatus = newUnifiedTransferStatus()
+
 	return &b
 }
 
@@ -260,7 +259,7 @@ type backend struct {
 	tidyStatus     *tidyStatus
 	lastTidy       time.Time
 
-	unifiedCertTransferRunning atomic.Bool
+	unifiedTransferStatus *unifiedTransferStatus
 
 	certCount                           *uint32
 	revokedCertCount                    *uint32
@@ -571,7 +570,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 	}
 
 	backgroundSc := b.makeStorageContext(context.Background(), b.storage)
-	go b.runUnifiedTransfer(backgroundSc)
+	go runUnifiedTransfer(backgroundSc)
 
 	crlErr := doCRL()
 	tidyErr := doAutoTidy()
@@ -758,136 +757,4 @@ func (b *backend) decrementTotalRevokedCertificatesCountReport() {
 func (b *backend) decrementTotalRevokedCertificatesCountNoReport() uint32 {
 	newRevokedCertCount := atomic.AddUint32(b.revokedCertCount, ^uint32(0))
 	return newRevokedCertCount
-}
-
-// runUnifiedTransfer meant to run as a background, this will process all and
-// send all missing local revocation entries to the unified space if the feature
-// is enabled.
-func (b *backend) runUnifiedTransfer(sc *storageContext) {
-	isPerfStandby := b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby)
-
-	if isPerfStandby || b.System().LocalMount() {
-		// We only do this on active enterprise nodes, when we aren't a local mount
-		return
-	}
-	config, err := b.crlBuilder.getConfigWithUpdate(sc)
-	if err != nil {
-		b.Logger().Error("failed to retrieve crl config from storage for unified transfer background process",
-			"error", err)
-		return
-	}
-
-	if !config.UnifiedCRL {
-		// Feature is disabled, no need to run
-		return
-	}
-
-	clusterId, err := b.System().ClusterID(sc.Context)
-	if err != nil {
-		b.Logger().Error("failed to fetch cluster id for unified transfer background process",
-			"error", err)
-		return
-	}
-
-	if clusterId == "" {
-		b.Logger().Error("got a blank cluster id for unified transfer background process")
-		return
-	}
-
-	if !b.unifiedCertTransferRunning.CompareAndSwap(false, true) {
-		b.Logger().Debug("an existing unified transfer process is already running")
-		return
-	}
-	defer b.unifiedCertTransferRunning.Store(false)
-
-	err = doUnifiedTransferMissingLocalSerials(sc, clusterId)
-	if err != nil {
-		b.Logger().Error("an error occurred running unified transfer", "error", err.Error())
-	}
-}
-
-func doUnifiedTransferMissingLocalSerials(sc *storageContext, clusterId string) error {
-	localRevokedSerialNums, err := sc.listRevokedCerts()
-	if err != nil {
-		return err
-	}
-	if len(localRevokedSerialNums) == 0 {
-		// No local certs to transfer, no further work to do.
-		return nil
-	}
-
-	unifiedSerials, err := listClusterSpecificUnifiedRevokedCerts(sc, clusterId)
-	if err != nil {
-		return err
-	}
-	unifiedCertLookup := sliceToMapKey(unifiedSerials)
-
-	errCount := 0
-	iterations := 0
-	for _, serialNum := range localRevokedSerialNums {
-		if iterations%25 == 0 {
-			config, _ := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
-			if config != nil && !config.UnifiedCRL {
-				return errors.New("unified crl has been disabled after we started, stopping")
-			}
-		}
-		if _, ok := unifiedCertLookup[serialNum]; !ok {
-			err := readRevocationEntryAndTransfer(sc, serialNum)
-			if err != nil {
-				errCount++
-				sc.Backend.Logger().Debug("Failed transferring local revocation to unified space",
-					"serial", serialNum, "error", err)
-			}
-		}
-		iterations++
-	}
-
-	if errCount > 0 {
-		sc.Backend.Logger().Warn(fmt.Sprintf("Failed transfering %d local serials to unified storage", errCount))
-	}
-
-	return nil
-}
-
-func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
-	hyphenSerial := normalizeSerial(serial)
-	revInfo, err := sc.fetchRevocationInfo(hyphenSerial)
-	if err != nil {
-		return fmt.Errorf("failed loading revocation entry for serial: %s: %w", serial, err)
-	}
-	if revInfo == nil {
-		sc.Backend.Logger().Debug("no certificate revocation entry for serial", "serial", serial)
-		return nil
-	}
-	cert, err := x509.ParseCertificate(revInfo.CertificateBytes)
-	if err != nil {
-		sc.Backend.Logger().Debug("failed parsing certificate stored in revocation entry for serial",
-			"serial", serial, "error", err)
-		return nil
-	}
-	if revInfo.CertificateIssuer == "" {
-		// No certificate issuer assigned to this serial yet, just drop it for now,
-		// as a crl rebuild/tidy needs to happen
-		return nil
-	}
-
-	revocationTime := revInfo.RevocationTimeUTC
-	if revInfo.RevocationTimeUTC.IsZero() {
-		// Legacy revocation entries only had this field and not revocationTimeUTC set...
-		revocationTime = time.Unix(revInfo.RevocationTime, 0)
-	}
-
-	if time.Now().After(revocationTime) {
-		// ignore transferring this entry as it has already expired.
-		return nil
-	}
-
-	entry := &unifiedRevocationEntry{
-		SerialNumber:      hyphenSerial,
-		CertExpiration:    cert.NotAfter,
-		RevocationTimeUTC: revocationTime,
-		CertificateIssuer: revInfo.CertificateIssuer,
-	}
-
-	return writeUnifiedRevocationEntry(sc, entry)
 }
