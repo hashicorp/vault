@@ -92,6 +92,9 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		status.Progress = progress
 		status.VerificationRequired = rekeyConf.VerificationRequired
 		status.VerificationNonce = rekeyConf.VerificationNonce
+		if recovery {
+			status.UnsealRecoveryEnabled = !rekeyConf.DisableUnsealRecovery
+		}
 		if rekeyConf.PGPKeys != nil && len(rekeyConf.PGPKeys) != 0 {
 			pgpFingerprints, err := pgpkeys.GetFingerprints(rekeyConf.PGPKeys, nil)
 			if err != nil {
@@ -125,12 +128,13 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 
 	// Initialize the rekey
 	err := core.RekeyInit(&vault.SealConfig{
-		SecretShares:         req.SecretShares,
-		SecretThreshold:      req.SecretThreshold,
-		StoredShares:         req.StoredShares,
-		PGPKeys:              req.PGPKeys,
-		Backup:               req.Backup,
-		VerificationRequired: req.RequireVerification,
+		SecretShares:          req.SecretShares,
+		SecretThreshold:       req.SecretThreshold,
+		StoredShares:          req.StoredShares,
+		PGPKeys:               req.PGPKeys,
+		Backup:                req.Backup,
+		VerificationRequired:  req.RequireVerification,
+		DisableUnsealRecovery: !req.EnableUnsealRecovery,
 	}, recovery)
 	if err != nil {
 		respondError(w, err.Code(), err)
@@ -189,7 +193,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 		defer cancel()
 
 		// Use the key to make progress on rekey
-		result, rekeyErr := core.RekeyUpdate(ctx, key, req.Nonce, recovery)
+		result, rekeyErr := core.RekeyUpdate(ctx, key, req.Nonce, recovery, req.AcknowledgeUnsealRecovery)
 		if rekeyErr != nil {
 			respondError(w, rekeyErr.Code(), rekeyErr)
 			return
@@ -204,6 +208,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			resp.PGPFingerprints = result.PGPFingerprints
 			resp.VerificationRequired = result.VerificationRequired
 			resp.VerificationNonce = result.VerificationNonce
+			resp.UnsealRecoveryEnabled = result.UnsealRecoveryEnabled
 
 			// Encode the keys
 			keys := make([]string, 0, len(result.SecretShares))
@@ -355,41 +360,45 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 }
 
 type RekeyRequest struct {
-	SecretShares        int      `json:"secret_shares"`
-	SecretThreshold     int      `json:"secret_threshold"`
-	StoredShares        int      `json:"stored_shares"`
-	PGPKeys             []string `json:"pgp_keys"`
-	Backup              bool     `json:"backup"`
-	RequireVerification bool     `json:"require_verification"`
+	SecretShares         int      `json:"secret_shares"`
+	SecretThreshold      int      `json:"secret_threshold"`
+	StoredShares         int      `json:"stored_shares"`
+	PGPKeys              []string `json:"pgp_keys"`
+	Backup               bool     `json:"backup"`
+	RequireVerification  bool     `json:"require_verification"`
+	EnableUnsealRecovery bool     `json:"enable_unseal_recovery"`
 }
 
 type RekeyStatusResponse struct {
-	Nonce                string   `json:"nonce"`
-	Started              bool     `json:"started"`
-	T                    int      `json:"t"`
-	N                    int      `json:"n"`
-	Progress             int      `json:"progress"`
-	Required             int      `json:"required"`
-	PGPFingerprints      []string `json:"pgp_fingerprints"`
-	Backup               bool     `json:"backup"`
-	VerificationRequired bool     `json:"verification_required"`
-	VerificationNonce    string   `json:"verification_nonce,omitempty"`
+	Nonce                 string   `json:"nonce"`
+	Started               bool     `json:"started"`
+	T                     int      `json:"t"`
+	N                     int      `json:"n"`
+	Progress              int      `json:"progress"`
+	Required              int      `json:"required"`
+	PGPFingerprints       []string `json:"pgp_fingerprints"`
+	Backup                bool     `json:"backup"`
+	VerificationRequired  bool     `json:"verification_required"`
+	VerificationNonce     string   `json:"verification_nonce,omitempty"`
+	UnsealRecoveryEnabled bool     `json:"unseal_recovery_enabled"`
 }
 
 type RekeyUpdateRequest struct {
-	Nonce string
-	Key   string
+	Nonce                     string
+	Key                       string
+	AcknowledgeUnsealRecovery bool `json:"acknowledge_unseal_recovery"`
 }
 
 type RekeyUpdateResponse struct {
-	Nonce                string   `json:"nonce"`
-	Complete             bool     `json:"complete"`
-	Keys                 []string `json:"keys"`
-	KeysB64              []string `json:"keys_base64"`
-	PGPFingerprints      []string `json:"pgp_fingerprints"`
-	Backup               bool     `json:"backup"`
-	VerificationRequired bool     `json:"verification_required"`
-	VerificationNonce    string   `json:"verification_nonce,omitempty"`
+	Nonce                 string   `json:"nonce"`
+	Complete              bool     `json:"complete"`
+	Keys                  []string `json:"keys"`
+	KeysB64               []string `json:"keys_base64"`
+	PGPFingerprints       []string `json:"pgp_fingerprints"`
+	Backup                bool     `json:"backup"`
+	VerificationRequired  bool     `json:"verification_required"`
+	VerificationNonce     string   `json:"verification_nonce,omitempty"`
+	UnsealRecoveryEnabled bool     `json:"unseal_recovery_enabled"`
 }
 
 type RekeyVerificationUpdateRequest struct {

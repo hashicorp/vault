@@ -23,15 +23,16 @@ var (
 type OperatorRekeyCommand struct {
 	*BaseCommand
 
-	flagCancel       bool
-	flagInit         bool
-	flagKeyShares    int
-	flagKeyThreshold int
-	flagNonce        string
-	flagPGPKeys      []string
-	flagStatus       bool
-	flagTarget       string
-	flagVerify       bool
+	flagCancel         bool
+	flagInit           bool
+	flagKeyShares      int
+	flagKeyThreshold   int
+	flagNonce          string
+	flagPGPKeys        []string
+	flagStatus         bool
+	flagTarget         string
+	flagVerify         bool
+	flagUnsealRecovery bool
 
 	// Backup options
 	flagBackup         bool
@@ -172,6 +173,20 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 			"attempt.",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "enable-unseal-recovery",
+		Target:  &c.flagUnsealRecovery,
+		Default: false,
+		Usage:   "If true on re-key init, re-keyed recovery keys will be able to unseal Vault in an emergency.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "acknowledge-unseal-recovery",
+		Target:  &c.flagUnsealRecovery,
+		Default: false,
+		Usage:   "On recovery key submission during rekey, acknowledges that the re-keyed keys will be able to unseal Vault in an emergency.",
+	})
+
 	f.VarFlag(&VarFlag{
 		Name:       "pgp-keys",
 		Value:      (*pgpkeys.PubKeyFilesFlag)(&c.flagPGPKeys),
@@ -260,7 +275,7 @@ func (c *OperatorRekeyCommand) Run(args []string) int {
 		if len(args) > 0 {
 			key = strings.TrimSpace(args[0])
 		}
-		return c.provide(client, key)
+		return c.provide(client, key, c.flagUnsealRecovery)
 	}
 }
 
@@ -268,7 +283,9 @@ func (c *OperatorRekeyCommand) Run(args []string) int {
 func (c *OperatorRekeyCommand) init(client *api.Client) int {
 	// Handle the different API requests
 	var fn func(*api.RekeyInitRequest) (*api.RekeyStatusResponse, error)
-	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
+
+	target := strings.ToLower(strings.TrimSpace(c.flagTarget))
+	switch target {
 	case "barrier":
 		fn = client.Sys().RekeyInit
 	case "recovery", "hsm":
@@ -278,13 +295,19 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 		return 1
 	}
 
+	if target != "recovery" && c.flagUnsealRecovery {
+		c.UI.Error(fmt.Sprintf("enable-unseal-recovery only applicable to recovery re-keys"))
+		return 1
+	}
+
 	// Make the request
 	status, err := fn(&api.RekeyInitRequest{
-		SecretShares:        c.flagKeyShares,
-		SecretThreshold:     c.flagKeyThreshold,
-		PGPKeys:             c.flagPGPKeys,
-		Backup:              c.flagBackup,
-		RequireVerification: c.flagVerify,
+		SecretShares:          c.flagKeyShares,
+		SecretThreshold:       c.flagKeyThreshold,
+		PGPKeys:               c.flagPGPKeys,
+		Backup:                c.flagBackup,
+		RequireVerification:   c.flagVerify,
+		DisableUnsealRecovery: !c.flagUnsealRecovery,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing rekey: %s", err))
@@ -355,11 +378,12 @@ func (c *OperatorRekeyCommand) cancel(client *api.Client) int {
 
 // provide prompts the user for the seal key and posts it to the update root
 // endpoint. If this is the last unseal, this function outputs it.
-func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
+func (c *OperatorRekeyCommand) provide(client *api.Client, key string, ackUnsealRecovery bool) int {
 	var statusFn func() (interface{}, error)
 	var updateFn func(string, string) (interface{}, error)
 
-	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
+	target := strings.ToLower(strings.TrimSpace(c.flagTarget))
+	switch target {
 	case "barrier":
 		statusFn = func() (interface{}, error) {
 			return client.Sys().RekeyStatus()
@@ -380,14 +404,14 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 			return client.Sys().RekeyRecoveryKeyStatus()
 		}
 		updateFn = func(s1 string, s2 string) (interface{}, error) {
-			return client.Sys().RekeyRecoveryKeyUpdate(s1, s2)
+			return client.Sys().RekeyRecoveryKeyUpdate(s1, s2, ackUnsealRecovery)
 		}
 		if c.flagVerify {
 			statusFn = func() (interface{}, error) {
 				return client.Sys().RekeyRecoveryKeyVerificationStatus()
 			}
 			updateFn = func(s1 string, s2 string) (interface{}, error) {
-				return client.Sys().RekeyRecoveryKeyVerificationUpdate(s1, s2)
+				return client.Sys().RekeyRecoveryKeyVerificationUpdate(s1, s2, ackUnsealRecovery)
 			}
 		}
 	default:
@@ -488,13 +512,16 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 
 	var complete bool
 	var mightContainUnsealKeys bool
+	var unsealRecoveryEnabled bool
 
 	switch resp := resp.(type) {
 	case *api.RekeyUpdateResponse:
 		complete = resp.Complete
 		mightContainUnsealKeys = true
+		unsealRecoveryEnabled = resp.UnsealRecoveryEnabled
 	case *api.RekeyVerificationUpdateResponse:
 		complete = resp.Complete
+		unsealRecoveryEnabled = resp.UnsealRecoveryEnabled
 	default:
 		c.UI.Error("Unknown update response type")
 		return 1
@@ -505,8 +532,8 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 	}
 
 	if mightContainUnsealKeys {
-		return c.printUnsealKeys(client, status.(*api.RekeyStatusResponse),
-			resp.(*api.RekeyUpdateResponse))
+		return c.printUnsealKeys(client, target, status.(*api.RekeyStatusResponse),
+			resp.(*api.RekeyUpdateResponse), unsealRecoveryEnabled)
 	}
 
 	c.UI.Output(wrapAtLength("Rekey verification successful. The rekey operation is complete and the new keys are now active."))
@@ -622,6 +649,7 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 			out = append(out, fmt.Sprintf("New Shares | %d", status.N))
 			out = append(out, fmt.Sprintf("New Threshold | %d", status.T))
 			out = append(out, fmt.Sprintf("Verification Required | %t", status.VerificationRequired))
+			out = append(out, fmt.Sprintf("Unseal Recovery Enabled | %t", status.UnsealRecoveryEnabled))
 			if status.VerificationNonce != "" {
 				out = append(out, fmt.Sprintf("Verification Nonce | %s", status.VerificationNonce))
 			}
@@ -651,7 +679,7 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 	}
 }
 
-func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse) int {
+func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, target string, status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse, unsealRecoveryEnabled bool) int {
 	switch Format(c.UI) {
 	case "table":
 	default:
@@ -740,10 +768,19 @@ func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.R
 			"The current verification status, including initial nonce, is shown below.",
 		))
 		c.UI.Output("")
-
 		c.flagVerify = true
 		return c.status(client)
 	}
 
+	if target == "recovery" {
+		c.UI.Output("")
+		var state string
+		if unsealRecoveryEnabled {
+			state = "can"
+		} else {
+			state = "can NOT"
+		}
+		c.UI.Output(wrapAtLength(fmt.Sprintf("These new recovery keys %s be used to unseal Vault via unseal recovery in an emergency.", state)))
+	}
 	return 0
 }

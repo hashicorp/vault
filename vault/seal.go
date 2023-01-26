@@ -425,14 +425,15 @@ func (s *SealConfig) Validate() error {
 
 func (s *SealConfig) Clone() *SealConfig {
 	ret := &SealConfig{
-		Type:                 s.Type,
-		SecretShares:         s.SecretShares,
-		SecretThreshold:      s.SecretThreshold,
-		Nonce:                s.Nonce,
-		Backup:               s.Backup,
-		StoredShares:         s.StoredShares,
-		VerificationRequired: s.VerificationRequired,
-		VerificationNonce:    s.VerificationNonce,
+		Type:                  s.Type,
+		SecretShares:          s.SecretShares,
+		SecretThreshold:       s.SecretThreshold,
+		Nonce:                 s.Nonce,
+		Backup:                s.Backup,
+		StoredShares:          s.StoredShares,
+		VerificationRequired:  s.VerificationRequired,
+		VerificationNonce:     s.VerificationNonce,
+		DisableUnsealRecovery: s.DisableUnsealRecovery,
 	}
 	if len(s.PGPKeys) > 0 {
 		ret.PGPKeys = make([]string, len(s.PGPKeys))

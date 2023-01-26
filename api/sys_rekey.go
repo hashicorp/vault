@@ -237,17 +237,18 @@ func (c *Sys) RekeyUpdateWithContext(ctx context.Context, shard, nonce string) (
 	return &result, err
 }
 
-func (c *Sys) RekeyRecoveryKeyUpdate(shard, nonce string) (*RekeyUpdateResponse, error) {
-	return c.RekeyRecoveryKeyUpdateWithContext(context.Background(), shard, nonce)
+func (c *Sys) RekeyRecoveryKeyUpdate(shard, nonce string, ackUnsealRecovery bool) (*RekeyUpdateResponse, error) {
+	return c.RekeyRecoveryKeyUpdateWithContext(context.Background(), shard, nonce, ackUnsealRecovery)
 }
 
-func (c *Sys) RekeyRecoveryKeyUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyUpdateResponse, error) {
+func (c *Sys) RekeyRecoveryKeyUpdateWithContext(ctx context.Context, shard, nonce string, ackUnsealRecovery bool) (*RekeyUpdateResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
 	body := map[string]interface{}{
-		"key":   shard,
-		"nonce": nonce,
+		"key":                         shard,
+		"nonce":                       nonce,
+		"acknowledge_unseal_recovery": ackUnsealRecovery,
 	}
 
 	r := c.c.NewRequest(http.MethodPut, "/v1/sys/rekey-recovery-key/update")
@@ -397,17 +398,18 @@ func (c *Sys) RekeyVerificationUpdateWithContext(ctx context.Context, shard, non
 	return &result, err
 }
 
-func (c *Sys) RekeyRecoveryKeyVerificationUpdate(shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
-	return c.RekeyRecoveryKeyVerificationUpdateWithContext(context.Background(), shard, nonce)
+func (c *Sys) RekeyRecoveryKeyVerificationUpdate(shard, nonce string, ackUnsealRecovery bool) (*RekeyVerificationUpdateResponse, error) {
+	return c.RekeyRecoveryKeyVerificationUpdateWithContext(context.Background(), shard, nonce, ackUnsealRecovery)
 }
 
-func (c *Sys) RekeyRecoveryKeyVerificationUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
+func (c *Sys) RekeyRecoveryKeyVerificationUpdateWithContext(ctx context.Context, shard, nonce string, ackUnsealRecovery bool) (*RekeyVerificationUpdateResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
 	body := map[string]interface{}{
-		"key":   shard,
-		"nonce": nonce,
+		"key":                         shard,
+		"nonce":                       nonce,
+		"acknowledge_unseal_recovery": ackUnsealRecovery,
 	}
 
 	r := c.c.NewRequest(http.MethodPut, "/v1/sys/rekey-recovery-key/verify")
@@ -427,36 +429,39 @@ func (c *Sys) RekeyRecoveryKeyVerificationUpdateWithContext(ctx context.Context,
 }
 
 type RekeyInitRequest struct {
-	SecretShares        int      `json:"secret_shares"`
-	SecretThreshold     int      `json:"secret_threshold"`
-	StoredShares        int      `json:"stored_shares"`
-	PGPKeys             []string `json:"pgp_keys"`
-	Backup              bool
-	RequireVerification bool `json:"require_verification"`
+	SecretShares          int      `json:"secret_shares"`
+	SecretThreshold       int      `json:"secret_threshold"`
+	StoredShares          int      `json:"stored_shares"`
+	PGPKeys               []string `json:"pgp_keys"`
+	Backup                bool
+	RequireVerification   bool `json:"require_verification"`
+	DisableUnsealRecovery bool `json:"disable_unseal_recovery"`
 }
 
 type RekeyStatusResponse struct {
-	Nonce                string   `json:"nonce"`
-	Started              bool     `json:"started"`
-	T                    int      `json:"t"`
-	N                    int      `json:"n"`
-	Progress             int      `json:"progress"`
-	Required             int      `json:"required"`
-	PGPFingerprints      []string `json:"pgp_fingerprints"`
-	Backup               bool     `json:"backup"`
-	VerificationRequired bool     `json:"verification_required"`
-	VerificationNonce    string   `json:"verification_nonce"`
+	Nonce                 string   `json:"nonce"`
+	Started               bool     `json:"started"`
+	T                     int      `json:"t"`
+	N                     int      `json:"n"`
+	Progress              int      `json:"progress"`
+	Required              int      `json:"required"`
+	PGPFingerprints       []string `json:"pgp_fingerprints"`
+	Backup                bool     `json:"backup"`
+	VerificationRequired  bool     `json:"verification_required"`
+	VerificationNonce     string   `json:"verification_nonce"`
+	UnsealRecoveryEnabled bool     `json:"unseal_recovery_enabled"`
 }
 
 type RekeyUpdateResponse struct {
-	Nonce                string   `json:"nonce"`
-	Complete             bool     `json:"complete"`
-	Keys                 []string `json:"keys"`
-	KeysB64              []string `json:"keys_base64"`
-	PGPFingerprints      []string `json:"pgp_fingerprints"`
-	Backup               bool     `json:"backup"`
-	VerificationRequired bool     `json:"verification_required"`
-	VerificationNonce    string   `json:"verification_nonce,omitempty"`
+	Nonce                 string   `json:"nonce"`
+	Complete              bool     `json:"complete"`
+	Keys                  []string `json:"keys"`
+	KeysB64               []string `json:"keys_base64"`
+	PGPFingerprints       []string `json:"pgp_fingerprints"`
+	Backup                bool     `json:"backup"`
+	VerificationRequired  bool     `json:"verification_required"`
+	VerificationNonce     string   `json:"verification_nonce,omitempty"`
+	UnsealRecoveryEnabled bool     `json:"unseal_recovery_enabled"`
 }
 
 type RekeyRetrieveResponse struct {
@@ -466,14 +471,16 @@ type RekeyRetrieveResponse struct {
 }
 
 type RekeyVerificationStatusResponse struct {
-	Nonce    string `json:"nonce"`
-	Started  bool   `json:"started"`
-	T        int    `json:"t"`
-	N        int    `json:"n"`
-	Progress int    `json:"progress"`
+	Nonce                 string `json:"nonce"`
+	Started               bool   `json:"started"`
+	T                     int    `json:"t"`
+	N                     int    `json:"n"`
+	Progress              int    `json:"progress"`
+	UnsealRecoveryEnabled bool   `json:"unseal_recovery_enabled"`
 }
 
 type RekeyVerificationUpdateResponse struct {
-	Nonce    string `json:"nonce"`
-	Complete bool   `json:"complete"`
+	Nonce                 string `json:"nonce"`
+	Complete              bool   `json:"complete"`
+	UnsealRecoveryEnabled bool   `json:"unseal_recovery_enabled"`
 }

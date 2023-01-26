@@ -36,12 +36,13 @@ const (
 // RekeyResult is used to provide the key parts back after
 // they are generated as part of the rekey.
 type RekeyResult struct {
-	SecretShares         [][]byte
-	PGPFingerprints      []string
-	Backup               bool
-	RecoveryKey          bool
-	VerificationRequired bool
-	VerificationNonce    string
+	SecretShares          [][]byte
+	PGPFingerprints       []string
+	Backup                bool
+	RecoveryKey           bool
+	VerificationRequired  bool
+	VerificationNonce     string
+	UnsealRecoveryEnabled bool
 }
 
 type RekeyVerifyResult struct {
@@ -294,9 +295,9 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) logical.HTTPCodedError {
 }
 
 // RekeyUpdate is used to provide a new key part for the barrier or recovery key.
-func (c *Core) RekeyUpdate(ctx context.Context, key []byte, nonce string, recovery bool) (*RekeyResult, logical.HTTPCodedError) {
+func (c *Core) RekeyUpdate(ctx context.Context, key []byte, nonce string, recovery, ackUnsealRecovery bool) (*RekeyResult, logical.HTTPCodedError) {
 	if recovery {
-		return c.RecoveryRekeyUpdate(ctx, key, nonce)
+		return c.RecoveryRekeyUpdate(ctx, key, nonce, ackUnsealRecovery)
 	}
 	return c.BarrierRekeyUpdate(ctx, key, nonce)
 }
@@ -590,7 +591,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 }
 
 // RecoveryRekeyUpdate is used to provide a new key part
-func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string) (*RekeyResult, logical.HTTPCodedError) {
+func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string, ackUnsealRecovery bool) (*RekeyResult, logical.HTTPCodedError) {
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
@@ -635,6 +636,13 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 
 	if nonce != c.recoveryRekeyConfig.Nonce {
 		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("incorrect nonce supplied; nonce for this rekey operation is %q", c.recoveryRekeyConfig.Nonce))
+	}
+
+	if !c.recoveryRekeyConfig.DisableUnsealRecovery != ackUnsealRecovery {
+		// Mismatch between desired unseal recovery state and acknowledged, abort.
+		urRequested := !c.recoveryRekeyConfig.DisableUnsealRecovery
+		c.rekeyCancelWithLock(true)
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("caller's acknowledgement of whether unseal recovery is enabled (%t) does not match rekey initial request (%t); aborting recovery rekey", ackUnsealRecovery, urRequested))
 	}
 
 	// Check if we already have this piece
@@ -759,15 +767,9 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform recovery rekey: %w", err).Error())
 	}
 
-	// Store the unseal recovery key
-	wrapper := aeadwrapper.NewShamirWrapper()
-	// TODO, just test if keys existed in the recovery path
-
-	keys, err := c.physical.Get(ctx, recoveryUnsealKeyPath)
-	if err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform recovery rekey, failed testing for recovery unseal keys: %w", err).Error())
-	}
-	if keys != nil {
+	if !c.recoveryRekeyConfig.DisableUnsealRecovery {
+		// Store the unseal recovery key
+		wrapper := aeadwrapper.NewShamirWrapper()
 		rootKeys, err := c.seal.GetStoredKeys(ctx)
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform recovery rekey, failed retrieving root keys: %w", err).Error())
@@ -778,9 +780,13 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 			Wrapper: wrapper,
 		})
 		recoverySeal.SetCore(c)
-
 		if err := recoverySeal.SetStoredKeys(ctx, rootKeys); err != nil {
 			c.logger.Error("failed to store recovery unseal keys", "error", err)
+		}
+		results.UnsealRecoveryEnabled = true
+	} else {
+		if err := c.physical.Delete(ctx, recoveryUnsealKeyPath); err != nil {
+			c.logger.Error("failed to remove recover unseal keys", "error", err)
 		}
 	}
 
@@ -944,13 +950,17 @@ func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
 	c.rekeyLock.Lock()
 	defer c.rekeyLock.Unlock()
 
+	c.rekeyCancelWithLock(recovery)
+	return nil
+}
+
+func (c *Core) rekeyCancelWithLock(recovery bool) {
 	// Clear any progress or config
 	if recovery {
 		c.recoveryRekeyConfig = nil
 	} else {
 		c.barrierRekeyConfig = nil
 	}
-	return nil
 }
 
 // RekeyVerifyRestart is used to start the verification process over
