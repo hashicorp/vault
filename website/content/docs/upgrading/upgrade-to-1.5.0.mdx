@@ -15,7 +15,7 @@ for Vault 1.5.0 compared to 1.4.1. Please read it carefully.
 
 The deprecated `credentials_file` config option has been removed. The `GOOGLE_APPLICATION_CREDENTIALS`
 environment variable or default credentials may be used instead. See
-[GCS Authentication](https://www.vaultproject.io/docs/configuration/storage/google-cloud-storage#gcs-authentication)
+[GCS Authentication](/vault/docs/configuration/storage/google-cloud-storage#gcs-authentication)
 for details on supported options.
 
 ## Raft Configuration
@@ -29,12 +29,12 @@ configuration is 1MiB.
 In addition, a new metric has been introduced, `vault.raft-storage.entry_size`,
 that allows for operators to sample the entry size, view the average, and adjust
 the configuration value as necessary. For additional details, please see
-[Raft configuration](/docs/configuration/storage/raft).
+[Raft configuration](/vault/docs/configuration/storage/raft).
 
 ## Enabling telemetry on 32-bit systems will cause Vault to crash.
 
 A workaround for this issue is to disable collection of usage gauges in
-the [telemetry](/docs/configuration/telemetry) stanza of the configuration.
+the [telemetry](/vault/docs/configuration/telemetry) stanza of the configuration.
 
 ```
 telemetry {
@@ -55,7 +55,7 @@ modified to make this operation impossible. The metrics collection process crash
 this while counting the number of KV secrets.
 
 A workaround for this issue is to disable collection of usage gauges in
-the [telemetry](/docs/configuration/telemetry) stanza of the configuration.
+the [telemetry](/vault/docs/configuration/telemetry) stanza of the configuration.
 
 ```
 telemetry {
@@ -69,7 +69,7 @@ This will disable all the metrics listed in the previous section. Or, set the en
 
 ## Non-string values in seal config prevent startup
 
-Any values in the [Seal configuration stanza](/docs/configuration/seal)
+Any values in the [Seal configuration stanza](/vault/docs/configuration/seal)
 that are not quoted strings yield a parse error of the form:
 
 ```

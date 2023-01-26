@@ -11,7 +11,7 @@ description: |-
 -> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
 
 Vault Enterprise features a mechanism to wrap values with an extra layer of
-encryption for supporting [seals](/docs/configuration/seal). This adds an
+encryption for supporting [seals](/vault/docs/configuration/seal). This adds an
 extra layer of protection and is useful in some compliance and regulatory
 environments, including FIPS 140-2 environments.
 
@@ -80,20 +80,20 @@ Seal Wrapping does incur some performance overhead.
 
 Some examples of places where seal wrapping is used include:
 
-- The [LDAP](/docs/auth/ldap), [RADIUS](/docs/auth/radius),
-  [Okta](/docs/auth/okta), and [AWS](/docs/auth/aws) auth methods,
+- The [LDAP](/vault/docs/auth/ldap), [RADIUS](/vault/docs/auth/radius),
+  [Okta](/vault/docs/auth/okta), and [AWS](/vault/docs/auth/aws) auth methods,
   for storing their config.
-- [PKI](/docs/secrets/pki) for storing the issuers and their keys,
-- [SSH](/docs/secrets/ssh) for storing the CA's keys,
-- [KMIP](/docs/secrets/kmip) for storing managed objects (externally-provided
+- [PKI](/vault/docs/secrets/pki) for storing the issuers and their keys,
+- [SSH](/vault/docs/secrets/ssh) for storing the CA's keys,
+- [KMIP](/vault/docs/secrets/kmip) for storing managed objects (externally-provided
   keys) and its CA keys.
-- [Transit](/docs/secrets/transit) for storing keys and their policy.
+- [Transit](/vault/docs/secrets/transit) for storing keys and their policy.
 
 ## FIPS Status
 
-See the [FIPS-specific Seal Wrap documentation](/docs/enterprise/fips/sealwrap)
+See the [FIPS-specific Seal Wrap documentation](/vault/docs/enterprise/fips/sealwrap)
 for more information about using Seal Wrapping to achieve FIPS 140-2 compliance.
-Note that there are additional [FIPS considerations](/docs/enterprise/sealwrap#seal-wrap-and-replication)
+Note that there are additional [FIPS considerations](/vault/docs/enterprise/sealwrap#seal-wrap-and-replication)
 regarding Seal Wrap usage and Vault Replication.
 
-[configuration]: /docs/configuration
+[configuration]: /vault/docs/configuration

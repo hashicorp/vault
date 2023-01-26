@@ -15,9 +15,9 @@ The user lockout feature can disabled as follows:
 - It can be disabled globally using environment variable VAULT_DISABLE_USER_LOCKOUT.
 - It can be disabled for all supported auth methods (ldap, userpass and approle) or a specific supported auth method using "disable_lockout"
  parameter within user_lockout stanza in configuration file. 
- Please see [user lockout configuration](/docs/configuration/user-lockout#user_lockout-stanza) for more details. 
-- It can be disabled for a specific auth mount using "auth tune". Please see [auth tune command](/docs/commands/auth/tune)
-or [auth tune api](/api-docs/system/auth#tune-auth-method) for more details. 
+ Please see [user lockout configuration](/vault/docs/configuration/user-lockout#user_lockout-stanza) for more details. 
+- It can be disabled for a specific auth mount using "auth tune". Please see [auth tune command](/vault/docs/commands/auth/tune)
+or [auth tune api](/vault/api-docs/system/auth#tune-auth-method) for more details. 
 
 
 ~> **NOTE**: This feature is available from  Vault version 1.13 and is only supported by userpass, ldap and approle auth methods.

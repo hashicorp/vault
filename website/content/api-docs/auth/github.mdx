@@ -8,7 +8,7 @@ description: This is the API documentation for the Vault GitHub auth method.
 
 This is the API documentation for the Vault GitHub auth method. For
 general information about the usage and operation of the GitHub method, please
-see the [Vault GitHub method documentation](/docs/auth/github).
+see the [Vault GitHub method documentation](/vault/docs/auth/github).
 
 This documentation assumes the GitHub method is enabled at the `/auth/github`
 path in Vault. Since it is possible to enable auth methods at any location,
