@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -22,46 +23,34 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func TestSanity(t *testing.T) {
-	inf, err := os.CreateTemp("", "auth.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	in := inf.Name()
-	inf.Close()
-	os.Remove(in)
-
-	if err := os.WriteFile(in, []byte("hello"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	symlink, err := os.CreateTemp("", "auth.jwt.symlink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	symlinkName := symlink.Name()
-	symlink.Close()
-	os.Remove(symlinkName)
-	os.Symlink(in, symlinkName)
-
-	data, err := os.ReadFile(symlinkName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	dataString := string(data)
-	if string(dataString) != "hello" {
-		t.Fatalf("Did not work %s", dataString)
-	}
-}
-
 func TestJWTEndToEnd(t *testing.T) {
-	// testJWTEndToEnd(t, false, false)
-	// testJWTEndToEnd(t, true, false)
-	testJWTEndToEnd(t, false, true)
-	// testJWTEndToEnd(t, true, true)
+	t.Parallel()
+	testCases := []struct {
+		ahWrapping            bool
+		useSymlink            bool
+		removeJWTAfterReading bool
+	}{
+		// default behaviour => token expected
+		{false, false, false},
+		{true, false, false},
+		{false, true, false},
+		{true, true, false},
+		{false, false, true},
+		{true, false, true},
+		{false, true, true},
+		{true, true, true},
+	}
+
+	for _, tc := range testCases {
+		tc := tc // capture range variable
+		t.Run(fmt.Sprintf("ahWrapping=%v, useSymlink=%v, removeJWTAfterReading=%v", tc.ahWrapping, tc.useSymlink, tc.removeJWTAfterReading), func(t *testing.T) {
+			t.Parallel()
+			testJWTEndToEnd(t, tc.ahWrapping, tc.useSymlink, tc.removeJWTAfterReading)
+		})
+	}
 }
 
-func testJWTEndToEnd(t *testing.T, ahWrapping, useSymlink bool) {
+func testJWTEndToEnd(t *testing.T, ahWrapping, useSymlink, removeJWTAfterReading bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
@@ -175,8 +164,10 @@ func testJWTEndToEnd(t *testing.T, ahWrapping, useSymlink bool) {
 		Logger:    logger.Named("auth.jwt"),
 		MountPath: "auth/jwt",
 		Config: map[string]interface{}{
-			"path": fileNameToUseAsPath,
-			"role": "test",
+			"path":                      fileNameToUseAsPath,
+			"role":                      "test",
+			"remove_jwt_after_reading":  removeJWTAfterReading,
+			"test_override_read_period": true,
 		},
 	})
 	if err != nil {
@@ -290,6 +281,22 @@ func testJWTEndToEnd(t *testing.T, ahWrapping, useSymlink bool) {
 				os.Remove(out)
 				if len(val) == 0 {
 					t.Fatal("written token was empty")
+				}
+
+				// First, ensure JWT has been removed
+				if removeJWTAfterReading {
+					_, err = os.Stat(in)
+					if err == nil {
+						t.Fatal("no error returned from stat, indicating the jwt is still present")
+					}
+					if !os.IsNotExist(err) {
+						t.Fatalf("unexpected error: %v", err)
+					}
+				} else {
+					_, err := os.Stat(in)
+					if err != nil {
+						t.Fatal("JWT file removed despite removeJWTAfterReading being set to false")
+					}
 				}
 
 				// First decrypt it
