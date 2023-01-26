@@ -1,5 +1,3 @@
-//go:build !enterprise
-
 package keysutil
 
 import (
