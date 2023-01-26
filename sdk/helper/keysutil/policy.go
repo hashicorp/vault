@@ -1532,7 +1532,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		}
 	}()
 
-	if err := p.RotateInMemory(ctx, randReader); err != nil {
+	if err := p.RotateInMemory(randReader); err != nil {
 		return err
 	}
 
@@ -1541,7 +1541,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 }
 
 // RotateInMemory rotates the policy but does not persist it to storage.
-func (p *Policy) RotateInMemory(ctx context.Context, randReader io.Reader) (retErr error) {
+func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 	now := time.Now()
 	entry := KeyEntry{
 		CreationTime:           now,
