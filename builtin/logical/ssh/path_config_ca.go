@@ -333,7 +333,7 @@ func generateSSHKeyPair(randomSource io.Reader, keyType string, keyBits int) (st
 			case 521:
 				curve = elliptic.P521()
 			default:
-				return "", "", fmt.Errorf("unknown ECDSA key pair algorithm: %v", keyType)
+				return "", "", fmt.Errorf("unknown ECDSA key pair algorithm and bits: %v / %v", keyType, keyBits)
 			}
 		}
 
