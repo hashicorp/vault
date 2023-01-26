@@ -968,6 +968,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rawEnabled:                     conf.EnableRaw,
 		introspectionEnabled:           conf.EnableIntrospection,
 		shutdownDoneCh:                 make(chan struct{}),
+		shutdownDoneChClosed:           false,
 		replicationState:               new(uint32),
 		atomicPrimaryClusterAddrs:      new(atomic.Value),
 		atomicPrimaryFailoverAddrs:     new(atomic.Value),
