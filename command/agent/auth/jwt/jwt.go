@@ -213,6 +213,10 @@ func (j *jwtMethod) ingressToken() {
 	// to read that file by following the link in the os.ReadFile call.
 	if symlink {
 		evalSymlinkPath, err = filepath.EvalSymlinks(j.path)
+		if err != nil {
+			j.logger.Error("error encountered evaluating symlinks", "error", err)
+			return
+		}
 		_, err := os.Lstat(evalSymlinkPath)
 		if err != nil {
 			if os.IsNotExist(err) {
