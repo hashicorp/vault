@@ -636,16 +636,15 @@ func (i *ZooKeeperHALock) Unlock() error {
 			attempts := 0
 			i.logger.Info("launching automated distributed lock release")
 
-			ticker := time.NewTicker(time.Second)
-			defer ticker.Stop()
 			for {
 				if err := i.unlockInternal(); err == nil {
 					i.logger.Info("distributed lock released")
 					return
 				}
 
+				timer := time.NewTimer(time.Second)
 				select {
-				case <-ticker.C:
+				case <-timer.C:
 					attempts := attempts + 1
 					if attempts >= 10 {
 						i.logger.Error("release lock max attempts reached. Lock may not be released", "error", err)
@@ -653,6 +652,9 @@ func (i *ZooKeeperHALock) Unlock() error {
 					}
 					continue
 				case <-i.stopCh:
+					if !timer.Stop() {
+						<-timer.C
+					}
 					return
 				}
 			}

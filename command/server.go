@@ -2298,8 +2298,6 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 	first := true
 
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
 	for {
 		migrationStatus, err := CheckStorageMigration(backend)
 		if err == nil {
@@ -2321,9 +2319,13 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 		}
 		c.logger.Warn("storage migration check error", "error", err.Error())
 
+		timer := time.NewTimer(2 * time.Second)
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 		case <-c.ShutdownCh:
+			if !timer.Stop() {
+				<-timer.C
+			}
 			return true
 		}
 	}
@@ -2604,8 +2606,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 }
 
 func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
 	for {
 		err := core.UnsealWithStoredKeys(ctx)
 		if err == nil {
@@ -2618,10 +2618,14 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 		}
 		c.logger.Warn("failed to unseal core", "error", err)
 
+		timer := time.NewTimer(5 * time.Second)
 		select {
 		case <-c.ShutdownCh:
+			if !timer.Stop() {
+				<-timer.C
+			}
 			return
-		case <-ticker.C:
+		case <-timer.C:
 		}
 	}
 }

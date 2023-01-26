@@ -241,8 +241,6 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 		if rsp == nil {
 			return nil, logical.ErrorResponse("okta auth backend unexpected failure"), nil, nil
 		}
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
 		for result.Status == "MFA_CHALLENGE" {
 			switch result.FactorResult {
 			case "WAITING":
@@ -269,10 +267,14 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 					return nil, logical.ErrorResponse("okta auth backend unexpected failure"), nil, nil
 				}
 
+				timer := time.NewTimer(1 * time.Second)
 				select {
-				case <-ticker.C:
+				case <-timer.C:
 					// Continue
 				case <-ctx.Done():
+					if !timer.Stop() {
+						<-timer.C
+					}
 					return nil, logical.ErrorResponse("exiting pending mfa challenge"), nil, nil
 				}
 			case "REJECTED":

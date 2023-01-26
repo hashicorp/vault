@@ -60,13 +60,15 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	defer close(doneCh)
 
 	go func() {
-		ticker := time.NewTicker(time.Second)
-		defer ticker.Stop()
 		for {
+			timer := time.NewTimer(time.Second)
 			select {
 			case <-doneCh:
+				if !timer.Stop() {
+					<-timer.C
+				}
 				return
-			case <-ticker.C:
+			case <-timer.C:
 			}
 
 			resp, _ := c.Logical().Read(fmt.Sprintf("auth/%s/verify/%s", mount, nonce))

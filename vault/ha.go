@@ -663,10 +663,14 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			// Spawn this in a go routine so we can cancel the context and
 			// unblock any inflight requests that are holding the statelock.
 			go func() {
+				timer := time.NewTimer(DefaultMaxRequestDuration)
 				select {
 				case <-activeCtx.Done():
+					if !timer.Stop() {
+						<-timer.C
+					}
 				// Attempt to drain any inflight requests
-				case <-time.After(DefaultMaxRequestDuration):
+				case <-timer.C:
 					activeCtxCancel()
 				}
 			}()
@@ -795,11 +799,10 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 	opCount := new(int32)
 
 	clusterAddr := ""
-	ticker := time.NewTicker(leaderCheckInterval)
-	defer ticker.Stop()
 	for {
+		timer := time.NewTimer(leaderCheckInterval)
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -832,6 +835,9 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 				atomic.AddInt32(lopCount, -1)
 			}()
 		case <-stopCh:
+			if !timer.Stop() {
+				<-timer.C
+			}
 			return
 		}
 	}
@@ -843,11 +849,10 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 	isRaft := raftBackend != nil
 
 	opCount := new(int32)
-	ticker := time.NewTicker(keyRotateCheckInterval)
-	defer ticker.Stop()
 	for {
+		timer := time.NewTimer(keyRotateCheckInterval)
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -903,6 +908,9 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				return
 			}()
 		case <-stopCh:
+			if !timer.Stop() {
+				<-timer.C
+			}
 			return
 		}
 	}
@@ -1025,8 +1033,6 @@ func (c *Core) scheduleUpgradeCleanup(ctx context.Context) error {
 
 // acquireLock blocks until the lock is acquired, returning the leaderLostCh
 func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan struct{} {
-	ticker := time.NewTicker(lockRetryInterval)
-	defer ticker.Stop()
 	for {
 		// Attempt lock acquisition
 		leaderLostCh, err := lock.Lock(stopCh)
@@ -1036,9 +1042,13 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 
 		// Retry the acquisition
 		c.logger.Error("failed to acquire lock", "error", err)
+		timer := time.NewTimer(lockRetryInterval)
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 		case <-stopCh:
+			if !timer.Stop() {
+				<-timer.C
+			}
 			return nil
 		}
 	}
@@ -1105,13 +1115,17 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 		return
 	}
 	for len(keys) > 0 {
+		timer := time.NewTimer(leaderPrefixCleanDelay)
 		select {
-		case <-time.After(leaderPrefixCleanDelay):
+		case <-timer.C:
 			if keys[0] != uuid {
 				c.barrier.Delete(ctx, coreLeaderPrefix+keys[0])
 			}
 			keys = keys[1:]
 		case <-leaderLostCh:
+			if !timer.Stop() {
+				<-timer.C
+			}
 			return
 		}
 	}

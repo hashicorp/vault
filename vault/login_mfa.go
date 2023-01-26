@@ -1966,8 +1966,6 @@ func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *
 		return fmt.Errorf("failed to get transaction ID for Duo authentication")
 	}
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
 	for {
 		// AuthStatus does the long polling until there is a status update. So
 		// there is no need to wait for a second before we invoke this API.
@@ -1988,11 +1986,15 @@ func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *
 		case "allow":
 			return nil
 		}
+		timer := time.NewTimer(time.Second)
 
 		select {
 		case <-ctx.Done():
+			if !timer.Stop() {
+				<-timer.C
+			}
 			return fmt.Errorf("duo push verification operation canceled")
-		case <-ticker.C:
+		case <-timer.C:
 		}
 	}
 }
@@ -2092,8 +2094,6 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return err
 	}
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
 	for {
 		// Okta provides an SDK method `GetFactorTransactionStatus` but does not provide the transaction id in
 		// the VerifyFactor respone. This code effectively reimplements that method.
@@ -2119,11 +2119,15 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		default:
 			return fmt.Errorf("unknown status code")
 		}
+		timer := time.NewTimer(time.Second)
 
 		select {
 		case <-ctx.Done():
+			if !timer.Stop() {
+				<-timer.C
+			}
 			return fmt.Errorf("push verification operation canceled")
-		case <-ticker.C:
+		case <-timer.C:
 		}
 	}
 }
