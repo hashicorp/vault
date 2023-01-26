@@ -33,14 +33,19 @@ try {
 }
 
 module.exports = {
-  plugins: ['ember-template-lint-plugin-prettier'],
-  extends: ['recommended', 'ember-template-lint-plugin-prettier:recommended'],
+  plugins: ['ember-template-lint-plugin-prettier', 'ember-template-lint-plugin-vault'],
+  extends: [
+    'recommended',
+    'ember-template-lint-plugin-prettier:recommended',
+    'ember-template-lint-plugin-vault:recommended',
+  ],
   rules: {
     'no-action': 'off',
     'no-implicit-this': {
       allow: ['supported-auth-backends'],
     },
     'require-input-label': 'off',
+    'component-attrs-before-args': 'off', // temporarily disabled until fixer can be run across codebase at start of release cycle
   },
   ignore: ['lib/story-md', 'tests/**'],
   // ember language server vscode extension does not currently respect the ignore field
