@@ -1141,6 +1141,10 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 									Type:     framework.TypeString,
 									Required: true,
 								},
+								"config": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
 							},
 						}},
 					},
