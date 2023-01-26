@@ -41,7 +41,7 @@ export default class PkiCertificateBaseModel extends Model {
   @attr('string', { masked: true }) certificate;
   @attr('number') expiration;
   @attr('number', { formatDate: true }) revocationTime;
-  @attr('string', { label: 'Issuing CA' }) issuingCa;
+  @attr('string', { label: 'Issuing CA', masked: true }) issuingCa;
   @attr('string') privateKey;
   @attr('string') privateKeyType;
   @attr('string') serialNumber;

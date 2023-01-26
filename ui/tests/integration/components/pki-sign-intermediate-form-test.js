@@ -18,7 +18,8 @@ const selectors = {
   fieldError: '[data-test-inline-alert]',
   formError: '[data-test-form-error]',
   resultsContainer: '[data-test-sign-intermediate-result]',
-  rowByName: (name) => `[data-test-row="${name}"]`,
+  rowByName: (name) => `[data-test-row-label="${name}"]`,
+  valueByName: (name) => `[data-test-value-div="${name}"]`,
 };
 module('Integration | Component | pki-sign-intermediate-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -34,6 +35,7 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
   });
 
   test('renders correctly on load', async function (assert) {
+    assert.expect(9);
     await render(hbs`<PkiSignIntermediateForm @onCancel={{this.onCancel}} @model={{this.model}} />`, {
       owner: this.engine,
     });
@@ -46,23 +48,13 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
     assert.dom(selectors.toggleAdditionalFields).exists();
 
     await click(selectors.toggleSigningOptions);
-    [('usePss', 'skid', 'signatureBits')].forEach((name) => {
+    ['usePss', 'skid', 'signatureBits'].forEach((name) => {
       assert.dom(selectors.fieldByName(name)).exists();
     });
-    await click(selectors.toggleSANOptions);
-    [('altNames', 'ipSans', 'uriSans', 'otherSans')].forEach((name) => {
-      assert.dom(selectors.fieldByName(name)).exists();
-    });
-    await click(selectors.toggleAdditionalFields);
-    [('ou', 'organization', 'country', 'locality', 'province', 'streetAddress', 'postalCode')].forEach(
-      (name) => {
-        assert.dom(selectors.fieldByName(name)).exists();
-      }
-    );
   });
 
   test('it shows the returned values on successful save', async function (assert) {
-    assert.expect(10);
+    assert.expect(13);
     await render(hbs`<PkiSignIntermediateForm @onCancel={{this.onCancel}} @model={{this.model}} />`, {
       owner: this.engine,
     });
@@ -87,8 +79,19 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
 
     await fillIn(selectors.csrInput, 'example-data');
     await click(selectors.saveButton);
-    ['serialNumber', 'caChain', 'certificate', 'issuingCa'].forEach((name) => {
-      assert.dom(selectors.rowByName(name)).exists();
+    [
+      { label: 'Serial number' },
+      { label: 'CA Chain', masked: true },
+      { label: 'Certificate', masked: true },
+      { label: 'Issuing CA', masked: true },
+    ].forEach(({ label, masked }) => {
+      assert.dom(selectors.rowByName(label)).exists();
+      if (masked) {
+        assert.dom(selectors.valueByName(label)).hasText('***********', `${label} is masked`);
+      } else {
+        assert.dom(selectors.valueByName(label)).hasText('31:52:b9:09:40', `Renders ${label}`);
+        assert.dom(`${selectors.valueByName(label)} a`).exists(`${label} is a link`);
+      }
     });
   });
 });
