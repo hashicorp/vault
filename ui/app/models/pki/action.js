@@ -1,5 +1,6 @@
 import Model, { attr } from '@ember-data/model';
 import { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
@@ -10,7 +11,7 @@ const validations = {
   issuerName: [
     {
       validator(model) {
-        if (model.issuerName === 'default') return false;
+        if (model.actionType === 'generate-root' && model.issuerName === 'default') return false;
         return true;
       },
       message: 'Issuer name must be unique across all issuers and not be the reserved value default.',
@@ -23,6 +24,8 @@ const validations = {
 export default class PkiActionModel extends Model {
   @service secretMountPath;
 
+  @tracked actionType; // used to toggle between different form fields when creating configuration
+
   /* actionType import */
   @attr('string') pemBundle;
 
@@ -33,7 +36,7 @@ export default class PkiActionModel extends Model {
   })
   type;
 
-  @attr('string') issuerName; // REQUIRED, cannot be "default"
+  @attr('string') issuerName; // REQUIRED for generate-root actionType, cannot be "default"
 
   @attr('string') keyName; // cannot be "default"
 
@@ -123,6 +126,11 @@ export default class PkiActionModel extends Model {
   })
   serialNumber;
 
+  @attr('boolean', {
+    subText: 'Whether to add a Basic Constraints extension with CA: true.',
+  })
+  addBasicConstraints;
+
   @attr({
     label: 'Backdate validity',
     detailsLabel: 'Issued certificate backdating',
@@ -150,6 +158,12 @@ export default class PkiActionModel extends Model {
   customTtl;
   @attr('string') ttl;
   @attr('date') notAfter;
+
+  @attr('string', { readOnly: true }) issuerId; // returned from generate-root action
+
+  // For generating and signing a CSR
+  @attr('string') csr;
+  @attr caChain;
 
   get backend() {
     return this.secretMountPath.currentPath;

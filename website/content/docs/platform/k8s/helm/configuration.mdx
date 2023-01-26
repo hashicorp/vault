@@ -58,14 +58,14 @@ and consider if they're appropriate for your deployment.
   - `serverTelemetry` - Values that configure metrics and telemetry
 
     - `prometheusOperator` (`boolean: false`) - When set to `true`, enables integration with the
-      Prometheus Operator. Be sure to configure the top-level [`serverTelemetry`](/docs/platform/k8s/helm/configuration#servertelemetry-1) section for more details
+      Prometheus Operator. Be sure to configure the top-level [`serverTelemetry`](/vault/docs/platform/k8s/helm/configuration#servertelemetry-1) section for more details
       and required configuration values.
 
 - `injector` - Values that configure running a Vault Agent Injector Admission Webhook Controller within Kubernetes.
 
   - `enabled` (`boolean or string: "-"`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created. When set to `"-"`, defaults to the value of `global.enabled`.
 
-  - `externalVaultAddr` (`string: ""`) - Deprecated: Please use [global.externalVaultAddr](/docs/platform/k8s/helm/configuration#externalvaultaddr) instead.
+  - `externalVaultAddr` (`string: ""`) - Deprecated: Please use [global.externalVaultAddr](/vault/docs/platform/k8s/helm/configuration#externalvaultaddr) instead.
 
   - `replicas` (`int: 1`) - The number of pods to deploy to create a highly available cluster of Vault Agent Injectors. Requires Vault K8s 0.7.0 to have more than 1 replica.
 
@@ -100,7 +100,7 @@ and consider if they're appropriate for your deployment.
     - `template` (`string: "map"`) - The default template type for rendered secrets if no custom templates are defined.
       Possible values include `map` and `json`.
 
-    - `templateConfig` - Default values within Agent's [`template_config` stanza](/docs/agent/template).
+    - `templateConfig` - Default values within Agent's [`template_config` stanza](/vault/docs/agent/template).
 
       - `exitOnRetryFailure` (`boolean: true`) - Controls whether Vault Agent exits after it has exhausted its number of template retry attempts due to failures.
 
@@ -176,9 +176,9 @@ and consider if they're appropriate for your deployment.
 
     - `annotations` (`string or object: {}`) - Defines additional annotations to attach to the webhook. This can either be YAML or a YAML-formatted multi-line templated string.
 
-  - `namespaceSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.namespaceSelector`](/docs/platform/k8s/helm/configuration#namespaceselector) instead.
+  - `namespaceSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.namespaceSelector`](/vault/docs/platform/k8s/helm/configuration#namespaceselector) instead.
 
-  - `objectSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.objectSelector`](/docs/platform/k8s/helm/configuration#objectselector) instead.
+  - `objectSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.objectSelector`](/vault/docs/platform/k8s/helm/configuration#objectselector) instead.
 
   - `extraLabels` (`dictionary: {}`) - This value defines additional labels for Vault Agent Injector pods.
 
@@ -243,9 +243,9 @@ and consider if they're appropriate for your deployment.
       "sample/annotation2": "bar"
     ```
 
-  - `failurePolicy` (`string: "Ignore"`) - Deprecated: please use [`webhook.failurePolicy`](/docs/platform/k8s/helm/configuration#failurepolicy) instead.
+  - `failurePolicy` (`string: "Ignore"`) - Deprecated: please use [`webhook.failurePolicy`](/vault/docs/platform/k8s/helm/configuration#failurepolicy) instead.
 
-  - `webhookAnnotations` (`dictionary: {}`) - Deprecated: please use [`webhook.annotations`](/docs/platform/k8s/helm/configuration#annotations-1) instead.
+  - `webhookAnnotations` (`dictionary: {}`) - Deprecated: please use [`webhook.annotations`](/vault/docs/platform/k8s/helm/configuration#annotations-1) instead.
 
   - `service` - The service section configures the Kubernetes service for the Vault Agent Injector.
 
@@ -334,7 +334,7 @@ and consider if they're appropriate for your deployment.
   - `ingress` - Values that configure Ingress services for Vault.
 
     ~> If deploying on OpenShift, these ingress settings are ignored. Use the [`route`](#route) configuration to expose Vault on OpenShift. <br/> <br/>
-    If [`ha`](#ha) is enabled the Ingress will point to the active vault server via the `active` Service. This requires vault 1.4+ and [service_registration](https://www.vaultproject.io/docs/configuration/service-registration/kubernetes) to be set in the vault config.
+    If [`ha`](#ha) is enabled the Ingress will point to the active vault server via the `active` Service. This requires vault 1.4+ and [service_registration](/vault/docs/configuration/service-registration/kubernetes) to be set in the vault config.
 
     - `enabled` (`boolean: false`) - When set to `true`, an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) service will be created.
 
@@ -395,7 +395,7 @@ and consider if they're appropriate for your deployment.
 
   - `route` - Values that configure Route services for Vault in OpenShift
 
-    ~> If [`ha`](#ha) is enabled the Route will point to the active vault server via the `active` Service (requires vault 1.4+ and [service_registration](https://www.vaultproject.io/docs/configuration/service-registration/kubernetes) to be set in the vault config).
+    ~> If [`ha`](#ha) is enabled the Route will point to the active vault server via the `active` Service (requires vault 1.4+ and [service_registration](/vault/docs/configuration/service-registration/kubernetes) to be set in the vault config).
 
     - `enabled` (`boolean: false`) - When set to `true`, a Route for Vault will be created.
 
@@ -411,7 +411,7 @@ and consider if they're appropriate for your deployment.
 
   - `authDelegator` - Values that configure the Cluster Role Binding attached to the Vault service account.
 
-    - `enabled` (`boolean: true`) - When set to `true`, a Cluster Role Binding will be bound to the Vault service account. This Cluster Role Binding has the necessary privileges for Vault to use the [Kubernetes Auth Method](/docs/auth/kubernetes).
+    - `enabled` (`boolean: true`) - When set to `true`, a Cluster Role Binding will be bound to the Vault service account. This Cluster Role Binding has the necessary privileges for Vault to use the [Kubernetes Auth Method](/vault/docs/auth/kubernetes).
 
   - `readinessProbe` - Values that configure the readiness probe for the Vault pods.
 
@@ -718,7 +718,7 @@ and consider if they're appropriate for your deployment.
 
     - `serviceDiscovery` - Values that configure permissions required for Vault Server to automatically discover and join a Vault cluster using pod metadata.
 
-      - `enabled` (`boolean: true`) - Enable or disable a service account role binding with the permissions required for Vault's Kubernetes [`service_registration`](https://developer.hashicorp.com/vault/docs/configuration/service-registration/kubernetes) config option.
+      - `enabled` (`boolean: true`) - Enable or disable a service account role binding with the permissions required for Vault's Kubernetes [`service_registration`](/vault/docs/configuration/service-registration/kubernetes) config option.
 
   - `dataStorage` - This configures the volume used for storing Vault data when not using external storage such as Consul.
 
@@ -749,7 +749,7 @@ and consider if they're appropriate for your deployment.
       kubernetes.io/my-pvc: foobar
     ```
 
-  - `auditStorage` - This configures the volume used for storing Vault's audit logs. See the [Vault documentation](/docs/audit) for more information.
+  - `auditStorage` - This configures the volume used for storing Vault's audit logs. See the [Vault documentation](/vault/docs/audit) for more information.
 
     - `enabled` (`boolean: false`) -
       Enables a persistent volume to be created for storing Vault's audit logs.
@@ -793,7 +793,7 @@ and consider if they're appropriate for your deployment.
       Enables `standalone` mode for the Vault server. This mode uses the `file` storage backend and requires a volume for persistence (`dataStorage`).
 
     - `config` (`string or object: "{}"`) -
-      A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
+      A raw string of extra HCL or JSON [configuration](/vault/docs/configuration) for Vault servers.
       This will be saved as-is into a ConfigMap that is read by the Vault servers.
       This can be used to add additional configuration that isn't directly exposed by the chart.
       If an object is provided, it will be written as JSON.
@@ -822,12 +822,12 @@ and consider if they're appropriate for your deployment.
   - `ha` - This configures `ha` mode for the Vault server.
 
     - `enabled` (`boolean: false`) -
-      Enables `ha` mode for the Vault server. This mode uses a highly available backend storage (such as Consul) to store Vault's data. By default this is configured to use [Consul Helm](https://github.com/hashicorp/consul-helm). For a complete list of storage backends, see the [Vault documentation](/docs/configuration).
+      Enables `ha` mode for the Vault server. This mode uses a highly available backend storage (such as Consul) to store Vault's data. By default this is configured to use [Consul Helm](https://github.com/hashicorp/consul-helm). For a complete list of storage backends, see the [Vault documentation](/vault/docs/configuration).
 
     - `apiAddr`: (`string: "{}"`) -
       Set the API address configuration for a Vault cluster. If set to an empty string, the pod IP address is used.
 
-    - `clusterAddr` (`string: null`) - Set the [`cluster_addr`](https://www.vaultproject.io/docs/configuration#cluster_addr) configuration for Vault HA.
+    - `clusterAddr` (`string: null`) - Set the [`cluster_addr`](/vault/docs/configuration#cluster_addr) configuration for Vault HA.
       If null, defaults to `https://$(HOSTNAME).{{ template "vault.fullname" . }}-internal:8201`.
 
     - `raft` - This configures `raft` integrated storage mode for the Vault server.
@@ -838,7 +838,7 @@ and consider if they're appropriate for your deployment.
       - `setNodeId` (`boolean: false`) - Set the Node Raft ID to the name of the pod.
 
       - `config` (`string or object: "{}"`) -
-        A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
+        A raw string of extra HCL or JSON [configuration](/vault/docs/configuration) for Vault servers.
         This will be saved as-is into a ConfigMap that is read by the Vault servers.
         This can be used to add additional configuration that isn't directly exposed by the chart.
         If an object is provided, it will be written as JSON.
@@ -850,7 +850,7 @@ and consider if they're appropriate for your deployment.
       If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated. If set to `0`, this disables partition updates. For more information see the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
 
     - `config` (`string or object: "{}"`) -
-      A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
+      A raw string of extra HCL or JSON [configuration](/vault/docs/configuration) for Vault servers.
       This will be saved as-is into a ConfigMap that is read by the Vault servers.
       This can be used to add additional configuration that isn't directly exposed by the chart.
       If an object is provided, it will be written as JSON.
@@ -1105,11 +1105,11 @@ and consider if they're appropriate for your deployment.
 
   - `debug` (`bool: false`) - When set to true, enables debug logging on the Vault CSI Provider daemonset.
 
-  - `extraArgs` (`string: array`) - The extra arguments to be applied to the CSI pod startup command. See [here](/docs/platform/k8s/csi/configurations#command-line-arguments) for available flags.
+  - `extraArgs` (`string: array`) - The extra arguments to be applied to the CSI pod startup command. See [here](/vault/docs/platform/k8s/csi/configurations#command-line-arguments) for available flags.
 
 - `serverTelemetry` - Values the configure metrics and telemetry. Enabling these features requires setting
-  the `telemetry {}` stanza in the Vault configuration. See the [telemetry](/docs/configuration/telemetry)
-  [docs](/docs/internals/telemetry) for more on the Vault configuration.
+  the `telemetry {}` stanza in the Vault configuration. See the [telemetry](/vault/docs/configuration/telemetry)
+  [docs](/vault/docs/internals/telemetry) for more on the Vault configuration.
 
   Currently, this chart does not support authenticating to Vault's metrics endpoint, so the following `telemetry {}` block must be included in the `listener "tcp" {}` stanza of the Vault configuration:
 

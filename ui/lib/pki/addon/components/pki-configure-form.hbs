@@ -2,7 +2,7 @@
   <div class="columns">
     {{#each this.configTypes as |option|}}
       <div class="column is-flex">
-        <label for={{option.key}} class="box-label is-column {{if (eq this.actionType option.key) 'is-selected'}}">
+        <label for={{option.key}} class="box-label is-column {{if (eq @config.actionType option.key) 'is-selected'}}">
           <div>
             <h3 class="box-label-header title is-6">
               <Icon @size="24" @name={{option.icon}} />
@@ -17,8 +17,8 @@
               id={{option.key}}
               name="pki-config-type"
               @value={{option.key}}
-              @groupValue={{this.actionType}}
-              @onChange={{fn (mut this.actionType) option.key}}
+              @groupValue={{@config.actionType}}
+              @onChange={{fn (mut @config.actionType) option.key}}
               data-test-pki-config-option={{option.key}}
             />
             <label for={{option.key}}></label>
@@ -27,24 +27,32 @@
       </div>
     {{/each}}
   </div>
-  {{#if (eq this.actionType "import")}}
+  {{#if (eq @config.actionType "import")}}
     <PkiCaCertificateImport
       @model={{@config}}
       @onCancel={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
-      @onSave={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
-      @adapterOptions={{hash actionType=this.actionType useIssuer=@config.canImportBundle}}
+      @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}
+      @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canImportBundle}}
     />
-  {{else if (eq this.actionType "generate-root")}}
+  {{else if (eq @config.actionType "generate-root")}}
     <PkiGenerateRoot
+      @model={{@config}}
+      @urls={{@urls}}
+      @onCancel={{this.cancel}}
+      @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canGenerateIssuerRoot}}
+    />
+  {{else if (eq @config.actionType "generate-csr")}}
+    <PkiGenerateCsr
       @model={{@config}}
       @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}
       @onCancel={{this.cancel}}
-      @adapterOptions={{hash actionType="generate-root" useIssuer=@config.canGenerateIssuerRoot}}
     />
-  {{else if (eq this.actionType "generate-csr")}}
-    <code>POST /intermediate/generate/:type ~or~ /issuers/generate/intermediate/:type</code>
   {{else}}
-    <EmptyState @title="Choose an option" @message="To see configuration options, choose your desired output above." />
+    <EmptyState
+      @title="Choose an option"
+      @message="To see configuration options, choose your desired output above."
+      data-test-configuration-empty-state
+    />
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
         <button type="button" class="button is-primary" disabled={{true}} data-test-pki-config-save>

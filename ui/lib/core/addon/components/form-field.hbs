@@ -215,7 +215,6 @@
       @onChange={{this.setAndBroadcast}}
       @attrName={{@attr.name}}
       @subText={{@attr.options.subText}}
-      @hideFormSection={{@attr.options.hideFormSection}}
     />
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}
@@ -305,7 +304,7 @@
           {{on "input" this.onChangeWithEvent}}
           {{on "change" this.onChangeWithEvent}}
           {{on "keyup" this.handleKeyUp}}
-          class="input {{if this.validationError 'has-error-border'}} has-bottom-margin-m"
+          class="input {{if this.validationError 'has-error-border' 'has-bottom-margin-m'}}"
           maxLength={{@attr.options.characterLimit}}
         />
         {{#if @attr.options.validationAttr}}

@@ -100,8 +100,9 @@ func FindResponseSchema(t *testing.T, paths []*framework.Path, pathIdx int, oper
 	var schemaResponses []framework.Response
 
 	for _, status := range []int{
-		http.StatusOK,
-		http.StatusNoContent,
+		http.StatusOK,        // 200
+		http.StatusAccepted,  // 202
+		http.StatusNoContent, // 204
 	} {
 		schemaResponses, ok = schemaOperation.Properties().Responses[status]
 		if ok {

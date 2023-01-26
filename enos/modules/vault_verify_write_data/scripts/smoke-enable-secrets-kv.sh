@@ -33,16 +33,16 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 retry 5 "$binpath" status > /dev/null 2>&1
 
 # Create user policy
-$binpath policy write reguser -<<EOF
+retry 5 $binpath policy write reguser -<<EOF
 path "*" {
   capabilities = ["read", "list"]
 }
 EOF
 
 # Enable the userpass auth method
-$binpath auth enable userpass > /dev/null 2>&1
+retry 5 $binpath auth enable userpass > /dev/null 2>&1
 
 # Create new user and attach reguser policy
-$binpath write auth/userpass/users/testuser password="passuser1" policies="reguser"
+retry 5 $binpath write auth/userpass/users/testuser password="passuser1" policies="reguser"
 
-$binpath secrets enable -path="secret" kv
+retry 5 $binpath secrets enable -path="secret" kv

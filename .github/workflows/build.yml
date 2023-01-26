@@ -173,7 +173,7 @@ jobs:
     needs:
       - product-metadata
       - build-linux
-    uses: ./.github/workflows/enos-run.yml
+    uses: ./.github/workflows/test-run-enos-scenario-matrix.yml
     strategy:
       fail-fast: false
       matrix:

@@ -14,14 +14,14 @@ for Vault 1.9.x compared to 1.8. Please read it carefully.
 ## OIDC Provider
 
 Vault 1.9.0 introduced the ability for Vault to be an OpenID Connect (OIDC) identity
-provider. To support the feature, Vault's [default policy](https://www.vaultproject.io/docs/concepts/policies#default-policy)
+provider. To support the feature, Vault's [default policy](/vault/docs/concepts/policies#default-policy)
 was modified to include an ACL rule for its Authorization Endpoint. Due to the handling
 of Vault's default policy during upgrades, existing deployments of Vault that are upgraded
 to 1.9.0 will not have this required ACL rule.
 
 If you're upgrading to 1.9.0 and want to use the new OIDC provider feature, the following
 ACL rule must be added to the default policy **or** a policy associated with the Vault
-[Auth Method](https://www.vaultproject.io/docs/auth) used to authenticate end-users during
+[Auth Method](/vault/docs/auth) used to authenticate end-users during
 the OIDC flow.
 
 ```hcl
@@ -38,14 +38,14 @@ token roles. When creating a role, the key parameter is required and the key
 must exist. Previously, it was possible to create a role and assign it a named
 key that did not yet exist despite the documentation stating otherwise.
 
-All calls to [create or update a role](https://www.vaultproject.io/api-docs/secret/identity/tokens#create-or-update-a-role)
+All calls to [create or update a role](/vault/api-docs/secret/identity/tokens#create-or-update-a-role)
 must be checked to ensure that roles are not being created or updated with
 non-existent keys.
 
 ## SSH Role Parameter `allowed_extensions` Behavior Change
 
 Prior versions of Vault allowed clients to specify any extension when requesting
-SSH certificate [signing requests](https://www.vaultproject.io/api-docs/secret/ssh#sign-ssh-key)
+SSH certificate [signing requests](/vault/api-docs/secret/ssh#sign-ssh-key)
 if their role had an `allowed_extensions` set to `""` or was missing.
 
 Now, Vault will reject a client request that specifies extensions if the role
@@ -63,7 +63,7 @@ specified by clients.
 ### HTTP Request Counter Deprecation
 
 In Vault 1.9, the internal HTTP Request count
-[API](https://www.vaultproject.io/api-docs/v1.8.x/system/internal-counters#http-requests)
+[API](/vault/api-docs/v1.8.x/system/internal-counters#http-requests)
 will be removed from the product. Calls to the endpoint will result in a 404
 error with a message stating that `functionality on this path has been removed`.
 
@@ -80,9 +80,9 @@ v3.5](https://etcd.io/blog/2021/announcing-etcd-3.5/), and will be
 decommissioned in the Etcd v3.6 release.
 
 Users upgrading to Vault 1.9 and planning to eventually upgrade to Vault 1.10
-should prepare to [migrate](/docs/commands/operator/migrate) Vault storage to
+should prepare to [migrate](/vault/docs/commands/operator/migrate) Vault storage to
 an Etcd v3 cluster prior to upgrading to Vault 1.10. All storage migrations
-should have [backups](/docs/concepts/storage#backing-up-vault-s-persisted-data)
+should have [backups](/vault/docs/concepts/storage#backing-up-vault-s-persisted-data)
 taken prior to migration.
 
 ## TLS Cipher Suites Changes
@@ -105,8 +105,8 @@ See [this blog post](https://go.dev/blog/tls-cipher-suites) for more information
 ### Identity Token Backend Key Rotations
 
 Existing Vault installations that use the [Identity Token
-backend](/api-docs/secret/identity/tokens) and have [named
-keys](/api-docs/secret/identity/tokens#create-a-named-key) generated will
+backend](/vault/api-docs/secret/identity/tokens) and have [named
+keys](/vault/api-docs/secret/identity/tokens#create-a-named-key) generated will
 encounter a panic when any of those existing keys pass their
 `rotation_period`. This issue affects Vault 1.9.0, and is fixed in Vault 1.9.1.
 Users should upgrade directly to 1.9.1 or above in order to avoid this panic.

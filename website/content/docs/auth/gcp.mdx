@@ -98,7 +98,7 @@ management tool.
 
    -> **Note**: If you're using a [Private Google Access](https://cloud.google.com/vpc/docs/configure-private-google-access)
    environment, you will additionally need to configure your environment’s custom endpoints
-   via the [custom_endpoint](/api-docs/auth/gcp#custom_endpoint) configuration parameter.
+   via the [custom_endpoint](/vault/api-docs/auth/gcp#custom_endpoint) configuration parameter.
 
 1. Create a named role:
 
@@ -163,18 +163,18 @@ The GCP project must have the following APIs enabled:
 - [compute.googleapis.com](https://console.cloud.google.com/flows/enableapi?apiid=compute.googleapis.com)
   for `gce` type roles.
 - [cloudresourcemanager.googleapis.com](https://console.cloud.google.com/flows/enableapi?apiid=cloudresourcemanager.googleapis.com)
-  for `iam` and `gce` type roles that set [`add_group_aliases`](/api-docs/auth/gcp#add_group_aliases) to true.
+  for `iam` and `gce` type roles that set [`add_group_aliases`](/vault/api-docs/auth/gcp#add_group_aliases) to true.
 
 #### Vault Server Permissions
 
-**For `iam`-type Vault roles**, the service account [`credentials`](/api-docs/auth/gcp#credentials)
+**For `iam`-type Vault roles**, the service account [`credentials`](/vault/api-docs/auth/gcp#credentials)
 given to Vault can have the following role:
 
 ```text
 roles/iam.serviceAccountKeyAdmin
 ```
 
-**For `gce`-type Vault roles**, the service account [`credentials`](/api-docs/auth/gcp#credentials)
+**For `gce`-type Vault roles**, the service account [`credentials`](/vault/api-docs/auth/gcp#credentials)
 given to Vault can have the following role:
 
 ```text
@@ -400,8 +400,8 @@ The GCP Auth Plugin has a full HTTP API. Please see the
 [signjwt-method]: https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/signJwt
 [cloud-creds]: https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application
 [service-accounts]: https://cloud.google.com/compute/docs/access/service-accounts
-[api-docs]: /api-docs/auth/gcp
-[identity-group-aliases]: /api-docs/secret/identity/group-alias
+[api-docs]: /vault/api-docs/auth/gcp
+[identity-group-aliases]: /vault/api-docs/secret/identity/group-alias
 [instance-identity]: https://cloud.google.com/compute/docs/instances/verifying-instance-identity
 [repo]: https://github.com/hashicorp/vault-plugin-auth-gcp
 
