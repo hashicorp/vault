@@ -66,7 +66,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagPathMatch,
 		Default: false,
 		EnvVar:  "",
-		Usage:   `Whether the this potential parent appears in the certificate chain of the issued cert`,
+		Usage:   `Whether the potential parent appears in the certificate chain of the issued cert`,
 	})
 
 	f.BoolVar(&BoolVar{
