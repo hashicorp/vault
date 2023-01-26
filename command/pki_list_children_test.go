@@ -40,9 +40,11 @@ func TestPKIListChildren(t *testing.T) {
 	}{
 		{
 			"rootX1-match-everything-no-constraints",
-			[]string{"pki", "list-intermediates", "-format=json", "-use_names=true",
+			[]string{
+				"pki", "list-intermediates", "-format=json", "-use_names=true",
 				"-subject_match=false", "-key_id_match=false", "-direct_sign=false", "-indirect_sign=false", "-path_match=false",
-				"pki-root/issuer/rootX1"},
+				"pki-root/issuer/rootX1",
+			},
 			map[string]bool{
 				"pki-root/issuer/rootX1":    true,
 				"pki-root/issuer/rootX2":    true,
@@ -84,9 +86,11 @@ func TestPKIListChildren(t *testing.T) {
 		},
 		{
 			"rootX1-subject-match-only",
-			[]string{"pki", "list-intermediates", "-format=json", "-use_names=true",
+			[]string{
+				"pki", "list-intermediates", "-format=json", "-use_names=true",
 				"-key_id_match=false", "-direct_sign=false", "-indirect_sign=false",
-				"pki-root/issuer/rootX1"},
+				"pki-root/issuer/rootX1",
+			},
 			map[string]bool{
 				"pki-root/issuer/rootX1":    true,
 				"pki-root/issuer/rootX2":    true,
@@ -107,9 +111,11 @@ func TestPKIListChildren(t *testing.T) {
 		},
 		{
 			"rootX1-in-path",
-			[]string{"pki", "list-intermediates", "-format=json", "-use_names=true",
+			[]string{
+				"pki", "list-intermediates", "-format=json", "-use_names=true",
 				"-subject_match=false", "-key_id_match=false", "-direct_sign=false", "-indirect_sign=false", "-path_match=true",
-				"pki-root/issuer/rootX1"},
+				"pki-root/issuer/rootX1",
+			},
 			map[string]bool{
 				"pki-root/issuer/rootX1":    true,
 				"pki-root/issuer/rootX2":    false,

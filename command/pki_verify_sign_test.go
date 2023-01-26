@@ -445,7 +445,6 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 			break // Parent Certs Already Named
 		}
 	}
-
 }
 
 func verifyExpectedJson(expectedResults map[string]bool, results map[string]interface{}) (isMatch bool, error string) {
