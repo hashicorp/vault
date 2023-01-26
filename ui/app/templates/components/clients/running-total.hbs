@@ -85,13 +85,7 @@
     </div>
   </div>
 {{else}}
-  {{#if @isDateRange}}
-    <AlertBanner @type="warning" @title="Warning">We only have data from
-      {{this.displayMonth}}
-      and that is what is being shown here.
-    </AlertBanner>
-  {{/if}}
-  {{#if this.singleMonthData.new_clients.clients}}
+  {{#if (and @isHistoricalMonth this.singleMonthData.new_clients.clients)}}
     <div class="chart-wrapper single-month-grid" data-test-running-total="single-month-stats">
       <div class="chart-header has-bottom-margin-sm">
         <h2 class="chart-title">Vault client counts</h2>
@@ -134,6 +128,11 @@
       </div>
     </div>
   {{else}}
-    <Clients::UsageStats @title="Total usage" @totalUsageCounts={{@runningTotals}} />
+    {{! This renders when viewing the current month for all namespaces, or filtered by a single namespace}}
+    <Clients::UsageStats
+      @title="Total usage"
+      @description="These totals are within this namespace and all its children. Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."
+      @totalUsageCounts={{@runningTotals}}
+    />
   {{/if}}
 {{/if}}

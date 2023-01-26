@@ -2,7 +2,7 @@
   <div class="chart-header has-header-link has-bottom-margin-m">
     <div class="header-left">
       <h2 class="chart-title">{{@title}}</h2>
-      <p class="chart-description"> These totals are within this namespace and all its children. </p>
+      <p class="chart-description"> {{or @description "These totals are within this namespace and all its children."}}</p>
     </div>
     <div class="header-right">
       <LearnLink @path="/tutorials/vault/usage-metrics">
