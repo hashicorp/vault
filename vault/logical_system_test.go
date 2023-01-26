@@ -77,6 +77,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 
 func TestSystemConfigCORS(t *testing.T) {
 	b := testSystemBackend(t)
+	paths := b.(*SystemBackend).configPaths()
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "")
 	b.(*SystemBackend).Core.systemBarrierView = view
@@ -106,6 +107,12 @@ func TestSystemConfigCORS(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, req.Operation),
+		actual,
+		true,
+	)
 
 	// Do it again. Bug #6182
 	req = logical.TestRequest(t, logical.UpdateOperation, "config/cors")
