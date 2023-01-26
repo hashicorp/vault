@@ -17,4 +17,5 @@ method](/docs/auth/jwt).
 
 - `remove_jwt_after_reading` `(bool: optional, defaults to true)` -
   This can be set to `false` to disable the default behavior of removing the
-  JWT after it's been read.
+  JWT after it's been read. Note that if `path` is a symlink to a JWT, the JWT,
+  not the symlink, will be deleted.
