@@ -8,7 +8,7 @@ const selectors = {
   keys: '[data-test-toggle-group="Key parameters"]',
   sanOptions: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
   subjectFields: '[data-test-toggle-group="Additional subject fields"]',
-  toggleByName: (name) => `[data-test-toggle-group="${name}}]`,
+  toggleByName: (name) => `[data-test-toggle-group="${name}"]`,
 };
 
 module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
