@@ -137,7 +137,7 @@ func TestSystemConfigCORS(t *testing.T) {
 	schema.ValidateResponse(
 		t,
 		schema.FindResponseSchema(t, paths, 0, req.Operation),
-		resp,
+		actual,
 		true,
 	)
 
