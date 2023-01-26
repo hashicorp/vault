@@ -1969,7 +1969,7 @@ WRITE:
 		writePath = legacyCRLPath
 	} else {
 		if isUnified {
-			writePath += unifiedCRLPathSuffix
+			writePath = unifiedCRLPathPrefix + writePath
 		}
 
 		if isDelta {
