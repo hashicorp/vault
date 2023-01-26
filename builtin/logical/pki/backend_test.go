@@ -3942,6 +3942,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"tidy_revoked_cert_issuer_associations": false,
 			"tidy_expired_issuers":                  false,
 			"tidy_move_legacy_ca_bundle":            false,
+			"tidy_revocation_queue":                 false,
 			"tidy_cross_cluster_revoked_certs":      false,
 			"pause_duration":                        "0s",
 			"state":                                 "Finished",
