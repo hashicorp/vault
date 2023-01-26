@@ -366,4 +366,19 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}) {
 		t.Fatalf("secret data did not match expected: %#v", secret.Data)
 	}
+
+	// Ensure that wrapping lookup without a client token responds correctly
+	client.ClearToken()
+	secret, err = client.Logical().Read("sys/wrapping/lookup")
+	if secret != nil {
+		t.Fatalf("expected no response: %#v", secret)
+	}
+
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if respError, ok := err.(*api.ResponseError); !ok || respError.StatusCode != 403 {
+		t.Fatalf("expected 403 response, actual: %d", respError.StatusCode)
+	}
 }
