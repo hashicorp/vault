@@ -18,6 +18,8 @@ type PKIListChildrenCommand struct {
 	flagDefaultDisabled bool
 	flagList            bool
 
+	flagUseNames bool
+
 	flagSignatureMatch    bool
 	flagIndirectSignMatch bool
 	flagKeyIdMatch        bool
@@ -50,7 +52,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagSubjectMatch,
 		Default: true,
 		EnvVar:  "",
-		Usage:   `Whether the subject key_id of the potential parent cert matches the issuing key id of the child cert`,
+		Usage:   `Whether the subject name of the potential parent cert matches the issuer name of the child cert`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -83,6 +85,14 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Default: true,
 		EnvVar:  "",
 		Usage:   `Whether trusting the parent certificate is sufficient to trust the child certificate`,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "use_names",
+		Target:  &c.flagUseNames,
+		Default: false,
+		EnvVar:  "",
+		Usage:   `Whether the list of issuers returned is referred to by name when it exists rather than uuid`,
 	})
 
 	return set
@@ -142,10 +152,23 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 				issuersMap := rawIssuersResp.Data["keys"]
 				certList := issuersMap.([]interface{})
 				for _, certId := range certList {
+					identifier := certId.(string)
+					if c.flagUseNames {
+						issuerReadResp, err := client.Logical().Read(sanitizePath(path) + "/issuer/" + identifier)
+						if err != nil {
+							c.UI.Warn(fmt.Sprintf("Unable to Fetch Issuer to Recover Name at: %v", sanitizePath(path)+"/issuer/"+identifier))
+						}
+						if issuerReadResp != nil {
+							issuerName := issuerReadResp.Data["issuer_name"].(string)
+							if issuerName != "" {
+								identifier = issuerName
+							}
+						}
+					}
 					if len(issued) == 0 {
-						issued = sanitizePath(path) + "/issuer/" + certId.(string)
+						issued = sanitizePath(path) + "/issuer/" + identifier
 					} else {
-						issued = issued + "," + sanitizePath(path) + "/issuer/" + certId.(string)
+						issued = issued + "," + sanitizePath(path) + "/issuer/" + identifier
 					}
 				}
 			}

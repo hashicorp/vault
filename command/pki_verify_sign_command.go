@@ -115,7 +115,7 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 		return fmt.Errorf("error: unable to fetch issuer %v: %w", issuerPath, err), nil
 	}
 	if len(issuedPath) <= 2 {
-		return fmt.Errorf(fmt.Sprintf("%v", issuedPath)), nil
+		return fmt.Errorf("%v", issuedPath), nil
 	}
 	caChainRaw := issuedCertResp.Data["ca_chain"]
 	if caChainRaw == nil {
