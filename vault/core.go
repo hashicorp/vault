@@ -331,7 +331,7 @@ type Core struct {
 	heldHALock           physical.Lock
 
 	// shutdownDoneCh is used to notify when Shutdown() completes
-	shutdownDoneCh chan struct{}
+	shutdownDoneCh       chan struct{}
 	shutdownDoneChClosed bool
 
 	// unlockInfo has the keys provided to Unseal until the threshold number of parts is available, as well as the operation nonce
