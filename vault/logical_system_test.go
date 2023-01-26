@@ -66,6 +66,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"storage/raft/snapshot-auto/config/*",
 		"leases",
 		"internal/inspect/*",
+		"enable-unseal-recovery",
 	}
 
 	b := testSystemBackend(t)
