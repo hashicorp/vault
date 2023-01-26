@@ -421,7 +421,11 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 		}
 
 		// Performs the actual persist and does setup
-		err = p.Rotate(ctx, req.Storage, rand, req.ManagedKeyUUID)
+		if p.Type == KeyType_MANAGED_KEY {
+			err = p.RotateManagedKey(ctx, req.Storage, req.ManagedKeyUUID)
+		} else {
+			err = p.Rotate(ctx, req.Storage, rand)
+		}
 		if err != nil {
 			cleanup()
 			return nil, false, err

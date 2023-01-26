@@ -271,7 +271,7 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, ke
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("automatically rotating key", "key", key)
 		}
-		return p.Rotate(ctx, req.Storage, b.GetRandomReader(), "")
+		return p.Rotate(ctx, req.Storage, b.GetRandomReader())
 
 	}
 	return nil

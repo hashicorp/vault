@@ -1508,7 +1508,7 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 
 // Rotate rotates the policy and persists it to storage.
 // If the rotation partially fails, the policy state will be restored.
-func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader io.Reader, managedKeyUUID string) (retErr error) {
+func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader io.Reader) (retErr error) {
 	priorLatestVersion := p.LatestVersion
 	priorMinDecryptionVersion := p.MinDecryptionVersion
 	var priorKeys keyEntryMap
@@ -1532,7 +1532,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		}
 	}()
 
-	if err := p.RotateInMemory(ctx, randReader, managedKeyUUID); err != nil {
+	if err := p.RotateInMemory(ctx, randReader); err != nil {
 		return err
 	}
 
@@ -1541,7 +1541,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 }
 
 // RotateInMemory rotates the policy but does not persist it to storage.
-func (p *Policy) RotateInMemory(ctx context.Context, randReader io.Reader, managedKeyUUID string) (retErr error) {
+func (p *Policy) RotateInMemory(ctx context.Context, randReader io.Reader) (retErr error) {
 	now := time.Now()
 	entry := KeyEntry{
 		CreationTime:           now,
@@ -1625,8 +1625,6 @@ func (p *Policy) RotateInMemory(ctx context.Context, randReader io.Reader, manag
 		if err != nil {
 			return err
 		}
-	case KeyType_MANAGED_KEY:
-		entry.ManagedKeyUUID = managedKeyUUID
 	}
 
 	if p.ConvergentEncryption {

@@ -36,3 +36,7 @@ func (p *Policy) verifyWithManagedKey(params *ManagedKeyParameters, options *Sig
 func (p *Policy) HMACWithManagedKey(ctx context.Context, ver int, managedKeySystemView logical.ManagedKeySystemView, backendUUID string, algorithm string, data []byte) (hmacBytes []byte, err error) {
 	return nil, errEntOnly
 }
+
+func (p *Policy) RotateManagedKey(ctx context.Context, storage logical.Storage, managedKeyUUID string) error {
+	return errEntOnly
+}

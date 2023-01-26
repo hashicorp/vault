@@ -55,16 +55,16 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 		p.Lock(true)
 	}
 
-	var keyId string
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
-		keyId, err = GetManagedKeyUUID(ctx, b, managedKeyName, managedKeyId)
+		keyId, err := GetManagedKeyUUID(ctx, b, managedKeyName, managedKeyId)
 		if err != nil {
 			return nil, err
 		}
+		err = p.RotateManagedKey(ctx, req.Storage, keyId)
+	} else {
+		// Rotate the policy
+		err = p.Rotate(ctx, req.Storage, b.GetRandomReader())
 	}
-
-	// Rotate the policy
-	err = p.Rotate(ctx, req.Storage, b.GetRandomReader(), keyId)
 
 	p.Unlock()
 	return nil, err
