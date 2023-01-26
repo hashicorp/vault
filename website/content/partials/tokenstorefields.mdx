@@ -3,7 +3,7 @@
   successfully, and ties the resulting token to these blocks as well.
 - `token_explicit_max_ttl` `(integer: 0 or string: "")` - If set, will encode
   an [explicit max
-  TTL](/docs/concepts/tokens#token-time-to-live-periodic-tokens-and-explicit-max-ttls)
+  TTL](/vault/docs/concepts/tokens#token-time-to-live-periodic-tokens-and-explicit-max-ttls)
   onto the token. This is a hard cap even if `token_ttl` and `token_max_ttl`
   would otherwise allow a renewal.
 - `token_no_default_policy` `(bool: false)` - If set, the `default` policy will
@@ -14,7 +14,7 @@
   If you require the token to have the ability to create child tokens,
   you will need to set this value to 0.
 - `token_period` `(integer: 0 or string: "")` - The
-  [period](/docs/concepts/tokens#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
+  [period](/vault/docs/concepts/tokens#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
   if any, to set on the token.
 - `token_type` `(string: "")` - The type of token that should be generated. Can
   be `service`, `batch`, or `default` to use the mount's tuned default (which

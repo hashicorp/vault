@@ -901,6 +901,10 @@
               {
                 "title": "Kubernetes",
                 "path": "agent/autoauth/methods/kubernetes"
+              },
+              {
+                "title": "Token File",
+                "path": "agent/autoauth/methods/token_file"
               }
             ]
           },

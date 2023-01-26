@@ -1696,7 +1696,11 @@ func (c *Core) sealMigrated(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
-	if c.seal.BarrierType() != c.migrationInfo.seal.BarrierType() {
+	// If the types of the seals differ, e.g. auto->shamir or shamir->auto, we're done.  BUT,
+	// with an auto seal in recovery mode as the migration seal, they will match even though
+	// the migration seal was really an auto seal
+	if c.seal.BarrierType() != c.migrationInfo.seal.BarrierType() ||
+		(isAutoSeal(c.migrationInfo.seal) && c.seal.BarrierType() == wrapping.WrapperTypeShamir) {
 		return true, nil
 	}
 
@@ -1748,20 +1752,34 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 			return fmt.Errorf("error getting recovery key to set on new seal: %w", err)
 		}
 
-		if err := c.seal.SetRecoveryKey(ctx, recoveryKey); err != nil {
-			return fmt.Errorf("error setting new recovery key information during migrate: %w", err)
+		if err := c.migrateAutoToAuto(ctx, recoveryKey); err != nil {
+			return err
 		}
+	case isUnsealRecoverySeal(c.migrationInfo.seal) && c.seal.RecoveryKeySupported():
+		c.logger.Info("migrating from one auto-unseal to another", "from",
+			c.migrationInfo.seal.BarrierType(), "to", c.seal.BarrierType())
 
-		barrierKeys, err := c.migrationInfo.seal.GetStoredKeys(ctx)
+		recoveryKey, err := c.migrationInfo.seal.UnsealRecoveryKey(ctx)
 		if err != nil {
-			return fmt.Errorf("error getting stored keys to set on new seal: %w", err)
+			return fmt.Errorf("error getting recovery key to set on new seal: %w", err)
 		}
 
-		if err := c.seal.SetStoredKeys(ctx, barrierKeys); err != nil {
-			return fmt.Errorf("error setting new barrier key information during migrate: %w", err)
+		if err := c.migrateAutoToAuto(ctx, recoveryKey); err != nil {
+			return err
+		}
+	case isUnsealRecoverySeal(c.migrationInfo.seal):
+		c.logger.Info("migrating from one auto-unseal to shamir", "from", c.migrationInfo.seal.BarrierType())
+		// Auto to Shamir, since recovery key isn't supported on new seal
+
+		recoveryKey, err := c.migrationInfo.seal.UnsealRecoveryKey(ctx)
+		if err != nil {
+			return fmt.Errorf("error getting recovery key to set on new seal: %w", err)
 		}
 
-	case c.migrationInfo.seal.RecoveryKeySupported():
+		if err := c.migrateAutoToShamir(ctx, recoveryKey); err != nil {
+			return err
+		}
+	case isAutoSeal(c.migrationInfo.seal):
 		c.logger.Info("migrating from one auto-unseal to shamir", "from", c.migrationInfo.seal.BarrierType())
 		// Auto to Shamir, since recovery key isn't supported on new seal
 
@@ -1770,21 +1788,9 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 			return fmt.Errorf("error getting recovery key to set on new seal: %w", err)
 		}
 
-		// We have recovery keys; we're going to use them as the new shamir KeK.
-		err = c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(recoveryKey)
-		if err != nil {
-			return fmt.Errorf("failed to set master key in seal: %w", err)
+		if err := c.migrateAutoToShamir(ctx, recoveryKey); err != nil {
+			return err
 		}
-
-		barrierKeys, err := c.migrationInfo.seal.GetStoredKeys(ctx)
-		if err != nil {
-			return fmt.Errorf("error getting stored keys to set on new seal: %w", err)
-		}
-
-		if err := c.seal.SetStoredKeys(ctx, barrierKeys); err != nil {
-			return fmt.Errorf("error setting new barrier key information during migrate: %w", err)
-		}
-
 	case c.seal.RecoveryKeySupported():
 		c.logger.Info("migrating from shamir to auto-unseal", "to", c.seal.BarrierType())
 		// Migration is happening from shamir -> auto. In this case use the shamir
@@ -1810,6 +1816,16 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 			return fmt.Errorf("error storing new master key: %w", err)
 		}
 
+		// Store the unseal recovery key
+		wrapper := aeadwrapper.NewShamirWrapper()
+		wrapper.SetAesGcmKeyBytes(c.migrationInfo.unsealKey)
+		recoverySeal := NewRecoverySeal(&vaultseal.Access{
+			Wrapper: wrapper,
+		})
+		recoverySeal.SetCore(c)
+		if err := recoverySeal.SetStoredKeys(ctx, [][]byte{newMasterKey}); err != nil {
+			c.logger.Error("failed to store recovery unseal keys", "error", err)
+		}
 	default:
 		return errors.New("unhandled migration case (shamir to shamir)")
 	}
@@ -1823,6 +1839,40 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 	atomic.StoreUint32(c.sealMigrationDone, 1)
 
 	c.logger.Info("seal migration complete")
+	return nil
+}
+
+func (c *Core) migrateAutoToAuto(ctx context.Context, recoveryKey []byte) error {
+	if err := c.seal.SetRecoveryKey(ctx, recoveryKey); err != nil {
+		return fmt.Errorf("error setting new recovery key information during migrate: %w", err)
+	}
+
+	barrierKeys, err := c.migrationInfo.seal.GetStoredKeys(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting stored keys to set on new seal: %w", err)
+	}
+
+	if err := c.seal.SetStoredKeys(ctx, barrierKeys); err != nil {
+		return fmt.Errorf("error setting new barrier key information during migrate: %w", err)
+	}
+	return nil
+}
+
+func (c *Core) migrateAutoToShamir(ctx context.Context, recoveryKey []byte) error {
+	// We have recovery keys; we're going to use them as the new shamir KeK.
+	err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(recoveryKey)
+	if err != nil {
+		return fmt.Errorf("failed to set master key in seal: %w", err)
+	}
+
+	barrierKeys, err := c.migrationInfo.seal.GetStoredKeys(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting stored keys to set on new seal: %w", err)
+	}
+
+	if err := c.seal.SetStoredKeys(ctx, barrierKeys); err != nil {
+		return fmt.Errorf("error setting new barrier key information during migrate: %w", err)
+	}
 	return nil
 }
 
@@ -2755,6 +2805,12 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 			// We have the same barrier type and the unwrap seal is nil so we're not
 			// migrating from same to same, IOW we assume it's not a migration.
 			return nil
+		case c.seal.BarrierType() == wrapping.WrapperTypeShamir && isUnsealRecoverySeal(c.seal):
+			// The stored barrier config is not shamir, but we have a shamir seal anyway, because
+			// seal recovery mode has been requested.  Note that this isn't for migration, but this function
+			// is called regardless of whether migration is occurring or not, and this is a valid state
+			// for the seal to be in, thus we mustn't reject it.
+			return nil
 		case c.seal.BarrierType() == wrapping.WrapperTypeShamir:
 			// The stored barrier config is not shamir, there is no disabled seal
 			// in config, and either no configured seal (which equates to Shamir)
@@ -2778,7 +2834,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 		// If we're not coming from Shamir we expect the previous seal to be
 		// in the config and disabled.
 
-		if unwrapSeal.BarrierType() == wrapping.WrapperTypeShamir {
+		if unwrapSeal.BarrierType() == wrapping.WrapperTypeShamir && !isUnsealRecoverySeal(unwrapSeal) {
 			return errors.New("Shamir seals cannot be set disabled (they should simply not be set)")
 		}
 	}
@@ -2814,6 +2870,21 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	return nil
 }
 
+// With the addition of unseal recovery mode, we need a more subtle check for whether a Seal is an auto
+// seal, as it may be a Shamir seal in due to recovery mode but would otherwise have been an auto seal.
+func isAutoSeal(seal Seal) bool {
+	return seal.RecoveryKeySupported() || isUnsealRecoverySeal(seal)
+}
+
+// Returns whether a seal is a recovery seal, e.g. a shamir seal pointing at the root key encrypted by
+// recovery keys rather than the seal wrapper.
+func isUnsealRecoverySeal(seal Seal) bool {
+	if ds, ok := seal.(*defaultSeal); ok {
+		return ds.unsealKeyPath == recoveryUnsealKeyPath
+	}
+	return false
+}
+
 func (c *Core) migrateSealConfig(ctx context.Context) error {
 	existBarrierSealConfig, existRecoverySealConfig, err := c.PhysicalSealConfigs(ctx)
 	if err != nil {
@@ -2823,10 +2894,10 @@ func (c *Core) migrateSealConfig(ctx context.Context) error {
 	var bc, rc *SealConfig
 
 	switch {
-	case c.migrationInfo.seal.RecoveryKeySupported() && c.seal.RecoveryKeySupported():
+	case isAutoSeal(c.migrationInfo.seal) && c.seal.RecoveryKeySupported():
 		// Migrating from auto->auto, copy the configs over
 		bc, rc = existBarrierSealConfig, existRecoverySealConfig
-	case c.migrationInfo.seal.RecoveryKeySupported():
+	case isAutoSeal(c.migrationInfo.seal):
 		// Migrating from auto->shamir, clone auto's recovery config and set
 		// stored keys to 1.
 		bc = existRecoverySealConfig.Clone()
@@ -2863,7 +2934,7 @@ func (c *Core) migrateSealConfig(ctx context.Context) error {
 
 func (c *Core) adjustSealConfigDuringMigration(existBarrierSealConfig, existRecoverySealConfig *SealConfig) {
 	switch {
-	case c.migrationInfo.seal.RecoveryKeySupported() && existRecoverySealConfig != nil:
+	case isAutoSeal(c.migrationInfo.seal) && existRecoverySealConfig != nil:
 		// Migrating from auto->shamir, clone auto's recovery config and set
 		// stored keys to 1.  Unless the recover config doesn't exist, in which
 		// case the migration is assumed to already have been performed.

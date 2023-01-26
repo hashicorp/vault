@@ -13,7 +13,7 @@ at a path on a running server. The steps are the same whether the plugin being
 upgraded is built-in or external.
 
 ~> Plugin versioning was introduced with Vault 1.12.0, so if your Vault server is
-  on 1.11.x or earlier, see the [1.11.x version of this page](/docs/v1.11.x/upgrading/plugins)
+  on 1.11.x or earlier, see the [1.11.x version of this page](/vault/docs/v1.11.x/upgrading/plugins)
   for plugin upgrade instructions.
 
 ### Upgrading auth and secrets plugins
@@ -64,7 +64,7 @@ an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
    $ vault secrets list -detailed
    ```
 
-1. Finally, trigger a [plugin reload](/docs/commands/plugin/reload) to reload all
+1. Finally, trigger a [plugin reload](/vault/docs/commands/plugin/reload) to reload all
    mounted backends using that plugin or a subset of the mounts using that plugin
    with either the `plugin` or `mounts` flag respectively.
 
@@ -178,11 +178,11 @@ transit             v1.12.0+builtin.vault
   to manage schema upgrades and downgrades. Check the plugin release notes for
   any unsupported upgrade or downgrade transitions, especially before moving to
   a new major version or downgrading.
-* Existing Vault [leases](/docs/concepts/lease) and [tokens](/docs/concepts/tokens)
+* Existing Vault [leases](/vault/docs/concepts/lease) and [tokens](/vault/docs/concepts/tokens)
   are generally unaffected by plugin upgrades and reloads. This is because the lifecycle
   of leases and tokens is handled by core systems within Vault. The plugin itself only
   handles renewal and revocation of them when it’s requested by those core systems.
 
-[plugin_reload_api]: /api-docs/system/plugins-reload-backend
-[plugin_registration]: /docs/plugins/plugin-architecture#plugin-registration
-[plugin_management]: /docs/plugins/plugin-management#enabling-disabling-external-plugins
+[plugin_reload_api]: /vault/api-docs/system/plugins-reload-backend
+[plugin_registration]: /vault/docs/plugins/plugin-architecture#plugin-registration
+[plugin_management]: /vault/docs/plugins/plugin-management#enabling-disabling-external-plugins
