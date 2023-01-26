@@ -148,7 +148,7 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 					return 1
 				}
 				if rawIssuersResp == nil {
-					continue // TODO: Empty Issuers Response this throws an error
+					continue
 				}
 				issuersMap := rawIssuersResp.Data["keys"]
 				certList := issuersMap.([]interface{})
