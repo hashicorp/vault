@@ -33,12 +33,13 @@ func (c *PKIListChildrenCommand) Synopsis() string {
 
 func (c *PKIListChildrenCommand) Help() string {
 	helpText := `
-Usage: vault pki verify-sign PARENT CHILD
-Returns four fields of information:
-- signature_match: was the key of the issuer used to sign the issued
-- path_match: the possible issuer appears in the valid certificate chain of the issued
-- key_id_match: does the key-id of the issuer match the key_id of the subject
-- subject_match: does the subject name of the issuer match the issuer subject of the issued
+Usage: vault pki list-intermediates PARENT CHILD-LIST
+PARENT is the certificate that might be the issuer that everything should be verified against.
+CHILD-LIST is a comma-separated list of intermediates to be compared to the PARENT.  It can be omitted, in which case a
+list will be constructed from all accessible pki mounts.
+This returns a list of issuing certificates, and whether they are a match. 
+By default, the type of match required is whether the PARENT has the expected subject, key_id, and could have (directly)
+signed this issuer.  This can be updated by changed the corresponding flag.
 `
 	return strings.TrimSpace(helpText)
 }
