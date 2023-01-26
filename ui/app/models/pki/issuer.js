@@ -29,8 +29,6 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   get useOpenAPI() {
     return false;
   }
-  @attr('string', { displayType: 'masked' }) certificate;
-  @attr('string', { displayType: 'masked', label: 'CA Chain' }) caChain;
   @attr('date', {
     label: 'Issue date',
   })
@@ -38,8 +36,6 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
 
   @attr isDefault; // readonly
   @attr('string') issuerId;
-  @attr('string', { displayType: 'masked' }) certificate;
-  @attr('string', { displayType: 'masked', label: 'CA Chain' }) caChain;
 
   @attr('string', {
     label: 'Default key ID',
