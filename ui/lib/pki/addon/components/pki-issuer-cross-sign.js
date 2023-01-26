@@ -26,7 +26,7 @@ import { parseCertificate } from 'vault/utils/parse-pki-cert';
  *    -> POST /:intermediateMount/issuers/import/bundle
  * 5. Read the imported issuer
  *    -> GET /:intermediateMount/issuer/:issuer_id
- * 5. Update this issuer with the newCrossSignedIssuer
+ * 6. Update this issuer with the newCrossSignedIssuer
  *    -> POST /:intermediateMount/issuer/:issuer_id
  *
  * @example
