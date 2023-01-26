@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
@@ -98,6 +99,7 @@ func TestConfigCustomHeaders(t *testing.T) {
 
 func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	b := testSystemBackend(t)
+	paths := b.(*SystemBackend).configPaths()
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "")
 	b.(*SystemBackend).Core.systemBarrierView = view
@@ -143,6 +145,13 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	if err == nil {
 		t.Fatal("request did not fail on setting a header that is present in custom response headers")
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 3, req.Operation),
+		resp,
+		true,
+	)
+
 	if !strings.Contains(resp.Data["error"].(string), fmt.Sprintf("This header already exists in the server configuration and cannot be set in the UI.")) {
 		t.Fatalf("failed to get the expected error")
 	}
@@ -152,10 +161,17 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	req.Data["values"] = []string{"400"}
 	req.ResponseWriter = hw
 
-	_, err = b.HandleRequest(namespace.RootContext(nil), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil {
 		t.Fatal("request did not fail on setting a header that is present in custom response headers")
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 3, req.Operation),
+		resp,
+		true,
+	)
+
 	h, err := b.(*SystemBackend).Core.uiConfig.Headers(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -169,10 +185,16 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	req.Data["values"] = []string{"Ui header value"}
 	req.ResponseWriter = hw
 
-	_, err = b.HandleRequest(namespace.RootContext(nil), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal("request failed on setting a header that is not present in custom response headers.", "error:", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 3, req.Operation),
+		resp,
+		true,
+	)
 
 	h, err = b.(*SystemBackend).Core.uiConfig.Headers(context.Background())
 	if err != nil {
