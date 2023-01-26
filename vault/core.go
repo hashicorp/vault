@@ -4093,3 +4093,15 @@ func (c *Core) initializeUnsealRecovery(ctx context.Context, recoveryKey, barrie
 	}
 	return nil
 }
+
+func (c *Core) UnsealRecoveryEnabled(ctx context.Context) (bool, error) {
+	// TODO: Return false on ENT
+	if !isUnsealRecoverySeal(c.seal) && !isAutoSeal(c.seal) {
+		return false, nil
+	}
+	pe, err := c.physical.Get(ctx, recoveryUnsealKeyPath)
+	if err != nil {
+		return false, err
+	}
+	return pe != nil, nil
+}
