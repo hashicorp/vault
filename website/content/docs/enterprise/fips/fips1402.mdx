@@ -120,6 +120,17 @@ Additionally, only the following key types are allowed in TLS chains of trust:
 Finally, only TLSv1.2 or higher is supported in FIPS mode. These are in line
 with recent NIST guidance and recommendations.
 
+#### Heterogeneous Cluster Deployments
+
+Hashicorp does not support mixed deployment scenarios within the same Vault
+cluster, e.g., mixing FIPS and non-FIPS Vault binary versions, or mixing FIPS
+Inside with FIPS Seal Wrap clusters. Clusters nodes must be of a single
+binary/deployment type across the entire cluster. Usage of Seal Wrap with
+the FIPS Inside binary is permitted.
+
+Running a heterogeneous cluster is not permitted by FIPS, as components of
+the system are not compliant with FIPS.
+
 ## Technical Details
 
 Vault Enterprise's FIPS 140-2 Inside binaries rely on a special version of the
