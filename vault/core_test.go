@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -520,6 +522,35 @@ func TestCore_ShutdownDone(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatalf("shutdown notification not received")
+	}
+}
+
+// verify that core.Shutdown called from multiple goroutines works correctly
+func TestCore_ShutdownDone_MultipleShutdowns(t *testing.T) {
+	c := TestCoreWithSealAndUINoCleanup(t, &CoreConfig{})
+	testCoreUnsealed(t, c)
+
+	doneCh := c.ShutdownDone()
+	shutdownErrors := errgroup.Group{}
+
+	for i := 0; i < 50; i++ {
+		shutdownErrors.Go(func() error {
+			time.Sleep(100 * time.Millisecond)
+			return c.Shutdown()
+		})
+	}
+
+	select {
+	case <-doneCh:
+		if !c.Sealed() {
+			t.Fatalf("shutdown done called prematurely!")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("shutdown notification not received")
+	}
+
+	if err := shutdownErrors.Wait(); err != nil {
+		t.Fatalf("shutdown error: %v", err)
 	}
 }
 
