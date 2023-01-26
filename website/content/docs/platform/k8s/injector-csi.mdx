@@ -12,13 +12,13 @@ Information contained within this document details the contrast between the Agen
 
 ## Vault Sidecar Agent Injector
 
-The [Vault Sidecar Agent Injector](/docs/platform/k8s/injector) leverages the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar) to alter pod specifications to include a Vault Agent container that renders Vault secrets to a shared memory volume. By rendering secrets to a shared volume, containers within the pod can consume Vault secrets without being Vault-aware. The injector is a Kubernetes mutating webhook controller. The controller intercepts pod events and applies mutations to the pod if annotations exist within the request. This functionality is provided by the [vault-k8s](https://github.com/hashicorp/vault-k8s) project and can be automatically installed and configured using the Vault Helm chart.
+The [Vault Sidecar Agent Injector](/vault/docs/platform/k8s/injector) leverages the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar) to alter pod specifications to include a Vault Agent container that renders Vault secrets to a shared memory volume. By rendering secrets to a shared volume, containers within the pod can consume Vault secrets without being Vault-aware. The injector is a Kubernetes mutating webhook controller. The controller intercepts pod events and applies mutations to the pod if annotations exist within the request. This functionality is provided by the [vault-k8s](https://github.com/hashicorp/vault-k8s) project and can be automatically installed and configured using the Vault Helm chart.
 
 ![Vault Sidecar Injection Workflow](/img/vault-sidecar-inject-workflow.png)
 
 ## Vault CSI Provider
 
-The [Vault CSI provider](/docs/platform/k8s/csi) allows pods to consume Vault secrets by using ephemeral [CSI Secrets Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver) volumes. At a high level, the CSI Secrets Store driver enables users to create `SecretProviderClass` objects. These objects define which secret provider to use and what secrets to retrieve. When pods requesting CSI volumes are made, the CSI Secrets Store driver sends the request to the Vault CSI provider if the provider is `vault`. The Vault CSI provider then uses the specified `SecretProviderClass` and the pod’s service account to retrieve the secrets from Vault and mount them into the pod’s CSI volume. Note that the secret is retrieved from Vault and populated to the CSI secrets store volume during the `ContainerCreation` phase. Therefore, pods are blocked from starting until the secrets are read from Vault and written to the volume.
+The [Vault CSI provider](/vault/docs/platform/k8s/csi) allows pods to consume Vault secrets by using ephemeral [CSI Secrets Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver) volumes. At a high level, the CSI Secrets Store driver enables users to create `SecretProviderClass` objects. These objects define which secret provider to use and what secrets to retrieve. When pods requesting CSI volumes are made, the CSI Secrets Store driver sends the request to the Vault CSI provider if the provider is `vault`. The Vault CSI provider then uses the specified `SecretProviderClass` and the pod’s service account to retrieve the secrets from Vault and mount them into the pod’s CSI volume. Note that the secret is retrieved from Vault and populated to the CSI secrets store volume during the `ContainerCreation` phase. Therefore, pods are blocked from starting until the secrets are read from Vault and written to the volume.
 
 ![Vault Sidecar Injection Workflow](/img/vault-csi-workflow.png)
 
@@ -52,7 +52,7 @@ Both Agent Injection and Vault CSI solutions have the following similarities:
 
 - They simplify retrieving different types of secrets stored in Vault and expose them to the target pod running on Kubernetes without knowing the not-so-trivial Vault processes. It’s important to note that there is no need to change the application logic or code to use these solutions, therefore, making it easier to migrate brownfield applications into Kubernetes. Developers working on greenfield applications can leverage the Vault SDKs to integrate with Vault directly.
 
-- They support all types of Vault [secrets engines](/docs/secrets). This support allows you to leverage an extensive set of secret types, ranging from static key-value secrets to dynamically generated database credentials and TLS certs with customized TTL.
+- They support all types of Vault [secrets engines](/vault/docs/secrets). This support allows you to leverage an extensive set of secret types, ranging from static key-value secrets to dynamically generated database credentials and TLS certs with customized TTL.
 
 - They leverage the application’s Kubernetes pod service account token as [Secret Zero](https://www.hashicorp.com/resources/secret-zero-mitigating-the-risk-of-secret-introduction-with-vault) to authenticate with Vault via the Kubernetes auth method. With this method, there is no need to manage yet another separate identity to identify the application pods when authenticating to Vault.
 
@@ -81,21 +81,21 @@ Now that you understand the similarities, there are differences between these tw
 
 - In contrast, the Vault CSI Driver is deployed as a daemonset on every node in the Kubernetes cluster and uses the Secret Provider Class specified and the pod’s service account to retrieve the secrets from Vault and mount them into the pod’s CSI volume.
 
-- The Sidecar Agent Injector supports [all](/docs/platform/k8s/injector/annotations#vault-hashicorp-com-auth-path) Vault [auto-auth](/docs/agent/autoauth/methods) methods. The Sidecar CSI driver supports only Vault’s [Kubernetes auth method](/docs/platform/k8s/csi/configurations#vaultkubernetesmountpath).
+- The Sidecar Agent Injector supports [all](/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-auth-path) Vault [auto-auth](/vault/docs/agent/autoauth/methods) methods. The Sidecar CSI driver supports only Vault’s [Kubernetes auth method](/vault/docs/platform/k8s/csi/configurations#vaultkubernetesmountpath).
 
 - The Sidecar container launched with every application pod uses [Vault Agent](https://www.hashicorp.com/blog/why-use-the-vault-agent-for-secrets-management), which provides a powerful set of capabilities such as auto-auth, templating, and caching. The CSI driver does not use the Vault Agent and therefore lacks these functionalities.
 
-- The Vault CSI driver supports rendering Vault secrets into Kubernetes secrets and environment variables. Sidecar Injector Service does not support rendering secrets into Kubernetes secrets; however, there are ways to [agent templating](/docs/platform/k8s/injector/examples#environment-variable-example) to render secrets into environment variables.
+- The Vault CSI driver supports rendering Vault secrets into Kubernetes secrets and environment variables. Sidecar Injector Service does not support rendering secrets into Kubernetes secrets; however, there are ways to [agent templating](/vault/docs/platform/k8s/injector/examples#environment-variable-example) to render secrets into environment variables.
 
 - The CSI driver uses `hostPath` to mount ephemeral volumes into the pods, which some container platforms (e.g., OpenShift) disable by default. On the other hand, Sidecar Agent Service uses in-memory _tmpfs_ volumes.
 
-- Sidecar Injector Service [automatically](/docs/agent/template#renewals-and-updating-secrets) renews, rotates, and fetches secrets/tokens while the CSI Driver does not support that.
+- Sidecar Injector Service [automatically](/vault/docs/agent/template#renewals-and-updating-secrets) renews, rotates, and fetches secrets/tokens while the CSI Driver does not support that.
 
 ## Comparison chart
 
 The below chart provides a high-level comparison between the two solutions.
 
-~> **Note:** Shared Memory Volume Environment Variable can be achieved through [Agent templating](/docs/platform/k8s/injector/examples#environment-variable-example).
+~> **Note:** Shared Memory Volume Environment Variable can be achieved through [Agent templating](/vault/docs/platform/k8s/injector/examples#environment-variable-example).
 
 ![Comparison Chart](/img/comparison-table.png)
 
@@ -119,10 +119,10 @@ Designing secrets management in Kubernetes is an intricate task. There are multi
 
 - [Retrieve HashiCorp Vault Secrets with Kubernetes CSI](https://www.hashicorp.com/blog/retrieve-hashicorp-vault-secrets-with-kubernetes-csi)
 
-- [Mount Vault Secrets Through Container Storage Interface (CSI) Volume](https://learn.hashicorp.com/tutorials/vault/kubernetes-secret-store-driver?in=vault/kubernetes)
+- [Mount Vault Secrets Through Container Storage Interface (CSI) Volume](/vault/tutorials/kubernetes/kubernetes-secret-store-driver)
 
-- [Injecting Secrets into Kubernetes Pods via Vault Agent Containers](https://learn.hashicorp.com/tutorials/vault/kubernetes-sidecar)
+- [Injecting Secrets into Kubernetes Pods via Vault Agent Containers](/vault/tutorials/kubernetes/kubernetes-sidecar)
 
-- [Vault Sidecar Injector Configurations and Examples](/docs/platform/k8s/injector/annotations)
+- [Vault Sidecar Injector Configurations and Examples](/vault/docs/platform/k8s/injector/annotations)
 
-- [Vault CSI Driver Configurations and Examples](/docs/platform/k8s/csi/configurations)
+- [Vault CSI Driver Configurations and Examples](/vault/docs/platform/k8s/csi/configurations)

@@ -156,7 +156,6 @@ export default class PkiRoleModel extends Model {
     label: 'Allowed domains',
     subText: 'Specifies the domains this role is allowed to issue certificates for. Add one item per row.',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   allowedDomains;
 
@@ -194,7 +193,6 @@ export default class PkiRoleModel extends Model {
     label: 'Policy identifiers',
     subText: 'A comma-separated string or list of policy object identifiers (OIDs). Add one per row. ',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   policyIdentifiers;
   /* End of overriding Policy identifier options */
@@ -213,7 +211,6 @@ export default class PkiRoleModel extends Model {
     subText: 'Defines allowed URI Subject Alternative Names. Add one item per row',
     editType: 'stringArray',
     docLink: '/docs/concepts/policies',
-    hideFormSection: true,
   })
   allowedUriSans;
 
@@ -229,7 +226,6 @@ export default class PkiRoleModel extends Model {
     label: 'Other SANs',
     subText: 'Defines allowed custom OID/UTF8-string SANs. Add one item per row.',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   allowedOtherSans;
   /* End of overriding SAN options */
@@ -240,7 +236,6 @@ export default class PkiRoleModel extends Model {
     subText:
       'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   allowedSerialNumbers;
 
@@ -271,7 +266,6 @@ export default class PkiRoleModel extends Model {
     label: 'Organization Units (OU)',
     subText:
       'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
-    hideFormSection: true,
   })
   ou;
 
@@ -293,12 +287,12 @@ export default class PkiRoleModel extends Model {
   })
   extKeyUsageOids;
 
-  @attr({ hideFormSection: true }) organization;
-  @attr({ hideFormSection: true }) country;
-  @attr({ hideFormSection: true }) locality;
-  @attr({ hideFormSection: true }) province;
-  @attr({ hideFormSection: true }) streetAddress;
-  @attr({ hideFormSection: true }) postalCode;
+  @attr('string') organization;
+  @attr('string') country;
+  @attr('string') locality;
+  @attr('string') province;
+  @attr('string') streetAddress;
+  @attr('string') postalCode;
   /* End of overriding Additional subject field options */
 
   /* CAPABILITIES

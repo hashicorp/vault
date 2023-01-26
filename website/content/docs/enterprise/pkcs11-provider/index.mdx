@@ -15,7 +15,7 @@ For example, it is often used to access a Hardware Security Module (HSM) (like a
 
 Vault provides a PKCS#11 library (or provider) so that Vault can be used as an SSM (Software Security Module).
 This allows a user to treat Vault like any other PKCS#11 device to manage keys, objects, and perform encryption and decryption in Vault using PKCS#11 calls.
-The PKCS#11 library connects to Vault's [KMIP Secrets Engine](/docs/secrets/kmip) to provide cryptographic operations and object storage.
+The PKCS#11 library connects to Vault's [KMIP Secrets Engine](/vault/docs/secrets/kmip) to provide cryptographic operations and object storage.
 
 ## Platform Support
 
@@ -51,7 +51,7 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
       server -dev -dev-root-token-id root -dev-listen-address 0.0.0.0:8200
     ```
 
-1. Configure the [KMIP Secrets Engine](/docs/secrets/kmip) and a KMIP *scope*. The scope is used to hold keys and objects.
+1. Configure the [KMIP Secrets Engine](/vault/docs/secrets/kmip) and a KMIP *scope*. The scope is used to hold keys and objects.
 
     ~> **Note**: These commands will output the credentials in plaintext.
 
@@ -64,7 +64,7 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
     ```
 
     ~> **Important**: When configuring KMIP in production, you will probably need to set the
-    `server_hostnames` and `server_ips` [configuration parameters](/api-docs/secret/kmip#parameters),
+    `server_hostnames` and `server_ips` [configuration parameters](/vault/api-docs/secret/kmip#parameters),
     otherwise the TLS connection to the KMIP Secrets Engine will fail due to certification validation errors.
 
     This last line will generate a JSON file with the certificate, key, and CA certificate chain to connect
@@ -146,7 +146,7 @@ Most programs will use only one slot.
 - `tls_cert_path` (required): the location of the client TLS certificate used to authenticate to the KMIP engine.
 - `tls_key_path` (optional, defaults to the value of `tls_cert_path`): the location of the encrypted or unencrypted TLS key used to authenticate to the KMIP engine.
 - `ca_path` (required): the location of the CA bundle that will be used to verify the server's certificate.
-- `scope` (required): the [KMIP scope](/docs/secrets/kmip#scopes-and-roles) to authenticate against and where the TDE master keys and associated metadata will be stored.
+- `scope` (required): the [KMIP scope](/vault/docs/secrets/kmip#scopes-and-roles) to authenticate against and where the TDE master keys and associated metadata will be stored.
 - `cache` (optional, default `true`): if the provider uses a cache to improve the performance of `C_GetAttributeValue` (KMIP: `GetAttributes`) calls.
 - `emulate_hardware` (optional, default `false`): specifies if the provider should report that it is connected to a hardware device.
 
@@ -292,9 +292,9 @@ Here is the list of supported and unsupported PKCS#11 functions:
   - [ ]  `C_DecryptDigestUpdate`
   - [ ]  `C_SignEncryptUpdate`
   - [ ]  `C_DecryptVerifyUpdate`
-- Random Number Generation
-  - [ ]  `C_SeedRandom`
-  - [ ]  `C_GenerateRandom`
+- Random Number Generation (see note below)
+  - [X]  `C_SeedRandom`
+  - [X]  `C_GenerateRandom`
 
 ## Limitations and Notes
 
@@ -306,3 +306,5 @@ Due to the nature of Vault, the KMIP Secrets Engine, and PKCS#11, there are some
   This is because nearly all PKCS#11 API calls are translated 1-1 to KMIP calls, aside from some object attribute calls (which can be locally cached).
   Multiple sessions can be safely used simultaneously though, and a single Vault server node has been tested as supporting thousands of ongoing sessions.
 - The object attribute cache is valid only for a single object per session, and will be cleared when another object's attributes are queried.
+- The random number generator function, `C_GenerateRandom`, is currently implemented in software in the library by calling out to Go's [`crypto/rand`](https://pkg.go.dev/crypto/rand) package,
+  and does **not** call Vault.

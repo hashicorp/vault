@@ -10,7 +10,7 @@ description: |-
 
 This is the API documentation for the Vault Azure auth method
 plugin. To learn more about the usage and operation, see the
-[Vault Azure method documentation](/docs/auth/azure).
+[Vault Azure method documentation](/vault/docs/auth/azure).
 
 This documentation assumes the plugin method is mounted at the
 `/auth/azure` path in Vault. Since it is possible to enable auth methods
@@ -31,7 +31,7 @@ virtual machine.
 - `tenant_id` `(string: <required>)` - The tenant id for the Azure Active Directory organization.
   This value can also be provided with the `AZURE_TENANT_ID` environment variable.
 - `resource` `(string: <required>)` - The resource URL for the application registered in Azure Active Directory.
-  The value is expected to match the audience (`aud` claim) of the [JWT](/api-docs/auth/azure#jwt)
+  The value is expected to match the audience (`aud` claim) of the [JWT](/vault/api-docs/auth/azure#jwt)
   provided to the login API. See the [resource](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http)
   parameter for how the audience is set when requesting a JWT access token from the Azure Instance Metadata Service (IMDS) endpoint.
   This value can also be provided with the `AZURE_AD_RESOURCE` environment variable.

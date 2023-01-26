@@ -1,0 +1,142 @@
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{if @model.isNew "Create role" "Edit role"}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<hr class="is-marginless has-background-gray-200" />
+
+<p class="has-top-margin-m">
+  A role in Vault dictates what will be generated for Kubernetes and what kind of rules will be used to do so. It is not a
+  Kubernetes role.
+</p>
+
+<div class="is-flex-row has-top-margin-s">
+  {{#each this.generationPreferences as |pref|}}
+    <RadioCard
+      @title={{pref.title}}
+      @description={{pref.description}}
+      @icon="token"
+      @value={{pref.value}}
+      @groupValue={{@model.generationPreference}}
+      @onChange={{this.changePreference}}
+      data-test-radio-card={{pref.value}}
+    />
+  {{/each}}
+</div>
+
+<div class="has-top-margin-xl has-bottom-margin-l">
+  <h2 class="title is-4">
+    Role options
+  </h2>
+  <hr class="is-marginless has-background-gray-200" />
+</div>
+
+{{#if @model.generationPreference}}
+  <form id="role" {{on "submit" this.onSave}} data-test-policy-form>
+    {{#each @model.filteredFormFields as |field|}}
+      <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+    {{/each}}
+
+    <div class="has-bottom-margin-s">
+      <ToggleButton
+        data-test-field="annotations"
+        @isOpen={{this.showAnnotations}}
+        @openLabel="Hide annotations and labels"
+        @closedLabel="Annotations and labels"
+        @onClick={{fn (mut this.showAnnotations)}}
+      />
+      {{#if this.showAnnotations}}
+        <div class="box" data-test-annotations>
+          {{#each this.extraFields as |field|}}
+            <div class={{if (eq field.type "labels") "has-top-margin-xl"}}>
+              <h2 class="title is-4">Extra {{field.type}}</h2>
+              <p>
+                {{field.description}}
+                See
+                <ExternalLink @href="https://kubernetes.io/docs/concepts/overview/working-with-objects/{{field.type}}/">
+                  Kubernetes
+                  {{singularize field.type}}
+                  documentation here
+                </ExternalLink>.
+              </p>
+              <KvObjectEditor
+                class="has-top-margin-m"
+                data-test-kv={{field.type}}
+                @value={{get @model field.key}}
+                @onChange={{fn (mut (get @model field.key))}}
+              />
+            </div>
+            <hr />
+          {{/each}}
+        </div>
+      {{/if}}
+    </div>
+
+    {{#if (eq @model.generationPreference "full")}}
+      <div class="has-top-margin-m has-bottom-margin-l" data-test-generated-role-rules>
+        <h2 class="title is-4">
+          Generated role rules
+        </h2>
+        <FormFieldLabel
+          for="templates"
+          @label="Role rules template"
+          @subText="Start with a template for role rules based on your use case"
+        />
+        <div class="select is-fullwidth">
+          <select id="templates" data-test-select-template {{on "change" this.selectTemplate}}>
+            {{#each this.roleRulesTemplates as |template|}}
+              <option selected={{eq this.selectedTemplateId template.id}} value={{template.id}}>
+                {{template.label}}
+              </option>
+            {{/each}}
+          </select>
+        </div>
+        {{#let (find-by "id" this.selectedTemplateId this.roleRulesTemplates) as |template|}}
+          <JsonEditor
+            class="has-top-margin-l"
+            data-test-rules
+            @title="Role rules"
+            @value={{template.rules}}
+            @mode="ruby"
+            @valueUpdated={{fn (mut template.rules)}}
+            @helpText={{this.roleRulesHelpText}}
+          >
+            <button type="button" class="toolbar-link" {{on "click" this.resetRoleRules}} data-test-restore-example>
+              Restore example
+              <Icon @name="reload" />
+            </button>
+          </JsonEditor>
+        {{/let}}
+      </div>
+    {{/if}}
+  </form>
+{{else}}
+  <EmptyState
+    class="is-shadowless"
+    @title="Choose an option above"
+    @message="To configure a Vault role, choose what should be generated in Kubernetes by Vault."
+  />
+{{/if}}
+
+<hr class="is-marginless has-background-gray-200" />
+
+<div class="has-top-margin-l has-bottom-margin-s">
+  <button
+    type="submit"
+    form="role"
+    class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+    disabled={{or (not @model.generationPreference) this.save.isRunning}}
+    data-test-save
+  >
+    Save
+  </button>
+  <button type="button" class="button has-left-margin-s" data-test-cancel {{on "click" this.cancel}}>
+    Back
+  </button>
+</div>

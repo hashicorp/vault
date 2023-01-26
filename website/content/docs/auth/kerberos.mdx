@@ -27,8 +27,8 @@ it into HashiCorp's maintenance.
 ## Prerequisites
 
 Kerberos is a very hands-on auth method. Other auth methods like
-[LDAP](/docs/auth/ldap) and
-[Azure](/docs/auth/azure) only require
+[LDAP](/vault/docs/auth/ldap) and
+[Azure](/vault/docs/auth/azure) only require
 a cursory amount of knowledge for configuration and use.
 Kerberos, on the other hand, is best used by people already familiar
 with it. We recommend that you use simpler authentication methods if
@@ -114,14 +114,14 @@ $ vault write auth/kerberos/config/ldap \
 ```
 
 The LDAP above relies upon the same code as the LDAP auth method.
-See [its documentation](/docs/auth/ldap)
+See [its documentation](/vault/docs/auth/ldap)
 for further discussion of available parameters.
 
 - Configure the Vault policies that should be granted to those
   who successfully authenticate based on their LDAP group membership.
   Since this is identical to the LDAP auth method, see
-  [Group Membership Resolution](/docs/auth/ldap#group-membership-resolution)
-  and [LDAP Group -> Policy Mapping](/docs/auth/ldap#ldap-group-policy-mapping)
+  [Group Membership Resolution](/vault/docs/auth/ldap#group-membership-resolution)
+  and [LDAP Group -> Policy Mapping](/vault/docs/auth/ldap#ldap-group-policy-mapping)
   for further discussion.
 
 ```shell-session
@@ -231,5 +231,5 @@ client.
 ## API
 
 The Kerberos auth method has a full HTTP API. Please see the
-[Kerberos auth method API](/api-docs/auth/kerberos) for more
+[Kerberos auth method API](/vault/api-docs/auth/kerberos) for more
 details.

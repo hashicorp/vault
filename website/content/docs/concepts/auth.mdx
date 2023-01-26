@@ -10,14 +10,14 @@ description: >-
 
 Authentication in Vault is the process by which user or machine supplied
 information is verified against an internal or external system. Vault supports
-multiple [auth methods](/docs/auth) including GitHub,
+multiple [auth methods](/vault/docs/auth) including GitHub,
 LDAP, AppRole, and more. Each auth method has a specific use case.
 
 Before a client can interact with Vault, it must _authenticate_ against an
 auth method. Upon authentication, a token is generated. This token is
 conceptually similar to a session ID on a website. The token may have attached
 policy, which is mapped at authentication time. This process is described in
-detail in the [policies concepts](/docs/concepts/policies) documentation.
+detail in the [policies concepts](/vault/docs/concepts/policies) documentation.
 
 ## auth methods
 
@@ -48,7 +48,7 @@ access, although some backends do support MFA.
 
 ## Tokens
 
-There is an [entire page dedicated to tokens](/docs/concepts/tokens),
+There is an [entire page dedicated to tokens](/vault/docs/concepts/tokens),
 but it is important to understand that authentication works by verifying
 your identity and then generating a token to associate with that identity.
 
@@ -60,7 +60,7 @@ the API you'll have to do this manually.
 This token given for authentication with any backend can also be used
 with the full set of token commands, such as creating new sub-tokens,
 revoking tokens, and renewing tokens. This is all covered on the
-[token concepts page](/docs/concepts/tokens).
+[token concepts page](/vault/docs/concepts/tokens).
 
 ## Authenticating
 
@@ -99,7 +99,7 @@ be used.
 ## Auth Leases
 
 Just like secrets, identities have
-[leases](/docs/concepts/lease) associated with them. This means that
+[leases](/vault/docs/concepts/lease) associated with them. This means that
 you must reauthenticate after the given lease period to continue accessing
 Vault.
 

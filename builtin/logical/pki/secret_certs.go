@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -49,9 +50,34 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 	defer b.revokeStorageLock.Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	resp, err := revokeCert(sc, serialInt.(string), true)
-	if resp == nil && err == nil {
-		b.Logger().Warn("expired certificate revoke failed because not found in storage, treating as success", "serial", serialInt.(string))
+	serial := serialInt.(string)
+
+	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
+	if err != nil {
+		return nil, err
 	}
-	return resp, err
+	if certEntry == nil {
+		// We can't write to revoked/ or update the CRL anyway because we don't have the cert,
+		// and there's no reason to expect this will work on a subsequent
+		// retry.  Just give up and let the lease get deleted.
+		b.Logger().Warn("expired certificate revoke failed because not found in storage, treating as success", "serial", serial)
+		return nil, nil
+	}
+
+	cert, err := x509.ParseCertificate(certEntry.Value)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing certificate: %w", err)
+	}
+
+	// Compatibility: Don't revoke CAs if they had leases. New CAs going forward aren't issued leases.
+	if cert.IsCA {
+		return nil, nil
+	}
+
+	config, err := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
+	if err != nil {
+		return nil, fmt.Errorf("error revoking serial: %s: failed reading config: %w", serial, err)
+	}
+
+	return revokeCert(sc, config, cert)
 }

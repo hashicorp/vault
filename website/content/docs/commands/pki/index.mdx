@@ -1,0 +1,32 @@
+---
+layout: docs
+page_title: pki - Command
+description: |-
+  The "pki" command groups subcommands for interacting with Vault's PKI
+  secrets engine.
+---
+
+# pki
+
+The `pki` command groups subcommands for interacting with Vault's
+[PKI Secrets Engine](/vault/docs/secrets/pki).
+
+## Syntax
+
+Option flags for a given subcommand are provided after the subcommand, but before the arguments.
+
+## Examples
+
+To [health check](/vault/docs/commands/pki/health-check) a mount, use the
+`vault pki health-check <mount>` command:
+
+```
+$ vault pki health-check pki
+ca_validity_period
+------------------
+status    endpoint                                            message
+------    --------                                            -------
+ok        /pki/issuer/da41ffb1-cc6d-5a5c-f147-e4d7beeb1b73    Issuer's validity (2032-12-17) is OK
+
+... more output elided ...
+```
