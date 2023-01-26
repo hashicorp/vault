@@ -117,7 +117,7 @@
       {{else}}
         {{#if this.totalUsageCounts}}
           {{#unless this.byMonthActivityData}}
-            {{! UsageStats render when viewing a single, historical month and activity data predates new client breakdown (< v1.10.0)
+            {{! UsageStats render when viewing a single, historical month AND activity data predates new client breakdown (< v1.10.0)
              or viewing the current month filtered down to auth method }}
             <Clients::UsageStats
               @title="Total usage"
@@ -136,6 +136,7 @@
               @selectedAuthMethod={{this.selectedAuthMethod}}
               @byMonthActivityData={{this.byMonthActivityData}}
               @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
+              @isCurrentMonth={{this.isCurrentMonth}}
               @runningTotals={{this.totalUsageCounts}}
               @upgradeData={{this.upgradeDuringActivity}}
               @responseTimestamp={{this.responseTimestamp}}

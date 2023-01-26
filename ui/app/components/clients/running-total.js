@@ -1,5 +1,4 @@
 import Component from '@glimmer/component';
-import { formatChartDate } from 'core/utils/date-formatters';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 
 /**
@@ -78,9 +77,5 @@ export default class RunningTotal extends Component {
 
   get singleMonthData() {
     return this.args?.byMonthActivityData[0];
-  }
-
-  get displayMonth() {
-    return formatChartDate(this.singleMonthData.month);
   }
 }

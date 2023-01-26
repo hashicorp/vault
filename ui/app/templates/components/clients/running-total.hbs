@@ -128,10 +128,16 @@
       </div>
     </div>
   {{else}}
-    {{! This renders when viewing the current month for all namespaces, or filtered by a single namespace}}
+    {{! This renders when either: 
+    -> viewing the current month and all namespaces (no filters)
+    -> filtering by a namespace with no month over month data
+    if filtering by a mount with no month over month data <UsageStats> in dashboard.hbs renders }}
     <Clients::UsageStats
       @title="Total usage"
-      @description="These totals are within this namespace and all its children. Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."
+      @description="These totals are within this namespace and all its children. {{if
+        @isCurrentMonth
+        "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."
+      }}"
       @totalUsageCounts={{@runningTotals}}
     />
   {{/if}}
