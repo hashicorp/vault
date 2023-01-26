@@ -332,6 +332,7 @@ type Core struct {
 
 	// shutdownDoneCh is used to notify when Shutdown() completes
 	shutdownDoneCh chan struct{}
+	shutdownDoneChClosed bool
 
 	// unlockInfo has the keys provided to Unseal until the threshold number of parts is available, as well as the operation nonce
 	unlockInfo *unlockInformation
@@ -1333,9 +1334,10 @@ func (c *Core) Shutdown() error {
 
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
-	if c.shutdownDoneCh != nil {
+
+	if !c.shutdownDoneChClosed {
 		close(c.shutdownDoneCh)
-		c.shutdownDoneCh = nil
+		c.shutdownDoneChClosed = true
 	}
 
 	return err
@@ -1344,9 +1346,7 @@ func (c *Core) Shutdown() error {
 func (c *Core) ShutdownWait() error {
 	donech := c.ShutdownDone()
 	err := c.Shutdown()
-	if donech != nil {
-		<-donech
-	}
+	<-donech
 	return err
 }
 
