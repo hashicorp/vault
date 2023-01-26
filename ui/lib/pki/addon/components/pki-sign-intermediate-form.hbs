@@ -1,12 +1,12 @@
 {{#if @model.id}}
   {{! Model only has ID once form has been submitted and saved }}
   <Toolbar />
-  <main data-test-issuer-details>
+  <main data-test-sign-intermediate-result>
     <div class="box is-sideless is-fullwidth is-shadowless">
       <AlertBanner
         @title="Next steps"
         @type="warning"
-        @message="The CA Chain and Issuing CA values will only be available once. Copy or download it now."
+        @message="The CA Chain and Issuing CA values will only be available once. Make sure you copy and save it now."
       />
 
       {{#each this.showFields as |fieldName|}}
@@ -28,7 +28,7 @@
     </div>
   </main>
 {{else}}
-  <form {{on "submit" (perform this.save)}}>
+  <form {{on "submit" (perform this.save)}} data-test-sign-intermediate-form>
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
       <NamespaceReminder @mode={{"create"}} @noun="signed intermediate" />
