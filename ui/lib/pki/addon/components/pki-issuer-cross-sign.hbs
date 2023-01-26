@@ -5,7 +5,7 @@
     have when it is imported to Vault.
   </p>
   {{#if this.signedIssuers}}
-    <h2 class="title is-5">Cross-signing complete ({{this.statusCount}})</h2>
+    <h2 data-test-cross-sign-status-count class="title is-5">Cross-signing complete ({{this.statusCount}})</h2>
     <p class="has-bottom-margin-xl">
       The next step is to
       <DocLink class="has-font-weight-normal" @path="/vault/docs/secrets/pki/rotation-primitives#notes-on-manual_chain">
@@ -26,16 +26,16 @@
       {{/each}}
     </div>
     <div class="box is-fullwidth is-sideless">
-      {{#each this.signedIssuers as |crossSignRow|}}
+      {{#each this.signedIssuers as |crossSignRow idx|}}
         <div class="box is-marginless no-top-shadow has-slim-padding">
-          <div class="is-flex-start">
+          <div data-test-info-table-row={{idx}} class="is-flex-start">
             <Icon
               @name={{if crossSignRow.hasError "alert-circle-fill" "check-circle"}}
               class={{if crossSignRow.hasError "has-text-danger" "has-text-success"}}
             />
             {{#each (map-by "key" this.inputFields) as |columnAttr|}}
               {{#let (get crossSignRow columnAttr) as |data|}}
-                <div class="is-flex-1 basis-0 has-bottom-margin-xs">
+                <div data-test-info-table-column={{columnAttr}} class="is-flex-1 basis-0 has-bottom-margin-xs">
                   {{#if (eq columnAttr "intermediateMount")}}
                     <LinkTo class="has-text-black has-text-weight-semibold" @route="overview" @model={{data}}>
                       {{data}}
@@ -59,7 +59,7 @@
           </div>
           {{#if crossSignRow.hasError}}
             <AlertBanner
-              @type={{if crossSignRow.hasUnsupportedParams "warning" "danger"}}
+              @type="danger"
               @title={{if crossSignRow.hasUnsupportedParams crossSignRow.hasError "Cross-sign failed"}}
               @message={{if crossSignRow.hasUnsupportedParams crossSignRow.hasUnsupportedParams crossSignRow.hasError}}
               @marginless={{true}}
