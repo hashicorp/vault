@@ -4709,14 +4709,13 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 
 	if sealConfig == nil {
 		s := &SealStatusResponse{
-			Type:                  core.SealAccess().BarrierType().String(),
-			Initialized:           initialized,
-			Sealed:                true,
-			RecoverySeal:          core.SealAccess().RecoveryKeySupported(),
-			UnsealRecoveryEnabled: unsealRecoveryEnabled,
-			StorageType:           core.StorageType(),
-			Version:               version.GetVersion().VersionNumber(),
-			BuildDate:             version.BuildDate,
+			Type:         core.SealAccess().BarrierType().String(),
+			Initialized:  initialized,
+			Sealed:       true,
+			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
+			StorageType:  core.StorageType(),
+			Version:      version.GetVersion().VersionNumber(),
+			BuildDate:    version.BuildDate,
 		}
 
 		if resourceIDonHCP != "" {
