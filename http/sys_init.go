@@ -11,8 +11,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-var handleSysEnableUnsealRecovery func(core *vault.Core) http.Handler
-
 func handleSysInit(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {

@@ -115,6 +115,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"storage/raft/snapshot-auto/config/*",
 				"leases",
 				"internal/inspect/*",
+				"enable-unseal-recovery",
 			},
 
 			Unauthenticated: []string{
@@ -167,6 +168,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 		},
 	}
 
+	b.Backend.Paths = append(b.Backend.Paths, b.unsealRecoveryPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rekeyPaths()...)
@@ -5142,6 +5144,25 @@ func (b *SystemBackend) handleReadExperiments(ctx context.Context, _ *logical.Re
 	}, nil
 }
 
+func (b *SystemBackend) handleEnableUnsealRecovery(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return nil, b.Core.InitializeUnsealRecovery(ctx)
+}
+
+func (b *SystemBackend) unsealRecoveryPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "enable-unseal-recovery$",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				// currently only works for irrevocable leases with param: type=irrevocable
+				logical.ReadOperation: b.handleEnableUnsealRecovery,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["enable-unseal-recovery"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["enable-unseal-recovery"][1]),
+		},
+	}
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -6001,6 +6022,10 @@ This path responds to the following HTTP methods.
 	"list-leases": {
 		"List leases associated with this Vault cluster",
 		"Requires sudo capability. List leases associated with this Vault cluster",
+	},
+	"enable-unseal-recovery": {
+		"Enables unsealing in an emergency using recovery keys when auto seals are enabled.",
+		"Requires sudo capability.  Enables unsealing in an emergency using recovery keys when auto seals are enabled.",
 	},
 	"version-history": {
 		"List historical version changes sorted by installation time in ascending order.",
