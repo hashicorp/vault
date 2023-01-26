@@ -139,7 +139,7 @@ type ExpirationManager struct {
 	quitCh             chan struct{}
 
 	// do not hold coreStateLock in any API handler code - it is already held
-	coreStateLock     *locking.DeadlockRWMutex
+	coreStateLock     locking.RWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
 
@@ -350,7 +350,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		restoreLocks: locksutil.CreateLocks(),
 		quitCh:       make(chan struct{}),
 
-		coreStateLock:     &c.stateLock,
+		coreStateLock:     c.stateLock,
 		quitContext:       c.activeContext,
 		leaseCheckCounter: new(uint32),
 

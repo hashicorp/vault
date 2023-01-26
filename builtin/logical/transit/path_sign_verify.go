@@ -154,6 +154,14 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
 Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
 			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -248,6 +256,14 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default: "auto",
 				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
 Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied  'input', 'hmac' or 'signature' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
 			},
 		},
 

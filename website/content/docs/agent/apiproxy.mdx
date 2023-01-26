@@ -13,20 +13,20 @@ for Vault's API.
 
 ## Functionality
 
-The [`listener` stanza](/docs/agent#listener-stanza) for Vault Agent configures a listener for Vault Agent. If
+The [`listener` stanza](/vault/docs/agent#listener-stanza) for Vault Agent configures a listener for Vault Agent. If
 its `role` is not set to `metrics_only`, it will act as a proxy for the Vault server that
-has been configured in the [`vault` stanza](/docs/agent#vault-stanza) stanza of Vault Agent. This enables access to the Vault
+has been configured in the [`vault` stanza](/vault/docs/agent#vault-stanza) stanza of Vault Agent. This enables access to the Vault
 API from the Agent API, and can be configured to optionally allow or force the automatic use of
 the Auto-Auth token for these requests, as described below.
 
 If a `listener` has been configured alongside a `cache` stanza, the API Proxy will
 first attempt to utilize the cache subsystem for qualifying requests, before forwarding the
-request to Vault. See the [caching docs](/docs/agent/caching) for more information on caching.
+request to Vault. See the [caching docs](/vault/docs/agent/caching) for more information on caching.
 
 ## Using Auto-Auth Token
 
 Vault Agent allows for easy authentication to Vault in a wide variety of
-environments using [Auto-Auth](/docs/agent/autoauth). By setting the
+environments using [Auto-Auth](/vault/docs/agent/autoauth). By setting the
 `use_auto_auth_token` (see below) configuration, clients will not be required
 to provide a Vault token to the requests made to the Agent. When this
 configuration is set, if the request doesn't already bear a token, then the
@@ -40,7 +40,7 @@ request to the Vault server.
 Vault Agent can be configured to force the use of the auto-auth token by using
 the value `force` for the `use_auto_auth_token` option. This configuration
 overrides the default behavior described above in [Using Auto-Auth
-Token](/docs/agent/apiproxy#using-auto-auth-token), and instead ignores any
+Token](/vault/docs/agent/apiproxy#using-auto-auth-token), and instead ignores any
 existing Vault token in the request and instead uses the auto-auth token.
 
 
@@ -57,7 +57,7 @@ auto-auth token, overwriting the attached Vault token if set.
 
 The following two `api_proxy` options are only useful when making requests to a Vault
 Enterprise cluster, and are documented as part of its
-[Eventual Consistency](/docs/enterprise/consistency#vault-agent-and-consistency-headers)
+[Eventual Consistency](/vault/docs/enterprise/consistency#vault-agent-and-consistency-headers)
 page.
 
 - `enforce_consistency` `(string: "never")` - Set to one of `"always"`
