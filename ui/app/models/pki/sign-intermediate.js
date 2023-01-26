@@ -1,7 +1,12 @@
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
+import { withModelValidations } from 'vault/decorators/model-validations';
 import PkiCertificateBaseModel from './certificate/base';
 
+const validations = {
+  csr: [{ type: 'presence', message: 'CSR is required.' }],
+};
+@withModelValidations(validations)
 @withFormFields([
   'csr',
   'useCsrValues',
@@ -19,14 +24,14 @@ export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
 
   @attr issuerRef;
 
-  @attr({
+  @attr('string', {
     label: 'CSR',
     editType: 'textarea',
     subText: 'The PEM-encoded CSR to be signed.',
   })
   csr;
 
-  @attr({
+  @attr('boolean', {
     label: 'Use CSR values',
     subText:
       'Subject information and key usages specified in the CSR will be used over parameters provided here, and extensions in the CSR will be copied into the issued certificate. Learn more here.',
@@ -53,9 +58,7 @@ export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
   })
   notBeforeDuration;
 
-  @attr({
-    hideFormWhen: ['useCsrValues', true],
-  })
+  @attr('string')
   commonName;
 
   @attr({

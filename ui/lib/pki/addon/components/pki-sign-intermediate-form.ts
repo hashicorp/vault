@@ -17,6 +17,7 @@ export default class PkiSignIntermediateFormComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @tracked errorBanner = '';
   @tracked inlineFormAlert = '';
+  @tracked modelValidations = null;
 
   @action cancel() {
     this.args.model.unloadRecord();
@@ -26,6 +27,10 @@ export default class PkiSignIntermediateFormComponent extends Component<Args> {
   @waitFor
   *save(event: Event) {
     event.preventDefault();
+    const { isValid, state, invalidFormMessage } = this.args.model.validate();
+    this.modelValidations = isValid ? null : state;
+    this.inlineFormAlert = invalidFormMessage;
+    if (!isValid) return;
     try {
       yield this.args.model.save();
       this.flashMessages.success('Successfully signed CSR.');
