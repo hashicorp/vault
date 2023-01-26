@@ -27,11 +27,17 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       ...this.existingConfig,
     });
     this.editModel = this.store.peekRecord('kubernetes/config', 'kubernetes-edit');
+    this.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'kubernetes', route: 'overview' },
+      { label: 'configure' },
+    ];
   });
 
   test('it should display proper options when toggling radio cards', async function (assert) {
-    await render(hbs`<Page::Configure @model={{this.newModel}} />`, { owner: this.engine });
-
+    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
     assert
       .dom('[data-test-radio-card="local"] input')
       .isChecked('Local cluster radio card is checked by default');
@@ -65,7 +71,9 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       return new Response(status, {});
     });
 
-    await render(hbs`<Page::Configure @model={{this.newModel}} />`, { owner: this.engine });
+    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
 
     await click('[data-test-config] button');
     assert
@@ -100,7 +108,9 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
 
     const stub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
 
-    await render(hbs`<Page::Configure @model={{this.newModel}} />`, { owner: this.engine });
+    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
 
     await click('[data-test-radio-card="manual"]');
     await fillIn('[data-test-input="kubernetesHost"]', this.existingConfig.kubernetes_host);
@@ -118,7 +128,9 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
 
     const stub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
 
-    await render(hbs`<Page::Configure @model={{this.editModel}} />`, { owner: this.engine });
+    await render(hbs`<Page::Configure @model={{this.editModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
 
     assert.dom('[data-test-radio-card="manual"] input').isChecked('Manual config radio card is checked');
     assert
@@ -153,7 +165,9 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     });
     this.model = this.store.peekRecord('kubernetes/config', 'kubernetes-edit-2');
 
-    await render(hbs`<Page::Configure @model={{this.model}} />`, { owner: this.engine });
+    await render(hbs`<Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
 
     assert.dom('[data-test-radio-card="local"] input').isChecked('Local cluster radio card is checked');
     assert
@@ -175,7 +189,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await render(
       hbs`
       <div id="modal-wormhole"></div>
-      <Page::Configure @model={{this.editModel}} />
+      <Page::Configure @model={{this.editModel}} @breadcrumbs={{this.breadcrumbs}} />
     `,
       { owner: this.engine }
     );
