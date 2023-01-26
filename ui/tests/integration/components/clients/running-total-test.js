@@ -1439,6 +1439,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       @runningTotals={{this.totalUsageCounts}}
       @upgradeData={{this.upgradeDuringActivity}}
       @responseTimestamp={{this.timestamp}}
+      @isHistoricalMonth={{false}}           
     />
     `);
 
@@ -1508,9 +1509,9 @@ module('Integration | Component | clients/running-total', function (hooks) {
       @byMonthActivityData={{this.byMonthActivityData}}
       @runningTotals={{this.totalUsageCounts}}
       @responseTimestamp={{this.timestamp}}
+      @isHistoricalMonth={{false}} 
     />
     `);
-
     assert.dom('[data-test-running-total]').exists('running total component renders');
     assert.dom('[data-test-line-chart]').exists('line chart renders');
     assert.dom('[data-test-vertical-bar-chart]').doesNotExist('vertical bar chart does not render');
@@ -1551,6 +1552,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       @byMonthActivityData={{this.singleMonth}}
       @runningTotals={{this.totalUsageCounts}}
       @responseTimestamp={{this.timestamp}}
+      @isHistoricalMonth={{true}}
     />
     `);
     assert.dom('[data-test-running-total]').exists('running total component renders');
