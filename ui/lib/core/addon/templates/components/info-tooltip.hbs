@@ -1,4 +1,8 @@
-<ToolTip as |d|>
+<ToolTip
+  @verticalPosition={{or this.verticalPosition "below"}}
+  @horizontalPosition={{or this.horizontalPosition "auto-right"}}
+  as |d|
+>
   <d.Trigger
     @htmlTag="button"
     @type="button"

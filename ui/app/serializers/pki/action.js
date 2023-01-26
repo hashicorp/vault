@@ -25,35 +25,43 @@ export default class PkiActionSerializer extends ApplicationSerializer {
 
   _allowedParamsByType(actionType, type) {
     const keyFields = keyParamsByType(type).map((attrName) => underscore(attrName).toLowerCase());
+    const commonProps = [
+      'alt_names',
+      'common_name',
+      'country',
+      'exclude_cn_from_sans',
+      'format',
+      'ip_sans',
+      'locality',
+      'organization',
+      'other_sans',
+      'ou',
+      'postal_code',
+      'province',
+      'serial_number',
+      'street_address',
+      'type',
+      'uri_sans',
+      ...keyFields,
+    ];
     switch (actionType) {
       case 'import':
         return ['pem_bundle'];
       case 'generate-root':
         return [
-          'alt_names',
-          'common_name',
-          'country',
-          'exclude_cn_from_sans',
-          'format',
-          'ip_sans',
+          ...commonProps,
           'issuer_name',
-          'locality',
           'max_path_length',
           'not_after',
           'not_before_duration',
-          'organization',
-          'other_sans',
-          'ou',
           'permitted_dns_domains',
-          'postal_code',
           'private_key_format',
-          'province',
-          'serial_number',
-          'street_address',
           'ttl',
-          'type',
-          ...keyFields,
         ];
+      case 'generate-csr':
+        return [...commonProps, 'add_basic_constraints'];
+      case 'sign-intermediate':
+        return ['common_name', 'issuer_name', 'csr'];
       default:
         // if type doesn't match, serialize all
         return null;

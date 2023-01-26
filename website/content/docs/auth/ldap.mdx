@@ -269,5 +269,5 @@ It should be noted that user -> policy mapping happens at token creation time. A
 ## API
 
 The LDAP auth method has a full HTTP API. Please see the
-[LDAP auth method API](/api-docs/auth/ldap) for more
+[LDAP auth method API](/vault/api-docs/auth/ldap) for more
 details.

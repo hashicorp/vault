@@ -1,15 +1,20 @@
 import Model from '@ember-data/model';
+import { FormField, ModelValidations } from 'vault/app-types';
+import CapabilitiesModel from '../capabilities';
 
 export default class PkiActionModel extends Model {
   secretMountPath: unknown;
   pemBundle: string;
   type: string;
+  actionType: string | null;
   get backend(): string;
   // apiPaths for capabilities
-  importBundlePath: string;
-  generateIssuerRootPath: string;
-  generateIssuerCsrPath: string;
+  importBundlePath: Promise<CapabilitiesModel>;
+  generateIssuerRootPath: Promise<CapabilitiesModel>;
+  generateIssuerCsrPath: Promise<CapabilitiesModel>;
   crossSignPath: string;
+  allFields: Array<FormField>;
+  validate(): ModelValidations;
   // Capabilities
   get canImportBundle(): boolean;
   get canGenerateIssuerRoot(): boolean;

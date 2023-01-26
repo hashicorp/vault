@@ -22,16 +22,14 @@ export default class PkiOverview extends Component<Args> {
   @tracked certificateValue = '';
 
   @action
-  transitionToViewCertificates(event: Event) {
-    event.preventDefault();
+  transitionToViewCertificates() {
     this.router.transitionTo(
       'vault.cluster.secrets.backend.pki.certificates.certificate.details',
       this.certificateValue
     );
   }
   @action
-  transitionToIssueCertificates(event: Event) {
-    event.preventDefault();
+  transitionToIssueCertificates() {
     this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.role.generate', this.rolesValue);
   }
 

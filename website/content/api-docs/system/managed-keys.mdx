@@ -7,7 +7,7 @@ description: The `/sys/managed-keys` endpoint is used to manage the managed keys
 # `/sys/managed-keys`
 
 The `/sys/managed-keys` endpoint is used to manage the Managed Key configuration within Vault.
-See the [Managed Keys](/docs/enterprise/managed-keys) section for further details on the Managed Keys system.
+See the [Managed Keys](/vault/docs/enterprise/managed-keys) section for further details on the Managed Keys system.
 
 ## List managed keys.
 
@@ -101,7 +101,7 @@ $ curl \
 - `type` `(string: "pkcs11")` - To select a PKCS#11 backend, the type parameter must be set to `pkcs11`.
 
 - `library` `(string: <required>)` - The name of the `kms_library` stanza to use from Vault's config to
-   lookup the local library path. See [kms_library stanza](/docs/configuration/kms-library) for further details.
+   lookup the local library path. See [kms_library stanza](/vault/docs/configuration/kms-library) for further details.
 
 - `key_label` `(string: <required>)` - The label of the key to use. If the key does not exist
   and generation is enabled, this is the label that will be given to the generated key. This
