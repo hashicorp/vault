@@ -165,3 +165,17 @@ variable "vault_upgrade_initial_release" {
     version = "1.10.4"
   }
 }
+
+variable "operator_instance" {
+  type        = string
+  description = "The ip address of the operator (Voter) node"
+}
+
+variable "remove_vault_instances" {
+  type = map(object({
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The old vault nodes to be removed"
+}
+
