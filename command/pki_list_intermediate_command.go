@@ -12,7 +12,7 @@ import (
 	"github.com/ryanuber/columnize"
 )
 
-type PKIListChildrenCommand struct {
+type PKIListIntermediateCommand struct {
 	*BaseCommand
 
 	flagConfig          string
@@ -29,24 +29,33 @@ type PKIListChildrenCommand struct {
 	flagPathMatch         bool
 }
 
-func (c *PKIListChildrenCommand) Synopsis() string {
+func (c *PKIListIntermediateCommand) Synopsis() string {
 	return "Determine Which (of a List) of Certificates Were Issued by A Given Parent Certificate"
 }
 
-func (c *PKIListChildrenCommand) Help() string {
+func (c *PKIListIntermediateCommand) Help() string {
 	helpText := `
 Usage: vault pki list-intermediates PARENT [CHILD] [CHILD] [CHILD] ...
-PARENT is the certificate that might be the issuer that everything should be verified against.
-CHILD is a list of paths to certificates to be compared to the PARENT, or pki mounts to look for certificates on.  
-If CHILD is omitted entirely, the list will be constructed from all accessible pki mounts.
-This returns a list of issuing certificates, and whether they are a match. 
-By default, the type of match required is whether the PARENT has the expected subject, key_id, and could have (directly)
-signed this issuer.  The match criteria can be updated by changed the corresponding flag.
-`
+
+  Lists the set of intermediate CAs issued by this parent issuer.
+
+  PARENT is the certificate that might be the issuer that everything should
+  be verified against.
+
+  CHILD is an optional list of paths to certificates to be compared to the
+  PARENT, or pki mounts to look for certificates on. If CHILD is omitted
+  entirely, the list will be constructed from all accessible pki mounts.
+
+  This returns a list of issuing certificates, and whether they are a match.
+  By default, the type of match required is whether the PARENT has the
+  expected subject, key_id, and could have (directly) signed this issuer. 
+  The match criteria can be updated by changed the corresponding flag.
+
+` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
-func (c *PKIListChildrenCommand) Flags() *FlagSets {
+func (c *PKIListIntermediateCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
@@ -55,7 +64,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagSubjectMatch,
 		Default: true,
 		EnvVar:  "",
-		Usage:   `Whether the subject name of the potential parent cert matches the issuer name of the child cert`,
+		Usage:   `Whether the subject name of the potential parent cert matches the issuer name of the child cert.`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -63,7 +72,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagKeyIdMatch,
 		Default: true,
 		EnvVar:  "",
-		Usage:   `Whether the subject key_id of the potential parent cert matches the issuing key id of the child cert`,
+		Usage:   `Whether the subject key id (SKID) of the potential parent cert matches the authority key id (AKID) of the child cert.`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -71,7 +80,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagPathMatch,
 		Default: false,
 		EnvVar:  "",
-		Usage:   `Whether the potential parent appears in the certificate chain of the issued cert`,
+		Usage:   `Whether the potential parent appears in the certificate chain field (ca_chain) of the issued cert.`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -79,7 +88,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagSignatureMatch,
 		Default: true,
 		EnvVar:  "",
-		Usage:   `Whether the key of the potential parent signed this issued certificate`,
+		Usage:   `Whether the key of the potential parent directly signed this issued certificate.`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -87,7 +96,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagIndirectSignMatch,
 		Default: true,
 		EnvVar:  "",
-		Usage:   `Whether trusting the parent certificate is sufficient to trust the child certificate`,
+		Usage:   `Whether trusting the parent certificate is sufficient to trust the child certificate.`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -95,13 +104,13 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagUseNames,
 		Default: false,
 		EnvVar:  "",
-		Usage:   `Whether the list of issuers returned is referred to by name when it exists rather than uuid`,
+		Usage:   `Whether the list of issuers returned is referred to by name (when it exists) rather than by uuid.`,
 	})
 
 	return set
 }
 
-func (c *PKIListChildrenCommand) Run(args []string) int {
+func (c *PKIListIntermediateCommand) Run(args []string) int {
 	f := c.Flags()
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())
@@ -198,7 +207,7 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *PKIListChildrenCommand) getIssuerListFromMount(client *api.Client, mountString string) ([]string, error) {
+func (c *PKIListIntermediateCommand) getIssuerListFromMount(client *api.Client, mountString string) ([]string, error) {
 	var issuerList []string
 	issuerListEndpoint := sanitizePath(mountString) + "/issuers"
 	rawIssuersResp, err := client.Logical().List(issuerListEndpoint)
@@ -231,16 +240,14 @@ func (c *PKIListChildrenCommand) getIssuerListFromMount(client *api.Client, moun
 
 func checkIfResultsMatchFilters(verifyResults, constraintMap map[string]bool) bool {
 	for key, required := range constraintMap {
-		if required == true {
-			if verifyResults[key] == false {
-				return false
-			}
+		if required && !verifyResults[key] {
+			return false
 		}
 	}
 	return true
 }
 
-func (c *PKIListChildrenCommand) outputResults(results map[string]bool) error {
+func (c *PKIListIntermediateCommand) outputResults(results map[string]bool) error {
 	switch Format(c.UI) {
 	case "", "table":
 		return c.outputResultsTable(results)
@@ -253,7 +260,7 @@ func (c *PKIListChildrenCommand) outputResults(results map[string]bool) error {
 	}
 }
 
-func (c *PKIListChildrenCommand) outputResultsTable(results map[string]bool) error {
+func (c *PKIListIntermediateCommand) outputResultsTable(results map[string]bool) error {
 	data := []string{"intermediate" + hopeDelim + "match?"}
 	for field, finding := range results {
 		row := field + hopeDelim + strconv.FormatBool(finding)
@@ -267,7 +274,7 @@ func (c *PKIListChildrenCommand) outputResultsTable(results map[string]bool) err
 	return nil
 }
 
-func (c *PKIListChildrenCommand) outputResultsJSON(results map[string]bool) error {
+func (c *PKIListIntermediateCommand) outputResultsJSON(results map[string]bool) error {
 	bytes, err := json.MarshalIndent(results, "", "  ")
 	if err != nil {
 		return err
@@ -277,7 +284,7 @@ func (c *PKIListChildrenCommand) outputResultsJSON(results map[string]bool) erro
 	return nil
 }
 
-func (c *PKIListChildrenCommand) outputResultsYAML(results map[string]bool) error {
+func (c *PKIListIntermediateCommand) outputResultsYAML(results map[string]bool) error {
 	bytes, err := yaml.Marshal(results)
 	if err != nil {
 		return err
