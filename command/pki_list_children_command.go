@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
+
 	"github.com/ghodss/yaml"
 	"github.com/ryanuber/columnize"
 )
@@ -17,6 +19,8 @@ type PKIListChildrenCommand struct {
 	flagReturnIndicator string
 	flagDefaultDisabled bool
 	flagList            bool
+
+	flagUseNames bool
 
 	flagSignatureMatch    bool
 	flagIndirectSignMatch bool
@@ -31,12 +35,13 @@ func (c *PKIListChildrenCommand) Synopsis() string {
 
 func (c *PKIListChildrenCommand) Help() string {
 	helpText := `
-Usage: vault pki verify-sign PARENT CHILD
-Returns four fields of information:
-- signature_match: was the key of the issuer used to sign the issued
-- path_match: the possible issuer appears in the valid certificate chain of the issued
-- key_id_match: does the key-id of the issuer match the key_id of the subject
-- subject_match: does the subject name of the issuer match the issuer subject of the issued
+Usage: vault pki list-intermediates PARENT [CHILD] [CHILD] [CHILD] ...
+PARENT is the certificate that might be the issuer that everything should be verified against.
+CHILD is a list of paths to certificates to be compared to the PARENT, or pki mounts to look for certificates on.  
+If CHILD is omitted entirely, w list will be constructed from all accessible pki mounts.
+This returns a list of issuing certificates, and whether they are a match. 
+By default, the type of match required is whether the PARENT has the expected subject, key_id, and could have (directly)
+signed this issuer.  This can be updated by changed the corresponding flag.
 `
 	return strings.TrimSpace(helpText)
 }
@@ -50,7 +55,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagSubjectMatch,
 		Default: true,
 		EnvVar:  "",
-		Usage:   `Whether the subject key_id of the potential parent cert matches the issuing key id of the child cert`,
+		Usage:   `Whether the subject name of the potential parent cert matches the issuer name of the child cert`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -66,7 +71,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagPathMatch,
 		Default: false,
 		EnvVar:  "",
-		Usage:   `Whether the this potential parent appears in the certificate chain of the issued cert`,
+		Usage:   `Whether the potential parent appears in the certificate chain of the issued cert`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -85,6 +90,14 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Usage:   `Whether trusting the parent certificate is sufficient to trust the child certificate`,
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "use_names",
+		Target:  &c.flagUseNames,
+		Default: false,
+		EnvVar:  "",
+		Usage:   `Whether the list of issuers returned is referred to by name when it exists rather than uuid`,
+	})
+
 	return set
 }
 
@@ -101,26 +114,38 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 		c.UI.Error("Not enough arguments (expected potential parent, got nothing)")
 		return 1
 	} else if len(args) > 2 {
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected only potential issuer and issued, got %d arguments)", len(args)))
 		for _, arg := range args {
 			if strings.HasPrefix(arg, "-") {
 				c.UI.Warn(fmt.Sprintf("Options (%v) must be specified before positional arguments (%v)", arg, args[0]))
 				break
 			}
 		}
-		return 1
 	}
 
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to obtain client: %w", err))
+		c.UI.Error(fmt.Sprintf("Failed to obtain client: %s", err))
 		return 1
 	}
 
 	issuer := sanitizePath(args[0])
-	issued := ""
+	var issued []string
 	if len(args) > 1 {
-		issued = sanitizePath(args[1])
+		for _, arg := range args[1:] {
+			// Arg Might be a Fully Qualified Path
+			if strings.Contains(sanitizePath(arg), "/issuer/") ||
+				strings.Contains(sanitizePath(arg), "/certs/") ||
+				strings.Contains(sanitizePath(arg), "/revoked/") {
+				issued = append(issued, sanitizePath(arg))
+			} else { // Or Arg Might be a Mount
+				mountCaList, err := c.getIssuerListFromMount(client, arg)
+				if err != nil {
+					c.UI.Error(err.Error())
+					return 1
+				}
+				issued = append(issued, mountCaList...)
+			}
+		}
 	} else {
 		mountListRaw, err := client.Logical().Read("/sys/mounts/")
 		if err != nil {
@@ -130,24 +155,12 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 		for path, rawValueMap := range mountListRaw.Data {
 			valueMap := rawValueMap.(map[string]interface{})
 			if valueMap["type"].(string) == "pki" {
-				issuerListEndpoint := sanitizePath(path) + "/issuers"
-				rawIssuersResp, err := client.Logical().List(issuerListEndpoint)
+				mountCaList, err := c.getIssuerListFromMount(client, sanitizePath(path))
 				if err != nil {
-					c.UI.Error(fmt.Sprintf("Failed to Read List of Issuers within Mount %v: %v", path, err))
+					c.UI.Error(err.Error())
 					return 1
 				}
-				issuersMap := rawIssuersResp.Data["keys"]
-				if issuersMap == nil {
-					continue // TODO: Add a Warning Here
-				}
-				certList := issuersMap.([]interface{})
-				for _, certId := range certList {
-					if len(issued) == 0 {
-						issued = sanitizePath(path) + "/issuer/" + certId.(string)
-					} else {
-						issued = issued + "," + sanitizePath(path) + "/issuer/" + certId.(string)
-					}
-				}
+				issued = append(issued, mountCaList...)
 			}
 		}
 	}
@@ -163,7 +176,7 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 		"signature_match": c.flagSignatureMatch,
 	}
 
-	for _, child := range strings.Split(issued, ",") {
+	for _, child := range issued {
 		path := sanitizePath(child)
 		if path != "" {
 			err, verifyResults := verifySignBetween(client, issuer, path)
@@ -175,9 +188,44 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 		}
 	}
 
-	c.outputResults(childrenMatches)
+	err = c.outputResults(childrenMatches)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
 
 	return 0
+}
+
+func (c *PKIListChildrenCommand) getIssuerListFromMount(client *api.Client, mountString string) ([]string, error) {
+	var issuerList []string
+	issuerListEndpoint := sanitizePath(mountString) + "/issuers"
+	rawIssuersResp, err := client.Logical().List(issuerListEndpoint)
+	if err != nil {
+		return issuerList, fmt.Errorf("failed to read list of issuers within mount %v: %v", mountString, err)
+	}
+	if rawIssuersResp == nil { // No Issuers (Empty Mount)
+		return issuerList, nil
+	}
+	issuersMap := rawIssuersResp.Data["keys"]
+	certList := issuersMap.([]interface{})
+	for _, certId := range certList {
+		identifier := certId.(string)
+		if c.flagUseNames {
+			issuerReadResp, err := client.Logical().Read(sanitizePath(mountString) + "/issuer/" + identifier)
+			if err != nil {
+				c.UI.Warn(fmt.Sprintf("Unable to Fetch Issuer to Recover Name at: %v", sanitizePath(mountString)+"/issuer/"+identifier))
+			}
+			if issuerReadResp != nil {
+				issuerName := issuerReadResp.Data["issuer_name"].(string)
+				if issuerName != "" {
+					identifier = issuerName
+				}
+			}
+		}
+		issuerList = append(issuerList, sanitizePath(mountString)+"/issuer/"+identifier)
+	}
+	return issuerList, nil
 }
 
 func checkIfResultsMatchFilters(verifyResults, constraintMap map[string]bool) bool {

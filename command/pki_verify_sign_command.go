@@ -30,11 +30,14 @@ func (c *PKIVerifySignCommand) Synopsis() string {
 func (c *PKIVerifySignCommand) Help() string {
 	helpText := `
 Usage: vault pki verify-sign POSSIBLE-ISSUER POSSIBLE-ISSUED
-Returns four fields of information:
+Here POSSIBLE-ISSUER and POSSIBLE-ISSUED are the fully name-spaced path to the certificate,
+for instance: 'ns1/mount1/issuer/issuerName/json'
+Returns five fields of information:
 - signature_match: was the key of the issuer used to sign the issued
 - path_match: the possible issuer appears in the valid certificate chain of the issued
 - key_id_match: does the key-id of the issuer match the key_id of the subject
 - subject_match: does the subject name of the issuer match the issuer subject of the issued
+- trust_match: if someone trusted the parent issuer, is the chain provided sufficient to trust the child issued
 `
 	return strings.TrimSpace(helpText)
 }
@@ -76,7 +79,7 @@ func (c *PKIVerifySignCommand) Run(args []string) int {
 
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to obtain client: %w", err))
+		c.UI.Error(fmt.Sprintf("Failed to obtain client: %s", err))
 		return 1
 	}
 
@@ -86,13 +89,13 @@ func (c *PKIVerifySignCommand) Run(args []string) int {
 		return pkiRetUsage
 	}
 
-	c.outputResults(results)
+	c.outputResults(results, issuer, issued)
 
 	return 0
 }
 
 func verifySignBetween(client *api.Client, issuerPath string, issuedPath string) (error, map[string]bool) {
-	// TODO: Stop Eating Warnings Here
+	// Note that this eats warnings
 
 	// Fetch and Parse the Potential Issuer:
 	issuerResp, err := client.Logical().Read(issuerPath)
@@ -112,7 +115,7 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 		return fmt.Errorf("error: unable to fetch issuer %v: %w", issuerPath, err), nil
 	}
 	if len(issuedPath) <= 2 {
-		return fmt.Errorf(fmt.Sprintf("%v", issuedPath)), nil
+		return fmt.Errorf("%v", issuedPath), nil
 	}
 	caChainRaw := issuedCertResp.Data["ca_chain"]
 	if caChainRaw == nil {
@@ -128,7 +131,7 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 	if err != nil {
 		return err, nil
 	}
-	parentKeyId := issuerCertBundle.Certificate.AuthorityKeyId
+	parentKeyId := issuedCertBundle.Certificate.AuthorityKeyId
 
 	// Check the Chain-Match
 	rootCertPool := x509.NewCertPool()
@@ -178,10 +181,10 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 	return nil, result
 }
 
-func (c *PKIVerifySignCommand) outputResults(results map[string]bool) error {
+func (c *PKIVerifySignCommand) outputResults(results map[string]bool, potentialParent, potentialChild string) error {
 	switch Format(c.UI) {
 	case "", "table":
-		return c.outputResultsTable(results)
+		return c.outputResultsTable(results, potentialParent, potentialChild)
 	case "json":
 		return c.outputResultsJSON(results)
 	case "yaml":
@@ -191,7 +194,9 @@ func (c *PKIVerifySignCommand) outputResults(results map[string]bool) error {
 	}
 }
 
-func (c *PKIVerifySignCommand) outputResultsTable(results map[string]bool) error {
+func (c *PKIVerifySignCommand) outputResultsTable(results map[string]bool, potentialParent, potentialChild string) error {
+	c.UI.Output("issuer:" + potentialParent)
+	c.UI.Output("issued:" + potentialChild + "\n")
 	data := []string{"field" + hopeDelim + "value"}
 	for field, finding := range results {
 		row := field + hopeDelim + strconv.FormatBool(finding)

@@ -47,7 +47,7 @@
     onclick={{action "toggleMask"}}
     type="button"
     class="{{if (eq this.value '') 'has-text-grey'}} masked-input-toggle button"
-    data-test-button
+    data-test-button="toggle-masked"
   >
     <Icon @name={{if this.showValue "eye" "eye-off"}} />
   </button>

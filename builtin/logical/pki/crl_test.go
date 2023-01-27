@@ -1062,7 +1062,7 @@ func TestAutoRebuild(t *testing.T) {
 	}
 
 	// This serial should exist in the delta WAL section for the mount...
-	resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+	resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + localDeltaWALPath)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data)
@@ -1082,7 +1082,7 @@ func TestAutoRebuild(t *testing.T) {
 		default:
 			// Check and see if there's a storage entry for the last rebuild
 			// serial. If so, validate the delta CRL contains this entry.
-			resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+			resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + localDeltaWALPath)
 			require.NoError(t, err)
 			require.NotNil(t, resp)
 			require.NotEmpty(t, resp.Data)
@@ -1103,7 +1103,7 @@ func TestAutoRebuild(t *testing.T) {
 			}
 
 			// Read the marker and see if its correct.
-			resp, err = client.Logical().Read("sys/raw/logical/" + pkiMount + "/" + deltaWALLastBuildSerial)
+			resp, err = client.Logical().Read("sys/raw/logical/" + pkiMount + "/" + localDeltaWALLastBuildSerial)
 			require.NoError(t, err)
 			if resp == nil {
 				time.Sleep(1 * time.Second)

@@ -79,6 +79,7 @@ message MFAMethodID {
 	string type = 1;
 	string id = 2;
 	bool uses_passcode = 3;
+	string name = 4;
 }
 
 message MFAConstraintAny {

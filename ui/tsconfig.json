@@ -20,6 +20,8 @@
       "vault/tests/*": ["tests/*"],
       "vault/mirage/*": ["mirage/*"],
       "vault/*": [
+        "types/*",
+        "types/vault/*",
         "app/*",
         "lib/core/app/*",
         "lib/css/app/*",

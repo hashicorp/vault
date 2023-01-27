@@ -8,7 +8,7 @@
   }}
   @isEngine={{true}}
 />
-<Toolbar>
+{{! <Toolbar>
   <ToolbarActions>
     <ToolbarLink @route="configuration.tidy">
       Tidy
@@ -17,24 +17,16 @@
       Edit configuration
     </ToolbarLink>
   </ToolbarActions>
-</Toolbar>
+</Toolbar> }}
 
-<div class="form-section">
-  <label class="title has-padding-top is-5">
-    URLs
-  </label>
-</div>
-<div class="form-section">
-  <label class="title has-padding-top is-5">
-    CRL
-  </label>
-</div>
-<div class="form-section">
-  <label class="title has-padding-top is-5">
-    Mount Configuration
-  </label>
-  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{! ARG TODO component and empty state }}
-  </div>
-</div>
-{{outlet}}
+<AlertBanner
+  @type="info"
+  @title="PKI beta in use"
+  @message="To configure the engine, you'll have to return to the regular version."
+  class="has-top-margin-m"
+  data-test-pki-configuration-banner
+>
+  <LinkToExternal @route="secretsListRootConfiguration" class="info">
+    Return to old PKI to configure
+  </LinkToExternal>
+</AlertBanner>
