@@ -217,7 +217,7 @@ func (j *jwtMethod) ingressToken() {
 			j.logger.Error("error encountered evaluating symlinks", "error", err)
 			return
 		}
-		_, err := os.Lstat(evalSymlinkPath)
+		_, err := os.Stat(evalSymlinkPath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return
