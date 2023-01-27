@@ -64,8 +64,9 @@ import (
 )
 
 var (
-	_ cli.Command             = (*ServerCommand)(nil)
-	_ cli.CommandAutocomplete = (*ServerCommand)(nil)
+	_                     cli.Command             = (*ServerCommand)(nil)
+	_                     cli.CommandAutocomplete = (*ServerCommand)(nil)
+	validateSealConfigEnt                         = func(seal *configutil.KMS, logger hclog.Logger) error { return nil }
 )
 
 var memProfilerEnabled = false
@@ -2394,6 +2395,11 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
 			Wrapper: aeadwrapper.NewShamirWrapper(),
 		})
+
+		if err := validateSealConfigEnt(configSeal, sealLogger); err != nil {
+			return barrierSeal, barrierWrapper, unwrapSeal, createdSeals, sealConfigError, err
+		}
+
 		var sealInfoKeys []string
 		sealInfoMap := map[string]string{}
 		wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
@@ -2403,6 +2409,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 					"Error parsing Seal configuration: %s", sealConfigError)
 			}
 		}
+
 		if configSeal.Recover {
 			seal = vault.NewRecoverySeal(&vaultseal.Access{
 				Wrapper: aeadwrapper.NewShamirWrapper(),

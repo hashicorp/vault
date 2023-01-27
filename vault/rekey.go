@@ -33,6 +33,10 @@ const (
 	coreRecoveryUnsealKeysBackupPath = "core/recovery-keys-backup"
 )
 
+var (
+	validateSealConfigEnt = func(*SealConfig) error { return nil }
+)
+
 // RekeyResult is used to provide the key parts back after
 // they are generated as part of the rekey.
 type RekeyResult struct {
@@ -250,6 +254,10 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) logical.HTTPCodedError {
 
 	// Check if the seal configuration is valid
 	if err := config.Validate(); err != nil {
+		c.logger.Error("invalid recovery configuration", "error", err)
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("invalid recovery configuration: %w", err).Error())
+	}
+	if err := validateSealConfigEnt(config); err != nil {
 		c.logger.Error("invalid recovery configuration", "error", err)
 		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("invalid recovery configuration: %w", err).Error())
 	}
