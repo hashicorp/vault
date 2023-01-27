@@ -128,6 +128,9 @@ func (l *InmemLayer) Dial(addr string, timeout time.Duration, tlsConfig *tls.Con
 	// with timeouts.
 	if l.forceTimeout == addr {
 		l.logger.Debug("forcing timeout", "addr", addr, "me", l.addr)
+		
+		// gRPC sets a deadline of 20 seconds on the dail attempt, so 
+		// matching that here.
 		time.Sleep(time.Second * 20)
 		return nil, deadlineError("i/o timeout")
 	}
