@@ -27,7 +27,7 @@ Some of these enhancements and changes in this release include the following:
 - **Redis Database Secrets Engine** is now available to manage static roles or generation of dynamic credentials, as well as root credential rotation on a stand-alone Redis server.
 - **AWS Elasticache Database Secrets Engine** is introduced to manage static credentials for AWS Elasticache instances. 
 
-~> **Vault Enterprise:** Use [Integrated Storage](/docs/configuration/storage/raft) or [Consul](/docs/configuration/storage/consul) as your Vault's storage backend. Vault Enterprise will no longer start up if configured to use a storage backend other than Integrated Storage or Consul. (See the [Upgrade Guide](/docs/upgrading/upgrade-to-1.12.x).)
+~> **Vault Enterprise:** Use [Integrated Storage](/vault/docs/configuration/storage/raft) or [Consul](/vault/docs/configuration/storage/consul) as your Vault's storage backend. Vault Enterprise will no longer start up if configured to use a storage backend other than Integrated Storage or Consul. (See the [Upgrade Guide](/vault/docs/upgrading/upgrade-to-1.12.x).)
 
 ## New Features
 
@@ -44,13 +44,13 @@ We  are extending that support to the Vault Transform Secrets Engine in this rel
 
 #### MSSQL Support
 
-An MSSQL store is now available to be used as an external storage engine with tokenization Transform Secrets Engine. Refer to the following documents, [Transform Secrets Engine(API)](/api-docs/secret/transform), [Transform Secrets Engine](/docs/secrets/transform), and [Tokenization Transform](/docs/secrets/transform/tokenization) for more information.
+An MSSQL store is now available to be used as an external storage engine with tokenization Transform Secrets Engine. Refer to the following documents, [Transform Secrets Engine(API)](/vault/api-docs/secret/transform), [Transform Secrets Engine](/vault/docs/secrets/transform), and [Tokenization Transform](/vault/docs/secrets/transform/tokenization) for more information.
 
 #### Key Auto Rotation
 
 Periodic rotation of encryption keys is a recommended key management practice for a good security posture. In Vault release 1.10, we added support for Auto key rotation for Transit Secrets Engine. In Vault 1.12, the Transform secrets engine is now  enhanced, allowing users to set the rotation policy during key creation in a time interval, which will cause Vault to rotate the Transform keys when the time interval elapses automatically.
 
-Refer to the following documentation [Tokenization Transform](/docs/secrets/transform/tokenization) and [Transform Secrets Engine(API)](/api-docs/secret/transform#rotate-tokenization-key) for more information.
+Refer to the following documentation [Tokenization Transform](/vault/docs/secrets/transform/tokenization) and [Transform Secrets Engine(API)](/vault/api-docs/secret/transform#rotate-tokenization-key) for more information.
 
 ### PKI Secrets Engine Improvements
 
@@ -60,7 +60,7 @@ We are improving Vault PKI Engine’s revocation capabilities by adding support 
 
 #### PKI and Managed Key support for RSA-PSS Signatures
 
-Since its initial release, Vault's PKI secrets engine only supported RSA-PKCS#1v1.5 (Public Key Cryptographic Standards) signatures for issuers and leaves. To conform with NIST's guidance around key transport and for compatibility with newer HSM Firmware, we have included support for RSA-PSS signatures (Probabilistic Signature Scheme). See the section on [PSS Support in the PKI documentation](https://www.vaultproject.io/docs/secrets/pki/considerations#pss-support) for limitations of this feature.
+Since its initial release, Vault's PKI secrets engine only supported RSA-PKCS#1v1.5 (Public Key Cryptographic Standards) signatures for issuers and leaves. To conform with NIST's guidance around key transport and for compatibility with newer HSM Firmware, we have included support for RSA-PSS signatures (Probabilistic Signature Scheme). See the section on [PSS Support in the PKI documentation](/vault/docs/secrets/pki/considerations#pss-support) for limitations of this feature.
 
 #### PKI Telemetry Improvements
 
@@ -86,18 +86,18 @@ This was a community contributed enhancement.
 
 ### Path and Role-Based Resource Quotas
 
-In this release, the existing resource quota functionality has been enhanced. In addition to applying the API rate limiting and lease quotas at the namespace or mount level, you can now use  the quotas to the [API path suffixes and auth mount roles](/docs/enterprise/lease-count-quotas). This enhancement provides users with more control over issued certificates.
+In this release, the existing resource quota functionality has been enhanced. In addition to applying the API rate limiting and lease quotas at the namespace or mount level, you can now use  the quotas to the [API path suffixes and auth mount roles](/vault/docs/enterprise/lease-count-quotas). This enhancement provides users with more control over issued certificates.
 
 ### Client Count Improvements
 
-The billing period for client counting API can now be specified with the [current month](/docs/concepts/client-count) for the end date parameter. When this is done the "new_clients" field will have an hyperlog approximate value indicating the number of new clients that came in the current month. Note that for the previous months, the number will be an exact value.
+The billing period for client counting API can now be specified with the [current month](/vault/docs/concepts/client-count) for the end date parameter. When this is done the "new_clients" field will have an hyperlog approximate value indicating the number of new clients that came in the current month. Note that for the previous months, the number will be an exact value.
 
 ### Redis Database Secrets Engine
 
-With the support of the Redis database secrets engine, users can use Vault to manage static and dynamic credentials for Redis OSS. The engine  works similarly to other database secrets engines. Refer to the [Redis](/docs/secrets/databases/redis) documentation for more information. Huge thanks to [Francis Hitchens](https://github.com/fhitchen), who contributed their repository to HashiCorp
+With the support of the Redis database secrets engine, users can use Vault to manage static and dynamic credentials for Redis OSS. The engine  works similarly to other database secrets engines. Refer to the [Redis](/vault/docs/secrets/databases/redis) documentation for more information. Huge thanks to [Francis Hitchens](https://github.com/fhitchen), who contributed their repository to HashiCorp
 
 ### AWS Elasticache Database Secrets Engine
-With the support of the AWS ElastiCache database secrets engine, users may use Vault to manage static credentials for AWS Elasticache instances. The engine will work similarly to other database secrets engines. Refer to the [elasticache](/docs/secrets/databases/rediselasticache) documentation for more information.
+With the support of the AWS ElastiCache database secrets engine, users may use Vault to manage static credentials for AWS Elasticache instances. The engine will work similarly to other database secrets engines. Refer to the [elasticache](/vault/docs/secrets/databases/rediselasticache) documentation for more information.
 
 ### LDAP Secrets Engine
 
@@ -137,10 +137,10 @@ Vault can now act as an OIDC provider for applications that wish to delegate aut
 
 ### License Termination Behavior
 
-The Licensing termination behavior has changed where non-evaluation licenses (production licenses) no longer have a termination date, making Vault more robust for Vault Enterprise customers. Also refer to the updated [licensing FAQ](/docs/enterprise/license/faq) for more information.
+The Licensing termination behavior has changed where non-evaluation licenses (production licenses) no longer have a termination date, making Vault more robust for Vault Enterprise customers. Also refer to the updated [licensing FAQ](/vault/docs/enterprise/license/faq) for more information.
 
 ### Namespace Custom Metadata
-Customers can now specify [custom metadata](/api-docs/system/namespaces) on the namespaces. The new `vault namespace patch` [command](/docs/commands/namespace) can be used to update existing namespaces with custom metadata as well. This will make it possible to tag namespaces with additional fields (For example: owner, region department) describing it.
+Customers can now specify [custom metadata](/vault/api-docs/system/namespaces) on the namespaces. The new `vault namespace patch` [command](/vault/docs/commands/namespace) can be used to update existing namespaces with custom metadata as well. This will make it possible to tag namespaces with additional fields (For example: owner, region department) describing it.
 
 ### Vault Agent Improvements
 
@@ -158,4 +158,4 @@ There are no known issues documented for this release.
 
 ## Feature Deprecations and EOL
 
-Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. A [Feature Deprecation FAQ](/docs/deprecation/faq) page addresses questions about  decisions made about Vault feature deprecations.
+Please refer to the [Deprecation Plans and Notice](/vault/docs/deprecation) page for up-to-date information on feature deprecations and plans. A [Feature Deprecation FAQ](/vault/docs/deprecation/faq) page addresses questions about  decisions made about Vault feature deprecations.

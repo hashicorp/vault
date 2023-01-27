@@ -10,7 +10,7 @@ description: This is the API documentation for the Vault Kubernetes auth method 
 
 This is the API documentation for the Vault Kubernetes auth method plugin. To
 learn more about the usage and operation, see the
-[Vault Kubernetes auth method](/docs/auth/kubernetes).
+[Vault Kubernetes auth method](/vault/docs/auth/kubernetes).
 
 This documentation assumes the Kubernetes method is mounted at the
 `/auth/kubernetes` path in Vault. Since it is possible to enable auth methods at
@@ -50,7 +50,7 @@ access the Kubernetes API.
 - `disable_iss_validation` `(bool: true)` **Deprecated** Disable JWT issuer validation. Allows to skip ISS validation.
 
 - `issuer` `(string: "")` **Deprecated** Optional JWT issuer. If no issuer is specified, then this plugin will use `kubernetes/serviceaccount` as the default issuer.
-See [these instructions](/docs/auth/kubernetes#discovering-the-service-account-issuer) for looking up the issuer for a given Kubernetes cluster.
+See [these instructions](/vault/docs/auth/kubernetes#discovering-the-service-account-issuer) for looking up the issuer for a given Kubernetes cluster.
 
 ### Caveats
 
@@ -138,7 +138,7 @@ entities attempting to login.
   While it is strongly advised that you use `serviceaccount_uid`, you may also use `serviceaccount_name` in cases where
   you want to set the alias ahead of time, and the risks are mitigated or otherwise acceptable given your use case.
   It is very important to limit who is able to delete/create service accounts within a given cluster.
-  See the [Create an Entity Alias](/api-docs/secret/identity/entity-alias#create-an-entity-alias) document
+  See the [Create an Entity Alias](/vault/api-docs/secret/identity/entity-alias#create-an-entity-alias) document
   which further expands on the potential security implications mentioned above.
 
 @include 'tokenfields.mdx'

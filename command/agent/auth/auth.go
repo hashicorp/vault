@@ -169,6 +169,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		var path string
 		var data map[string]interface{}
 		var header http.Header
+		var isTokenFileMethod bool
 
 		switch am.(type) {
 		case AuthMethodWithClient:
@@ -254,9 +255,22 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		}
 
 		// This should only happen if there's no preloaded token (regular auto-auth login)
-		//  or if a preloaded token has expired and is now switching to auto-auth.
+		// or if a preloaded token has expired and is now switching to auto-auth.
 		if secret.Auth == nil {
-			secret, err = clientToUse.Logical().WriteWithContext(ctx, path, data)
+			isTokenFileMethod = path == "auth/token/lookup-self"
+			if isTokenFileMethod {
+				token, _ := data["token"].(string)
+				lookupSelfClient, err := clientToUse.Clone()
+				if err != nil {
+					ah.logger.Error("failed to clone client to perform token lookup")
+					return err
+				}
+				lookupSelfClient.SetToken(token)
+				secret, err = lookupSelfClient.Auth().Token().LookupSelf()
+			} else {
+				secret, err = clientToUse.Logical().WriteWithContext(ctx, path, data)
+			}
+
 			// Check errors/sanity
 			if err != nil {
 				ah.logger.Error("error authenticating", "error", err, "backoff", backoffCfg)
@@ -268,6 +282,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				return err
 			}
 		}
+
+		var leaseDuration int
 
 		switch {
 		case ah.wrapTTL > 0:
@@ -319,28 +335,77 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 
 		default:
-			if secret == nil || secret.Auth == nil {
-				ah.logger.Error("authentication returned nil auth info", "backoff", backoffCfg)
-				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
+			// We handle the token_file method specially, as it's the only
+			// auth method that isn't actually authenticating, i.e. the secret
+			// returned does not have an Auth struct attached
+			isTokenFileMethod := path == "auth/token/lookup-self"
+			if isTokenFileMethod {
+				// We still check the response of the request to ensure the token is valid
+				// i.e. if the token is invalid, we will fail in the authentication step
+				if secret == nil || secret.Data == nil {
+					ah.logger.Error("token file validation failed, token may be invalid", "backoff", backoffCfg)
+					metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 
-				if backoff(ctx, backoffCfg) {
-					continue
+					if backoff(ctx, backoffCfg) {
+						continue
+					}
+					return err
 				}
-				return err
-			}
-			if secret.Auth.ClientToken == "" {
-				ah.logger.Error("authentication returned empty client token", "backoff", backoffCfg)
-				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
+				token, ok := secret.Data["id"].(string)
+				if !ok || token == "" {
+					ah.logger.Error("token file validation returned empty client token", "backoff", backoffCfg)
+					metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 
-				if backoff(ctx, backoffCfg) {
-					continue
+					if backoff(ctx, backoffCfg) {
+						continue
+					}
+					return err
 				}
-				return err
-			}
-			ah.logger.Info("authentication successful, sending token to sinks")
-			ah.OutputCh <- secret.Auth.ClientToken
-			if ah.enableTemplateTokenCh {
-				ah.TemplateTokenCh <- secret.Auth.ClientToken
+
+				duration, _ := secret.Data["ttl"].(json.Number).Int64()
+				leaseDuration = int(duration)
+				renewable, _ := secret.Data["renewable"].(bool)
+				secret.Auth = &api.SecretAuth{
+					ClientToken:   token,
+					LeaseDuration: int(duration),
+					Renewable:     renewable,
+				}
+				ah.logger.Info("authentication successful, sending token to sinks")
+				ah.OutputCh <- token
+				if ah.enableTemplateTokenCh {
+					ah.TemplateTokenCh <- token
+				}
+
+				tokenType := secret.Data["type"].(string)
+				if tokenType == "batch" {
+					ah.logger.Info("note that this token type is batch, and batch tokens cannot be renewed", "ttl", leaseDuration)
+				}
+			} else {
+				if secret == nil || secret.Auth == nil {
+					ah.logger.Error("authentication returned nil auth info", "backoff", backoffCfg)
+					metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
+
+					if backoff(ctx, backoffCfg) {
+						continue
+					}
+					return err
+				}
+				if secret.Auth.ClientToken == "" {
+					ah.logger.Error("authentication returned empty client token", "backoff", backoffCfg)
+					metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
+
+					if backoff(ctx, backoffCfg) {
+						continue
+					}
+					return err
+				}
+
+				leaseDuration = secret.LeaseDuration
+				ah.logger.Info("authentication successful, sending token to sinks")
+				ah.OutputCh <- secret.Auth.ClientToken
+				if ah.enableTemplateTokenCh {
+					ah.TemplateTokenCh <- secret.Auth.ClientToken
+				}
 			}
 
 			am.CredSuccess()
@@ -364,10 +429,15 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			return err
 		}
 
-		// Start the renewal process
-		ah.logger.Info("starting renewal process")
 		metrics.IncrCounter([]string{"agent", "auth", "success"}, 1)
-		go watcher.Renew()
+		// We don't want to trigger the renewal process for tokens with
+		// unlimited TTL, such as the root token.
+		if leaseDuration == 0 && isTokenFileMethod {
+			ah.logger.Info("not starting token renewal process, as token has unlimited TTL")
+		} else {
+			ah.logger.Info("starting renewal process")
+			go watcher.Renew()
+		}
 
 	LifetimeWatcherLoop:
 		for {

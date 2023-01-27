@@ -18,7 +18,7 @@ system.
 ## Policy-Authorization Workflow
 
 Before a human or machine can gain access, an administrator must configure Vault
-with an [auth method](/docs/concepts/auth). Authentication is
+with an [auth method](/vault/docs/concepts/auth). Authentication is
 the process by which human or machine-supplied information is verified against
 an internal or external system.
 
@@ -84,7 +84,7 @@ user or machine is allowed to access.
 
 [hcl]: https://github.com/hashicorp/hcl
 
-Here is a very simple policy which grants read capabilities to the [KVv1](/api-docs/secret/kv/kv-v1) path
+Here is a very simple policy which grants read capabilities to the [KVv1](/vault/api-docs/secret/kv/kv-v1) path
 `"secret/foo"`:
 
 ```ruby
@@ -205,7 +205,7 @@ control over permitted (or denied) operations. As shown in the examples above,
 capabilities are always specified as a list of strings, even if there is only
 one capability.
 
-To determine the capabilities needed to perform a specific operation, the `-output-policy` flag can be added to the CLI subcommand. For an example, refer to the [Print Policy Requirements](/docs/commands#print-policy-requirements) document section.
+To determine the capabilities needed to perform a specific operation, the `-output-policy` flag can be added to the CLI subcommand. For an example, refer to the [Print Policy Requirements](/vault/docs/commands#print-policy-requirements) document section.
 
 
 The list of capabilities include the following:
@@ -341,11 +341,11 @@ path take precedence over permissions on parameters.
 
 ### Parameter Constraints
 
-!> **Note:** The use of [globs](docs/concepts/policies#policy-syntax) (`*`) may result in [surprising or unexpected behavior](#parameter-constraints-limitations).
+!> **Note:** The use of [globs](/vault/docs/concepts/policies#policy-syntax) (`*`) may result in [surprising or unexpected behavior](#parameter-constraints-limitations).
 
-~> **Note:** The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the [version 2 kv secrets engine](/docs/secrets/kv/kv-v2).
+~> **Note:** The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the [version 2 kv secrets engine](/vault/docs/secrets/kv/kv-v2).
 
-See the [API Specification](/api-docs/secret/kv/kv-v2) for more information.
+See the [API Specification](/vault/api-docs/secret/kv/kv-v2) for more information.
 
 Policies can take into account HTTP request parameters to further
 constrain requests, using the following options:
@@ -381,10 +381,10 @@ constrain requests, using the following options:
     ```
 
     -> **Usage example:** The [ACL Policy Path
-     Templating](https://learn.hashicorp.com/tutorials/vault/policy-templating)
+     Templating](/vault/tutorials/policies/policy-templating)
      tutorial demonstrates the use of `allowed_parameters` to permit a user to
      update the user's password when using the [userpass auth
-     method](/docs/auth/userpass) to log in with Vault. 
+     method](/vault/docs/auth/userpass) to log in with Vault. 
 
   - Setting a parameter with a value of a populated list allows the parameter
     to contain only those values.
@@ -516,8 +516,8 @@ path "secret/foo" {
 
 These parameters can be used to set minimums/maximums on TTLs set by clients
 when requesting that a response be
-[wrapped](/docs/concepts/response-wrapping), with a granularity of a
-second. These use [duration format strings](/docs/concepts/duration-format).
+[wrapped](/vault/docs/concepts/response-wrapping), with a granularity of a
+second. These use [duration format strings](/vault/docs/concepts/duration-format).
 
 In practice, setting a minimum TTL of one second effectively makes response
 wrapping mandatory for a particular path.
@@ -618,8 +618,8 @@ $ curl \
 
 For more information, please read:
 
-- [Production Hardening](https://learn.hashicorp.com/tutorials/vault/production-hardening)
-- [Generating a Root Token](https://learn.hashicorp.com/tutorials/vault/generate-root)
+- [Production Hardening](/vault/tutorials/operations/production-hardening)
+- [Generating a Root Token](/vault/tutorials/operations/generate-root)
 
 ## Managing Policies
 
