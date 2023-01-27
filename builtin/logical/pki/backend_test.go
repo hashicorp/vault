@@ -683,6 +683,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 }
 
 func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType string, keyBits int) (interface{}, []byte, string) {
+	t.Helper()
+
 	var priv interface{}
 	var err error
 	switch keyType {
@@ -814,6 +816,8 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 }
 
 func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int) (x509.CertificateRequest, string) {
+	t.Helper()
+
 	csrTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
 			Country:      []string{"MyCountry"},
