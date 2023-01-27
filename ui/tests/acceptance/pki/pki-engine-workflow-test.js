@@ -434,4 +434,29 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.issuerDetails.groupTitle).exists({ count: 1 }, 'only 1 group title rendered');
     });
   });
+
+  module('cross-sign', function (hooks) {
+    hooks.beforeEach(function () {
+      this.pemBundle = rootPem;
+    });
+    skip('import happy path', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.emptyStateLink);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      assert.dom(SELECTORS.configuration.title).hasText('Configure PKI');
+      assert.dom(SELECTORS.configuration.emptyState).exists({ count: 1 }, 'Shows empty state by default');
+      await click(SELECTORS.configuration.optionByKey('import'));
+      assert.dom(SELECTORS.configuration.emptyState).doesNotExist();
+      await click('[data-test-text-toggle]');
+      await fillIn('[data-test-text-file-textarea]', this.pemBundle);
+      await click('[data-test-pki-ca-cert-import]');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/issuers`,
+        'redirects to issuers list on success'
+      );
+    });
+  });
 });
