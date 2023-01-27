@@ -30,7 +30,6 @@ func TestJWTEndToEnd(t *testing.T) {
 		useSymlink            bool
 		removeJWTAfterReading bool
 	}{
-		// default behaviour => token expected
 		{false, false, false},
 		{true, false, false},
 		{false, true, false},
