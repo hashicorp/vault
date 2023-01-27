@@ -12,7 +12,7 @@ import (
 	"github.com/ryanuber/columnize"
 )
 
-type PKIListChildrenCommand struct {
+type PKIListIntermediateCommand struct {
 	*BaseCommand
 
 	flagConfig          string
@@ -29,11 +29,11 @@ type PKIListChildrenCommand struct {
 	flagPathMatch         bool
 }
 
-func (c *PKIListChildrenCommand) Synopsis() string {
+func (c *PKIListIntermediateCommand) Synopsis() string {
 	return "Determine Which (of a List) of Certificates Were Issued by A Given Parent Certificate"
 }
 
-func (c *PKIListChildrenCommand) Help() string {
+func (c *PKIListIntermediateCommand) Help() string {
 	helpText := `
 Usage: vault pki list-intermediates PARENT [CHILD] [CHILD] [CHILD] ...
 
@@ -55,7 +55,7 @@ Usage: vault pki list-intermediates PARENT [CHILD] [CHILD] [CHILD] ...
 	return strings.TrimSpace(helpText)
 }
 
-func (c *PKIListChildrenCommand) Flags() *FlagSets {
+func (c *PKIListIntermediateCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
@@ -110,7 +110,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 	return set
 }
 
-func (c *PKIListChildrenCommand) Run(args []string) int {
+func (c *PKIListIntermediateCommand) Run(args []string) int {
 	f := c.Flags()
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())
@@ -207,7 +207,7 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *PKIListChildrenCommand) getIssuerListFromMount(client *api.Client, mountString string) ([]string, error) {
+func (c *PKIListIntermediateCommand) getIssuerListFromMount(client *api.Client, mountString string) ([]string, error) {
 	var issuerList []string
 	issuerListEndpoint := sanitizePath(mountString) + "/issuers"
 	rawIssuersResp, err := client.Logical().List(issuerListEndpoint)
@@ -247,7 +247,7 @@ func checkIfResultsMatchFilters(verifyResults, constraintMap map[string]bool) bo
 	return true
 }
 
-func (c *PKIListChildrenCommand) outputResults(results map[string]bool) error {
+func (c *PKIListIntermediateCommand) outputResults(results map[string]bool) error {
 	switch Format(c.UI) {
 	case "", "table":
 		return c.outputResultsTable(results)
@@ -260,7 +260,7 @@ func (c *PKIListChildrenCommand) outputResults(results map[string]bool) error {
 	}
 }
 
-func (c *PKIListChildrenCommand) outputResultsTable(results map[string]bool) error {
+func (c *PKIListIntermediateCommand) outputResultsTable(results map[string]bool) error {
 	data := []string{"intermediate" + hopeDelim + "match?"}
 	for field, finding := range results {
 		row := field + hopeDelim + strconv.FormatBool(finding)
@@ -274,7 +274,7 @@ func (c *PKIListChildrenCommand) outputResultsTable(results map[string]bool) err
 	return nil
 }
 
-func (c *PKIListChildrenCommand) outputResultsJSON(results map[string]bool) error {
+func (c *PKIListIntermediateCommand) outputResultsJSON(results map[string]bool) error {
 	bytes, err := json.MarshalIndent(results, "", "  ")
 	if err != nil {
 		return err
@@ -284,7 +284,7 @@ func (c *PKIListChildrenCommand) outputResultsJSON(results map[string]bool) erro
 	return nil
 }
 
-func (c *PKIListChildrenCommand) outputResultsYAML(results map[string]bool) error {
+func (c *PKIListIntermediateCommand) outputResultsYAML(results map[string]bool) error {
 	bytes, err := yaml.Marshal(results)
 	if err != nil {
 		return err

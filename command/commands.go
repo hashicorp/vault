@@ -544,7 +544,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 			}, nil
 		},
 		"pki list-intermediates": func() (cli.Command, error) {
-			return &PKIListChildrenCommand{
+			return &PKIListIntermediateCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
