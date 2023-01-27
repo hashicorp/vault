@@ -65,7 +65,6 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		},
 
 		Secrets: []*framework.Secret{
-			secretDynamicKey(&b),
 			secretOTP(&b),
 		},
 
