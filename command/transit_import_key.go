@@ -166,7 +166,7 @@ func fetchWrappingKey(c *BaseCommand, client *api.Client, path string) (any, err
 	keyBlock, _ := pem.Decode([]byte(key.(string)))
 	parsedKey, err := x509.ParsePKIXPublicKey(keyBlock.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing wrapping key: %v", err)
+		return nil, fmt.Errorf("error parsing wrapping key: %w", err)
 	}
 	return parsedKey, nil
 }
