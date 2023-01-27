@@ -35,7 +35,7 @@ jobs:
     name: Test ${{ matrix.build-artifact-name }}
     if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
     needs: product-metadata
-    uses: ./.github/workflows/enos-run.yml
+    uses: ./.github/workflows/test-run-enos-scenario-matrix.yml
     strategy:
       fail-fast: false
       matrix:
@@ -54,8 +54,7 @@ jobs:
 
   save-metadata:
     runs-on: linux
-    needs: [test]
-    if: ${{ startsWith(github.event.action, 'enos-release-testing-oss') || failure() }}
+    needs: test
     steps:
       - name: Persist metadata
         uses: hashicorp/actions-persist-metadata@v1

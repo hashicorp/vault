@@ -6,12 +6,6 @@ terraform {
   }
 }
 
-variable "vault_cluster_addr_port" {
-  description = "The Raft cluster address port"
-  type        = string
-  default     = "8201"
-}
-
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"
@@ -30,8 +24,13 @@ variable "vault_instances" {
   description = "The vault cluster instances that were created"
 }
 
+variable "vault_root_token" {
+  type        = string
+  description = "The vault root token"
+}
+
 locals {
-  instances = {
+  public_ips = {
     for idx in range(var.vault_instance_count) : idx => {
       public_ip  = values(var.vault_instances)[idx].public_ip
       private_ip = values(var.vault_instances)[idx].private_ip
@@ -39,14 +38,15 @@ locals {
   }
 }
 
-resource "enos_remote_exec" "verify_node_unsealed" {
-  for_each = local.instances
+resource "enos_remote_exec" "smoke-verify-undo-logs" {
+  for_each = local.public_ips
 
-  content = templatefile("${path.module}/templates/verify-vault-node-unsealed.sh", {
-    vault_cluster_addr      = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
-    vault_install_dir       = var.vault_install_dir
-    vault_local_binary_path = "${var.vault_install_dir}/vault"
-  })
+  environment = {
+    VAULT_TOKEN = var.vault_root_token
+    VAULT_ADDR  = "http://localhost:8200"
+  }
+
+  scripts = [abspath("${path.module}/scripts/smoke-verify-undo-logs.sh")]
 
   transport = {
     ssh = {
