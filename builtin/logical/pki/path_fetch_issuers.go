@@ -137,10 +137,12 @@ for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 	fields["enable_aia_url_templating"] = &framework.FieldSchema{
 		Type: framework.TypeBool,
 		Description: `Whether or not to enabling templating of the
-above AIA fields. When templating is enabled the special values '{{issuer_id}}'
-and '{{cluster_path}}' are available, but the addresses are not checked for
-URL validity until issuance time. This requires /config/cluster's path to be
-set on all PR Secondary clusters.`,
+above AIA fields. When templating is enabled the special values '{{issuer_id}}',
+'{{cluster_path}}', '{{cluster_aia_path}}' are available, but the addresses are
+not checked for URL validity until issuance time. Using '{{cluster_path}}'
+requires /config/cluster's 'path' member to be set on all PR Secondary clusters
+and using '{{cluster_aia_path}}' requires /config/cluster's 'aia_path' member
+to be set on all PR secondary clusters.`,
 		Default: false,
 	}
 
@@ -548,7 +550,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	var newName string
 	if ok {
 		newName, err = getIssuerName(sc, data)
-		if err != nil && err != errIssuerNameInUse {
+		if err != nil && err != errIssuerNameInUse && err != errIssuerNameIsEmpty {
 			// If the error is name already in use, and the new name is the
 			// old name for this issuer, we're not actually updating the
 			// issuer name (or causing a conflict) -- so don't err out. Other
@@ -841,6 +843,8 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 			Data: map[string]interface{}{
 				"certificate": string(certificate),
 				"ca_chain":    issuer.CAChain,
+				"issuer_id":   issuer.ID,
+				"issuer_name": issuer.Name,
 			},
 		}, nil
 	}

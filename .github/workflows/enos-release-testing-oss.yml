@@ -7,18 +7,20 @@ on:
       - enos-release-testing-oss::*
 
 jobs:
-  metadata:
+  product-metadata:
     if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
     runs-on: ubuntu-latest
     outputs:
-      matrix-test-group: ${{ steps.matrix-group.outputs.matrix-test-group }}
+      matrix-test-group: ${{ steps.get-metadata.outputs.matrix-test-group }}
       vault-revision: ${{ steps.get-metadata.outputs.vault-revision }}
       vault-version: ${{ steps.get-metadata.outputs.vault-version }}
     steps:
       - uses: actions/checkout@v3
         with:
+          # Check out the repository at the same Git SHA that was used to create
+          # the artifacts to get the correct metadata.
           ref: ${{ github.event.client_payload.payload.sha }}
-      - id: matrix-group
+      - id: get-metadata
         env:
           # MATRIX_MAX_TEST_GROUPS is required to determine the randomly selected
           # test group. It should be set to the highest test_group used in the
@@ -32,7 +34,7 @@ jobs:
   test:
     name: Test ${{ matrix.build-artifact-name }}
     if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
-    needs: metadata
+    needs: product-metadata
     uses: ./.github/workflows/enos-run.yml
     strategy:
       fail-fast: false
@@ -43,8 +45,16 @@ jobs:
           - matrix-file-name: enos_release_testing_oss-artifactory-oss-linux-arm64-zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
     with:
-      matrix-file-name: ${{ matrix.test-name }}
-      matrix-test-group: ${{ needs.metadata.outputs.matrix-test-group }}
+      build-artifact-name: ${{ matrix.build-artifact-name }}
+      matrix-file-name: ${{ matrix.matrix-file-name }}
+      matrix-test-group: ${{ needs.product-metadata.outputs.matrix-test-group }}
       vault-edition: oss
       vault-revision: ${{ needs.product-metadata.outputs.vault-revision }}
     secrets: inherit
+
+  save-metadata:
+    runs-on: linux
+    needs: test
+    steps:
+      - name: Persist metadata
+        uses: hashicorp/actions-persist-metadata@v1

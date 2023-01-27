@@ -967,15 +967,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation:   b.pathInternalOpenAPI,
 				logical.UpdateOperation: b.pathInternalOpenAPI,
 			},
-		},
-		{
-			Pattern: "internal/specs/openapi",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalOpenAPI,
-					Summary:  "Generate an OpenAPI 3 document of all mounted paths.",
-				},
-			},
+			HelpSynopsis: "Generate an OpenAPI 3 document of all mounted paths.",
 		},
 		{
 			Pattern: "internal/ui/feature-flags",
@@ -1071,6 +1063,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-entities"][1]),
 		},
+	}
+}
+
+func (b *SystemBackend) introspectionPaths() []*framework.Path {
+	return []*framework.Path{
 		{
 			Pattern: "internal/inspect/router/" + framework.GenericNameRegex("tag"),
 			Fields: map[string]*framework.FieldSchema{
@@ -2049,6 +2046,48 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["mounts"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) experimentPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "experiments$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadExperiments,
+					Summary:  "Returns the available and enabled experiments",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["experiments"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["experiments"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) lockedUserPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "lockedusers/(?P<mount_accessor>.+?)/unlock/(?P<alias_identifier>.+)",
+			Fields: map[string]*framework.FieldSchema{
+				"mount_accessor": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
+				},
+				"alias_identifier": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["alias_identifier"][0]),
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleUnlockUser,
+					Summary:  "Unlocks the user with given mount_accessor and alias_identifier",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
 		},
 	}
 }

@@ -1,6 +1,6 @@
 repository {
-  # go_modules = true
-  # osv = true
+  go_modules = true
+  osv = true
   secrets {
     all = true
   } 

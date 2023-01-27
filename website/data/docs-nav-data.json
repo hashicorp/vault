@@ -544,6 +544,19 @@
         ]
       },
       {
+        "title": "<code>pki</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/pki"
+          },
+          {
+            "title": "<code>health-check</code>",
+            "path": "commands/pki/health-check"
+          }
+        ]
+      },
+      {
         "title": "<code>lease</code>",
         "routes": [
           {
