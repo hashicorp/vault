@@ -950,6 +950,7 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 				if err != nil {
 					return "", errutil.InternalError{Err: fmt.Sprintf("unable to get associated_data/additional_data from factory[%d]: %v", index, err)}
 				}
+			case ManagedKeyFactory:
 			default:
 				return "", errutil.InternalError{Err: fmt.Sprintf("unknown type of factory[%d]: %T", index, rawFactory)}
 			}
@@ -1994,6 +1995,7 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 				if err != nil {
 					return "", errutil.InternalError{Err: fmt.Sprintf("unable to get associated_data/additional_data from factory[%d]: %v", index, err)}
 				}
+			case ManagedKeyFactory:
 			default:
 				return "", errutil.InternalError{Err: fmt.Sprintf("unknown type of factory[%d]: %T", index, rawFactory)}
 			}
