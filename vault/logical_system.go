@@ -4666,7 +4666,7 @@ type SealStatusResponse struct {
 	HCPLinkStatus         string   `json:"hcp_link_status,omitempty"`
 	HCPLinkResourceID     string   `json:"hcp_link_resource_ID,omitempty"`
 	Warnings              []string `json:"warnings,omitempty"`
-	UnsealRecoveryEnabled bool     `json:"unseal_recovery_enabled"`
+	UnsealRecoveryEnabled bool     `json:"unseal_recovery_enabled,omitempty"`
 }
 
 // getStatusWarnings exposes potentially dangerous overrides in the status response

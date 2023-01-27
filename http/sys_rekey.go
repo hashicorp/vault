@@ -380,7 +380,7 @@ type RekeyStatusResponse struct {
 	Backup                bool     `json:"backup"`
 	VerificationRequired  bool     `json:"verification_required"`
 	VerificationNonce     string   `json:"verification_nonce,omitempty"`
-	UnsealRecoveryEnabled bool     `json:"unseal_recovery_enabled"`
+	UnsealRecoveryEnabled bool     `json:"unseal_recovery_enabled,omitempty"`
 }
 
 type RekeyUpdateRequest struct {
@@ -398,7 +398,7 @@ type RekeyUpdateResponse struct {
 	Backup                bool     `json:"backup"`
 	VerificationRequired  bool     `json:"verification_required"`
 	VerificationNonce     string   `json:"verification_nonce,omitempty"`
-	UnsealRecoveryEnabled bool     `json:"unseal_recovery_enabled"`
+	UnsealRecoveryEnabled bool     `json:"unseal_recovery_enabled,omitempty"`
 }
 
 type RekeyVerificationUpdateRequest struct {

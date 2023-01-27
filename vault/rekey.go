@@ -33,9 +33,7 @@ const (
 	coreRecoveryUnsealKeysBackupPath = "core/recovery-keys-backup"
 )
 
-var (
-	validateSealConfigEnt = func(*SealConfig) error { return nil }
-)
+var validateSealConfigEnt = func(*SealConfig) error { return nil }
 
 // RekeyResult is used to provide the key parts back after
 // they are generated as part of the rekey.
