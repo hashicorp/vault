@@ -302,12 +302,12 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 
 	// Make the request
 	status, err := fn(&api.RekeyInitRequest{
-		SecretShares:          c.flagKeyShares,
-		SecretThreshold:       c.flagKeyThreshold,
-		PGPKeys:               c.flagPGPKeys,
-		Backup:                c.flagBackup,
-		RequireVerification:   c.flagVerify,
-		DisableUnsealRecovery: !c.flagUnsealRecovery,
+		SecretShares:         c.flagKeyShares,
+		SecretThreshold:      c.flagKeyThreshold,
+		PGPKeys:              c.flagPGPKeys,
+		Backup:               c.flagBackup,
+		RequireVerification:  c.flagVerify,
+		EnableUnsealRecovery: c.flagUnsealRecovery,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing rekey: %s", err))
