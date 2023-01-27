@@ -18,38 +18,36 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func TestAppRole_LocalSecretIDsRead(t *testing.T) {
-	var resp *logical.Response
-	var err error
-	b, storage := createBackendWithStorage(t)
+func (b *backend) requestNoErr(t *testing.T, req *logical.Request) *logical.Response {
+	t.Helper()
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route(req.Path), req.Operation), resp, true)
+	return resp
+}
 
-	paths := rolePaths(b)
+func TestAppRole_LocalSecretIDsRead(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
 
 	roleData := map[string]interface{}{
 		"local_secret_ids": true,
 		"bind_secret_id":   true,
 	}
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	b.requestNoErr(t, &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/testrole",
 		Storage:   storage,
 		Data:      roleData,
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.CreateOperation), resp, true)
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp := b.requestNoErr(t, &logical.Request{
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 		Path:      "role/testrole/local-secret-ids",
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 2, logical.ReadOperation), resp, true)
 
 	if !resp.Data["local_secret_ids"].(bool) {
 		t.Fatalf("expected local_secret_ids to be returned")

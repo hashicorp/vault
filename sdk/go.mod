@@ -39,7 +39,7 @@ require (
 	golang.org/x/crypto v0.5.0
 	golang.org/x/text v0.6.0
 	google.golang.org/grpc v1.41.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.27.1
 )
 
 require (
@@ -48,6 +48,7 @@ require (
 	github.com/frankban/quicktest v1.10.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.3.1 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.0 // indirect
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.6 // indirect
 	github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect

@@ -8,6 +8,7 @@ const selectors = {
   keys: '[data-test-toggle-group="Key parameters"]',
   sanOptions: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
   subjectFields: '[data-test-toggle-group="Additional subject fields"]',
+  toggleByName: (name) => `[data-test-toggle-group="${name}"]`,
 };
 
 module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
@@ -91,6 +92,34 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
     const fields = ['ou', 'organization', 'country', 'locality', 'province', 'streetAddress', 'postalCode'];
     assert.dom('[data-test-field]').exists({ count: fields.length }, 'Correct number of fields render');
     fields.forEach((key) => {
+      assert.dom(`[data-test-input="${key}"]`).exists(`${key} input renders`);
+    });
+  });
+
+  test('it should render groups according to the passed @groups', async function (assert) {
+    assert.expect(11);
+    const fieldsA = ['ou', 'organization'];
+    const fieldsZ = ['country', 'locality', 'province', 'streetAddress', 'postalCode'];
+    this.set('groups', {
+      'Group A': fieldsA,
+      'Group Z': fieldsZ,
+    });
+    await render(hbs`<PkiGenerateToggleGroups @model={{this.model}} @groups={{this.groups}} />`, {
+      owner: this.engine,
+    });
+
+    assert.dom(selectors.toggleByName('Group A')).hasText('Group A', 'First group renders');
+    assert.dom(selectors.toggleByName('Group Z')).hasText('Group Z', 'Second group renders');
+
+    await click(selectors.toggleByName('Group A'));
+    assert.dom('[data-test-field]').exists({ count: fieldsA.length }, 'Correct number of fields render');
+    fieldsA.forEach((key) => {
+      assert.dom(`[data-test-input="${key}"]`).exists(`${key} input renders`);
+    });
+
+    await click(selectors.toggleByName('Group Z'));
+    assert.dom('[data-test-field]').exists({ count: fieldsZ.length }, 'Correct number of fields render');
+    fieldsZ.forEach((key) => {
       assert.dom(`[data-test-input="${key}"]`).exists(`${key} input renders`);
     });
   });

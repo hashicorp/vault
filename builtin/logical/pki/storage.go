@@ -1389,3 +1389,19 @@ func (sc *storageContext) writeClusterConfig(config *clusterConfigEntry) error {
 
 	return sc.Storage.Put(sc.Context, entry)
 }
+
+func (sc *storageContext) fetchRevocationInfo(serial string) (*revocationInfo, error) {
+	var revInfo *revocationInfo
+	revEntry, err := fetchCertBySerial(sc, revokedPath, serial)
+	if err != nil {
+		return nil, err
+	}
+	if revEntry != nil {
+		err = revEntry.DecodeJSON(&revInfo)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding existing revocation info")
+		}
+	}
+
+	return revInfo, nil
+}

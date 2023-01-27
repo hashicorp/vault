@@ -46,17 +46,15 @@ module('Integration | Component | pki-role-form', function (hooks) {
 
   test('it should save a new pki role with various options selected', async function (assert) {
     // Key usage, Key params and Not valid after options are tested in their respective component tests
-    assert.expect(10);
+    assert.expect(9);
     this.server.post(`/${this.model.backend}/roles/test-role`, (schema, req) => {
       assert.ok(true, 'Request made to save role');
       const request = JSON.parse(req.requestBody);
-      const roleName = request.name;
       const allowedDomainsTemplate = request.allowed_domains_template;
       const policyIdentifiers = request.policy_identifiers;
       const allowedUriSansTemplate = request.allow_uri_sans_template;
       const allowedSerialNumbers = request.allowed_serial_numbers;
 
-      assert.strictEqual(roleName, 'test-role', 'correctly sends the role name');
       assert.true(allowedDomainsTemplate, 'correctly sends allowed_domains_template');
       assert.strictEqual(policyIdentifiers[0], 'some-oid', 'correctly sends policy_identifiers');
       assert.true(allowedUriSansTemplate, 'correctly sends allowed_uri_sans_template');
