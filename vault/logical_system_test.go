@@ -3567,7 +3567,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 
 func TestSystemBackend_InternalUIMount(t *testing.T) {
 	core, b, rootToken := testCoreSystemBackend(t)
-	paths := b.(*SystemBackend).internalPaths()
+	systemBackend := b.(*SystemBackend)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "policy/secret")
 	req.ClientToken = rootToken
@@ -3599,7 +3599,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 3, req.Operation),
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -3624,7 +3624,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 3, req.Operation),
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -3640,7 +3640,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 3, req.Operation),
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
