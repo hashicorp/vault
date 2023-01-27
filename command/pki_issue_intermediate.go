@@ -44,7 +44,7 @@ func (c *PKIIssueCACommand) Flags() *FlagSets {
 		Target:     &c.flagKeyStorageSource,
 		Default:    "internal",
 		EnvVar:     "",
-		Usage:      `Options are “existing” - to use an existing key inside vault, “internal” - to generate a new key inside vault, or “kms” - to link to an external key.  Exported keys are not available through this API.`,
+		Usage:      `Options are "existing" - to use an existing key inside vault, "internal" - to generate a new key inside vault, or "kms" - to link to an external key.  Exported keys are not available through this API.`,
 		Completion: complete.PredictSet("internal", "existing", "kms"),
 	})
 
