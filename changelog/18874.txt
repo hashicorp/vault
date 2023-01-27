@@ -1,0 +1,3 @@
+```release-note:security
+secrets/ssh: removal of the deprecated dynamic keys mode.
+```
