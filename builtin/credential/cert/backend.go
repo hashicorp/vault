@@ -23,16 +23,6 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
-	bConf, err := b.Config(ctx, conf.StorageView)
-	if err != nil {
-		return nil, err
-	}
-	if bConf != nil {
-		b.updatedConfig(bConf)
-	}
-	if err := b.lockThenpopulateCRLs(ctx, conf.StorageView); err != nil {
-		return nil, err
-	}
 	return b, nil
 }
 
@@ -53,10 +43,11 @@ func Backend() *backend {
 			pathListCRLs(&b),
 			pathCRLs(&b),
 		},
-		AuthRenew:    b.pathLoginRenew,
-		Invalidate:   b.invalidate,
-		BackendType:  logical.TypeCredential,
-		PeriodicFunc: b.updateCRLs,
+		AuthRenew:      b.pathLoginRenew,
+		Invalidate:     b.invalidate,
+		BackendType:    logical.TypeCredential,
+		InitializeFunc: b.initialize,
+		PeriodicFunc:   b.updateCRLs,
 	}
 
 	b.crlUpdateMutex = &sync.RWMutex{}
@@ -72,6 +63,25 @@ type backend struct {
 	ocspClientMutex sync.RWMutex
 	ocspClient      *ocsp.Client
 	configUpdated   atomic.Bool
+}
+
+func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	bConf, err := b.Config(ctx, req.Storage)
+	if err != nil {
+		b.Logger().Error(fmt.Sprintf("failed to load backend configuration: %v", err))
+		return err
+	}
+
+	if bConf != nil {
+		b.updatedConfig(bConf)
+	}
+
+	if err := b.lockThenpopulateCRLs(ctx, req.Storage); err != nil {
+		b.Logger().Error(fmt.Sprintf("failed to populate CRLs: %v", err))
+		return err
+	}
+
+	return nil
 }
 
 func (b *backend) invalidate(_ context.Context, key string) {
