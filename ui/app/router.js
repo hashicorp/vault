@@ -154,9 +154,7 @@ Router.map(function () {
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
           this.mount('kubernetes');
-          if (config.environment !== 'production') {
-            this.mount('pki');
-          }
+          this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration');
           // because globs / params can't be empty,
