@@ -3,6 +3,8 @@ package command
 import (
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/api"
 )
 
 func TestPKIListIntermediate(t *testing.T) {
@@ -28,6 +30,10 @@ func TestPKIListIntermediate(t *testing.T) {
 	// RootX1 has issued IntX1; RootX3 has issued IntX2
 	createComplicatedIssuerSetUp(t, client)
 
+	runPkiListIntermediateTests(t, client)
+}
+
+func runPkiListIntermediateTests(t *testing.T, client *api.Client) {
 	cases := []struct {
 		name               string
 		args               []string

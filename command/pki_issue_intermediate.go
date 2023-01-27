@@ -205,7 +205,20 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 	}
 	failureState.caChainImported = true
 
+	// Finally we read our newly issued certificate in order to tell our caller about it
+	c.readAndOutputNewCertificate(client, intermediateMount, issuerId)
+
 	return 0
+}
+
+func (c *PKIIssueCACommand) readAndOutputNewCertificate(client *api.Client, intermediateMount string, issuerId string) {
+	resp, err := client.Logical().Read(sanitizePath(intermediateMount + "/issuer/" + issuerId))
+	if err != nil || resp == nil {
+		c.UI.Error(fmt.Sprintf("Error Reading Fully Imported Certificate from %v : %v",
+			intermediateMount+"issuer/"+issuerId, err))
+	}
+
+	OutputSecret(c.UI, resp)
 }
 
 func importIssuerWithName(client *api.Client, mount string, bundle string, name string) (issuerUUID string, err error) {

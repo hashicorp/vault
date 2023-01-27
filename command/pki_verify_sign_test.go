@@ -34,6 +34,10 @@ func TestPKIVerifySign(t *testing.T) {
 	// RootX1 has issued IntX1; RootX3 has issued IntX2
 	createComplicatedIssuerSetUp(t, client)
 
+	runPkiVerifySignTests(t, client)
+}
+
+func runPkiVerifySignTests(t *testing.T, client *api.Client) {
 	cases := []struct {
 		name               string
 		args               []string
