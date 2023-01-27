@@ -488,3 +488,13 @@ func (q *revocationQueue) Iterate() []*revocationQueueEntry {
 
 	return ret
 }
+
+// sliceToMapKey return a map that who's keys are entries in a map.
+func sliceToMapKey(s []string) map[string]struct{} {
+	var empty struct{}
+	myMap := make(map[string]struct{}, len(s))
+	for _, s := range s {
+		myMap[s] = empty
+	}
+	return myMap
+}
