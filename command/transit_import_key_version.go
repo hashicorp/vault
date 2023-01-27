@@ -26,7 +26,9 @@ Usage: vault transit import-version PATH KEY
 
   Using the Transit or Transform key wrapping system, imports key material from
   the base64 encoded KEY, into a new key whose API path is PATH.  To import a new transit/transform key,
-  use import.  If your system or device natively supports the RSA AES key wrap mechanism, you should use it directly 
+  use import.  The remaining options after KEY (key=value style) are passed on to the transit/transform create key 
+  endpoint. 
+  If your system or device natively supports the RSA AES key wrap mechanism, you should use it directly 
   rather than this command.
 ` + c.Flags().Help()
 

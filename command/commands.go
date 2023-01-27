@@ -697,7 +697,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"transit import version": func() (cli.Command, error) {
+		"transit import-version": func() (cli.Command, error) {
 			return &TransitImportVersionCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil

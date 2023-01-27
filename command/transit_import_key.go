@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"flag"
 	"fmt"
 	"regexp"
 	"strings"
@@ -40,12 +39,13 @@ func (c *TransitImportCommand) Synopsis() string {
 
 func (c *TransitImportCommand) Help() string {
 	helpText := `
-Usage: vault transit import PATH KEY
+Usage: vault transit import PATH KEY [options...]
 
   Using the Transit or Transform key wrapping system, imports key material from
   the base64 encoded KEY, into a new key whose API path is PATH.  To import a new version
-  into an existing key, use import_version.  If your system or device natively supports
-  the RSA AES key wrap mechanism, you should use it directly rather than this command.
+  into an existing key, use import_version.  The remaining options after KEY (key=value style) are passed
+  on to the transit/transform create key endpoint.  If your system or device natively supports
+  the RSA AES key wrap mechanism, you should use it directly rather than this command. 
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
@@ -84,7 +84,7 @@ func importKey(c *BaseCommand, operation string, args []string) int {
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("failed to generate ephemeral key: %v", err))
 	}
-	parts := keyPath.FindStringSubmatch(flag.Args()[1])
+	parts := keyPath.FindStringSubmatch(args[0])
 	if len(parts) != 3 {
 		c.UI.Error("expected transit path and key name in the form :path:/keys/:name:")
 		return 1
@@ -92,19 +92,19 @@ func importKey(c *BaseCommand, operation string, args []string) int {
 	path := parts[1]
 	keyName := parts[2]
 
-	key, err := base64.StdEncoding.DecodeString(flag.Args()[2])
+	key, err := base64.StdEncoding.DecodeString(args[1])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("error base64 decoding source key material: %v", err))
 		return 1
 	}
 	// Fetch the wrapping key
-	c.UI.Info("Retrieving transit wrapping key.")
+	c.UI.Output("Retrieving transit wrapping key.")
 	wrappingKey, err := fetchWrappingKey(c, client, path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("failed to fetch wrapping key: %v", err))
 		return 2
 	}
-	c.UI.Info("Wrapping source key with ephemeral key.")
+	c.UI.Output("Wrapping source key with ephemeral key.")
 	wrapKWP, err := subtle.NewKWP(ephemeralAESKey)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("failure building key wrapping key: %v", err))
@@ -115,7 +115,7 @@ func importKey(c *BaseCommand, operation string, args []string) int {
 		c.UI.Error(fmt.Sprintf("failure wrapping source key: %v", err))
 		return 2
 	}
-	c.UI.Info("Encrypting ephemeral key with transit wrapping key.")
+	c.UI.Output("Encrypting ephemeral key with transit wrapping key.")
 	wrappedAESKey, err := rsa.EncryptOAEP(
 		sha256.New(),
 		rand.Reader,
@@ -133,19 +133,19 @@ func importKey(c *BaseCommand, operation string, args []string) int {
 	data := map[string]interface{}{
 		"ciphertext": importCiphertext,
 	}
-	for _, v := range flag.Args()[3:] {
+	for _, v := range args[2:] {
 		parts := strings.Split(v, "=")
 		data[parts[0]] = parts[1]
 	}
 
-	c.UI.Info("Submitting wrapped key to Vault transit.")
+	c.UI.Output("Submitting wrapped key to Vault transit.")
 	// Finally, call import
 	_, err = client.Logical().Write(path+"/keys/"+keyName+"/"+operation, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("failed to call import:%v", err))
 		return 3
 	} else {
-		c.UI.Info("Success!")
+		c.UI.Output("Success!")
 		return 0
 	}
 }
