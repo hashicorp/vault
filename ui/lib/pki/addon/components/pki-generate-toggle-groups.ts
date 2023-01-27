@@ -6,6 +6,7 @@ import PkiActionModel from 'vault/models/pki/action';
 
 interface Args {
   model: PkiActionModel;
+  groups: Map<[key: string], Array<string>> | null;
 }
 
 export default class PkiGenerateToggleGroupsComponent extends Component<Args> {
@@ -21,6 +22,7 @@ export default class PkiGenerateToggleGroupsComponent extends Component<Args> {
   }
 
   get groups() {
+    if (this.args.groups) return this.args.groups;
     const groups = {
       'Key parameters': this.keyParamFields,
       'Subject Alternative Name (SAN) Options': ['altNames', 'ipSans', 'uriSans', 'otherSans'],
