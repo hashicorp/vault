@@ -53,7 +53,6 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 
 		Paths: []*framework.Path{
 			pathConfigZeroAddress(&b),
-			pathKeys(&b),
 			pathListRoles(&b),
 			pathRoles(&b),
 			pathCredsCreate(&b),
@@ -112,8 +111,8 @@ const backendHelp = `
 The SSH backend generates credentials allowing clients to establish SSH
 connections to remote hosts.
 
-There are three variants of the backend, which generate different types of
-credentials: dynamic keys, One-Time Passwords (OTPs) and certificate authority. The desired behavior
+There are two variants of the backend, which generate different types of
+credentials: One-Time Passwords (OTPs) and certificate authority. The desired behavior
 is role-specific and chosen at role creation time with the 'key_type'
 parameter.
 
