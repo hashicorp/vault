@@ -213,7 +213,7 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(accessorHashes) != count {
-		t.Fatalf("bad: len(accessorHashes); expect %d, got %d", count, len(accessorHashes))
+		t.Fatalf("bad: len(accessorHashes); expect %d, got %d -> %v", count, len(accessorHashes), accessorHashes)
 	}
 
 	roleHMACs, err := storage.List(context.Background(), secretIDPrefix)

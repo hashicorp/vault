@@ -226,6 +226,8 @@ func (b *backend) nonLockedSetSecretIDStorageEntry(ctx context.Context, s logica
 
 	entryIndex := fmt.Sprintf("%s%s/%s", roleSecretIDPrefix, roleNameHMAC, secretIDHMAC)
 
+	b.Logger().Trace("writing secret entry", "hmac", secretIDHMAC)
+
 	if entry, err := logical.StorageEntryJSON(entryIndex, secretEntry); err != nil {
 		return err
 	} else if err = s.Put(ctx, entry); err != nil {
@@ -370,6 +372,8 @@ func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 		accessorPrefix = secretIDAccessorLocalPrefix
 	}
 	entryIndex := accessorPrefix + salt.SaltID(entry.SecretIDAccessor)
+
+	b.Logger().Trace("Writing secretID Accessor:", "accessor", salt.SaltID(entry.SecretIDAccessor), "hmac", secretIDHMAC)
 
 	accessorLock := b.secretIDAccessorLock(accessorUUID)
 	accessorLock.Lock()

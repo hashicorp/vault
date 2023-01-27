@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -137,6 +138,8 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 				return err
 			}
 
+			logger.Trace("got secret entry with accessor", "SecretIDAccessor", result.SecretIDAccessor, "hmac", secretIDHMAC)
+
 			// If a secret ID entry does not have a corresponding accessor
 			// entry, revoke the secret ID immediately
 			accessorEntry, err := b.secretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
@@ -144,7 +147,7 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 				return fmt.Errorf("failed to read secret ID accessor entry: %w", err)
 			}
 			if accessorEntry == nil {
-				logger.Trace("found nil accessor")
+				logger.Trace("found nil accessor", "entryIndex", entryIndex, "secretIDHmac", secretIDHMAC)
 				if err := s.Delete(ctx, entryIndex); err != nil {
 					return fmt.Errorf("error deleting secret ID %q from storage: %w", secretIDHMAC, err)
 				}
@@ -219,12 +222,16 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 					// determined that it should stay.
 					if _, ok := skipHashes[entry.saltedSecretIDAccessor]; ok {
 						continue
+					} else if !strings.HasPrefix(entry.saltedSecretIDAccessor, "invalid") {
+						logger.Trace("expected valid salted accessor to be MALSFJ")
 					}
 
 					// Don't clean up accessor index entry if referenced in role.
 					if _, ok := allSecretIDHMACs[entry.SecretIDHMAC]; ok {
 						continue
 					}
+
+					logger.Trace("found dangling accessor we want removed", "prefix", accessorIDPrefixToUse, "salted id", entry.saltedSecretIDAccessor)
 
 					if err := s.Delete(context.Background(), accessorIDPrefixToUse+entry.saltedSecretIDAccessor); err != nil {
 						return err
