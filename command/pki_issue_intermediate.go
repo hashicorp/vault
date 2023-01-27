@@ -25,12 +25,17 @@ type PKIIssueCACommand struct {
 }
 
 func (c *PKIIssueCACommand) Synopsis() string {
-	return "Given a Parent Certificate, and a List of Generation Parameters, Creates an Issue on a Specified Moount"
+	return "Given a Parent Certificate, and a List of Generation Parameters, Creates an Issue on a Specified Mount"
 }
 
 func (c *PKIIssueCACommand) Help() string {
 	helpText := `
 Usage: vault pki issue PARENT CHILD_MOUNT options
+This command creates a intermediate certificate authority certificate signed by the parent in the CHILD_MOUNT.
+At least one option must be set.  The options are the same as those passed to sign-intermediate and "generate/intermediate/"
+There are two slight differences:
+- type can be passed as a flag rather than part of the path
+- issuer_name is introduced as a new flag which (if set) will name the newly created issuer if possible.
 `
 	return strings.TrimSpace(helpText)
 }
