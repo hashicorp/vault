@@ -2,6 +2,7 @@ package command
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -159,7 +160,7 @@ func convertListOfInterfaceToString(list []interface{}, sep string) string {
 
 func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 	// Relationship Map to Create
-	//          pki-root			| pki-newroot
+	//          pki-root			| pki-newroot  | pki-empty
 	// RootX1    RootX2    RootX4     RootX3
 	//   |								 |
 	// ----------------------------------------------
@@ -201,6 +202,14 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 		t.Fatalf("pki mount error: %#v", err)
 	}
 
+	// Used to check handling empty list responses: Not Used for Any Issuers / Certificates
+	if err := client.Sys().Mount("pki-empty", &api.MountInput{
+		Type:   "pki",
+		Config: api.MountConfigInput{},
+	}); err != nil {
+		t.Fatalf("pki mount error: %#v", err)
+	}
+
 	resp, err := client.Logical().Write("pki-root/root/generate/internal", map[string]interface{}{
 		"key_type":    "ec",
 		"common_name": "Root X",
@@ -208,7 +217,7 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 		"issuer_name": "rootX1",
 		"key_name":    "rootX1",
 	})
-	t.Logf("%s", resp.Data)
+
 	if err != nil || resp == nil {
 		t.Fatalf("failed to prime CA: %v", err)
 	}
@@ -219,7 +228,7 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 		"ttl":         "3650d",
 		"issuer_name": "rootX2",
 	})
-	t.Logf("%s", resp.Data)
+
 	if err != nil || resp == nil {
 		t.Fatalf("failed to prime CA: %v", err)
 	}
@@ -251,6 +260,10 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 	if err != nil || int1CsrResp == nil {
 		t.Fatalf("failed to generate CSR: %v", err)
 	}
+	int1KeyId, ok := int1CsrResp.Data["key_id"]
+	if !ok {
+		t.Fatalf("no key_id produced when generating csr, response %v", int1CsrResp.Data)
+	}
 	int1CsrRaw, ok := int1CsrResp.Data["csr"]
 	if !ok {
 		t.Fatalf("no csr produced when generating intermediate, resp: %v", int1CsrResp)
@@ -277,17 +290,23 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 	if !ok {
 		t.Fatalf("no mapping data returned on issuer import: %v", importInt1Resp)
 	}
-	importIssuerId := ""
 	for key, value := range importIssuerIdMap.(map[string]interface{}) {
 		if value != nil && len(value.(string)) > 0 {
-			importIssuerId = key
-			break
+			if value != int1KeyId {
+				t.Fatalf("Expected exactly one key_match to %v, got multiple: %v", int1KeyId, importIssuerIdMap)
+			}
+			if resp, err := client.Logical().JSONMergePatch(context.Background(), "pki-int/issuer/"+key, map[string]interface{}{
+				"issuer_name": "intX1",
+			}); err != nil || resp == nil {
+				t.Fatalf("error naming issuer %v", err)
+			}
+		} else {
+			if resp, err := client.Logical().JSONMergePatch(context.Background(), "pki-int/issuer/"+key, map[string]interface{}{
+				"issuer_name": "rootX1",
+			}); err != nil || resp == nil {
+				t.Fatalf("error naming issuer parent %v", err)
+			}
 		}
-	}
-	if resp, err := client.Logical().Write("pki-int/issuer/"+importIssuerId, map[string]interface{}{
-		"issuer_name": "intX1",
-	}); err != nil || resp == nil {
-		t.Fatalf("error naming issuer %v", err)
 	}
 
 	// Intermediate X2
@@ -298,6 +317,10 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 	})
 	if err != nil || int2CsrResp == nil {
 		t.Fatalf("failed to generate CSR: %v", err)
+	}
+	int2KeyId, ok := int2CsrResp.Data["key_id"]
+	if !ok {
+		t.Fatalf("no key material returned from producing csr, resp: %v", int2CsrResp)
 	}
 	int2CsrRaw, ok := int2CsrResp.Data["csr"]
 	if !ok {
@@ -316,8 +339,7 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 	}
 	int2CertChain := convertListOfInterfaceToString(int2CertChainRaw.([]interface{}), "\n")
 	importInt2Resp, err := client.Logical().Write("pki-int/issuers/import/cert", map[string]interface{}{
-		"pem_bundle":  int2CertChain,
-		"issuer_name": "intX2",
+		"pem_bundle": int2CertChain,
 	})
 	if err != nil || importInt2Resp == nil {
 		t.Fatalf("failed to import certificate: %v", err)
@@ -326,17 +348,23 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 	if !ok {
 		t.Fatalf("no mapping data returned on issuer import: %v", importInt2Resp)
 	}
-	importIssuer2Id := ""
 	for key, value := range importIssuer2IdMap.(map[string]interface{}) {
 		if value != nil && len(value.(string)) > 0 {
-			importIssuer2Id = key
-			break
+			if value != int2KeyId {
+				t.Fatalf("unexpected key_match with ca_chain, expected only %v, got %v", int2KeyId, importIssuer2IdMap)
+			}
+			if resp, err := client.Logical().JSONMergePatch(context.Background(), "pki-int/issuer/"+key, map[string]interface{}{
+				"issuer_name": "intX2",
+			}); err != nil || resp == nil {
+				t.Fatalf("error naming issuer %v", err)
+			}
+		} else {
+			if resp, err := client.Logical().Write("pki-int/issuer/"+key, map[string]interface{}{
+				"issuer_name": "rootX3",
+			}); err != nil || resp == nil {
+				t.Fatalf("error naming parent issuer %v", err)
+			}
 		}
-	}
-	if resp, err := client.Logical().Write("pki-int/issuer/"+importIssuer2Id, map[string]interface{}{
-		"issuer_name": "intX2",
-	}); err != nil || resp == nil {
-		t.Fatalf("error naming issuer %v", err)
 	}
 
 	// Intermediate X3
@@ -348,6 +376,7 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 	if err != nil || int3CsrResp == nil {
 		t.Fatalf("failed to generate CSR: %v", err)
 	}
+	int3KeyId, ok := int3CsrResp.Data["key_id"]
 	int3CsrRaw, ok := int3CsrResp.Data["csr"]
 	if !ok {
 		t.Fatalf("no csr produced when generating intermediate, resp: %v", int3CsrResp)
@@ -375,17 +404,15 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 	if !ok {
 		t.Fatalf("no mapping data returned on issuer import: %v", importInt2Resp)
 	}
-	importIssuer3Id1 := ""
 	for key, value := range importIssuer3IdMap1.(map[string]interface{}) {
-		if value != nil && len(value.(string)) > 0 {
-			importIssuer3Id1 = key
+		if value != nil && len(value.(string)) > 0 && value == int3KeyId {
+			if resp, err := client.Logical().JSONMergePatch(context.Background(), "pki-int/issuer/"+key, map[string]interface{}{
+				"issuer_name": "intX3",
+			}); err != nil || resp == nil {
+				t.Fatalf("error naming issuer %v", err)
+			}
 			break
 		}
-	}
-	if resp, err := client.Logical().Write("pki-int/issuer/"+importIssuer3Id1, map[string]interface{}{
-		"issuer_name": "intX3",
-	}); err != nil || resp == nil {
-		t.Fatalf("error naming issuer %v", err)
 	}
 	// sign by intX2 and import
 	int3CertResp2, err := client.Logical().Write("pki-int/issuer/intX2/sign-intermediate", map[string]interface{}{
@@ -409,17 +436,15 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 	if !ok {
 		t.Fatalf("no mapping data returned on issuer import: %v", importInt2Resp)
 	}
-	importIssuer3Id2 := ""
 	for key, value := range importIssuer3IdMap2.(map[string]interface{}) {
-		if value != nil && len(value.(string)) > 0 {
-			importIssuer3Id2 = key
-			break
+		if value != nil && len(value.(string)) > 0 && value == int3KeyId {
+			if resp, err := client.Logical().JSONMergePatch(context.Background(), "pki-int/issuer/"+key, map[string]interface{}{
+				"issuer_name": "intX3also",
+			}); err != nil || resp == nil {
+				t.Fatalf("error naming issuer %v", err)
+			}
+			break // Parent Certs Already Named
 		}
-	}
-	if resp, err := client.Logical().Write("pki-int/issuer/"+importIssuer3Id2, map[string]interface{}{
-		"issuer_name": "intX3also",
-	}); err != nil || resp == nil {
-		t.Fatalf("error naming issuer %v", err)
 	}
 }
 
