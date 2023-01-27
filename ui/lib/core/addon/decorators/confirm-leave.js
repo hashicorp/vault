@@ -1,3 +1,4 @@
+import { action } from '@ember/object';
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import Ember from 'ember';
@@ -50,7 +51,7 @@ export function withConfirmLeave(modelPath = 'model', silentCleanupPaths) {
       _rollbackModel(modelPath) {
         const model = this.controller.get(modelPath);
         if (!model || !model.hasDirtyAttributes || model.isSaving) {
-          // we only want to rollback if the model is dirty and not saving
+          // we only want to complete rollback if the model is dirty and not saving
           return;
         }
         const method = model.isNew ? 'unloadRecord' : 'rollbackAttributes';
@@ -58,6 +59,7 @@ export function withConfirmLeave(modelPath = 'model', silentCleanupPaths) {
         return;
       }
 
+      @action
       willTransition(transition) {
         try {
           super.willTransition(...arguments);
@@ -67,33 +69,23 @@ export function withConfirmLeave(modelPath = 'model', silentCleanupPaths) {
         }
         const model = this.controller.get(modelPath);
 
-        // if the record is saving, we don't need to rollback
-        if (!model || !model.unloadRecord || model.isSaving) {
-          return;
-        }
-        if (model && model.hasDirtyAttributes) {
+        if (model && model.hasDirtyAttributes && !model.isSaving) {
           if (
             Ember.testing ||
             window.confirm(
               'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'
             )
           ) {
-            const method = model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-            model[method]();
-            silentCleanupPaths?.forEach((pathToModel) => {
-              this._rollbackModel(pathToModel);
-            });
-            return true;
+            this._rollbackModel(modelPath);
           } else {
             transition.abort();
             return false;
           }
-        } else {
-          silentCleanupPaths?.forEach((pathToModel) => {
-            this._rollbackModel(pathToModel);
-          });
-          return true;
         }
+        silentCleanupPaths?.forEach((pathToModel) => {
+          this._rollbackModel(pathToModel);
+        });
+        return true;
       }
     };
   };
