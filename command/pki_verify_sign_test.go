@@ -18,7 +18,7 @@ func TestPKIVerifySign(t *testing.T) {
 	defer closer()
 
 	// Relationship Map to Create
-	//          pki-root			| pki-newroot
+	//          pki-root			| pki-newroot | pki-empty
 	// RootX1    RootX2    RootX4     RootX3
 	//   |								 |
 	// ----------------------------------------------

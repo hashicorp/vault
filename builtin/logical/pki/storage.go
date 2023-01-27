@@ -33,7 +33,7 @@ const (
 	deltaCRLPathSuffix          = "-delta"
 	unifiedCRLPath              = "unified-crl"
 	unifiedDeltaCRLPath         = "unified-delta-crl"
-	unifiedCRLPathSuffix        = "-unified"
+	unifiedCRLPathPrefix        = "unified-"
 
 	autoTidyConfigPath = "config/auto-tidy"
 	clusterConfigPath  = "config/cluster"
@@ -1118,7 +1118,7 @@ func (sc *storageContext) resolveIssuerCRLPath(reference string, unified bool) (
 	if crlId, ok := crlConfig.IssuerIDCRLMap[issuer]; ok && len(crlId) > 0 {
 		path := fmt.Sprintf("crls/%v", crlId)
 		if unified {
-			path += unifiedCRLPathSuffix
+			path = unifiedCRLPathPrefix + path
 		}
 
 		return path, nil

@@ -19,7 +19,7 @@ the form of multiple types of policies and a fixed evaluation order.
 Vault's policy system has been expanded to support three types of policies:
 
 - `ACLs` - These are the [traditional Vault
-  policies](/docs/concepts/policies) and remain unchanged.
+  policies](/vault/docs/concepts/policies) and remain unchanged.
 
 - `Role Governing Policies (RGPs)` - RGPs are Sentinel policies that are tied
   to particular tokens, Identity entities, or Identity groups. They have access
@@ -35,7 +35,7 @@ to root token generation cannot support EGPs because it's already the mechanism
 of last resort if, for instance, all clients are locked out of Vault due to
 misconfigured EGPs.
 
-Like with ACLs, [root tokens](/docs/concepts/tokens#root-tokens)
+Like with ACLs, [root tokens](/vault/docs/concepts/tokens#root-tokens)
 are not subject to Sentinel policy checks.
 
 Sentinel execution should be considered to be significantly slower than normal
@@ -71,7 +71,7 @@ logged as warnings in Vault's server logs.
 ## MFA
 
 Sentinel policies support the [Identity-based MFA
-system](/docs/enterprise/mfa) in Vault Enterprise. Within a single
+system](/vault/docs/enterprise/mfa) in Vault Enterprise. Within a single
 request, multiple checks of any named MFA method will only trigger
 authentication behavior for that method once, regardless of whether its
 validity is checked via ACLs, RGPs, or EGPs.
@@ -89,7 +89,7 @@ able to glean from the original request alone.
 
 Sentinel policies can be configured via the `sys/policies/rgp/` and
 `sys/policies/egp/` endpoints; see [the
-documentation](/api-docs/system/policies) for more information.
+documentation](/vault/api-docs/system/policies) for more information.
 
 Once set, RGPs can be assigned to Identity entities and groups or to tokens
 just like ACL policies. As a result, they cannot share names with ACL policies.
@@ -105,9 +105,9 @@ effect on all requests.
 
 ## Properties and Examples
 
-See the [Examples](/docs/enterprise/sentinel/examples) page for examples
+See the [Examples](/vault/docs/enterprise/sentinel/examples) page for examples
 of Sentinel in action, and the
-[Properties](/docs/enterprise/sentinel/properties) page for detailed
+[Properties](/vault/docs/enterprise/sentinel/properties) page for detailed
 property documentation.
 
 ## Tutorial

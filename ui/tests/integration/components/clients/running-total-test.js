@@ -1424,7 +1424,6 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
   test('it renders with full monthly activity data', async function (assert) {
     this.set('byMonthActivityData', MONTHLY_ACTIVITY);
-    this.set('byMonthNewClients', NEW_ACTIVITY);
     this.set('totalUsageCounts', TOTAL_USAGE_COUNTS);
     const expectedTotalEntity = formatNumber([TOTAL_USAGE_COUNTS.entity_clients]);
     const expectedTotalNonEntity = formatNumber([TOTAL_USAGE_COUNTS.non_entity_clients]);
@@ -1436,11 +1435,11 @@ module('Integration | Component | clients/running-total', function (hooks) {
       <Clients::RunningTotal
       @chartLegend={{this.chartLegend}}
       @selectedAuthMethod={{this.selectedAuthMethod}}
-      // @lineChartData={{this.byMonthActivityData}}
-      // @barChartData={{this.byMonthNewClients}}
+      @byMonthActivityData={{this.byMonthActivityData}}
       @runningTotals={{this.totalUsageCounts}}
       @upgradeData={{this.upgradeDuringActivity}}
-      @timestamp={{this.timestamp}}
+      @responseTimestamp={{this.timestamp}}
+      @isHistoricalMonth={{false}}           
     />
     `);
 
@@ -1496,8 +1495,8 @@ module('Integration | Component | clients/running-total', function (hooks) {
   });
 
   test('it renders with no new monthly data', async function (assert) {
-    this.set('byMonthActivityData', MONTHLY_ACTIVITY);
-    this.set('byMonthNewClients', NEW_ACTIVITY);
+    const monthlyWithoutNew = MONTHLY_ACTIVITY.map((d) => ({ ...d, new_clients: { month: d.month } }));
+    this.set('byMonthActivityData', monthlyWithoutNew);
     this.set('totalUsageCounts', TOTAL_USAGE_COUNTS);
     const expectedTotalEntity = formatNumber([TOTAL_USAGE_COUNTS.entity_clients]);
     const expectedTotalNonEntity = formatNumber([TOTAL_USAGE_COUNTS.non_entity_clients]);
@@ -1507,12 +1506,12 @@ module('Integration | Component | clients/running-total', function (hooks) {
       <Clients::RunningTotal
       @chartLegend={{this.chartLegend}}
       @selectedAuthMethod={{this.selectedAuthMethod}}
-      @lineChartData={{this.byMonthActivityData}}
+      @byMonthActivityData={{this.byMonthActivityData}}
       @runningTotals={{this.totalUsageCounts}}
-      @timestamp={{this.timestamp}}
+      @responseTimestamp={{this.timestamp}}
+      @isHistoricalMonth={{false}} 
     />
     `);
-
     assert.dom('[data-test-running-total]').exists('running total component renders');
     assert.dom('[data-test-line-chart]').exists('line chart renders');
     assert.dom('[data-test-vertical-bar-chart]').doesNotExist('vertical bar chart does not render');
@@ -1528,17 +1527,16 @@ module('Integration | Component | clients/running-total', function (hooks) {
       .hasText(`${expectedTotalNonEntity}`, `renders correct new average ${expectedTotalNonEntity}`);
     assert
       .dom('[data-test-running-new-entity] p.data-details')
-      .hasText('0', 'renders 0 average new entity clients');
+      .doesNotExist('new client counts does not exist');
     assert
       .dom('[data-test-running-new-nonentity] p.data-details')
-      .hasText('0', 'renders 0 average entity clients');
+      .doesNotExist('average new client counts does not exist');
   });
 
   test('it renders with single historical month data', async function (assert) {
     const singleMonth = MONTHLY_ACTIVITY[MONTHLY_ACTIVITY.length - 1];
     const singleMonthNew = NEW_ACTIVITY[NEW_ACTIVITY.length - 1];
     this.set('singleMonth', [singleMonth]);
-    this.set('singleMonthNew', [singleMonthNew]);
     const expectedTotalClients = formatNumber([singleMonth.clients]);
     const expectedTotalEntity = formatNumber([singleMonth.entity_clients]);
     const expectedTotalNonEntity = formatNumber([singleMonth.non_entity_clients]);
@@ -1551,10 +1549,10 @@ module('Integration | Component | clients/running-total', function (hooks) {
       <Clients::RunningTotal
       @chartLegend={{this.chartLegend}}
       @selectedAuthMethod={{this.selectedAuthMethod}}
-      @lineChartData={{this.singleMonth}}
-      @barChartData={{this.singleMonthNew}}
+      @byMonthActivityData={{this.singleMonth}}
       @runningTotals={{this.totalUsageCounts}}
-      @timestamp={{this.timestamp}}
+      @responseTimestamp={{this.timestamp}}
+      @isHistoricalMonth={{true}}
     />
     `);
     assert.dom('[data-test-running-total]').exists('running total component renders');

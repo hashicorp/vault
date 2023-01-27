@@ -54,7 +54,7 @@ export default class LineChart extends Component {
     } else if (!Object.keys(upgradeData[0]).includes('timestampInstalled')) {
       // eslint-disable-next-line
       console.debug(
-        `upgrade must be an object with the following key names: ['id', 'previousVersion', 'timestampInstalled']`
+        `upgrade must be an object with the following key names: ['version', 'previousVersion', 'timestampInstalled']`
       );
       return null;
     } else {
@@ -184,9 +184,9 @@ export default class LineChart extends Component {
       this.tooltipUpgradeText = '';
       const upgradeInfo = findUpgradeData(data);
       if (upgradeInfo) {
-        const { id, previousVersion } = upgradeInfo;
+        const { version, previousVersion } = upgradeInfo;
         this.tooltipUpgradeText = `Vault was upgraded 
-        ${previousVersion ? 'from ' + previousVersion : ''} to ${id}`;
+        ${previousVersion ? 'from ' + previousVersion : ''} to ${version}`;
       }
 
       const node = hoverCircles.filter((plot) => plot[this.xKey] === data[this.xKey]).node();

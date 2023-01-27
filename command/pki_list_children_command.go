@@ -38,10 +38,17 @@ func (c *PKIListChildrenCommand) Help() string {
 Usage: vault pki list-intermediates PARENT [CHILD] [CHILD] [CHILD] ...
 PARENT is the certificate that might be the issuer that everything should be verified against.
 CHILD is a list of paths to certificates to be compared to the PARENT, or pki mounts to look for certificates on.  
+<<<<<<< HEAD
 If CHILD is omitted entirely, w list will be constructed from all accessible pki mounts.
 This returns a list of issuing certificates, and whether they are a match. 
 By default, the type of match required is whether the PARENT has the expected subject, key_id, and could have (directly)
 signed this issuer.  This can be updated by changed the corresponding flag.
+=======
+If CHILD is omitted entirely, the list will be constructed from all accessible pki mounts.
+This returns a list of issuing certificates, and whether they are a match. 
+By default, the type of match required is whether the PARENT has the expected subject, key_id, and could have (directly)
+signed this issuer.  The match criteria can be updated by changed the corresponding flag.
+>>>>>>> main
 `
 	return strings.TrimSpace(helpText)
 }
@@ -132,11 +139,12 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 	var issued []string
 	if len(args) > 1 {
 		for _, arg := range args[1:] {
+			cleanPath := sanitizePath(arg)
 			// Arg Might be a Fully Qualified Path
-			if strings.Contains(sanitizePath(arg), "/issuer/") ||
-				strings.Contains(sanitizePath(arg), "/certs/") ||
-				strings.Contains(sanitizePath(arg), "/revoked/") {
-				issued = append(issued, sanitizePath(arg))
+			if strings.Contains(cleanPath, "/issuer/") ||
+				strings.Contains(cleanPath, "/certs/") ||
+				strings.Contains(cleanPath, "/revoked/") {
+				issued = append(issued, cleanPath)
 			} else { // Or Arg Might be a Mount
 				mountCaList, err := c.getIssuerListFromMount(client, arg)
 				if err != nil {
