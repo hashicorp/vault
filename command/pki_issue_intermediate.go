@@ -224,7 +224,7 @@ func (c *PKIIssueCACommand) readAndOutputNewCertificate(client *api.Client, inte
 	resp, err := client.Logical().Read(sanitizePath(intermediateMount + "/issuer/" + issuerId))
 	if err != nil || resp == nil {
 		c.UI.Error(fmt.Sprintf("Error Reading Fully Imported Certificate from %v : %v",
-			intermediateMount+"issuer/"+issuerId, err))
+			intermediateMount+"/issuer/"+issuerId, err))
 	}
 
 	OutputSecret(c.UI, resp)
