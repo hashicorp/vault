@@ -53,7 +53,7 @@ func (c *PKIIssueCACommand) Flags() *FlagSets {
 		Target:  &c.flagNewIssuerName,
 		Default: "",
 		EnvVar:  "",
-		Usage:   `If present, the newly created issuer will be given this name`,
+		Usage:   `If present, the newly created issuer will be given this name.`,
 	})
 
 	return set
