@@ -37,7 +37,7 @@ func (c *PKIListChildrenCommand) Help() string {
 	helpText := `
 Usage: vault pki list-intermediates PARENT [CHILD] [CHILD] [CHILD] ...
 PARENT is the certificate that might be the issuer that everything should be verified against.
-CHILD is a list of paths to certificates to be compared to the PARENT, or pki mounts to look for certificates on.
+CHILD is a list of paths to certificates to be compared to the PARENT, or pki mounts to look for certificates on.  
 If CHILD is omitted entirely, the list will be constructed from all accessible pki mounts.
 This returns a list of issuing certificates, and whether they are a match. 
 By default, the type of match required is whether the PARENT has the expected subject, key_id, and could have (directly)
