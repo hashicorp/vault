@@ -5,7 +5,7 @@ import { tracked } from '@glimmer/tracking';
 import { isAfter, isBefore, isSameMonth, format } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-
+// my sincere apologies to the next dev who had to refactor/debug this
 export default class Dashboard extends Component {
   @service store;
   @service version;

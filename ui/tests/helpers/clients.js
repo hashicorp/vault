@@ -17,7 +17,6 @@ import { Response } from 'miragejs';
   License start date this month
 */
 export const SELECTORS = {
-  currentMonthActiveTab: '.active[data-test-current-month]',
   dashboardActiveTab: '.active[data-test-dashboard]',
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',
