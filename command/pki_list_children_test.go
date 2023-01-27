@@ -134,6 +134,64 @@ func TestPKIListChildren(t *testing.T) {
 			"",
 			"",
 		},
+		{
+			"rootX1-only-int-mount",
+			[]string{
+				"pki", "list-intermediates", "-format=json", "-use_names=true",
+				"-subject_match=false", "-key_id_match=false", "-direct_sign=false", "-indirect_sign=false", "-path_match=true",
+				"pki-root/issuer/rootX1", "pki-int/",
+			},
+			map[string]bool{
+				"pki-int/issuer/intX1":     true,
+				"pki-int/issuer/intX2":     false,
+				"pki-int/issuer/intX3":     true,
+				"pki-int/issuer/intX3also": false,
+				"pki-int/issuer/rootX1":    true,
+				"pki-int/issuer/rootX3":    false,
+			},
+			true,
+			false,
+			"",
+			"",
+			"",
+		},
+		{
+			"rootX1-subject-match-root-mounts-only",
+			[]string{
+				"pki", "list-intermediates", "-format=json", "-use_names=true",
+				"-key_id_match=false", "-direct_sign=false", "-indirect_sign=false",
+				"pki-root/issuer/rootX1", "pki-root/", "pki-newroot", "pki-empty",
+			},
+			map[string]bool{
+				"pki-root/issuer/rootX1":    true,
+				"pki-root/issuer/rootX2":    true,
+				"pki-newroot/issuer/rootX3": true,
+				"pki-root/issuer/rootX4":    false,
+			},
+			true,
+			false,
+			"",
+			"",
+			"",
+		},
+		{
+			"rootX1-subject-match-these-certs-only",
+			[]string{
+				"pki", "list-intermediates", "-format=json", "-use_names=true",
+				"-key_id_match=false", "-direct_sign=false", "-indirect_sign=false",
+				"pki-root/issuer/rootX1", "pki-root/issuer/rootX2", "pki-newroot/issuer/rootX3", "pki-root/issuer/rootX4",
+			},
+			map[string]bool{
+				"pki-root/issuer/rootX2":    true,
+				"pki-newroot/issuer/rootX3": true,
+				"pki-root/issuer/rootX4":    false,
+			},
+			true,
+			false,
+			"",
+			"",
+			"",
+		},
 	}
 	for _, testCase := range cases {
 		var errString string
