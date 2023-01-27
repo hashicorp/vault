@@ -102,9 +102,10 @@ type crlBuilder struct {
 
 	// Global revocation queue entries get accepted by the invalidate func
 	// and passed to the crlBuilder for processing.
-	haveInitializedQueue bool
+	haveInitializedQueue *atomic2.Bool
 	revQueue             *revocationQueue
 	removalQueue         *revocationQueue
+	crossQueue           *revocationQueue
 }
 
 const (
@@ -123,8 +124,10 @@ func newCRLBuilder(canRebuild bool) *crlBuilder {
 		dirty:                 atomic2.NewBool(true),
 		config:                defaultCrlConfig,
 		invalidate:            atomic2.NewBool(false),
+		haveInitializedQueue:  atomic2.NewBool(false),
 		revQueue:              newRevocationQueue(),
 		removalQueue:          newRevocationQueue(),
+		crossQueue:            newRevocationQueue(),
 	}
 }
 
@@ -173,6 +176,19 @@ func (cb *crlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 	}
 
 	return nil
+}
+
+func (cb *crlBuilder) notifyOnConfigChange(sc *storageContext, priorConfig crlConfig, newConfig crlConfig) {
+	// If you need to hook into a CRL configuration change across different server types
+	// such as primary clusters as well as performance replicas, it is easier to do here than
+	// in two places (API layer and in invalidateFunc)
+	if priorConfig.UnifiedCRL != newConfig.UnifiedCRL && newConfig.UnifiedCRL {
+		sc.Backend.unifiedTransferStatus.forceRun()
+	}
+
+	if priorConfig.UseGlobalQueue != newConfig.UseGlobalQueue && newConfig.UseGlobalQueue {
+		cb.haveInitializedQueue.Store(false)
+	}
 }
 
 func (cb *crlBuilder) getConfigWithUpdate(sc *storageContext) (*crlConfig, error) {
@@ -568,9 +584,17 @@ func (cb *crlBuilder) addCertForRevocationRemoval(cluster, serial string) {
 	cb.removalQueue.Add(entry)
 }
 
+func (cb *crlBuilder) addCertFromCrossRevocation(cluster, serial string) {
+	entry := &revocationQueueEntry{
+		Cluster: cluster,
+		Serial:  serial,
+	}
+	cb.crossQueue.Add(entry)
+}
+
 func (cb *crlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotPerfPrimary bool) error {
 	// Assume holding lock.
-	if cb.haveInitializedQueue {
+	if cb.haveInitializedQueue.Load() {
 		return nil
 	}
 
@@ -629,14 +653,6 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 
 	isNotPerfPrimary := sc.Backend.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
 		(!sc.Backend.System().LocalMount() && sc.Backend.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
-
-	// Before revoking certificates, we need to hold the lock for certificate
-	// storage. This prevents any parallel revocations and prevents us from
-	// multiple places. We do this before grabbing the contents of the
-	// revocation queues themselves, to ensure we interleave well with other
-	// invocations of this function and avoid duplicate work.
-	sc.Backend.revokeStorageLock.Lock()
-	defer sc.Backend.revokeStorageLock.Unlock()
 
 	if err := cb.maybeGatherQueueForFirstProcess(sc, isNotPerfPrimary); err != nil {
 		return fmt.Errorf("failed to gather first queue: %v", err)
@@ -718,7 +734,7 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 
 		// See note in pki/backend.go; this should be empty.
 		cb.removalQueue.RemoveAll()
-		cb.haveInitializedQueue = true
+		cb.haveInitializedQueue.Store(true)
 		return nil
 	}
 
@@ -744,18 +760,71 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 		cb.removalQueue.Remove(entry)
 	}
 
-	cb.haveInitializedQueue = true
+	cb.haveInitializedQueue.Store(true)
 
 	return nil
 }
 
-func (cb *crlBuilder) notifyOnConfigChange(sc *storageContext, priorConfig crlConfig, newConfig crlConfig) {
-	// If you need to hook into a CRL configuration change across different server types
-	// such as primary clusters as well as performance replicas, it is easier to do here than
-	// in two places (API layer and in invalidateFunc)
-	if priorConfig.UnifiedCRL != newConfig.UnifiedCRL && newConfig.UnifiedCRL {
-		sc.Backend.unifiedTransferStatus.forceRun()
+func (cb *crlBuilder) processCrossClusterRevocations(sc *storageContext) error {
+	sc.Backend.Logger().Debug(fmt.Sprintf("starting to process unified revocations"))
+
+	crlConfig, err := cb.getConfigWithUpdate(sc)
+	if err != nil {
+		return err
 	}
+
+	if !crlConfig.UnifiedCRL {
+		cb.crossQueue.RemoveAll()
+		return nil
+	}
+
+	crossQueue := cb.crossQueue.Iterate()
+	sc.Backend.Logger().Debug(fmt.Sprintf("gathered %v unified revocations entries", len(crossQueue)))
+
+	ourClusterId, err := sc.Backend.System().ClusterID(sc.Context)
+	if err != nil {
+		return fmt.Errorf("unable to fetch clusterID to ignore local unified revocation entries: %w", err)
+	}
+
+	for _, req := range crossQueue {
+		// Regardless of whether we're on the perf primary or a secondary
+		// cluster, we can safely ignore revocation requests originating
+		// from our node, because we've already checked them once (when
+		// they were created).
+		if ourClusterId != "" && ourClusterId == req.Cluster {
+			continue
+		}
+
+		// Fetch the revocation entry to ensure it exists and this wasn't
+		// a delete.
+		rPath := unifiedRevocationReadPathPrefix + req.Cluster + "/" + req.Serial
+		entry, err := sc.Storage.Get(sc.Context, rPath)
+		if err != nil {
+			return fmt.Errorf("failed to read unified revocation entry: %w", err)
+		}
+		if entry == nil {
+			// Skip this entry: it was likely caused by the deletion of this
+			// record during tidy.
+			cb.crossQueue.Remove(req)
+			continue
+		}
+
+		resp, err := tryRevokeCertBySerial(sc, crlConfig, req.Serial)
+		if err == nil && resp != nil && !resp.IsError() && resp.Data != nil && resp.Data["state"].(string) == "revoked" {
+			// We could theoretically save ourselves from writing a global
+			// revocation entry during the above certificate revocation, as
+			// we don't really need it to appear on either the unified CRL
+			// or its delta CRL, but this would require more plumbing.
+			cb.crossQueue.Remove(req)
+		} else if err != nil {
+			// Because we fake being from a lease, we get the guarantee that
+			// err == nil == resp if the cert was already revoked; this means
+			// this err should actually be fatal.
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Helper function to fetch a map of issuerID->parsed cert for revocation
@@ -805,6 +874,10 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509
 // Revoke a certificate from a given serial number if it is present in local
 // storage.
 func tryRevokeCertBySerial(sc *storageContext, config *crlConfig, serial string) (*logical.Response, error) {
+	// revokeCert requires us to hold these locks before calling it.
+	sc.Backend.revokeStorageLock.Lock()
+	defer sc.Backend.revokeStorageLock.Unlock()
+
 	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
 	if err != nil {
 		switch err.(type) {
