@@ -60,7 +60,8 @@ var (
 		}
 	}
 
-	entPaths = func(b *SystemBackend) []*framework.Path {
+	entPaths     = entStubPaths
+	entStubPaths = func(b *SystemBackend) []*framework.Path {
 		buildEnterpriseOnlyPaths := func(paths map[string][]logical.Operation) []*framework.Path {
 			var results []*framework.Path
 			for pattern, operations := range paths {
@@ -196,6 +197,7 @@ var (
 		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
 			"storage/raft/snapshot-auto/config/":                                      {logical.ListOperation},
 			"storage/raft/snapshot-auto/config/" + framework.GenericNameRegex("name"): {logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation},
+			"storage/raft/snapshot-auto/status/" + framework.GenericNameRegex("name"): {logical.ReadOperation},
 		})...)
 
 		paths = append(paths, buildEnterpriseOnlyPaths(map[string][]logical.Operation{
