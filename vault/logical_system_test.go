@@ -3375,7 +3375,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 
 func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
-	paths := b.(*SystemBackend).internalPaths()
+	systemBackend := b.(*SystemBackend)
 
 	// Ensure no entries are in the endpoint as a starting point
 	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
@@ -3385,7 +3385,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 2, req.Operation),
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -3406,7 +3406,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 2, req.Operation),
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -3539,7 +3539,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 2, req.Operation),
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
