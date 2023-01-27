@@ -794,7 +794,7 @@ func manualVerify(depth int, t *testing.T, p *Policy, input []byte, sig *Signing
 	t.Log(tabs, "Manually verifying signature with options:", options)
 
 	tabs = strings.Repeat("\t", depth+1)
-	verified, err := p.VerifySignatureWithOptions(nil, input, sig.Signature, &options)
+	verified, err := p.VerifySignatureWithOptions(nil, input, sig.Signature, &options, nil)
 	if err != nil {
 		t.Fatal(tabs, "❌ Failed to manually verify signature:", err)
 	}
@@ -874,7 +874,7 @@ func Test_RSA_PSS(t *testing.T) {
 			t.Log(tabs[5], "Salt length:", saltLength)
 			saltedOptions := saltOptions(unsaltedOptions, saltLength)
 
-			verified, _ := p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions)
+			verified, _ := p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions, nil)
 			if verified {
 				t.Fatal(tabs[6], "❌ Failed to invalidate", verified, "signature using incorrect salt length:", err)
 			}
@@ -889,14 +889,14 @@ func Test_RSA_PSS(t *testing.T) {
 
 			// 2.1. Fail to sign.
 			t.Log(tabs[5], "Try to make a manual signature")
-			_, err := p.SignWithOptions(0, nil, input, &saltedOptions)
+			_, err := p.SignWithOptions(0, nil, input, &saltedOptions, nil)
 			if !errors.As(err, &userError) {
 				t.Fatal(tabs[6], "❌ Failed to reject invalid salt length:", err)
 			}
 
 			// 2.2. Fail to verify.
 			t.Log(tabs[5], "Try to verify an automatic signature using an invalid salt length")
-			_, err = p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions)
+			_, err = p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions, nil)
 			if !errors.As(err, &userError) {
 				t.Fatal(tabs[6], "❌ Failed to reject invalid salt length:", err)
 			}
@@ -912,7 +912,7 @@ func Test_RSA_PSS(t *testing.T) {
 
 			// 3.1. Make a "manual" signature with the given key size, hash algorithm, and salt length.
 			t.Log(tabs[5], "Make a manual signature")
-			sig, err := p.SignWithOptions(0, nil, input, &saltedOptions)
+			sig, err := p.SignWithOptions(0, nil, input, &saltedOptions, nil)
 			if err != nil {
 				t.Fatal(tabs[6], "❌ Failed to manually sign:", err)
 			}
