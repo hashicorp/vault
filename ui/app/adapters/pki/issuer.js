@@ -4,6 +4,11 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 export default class PkiIssuerAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
+  _getBackend(snapshot) {
+    const { record, adapterOptions } = snapshot;
+    return adapterOptions?.mount || record.backend;
+  }
+
   optionsForQuery(id) {
     const data = {};
     if (!id) {
@@ -19,6 +24,24 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     } else {
       return `${baseUrl}/issuers`;
     }
+  }
+
+  createRecord(store, type, snapshot) {
+    let url = this.urlForQuery(this._getBackend(snapshot));
+    if (snapshot.adapterOptions.import) {
+      url = `${url}/import/bundle`;
+    }
+    return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
+      return resp;
+    });
+  }
+
+  updateRecord(store, type, snapshot) {
+    const { issuerId } = snapshot.record;
+    const backend = this._getBackend(snapshot);
+    const data = this.serialize(snapshot);
+    const url = this.urlForQuery(backend, issuerId);
+    return this.ajax(url, 'POST', { data });
   }
 
   query(store, type, query) {

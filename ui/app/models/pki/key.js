@@ -51,7 +51,7 @@ export default class PkiKeyModel extends Model {
    * Default to show UI elements unless we know they can't access the given path
    */
 
-  @lazyCapabilities(apiPath`${'backend'}/key/${'key_id'}`, 'backend', 'key_id') keyPath;
+  @lazyCapabilities(apiPath`${'backend'}/key/${'keyId'}`, 'backend', 'keyId') keyPath;
   get canRead() {
     return this.keyPath.get('canRead') !== false;
   }

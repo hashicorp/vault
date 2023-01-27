@@ -212,6 +212,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.EnableResponseHeaderHostname = opts.EnableResponseHeaderHostname
 	conf.DisableSSCTokens = opts.DisableSSCTokens
 	conf.PluginDirectory = opts.PluginDirectory
+	conf.DetectDeadlocks = opts.DetectDeadlocks
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -1114,6 +1115,20 @@ func (c *TestClusterCore) stop() error {
 	return nil
 }
 
+func (c *TestClusterCore) GrabRollbackLock() {
+	// Ensure we don't hold this lock while there are in flight rollbacks.
+	c.rollback.inflightAll.Wait()
+	c.rollback.inflightLock.Lock()
+}
+
+func (c *TestClusterCore) ReleaseRollbackLock() {
+	c.rollback.inflightLock.Unlock()
+}
+
+func (c *TestClusterCore) TriggerRollbacks() {
+	c.rollback.triggerRollbacks()
+}
+
 func (c *TestCluster) Cleanup() {
 	c.Logger.Info("cleaning up vault cluster")
 	if tl, ok := c.Logger.(*TestLogger); ok {
@@ -1382,6 +1397,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	var baseAddr *net.TCPAddr
 	if opts != nil && opts.BaseListenAddress != "" {
 		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
+
 		if err != nil {
 			t.Fatal("could not parse given base IP")
 		}
@@ -1633,6 +1649,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if base != nil {
+		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
 		coreConfig.DisableCache = base.DisableCache
 		coreConfig.EnableUI = base.EnableUI

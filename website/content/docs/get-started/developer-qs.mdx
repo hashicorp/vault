@@ -20,14 +20,14 @@ For an out-of-the-box runnable demo application showcasing these concepts and mo
 
 ## Prerequisites
 
-- [Docker](https://docs.docker.com/get-docker/) or a [local installation](https://learn.hashicorp.com/tutorials/vault/getting-started-install?in=vault/getting-started) of the Vault binary
+- [Docker](https://docs.docker.com/get-docker/) or a [local installation](/vault/tutorials/getting-started/getting-started-install) of the Vault binary
 - A development environment applicable to one of the languages in this quick start (currently **Go**, **Ruby**, **C#**, **Python**, **Java (Spring)**, and **Bash (curl)**)
 
 -> **Note**: Make sure you are using the [latest version](https://docs.docker.com/engine/release-notes/) of Docker. Older versions may not work. As of 1.12.0, the recommended version of Docker is 20.10.17 or higher.
 
 ## Step 1: Start Vault
 
-!> **Warning**: This in-memory “dev” server is useful for practicing with Vault locally for the first time, but is insecure and **should never be used in production**. For developers who need to manage their own production Vault installations, this [page](https://learn.hashicorp.com/tutorials/vault/production-hardening) provides some guidance on how to make your setup more production-friendly.
+!> **Warning**: This in-memory “dev” server is useful for practicing with Vault locally for the first time, but is insecure and **should never be used in production**. For developers who need to manage their own production Vault installations, this [page](/vault/tutorials/operations/production-hardening) provides some guidance on how to make your setup more production-friendly.
 
 Run the Vault server in a non-production "dev" mode in one of the following ways:
 
@@ -45,7 +45,7 @@ $ vault server -dev -dev-root-token-id="dev-only-token"
 
 The `-dev-root-token-id` flag for dev servers tells the Vault server to allow full root access to anyone who presents a token with the specified value (in this case "dev-only-token").
 
-!> **Warning**: The [root token](https://www.vaultproject.io/docs/concepts/tokens#root-tokens) is useful for development, but allows full access to all data and functionality of Vault, so it must be carefully guarded in production. Ideally, even an administrator of Vault would use their own token with limited privileges instead of the root token.
+!> **Warning**: The [root token](/vault/docs/concepts/tokens#root-tokens) is useful for development, but allows full access to all data and functionality of Vault, so it must be carefully guarded in production. Ideally, even an administrator of Vault would use their own token with limited privileges instead of the root token.
 
 Vault is now listening over HTTP on port **8200**. With all the setup out of the way, it's time to get coding!
 
@@ -174,7 +174,7 @@ import org.springframework.vault.core.VaultTemplate;
 
 ## Step 3: Authenticate to Vault
 
-A variety of [authentication methods](/docs/auth) can be used to prove your application's identity to the Vault server. To explore more secure authentication methods, such as via Kubernetes or your cloud provider, see the auth code snippets in the [vault-examples](https://github.com/hashicorp/vault-examples) repository.
+A variety of [authentication methods](/vault/docs/auth) can be used to prove your application's identity to the Vault server. To explore more secure authentication methods, such as via Kubernetes or your cloud provider, see the auth code snippets in the [vault-examples](https://github.com/hashicorp/vault-examples) repository.
 
 To keep things simple for our example, we'll just use the root token created in **Step 1**.
 Paste the following code to initialize a new Vault client that will use token-based authentication for all its requests:
@@ -306,7 +306,7 @@ curl \
 
 </CodeTabs>
 
-A common way of storing secrets is as key-value pairs using the [KV secrets engine (v2)](/docs/secrets/kv/kv-v2). In the code we've just added, `password` is the key in the key-value pair, and `Hashi123` is the value.
+A common way of storing secrets is as key-value pairs using the [KV secrets engine (v2)](/vault/docs/secrets/kv/kv-v2). In the code we've just added, `password` is the key in the key-value pair, and `Hashi123` is the value.
 
 We also provided the path to our secret in Vault. We will reference this path in a moment when we learn how to retrieve our secret.
 
@@ -428,4 +428,4 @@ For more secure examples of client authentication, see the auth snippets in the 
 
 For a runnable demo app that demonstrates more features, for example, how to keep your connection to Vault alive and how to connect to a database using Vault's dynamic database credentials, see the sample application hello-vault ([Go](https://github.com/hashicorp/hello-vault-go), [C#](https://github.com/hashicorp/hello-vault-dotnet)).
 
-To learn how to integrate applications with Vault without needing to always change your application code, see the [Vault Agent](https://www.vaultproject.io/docs/agent) documentation.
+To learn how to integrate applications with Vault without needing to always change your application code, see the [Vault Agent](/vault/docs/agent) documentation.

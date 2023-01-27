@@ -88,24 +88,24 @@ Let's take a closer look at a snippet from the above main package.
 
 The call to `plugin.ServeMultiplex` ensures that the plugin will use
 Vault's [plugin
-multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing) feature.
+multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing) feature.
 However, this plugin will not be multiplexed if it is run by a version of Vault
 that does not support multiplexing. Vault will simply fall back to a plugin
 version that it can run. Additionally, we set the `TLSProviderFunc` to ensure
 that our plugin is backwards compatible with versions of Vault that do not
 support automatic mutual TLS for secure [plugin
-communication](/docs/plugins/plugin-architecture#plugin-communication). If you
+communication](/vault/docs/plugins/plugin-architecture#plugin-communication). If you
 are certain your plugin does not need backwards compatibility, this field can
 be omitted.
 
-[api_addr]: /docs/configuration#api_addr
+[api_addr]: /vault/docs/configuration#api_addr
 
 ## Building a Plugin from Source
 
 To build a plugin from source, first navigate to the location holding the
 desired plugin version. Next, run `go build` to obtain a new binary for the
 plugin. Finally,
-[register](/docs/plugins/plugin-architecture#plugin-registration) the
+[register](/vault/docs/plugins/plugin-architecture#plugin-registration) the
 plugin and enable it.
 
 ## Plugin Development - Resources
@@ -117,10 +117,10 @@ tutorial.
 Other HashiCorp plugin development resources:
 
 * [vault-auth-plugin-example](https://github.com/hashicorp/vault-auth-plugin-example)
-* [Custom Secrets Engines](https://learn.hashicorp.com/collections/vault/custom-secrets-engine)
+* [Custom Secrets Engines](/vault/tutorials/custom-secrets-engine)
 
 ### Plugin Development - Resources - Community
 
-See the [Plugin Portal](/docs/plugins/plugin-portal#community) to find
+See the [Plugin Portal](/vault/docs/plugins/plugin-portal#community) to find
 Community plugin examples/guides developed by community members. HashiCorp does
 not validate these for correctness.

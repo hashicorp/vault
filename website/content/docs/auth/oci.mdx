@@ -101,7 +101,7 @@ Create the Vault admin role:
 
 You will see a response that includes a token with the previously added policy.
 
-1.  Use the received token to read secrets, writer secrets, and add roles per the instructions in [/docs/secrets/kv/kv-v1](/docs/secrets/kv/kv-v1).
+1.  Use the received token to read secrets, writer secrets, and add roles per the instructions in [/docs/secrets/kv/kv-v1](/vault/docs/secrets/kv/kv-v1).
 1.  Log into Vault using the user API key.
 
     - [Add an API Key](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/apisigningkey.htm) for a user in the console. This user should be part of a group that has previously been added to the Vault admin role.
@@ -111,7 +111,7 @@ You will see a response that includes a token with the previously added policy.
 
       `vault login -method=oci auth_type=apikey role=vaultadminrole`
 
-1.  Stop Vault and re-start it in the production environment. See [the configuration docs](/docs/configuration/) for more information.
+1.  Stop Vault and re-start it in the production environment. See [the configuration docs](/vault/docs/configuration/) for more information.
 1.  Repeat all steps in this [Configure the OCI Auth Method](#configure-the-oci-auth-method) section while in the production environment.
 
 ### Manage Roles in the OCI Auth method
@@ -199,4 +199,4 @@ POST http://127.0.0.1/v1/auth/oci/login/devrole
 
 ## API
 
-The OCI Auth method has a full HTTP API. Please see the [API docs](/api-docs/auth/oci) for more details.
+The OCI Auth method has a full HTTP API. Please see the [API docs](/vault/api-docs/auth/oci) for more details.

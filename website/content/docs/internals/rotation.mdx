@@ -9,7 +9,7 @@ description: Learn about the details of key rotation within Vault.
 Vault has multiple encryption keys that are used for various purposes. These keys support
 rotation so that they can be periodically changed or in response to a potential leak or
 compromise. It is useful to first understand the
-[high-level architecture](/docs/internals/architecture) before learning about key rotation.
+[high-level architecture](/vault/docs/internals/architecture) before learning about key rotation.
 
 As a review, Vault starts in a _sealed_ state. Vault is unsealed by providing the unseal keys.
 By default, Vault uses a technique known as [Shamir's secret sharing algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing)

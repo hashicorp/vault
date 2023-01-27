@@ -31,7 +31,7 @@ configured Sinks, subject to their configuration.
 
 Sinks support some advanced features, including the ability for the written
 values to be encrypted or
-[response-wrapped](/docs/concepts/response-wrapping).
+[response-wrapped](/vault/docs/concepts/response-wrapping).
 
 Both mechanisms can be used concurrently; in this case, the value will be
 response-wrapped, then encrypted.
@@ -110,7 +110,7 @@ The top level `auto_auth` block has two configuration entries:
 Agent does not track the number of uses remaining, and may allow the token to
 expire before attempting to renew it. For example, if using AppRole auto-auth,
 you must use 0 (meaning unlimited) as the value for
-[`token_num_uses`](https://www.vaultproject.io/api-docs/auth/approle#token_num_uses).
+[`token_num_uses`](/vault/api-docs/auth/approle#token_num_uses).
 
 These are common configuration values that live within the `method` block:
 
@@ -135,14 +135,14 @@ These are common configuration values that live within the `method` block:
   automatically reauthenticate when it expires. Rather than a simple string,
   the written value will be a JSON-encoded
   [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
-  structure. Uses [duration format strings](/docs/concepts/duration-format).
+  structure. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 - `min_backoff` `(string or integer: "1s")` - The minimum backoff time Agent
   will delay before retrying after a failed auth attempt. The backoff will start
   at the configured value and double (with some randomness) after successive
   failures, capped by `max_backoff.` If Agent templating is being used, this
   value is also used as the min backoff time for the templating server.
-  Uses [duration format strings](/docs/concepts/duration-format).
+  Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 - `max_backoff` `(string or integer: "5m")` - The maximum time Agent will delay
   before retrying after a failed auth attempt. The backoff will start at
@@ -150,7 +150,7 @@ These are common configuration values that live within the `method` block:
   capped by `max_backoff.` If Agent templating is being used, this value is also
   used as the max backoff time for the templating server. `max_backoff` is the
   duration between retries, and **not** the duration that retries will be
-  performed before giving up. Uses [duration format strings](/docs/concepts/duration-format).
+  performed before giving up. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 - `exit_on_err` `(bool: false)` - When set to true, Vault Agent will exit if any 
   errors occur during authentication. This configurable only affects login attempts 
@@ -173,7 +173,7 @@ These configuration values are common to all Sinks:
   reauthenticate when it expires. Rather than a simple string, the written
   value will be a JSON-encoded
   [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
-  structure. Uses [duration format strings](/docs/concepts/duration-format).
+  structure. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 - `dh_type` `(string: optional)` - If specified, the type of Diffie-Hellman exchange to
   perform, meaning, which ciphers and/or curves. Currently only `curve25519` is

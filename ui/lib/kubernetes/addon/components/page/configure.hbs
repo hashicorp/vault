@@ -1,0 +1,120 @@
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Configure kubernetes
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<hr class="is-marginless has-background-gray-200" />
+
+<p class="has-top-margin-m">
+  To customize your configuration, specify the type of Kubernetes cluster that credentials will be generated for.
+</p>
+
+<div class="is-flex-row has-top-margin-s">
+  <RadioCard
+    class="has-fixed-width"
+    @title="Local cluster"
+    @description="Generate credentials for the local Kubernetes cluster that Vault is running on, using Vault’s service account."
+    @icon="kubernetes-color"
+    @value={{false}}
+    @groupValue={{@model.disableLocalCaJwt}}
+    @onChange={{this.onRadioSelect}}
+    data-test-radio-card="local"
+  />
+  <RadioCard
+    class="has-fixed-width"
+    @title="Manual configuration"
+    @description="Generate credentials for an external Kubernetes cluster, using a service account that you specify."
+    @icon="vault"
+    @iconClass="has-text-black"
+    @value={{true}}
+    @groupValue={{@model.disableLocalCaJwt}}
+    @onChange={{this.onRadioSelect}}
+    data-test-radio-card="manual"
+  />
+</div>
+
+<div class="has-top-margin-m" data-test-config>
+  {{#if @model.disableLocalCaJwt}}
+    <MessageError @errorMessage={{this.error}} />
+    {{#each @model.formFields as |attr|}}
+      <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+    {{/each}}
+  {{else if (eq this.inferredState "success")}}
+    <Icon @name="check-circle-fill" class="has-text-green" />
+    <span>Configuration values were inferred successfully.</span>
+  {{else if (eq this.inferredState "error")}}
+    <Icon @name="x-square-fill" class="has-text-red" />
+    <span class="has-text-red">
+      Vault could not infer a configuration from your environment variables. Check your configuration file to edit or delete
+      them, or configure manually.
+    </span>
+  {{else}}
+    <p>
+      Configuration values can be inferred from the pod and your local environment variables.
+    </p>
+    <div>
+      <button
+        class="button has-top-margin-s {{if this.fetchInferred.isRunning 'is-loading'}}"
+        type="button"
+        disabled={{this.fetchInferred.isRunning}}
+        {{on "click" (perform this.fetchInferred)}}
+      >
+        Get config values
+      </button>
+    </div>
+  {{/if}}
+</div>
+
+<hr class="has-background-gray-200 has-top-margin-l" />
+
+<div class="has-top-margin-s has-bottom-margin-s">
+  <button
+    data-test-config-save
+    class="button is-primary"
+    type="button"
+    disabled={{this.isDisabled}}
+    {{on "click" (perform this.save)}}
+  >
+    Save
+  </button>
+  <button
+    data-test-config-cancel
+    class="button has-left-margin-xs"
+    type="button"
+    disabled={{or this.save.isRunning this.fetchInferred.isRunning}}
+    {{on "click" this.cancel}}
+  >
+    Back
+  </button>
+</div>
+
+{{#if this.showConfirm}}
+  <Modal
+    @title="Edit configuration"
+    @type="warning"
+    @isActive={{this.showConfirm}}
+    @showCloseButton={{true}}
+    @onClose={{fn (mut this.showConfirm) false}}
+  >
+    <section class="modal-card-body">
+      <p>
+        Making changes to your configuration may affect how Vault will reach the Kubernetes API and authenticate with it. Are
+        you sure?
+      </p>
+    </section>
+    <footer class="modal-card-foot modal-card-foot-outlined">
+      <button data-test-config-confirm type="button" class="button is-primary" {{on "click" (perform this.save)}}>
+        Confirm
+      </button>
+      <button type="button" class="button" onclick={{fn (mut this.showConfirm) false}}>
+        Cancel
+      </button>
+    </footer>
+  </Modal>
+{{/if}}

@@ -51,7 +51,7 @@ of secret that's being rendered by this function, template will have different
 renewal behavior as detailed in the [Renewals
 section](#renewals-and-updating-secrets). The `pkiCert` function is intended to
 work specifically for certificates issued by the [PKI Secrets
-Engine](/docs/secrets/pki). Refer to the [Certificates](#certificates) section
+Engine](/vault/docs/secrets/pki). Refer to the [Certificates](#certificates) section
 for differences in certificate renewal behavior between `secret` and `pkiCert`.
 
 The following links contain additional resources for the templating language used by Vault Agent templating.
@@ -104,7 +104,7 @@ failures.
 - `static_secret_render_interval` `(string or integer: 5m)` - If specified, configures
   how often Vault Agent Template should render non-leased secrets such as KV v2.
   This setting will not change how often Vault Agent Templating renders leased
-  secrets. Uses [duration format strings](/docs/concepts/duration-format).
+  secrets. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 ### `template_config` Stanza Example
 
@@ -115,7 +115,7 @@ template_config {
 }
 ```
 
-In another example `template_config` with [`error_on_missing_key` parameter in the template stanza](/docs/agent/template#error_on_missing_key)
+In another example `template_config` with [`error_on_missing_key` parameter in the template stanza](/vault/docs/agent/template#error_on_missing_key)
 as well as `exit_on_retry_failure` result in the agent exiting in case of no key
 / value issues instead of the default retry behavior.
 
@@ -135,7 +135,7 @@ template {
 ### Interaction between `exit_on_retry_failure` and `error_on_missing_key`
 
 The parameter
-[`error_on_missing_key`](/docs/agent/template#error_on_missing_key) can be
+[`error_on_missing_key`](/vault/docs/agent/template#error_on_missing_key) can be
 specified within the `template` stanza which determines if a template should
 error when a key is missing in the secret. When `error_on_missing_key` is not
 specified or set to `false` and the key to render is not in the secret's
@@ -184,7 +184,7 @@ can be used here:
 - `error_on_missing_key` `(bool: false)` - Exit with an error when accessing
   a struct or map field/key that does notexist. The default behavior will print `<no value>`
   when accessing a field that does not exist. It is highly recommended you set this
-  to "true". Also see [`exit_on_retry_failure` in global Vault Agent Template Config](/docs/agent/template#interaction-between-exit_on_retry_failure-and-error_on_missing_key).
+  to "true". Also see [`exit_on_retry_failure` in global Vault Agent Template Config](/vault/docs/agent/template#interaction-between-exit_on_retry_failure-and-error_on_missing_key).
 - `exec` `(object: optional)` - The exec block executes a command when the
   template is rendered and the output has changed. The block parameters are
   `command` `(string or array: required)` and `timeout` `(string: optional, defaults
@@ -231,7 +231,7 @@ the `auto_auth` stanza in the agent configuration.
 ## Renewals and Updating Secrets
 
 The Vault Agent templating automatically renews and fetches secrets/tokens.
-Unlike [Vault Agent caching](/docs/agent/caching), the behavior of how Vault Agent
+Unlike [Vault Agent caching](/vault/docs/agent/caching), the behavior of how Vault Agent
 templating does this depends on the type of secret or token. The following is a
 high level overview of different behaviors.
 
@@ -243,18 +243,18 @@ of the secret's lease duration has elapsed.
 ### Non-Renewable Secrets
 
 If a secret or token isn't renewable or leased, Vault Agent will fetch the secret every 5 minutes.
-This can be configured using Template config [static_secret_render_interval](/docs/agent/template#static_secret_render_interval) (requires Vault 1.8+).
-Non-renewable secrets include (but not limited to) [KV Version 2](/docs/secrets/kv/kv-v2).
+This can be configured using Template config [static_secret_render_interval](/vault/docs/agent/template#static_secret_render_interval) (requires Vault 1.8+).
+Non-renewable secrets include (but not limited to) [KV Version 2](/vault/docs/secrets/kv/kv-v2).
 
 ### Non-Renewable Leased Secrets
 
 If a secret or token is non-renewable but leased, Vault Agent will fetch the secret when 85% of the
 secrets time-to-live (TTL) is reached. Leased, non-renewable secrets include (but not limited
-to) dynamic secrets such as [database credentials](/docs/secrets/databases) and [KV Version 1](/docs/secrets/kv/kv-v1).
+to) dynamic secrets such as [database credentials](/vault/docs/secrets/databases) and [KV Version 1](/vault/docs/secrets/kv/kv-v1).
 
 ### Static Roles
 
-If a secret has a `rotation_period`, such as a [database static role](/docs/secrets/databases#static-roles),
+If a secret has a `rotation_period`, such as a [database static role](/vault/docs/secrets/databases#static-roles),
 Vault Agent template will fetch the new secret as it changes in Vault. It does
 this by inspecting the secret's time-to-live (TTL).
 
@@ -267,7 +267,7 @@ re-authenticates.
 
 #### Rendering using the `pkiCert` template function
 
-If a [certificate](/docs/secrets/pki) is rendered using the `pkiCert` template
+If a [certificate](/vault/docs/secrets/pki) is rendered using the `pkiCert` template
 function, Vault Agent template will have the following fetching and re-rendering
 behaviors on certificates:
 
@@ -278,7 +278,7 @@ skip fetching unless the current rendered one has expired.
 
 #### Rendering using the `secret` template function
 
-If a [certificate](/docs/secrets/pki) is rendered using the `secret` template
+If a [certificate](/vault/docs/secrets/pki) is rendered using the `secret` template
 function, Vault Agent template will have the following fetching and re-rendering
 behaviors on certificates:
 
