@@ -64,7 +64,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagSubjectMatch,
 		Default: true,
 		EnvVar:  "",
-		Usage:   `Whether the subject name of the potential parent cert matches the issuer name of the child cert`,
+		Usage:   `Whether the subject name of the potential parent cert matches the issuer name of the child cert.`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -72,7 +72,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagKeyIdMatch,
 		Default: true,
 		EnvVar:  "",
-		Usage:   `Whether the subject key_id of the potential parent cert matches the issuing key id of the child cert`,
+		Usage:   `Whether the subject key id (SKID) of the potential parent cert matches the authority key id (AKID) of the child cert.`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -80,7 +80,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagPathMatch,
 		Default: false,
 		EnvVar:  "",
-		Usage:   `Whether the potential parent appears in the certificate chain of the issued cert`,
+		Usage:   `Whether the potential parent appears in the certificate chain field (ca_chain) of the issued cert.`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -88,7 +88,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagSignatureMatch,
 		Default: true,
 		EnvVar:  "",
-		Usage:   `Whether the key of the potential parent signed this issued certificate`,
+		Usage:   `Whether the key of the potential parent directly signed this issued certificate.`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -96,7 +96,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagIndirectSignMatch,
 		Default: true,
 		EnvVar:  "",
-		Usage:   `Whether trusting the parent certificate is sufficient to trust the child certificate`,
+		Usage:   `Whether trusting the parent certificate is sufficient to trust the child certificate.`,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -104,7 +104,7 @@ func (c *PKIListChildrenCommand) Flags() *FlagSets {
 		Target:  &c.flagUseNames,
 		Default: false,
 		EnvVar:  "",
-		Usage:   `Whether the list of issuers returned is referred to by name when it exists rather than uuid`,
+		Usage:   `Whether the list of issuers returned is referred to by name (when it exists) rather than by uuid.`,
 	})
 
 	return set
