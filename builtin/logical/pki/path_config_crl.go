@@ -273,11 +273,10 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	b.crlBuilder.markConfigDirty()
 	b.crlBuilder.reloadConfigIfRequired(sc)
 
+	// Note this only affects/happens on the main cluster node, if you need to
+	// notify something based on a configuration change on all server types
+	// have a look at crlBuilder::reloadConfigIfRequired
 	if oldDisable != config.Disable || (oldAutoRebuild && !config.AutoRebuild) || (oldEnableDelta != config.EnableDelta) || (oldUnifiedCRL != config.UnifiedCRL) {
-		if oldUnifiedCRL != config.UnifiedCRL && config.UnifiedCRL {
-			b.unifiedTransferStatus.forceRun()
-		}
-
 		// It wasn't disabled but now it is (or equivalently, we were set to
 		// auto-rebuild and we aren't now or equivalently, we changed our
 		// mind about delta CRLs and need a new complete one or equivalently,

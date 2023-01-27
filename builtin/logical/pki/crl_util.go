@@ -91,9 +91,10 @@ type crlBuilder struct {
 	canRebuild            bool
 	lastDeltaRebuildCheck time.Time
 
-	_config sync.RWMutex
-	dirty   *atomic2.Bool
-	config  crlConfig
+	_config               sync.RWMutex
+	dirty                 *atomic2.Bool
+	config                crlConfig
+	haveInitializedConfig bool
 
 	// Whether to invalidate our LastModifiedTime due to write on the
 	// global issuance config.
@@ -148,6 +149,8 @@ func (cb *crlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 			return err
 		}
 
+		previousConfig := cb.config
+
 		// Set the default config if none was returned to us.
 		if config != nil {
 			cb.config = *config
@@ -157,6 +160,16 @@ func (cb *crlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 
 		// Updated the config; unset dirty.
 		cb.dirty.Store(false)
+		triggerChangeNotification := true
+		if !cb.haveInitializedConfig {
+			cb.haveInitializedConfig = true
+			triggerChangeNotification = false // do not trigger on the initial loading of configuration.
+		}
+
+		// Certain things need to be triggered on all server types when crlConfig is loaded.
+		if triggerChangeNotification {
+			cb.notifyOnConfigChange(sc, previousConfig, cb.config)
+		}
 	}
 
 	return nil
@@ -734,6 +747,15 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 	cb.haveInitializedQueue = true
 
 	return nil
+}
+
+func (cb *crlBuilder) notifyOnConfigChange(sc *storageContext, priorConfig crlConfig, newConfig crlConfig) {
+	// If you need to hook into a CRL configuration change across different server types
+	// such as primary clusters as well as performance replicas, it is easier to do here than
+	// in two places (API layer and in invalidateFunc)
+	if priorConfig.UnifiedCRL != newConfig.UnifiedCRL && newConfig.UnifiedCRL {
+		sc.Backend.unifiedTransferStatus.forceRun()
+	}
 }
 
 // Helper function to fetch a map of issuerID->parsed cert for revocation

@@ -81,12 +81,12 @@ func runUnifiedTransfer(sc *storageContext) {
 	// error that comes in from the revoke API after that. This will
 	// force another run, which worst case, we will fix it on the next
 	// periodic function call that passes our min delay.
-	sc.Backend.unifiedTransferStatus.forceRerun.Store(false)
+	status.forceRerun.Store(false)
 
 	err = doUnifiedTransferMissingLocalSerials(sc, clusterId)
 	if err != nil {
 		b.Logger().Error("an error occurred running unified transfer", "error", err.Error())
-		sc.Backend.unifiedTransferStatus.forceRerun.Store(true)
+		status.forceRerun.Store(true)
 	}
 	status.lastRun = time.Now()
 }
