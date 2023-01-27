@@ -34,7 +34,8 @@ export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
   @attr('boolean', {
     label: 'Use CSR values',
     subText:
-      'Subject information and key usages specified in the CSR will be used over parameters provided here, and extensions in the CSR will be copied into the issued certificate. Learn more here.',
+      'Subject information and key usages specified in the CSR will be used over parameters provided here, and extensions in the CSR will be copied into the issued certificate.',
+    docLink: '/vault/api-docs/secret/pki#use_csr_values',
   })
   useCsrValues;
 
@@ -62,8 +63,9 @@ export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
   commonName;
 
   @attr({
+    label: 'Permitted DNS domains',
     subText:
-      'A comma separated string (or, string array) containing DNS domains for which certificates are allowed to be issued or signed by this CA certificate.',
+      'DNS domains for which certificates are allowed to be issued or signed by this CA certificate. Enter each value as a new input.',
   })
   permittedDnsDomains;
 

@@ -29,10 +29,6 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   get useOpenAPI() {
     return false;
   }
-  @attr('date', {
-    label: 'Issue date',
-  })
-  notValidBefore;
 
   @attr isDefault; // readonly
   @attr('string') issuerId;

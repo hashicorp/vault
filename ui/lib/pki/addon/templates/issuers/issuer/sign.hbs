@@ -10,4 +10,7 @@
   </p.levelLeft>
 </PageHeader>
 
-<PkiSignIntermediateForm @model={{this.model}} @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers"}} />
+<PkiSignIntermediateForm
+  @model={{this.model}}
+  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details" model=this.model.issuerRef}}
+/>
