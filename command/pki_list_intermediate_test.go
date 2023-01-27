@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestPKIListChildren(t *testing.T) {
+func TestPKIListIntermediate(t *testing.T) {
 	t.Parallel()
 
 	client, closer := testVaultServer(t)
