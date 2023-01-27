@@ -475,10 +475,6 @@
         "path": "system/init"
       },
       {
-        "title": "<code>/sys/enable-unseal-recovery</code>",
-        "path": "system/enable-unseal-recovery"
-      },
-      {
         "title": "<code>/sys/internal/counters</code>",
         "path": "system/internal-counters"
       },
