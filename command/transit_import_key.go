@@ -67,6 +67,7 @@ func (c *TransitImportCommand) Run(args []string) int {
 	return importKey(c.BaseCommand, "import", args)
 }
 
+// error codes: 1: user error, 2: internal computation error, 3: remote api call error
 func importKey(c *BaseCommand, operation string, args []string) int {
 	if len(args) != 2 {
 		c.UI.Error(fmt.Sprintf("Incorrect argument count (expected 2, got %d)", len(args)))
@@ -102,7 +103,7 @@ func importKey(c *BaseCommand, operation string, args []string) int {
 	wrappingKey, err := fetchWrappingKey(c, client, path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("failed to fetch wrapping key: %v", err))
-		return 2
+		return 3
 	}
 	c.UI.Output("Wrapping source key with ephemeral key.")
 	wrapKWP, err := subtle.NewKWP(ephemeralAESKey)
