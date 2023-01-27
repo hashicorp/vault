@@ -35,7 +35,8 @@ func testCountActiveTokens(t *testing.T, c *Core, root string) int {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, c.systemBackend.Route(req.Path), req.Operation),
+		// we remove the `sys/` prefix b/c Core removes it before routing to the 'sys' backend
+		schema.GetResponseSchema(t, c.systemBackend.Route("internal/counters/tokens"), req.Operation),
 		resp,
 		true,
 	)
