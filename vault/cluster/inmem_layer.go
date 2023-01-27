@@ -122,10 +122,13 @@ func (l *InmemLayer) Dial(addr string, timeout time.Duration, tlsConfig *tls.Con
 		panic(fmt.Sprintf("%q attempted to dial itself", l.addr))
 	}
 
+        // This simulates an i/o timeout by sleeping for 20 seconds and returning 
+	// an error when the forceTimeout name is the same as the host we are 
+	// currently connecting to. Useful for checking how gRPC connections react 
+	// with timeouts.
 	if l.forceTimeout == addr {
 		l.logger.Debug("forcing timeout", "addr", addr, "me", l.addr)
 		time.Sleep(time.Second * 20)
-
 		return nil, deadlineError("i/o timeout")
 	}
 
