@@ -474,6 +474,12 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 				}
 			}
 		}
+	case strings.HasPrefix(key, unifiedRevocationReadPathPrefix):
+		// Three parts to this key: prefix, cluster, and serial.
+		split := strings.Split(key, "/")
+		cluster := split[len(split)-2]
+		serial := split[len(split)-1]
+		b.crlBuilder.addCertFromCrossRevocation(cluster, serial)
 	}
 }
 
@@ -495,6 +501,11 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 		// First handle any global revocation queue entries.
 		if err := b.crlBuilder.processRevocationQueue(sc); err != nil {
+			return err
+		}
+
+		// Then handle any unified cross-cluster revocations.
+		if err := b.crlBuilder.processCrossClusterRevocations(sc); err != nil {
 			return err
 		}
 
