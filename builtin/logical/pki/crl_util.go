@@ -102,7 +102,7 @@ type crlBuilder struct {
 
 	// Global revocation queue entries get accepted by the invalidate func
 	// and passed to the crlBuilder for processing.
-	haveInitializedQueue bool
+	haveInitializedQueue *atomic2.Bool
 	revQueue             *revocationQueue
 	removalQueue         *revocationQueue
 	crossQueue           *revocationQueue
@@ -124,6 +124,7 @@ func newCRLBuilder(canRebuild bool) *crlBuilder {
 		dirty:                 atomic2.NewBool(true),
 		config:                defaultCrlConfig,
 		invalidate:            atomic2.NewBool(false),
+		haveInitializedQueue:  atomic2.NewBool(false),
 		revQueue:              newRevocationQueue(),
 		removalQueue:          newRevocationQueue(),
 		crossQueue:            newRevocationQueue(),
@@ -183,6 +184,10 @@ func (cb *crlBuilder) notifyOnConfigChange(sc *storageContext, priorConfig crlCo
 	// in two places (API layer and in invalidateFunc)
 	if priorConfig.UnifiedCRL != newConfig.UnifiedCRL && newConfig.UnifiedCRL {
 		sc.Backend.unifiedTransferStatus.forceRun()
+	}
+
+	if priorConfig.UseGlobalQueue != newConfig.UseGlobalQueue && newConfig.UseGlobalQueue {
+		cb.haveInitializedQueue.Store(false)
 	}
 }
 
@@ -589,7 +594,7 @@ func (cb *crlBuilder) addCertFromCrossRevocation(cluster, serial string) {
 
 func (cb *crlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotPerfPrimary bool) error {
 	// Assume holding lock.
-	if cb.haveInitializedQueue {
+	if cb.haveInitializedQueue.Load() {
 		return nil
 	}
 
@@ -729,7 +734,7 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 
 		// See note in pki/backend.go; this should be empty.
 		cb.removalQueue.RemoveAll()
-		cb.haveInitializedQueue = true
+		cb.haveInitializedQueue.Store(true)
 		return nil
 	}
 
@@ -755,7 +760,7 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 		cb.removalQueue.Remove(entry)
 	}
 
-	cb.haveInitializedQueue = true
+	cb.haveInitializedQueue.Store(true)
 
 	return nil
 }
