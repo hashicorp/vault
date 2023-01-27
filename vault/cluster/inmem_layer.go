@@ -126,8 +126,7 @@ func (l *InmemLayer) Dial(addr string, timeout time.Duration, tlsConfig *tls.Con
 		l.logger.Debug("forcing timeout", "addr", addr, "me", l.addr)
 		time.Sleep(time.Second * 20)
 
-		var timeout deadlineError = "i/o timeout"
-		return nil, timeout
+		return nil, deadlineError("i/o timeout")
 	}
 
 	peer, ok := l.peers[addr]
