@@ -31,12 +31,16 @@ func (c *PKIIssueCACommand) Synopsis() string {
 func (c *PKIIssueCACommand) Help() string {
 	helpText := `
 Usage: vault pki issue PARENT CHILD_MOUNT options
+
+PARENT is the fully qualified path of the Certificate Authority in vault which will issue the new intermediate certificate.
+
+CHILD_MOUNT is the path of the mount in vault where the new issuer is saved.
+
+options are the superset of the options passed to generate/intermediate and sign-intermediate commands.  At least one option must be set.
+
 This command creates a intermediate certificate authority certificate signed by the parent in the CHILD_MOUNT.
-At least one option must be set.  The options are the same as those passed to sign-intermediate and "generate/intermediate/"
-There are two slight differences:
-- type can be passed as a flag rather than part of the path
-- issuer_name is introduced as a new flag which (if set) will name the newly created issuer if possible.
-`
+
+` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
