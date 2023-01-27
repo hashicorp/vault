@@ -240,10 +240,8 @@ func (c *PKIListChildrenCommand) getIssuerListFromMount(client *api.Client, moun
 
 func checkIfResultsMatchFilters(verifyResults, constraintMap map[string]bool) bool {
 	for key, required := range constraintMap {
-		if required == true {
-			if verifyResults[key] == false {
-				return false
-			}
+		if required && !verifyResults[key] {
+			return false
 		}
 	}
 	return true
