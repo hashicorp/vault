@@ -155,7 +155,7 @@ func createComplicatedIssuerSetUpWithIssueIntermediate(t *testing.T, client *api
 		"pki", "issue", "-format=json", "-issuer_name=intX2",
 		"pki-newroot/issuer/rootX3",
 		"pki-int/",
-		"key_type=ed25519",
+		"key_type=ec",
 		"common_name=Int X2",
 		"ttl=3650d",
 	}
