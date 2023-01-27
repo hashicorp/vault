@@ -75,6 +75,14 @@ func (a AssocDataFactory) GetAssociatedData() ([]byte, error) {
 	return base64.StdEncoding.DecodeString(a.Encoded)
 }
 
+type ManagedKeyFactory struct {
+	managedKeyParams keysutil.ManagedKeyParameters
+}
+
+func (m ManagedKeyFactory) GetManagedKeyParameters() keysutil.ManagedKeyParameters {
+	return m.managedKeyParams
+}
+
 func (b *backend) pathEncrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "encrypt/" + framework.GenericNameRegex("name"),
@@ -468,21 +476,23 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			factory = AssocDataFactory{item.AssociatedData}
 		}
 
-		var managedKeyParameters *keysutil.ManagedKeyParameters
+		var managedKeyFactory ManagedKeyFactory
 		if p.Type == keysutil.KeyType_MANAGED_KEY {
 			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
 			if !ok {
 				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
 			}
 
-			managedKeyParameters = &keysutil.ManagedKeyParameters{
-				ManagedKeySystemView: managedKeySystemView,
-				BackendUUID:          b.backendUUID,
-				Context:              ctx,
+			managedKeyFactory = ManagedKeyFactory{
+				managedKeyParams: keysutil.ManagedKeyParameters{
+					ManagedKeySystemView: managedKeySystemView,
+					BackendUUID:          b.backendUUID,
+					Context:              ctx,
+				},
 			}
 		}
 
-		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext, managedKeyParameters, factory)
+		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext, factory, managedKeyFactory)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:

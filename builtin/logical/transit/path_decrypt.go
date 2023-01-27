@@ -192,21 +192,23 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			factory = AssocDataFactory{item.AssociatedData}
 		}
 
-		var managedKeyParams *keysutil.ManagedKeyParameters
+		var managedKeyFactory ManagedKeyFactory
 		if p.Type == keysutil.KeyType_MANAGED_KEY {
 			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
 			if !ok {
 				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
 			}
 
-			managedKeyParams = &keysutil.ManagedKeyParameters{
-				ManagedKeySystemView: managedKeySystemView,
-				BackendUUID:          b.backendUUID,
-				Context:              ctx,
+			managedKeyFactory = ManagedKeyFactory{
+				managedKeyParams: keysutil.ManagedKeyParameters{
+					ManagedKeySystemView: managedKeySystemView,
+					BackendUUID:          b.backendUUID,
+					Context:              ctx,
+				},
 			}
 		}
 
-		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, managedKeyParams, factory)
+		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factory, managedKeyFactory)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:

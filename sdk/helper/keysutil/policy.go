@@ -83,6 +83,10 @@ type AssociatedDataFactory interface {
 	GetAssociatedData() ([]byte, error)
 }
 
+type ManagedKeyFactory interface {
+	GetManagedKeyParameters() ManagedKeyParameters
+}
+
 type RestoreInfo struct {
 	Time    time.Time `json:"time"`
 	Version int       `json:"version"`
@@ -94,10 +98,11 @@ type BackupInfo struct {
 }
 
 type SigningOptions struct {
-	HashAlgorithm HashType
-	Marshaling    MarshalingType
-	SaltLength    int
-	SigAlgorithm  string
+	HashAlgorithm    HashType
+	Marshaling       MarshalingType
+	SaltLength       int
+	SigAlgorithm     string
+	ManagedKeyParams ManagedKeyParameters
 }
 
 type SigningResult struct {
@@ -854,14 +859,14 @@ func (p *Policy) convergentVersion(ver int) int {
 }
 
 func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, error) {
-	return p.EncryptWithFactory(ver, context, nonce, value, nil, nil)
+	return p.EncryptWithFactory(ver, context, nonce, value, nil)
 }
 
 func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
-	return p.DecryptWithFactory(context, nonce, value, nil, nil)
+	return p.DecryptWithFactory(context, nonce, value, nil)
 }
 
-func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, managedKeyParams *ManagedKeyParameters, factories ...interface{}) (string, error) {
+func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factories ...interface{}) (string, error) {
 	if !p.Type.DecryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
@@ -970,6 +975,7 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, managed
 			return "", err
 		}
 		var aad []byte
+		var managedKeyFactory ManagedKeyFactory
 		for _, f := range factories {
 			switch factory := f.(type) {
 			case AssociatedDataFactory:
@@ -977,10 +983,16 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, managed
 				if err != nil {
 					return "", err
 				}
+			case ManagedKeyFactory:
+				managedKeyFactory = factory
 			}
 		}
 
-		plain, err = p.decryptWithManagedKey(managedKeyParams, keyEntry, decoded, nonce, aad)
+		if managedKeyFactory == nil {
+			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
+		}
+
+		plain, err = p.decryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, decoded, nonce, aad)
 		if err != nil {
 			return "", err
 		}
@@ -1019,7 +1031,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 		Marshaling:    marshaling,
 		SaltLength:    rsa.PSSSaltLengthAuto,
 		SigAlgorithm:  sigAlgorithm,
-	}, nil)
+	})
 }
 
 func (p *Policy) minRSAPSSSaltLength() int {
@@ -1036,7 +1048,7 @@ func (p *Policy) validRSAPSSSaltLength(priv *rsa.PrivateKey, hash crypto.Hash, s
 	return p.minRSAPSSSaltLength() <= saltLength && saltLength <= p.maxRSAPSSSaltLength(priv, hash)
 }
 
-func (p *Policy) SignWithOptions(ver int, context, input []byte, options *SigningOptions, managedKeyParams *ManagedKeyParameters) (*SigningResult, error) {
+func (p *Policy) SignWithOptions(ver int, context, input []byte, options *SigningOptions) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -1188,7 +1200,7 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 			return nil, err
 		}
 
-		sig, err = p.signWithManagedKey(managedKeyParams, options, keyEntry, input)
+		sig, err = p.signWithManagedKey(options, keyEntry, input)
 		if err != nil {
 			return nil, err
 		}
@@ -1219,10 +1231,10 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 		Marshaling:    marshaling,
 		SaltLength:    rsa.PSSSaltLengthAuto,
 		SigAlgorithm:  sigAlgorithm,
-	}, nil)
+	})
 }
 
-func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, options *SigningOptions, managedKeyParams *ManagedKeyParameters) (bool, error) {
+func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, options *SigningOptions) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -1372,7 +1384,7 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 			return false, err
 		}
 
-		return p.verifyWithManagedKey(managedKeyParams, options, keyEntry, input, sigBytes)
+		return p.verifyWithManagedKey(options, keyEntry, input, sigBytes)
 
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
@@ -1904,7 +1916,7 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 	return plain, nil
 }
 
-func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, managedKeyParams *ManagedKeyParameters, factories ...interface{}) (string, error) {
+func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, factories ...interface{}) (string, error) {
 	if !p.Type.EncryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
 	}
@@ -2008,6 +2020,7 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		}
 
 		var aad []byte
+		var managedKeyFactory ManagedKeyFactory
 		for _, f := range factories {
 			switch factory := f.(type) {
 			case AssociatedDataFactory:
@@ -2015,10 +2028,16 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 				if err != nil {
 					return "", nil
 				}
+			case ManagedKeyFactory:
+				managedKeyFactory = factory
 			}
 		}
 
-		ciphertext, err = p.encryptWithManagedKey(managedKeyParams, keyEntry, plaintext, nonce, aad)
+		if managedKeyFactory == nil {
+			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
+		}
+
+		ciphertext, err = p.encryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, plaintext, nonce, aad)
 		if err != nil {
 			return "", err
 		}
