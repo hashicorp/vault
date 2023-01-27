@@ -49,7 +49,6 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/config/cors":                              regexp.MustCompile(`^/sys/config/cors$`),
 	"/sys/config/ui/headers/":                       regexp.MustCompile(`^/sys/config/ui/headers/$`),
 	"/sys/config/ui/headers/{header}":               regexp.MustCompile(`^/sys/config/ui/headers/.+$`),
-	"/sys/enable-unseal-recovery":                   regexp.MustCompile(`^/sys/enable-unseal-recovery$`),
 	"/sys/leases":                                   regexp.MustCompile(`^/sys/leases$`),
 	"/sys/leases/lookup/":                           regexp.MustCompile(`^/sys/leases/lookup/$`),
 	"/sys/leases/lookup/{prefix}":                   regexp.MustCompile(`^/sys/leases/lookup/.+$`),
