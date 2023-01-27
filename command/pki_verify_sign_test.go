@@ -217,6 +217,7 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 		"issuer_name": "rootX1",
 		"key_name":    "rootX1",
 	})
+
 	if err != nil || resp == nil {
 		t.Fatalf("failed to prime CA: %v", err)
 	}
@@ -227,6 +228,7 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 		"ttl":         "3650d",
 		"issuer_name": "rootX2",
 	})
+
 	if err != nil || resp == nil {
 		t.Fatalf("failed to prime CA: %v", err)
 	}
@@ -412,7 +414,6 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 			break
 		}
 	}
-
 	// sign by intX2 and import
 	int3CertResp2, err := client.Logical().Write("pki-int/issuer/intX2/sign-intermediate", map[string]interface{}{
 		"csr": int3Csr,

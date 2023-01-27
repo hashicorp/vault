@@ -33,13 +33,13 @@ modifications via replication.
 ## Database Engine Interface Upgrade
 
 The Database Engine has changed the underlying interface between Vault and each database
-implementation. This change allows use of [password policies](/docs/concepts/password-policies)
+implementation. This change allows use of [password policies](/vault/docs/concepts/password-policies)
 within the Database engine. The API for the Database Engine has not changed, only the underlying
 interface between Vault and the database plugins. All built-in database plugins (as well as the
 [Oracle](https://github.com/hashicorp/vault-plugin-database-oracle) plugin) have been upgraded to
 the new interface so no user actions are needed. Vault will continue to recognize existing custom
 database plugins but the old interface should be considered deprecated and may be removed in a
-future release. See our [upgrade guide for custom databases](/docs/secrets/databases/custom) for
+future release. See our [upgrade guide for custom databases](/vault/docs/secrets/databases/custom) for
 more information on upgrading custom database plugins.
 
 @include 'alpine-314.mdx'

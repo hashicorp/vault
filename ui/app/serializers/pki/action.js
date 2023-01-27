@@ -60,6 +60,8 @@ export default class PkiActionSerializer extends ApplicationSerializer {
         ];
       case 'generate-csr':
         return [...commonProps, 'add_basic_constraints'];
+      case 'sign-intermediate':
+        return ['common_name', 'issuer_name', 'csr'];
       default:
         // if type doesn't match, serialize all
         return null;

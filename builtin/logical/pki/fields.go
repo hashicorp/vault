@@ -536,5 +536,12 @@ especially if the cluster is offline.`,
 		Default: int(defaultTidyConfig.QueueSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
+	fields["tidy_cross_cluster_revoked_certs"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to enable tidying up
+the cross-cluster revoked certificate store. Only runs on the active
+primary node.`,
+	}
+
 	return fields
 }

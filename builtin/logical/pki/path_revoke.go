@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -593,6 +594,7 @@ func (b *backend) pathListRevocationQueueHandler(ctx context.Context, request *l
 			if hasSlash {
 				serial = serial[0 : len(serial)-1]
 			}
+			serial = denormalizeSerial(serial)
 
 			var data map[string]interface{}
 			rawData, isPresent := responseInfo[serial]
@@ -619,18 +621,40 @@ func (b *backend) pathListRevocationQueueHandler(ctx context.Context, request *l
 
 func (b *backend) pathListUnifiedRevokedCertsHandler(ctx context.Context, request *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, request.Storage)
+	responseKeys := []string{}
+	responseInfo := make(map[string]interface{})
 
-	revokedCerts, err := listUnifiedRevokedCerts(sc)
+	clusterPathsById, err := lookupUnifiedClusterPaths(sc)
 	if err != nil {
 		return nil, err
 	}
 
-	// Normalize serial back to a format people are expecting.
-	for i, serial := range revokedCerts {
-		revokedCerts[i] = denormalizeSerial(serial)
+	for clusterId := range clusterPathsById {
+		clusterSerials, err := listClusterSpecificUnifiedRevokedCerts(sc, clusterId)
+		if err != nil {
+			return nil, err
+		}
+		for _, serial := range clusterSerials {
+			if strings.HasSuffix(serial, "/") {
+				// Skip folders as they wouldn't be a proper revocation
+				continue
+			}
+			colonSerial := denormalizeSerial(serial)
+			var data map[string][]string
+			rawData, isPresent := responseInfo[colonSerial]
+			if !isPresent {
+				responseKeys = append(responseKeys, colonSerial)
+				data = map[string][]string{}
+			} else {
+				data = rawData.(map[string][]string)
+			}
+
+			data["revoking_clusters"] = append(data["revoking_clusters"], clusterId)
+			responseInfo[colonSerial] = data
+		}
 	}
 
-	return logical.ListResponse(revokedCerts), nil
+	return logical.ListResponseWithInfo(responseKeys, responseInfo), nil
 }
 
 const pathRevokeHelpSyn = `

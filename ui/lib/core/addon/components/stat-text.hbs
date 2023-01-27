@@ -7,5 +7,6 @@
   {{#if @subText}}
     <div class="stat-text">{{@subText}}</div>
   {{/if}}
-  <div class="stat-value">{{format-number @value}}</div>
+  {{! Ember reads 0 as falsy, so only render a dash if the value is truly undefined}}
+  <div class="stat-value">{{if (or @value (eq @value 0)) (format-number @value) "-"}}</div>
 </div>

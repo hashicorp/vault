@@ -32,9 +32,9 @@
   </div>
 
   <div data-test-monthly-usage-timestamp class="timestamp">
-    {{#if @timestamp}}
+    {{#if @responseTimestamp}}
       Updated
-      {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa"}}
+      {{date-format @responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
     {{/if}}
   </div>
 

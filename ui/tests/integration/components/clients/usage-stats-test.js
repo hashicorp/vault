@@ -11,13 +11,15 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
 
     assert.dom('[data-test-stat-text]').exists({ count: 3 }, 'Renders 3 Stat texts even with no data passed');
     assert.dom('[data-test-stat-text="total-clients"]').exists('Total clients exists');
-    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('0', 'Value defaults to zero');
+    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('-', 'renders dash when no data');
     assert.dom('[data-test-stat-text="entity-clients"]').exists('Entity clients exists');
-    assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('0', 'Value defaults to zero');
+    assert
+      .dom('[data-test-stat-text="entity-clients"] .stat-value')
+      .hasText('-', 'renders dash when no data');
     assert.dom('[data-test-stat-text="non-entity-clients"]').exists('Non entity clients exists');
     assert
       .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
-      .hasText('0', 'Value defaults to zero');
+      .hasText('-', 'renders dash when no data');
     assert
       .dom('a')
       .hasAttribute('href', 'https://developer.hashicorp.com/vault/tutorials/monitoring/usage-metrics');
