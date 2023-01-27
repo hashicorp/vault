@@ -384,12 +384,12 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 		keys = cluster.RecoveryKeys
 	}
 
-	updateFunc := client.Sys().RekeyUpdate
-	if recovery {
-		updateFunc = client.Sys().RekeyRecoveryKeyUpdate
-	}
 	for j := 0; j < len(keys); j++ {
-		statusResp, err = updateFunc(base64.StdEncoding.EncodeToString(keys[j]), init.Nonce)
+		if recovery {
+			client.Sys().RekeyRecoveryKeyUpdate(base64.StdEncoding.EncodeToString(keys[j]), init.Nonce, false)
+		} else {
+			statusResp, err = client.Sys().RekeyUpdate(base64.StdEncoding.EncodeToString(keys[j]), init.Nonce)
+		}
 		if err != nil {
 			t.Fatal(err)
 		}

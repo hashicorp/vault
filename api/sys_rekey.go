@@ -429,13 +429,13 @@ func (c *Sys) RekeyRecoveryKeyVerificationUpdateWithContext(ctx context.Context,
 }
 
 type RekeyInitRequest struct {
-	SecretShares          int      `json:"secret_shares"`
-	SecretThreshold       int      `json:"secret_threshold"`
-	StoredShares          int      `json:"stored_shares"`
-	PGPKeys               []string `json:"pgp_keys"`
-	Backup                bool
-	RequireVerification   bool `json:"require_verification"`
-	DisableUnsealRecovery bool `json:"disable_unseal_recovery"`
+	SecretShares         int      `json:"secret_shares"`
+	SecretThreshold      int      `json:"secret_threshold"`
+	StoredShares         int      `json:"stored_shares"`
+	PGPKeys              []string `json:"pgp_keys"`
+	Backup               bool
+	RequireVerification  bool `json:"require_verification"`
+	EnableUnsealRecovery bool `json:"enable_unseal_recovery"`
 }
 
 type RekeyStatusResponse struct {

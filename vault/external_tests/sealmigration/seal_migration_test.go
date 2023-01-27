@@ -1,8 +1,14 @@
 package sealmigration
 
 import (
+	"encoding/hex"
 	"sync/atomic"
 	"testing"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/stretchr/testify/assert"
+
+	sealhelper "github.com/hashicorp/vault/helper/testhelpers/seal"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -64,4 +70,67 @@ func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
 // cluster to do the migration.
 func TestSealMigration_TransitToTransit(t *testing.T) {
 	testVariousBackends(t, ParamTestSealMigration_TransitToTransit, BasePort_TransitToTransit, true)
+}
+
+func TestSysRekey_Update_ChangingRecoveryMode(t *testing.T) {
+	cases := []struct {
+		name             string
+		recoveryModeInit bool
+		recoveryModeAck  bool
+		failureExpected  bool
+	}{
+		{"rekey-successful-unseal-recovery", true, true, false},
+		{"rekey-fail-not-acked", true, false, true},
+		{"rekey-fail-ack-unexpected", false, true, true},
+		{"rekey-unseal-recovery-off", false, false, false},
+	}
+
+	// Create the transit server.
+	tss := sealhelper.NewTransitSealServer(t, 0)
+	defer func() {
+		if tss != nil {
+			tss.Cleanup()
+		}
+	}()
+	sealKeyName := "transit-seal-key-1"
+	tss.MakeKey(t, sealKeyName)
+	logger := logging.NewVaultLogger(hclog.Trace)
+	storage, cleanup := teststorage.MakeReusableStorage(
+		t, logger, teststorage.MakeInmemBackend(t, logger))
+	defer cleanup()
+	// Initialize the backend with transit.
+	cluster, _ := InitializeTransit(t, logger, storage, BasePort_TransitOnly, tss, sealKeyName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+	keys := make([]string, len(cluster.RecoveryKeys))
+	for i, k := range cluster.RecoveryKeys {
+		keys[i] = hex.EncodeToString(k)
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			initConfig := &api.RekeyInitRequest{
+				SecretShares:         5,
+				SecretThreshold:      3,
+				EnableUnsealRecovery: c.recoveryModeInit,
+			}
+			resp, err := client.Sys().RekeyRecoveryKeyInit(initConfig)
+			assert.NoError(t, err)
+
+			for _, key := range keys[:3] {
+				resp, err := client.Sys().RekeyRecoveryKeyUpdate(key, resp.Nonce, c.recoveryModeAck)
+
+				if c.failureExpected {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+					if resp.Complete {
+						assert.True(t, resp.UnsealRecoveryEnabled == c.recoveryModeInit)
+						keys = resp.Keys
+					}
+				}
+
+			}
+		})
+	}
 }

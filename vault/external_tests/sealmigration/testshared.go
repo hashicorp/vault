@@ -34,6 +34,7 @@ const (
 	BasePort_TransitToShamir_Post14   = 23000
 	BasePort_TransitToTransit         = 24000
 	BasePort_TransitToShamir_Recovery = 25000
+	BasePort_TransitOnly              = 26000
 )
 
 func ParamTestSealMigrationTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int) {
