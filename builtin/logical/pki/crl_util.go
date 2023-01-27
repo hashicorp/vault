@@ -649,14 +649,6 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 	isNotPerfPrimary := sc.Backend.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
 		(!sc.Backend.System().LocalMount() && sc.Backend.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
 
-	// Before revoking certificates, we need to hold the lock for certificate
-	// storage. This prevents any parallel revocations and prevents us from
-	// multiple places. We do this before grabbing the contents of the
-	// revocation queues themselves, to ensure we interleave well with other
-	// invocations of this function and avoid duplicate work.
-	sc.Backend.revokeStorageLock.Lock()
-	defer sc.Backend.revokeStorageLock.Unlock()
-
 	if err := cb.maybeGatherQueueForFirstProcess(sc, isNotPerfPrimary); err != nil {
 		return fmt.Errorf("failed to gather first queue: %v", err)
 	}
@@ -771,14 +763,6 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 func (cb *crlBuilder) processCrossClusterRevocations(sc *storageContext) error {
 	sc.Backend.Logger().Debug(fmt.Sprintf("starting to process unified revocations"))
 
-	// Before revoking certificates, we need to hold the lock for certificate
-	// storage. This prevents any parallel revocations and prevents us from
-	// getting called in multiple places. We do this before grabbing the
-	// contents of the revocation queues themselves, to ensure we interleave
-	// well with other invocations of this function and avoid duplicate work.
-	sc.Backend.revokeStorageLock.Lock()
-	defer sc.Backend.revokeStorageLock.Unlock()
-
 	crlConfig, err := cb.getConfigWithUpdate(sc)
 	if err != nil {
 		return err
@@ -885,6 +869,10 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509
 // Revoke a certificate from a given serial number if it is present in local
 // storage.
 func tryRevokeCertBySerial(sc *storageContext, config *crlConfig, serial string) (*logical.Response, error) {
+	// revokeCert requires us to hold these locks before calling it.
+	sc.Backend.revokeStorageLock.Lock()
+	defer sc.Backend.revokeStorageLock.Unlock()
+
 	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
 	if err != nil {
 		switch err.(type) {
