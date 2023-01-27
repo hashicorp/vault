@@ -28,10 +28,13 @@ export function formatTooltipNumber(value) {
 }
 
 export function calculateAverage(dataset, objectKey) {
-  if (!Array.isArray(dataset) || dataset?.length === 0) return null;
-  // if an array of objects, objectKey of the integer we want to calculate, ex: 'entity_clients'
-  // if d[objectKey] is undefined there is no value, so return 0
-  const getIntegers = objectKey ? dataset?.map((d) => (d[objectKey] ? d[objectKey] : 0)) : dataset;
-  const checkIntegers = getIntegers.every((n) => Number.isInteger(n)); // decimals will be false
-  return checkIntegers ? Math.round(mean(getIntegers)) : null;
+  // before mapping for values, check that the objectKey exists at least once in the dataset because
+  // map returns 0 when dataset[objectKey] is undefined in order to calculate average
+  if (!Array.isArray(dataset) || !objectKey || !dataset.some((d) => Object.keys(d).includes(objectKey))) {
+    return null;
+  }
+
+  const integers = dataset.map((d) => (d[objectKey] ? d[objectKey] : 0));
+  const checkIntegers = integers.every((n) => Number.isInteger(n)); // decimals will be false
+  return checkIntegers ? Math.round(mean(integers)) : null;
 }
