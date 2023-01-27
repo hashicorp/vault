@@ -132,11 +132,12 @@ func (c *PKIListChildrenCommand) Run(args []string) int {
 	var issued []string
 	if len(args) > 1 {
 		for _, arg := range args[1:] {
+			cleanPath := sanitizePath(arg)
 			// Arg Might be a Fully Qualified Path
-			if strings.Contains(sanitizePath(arg), "/issuer/") ||
-				strings.Contains(sanitizePath(arg), "/certs/") ||
-				strings.Contains(sanitizePath(arg), "/revoked/") {
-				issued = append(issued, sanitizePath(arg))
+			if strings.Contains(cleanPath, "/issuer/") ||
+				strings.Contains(cleanPath, "/certs/") ||
+				strings.Contains(cleanPath, "/revoked/") {
+				issued = append(issued, cleanPath)
 			} else { // Or Arg Might be a Mount
 				mountCaList, err := c.getIssuerListFromMount(client, arg)
 				if err != nil {
