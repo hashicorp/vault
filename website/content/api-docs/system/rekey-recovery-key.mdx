@@ -20,6 +20,7 @@ This endpoint reads the configuration and progress of the current rekey attempt.
 | :----- | :----------------------------- |
 | `GET`  | `/sys/rekey-recovery-key/init` |
 
+
 ### Sample Request
 
 ```shell-session
@@ -93,6 +94,12 @@ nonce.
   without `pgp_keys`, and when used with it, it allows ensuring that the
   returned keys can be successfully decrypted before committing to the new
   shares, which the backup functionality does not provide.
+
+- `enable_unseal_recovery` `(bool: false)` - If true, the resulting new
+  recovery keys can be used to unseal Vault using 
+  [Unseal Recovery Mode](/vault/docs/concepts/seal#unseal-recovery-mode).  If so,
+  submitting shares via update must also pass the `acknowledge_unseal_recovery`
+  flag.  In other words, all parties must be aware and agree to enable this mode.
 
 ### Sample Payload
 
@@ -204,6 +211,10 @@ for the verification operation.
 - `key` `(string: <required>)` – Specifies a single recovery share key.
 
 - `nonce` `(string: <required>)` – Specifies the nonce of the rekey operation.
+
+- `acknowledge_unseal_recovery` `(bool: false)` - Passed to agree to the enablement
+  of unseal recovery mode at the start of rekeying.  If there is a disagreement
+  rekeying is aborted.
 
 ### Sample Payload
 
