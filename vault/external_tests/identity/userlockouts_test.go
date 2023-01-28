@@ -374,6 +374,13 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// create another user for userpass with a different case
+	if _, err = standby.Logical().Write("auth/userpass/users/bSmith", map[string]interface{}{
+		"password": "training",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
 	// login failure count 1
 	standby.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "wrongPassword",
@@ -399,6 +406,36 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 
 	// login: should be successful as user unlocked
 	if _, err = standby.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+		"password": "training",
+	}); err != nil {
+		t.Fatal("expected login to succeed as user is unlocked")
+	}
+
+	// login failure count 1 for user bSmith
+	standby.Logical().Write("auth/userpass/login/bSmith", map[string]interface{}{
+		"password": "wrongPassword",
+	})
+	// login failure count 2 for user bSmith
+	standby.Logical().Write("auth/userpass/login/bSmith", map[string]interface{}{
+		"password": "wrongPassword",
+	})
+	// login : permission denied as user locked out for user bSmith
+	if _, err = standby.Logical().Write("auth/userpass/login/bSmith", map[string]interface{}{
+		"password": "training",
+	}); err == nil {
+		t.Fatal("expected login to fail as user locked out")
+	}
+	if !strings.Contains(err.Error(), logical.ErrPermissionDenied.Error()) {
+		t.Fatalf("expected to see permission denied error as user locked out, got %v", err)
+	}
+
+	// unlock user bSmith
+	if _, err = standby.Logical().Write("sys/locked-users/"+mountAccessor+"/unlock/bSmith", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// login: should be successful as user bSmith unlocked
+	if _, err = standby.Logical().Write("auth/userpass/login/bSmith", map[string]interface{}{
 		"password": "training",
 	}); err != nil {
 		t.Fatal("expected login to succeed as user is unlocked")
