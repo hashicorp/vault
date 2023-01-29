@@ -9,6 +9,9 @@ description: >-
 The `/sys/internal/inspect/router` endpoint is intended for a Vault admin to inspect the internal components of Vault's router.
 This endpoint can be accessed with a root token or sudo privileges.
 
+~> **NOTE**: These endpoints are only available in Vault version 1.13+. Backwards compatibility is not guaranteed. These endpoints are subject to change or may disappear without notice.
+
+
 ## Root
 
 This endpoint returns a list of router entries in the router's root tree.

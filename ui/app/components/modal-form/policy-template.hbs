@@ -31,15 +31,14 @@
     {{#if (eq this.policy.policyType "acl")}}
       <p>
         ACL Policies are written in Hashicorp Configuration Language (
-        <DocLink @host="https://github.com/hashicorp/hcl">HCL</DocLink>
+        <ExternalLink @href="https://github.com/hashicorp/hcl">HCL</ExternalLink>
         ) or JSON and describe which paths in Vault a user or machine is allowed to access. Here is an example policy:
       </p>
     {{else}}
       <p class="has-bottom-margin-s">
         Role Governing Policies (RGPs) are tied to client tokens or identities which is similar to
-        <DocLink @host="https://developer.hashicorp.com" @path="/vault/tutorials/policies/policies">ACL policies</DocLink>.
-        They use
-        <DocLink @host="https://developer.hashicorp.com" @path="/vault/docs/enterprise/sentinel">Sentinel</DocLink>
+        <DocLink @path="/vault/tutorials/policies/policies">ACL policies</DocLink>. They use
+        <DocLink @path="/vault/docs/enterprise/sentinel">Sentinel</DocLink>
         as a language framework to enable fine-grained policy decisions.
       </p>
       <p>

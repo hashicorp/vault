@@ -1,0 +1,326 @@
+---
+layout: docs
+page_title: pki health-check - Command
+description: |-
+  The "pki health-check" command verifies the health of the given PKI secrets
+  engine mount against an optional configuration.
+---
+
+# pki health-check
+
+The `pki health-check` command verifies the health of the given PKI secrets
+engine mount against an optional configuration.
+
+This runs with the permissions of the given token, reading various APIs from
+the mount and `/sys` against the given Vault server
+
+Mounts need to be specified with any namespaces prefixed in the path, e.g.,
+`ns1/pki`.
+
+## Examples
+
+Performs a basic health check against the `pki-root` mount:
+
+```shell-session
+$ vault pki health-check pki-root/
+```
+
+Configuration can be specified using the `-health-config` flag:
+
+```shell-session
+$ vault pki health-check -health-config=mycorp-root.json pki-root/
+```
+
+Using the `-list` flag will show the list of health checks and any
+known configuration values (with their defaults) that will be run
+against this mount:
+
+```shell-session
+$ vault pki health-check -list pki-root/
+```
+
+## Usage
+
+The following flags are unique to this command:
+
+ - `-default-disabled` - When specified, results in all health checks being
+   disabled by default unless enabled by the configuration file explicitly.
+  The default is `false`, meaning all default-enabled health checks will run.
+
+ - `-health-config` `(string: "")` - Path to JSON configuration file to
+   modify health check execution and parameters.
+
+ - `-list` - When specified, no health checks are run, but all known health
+   checks are printed. Still requires a positional mount argument. The default
+   is `false`, meaning no listing is printed and health checks will execute.
+
+ - `-return-indicator` `(string: "default")` - Behavior of the return value
+   (exit code) of this command:
+     - `permission`, for exiting with a non-zero code when the tool lacks
+       permissions or has a version mismatch with
+       the server;
+     - `critical`, for exiting with a non-zero code when a check returns a
+       critical status in addition to the above;
+     - `warning`, for exiting with a non-zero status when a check returns a
+       warning status in addition to the above;
+     - `informational`, for exiting with a non-zero status when a check
+       returns an informational status in addition to the above;
+     - `default`, for the default behavior based on severity of message
+        and only returning a zero exit status when all checks have passed
+        and no execution errors have occurred.
+
+This command respects the `-format` parameter to control the presentation of
+output sent to stdout. Fatal errors that prevent health checks from executing
+may not follow this formatting.
+
+## Return Status and Output
+
+This command returns the following exit codes:
+
+ - `0` - Everything is good.
+ - `1` - Usage error (check CLI parameters).
+ - `2` - Informational message from a health check.
+ - `3` - Warning message from a health check.
+ - `4` - Critical message from a health check.
+ - `5` - A version mismatch between health check and Vault Server occurred,
+	     preventing one or more health checks from being fully run.
+ - `6` - A permission denied message was returned from Vault Server for
+	     one or more health checks.
+
+Note that an exit code of `5` (due to a version mismatch) is not necessarily
+fatal to the health check. For example, the `crl_validity_period` health
+check will return an invalid version warning when run against Vault 1.11 as
+no Delta CRL exists for this version of Vault, but this will not impact its
+ability to check the complete CRL.
+
+Each health check outputs one or results in a list. This list contains a
+mapping of keys (`status`, `status_code`, `endpoint`, and `message`) to
+values returned by the health check. An endpoint may occur in more than
+one health check and is not necessarily guaranteed to exist on the server
+(e.g., using wildcards to indicate all matching paths have the same
+result). Tabular form elides the status code, as this is meant to be
+consumed programatically.
+
+These correspond to the following health check status values:
+
+ - status `not_applicable` / status code `0`: exit code `0`.
+ - status `ok` / status code `1`: exit code `0` 
+ - status `informational` / status code `2`: exit code `2`.
+ - status `warning` / status code `3`: exit code `3`.
+ - status `critical` / status code `4`: exit code `4`.
+ - status `invalid_version` / status code `5`: exit code `5`.
+ - status `insufficient_permissions` / status code `6`: exit code `6`.
+
+## Health Checks
+
+The following health checks are currently implemented. More health checks may
+be added in future releases and may default to being enabled.
+
+### CA Validity Period
+
+**Name**: `ca_validity_period`
+
+**Accessed APIs**:
+
+ - `LIST /issuers` (unauthenticated)
+ - `READ /issuer/:issuer_ref/json` (unauthenticated)
+
+**Config Parameters**:
+
+ - `root_expiry_critical` `(duration: 182d)` - for a duration within which the root's lifetime is considered critical
+ - `intermediate_expiry_critical` `(duration: 30d)` - for a duration within which the intermediate's lifetime is considered critical
+ - `root_expiry_warning` `(duration: 365d)` -  for a duration within which the root's lifetime is considered warning
+ - `intermediate_expiry_warning` `(duration: 60d)` - for a duration within which the intermediate's lifetime is considered warning
+ - `root_expiry_informational` `(duration: 730d)` - for a duration within which the root's lifetime is considered informational
+ - `intermediate_expiry_informational` `(duration: 180d)` - for a duration within which the intermediate's lifetime is considered informational
+
+This health check will check each issuer in the mount for validity status, returning a list. If a CA expires within the next 30 days, the result will be critical. If a root CA expires within the next 12 months or an intermediate CA within the next 2 months, the result will be a warning. If a root CA expires within 24 months or an intermediate CA within 6 months, the result will be informational.
+
+The remediation here is to remove old CAs after they expire and perform a [CA rotation operation](/docs/secrets/pki/rotation-primitives) for any with pending expiry.
+
+### CRL Validity Period
+
+**Name**: `crl_validity_period`
+
+**Accessed APIs**:
+
+ - `LIST /issuers` (unauthenticated)
+ - `READ /config/crl` (optional)
+ - `READ /issuer/:issuer_ref/crl` (unauthenticated)
+ - `READ /issuer/:issuer_ref/crl/delta` (unauthenticated)
+
+**Config Parameters**:
+
+ - `crl_expiry_pct_critical` `(int: 95)` - the percentage of validity period after which a CRL should be considered critically close to expiry
+ - `delta_crl_expiry_pct_critical` `(int: 95)` - the percentage of validity period after which a Delta CRL should be considered critically close to expiry
+
+This health check checks each issuer's CRL for validity status, returning a list. Unlike CAs, where a date-based duration makes sense due to effort required to successfully rotate, rotating CRLs are much easier, so a percentage based approach makes sense. If the chosen percentage exceeds that of the `grace_period` from the CRL configuration, an informational message will be issued rather than OK.
+
+For informational purposes, it reads the CRL config and suggests enabling auto-rebuild CRLs if not enabled.
+
+### Hardware-Backed Root Certificate
+
+**Name**: `hardware_backed_root`
+
+**APIs**:
+
+ - `LIST /issuers` (unauthenticated)
+ - `READ /issuer/:issuer_ref`
+ - `READ /key/:key_ref`
+
+**Config Parameters**:
+
+ - `enabled` `(boolean: false)` - defaults to not being run.
+
+This health check checks issuers for root CAs backed by software keys. While Vault is secure, for production root certificates, we'd recommend the additional integrity of KMS-backed keys. This is an informational check only. When all roots are KMS-backed, we'll return OK; when no issuers are roots, we'll return not applicable.
+
+### Root Certificate Issued Non-CA Leaves
+
+**Name**: `root_issued_leaves`
+
+**APIs**:
+
+ - `LIST /issuers` (unauthenticated)
+ - `READ /issuer/:issuer_ref/pem` (unauthenticated)
+ - `LIST /certs`
+ - `READ /certs/:serial` (unauthenticated)
+
+**Config Parameters**:
+
+ - `certs_to_fetch` `(int: 100)` - a quantity of leaf certificates to fetch to see if any leaves have been issued by a root directly.
+
+This health check verifies whether a proper CA hierarchy is in use. We do this by fetching `certs_to_fetch` leaf certificates (configurable) and seeing if they are a non-issuer leaf and if they were signed by a root issuer in this mount. If one is found, we'll issue a warning about this, and recommend setting up an intermediate CA.
+
+### Role Allows Implicit Localhost Issuance
+
+**Name**: `role_allows_localhost`
+
+**APIs**:
+
+ - `LIST /roles`
+ - `READ /roles/:name`
+
+**Config Parameters**: (none)
+
+This health check checks each role to see whether the role allows localhost based issuance implicitly (`allow_localhost=true`) with a non-empty allowed_domains value. If it does, it issues a warning and suggests setting it to false and switching to allowed_domains with an explicit list of allowed localhost-like domains. This is a best-practice to simplify understanding of roles.
+
+### Role Allows Glob-Based Wildcard Issuance
+
+**Name**: `role_allows_glob_wildcards`
+
+**APIs**:
+
+ - `LIST /roles`
+ - `READ /roles/:name`
+
+**Config Parameters**:
+
+ - `allowed_roles` `(list: nil)` - an allow-list of roles to ignore.
+
+This health check checks each role to see whether or not it allows wildcard issuance with glob domains as well - these two interact and can result in nested wildcards and other quirks. It is strongly suggested that roles either allow globs or or allow wildcards, but not both - this will be a critical warning. If both behaviors are required, we'd suggest splitting it into two roles.
+
+### Role Sets `no_store=false` and Performance
+
+**Name**: `role_no_store_false`
+
+**APIs**:
+
+ - `LIST /roles`
+ - `READ /roles/:name`
+ - `LIST /certs`
+ - `READ /config/crl`
+
+**Config Parameters**:
+
+ - `allowed_roles` `(list: nil)` - an allow-list of roles to ignore.
+
+This health check checks each role to see whether it sets `no_store=false` or not. When used with lots of certificates and no temporal auto-rebuilding of CRLs, this can result in bad performance. Instead, BYOC can be used for the occasional revocation and shorter certificate lifetimes used instead. Without auto-rebuild, this will be a warning, but when auto-rebuild is enabled, we can make it informational.
+
+### Accessibility of Audit Information
+
+**Name**: `audit_visibility`
+
+**APIs**:
+
+ - `READ /sys/mounts/:mount/tune`
+
+**Config Parameters**:
+
+ - `ignored_parameters` `(list: nil)` - a list of parameters to ignore their HMAC status.
+
+This health check checks whether audit information is accessible to log consumers, validating whether our list of safe and unsafe audit parameters are generally followed. These are informational responses, if any are present.
+
+### ACL Policies Allow Problematic Endpoints
+
+**Name**: `policy_allow_endpoints`
+
+**APIs**:
+
+ - `LIST /sys/policy`
+ - `READ /sys/policy/:name`
+
+**Config Parameters**:
+
+ - `allowed_policies` `(list: nil)` -  a list of policies to allow-list for access to insecure APIs.
+
+This health check checks whether unsafe access to APIs (such as `sign-intermediate`, `sign-verbatim`, and `sign-self-issued`) are allowed. Any findings are a critical result and should be rectified by the administrator or explicitly allowed.
+
+### Allow If-Modified-Since Requests
+
+**Name**: `allow_if_modified_since`
+
+**APIs**:
+
+ - `READ /sys/internal/ui/mounts`
+
+**Config Parameters**: (none)
+
+This health check verifies if the `If-Modified-Since` header has been added to `passthrough_request_headers` and if `Last-Modified` header has been added to `allowed_response_headers`. This is an informational message if both haven't been configured, or a warning if only one has been configured.
+
+### Auto-Tidy Disabled
+
+**Name**: `enable_auto_tidy`
+
+**APIs**:
+
+ - `READ /config/auto-tidy`
+
+**Config Parameters**:
+
+ - `interval_duration_critical` `(duration: 7d)` - the maximum allowed interval_duration to hit critical threshold. 
+ - `interval_duration_warning` `(duration: 2d)` - the maximum allowed interval_duration to hit a warning threshold. 
+ - `pause_duration_critical` `(duration: 1s)` - the maximum allowed pause_duration to hit a critical threshold.
+ - `pause_duration_warning` `(duration: 200ms)` - the maximum allowed pause_duration to hit a warning threshold.
+
+This health check verifies that auto-tidy is enabled, with sane defaults for interval_duration and pause_duration. Any disabled findings will be informational, as this is a best-practice but not strictly required, but other findings w.r.t. `interval_duration` or `pause_duration` will be critical/warnings.
+
+### Tidy Hasn't Run
+
+**Name**: `tidy_last_run`
+
+**APIs**:
+
+ - `READ /tidy-status`
+
+**Config Parameters**: 
+
+ - `last_run_critical` `(duration: 7d)` - the critical delay threshold between when tidy should have last run.
+ - `last_run_warning` `(duration: 2d)` - the warning delay threshold between when tidy should have last run.
+
+This health check verifies that tidy has run within the last run window. This can be critical/warning alerts as this can start to seriously impact Vault's performance.
+
+### Too Many Certificates
+
+**Name**: `too_many_certs`
+
+**APIs**:
+
+ - `READ /tidy-status`
+ - `LIST /certs`
+
+**Config Parameters**: 
+
+ - `count_critical` `(int: 250000)` - the critical threshold at which there are too many certs.
+ - `count_warning` `(int: 50000)` - the warning threshold at which there are too many certs.
+
+This health check verifies that this cluster has a reasonable number of certificates. Ideally this would be fetched from tidy's status or a new metric reporting format, but as a fallback when tidy hasn't run, a list operation will be performed instead.

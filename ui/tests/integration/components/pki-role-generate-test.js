@@ -14,7 +14,7 @@ module('Integration | Component | pki-role-generate', function (hooks) {
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(async function () {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub);
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.store = this.owner.lookup('service:store');
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-test';

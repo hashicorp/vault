@@ -83,6 +83,14 @@ Defaults to "sha2-256".`,
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
 			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be processed in a single batch. When this parameter
+is set, if the parameter 'input' is also set, it will be ignored.
+Any batch output will preserve the order of the batch input.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{

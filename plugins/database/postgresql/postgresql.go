@@ -338,6 +338,17 @@ func (p *PostgreSQL) customDeleteUser(ctx context.Context, username string, revo
 	}()
 
 	for _, stmt := range revocationStmts {
+		if containsMultilineStatement(stmt) {
+			// Execute it as-is.
+			m := map[string]string{
+				"name":     username,
+				"username": username,
+			}
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, stmt); err != nil {
+				return err
+			}
+			continue
+		}
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {

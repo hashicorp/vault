@@ -1,0 +1,40 @@
+<SecretListHeader
+  @model={{this.model}}
+  @backendCrumb={{hash
+    label=this.model.id
+    text=this.model.id
+    path="vault.cluster.secrets.backend.list-root"
+    model=this.model.id
+  }}
+  @isEngine={{true}}
+/>
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink @route="configuration.tidy">
+      Tidy
+    </ToolbarLink>
+    <ToolbarLink @route="configuration.edit">
+      Edit configuration
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+<div class="form-section">
+  <label class="title has-padding-top is-5">
+    URLs
+  </label>
+</div>
+<div class="form-section">
+  <label class="title has-padding-top is-5">
+    CRL
+  </label>
+</div>
+<div class="form-section">
+  <label class="title has-padding-top is-5">
+    Mount Configuration
+  </label>
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{! ARG TODO component and empty state }}
+  </div>
+</div>
+{{outlet}}

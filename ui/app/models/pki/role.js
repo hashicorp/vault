@@ -98,7 +98,7 @@ export default class PkiRoleModel extends Model {
     label: 'Not valid after',
     detailsLabel: 'Issued certificates expire after',
     subText:
-      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date. If no TTL is set, the system uses "default" or the value of max_ttl, whichever is shorter. Alternatively, you can set the not_after date below.',
+      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date.',
     editType: 'yield',
   })
   customTtl;
@@ -106,10 +106,11 @@ export default class PkiRoleModel extends Model {
   @attr({
     label: 'Backdate validity',
     detailsLabel: 'Issued certificate backdating',
+    helperTextDisabled: 'Vault will use the default value, 30s',
     helperTextEnabled:
       'Also called the not_before_duration property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
     editType: 'ttl',
-    defaultValue: '30s', // The API type is "duration" which accepts both an integer and string e.g. 30 || '30s'
+    defaultValue: '30s',
   })
   notBeforeDuration;
 

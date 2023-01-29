@@ -25,6 +25,7 @@ const (
 
 	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
 	legacyCertBundlePath        = "config/ca_bundle"
+	legacyCertBundleBackupPath  = "config/ca_bundle.bak"
 	legacyCRLPath               = "crl"
 	deltaCRLPath                = "delta-crl"
 	deltaCRLPathSuffix          = "-delta"
@@ -197,7 +198,8 @@ type issuerConfigEntry struct {
 }
 
 type clusterConfigEntry struct {
-	Path string `json:"path"`
+	Path    string `json:"path"`
+	AIAPath string `json:"aia_path"`
 }
 
 type aiaConfigEntry struct {
@@ -232,15 +234,18 @@ func (c *aiaConfigEntry) toURLEntries(sc *storageContext, issuer issuerID) (*cer
 			templated := make([]string, len(*source))
 			for index, uri := range *source {
 				if strings.Contains(uri, "{{cluster_path}}") && len(cfg.Path) == 0 {
-					return nil, fmt.Errorf("unable to template AIA URLs as we lack local cluster address information")
+					return nil, fmt.Errorf("unable to template AIA URLs as we lack local cluster address information (path)")
 				}
-
+				if strings.Contains(uri, "{{cluster_aia_path}}") && len(cfg.AIAPath) == 0 {
+					return nil, fmt.Errorf("unable to template AIA URLs as we lack local cluster address information (aia_path)")
+				}
 				if strings.Contains(uri, "{{issuer_id}}") && len(issuer) == 0 {
 					// Elide issuer AIA info as we lack an issuer_id.
 					return nil, fmt.Errorf("unable to template AIA URLs as we lack an issuer_id for this operation")
 				}
 
 				uri = strings.ReplaceAll(uri, "{{cluster_path}}", cfg.Path)
+				uri = strings.ReplaceAll(uri, "{{cluster_aia_path}}", cfg.AIAPath)
 				uri = strings.ReplaceAll(uri, "{{issuer_id}}", issuer.String())
 				templated[index] = uri
 			}

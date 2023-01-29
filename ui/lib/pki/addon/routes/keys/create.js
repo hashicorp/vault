@@ -5,7 +5,6 @@ import { withConfirmLeave } from 'core/decorators/confirm-leave';
 @withConfirmLeave()
 export default class PkiKeysCreateRoute extends PkiKeysIndexRoute {
   @service store;
-  @service secretMountPath;
 
   model() {
     return this.store.createRecord('pki/key');

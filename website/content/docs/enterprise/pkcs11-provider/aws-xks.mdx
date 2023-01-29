@@ -18,7 +18,8 @@ This is tested as working with Vault 1.11.0 Enterprise (and later) with Advanced
 
 Prerequisites:
 
-* A server capable of running XKS Proxy, which is exposed to the Internet or a VPC endpoint. This can be the same as the Vault server.
+* A server capable of running XKS Proxy on port 443, which is exposed to the Internet or a VPC endpoint. This can be the same as the Vault server.
+* A valid DNS entry with a valid TLS certificate for XKS Proxy.
 * `libvault-pkcs11.so` downloaded from [releases.hashicorp.com](https://releases.hashicorp.com/vault-pkcs11-provider) for your platform and available on the XKS Proxy server.
 * Vault Enterprise with the KMIP Secrets Engine available and with TCP port 5696 accessible to where XKS Proxy will be running.
 
@@ -27,6 +28,10 @@ There are 3 parts to this setup:
 1. Vault KMIP Secrets Engine standard setup. (There is nothing specific to XKS in this setup.)
 1. Vault PKCS#11 setup to tell the PKCS#11 provider (`libvault-pkcs11.so`) how to talk to the Vault KMIP Secrets Engine. (There is nothing specific to XKS in this setup.)
 1. XKS Proxy setup.
+
+~> **Important**: XKS has a strict 250 ms latency requirement.
+In order to serve requests with this latency, we recommend hosting Vault and the XKS proxy as close as possible
+to the desired KMS region.
 
 ## Vault Setup
 
@@ -71,24 +76,22 @@ On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/km
     jq --raw-output --exit-status '.data.certificate' kmip.json > cert.pem
     ```
 
-1. Create an AES-256 key in KMIP, for example, using `pkcs11-tool` (usually installed with the OpenSC package). See the [Vault docs](https://developer.hashicorp.com/vault/docs/enterprise/pkcs11-provider) for the full setup.
-   ```sh
-   VAULT_LOG_FILE=/dev/null pkcs11-tool --module ./libvault-pkcs11.so --keygen -a abc123 --key-type AES:32 \
-       --extractable --allow-sw
-   Key generated:
-   Secret Key Object; AES length 32
-   VALUE:
-   label:      abc123
-   Usage:      encrypt, decrypt, wrap, unwrap
-   Access:     none
-   ```
-
-
 ## XKS Proxy Setup
 
 The rest of the steps take place on the XKS Proxy server.
 
-1. Copy the `libvault-pkcs11.so` binary somewhere on the server, such as `/usr/local/lib` (should be same as in the TOML config file below), and `chmod` it so that it is executable.
+For this example, We will use an HTTPS proxy service like [ngrok](https://ngrok.com/) to forward connections
+to the XKS proxy. This helps to quickly setup a valid domain and TLS endpoint for testing.
+
+1. Start `ngrok`:
+
+   ```shell-session
+   $ ngrok http 8000
+   ```
+
+   This will output a domain that can be used to configure KMS later, such as `https://example.ngrok.io`.
+
+1. Copy the `libvault-pkcs11.so` binary to the server, such as `/usr/local/lib` (should be same as in the TOML config file below), and `chmod` it so that it is executable.
 
 1. Copy the TLS certificate bundle (e.g., `/etc/kmip/cert.pem`) and CA bundle (e.g., `/etc/kmip/ca.pem`) to the `xks-proxy` server (doesn't matter where, as long as the `xks-proxy` process has access to it) from the Vault setup.
 
@@ -109,7 +112,7 @@ The rest of the steps take place on the XKS Proxy server.
    [server]
    ip = "0.0.0.0"
    port = 8000
-   region = "us-east-1"
+   region = "us-east-2"
    service = "kms-xks-proxy"
 
    [server.tcp_keepalive]
@@ -134,12 +137,12 @@ The rest of the steps take place on the XKS Proxy server.
    tls_cert_pem = "tls/server_cert.pem"
    tls_key_pem = "tls/server_key.pem"
    mtls_client_ca_pem = "tls/client_ca.pem"
-   mtls_client_dns_name = "us-east-1.alpha.cks.kms.aws.internal.amazonaws.com"
+   mtls_client_dns_name = "us-east-2.alpha.cks.kms.aws.internal.amazonaws.com"
 
    [[external_key_stores]]
    uri_path_prefix = "/xyz"
-   sigv4_access_id = "AKIA4GBY3I6JCE5M2HPM"
-   sigv4_secret_key = "1234567890123456789012345678901234567890123="
+   sigv4_access_key_id = "AKIA4GBY3I6JCE5M2HPM"
+   sigv4_secret_access_key = "1234567890123456789012345678901234567890123="
    xks_key_id_set = ["abc123"]
 
    [pkcs11]
@@ -159,6 +162,8 @@ The rest of the steps take place on the XKS Proxy server.
    is_zero_iv_required = false
    ```
 
+~> **Note**: `vault-pkcs11-provider` versions of 0.1.0–0.1.2 require the last two lines to be changed to `can_generate_iv = true` and `is_zero_iv_required = true`.
+
 1. Create a file, `/etc/vault-pkcs11.hcl` with the following contents:
 
     ```hcl
@@ -175,22 +180,107 @@ The rest of the steps take place on the XKS Proxy server.
 
 1. If you want to view the Vault logs (helpful when trying to find error messages), you can specify the `VAULT_LOG_FILE` (default is stdout) and `VAULT_LOG_LEVEL` (default is `INFO`). We'd recommend setting `VAULT_LOG_FILE` to something like `/tmp/vault.log` or `/var/log/vault.log`. Other useful log levels are `WARN` (quieter) and `TRACE` (very verbose, could possibly contain sensitive information, like raw network packets).
 
-## Enable XKS in the AWS UI
+1. Create an AES-256 key in KMIP, for example, using `pkcs11-tool` (usually installed with the OpenSC package). See the [Vault docs](https://developer.hashicorp.com/vault/docs/enterprise/pkcs11-provider) for the full setup.
+   ```sh
+   VAULT_LOG_FILE=/dev/null pkcs11-tool --module ./libvault-pkcs11.so --keygen -a abc123 --key-type AES:32 \
+       --extractable --allow-sw
+   Key generated:
+   Secret Key Object; AES length 32
+   VALUE:
+   label:      abc123
+   Usage:      encrypt, decrypt, wrap, unwrap
+   Access:     none
+   ```
 
-1. Go into KMS settings in the AWS UI.
-1. Go to "External key stores" in the navigation menu.
-1. Click on "Create external key store"
-1. Add the relevant settings:
-   a. Key store name: the name you want your key store to be referred to in AWS
-   a. Proxy URI endpoint: the base URI of the XKS proxy server (e.g., `https://xks.example.com:1234`)
-   a. Proxy URI path prefix: added to the end of the base URI of the XKS proxy server when making requests
-   a. Proxy credential, Access key ID: the access key you configured in the XKS proxy configuration file
-   a. Proxy credential, Secret access key: the secret key you configured in the XKS proxy configuration file
-1. Create the external key store
-1. Connect the external key store (will take a few minutes)
-1. Select the newly created external key store
-1. Select "Create a KMS key in this key store"
-   a. Enter an external key ID corresponding to a PKCS#11 label that is allowed in the settings TOML. In the example above, this is "abc123".
-   a. Enter an alias for this key.
-   a. Set up the key administrators and key usage permissions.
-1. You should now be able to use this Vault-backed key with the KMS API, e.g., `aws kms encrypt`.
+## Enable XKS in the AWS CLI
+
+
+1. Create the KMS custom key store with the appropriate parameters to point to your XKS proxy (in this example, through `ngrok`).
+
+   ```shell-session
+   $ aws kms create-custom-key-store \
+       --custom-key-store-name myVaultKeyStore \
+       --custom-key-store-type EXTERNAL_KEY_STORE \
+       --xks-proxy-uri-endpoint https://example.ngrok.io \
+       --xks-proxy-uri-path /xyz/kms/xks/v1 \
+       --xks-proxy-authentication-credential AccessKeyId=AKIA4GBY3I6JCE5M2HPM,RawSecretAccessKey=1234567890123456789012345678901234567890123= \
+       --xks-proxy-connectivity PUBLIC_ENDPOINT
+
+   {
+       "CustomKeyStoreId": "cks-d7a55fe93d63191d6"
+   }
+   ```
+
+1. Tell KMS to connect to the key store.
+
+   ```shell-session
+   $ aws kms connect-custom-key-store --custom-key-store-id cks-d7a55fe93d63191d6
+   ```
+
+1. Wait for the `ConnectionState` of your custom key store to be `CONNECTED`. This can take a few minutes.
+
+   ```shell-session
+   $ aws kms describe-custom-key-stores --custom-key-store-id cks-d7a55fe93d63191d6
+   ```
+
+1. Create a KMS key associated with the XKS key ID (`abc123` in this example):
+
+   ```shell-session
+   $ aws kms create-key --custom-key-store-id cks-d7a55fe93d63191d6 \
+       --xks-key-id abc123 --origin EXTERNAL_KEY_STORE
+   {
+       "KeyMetadata": {
+           "AWSAccountId": "111111111111",
+           "KeyId": "a93f205a-2a37-4338-aa64-92b4a4b0b67d",
+           "Arn": "arn:aws:kms:us-east-2:111111111111:key/a93f205a-2a37-4338-aa64-92b4a4b0b67d",
+           "CreationDate": "2022-12-22T11:03:23.695000-08:00",
+           "Enabled": true,
+           "Description": "",
+           "KeyUsage": "ENCRYPT_DECRYPT",
+           "KeyState": "Enabled",
+           "Origin": "EXTERNAL_KEY_STORE",
+           "CustomKeyStoreId": "cks-16460f66b34705025",
+           "KeyManager": "CUSTOMER",
+           "CustomerMasterKeySpec": "SYMMETRIC_DEFAULT",
+           "KeySpec": "SYMMETRIC_DEFAULT",
+           "EncryptionAlgorithms": [
+               "SYMMETRIC_DEFAULT"
+           ],
+           "MultiRegion": false,
+           "XksKeyConfiguration": {
+               "Id": "abc123"
+           }
+       }
+   }
+   ```
+
+1. Encrypt some data with this key:
+
+   ```shell-session
+   $ aws kms encrypt --key-id a93f205a-2a37-4338-aa64-92b4a4b0b67d --plaintext YWJjMTIzCg==
+   {
+       "CiphertextBlob": "somerandomciphertextblob=",
+       "KeyId": "arn:aws:kms:us-east-2:111111111111:key/a93f205a-2a37-4338-aa64-92b4a4b0b67d",
+       "EncryptionAlgorithm": "SYMMETRIC_DEFAULT"
+   }
+
+1. Decypt the resulting ciphertext:
+
+   ```shell-session
+   $ aws kms decrypt --ciphertext-blob somerandomciphertextblob=
+   {
+       "KeyId": "arn:aws:kms:us-east-2:111111111111:key/a93f205a-2a37-4338-aa64-92b4a4b0b67d",
+       "Plaintext": "YWJjMTIzCg==",
+       "EncryptionAlgorithm": "SYMMETRIC_DEFAULT"
+   }
+   ```
+
+1. Optionally, clean up your key and key store with:
+
+   ```shell-session
+   $ aws kms disable-key --key-id a93f205a-2a37-4338-aa64-92b4a4b0b67d
+   $ aws kms disconnect-custom-key-store --custom-key-store-id cks-16460f66b34705025
+   $ aws kms delete-custom-key-store --custom-key-store-id cks-16460f66b34705025
+   ```
+
+   (The `aws kms delete-custom-key-store` command will not succeed until all keys in the key store have been disabled and deleted.)

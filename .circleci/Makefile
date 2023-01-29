@@ -82,6 +82,7 @@ define GEN_CONFIG
 	@mv -f $@.tmp $@
 endef
 
+.PHONY: $(OUT)
 $(OUT): $(CONFIG_SOURCE) 
 	$(GEN_CONFIG)
 	@echo "$@ updated"

@@ -73,6 +73,8 @@ jobs:
       MATRIX_TEST_GROUP: ${{ inputs.matrix-test-group }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.vault-revision }}
       - id: metadata
         run: |
           echo "build-date=$(make ci-get-date)" >> $GITHUB_OUTPUT

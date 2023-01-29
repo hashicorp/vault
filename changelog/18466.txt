@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Allow patching issuer to set an empty issuer name.
+```

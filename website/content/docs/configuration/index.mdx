@@ -149,9 +149,17 @@ to specify where the configuration is.
   maximum request duration allowed before Vault cancels the request. This can
   be overridden per listener via the `max_request_duration` value.
 
+- `detect_deadlocks` `(string: "")` - Specifies the internal mutex locks that should be monitored for
+potential deadlocks. Currently supported value is `statelock`, which will cause "POTENTIAL DEADLOCK:"
+to be logged when an attempt at a core state lock appears to be deadlocked. Enabling this can have
+a negative effect on performance due to the tracking of each lock attempt.
+
 - `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which
   allows the decryption/encryption of raw data into and out of the security
   barrier. This is a highly privileged endpoint.
+
+- `introspection_endpoint` `(bool: false)` - Enables the `sys/internal/inspect` endpoint
+  which allows users with a root token or sudo privileges to inspect certain subsystems inside Vault.
 
 - `ui` `(bool: false)` – Enables the built-in web UI, which is available on all
   listeners (address + port) at the `/ui` path. Browsers accessing the standard
@@ -196,6 +204,12 @@ to specify where the configuration is.
 - `log_rotate_bytes` - Equivalent to the [`-log-rotate-bytes` command-line flag](/docs/commands/server#_log_rotate_bytes).
 
 - `log_rotate_max_files` - Equivalent to the [`-log-rotate-max-files` command-line flag](/docs/commands/server#_log_rotate_max_files).
+
+- `experiments` `(string array: [])` - The list of experiments to enable for this node.
+  Experiments should NOT be used in production, and the associated APIs may have backwards
+  incompatible changes between releases. Additional experiments can also be specified via
+  the `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
+  [`-experiment`](/docs/commands/server#experiment) flag.
 
 ### High Availability Parameters
 

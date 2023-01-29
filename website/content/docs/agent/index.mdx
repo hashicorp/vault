@@ -186,6 +186,9 @@ These are the currently-available general configuration options:
 
 - `listener` <code>([listener][listener]: <optional\>)</code> - Specifies the addresses and ports on which the Agent will respond to requests.
 
+  ~> **Note:** On `SIGHUP` (`kill -SIGHUP $(pidof vault)`), Vault Agent will attempt to reload listener TLS configuration.
+  This method can be used to refresh certificates used by Vault Agent without having to restart its process.
+
 - `pid_file` `(string: "")` - Path to the file in which the agent's Process ID
   (PID) should be stored
 
@@ -212,6 +215,9 @@ These are the currently-available general configuration options:
   for a list of metrics specific to Agent.
 
 - `log_level` - Equivalent to the [`-log-level` command-line flag](#_log_level).
+
+  ~> **Note:** On `SIGHUP` (`kill -SIGHUP $(pidof vault)`), Vault Agent will update the log level to the value
+  specified by configuration file (including overriding values set using CLI or environment variable parameters).
 
 - `log_format` - Equivalent to the [`-log-format` command-line flag](#_log_format).
 
@@ -360,6 +366,12 @@ To run Vault Agent:
    ```shell-session
    $ vault agent -h
    ```
+
+As with Vault, the `-config` flag can be used in three different ways:
+
+- Use the flag once to name the path to a single specific configuration file.
+- Use the flag multiple times to name multiple configuration files, which will be composed at runtime.
+- Use the flag to name a directory of configuration files, the contents of which will be composed at runtime.
 
 ## Example Configuration
 

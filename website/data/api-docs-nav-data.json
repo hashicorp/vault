@@ -422,6 +422,15 @@
         "path": "system/config-cors"
       },
       {
+        "title": "<code>/sys/config/group-policy-application</code>",
+        "path": "system/config-group-policy-application",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "<code>/sys/config/reload</code>",
         "path": "system/config-reload"
       },
@@ -436,6 +445,10 @@
       {
         "title": "<code>/sys/control-group</code>",
         "path": "system/control-group"
+      },
+      {
+        "title": "<code>/sys/experiments</code>",
+        "path": "system/experiments"
       },
       {
         "title": "<code>/sys/generate-recovery-token</code>",

@@ -280,10 +280,14 @@ entity and then authorizes the entity for the given role.
   metadata.
 - `vm_name` `(string: "")` - The virtual machine name for the machine that
   generated the MSI token. This information can be obtained through instance
-  metadata. If vmss_name is provided, this value is ignored.
+  metadata. If `vmss_name` is provided, this value is ignored.
 - `vmss_name` `(string: "")` - The virtual machine scale set name for the machine
   that generated the MSI token. This information can be obtained through instance
   metadata.
+- `resource_id` `(string: "")` - The fully qualified ID of the Azure resource that
+  generated the MSI token, including the resource name and resource type. Use
+  the format /subscriptions/{guid}/resourceGroups/{resource-group-name}/{resource-provider-namespace}/{resource-type}/{resource-name}.
+  If `vm_name` or `vmss_name` is provided, this value is ignored.
 
 ### Sample Payload
 
