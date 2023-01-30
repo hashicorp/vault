@@ -742,12 +742,29 @@ func TestSystemBackend_remount_auth(t *testing.T) {
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 
+	// validate the response structure for remount named read
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, b.(*SystemBackend).remountPaths(), 0, logical.ReadOperation),
+		resp,
+		true,
+	)
+
 	RetryUntil(t, 5*time.Second, func() error {
 		req = logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("remount/status/%s", resp.Data["migration_id"]))
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
+
+		// validate the response structure for remount status read
+		schema.ValidateResponse(
+			t,
+			schema.FindResponseSchema(t, b.(*SystemBackend).remountPaths(), 1, logical.ReadOperation),
+			resp,
+			true,
+		)
+
 		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
 		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
 			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)

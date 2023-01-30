@@ -341,7 +341,7 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 				logical.CreateOperation: &framework.PathOperation{
 					Callback: r.handleRawWrite,
 					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 						}},
 					},

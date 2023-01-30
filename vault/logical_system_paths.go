@@ -345,6 +345,47 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 }
 
 func (b *SystemBackend) rekeyPaths() []*framework.Path {
+	respFields := map[string]*framework.FieldSchema{
+		"nounce": {
+			Type:     framework.TypeString,
+			Required: true,
+		},
+		"started": {
+			Type:     framework.TypeString,
+			Required: true,
+		},
+		"t": {
+			Type:     framework.TypeInt,
+			Required: true,
+		},
+		"n": {
+			Type:     framework.TypeInt,
+			Required: true,
+		},
+		"progress": {
+			Type:     framework.TypeInt,
+			Required: true,
+		},
+		"required": {
+			Type:     framework.TypeInt,
+			Required: true,
+		},
+		"verification_required": {
+			Type:     framework.TypeBool,
+			Required: true,
+		},
+		"verification_nonce": {
+			Type:     framework.TypeString,
+			Required: true,
+		},
+		"backup": {
+			Type: framework.TypeBool,
+		},
+		"pgp_fingerprints": {
+			Type: framework.TypeCommaStringSlice,
+		},
+	}
+
 	return []*framework.Path{
 		{
 			Pattern: "rekey/init",
@@ -372,16 +413,32 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				},
 			},
 
-			// TODO not sure what to do for this as there are no callbacks
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields:      respFields,
+						}},
+					},
 					Summary: "Reads the configuration and progress of the current rekey attempt.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields:      respFields,
+						}},
+					},
 					Summary:     "Initializes a new rekey attempt.",
 					Description: "Only a single rekey attempt can take place at a time, and changing the parameters of a rekey requires canceling and starting a new rekey, which will also provide a new nonce.",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+						}},
+					},
 					Summary:     "Cancels any in-progress rekey.",
 					Description: "This clears the rekey settings as well as any progress made. This must be called to change the parameters of the rekey. Note: verification is still a part of a rekey. If rekeying is canceled during the verification flow, the current unseal keys remain valid.",
 				},
@@ -419,7 +476,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleRekeyDeleteBarrier,
 					Responses: map[int][]framework.Response{
-						http. StatusNoContent: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 						}},
 					},
@@ -462,7 +519,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleRekeyDeleteRecovery,
 					Responses: map[int][]framework.Response{
-						http. StatusNoContent: {{
+						http.StatusNoContent: {{
 							Description: "OK",
 						}},
 					},
@@ -488,7 +545,55 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					// TODO what to do with no callback
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nounce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"complete": {
+									Type: framework.TypeBool,
+								},
+								"started": {
+									Type: framework.TypeString,
+								},
+								"t": {
+									Type: framework.TypeInt,
+								},
+								"n": {
+									Type: framework.TypeInt,
+								},
+								"progress": {
+									Type: framework.TypeInt,
+								},
+								"required": {
+									Type: framework.TypeInt,
+								},
+								"keys": {
+									Type: framework.TypeCommaStringSlice,
+								},
+								"keys_base64": {
+									Type: framework.TypeCommaStringSlice,
+								},
+								"verification_required": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"verification_nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"backup": {
+									Type: framework.TypeBool,
+								},
+								"pgp_fingerprints": {
+									Type: framework.TypeCommaStringSlice,
+								},
+							},
+						}},
+					},
 					Summary: "Enter a single unseal key share to progress the rekey of the Vault.",
 				},
 			},
@@ -510,13 +615,81 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			// TODO no callbacks here as well
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nounce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"started": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"t": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"n": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+							},
+						}},
+					},
 					Summary: "Read the configuration and progress of the current rekey verification attempt.",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nounce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"started": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"t": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"n": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+							},
+						}},
+					},
 					Summary:     "Cancel any in-progress rekey verification operation.",
 					Description: "This clears any progress made and resets the nonce. Unlike a `DELETE` against `sys/rekey/init`, this only resets the current verification operation, not the entire rekey atttempt.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nounce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"complete": {
+									Type: framework.TypeBool,
+								},
+							},
+						}},
+					},
 					Summary: "Enter a single new key share to progress the rekey verification operation.",
 				},
 			},
