@@ -1,4 +1,4 @@
 ```release-note:change
-core: recovery keys may now be used to unseal an auto-sealed Vault via an
-opt-out unseal recovery mode.
+core: recovery keys may now be used to unseal an auto-sealed non-enterprise Vault via an
+opt-out unseal recovery mode. 
 ```
