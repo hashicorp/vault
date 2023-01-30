@@ -25,10 +25,6 @@ var (
 	keyPath                         = regexp.MustCompile("^(.*)/keys/([^/]*)$")
 )
 
-type transitImportCommand interface {
-	Flags() *FlagSets
-}
-
 type TransitImportCommand struct {
 	*BaseCommand
 }
@@ -157,7 +153,7 @@ func fetchWrappingKey(c *BaseCommand, client *api.Client, path string) (any, err
 		return nil, fmt.Errorf("error fetching wrapping key: %w", err)
 	}
 	if resp == nil {
-		return nil, fmt.Errorf("transit not mounted at %s: %v", path)
+		return nil, fmt.Errorf("transit not mounted at %s: %v", path, err)
 	}
 	key, ok := resp.Data["public_key"]
 	if !ok {
