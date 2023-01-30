@@ -313,7 +313,7 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 
 	// Intermediate X2
 	int2CsrResp, err := client.Logical().Write("pki-int/intermediate/generate/internal", map[string]interface{}{
-		"key_type":    "ed25519",
+		"key_type":    "ec",
 		"common_name": "Int X2",
 		"ttl":         "3650d",
 	})
