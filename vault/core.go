@@ -23,6 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/helper/constants"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -1816,14 +1818,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 			return fmt.Errorf("error storing new master key: %w", err)
 		}
 
-		// Store the unseal recovery key
-		wrapper := aeadwrapper.NewShamirWrapper()
-		wrapper.SetAesGcmKeyBytes(c.migrationInfo.unsealKey)
-		recoverySeal := NewRecoverySeal(&vaultseal.Access{
-			Wrapper: wrapper,
-		})
-		recoverySeal.SetCore(c)
-		if err := recoverySeal.SetStoredKeys(ctx, [][]byte{newMasterKey}); err != nil {
+		if _, err := c.initializeUnsealRecovery(ctx, c.migrationInfo.unsealKey, newMasterKey); err != nil {
 			c.logger.Error("failed to store recovery unseal keys", "error", err)
 		}
 	default:
@@ -4052,24 +4047,26 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	return raftBackend.GetAutopilotServerState(ctx)
 }
 
-func (c *Core) initializeUnsealRecovery(ctx context.Context, recoveryKey, barrierKey []byte) error {
+func (c *Core) initializeUnsealRecovery(ctx context.Context, recoveryKey, barrierKey []byte) (bool, error) {
+	if !constants.IsEnterprise {
+		return false, nil
+	}
 	wrapper := aeadwrapper.NewShamirWrapper()
 	if err := wrapper.SetAesGcmKeyBytes(recoveryKey); err != nil {
-		return fmt.Errorf("failed to store recover unseal keys: %v", err)
+		return false, fmt.Errorf("failed to store recover unseal keys: %v", err)
 	}
 	recoverySeal := NewRecoverySeal(&vaultseal.Access{
 		Wrapper: wrapper,
 	})
 	recoverySeal.SetCore(c)
 	if err := recoverySeal.SetStoredKeys(ctx, [][]byte{barrierKey}); err != nil {
-		return fmt.Errorf("failed to store recover unseal keys: %v", err)
+		return false, fmt.Errorf("failed to store recover unseal keys: %v", err)
 	}
-	return nil
+	return true, nil
 }
 
 func (c *Core) UnsealRecoveryEnabled(ctx context.Context) (bool, error) {
-	// TODO: Return false on ENT
-	if !isUnsealRecoverySeal(c.seal) && !isAutoSeal(c.seal) {
+	if constants.IsEnterprise || (!isUnsealRecoverySeal(c.seal) && !isAutoSeal(c.seal)) {
 		return false, nil
 	}
 	pe, err := c.physical.Get(ctx, recoveryUnsealKeyPath)

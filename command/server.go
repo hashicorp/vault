@@ -2410,7 +2410,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			}
 		}
 
-		if configSeal.Recover {
+		if configSeal.Recover && !constants.IsEnterprise {
 			seal = vault.NewRecoverySeal(&vaultseal.Access{
 				Wrapper: aeadwrapper.NewShamirWrapper(),
 			})

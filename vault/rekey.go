@@ -774,19 +774,11 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	}
 
 	if !c.recoveryRekeyConfig.DisableUnsealRecovery {
-		// Store the unseal recovery key
-		wrapper := aeadwrapper.NewShamirWrapper()
 		rootKeys, err := c.seal.GetStoredKeys(ctx)
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform recovery rekey, failed retrieving root keys: %w", err).Error())
 		}
-
-		wrapper.SetAesGcmKeyBytes(newRecoveryKey)
-		recoverySeal := NewRecoverySeal(&seal.Access{
-			Wrapper: wrapper,
-		})
-		recoverySeal.SetCore(c)
-		if err := recoverySeal.SetStoredKeys(ctx, rootKeys); err != nil {
+		if err := c.initializeUnsealRecovery(ctx, newRecoveryKey, rootKeys); err != nil {
 			c.logger.Error("failed to store recovery unseal keys", "error", err)
 		}
 		results.UnsealRecoveryEnabled = true
