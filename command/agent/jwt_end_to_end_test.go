@@ -163,10 +163,10 @@ func testJWTEndToEnd(t *testing.T, ahWrapping, useSymlink, removeJWTAfterReading
 		Logger:    logger.Named("auth.jwt"),
 		MountPath: "auth/jwt",
 		Config: map[string]interface{}{
-			"path":                      fileNameToUseAsPath,
-			"role":                      "test",
-			"remove_jwt_after_reading":  removeJWTAfterReading,
-			"test_override_read_period": true,
+			"path":                     fileNameToUseAsPath,
+			"role":                     "test",
+			"remove_jwt_after_reading": removeJWTAfterReading,
+			"jwt_read_period":          "0.5s",
 		},
 	})
 	if err != nil {

@@ -91,24 +91,22 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("'role' value is empty")
 	}
 
-	// If we don't delete the JWT after reading, use a slower reload period,
-	// otherwise we would re-read the whole file every 500ms, instead of just
-	// doing a stat on the file every 500ms.
+	// Default readPeriod
 	readPeriod := 1 * time.Minute
-	if j.removeJWTAfterReading {
-		readPeriod = 500 * time.Millisecond
-	}
 
-	// This is test-only config, so that tests don't need to wait for minutes
-	// in the case that removeJWTAfterReading != true
-	if testOverrideReadPeriodRaw, ok := conf.Config["test_override_read_period"]; ok {
-		testOverrideReadPeriod, err := parseutil.ParseBool(testOverrideReadPeriodRaw)
-		if err == nil {
-			if testOverrideReadPeriod {
-				readPeriod = 500 * time.Millisecond
-			}
+	if jwtReadPeriodRaw, ok := conf.Config["jwt_read_period"]; ok {
+		jwtReadPeriod, err := parseutil.ParseDurationSecond(jwtReadPeriodRaw)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing 'jwt_read_period' value: %w", err)
 		}
-		// We do nothing if err is non-nil, as this is meant to be a test-only config.
+		readPeriod = jwtReadPeriod
+	} else {
+		// If we don't delete the JWT after reading, use a slower reload period,
+		// otherwise we would re-read the whole file every 500ms, instead of just
+		// doing a stat on the file every 500ms.
+		if j.removeJWTAfterReading {
+			readPeriod = 500 * time.Millisecond
+		}
 	}
 
 	j.ticker = time.NewTicker(readPeriod)
@@ -196,22 +194,14 @@ func (j *jwtMethod) ingressToken() {
 	// Check that the path refers to a file.
 	// If it's a symlink, it could still be a symlink to a directory,
 	// but os.ReadFile below will return a descriptive error.
-	var symlink bool
+	evalSymlinkPath := j.path
 	switch mode := fi.Mode(); {
 	case mode.IsRegular():
 		// regular file
 	case mode&fs.ModeSymlink != 0:
-		symlink = true
-	default:
-		j.logger.Error("jwt file is not a regular file or symlink")
-		return
-	}
-
-	evalSymlinkPath := j.path
-	// If our file path is a symlink, we should also return early (like above) without error
-	// if the file that is linked to is not present, otherwise we will error when trying
-	// to read that file by following the link in the os.ReadFile call.
-	if symlink {
+		// If our file path is a symlink, we should also return early (like above) without error
+		// if the file that is linked to is not present, otherwise we will error when trying
+		// to read that file by following the link in the os.ReadFile call.
 		evalSymlinkPath, err = filepath.EvalSymlinks(j.path)
 		if err != nil {
 			j.logger.Error("error encountered evaluating symlinks", "error", err)
@@ -225,6 +215,9 @@ func (j *jwtMethod) ingressToken() {
 			j.logger.Error("error encountered stat'ing jwt file after evaluating symlinks", "error", err)
 			return
 		}
+	default:
+		j.logger.Error("jwt file is not a regular file or symlink")
+		return
 	}
 
 	token, err := os.ReadFile(j.path)

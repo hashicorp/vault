@@ -19,3 +19,8 @@ method](/docs/auth/jwt).
   This can be set to `false` to disable the default behavior of removing the
   JWT after it's been read. Note that if `path` is a symlink to a JWT, the JWT,
   not the symlink, will be deleted.
+
+- `jwt_read_period` `(duration: "0.5s", optional)` - The duration after which
+Agent will attempt to read the JWT stored at `path`. Defaults to `1m` if
+`remove_jwt_after_reading` is set to `true`, or `0.5s` otherwise.
+Uses [duration format strings](/docs/concepts/duration-format).
