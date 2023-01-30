@@ -46,7 +46,7 @@ jobs:
           echo "node-version=$(cat ./ui/.nvmrc)" >> $GITHUB_OUTPUT
           if ${IS_ENT} == true; then
             echo "detected vault_edition=ent"
-            echo "runs-on=ubuntu-latest" >> $GITHUB_OUTPUT # ubuntu-latest has Chrome so we need to use this for now. The on-demand runners do not 
+            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5.2xlarge', 'disk_gb=64']" >> $GITHUB_OUTPUT
             echo "vault_edition=ent" >> $GITHUB_OUTPUT
           else
             echo "detected vault_edition=oss"
@@ -76,15 +76,6 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ needs.get-metadata.outputs.go-version }}
-      - name: Configure AWS credentials from Test account
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
-          aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
-          role-skip-session-tagging: true
-          role-duration-seconds: 5400
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -107,6 +98,20 @@ jobs:
       - name: Set Up Vault Enterprise License
         if: contains(${{ github.event.repository.name }}, 'ent')
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
+      - name: Se Up Chrome
+        if: contains(${{ github.event.repository.name }}, 'ent')
+        run: |
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb
+      - name: Configure AWS credentials from Test account
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
+          role-skip-session-tagging: true
+          role-duration-seconds: 3600
       - name: Setup Cluster
         id: setup_cluster
         env:
@@ -123,7 +128,7 @@ jobs:
       - name: Run UI Tests
         id: run_ui_tests
         env:
-          ENOS_VAR_ui_test_filter: ${{ inputs.test_filter }}
+          ENOS_VAR_ui_test_filter: "${{ inputs.test_filter }}"
         run: enos scenario run --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
       - name: Ensure scenario has been destroyed
         if: ${{ always() }}
