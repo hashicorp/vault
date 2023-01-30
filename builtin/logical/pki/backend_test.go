@@ -5601,11 +5601,11 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	b.initializeStoredCertificateCounts(ctx)
 
 	// Test certificate count
-	if *(b.certCount) != 8 {
+	if atomic.LoadUint32(b.certCount) != 8 {
 		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", *(b.certCount))
 	}
 
-	if *(b.revokedCertCount) != 4 {
+	if atomic.LoadUint32(b.revokedCertCount) != 4 {
 		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", *(b.revokedCertCount))
 	}
 
