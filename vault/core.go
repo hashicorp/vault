@@ -4049,7 +4049,7 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 }
 
 func (c *Core) initializeUnsealRecovery(ctx context.Context, recoveryKey []byte, rootKeys [][]byte) (bool, error) {
-	if !constants.IsEnterprise {
+	if constants.IsEnterprise {
 		return false, nil
 	}
 	wrapper := aeadwrapper.NewShamirWrapper()

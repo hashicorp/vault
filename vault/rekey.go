@@ -778,6 +778,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform recovery rekey, failed retrieving root keys: %w", err).Error())
 		}
+
 		if _, err := c.initializeUnsealRecovery(ctx, newRecoveryKey, rootKeys); err != nil {
 			c.logger.Error("failed to store recovery unseal keys", "error", err)
 		}
