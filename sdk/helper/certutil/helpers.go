@@ -81,7 +81,7 @@ var InvSignatureAlgorithmNames = map[x509.SignatureAlgorithm]string{
 // OID for RFC 5280 CRL Number extension.
 //
 // > id-ce-cRLNumber OBJECT IDENTIFIER ::= { id-ce 20 }
-var CRLNumnberOID = asn1.ObjectIdentifier([]int{2, 5, 29, 20})
+var CRLNumberOID = asn1.ObjectIdentifier([]int{2, 5, 29, 20})
 
 // OID for RFC 5280 Delta CRL Indicator CRL extension.
 //

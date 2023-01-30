@@ -271,7 +271,7 @@ func getCRLNumber(t *testing.T, crl pkix.TBSCertificateList) int {
 	t.Helper()
 
 	for _, extension := range crl.Extensions {
-		if extension.Id.Equal(certutil.CRLNumnberOID) {
+		if extension.Id.Equal(certutil.CRLNumberOID) {
 			bigInt := new(big.Int)
 			leftOver, err := asn1.Unmarshal(extension.Value, &bigInt)
 			require.NoError(t, err, "Failed unmarshalling crl number extension")
