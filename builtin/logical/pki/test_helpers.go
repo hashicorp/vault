@@ -306,7 +306,8 @@ func getCrlReferenceFromDelta(t *testing.T, crl pkix.TBSCertificateList) int {
 }
 
 func waitForUpdatedCrl(t *testing.T, client *api.Client, mountPoint string, lastSeenCRLNumber int,
-	maxWait time.Duration) pkix.TBSCertificateList {
+	maxWait time.Duration,
+) pkix.TBSCertificateList {
 	t.Helper()
 
 	interruptChan := time.After(maxWait)
