@@ -237,8 +237,11 @@
           id={{@attr.name}}
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
           oninput={{this.onChangeWithEvent}}
-          class="textarea"
+          class="textarea {{if this.validationError 'has-error-border'}}"
         ></textarea>
+        {{#if this.validationError}}
+          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+        {{/if}}
       {{else if (eq @attr.options.editType "password")}}
         <Input
           data-test-input={{@attr.name}}
@@ -304,7 +307,7 @@
           {{on "input" this.onChangeWithEvent}}
           {{on "change" this.onChangeWithEvent}}
           {{on "keyup" this.handleKeyUp}}
-          class="input {{if this.validationError 'has-error-border'}} has-bottom-margin-m"
+          class="input {{if this.validationError 'has-error-border' 'has-bottom-margin-m'}}"
           maxLength={{@attr.options.characterLimit}}
         />
         {{#if @attr.options.validationAttr}}

@@ -152,6 +152,16 @@ The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 of the ca_chain field.`,
 	}
 
+	fields["user_ids"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `The requested user_ids value to place in the subject,
+if any, in a comma-delimited list. Restricted by allowed_user_ids.
+Any values are added with OID 0.9.2342.19200300.100.1.1.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "User ID(s)",
+		},
+	}
+
 	fields = addIssuerRefField(fields)
 
 	return fields
@@ -524,6 +534,13 @@ slated for removal. Setting this too low may remove valid revocation
 requests before the owning cluster has a chance to process them,
 especially if the cluster is offline.`,
 		Default: int(defaultTidyConfig.QueueSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
+	fields["tidy_cross_cluster_revoked_certs"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to enable tidying up
+the cross-cluster revoked certificate store. Only runs on the active
+primary node.`,
 	}
 
 	return fields

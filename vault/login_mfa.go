@@ -1951,6 +1951,7 @@ func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *
 		}
 	}
 
+	options = append(options, authapi.AuthIpAddr(reqConnectionRemoteAddr))
 	options = append(options, authapi.AuthUsername(username))
 	options = append(options, authapi.AuthAsync())
 

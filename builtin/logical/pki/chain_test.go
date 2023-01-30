@@ -309,6 +309,8 @@ func (c CBValidateChain) PrettyChain(t testing.TB, chain []string, knownCerts ma
 }
 
 func ToCertificate(t testing.TB, cert string) *x509.Certificate {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(cert))
 	if block == nil {
 		t.Fatalf("Unable to parse certificate: nil PEM block\n[%v]\n", cert)
@@ -323,6 +325,8 @@ func ToCertificate(t testing.TB, cert string) *x509.Certificate {
 }
 
 func ToCRL(t testing.TB, crl string, issuer *x509.Certificate) *pkix.CertificateList {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(crl))
 	if block == nil {
 		t.Fatalf("Unable to parse CRL: nil PEM block\n[%v]\n", crl)

@@ -38,7 +38,8 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       this.context
     );
 
-    assert.dom(SELECTORS.rotateRoot).hasText('Rotate this root');
+    // Add back when rotate root capability is added
+    // assert.dom(SELECTORS.rotateRoot).hasText('Rotate this root');
     assert.dom(SELECTORS.crossSign).hasText('Cross-sign Issuer');
     assert.dom(SELECTORS.signIntermediate).hasText('Sign Intermediate');
     assert.dom(SELECTORS.download).hasText('Download');

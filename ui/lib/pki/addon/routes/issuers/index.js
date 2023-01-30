@@ -1,7 +1,7 @@
 import PkiOverviewRoute from '../overview';
 import { inject as service } from '@ember/service';
 
-export default class PkiIssuersIndexRoute extends PkiOverviewRoute {
+export default class PkiIssuersListRoute extends PkiOverviewRoute {
   @service store;
   @service secretMountPath;
   @service pathHelp;

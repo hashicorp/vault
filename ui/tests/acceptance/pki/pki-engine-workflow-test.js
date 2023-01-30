@@ -127,6 +127,21 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.issuerDetails.valueByName('Common name')).hasText('my-common-name');
       assert.dom(SELECTORS.issuerDetails.valueByName('Issuer name')).hasText('my-first-issuer');
     });
+
+    test('it should generate intermediate csr', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.emptyStateLink);
+      await click(SELECTORS.configuration.optionByKey('generate-csr'));
+      await fillIn(SELECTORS.configuration.typeField, 'exported');
+      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
+      await click('[data-test-save]');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/issuers`,
+        'Transitions to issuers on save success'
+      );
+    });
   });
 
   module('roles', function (hooks) {

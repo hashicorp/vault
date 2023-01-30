@@ -543,6 +543,21 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"pki issue": func() (cli.Command, error) {
+			return &PKIIssueCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki list-intermediates": func() (cli.Command, error) {
+			return &PKIListIntermediateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki verify-sign": func() (cli.Command, error) {
+			return &PKIVerifySignCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"plugin": func() (cli.Command, error) {
 			return &PluginCommand{
 				BaseCommand: getBaseCommand(),

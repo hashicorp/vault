@@ -10,7 +10,7 @@ description: |-
 
 Vault supports Multi-factor Authentication (MFA) for authenticating to
 an auth method using different authentication types. We use the term `Login MFA` to distinguish
-this feature and the [Vault Enterprise MFA](/docs/enterprise/mfa).
+this feature and the [Vault Enterprise MFA](/vault/docs/enterprise/mfa).
 Login MFA is built on top of the Identity system of Vault.
 
 ## MFA Types
@@ -40,15 +40,15 @@ MFA in Vault includes the following login types:
 ## Login MFA Procedure
 
 ~> **NOTE:** Vault's built-in Login MFA feature does not protect against brute forcing of
-TOTP passcodes by default. We recommend that per-client [rate limits](/docs/concepts/resource-quotas)
+TOTP passcodes by default. We recommend that per-client [rate limits](/vault/docs/concepts/resource-quotas)
 are applied to the relevant login and/or mfa paths (e.g. `/sys/mfa/validate`). External MFA
 methods (`Duo`, `Ping` and `Okta`) may already provide configurable rate limiting. Rate limiting of
 Login MFA paths are enforced by default in Vault 1.10.1 and above.
 
 Login MFA can be configured to secure further authenticating to an auth method. To enable login
-MFA, an MFA method needs to be configured. Please see [Login MFA API](/api-docs/secret/identity/mfa) for details
+MFA, an MFA method needs to be configured. Please see [Login MFA API](/vault/api-docs/secret/identity/mfa) for details
 on how to configure an MFA method. Once an MFA method is configured, an operator can configure an MFA enforcement using the returned unique MFA method ID.
-Please see [Login MFA Enforcement API](/api-docs/secret/identity/mfa/login-enforcement)
+Please see [Login MFA Enforcement API](/vault/api-docs/secret/identity/mfa/login-enforcement)
 for details on how to configure an MFA enforcement config. MFA could be enforced for an entity, a group of
 entities, a specific auth method accessor, or an auth method type. A login request that matches
 any MFA enforcement restrictions is subject to further MFA validation,
@@ -137,10 +137,10 @@ note that this can affect the login response on any auth mount protected by MFA 
 
 Note that the `uses_passcode` boolean value will always show true for TOTP, and false for Okta and PingID.
 For Duo method, the value can be configured as part of the method configuration, using the `use_passcode` parameter.
-Please see [Duo API](/api-docs/secret/identity/mfa/duo) for details
+Please see [Duo API](/vault/api-docs/secret/identity/mfa/duo) for details
 on how to configure the boolean value for Duo.
 
-To validate the MFA restricted login request, the user sends a second request to the [validate](/api-docs/system/mfa/validate)
+To validate the MFA restricted login request, the user sends a second request to the [validate](/vault/api-docs/system/mfa/validate)
 endpoint including the MFA request ID and MFA payload. MFA payload contains a map of methodIDs and their associated credentials.
 If the configured MFA methods, such as PingID, Okta, and Duo, do not require a passcode, the associated
 credentials will be a list with one empty string.
@@ -189,7 +189,7 @@ To disable the interactive login experience, a user needs to pass in the `non-in
 $ vault write -non-interactive sys/mfa/validate -format=json @payload.json
 ```
 
-To get started with Login MFA, refer to the [Login MFA](https://learn.hashicorp.com/tutorials/vault/multi-factor-authentication) tutorial.
+To get started with Login MFA, refer to the [Login MFA](/vault/tutorials/auth-methods/multi-factor-authentication) tutorial.
 
 
 ### TOTP Passcode Validation Rate Limit
