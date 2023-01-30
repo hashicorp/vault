@@ -980,7 +980,7 @@ func TestAutoRebuild(t *testing.T) {
 	require.NoError(t, err)
 
 	crl := getCrlCertificateList(t, client, "pki")
-	lastCRLNumber := crl.Version
+	lastCRLNumber := getCRLNumber(t, crl)
 	lastCRLExpiry := crl.NextUpdate
 	requireSerialNumberInCRL(t, crl, leafSerial)
 
@@ -993,6 +993,12 @@ func TestAutoRebuild(t *testing.T) {
 		"delta_rebuild_interval":    deltaPeriod,
 	})
 	require.NoError(t, err)
+
+	// Wait for the CRL to update based on the configuration change we just did
+	// so that it doesn't grab the revocation we are going to do afterwards.
+	crl = waitForUpdatedCrl(t, client, "pki", lastCRLNumber, lastCRLExpiry.Sub(time.Now()))
+	lastCRLNumber = getCRLNumber(t, crl)
+	lastCRLExpiry = crl.NextUpdate
 
 	// Issue a cert and revoke it.
 	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
@@ -1041,7 +1047,7 @@ func TestAutoRebuild(t *testing.T) {
 
 	// New serial should not appear on CRL.
 	crl = getCrlCertificateList(t, client, "pki")
-	thisCRLNumber := crl.Version
+	thisCRLNumber := getCRLNumber(t, crl)
 	requireSerialNumberInCRL(t, crl, leafSerial) // But the old one should.
 	now := time.Now()
 	graceInterval, _ := time.ParseDuration(gracePeriod)
@@ -1128,6 +1134,11 @@ func TestAutoRebuild(t *testing.T) {
 				// Check if it is on the main CRL because its already regenerated.
 				mainCRL := getParsedCrlAtPath(t, client, "/v1/pki/crl").TBSCertList
 				requireSerialNumberInCRL(t, mainCRL, newLeafSerial)
+			} else {
+				referenceCrlNum := getCrlReferenceFromDelta(t, deltaCrl)
+				if lastCRLNumber < referenceCrlNum {
+					lastCRLNumber = referenceCrlNum
+				}
 			}
 		}
 	}
@@ -1138,32 +1149,9 @@ func TestAutoRebuild(t *testing.T) {
 		time.Sleep(expectedUpdate.Sub(now))
 	}
 
-	// Otherwise, the absolute latest we're willing to wait is some delta
-	// after CRL expiry (to let stuff regenerate &c).
-	interruptChan = time.After(lastCRLExpiry.Sub(now) + delta)
-	for {
-		select {
-		case <-interruptChan:
-			t.Fatalf("expected CRL to regenerate prior to CRL expiry (plus %v grace period)", delta)
-		default:
-			crl = getCrlCertificateList(t, client, "pki")
-			if crl.NextUpdate.Equal(lastCRLExpiry) {
-				// Hack to ensure we got a net-new CRL. If we didn't, we can
-				// exit this default conditional and wait for the next
-				// go-round. When the timer fires, it'll populate the channel
-				// and we'll exit correctly.
-				time.Sleep(1 * time.Second)
-				break
-			}
-
-			now := time.Now()
-			require.True(t, crl.ThisUpdate.Before(now))
-			require.True(t, crl.NextUpdate.After(now))
-			requireSerialNumberInCRL(t, crl, leafSerial)
-			requireSerialNumberInCRL(t, crl, newLeafSerial)
-			return
-		}
-	}
+	crl = waitForUpdatedCrl(t, client, "pki", lastCRLNumber, lastCRLExpiry.Sub(now)+delta)
+	requireSerialNumberInCRL(t, crl, leafSerial)
+	requireSerialNumberInCRL(t, crl, newLeafSerial)
 }
 
 func TestTidyIssuerAssociation(t *testing.T) {
