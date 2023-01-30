@@ -124,9 +124,6 @@ jobs:
     strategy:
       matrix:
         arch: [arm, arm64, 386, amd64]
-    env:
-      repo: ${{ github.event.repository.name }}
-      version: ${{ needs.product-metadata.outputs.vault-version }}
     steps:
       - uses: actions/checkout@v3
       - uses: hashicorp/actions-docker-build@v1
@@ -136,8 +133,8 @@ jobs:
           arch: ${{ matrix.arch }}
           zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
           tags: |
-            docker.io/hashicorp/${{ env.repo }}:${{ env.version }}
-            public.ecr.aws/hashicorp/${{ env.repo }}:${{ env.version }}
+            docker.io/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
+            public.ecr.aws/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
 
   build-ubi:
     name: Build Vault Red Hat UBI
@@ -148,18 +145,15 @@ jobs:
     strategy:
       matrix:
         arch: [amd64]
-    env:
-      repo: ${{ github.event.repository.name }}
-      version: ${{ needs.product-metadata.outputs.vault-version }}
     steps:
       - uses: actions/checkout@v2
       - uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{ env.version }}
+          version: ${{ needs.product-metadata.outputs.vault-version }}
           target: ubi
           arch: ${{ matrix.arch }}
           zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
-          redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ env.version }}-ubi
+          redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ needs.product-metadata.outputs.vault-version }}-ubi
 
   test:
     name: Test ${{ matrix.build-artifact-name }}
