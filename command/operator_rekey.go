@@ -63,10 +63,8 @@ Usage: vault operator rekey [options] [KEY]
   the command. If key is specified as "-", the command will read from stdin. If
   a TTY is available, the command will prompt for text.
 
-  If the flag -target=recovery is supplied, then this operation will
-  generate a new set of recovery keys rather than unseal keys. These recovery
-  keys provide an authorization mechanism for actions that require a quorum. The
-  recovery keys will not be able to unseal vault.
+  If the flag -target=recovery is supplied, then this operation will require a
+  quorum of recovery keys in order to generate a new set of recovery keys. 
 
   Initialize a rekey:
 
@@ -724,7 +722,7 @@ func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.R
 		switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
 		case "barrier":
 			c.UI.Output(wrapAtLength(fmt.Sprintf(
-				"Vault rekeyed with %d key shares and a key threshold of %d. Please "+
+				"Vault unseal keys rekeyed with %d key shares and a key threshold of %d. Please "+
 					"securely distribute the key shares printed above. When Vault is "+
 					"re-sealed, restarted, or stopped, you must supply at least %d of "+
 					"these keys to unseal it before it can start servicing requests.",
@@ -733,7 +731,7 @@ func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.R
 				status.T)))
 		case "recovery", "hsm":
 			c.UI.Output(wrapAtLength(fmt.Sprintf(
-				"Vault rekeyed with %d key shares and a key threshold of %d. Please "+
+				"Vault recovery keys rekeyed with %d key shares and a key threshold of %d. Please "+
 					"securely distribute the key shares printed above.",
 				status.N,
 				status.T)))
@@ -745,7 +743,7 @@ func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.R
 		switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
 		case "barrier":
 			c.UI.Output(wrapAtLength(fmt.Sprintf(
-				"Vault has created a new key, split into %d key shares and a key threshold "+
+				"Vault has created a new unseal key, split into %d key shares and a key threshold "+
 					"of %d. These will not be active until after verification is complete. "+
 					"Please securely distribute the key shares printed above. When Vault "+
 					"is re-sealed, restarted, or stopped, you must supply at least %d of "+
@@ -756,7 +754,7 @@ func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.R
 			warningText = "unseal"
 		case "recovery", "hsm":
 			c.UI.Output(wrapAtLength(fmt.Sprintf(
-				"Vault has created a new key, split into %d key shares and a key threshold "+
+				"Vault has created a new recovery key, split into %d key shares and a key threshold "+
 					"of %d. These will not be active until after verification is complete. "+
 					"Please securely distribute the key shares printed above.",
 				status.N,

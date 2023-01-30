@@ -180,7 +180,7 @@ func testVaultServerCoreConfigWithOpts(tb testing.TB, coreConfig *vault.CoreConf
 		keys = cluster.BarrierKeys
 	}
 
-	return client, encodeKeys(keys), func() { defer cluster.Cleanup() }
+	return client, encodeKeys(keys), cluster.Cleanup
 }
 
 // Convert the unseal keys to base64 encoded, since these are how the user
