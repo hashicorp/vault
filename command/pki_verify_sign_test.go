@@ -18,7 +18,7 @@ func TestPKIVerifySign(t *testing.T) {
 	defer closer()
 
 	// Relationship Map to Create
-	//          pki-root			| pki-newroot
+	//          pki-root			| pki-newroot | pki-empty
 	// RootX1    RootX2    RootX4     RootX3
 	//   |								 |
 	// ----------------------------------------------
@@ -34,6 +34,10 @@ func TestPKIVerifySign(t *testing.T) {
 	// RootX1 has issued IntX1; RootX3 has issued IntX2
 	createComplicatedIssuerSetUp(t, client)
 
+	runPkiVerifySignTests(t, client)
+}
+
+func runPkiVerifySignTests(t *testing.T, client *api.Client) {
 	cases := []struct {
 		name               string
 		args               []string
@@ -217,7 +221,6 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 		"issuer_name": "rootX1",
 		"key_name":    "rootX1",
 	})
-
 	if err != nil || resp == nil {
 		t.Fatalf("failed to prime CA: %v", err)
 	}
@@ -228,7 +231,6 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 		"ttl":         "3650d",
 		"issuer_name": "rootX2",
 	})
-
 	if err != nil || resp == nil {
 		t.Fatalf("failed to prime CA: %v", err)
 	}
@@ -311,7 +313,7 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 
 	// Intermediate X2
 	int2CsrResp, err := client.Logical().Write("pki-int/intermediate/generate/internal", map[string]interface{}{
-		"key_type":    "ed25519",
+		"key_type":    "ec",
 		"common_name": "Int X2",
 		"ttl":         "3650d",
 	})
@@ -414,6 +416,7 @@ func createComplicatedIssuerSetUp(t *testing.T, client *api.Client) {
 			break
 		}
 	}
+
 	// sign by intX2 and import
 	int3CertResp2, err := client.Logical().Write("pki-int/issuer/intX2/sign-intermediate", map[string]interface{}{
 		"csr": int3Csr,
