@@ -7,11 +7,15 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
 	"io"
+	"math"
+	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -260,5 +264,63 @@ func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, 
 	if resp != nil {
 		msg := fmt.Sprintf("expected nil response but got: %v", resp)
 		require.Nilf(t, resp, msg, msgAndArgs...)
+	}
+}
+
+func getCRLNumber(t *testing.T, crl pkix.TBSCertificateList) int {
+	t.Helper()
+
+	for _, extension := range crl.Extensions {
+		if extension.Id.Equal(certutil.CRLNumberOID) {
+			bigInt := new(big.Int)
+			leftOver, err := asn1.Unmarshal(extension.Value, &bigInt)
+			require.NoError(t, err, "Failed unmarshalling crl number extension")
+			require.Empty(t, leftOver, "leftover bytes from unmarshalling crl number extension")
+			require.True(t, bigInt.IsInt64(), "parsed crl number integer is not an int64")
+			require.False(t, math.MaxInt <= bigInt.Int64(), "parsed crl number integer can not fit in an int")
+			return int(bigInt.Int64())
+		}
+	}
+
+	t.Fatalf("failed to find crl number extension")
+	return 0
+}
+
+func getCrlReferenceFromDelta(t *testing.T, crl pkix.TBSCertificateList) int {
+	t.Helper()
+
+	for _, extension := range crl.Extensions {
+		if extension.Id.Equal(certutil.DeltaCRLIndicatorOID) {
+			bigInt := new(big.Int)
+			leftOver, err := asn1.Unmarshal(extension.Value, &bigInt)
+			require.NoError(t, err, "Failed unmarshalling delta crl indicator extension")
+			require.Empty(t, leftOver, "leftover bytes from unmarshalling delta crl indicator extension")
+			require.True(t, bigInt.IsInt64(), "parsed delta crl integer is not an int64")
+			require.False(t, math.MaxInt <= bigInt.Int64(), "parsed delta crl integer can not fit in an int")
+			return int(bigInt.Int64())
+		}
+	}
+
+	t.Fatalf("failed to find delta crl indicator extension")
+	return 0
+}
+
+func waitForUpdatedCrl(t *testing.T, client *api.Client, mountPoint string, lastSeenCRLNumber int,
+	maxWait time.Duration,
+) pkix.TBSCertificateList {
+	t.Helper()
+
+	interruptChan := time.After(maxWait)
+	for {
+		select {
+		case <-interruptChan:
+			t.Fatalf("expected CRL to regenerate after %s", maxWait)
+		default:
+			crl := getCrlCertificateList(t, client, mountPoint)
+			thisCRLNumber := getCRLNumber(t, crl)
+			if thisCRLNumber > lastSeenCRLNumber {
+				return crl
+			}
+		}
 	}
 }
