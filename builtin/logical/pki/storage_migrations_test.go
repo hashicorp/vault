@@ -790,6 +790,8 @@ func requireFailInMigration(t *testing.T, b *backend, s logical.Storage, operati
 }
 
 func requireFileNotExists(t *testing.T, sc *storageContext, path string) {
+	t.Helper()
+
 	entry, err := sc.Storage.Get(sc.Context, path)
 	require.NoError(t, err)
 	if entry != nil {
@@ -800,6 +802,8 @@ func requireFileNotExists(t *testing.T, sc *storageContext, path string) {
 }
 
 func requireFileExists(t *testing.T, sc *storageContext, path string, contents []byte) []byte {
+	t.Helper()
+
 	entry, err := sc.Storage.Get(sc.Context, path)
 	require.NoError(t, err)
 	require.NotNil(t, entry)

@@ -136,7 +136,7 @@ be added in future releases and may default to being enabled.
 
 This health check will check each issuer in the mount for validity status, returning a list. If a CA expires within the next 30 days, the result will be critical. If a root CA expires within the next 12 months or an intermediate CA within the next 2 months, the result will be a warning. If a root CA expires within 24 months or an intermediate CA within 6 months, the result will be informational.
 
-The remediation here is to remove old CAs after they expire and perform a [CA rotation operation](/docs/secrets/pki/rotation-primitives) for any with pending expiry.
+The remediation here is to remove old CAs after they expire and perform a [CA rotation operation](/vault/docs/secrets/pki/rotation-primitives) for any with pending expiry.
 
 ### CRL Validity Period
 

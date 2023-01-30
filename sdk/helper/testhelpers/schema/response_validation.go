@@ -88,11 +88,17 @@ func FindResponseSchema(t *testing.T, paths []*framework.Path, pathIdx int, oper
 
 	schemaPath := paths[pathIdx]
 
-	schemaOperation, ok := schemaPath.Operations[operation]
+	return GetResponseSchema(t, schemaPath, operation)
+}
+
+func GetResponseSchema(t *testing.T, path *framework.Path, operation logical.Operation) *framework.Response {
+	t.Helper()
+
+	schemaOperation, ok := path.Operations[operation]
 	if !ok {
 		t.Fatalf(
 			"could not find response schema: %s: %q operation does not exist",
-			schemaPath.Pattern,
+			path.Pattern,
 			operation,
 		)
 	}
@@ -113,7 +119,7 @@ func FindResponseSchema(t *testing.T, paths []*framework.Path, pathIdx int, oper
 	if len(schemaResponses) == 0 {
 		t.Fatalf(
 			"could not find response schema: %s: %q operation: no responses found",
-			schemaPath.Pattern,
+			path.Pattern,
 			operation,
 		)
 	}

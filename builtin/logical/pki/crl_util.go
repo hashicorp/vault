@@ -91,9 +91,10 @@ type crlBuilder struct {
 	canRebuild            bool
 	lastDeltaRebuildCheck time.Time
 
-	_config sync.RWMutex
-	dirty   *atomic2.Bool
-	config  crlConfig
+	_config               sync.RWMutex
+	dirty                 *atomic2.Bool
+	config                crlConfig
+	haveInitializedConfig bool
 
 	// Whether to invalidate our LastModifiedTime due to write on the
 	// global issuance config.
@@ -101,9 +102,10 @@ type crlBuilder struct {
 
 	// Global revocation queue entries get accepted by the invalidate func
 	// and passed to the crlBuilder for processing.
-	haveInitializedQueue bool
+	haveInitializedQueue *atomic2.Bool
 	revQueue             *revocationQueue
 	removalQueue         *revocationQueue
+	crossQueue           *revocationQueue
 }
 
 const (
@@ -122,8 +124,10 @@ func newCRLBuilder(canRebuild bool) *crlBuilder {
 		dirty:                 atomic2.NewBool(true),
 		config:                defaultCrlConfig,
 		invalidate:            atomic2.NewBool(false),
+		haveInitializedQueue:  atomic2.NewBool(false),
 		revQueue:              newRevocationQueue(),
 		removalQueue:          newRevocationQueue(),
+		crossQueue:            newRevocationQueue(),
 	}
 }
 
@@ -148,6 +152,8 @@ func (cb *crlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 			return err
 		}
 
+		previousConfig := cb.config
+
 		// Set the default config if none was returned to us.
 		if config != nil {
 			cb.config = *config
@@ -157,9 +163,32 @@ func (cb *crlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 
 		// Updated the config; unset dirty.
 		cb.dirty.Store(false)
+		triggerChangeNotification := true
+		if !cb.haveInitializedConfig {
+			cb.haveInitializedConfig = true
+			triggerChangeNotification = false // do not trigger on the initial loading of configuration.
+		}
+
+		// Certain things need to be triggered on all server types when crlConfig is loaded.
+		if triggerChangeNotification {
+			cb.notifyOnConfigChange(sc, previousConfig, cb.config)
+		}
 	}
 
 	return nil
+}
+
+func (cb *crlBuilder) notifyOnConfigChange(sc *storageContext, priorConfig crlConfig, newConfig crlConfig) {
+	// If you need to hook into a CRL configuration change across different server types
+	// such as primary clusters as well as performance replicas, it is easier to do here than
+	// in two places (API layer and in invalidateFunc)
+	if priorConfig.UnifiedCRL != newConfig.UnifiedCRL && newConfig.UnifiedCRL {
+		sc.Backend.unifiedTransferStatus.forceRun()
+	}
+
+	if priorConfig.UseGlobalQueue != newConfig.UseGlobalQueue && newConfig.UseGlobalQueue {
+		cb.haveInitializedQueue.Store(false)
+	}
 }
 
 func (cb *crlBuilder) getConfigWithUpdate(sc *storageContext) (*crlConfig, error) {
@@ -555,9 +584,17 @@ func (cb *crlBuilder) addCertForRevocationRemoval(cluster, serial string) {
 	cb.removalQueue.Add(entry)
 }
 
+func (cb *crlBuilder) addCertFromCrossRevocation(cluster, serial string) {
+	entry := &revocationQueueEntry{
+		Cluster: cluster,
+		Serial:  serial,
+	}
+	cb.crossQueue.Add(entry)
+}
+
 func (cb *crlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotPerfPrimary bool) error {
 	// Assume holding lock.
-	if cb.haveInitializedQueue {
+	if cb.haveInitializedQueue.Load() {
 		return nil
 	}
 
@@ -616,14 +653,6 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 
 	isNotPerfPrimary := sc.Backend.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
 		(!sc.Backend.System().LocalMount() && sc.Backend.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
-
-	// Before revoking certificates, we need to hold the lock for certificate
-	// storage. This prevents any parallel revocations and prevents us from
-	// multiple places. We do this before grabbing the contents of the
-	// revocation queues themselves, to ensure we interleave well with other
-	// invocations of this function and avoid duplicate work.
-	sc.Backend.revokeStorageLock.Lock()
-	defer sc.Backend.revokeStorageLock.Unlock()
 
 	if err := cb.maybeGatherQueueForFirstProcess(sc, isNotPerfPrimary); err != nil {
 		return fmt.Errorf("failed to gather first queue: %v", err)
@@ -705,7 +734,7 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 
 		// See note in pki/backend.go; this should be empty.
 		cb.removalQueue.RemoveAll()
-		cb.haveInitializedQueue = true
+		cb.haveInitializedQueue.Store(true)
 		return nil
 	}
 
@@ -731,7 +760,69 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 		cb.removalQueue.Remove(entry)
 	}
 
-	cb.haveInitializedQueue = true
+	cb.haveInitializedQueue.Store(true)
+
+	return nil
+}
+
+func (cb *crlBuilder) processCrossClusterRevocations(sc *storageContext) error {
+	sc.Backend.Logger().Debug(fmt.Sprintf("starting to process unified revocations"))
+
+	crlConfig, err := cb.getConfigWithUpdate(sc)
+	if err != nil {
+		return err
+	}
+
+	if !crlConfig.UnifiedCRL {
+		cb.crossQueue.RemoveAll()
+		return nil
+	}
+
+	crossQueue := cb.crossQueue.Iterate()
+	sc.Backend.Logger().Debug(fmt.Sprintf("gathered %v unified revocations entries", len(crossQueue)))
+
+	ourClusterId, err := sc.Backend.System().ClusterID(sc.Context)
+	if err != nil {
+		return fmt.Errorf("unable to fetch clusterID to ignore local unified revocation entries: %w", err)
+	}
+
+	for _, req := range crossQueue {
+		// Regardless of whether we're on the perf primary or a secondary
+		// cluster, we can safely ignore revocation requests originating
+		// from our node, because we've already checked them once (when
+		// they were created).
+		if ourClusterId != "" && ourClusterId == req.Cluster {
+			continue
+		}
+
+		// Fetch the revocation entry to ensure it exists and this wasn't
+		// a delete.
+		rPath := unifiedRevocationReadPathPrefix + req.Cluster + "/" + req.Serial
+		entry, err := sc.Storage.Get(sc.Context, rPath)
+		if err != nil {
+			return fmt.Errorf("failed to read unified revocation entry: %w", err)
+		}
+		if entry == nil {
+			// Skip this entry: it was likely caused by the deletion of this
+			// record during tidy.
+			cb.crossQueue.Remove(req)
+			continue
+		}
+
+		resp, err := tryRevokeCertBySerial(sc, crlConfig, req.Serial)
+		if err == nil && resp != nil && !resp.IsError() && resp.Data != nil && resp.Data["state"].(string) == "revoked" {
+			// We could theoretically save ourselves from writing a global
+			// revocation entry during the above certificate revocation, as
+			// we don't really need it to appear on either the unified CRL
+			// or its delta CRL, but this would require more plumbing.
+			cb.crossQueue.Remove(req)
+		} else if err != nil {
+			// Because we fake being from a lease, we get the guarantee that
+			// err == nil == resp if the cert was already revoked; this means
+			// this err should actually be fatal.
+			return err
+		}
+	}
 
 	return nil
 }
@@ -783,6 +874,10 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509
 // Revoke a certificate from a given serial number if it is present in local
 // storage.
 func tryRevokeCertBySerial(sc *storageContext, config *crlConfig, serial string) (*logical.Response, error) {
+	// revokeCert requires us to hold these locks before calling it.
+	sc.Backend.revokeStorageLock.Lock()
+	defer sc.Backend.revokeStorageLock.Unlock()
+
 	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
 	if err != nil {
 		switch err.(type) {
@@ -836,32 +931,21 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 		}
 	}
 
-	var revInfo revocationInfo
-	revEntry, err := fetchCertBySerial(sc, revokedPath, colonSerial)
+	curRevInfo, err := sc.fetchRevocationInfo(colonSerial)
 	if err != nil {
-		switch err.(type) {
-		case errutil.UserError:
-			return logical.ErrorResponse(err.Error()), nil
-		default:
-			return nil, err
-		}
+		return nil, err
 	}
-	if revEntry != nil {
-		// Set the revocation info to the existing values
-		err = revEntry.DecodeJSON(&revInfo)
-		if err != nil {
-			return nil, fmt.Errorf("error decoding existing revocation info")
-		}
-
+	if curRevInfo != nil {
 		resp := &logical.Response{
 			Data: map[string]interface{}{
-				"revocation_time": revInfo.RevocationTime,
+				"revocation_time": curRevInfo.RevocationTime,
 				"state":           "revoked",
 			},
 		}
-		if !revInfo.RevocationTimeUTC.IsZero() {
-			resp.Data["revocation_time_rfc3339"] = revInfo.RevocationTimeUTC.Format(time.RFC3339Nano)
+		if !curRevInfo.RevocationTimeUTC.IsZero() {
+			resp.Data["revocation_time_rfc3339"] = curRevInfo.RevocationTimeUTC.Format(time.RFC3339Nano)
 		}
+
 		return resp, nil
 	}
 
@@ -874,15 +958,17 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 	}
 
 	currTime := time.Now()
-	revInfo.CertificateBytes = cert.Raw
-	revInfo.RevocationTime = currTime.Unix()
-	revInfo.RevocationTimeUTC = currTime.UTC()
+	revInfo := revocationInfo{
+		CertificateBytes:  cert.Raw,
+		RevocationTime:    currTime.Unix(),
+		RevocationTimeUTC: currTime.UTC(),
+	}
 
 	// We may not find an issuer with this certificate; that's fine so
 	// ignore the return value.
 	associateRevokedCertWithIsssuer(&revInfo, cert, issuerIDCertMap)
 
-	revEntry, err = logical.StorageEntryJSON(revokedPath+hyphenSerial, revInfo)
+	revEntry, err := logical.StorageEntryJSON(revokedPath+hyphenSerial, revInfo)
 	if err != nil {
 		return nil, fmt.Errorf("error creating revocation entry")
 	}
@@ -908,8 +994,9 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 		if ignoreErr != nil {
 			// Just log the error if we fail to write across clusters, a separate background
 			// thread will reattempt it later on as we have the local write done.
-			sc.Backend.Logger().Debug("Failed to write unified revocation entry",
+			sc.Backend.Logger().Debug("Failed to write unified revocation entry, will re-attempt later",
 				"serial_number", colonSerial, "error", ignoreErr)
+			sc.Backend.unifiedTransferStatus.forceRun()
 		}
 	}
 
@@ -1969,7 +2056,7 @@ WRITE:
 		writePath = legacyCRLPath
 	} else {
 		if isUnified {
-			writePath += unifiedCRLPathSuffix
+			writePath = unifiedCRLPathPrefix + writePath
 		}
 
 		if isDelta {

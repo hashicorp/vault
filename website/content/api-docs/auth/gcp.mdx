@@ -10,7 +10,7 @@ description: |-
 
 This is the API documentation for the Vault Google Cloud auth method. To learn
 more about the usage and operation, see the
-[Vault Google Cloud method documentation](/docs/auth/gcp).
+[Vault Google Cloud method documentation](/vault/docs/auth/gcp).
 
 This documentation assumes the plugin method is mounted at the
 `/auth/gcp` path in Vault. Since it is possible to enable auth methods
@@ -31,7 +31,7 @@ to confirm signed JWTs passed in during login.
 
 - `credentials` `(string: "")` - A JSON string containing the contents of a GCP
   service account credentials file. The service account associated with the credentials
-  file must have the following [permissions](/docs/auth/gcp#required-gcp-permissions).
+  file must have the following [permissions](/vault/docs/auth/gcp#required-gcp-permissions).
   If this value is empty, Vault will try to use [Application Default Credentials][gcp-adc]
   from the machine on which the Vault server is running.
 

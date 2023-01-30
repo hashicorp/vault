@@ -16,6 +16,7 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
       'notValidAfter',
       'notValidBefore',
       'serialNumber',
+      'signatureBits',
     ];
     this.attrs = attrs.reduce((attrObj, attr) => {
       attrObj[attr] = { serialize: false };
