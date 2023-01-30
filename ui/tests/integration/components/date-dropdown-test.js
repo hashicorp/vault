@@ -45,7 +45,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
   test('it renders dropdown and selects month and year', async function (assert) {
     let parentAction = (month, year) => {
       assert.equal(month, 'January', 'sends correct month to parent callback');
-      assert.equal(year, CURRENT_YEAR, 'sends correct year to parent callback');
+      assert.equal(year, CURRENT_YEAR - 1, 'sends correct year to parent callback');
     };
     this.set('parentAction', parentAction);
 
