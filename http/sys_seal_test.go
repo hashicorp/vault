@@ -472,16 +472,15 @@ func TestSysUnseal_Reset(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected := map[string]interface{}{
-		"sealed":                  true,
-		"t":                       json.Number("3"),
-		"n":                       json.Number("5"),
-		"progress":                json.Number("0"),
-		"type":                    "shamir",
-		"recovery_seal":           false,
-		"initialized":             true,
-		"build_date":              version.BuildDate,
-		"migration":               false,
-		"unseal_recovery_enabled": false,
+		"sealed":        true,
+		"t":             json.Number("3"),
+		"n":             json.Number("5"),
+		"progress":      json.Number("0"),
+		"type":          "shamir",
+		"recovery_seal": false,
+		"initialized":   true,
+		"build_date":    version.BuildDate,
+		"migration":     false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
