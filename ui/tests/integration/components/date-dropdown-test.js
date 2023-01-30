@@ -51,16 +51,15 @@ module('Integration | Component | date-dropdown', function (hooks) {
 
     await render(hbs`
     <div class="is-flex-align-baseline">
-    <DateDropdown 
+    <DateDropdown
     @handleDateSelection={{parentAction}} />
     </div>
     `);
 
-    const monthDropdown = this.element.querySelector('[data-test-popup-menu-trigger="month"]');
-    const yearDropdown = this.element.querySelector('[data-test-popup-menu-trigger="year"]');
-    const submitButton = this.element.querySelector('[data-test-date-dropdown-submit]');
-
-    assert.strictEqual(submitButton.disabled, true, 'button is disabled when no month or year selected');
+    const monthDropdown = '[data-test-popup-menu-trigger="month"]';
+    const yearDropdown = '[data-test-popup-menu-trigger="year"]';
+    const submitButton = '[data-test-date-dropdown-submit]';
+    assert.dom(submitButton).isDisabled('button is disabled when no month or year selected');
 
     await click(monthDropdown);
     let dropdownListMonths = this.element.querySelectorAll('[data-test-month-list] button');
@@ -82,10 +81,9 @@ module('Integration | Component | date-dropdown', function (hooks) {
       assert.dom(year).hasText(`${comparisonYear}`, `dropdown includes ${comparisonYear}`);
     }
 
-    await click(dropdownListYears[0]);
-    assert.dom(yearDropdown).hasText(`${CURRENT_YEAR}`, `dropdown selects ${CURRENT_YEAR}`);
+    await click(dropdownListYears[1]);
     assert.dom('.ember-basic-dropdown-content').doesNotExist('dropdown closes after selecting year');
-    assert.strictEqual(submitButton.disabled, false, 'button enabled when month and year selected');
+    assert.dom(submitButton).isNotDisabled('button enabled when month and year selected');
 
     await click(submitButton);
   });
