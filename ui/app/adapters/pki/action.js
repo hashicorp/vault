@@ -24,7 +24,7 @@ export default class PkiActionAdapter extends ApplicationAdapter {
           ? `${baseUrl}/issuers/generate/intermediate/${type}`
           : `${baseUrl}/intermediate/generate/${type}`;
       case 'sign-intermediate':
-        return `${baseUrl}/issuer/${issuerName}/sign-intermediate`;
+        return `${baseUrl}/issuer/${encodePath(issuerName)}/sign-intermediate`;
       default:
         assert('actionType must be one of import, generate-root, generate-csr or sign-intermediate');
     }

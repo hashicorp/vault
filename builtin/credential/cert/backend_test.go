@@ -1103,6 +1103,11 @@ func testFactory(t *testing.T) logical.Backend {
 	if err != nil {
 		t.Fatalf("error: %s", err)
 	}
+	if err := b.Initialize(context.Background(), &logical.InitializationRequest{
+		Storage: storage,
+	}); err != nil {
+		t.Fatalf("error: %s", err)
+	}
 	return b
 }
 

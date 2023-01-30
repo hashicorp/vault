@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
+
 	atomic2 "go.uber.org/atomic"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -239,6 +241,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.possibleDoubleCountedSerials = make([]string, 0, 250)
 	b.possibleDoubleCountedRevokedSerials = make([]string, 0, 250)
 
+	b.unifiedTransferStatus = newUnifiedTransferStatus()
+
 	return &b
 }
 
@@ -254,6 +258,8 @@ type backend struct {
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
 	lastTidy       time.Time
+
+	unifiedTransferStatus *unifiedTransferStatus
 
 	certCount                           *uint32
 	revokedCertCount                    *uint32
@@ -468,6 +474,12 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 				}
 			}
 		}
+	case strings.HasPrefix(key, unifiedRevocationReadPathPrefix):
+		// Three parts to this key: prefix, cluster, and serial.
+		split := strings.Split(key, "/")
+		cluster := split[len(split)-2]
+		serial := split[len(split)-1]
+		b.crlBuilder.addCertFromCrossRevocation(cluster, serial)
 	}
 }
 
@@ -489,6 +501,11 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 		// First handle any global revocation queue entries.
 		if err := b.crlBuilder.processRevocationQueue(sc); err != nil {
+			return err
+		}
+
+		// Then handle any unified cross-cluster revocations.
+		if err := b.crlBuilder.processCrossClusterRevocations(sc); err != nil {
 			return err
 		}
 
@@ -563,19 +580,23 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		return nil
 	}
 
+	backgroundSc := b.makeStorageContext(context.Background(), b.storage)
+	go runUnifiedTransfer(backgroundSc)
+
 	crlErr := doCRL()
 	tidyErr := doAutoTidy()
 
-	if crlErr != nil && tidyErr != nil {
-		return fmt.Errorf("Error building CRLs:\n - %v\n\nError running auto-tidy:\n - %w\n", crlErr, tidyErr)
-	}
-
+	var errors error
 	if crlErr != nil {
-		return fmt.Errorf("Error building CRLs:\n - %w\n", crlErr)
+		errors = multierror.Append(errors, fmt.Errorf("Error building CRLs:\n - %w\n", crlErr))
 	}
 
 	if tidyErr != nil {
-		return fmt.Errorf("Error running auto-tidy:\n - %w\n", tidyErr)
+		errors = multierror.Append(errors, fmt.Errorf("Error running auto-tidy:\n - %w\n", tidyErr))
+	}
+
+	if errors != nil {
+		return errors
 	}
 
 	// Check if the CRL was invalidated due to issuer swap and update

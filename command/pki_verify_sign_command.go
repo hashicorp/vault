@@ -30,15 +30,25 @@ func (c *PKIVerifySignCommand) Synopsis() string {
 func (c *PKIVerifySignCommand) Help() string {
 	helpText := `
 Usage: vault pki verify-sign POSSIBLE-ISSUER POSSIBLE-ISSUED
-Here POSSIBLE-ISSUER and POSSIBLE-ISSUED are the fully name-spaced path to the certificate,
-for instance: 'ns1/mount1/issuer/issuerName/json'
-Returns five fields of information:
-- signature_match: was the key of the issuer used to sign the issued
-- path_match: the possible issuer appears in the valid certificate chain of the issued
-- key_id_match: does the key-id of the issuer match the key_id of the subject
-- subject_match: does the subject name of the issuer match the issuer subject of the issued
-- trust_match: if someone trusted the parent issuer, is the chain provided sufficient to trust the child issued
-`
+
+  Verifies whether the listed issuer has signed the listed issued certificate.
+
+  POSSIBLE-ISSUER and POSSIBLE-ISSUED are the fully name-spaced path to
+  an issuer certificate, for instance: 'ns1/mount1/issuer/issuerName/json'.
+
+  Returns five fields of information:
+
+    - signature_match: was the key of the issuer used to sign the issued.
+    - path_match: the possible issuer appears in the valid certificate chain
+	  of the issued.
+    - key_id_match: does the key-id of the issuer match the key_id of the
+	  subject.
+    - subject_match: does the subject name of the issuer match the issuer
+	  subject of the issued.
+    - trust_match: if someone trusted the parent issuer, is the chain
+	  provided sufficient to trust the child issued.
+
+` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
@@ -115,7 +125,7 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 		return fmt.Errorf("error: unable to fetch issuer %v: %w", issuerPath, err), nil
 	}
 	if len(issuedPath) <= 2 {
-		return fmt.Errorf(fmt.Sprintf("%v", issuedPath)), nil
+		return fmt.Errorf("%v", issuedPath), nil
 	}
 	caChainRaw := issuedCertResp.Data["ca_chain"]
 	if caChainRaw == nil {

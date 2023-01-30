@@ -21,6 +21,8 @@ import (
 
 // Setup helpers
 func CreateBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
+	t.Helper()
+
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -36,6 +38,8 @@ func CreateBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 }
 
 func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
+	t.Helper()
+
 	err := client.Sys().Mount(path, &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
@@ -48,6 +52,8 @@ func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
 
 // Signing helpers
 func requireSignedBy(t *testing.T, cert *x509.Certificate, signingCert *x509.Certificate) {
+	t.Helper()
+
 	if err := cert.CheckSignatureFrom(signingCert); err != nil {
 		t.Fatalf("signature verification failed: %v", err)
 	}
@@ -55,6 +61,8 @@ func requireSignedBy(t *testing.T, cert *x509.Certificate, signingCert *x509.Cer
 
 // Certificate helper
 func parseCert(t *testing.T, pemCert string) *x509.Certificate {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(pemCert))
 	require.NotNil(t, block, "failed to decode PEM block")
 
@@ -64,6 +72,8 @@ func parseCert(t *testing.T, pemCert string) *x509.Certificate {
 }
 
 func requireMatchingPublicKeys(t *testing.T, cert *x509.Certificate, key crypto.PublicKey) {
+	t.Helper()
+
 	certPubKey := cert.PublicKey
 	areEqual, err := certutil.ComparePublicKeysAndType(certPubKey, key)
 	require.NoError(t, err, "failed comparing public keys: %#v", err)
@@ -89,17 +99,25 @@ func getSelfSigned(t *testing.T, subject, issuer *x509.Certificate, key *rsa.Pri
 
 // CRL related helpers
 func getCrlCertificateList(t *testing.T, client *api.Client, mountPoint string) pkix.TBSCertificateList {
+	t.Helper()
+
 	path := fmt.Sprintf("/v1/%s/crl", mountPoint)
 	return getParsedCrlAtPath(t, client, path).TBSCertList
 }
 
 func parseCrlPemBytes(t *testing.T, crlPem []byte) pkix.TBSCertificateList {
+	t.Helper()
+
 	certList, err := x509.ParseCRL(crlPem)
 	require.NoError(t, err)
 	return certList.TBSCertList
 }
 
 func requireSerialNumberInCRL(t *testing.T, revokeList pkix.TBSCertificateList, serialNum string) bool {
+	if t != nil {
+		t.Helper()
+	}
+
 	serialsInList := make([]string, 0, len(revokeList.RevokedCertificates))
 	for _, revokeEntry := range revokeList.RevokedCertificates {
 		formattedSerial := certutil.GetHexFormatted(revokeEntry.SerialNumber.Bytes(), ":")
@@ -117,11 +135,15 @@ func requireSerialNumberInCRL(t *testing.T, revokeList pkix.TBSCertificateList, 
 }
 
 func getParsedCrl(t *testing.T, client *api.Client, mountPoint string) *pkix.CertificateList {
+	t.Helper()
+
 	path := fmt.Sprintf("/v1/%s/crl", mountPoint)
 	return getParsedCrlAtPath(t, client, path)
 }
 
 func getParsedCrlAtPath(t *testing.T, client *api.Client, path string) *pkix.CertificateList {
+	t.Helper()
+
 	req := client.NewRequest("GET", path)
 	resp, err := client.RawRequest(req)
 	if err != nil {
@@ -145,6 +167,8 @@ func getParsedCrlAtPath(t *testing.T, client *api.Client, path string) *pkix.Cer
 }
 
 func getParsedCrlFromBackend(t *testing.T, b *backend, s logical.Storage, path string) *pkix.CertificateList {
+	t.Helper()
+
 	resp, err := CBRead(b, s, path)
 	if err != nil {
 		t.Fatal(err)
@@ -201,6 +225,8 @@ func CBDelete(b *backend, s logical.Storage, path string) (*logical.Response, er
 }
 
 func requireFieldsSetInResp(t *testing.T, resp *logical.Response, fields ...string) {
+	t.Helper()
+
 	var missingFields []string
 	for _, field := range fields {
 		value, ok := resp.Data[field]
@@ -213,6 +239,8 @@ func requireFieldsSetInResp(t *testing.T, resp *logical.Response, fields ...stri
 }
 
 func requireSuccessNonNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
+	t.Helper()
+
 	require.NoError(t, err, msgAndArgs...)
 	if resp.IsError() {
 		errContext := fmt.Sprintf("Expected successful response but got error: %v", resp.Error())
@@ -222,6 +250,8 @@ func requireSuccessNonNilResponse(t *testing.T, resp *logical.Response, err erro
 }
 
 func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
+	t.Helper()
+
 	require.NoError(t, err, msgAndArgs...)
 	if resp.IsError() {
 		errContext := fmt.Sprintf("Expected successful response but got error: %v", resp.Error())
