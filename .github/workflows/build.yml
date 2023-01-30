@@ -9,9 +9,6 @@ on:
       - main
       - release/**
 
-env:
-  PKG_NAME: vault
-
 jobs:
   product-metadata:
     runs-on: ubuntu-latest
@@ -37,7 +34,7 @@ jobs:
           echo "build-date=$(make ci-get-date)" >> $GITHUB_OUTPUT
           echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
           echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> $GITHUB_OUTPUT
-          echo "package-name=${{ env.PKG_NAME }}" >> $GITHUB_OUTPUT
+          echo "package-name=vault" >> $GITHUB_OUTPUT
           echo "vault-base-version=$(make ci-get-version-base)" >> $GITHUB_OUTPUT
           echo "vault-revision=$(make ci-get-revision)" >> $GITHUB_OUTPUT
           echo "vault-version=$(make ci-get-version)" >> $GITHUB_OUTPUT
@@ -53,7 +50,7 @@ jobs:
           if-no-files-found: error
 
   build-other:
-    name: Build Vault Other
+    name: Other
     needs: product-metadata
     strategy:
       matrix:
@@ -79,7 +76,7 @@ jobs:
     secrets: inherit
 
   build-linux:
-    name: Build Vault Linux
+    name: Linux
     needs: product-metadata
     strategy:
       matrix:
@@ -97,7 +94,7 @@ jobs:
     secrets: inherit
 
   build-darwin:
-    name: Build Vault Darwin
+    name: Darwin
     needs: product-metadata
     strategy:
       matrix:
@@ -116,7 +113,7 @@ jobs:
     secrets: inherit
 
   build-docker:
-    name: Build Vault Docker
+    name: Docker image
     needs:
       - product-metadata
       - build-linux
@@ -124,23 +121,20 @@ jobs:
     strategy:
       matrix:
         arch: [arm, arm64, 386, amd64]
-    env:
-      repo: ${{ github.event.repository.name }}
-      version: ${{ needs.product-metadata.outputs.vault-version }}
     steps:
       - uses: actions/checkout@v3
       - uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{ env.version }}
+          version: ${{ needs.product-metadata.outputs.vault-version }}
           target: default
           arch: ${{ matrix.arch }}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
+          zip_artifact_name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
           tags: |
-            docker.io/hashicorp/${{ env.repo }}:${{ env.version }}
-            public.ecr.aws/hashicorp/${{ env.repo }}:${{ env.version }}
+            docker.io/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
+            public.ecr.aws/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
 
   build-ubi:
-    name: Build Vault Red Hat UBI
+    name: UBI image
     needs:
       - product-metadata
       - build-linux
@@ -148,18 +142,15 @@ jobs:
     strategy:
       matrix:
         arch: [amd64]
-    env:
-      repo: ${{ github.event.repository.name }}
-      version: ${{ needs.product-metadata.outputs.vault-version }}
     steps:
       - uses: actions/checkout@v2
       - uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{ env.version }}
+          version: ${{ needs.product-metadata.outputs.vault-version }}
           target: ubi
           arch: ${{ matrix.arch }}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
-          redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ env.version }}-ubi
+          zip_artifact_name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
+          redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ needs.product-metadata.outputs.vault-version }}-ubi
 
   test:
     name: Test ${{ matrix.build-artifact-name }}
@@ -222,4 +213,4 @@ jobs:
       - test
       - test-docker-k8s
     steps:
-      - run: echo "All build and test workflows have succeeded!"
+      - run: echo "All required build and test workflows have succeeded!"
