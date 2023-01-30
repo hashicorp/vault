@@ -20,6 +20,11 @@ var (
 	_ cli.CommandAutocomplete = (*OperatorRekeyCommand)(nil)
 )
 
+const (
+	keyTypeRecovery = "Recovery"
+	keyTypeUnseal   = "Unseal"
+)
+
 type OperatorRekeyCommand struct {
 	*BaseCommand
 
@@ -58,6 +63,9 @@ Usage: vault operator rekey [options] [KEY]
   An unseal key may be provided directly on the command line as an argument to
   the command. If key is specified as "-", the command will read from stdin. If
   a TTY is available, the command will prompt for text.
+
+  If the flag -target=recovery is supplied, then this operation will require a
+  quorum of recovery keys in order to generate a new set of recovery keys. 
 
   Initialize a rekey:
 
@@ -113,7 +121,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Target:  &c.flagCancel,
 		Default: false,
 		Usage: "Reset the rekeying progress. This will discard any submitted " +
-			"unseal keys or configuration.",
+			"unseal keys, recovery keys, or configuration.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -121,7 +129,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Target:  &c.flagStatus,
 		Default: false,
 		Usage: "Print the status of the current attempt without providing an " +
-			"unseal key.",
+			"unseal or recovery key.",
 	})
 
 	f.IntVar(&IntVar{
@@ -131,7 +139,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Default:    5,
 		Completion: complete.PredictAnything,
 		Usage: "Number of key shares to split the generated root key into. " +
-			"This is the number of \"unseal keys\" to generate.",
+			"This is the number of \"unseal keys\" or \"recovery keys\" to generate.",
 	})
 
 	f.IntVar(&IntVar{
@@ -151,7 +159,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
 		Usage: "Nonce value provided at initialization. The same nonce value " +
-			"must be provided with each unseal key.",
+			"must be provided with each unseal or recovery key.",
 	})
 
 	f.StringVar(&StringVar{
@@ -194,7 +202,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Usage: "Comma-separated list of paths to files on disk containing " +
 			"public PGP keys OR a comma-separated list of Keybase usernames using " +
 			"the format \"keybase:<username>\". When supplied, the generated " +
-			"unseal keys will be encrypted and base64-encoded in the order " +
+			"unseal or recovery keys will be encrypted and base64-encoded in the order " +
 			"specified in this list.",
 	})
 
@@ -204,25 +212,25 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Name:    "backup",
 		Target:  &c.flagBackup,
 		Default: false,
-		Usage: "Store a backup of the current PGP encrypted unseal keys in " +
+		Usage: "Store a backup of the current PGP encrypted unseal or recovery keys in " +
 			"Vault's core. The encrypted values can be recovered in the event of " +
 			"failure or discarded after success. See the -backup-delete and " +
 			"-backup-retrieve options for more information. This option only " +
-			"applies when the existing unseal keys were PGP encrypted.",
+			"applies when the existing unseal or recovery keys were PGP encrypted.",
 	})
 
 	f.BoolVar(&BoolVar{
 		Name:    "backup-delete",
 		Target:  &c.flagBackupDelete,
 		Default: false,
-		Usage:   "Delete any stored backup unseal keys.",
+		Usage:   "Delete any stored backup unseal or recovery keys.",
 	})
 
 	f.BoolVar(&BoolVar{
 		Name:    "backup-retrieve",
 		Target:  &c.flagBackupRetrieve,
 		Default: false,
-		Usage: "Retrieve the backed-up unseal keys. This option is only available " +
+		Usage: "Retrieve the backed-up unseal or recovery keys. This option is only available " +
 			"if the PGP keys were provided and the backup has not been deleted.",
 	})
 
@@ -285,10 +293,12 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 	var fn func(*api.RekeyInitRequest) (*api.RekeyStatusResponse, error)
 
 	target := strings.ToLower(strings.TrimSpace(c.flagTarget))
+	keyTypeRequired := keyTypeUnseal
 	switch target {
 	case "barrier":
 		fn = client.Sys().RekeyInit
 	case "recovery", "hsm":
+		keyTypeRequired = keyTypeRecovery
 		fn = client.Sys().RekeyRecoveryKeyInit
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown target: %s", c.flagTarget))
@@ -318,25 +328,25 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 	if len(c.flagPGPKeys) == 0 {
 		if Format(c.UI) == "table" {
 			c.UI.Warn(wrapAtLength(
-				"WARNING! If you lose the keys after they are returned, there is no " +
-					"recovery. Consider canceling this operation and re-initializing " +
-					"with the -pgp-keys flag to protect the returned unseal keys along " +
-					"with -backup to allow recovery of the encrypted keys in case of " +
-					"emergency. You can delete the stored keys later using the -delete " +
-					"flag."))
+				fmt.Sprintf("WARNING! If you lose the keys after they are returned, there is no "+
+					"recovery. Consider canceling this operation and re-initializing "+
+					"with the -pgp-keys flag to protect the returned %s keys along "+
+					"with -backup to allow recovery of the encrypted keys in case of "+
+					"emergency. You can delete the stored keys later using the -delete "+
+					"flag.", strings.ToLower(keyTypeRequired))))
 			c.UI.Output("")
 		}
 	}
 	if len(c.flagPGPKeys) > 0 && !c.flagBackup {
 		if Format(c.UI) == "table" {
 			c.UI.Warn(wrapAtLength(
-				"WARNING! You are using PGP keys for encrypted the resulting unseal " +
-					"keys, but you did not enable the option to backup the keys to " +
-					"Vault's core. If you lose the encrypted keys after they are " +
-					"returned, you will not be able to recover them. Consider canceling " +
-					"this operation and re-running with -backup to allow recovery of the " +
-					"encrypted unseal keys in case of emergency. You can delete the " +
-					"stored keys later using the -delete flag."))
+				fmt.Sprintf("WARNING! You are using PGP keys for encrypted the resulting %s "+
+					"keys, but you did not enable the option to backup the keys to "+
+					"Vault's core. If you lose the encrypted keys after they are "+
+					"returned, you will not be able to recover them. Consider canceling "+
+					"this operation and re-running with -backup to allow recovery of the "+
+					"encrypted unseal keys in case of emergency. You can delete the "+
+					"stored keys later using the -delete flag.", strings.ToLower(keyTypeRequired))))
 			c.UI.Output("")
 		}
 	}
@@ -381,8 +391,8 @@ func (c *OperatorRekeyCommand) cancel(client *api.Client) int {
 func (c *OperatorRekeyCommand) provide(client *api.Client, key string, ackUnsealRecovery bool) int {
 	var statusFn func() (interface{}, error)
 	var updateFn func(string, string) (interface{}, error)
-
 	target := strings.ToLower(strings.TrimSpace(c.flagTarget))
+	keyTypeRequired := keyTypeUnseal
 	switch target {
 	case "barrier":
 		statusFn = func() (interface{}, error) {
@@ -400,6 +410,7 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string, ackUnseal
 			}
 		}
 	case "recovery", "hsm":
+		keyTypeRequired = keyTypeRecovery
 		statusFn = func() (interface{}, error) {
 			return client.Sys().RekeyRecoveryKeyStatus()
 		}
@@ -472,7 +483,7 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string, ackUnseal
 		// Nonce value is not required if we are prompting via the terminal
 		w := getWriterFromUI(c.UI)
 		fmt.Fprintf(w, "Rekey operation nonce: %s\n", nonce)
-		fmt.Fprintf(w, "Unseal Key (will be hidden): ")
+		fmt.Fprintf(w, "%s Key (will be hidden): ", keyTypeRequired)
 		key, err = password.Read(os.Stdin)
 		fmt.Fprintf(w, "\n")
 		if err != nil {
@@ -482,11 +493,11 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string, ackUnseal
 			}
 
 			c.UI.Error(wrapAtLength(fmt.Sprintf("An error occurred attempting to "+
-				"ask for the unseal key. The raw error message is shown below, but "+
+				"ask for the %s key. The raw error message is shown below, but "+
 				"usually this is because you attempted to pipe a value into the "+
 				"command or you are executing outside of a terminal (tty). If you "+
 				"want to pipe the value, pass \"-\" as the argument to read from "+
-				"stdin. The raw error was: %s", err)))
+				"stdin. The raw error was: %s", strings.ToLower(keyTypeRequired), err)))
 			return 1
 		}
 	default: // Supplied directly as an arg
@@ -725,7 +736,7 @@ func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, target string
 			)))
 		case "recovery", "hsm":
 			c.UI.Output(wrapAtLength(fmt.Sprintf(
-				"The encrypted unseal keys are backed up to \"core/recovery-keys-backup\" " +
+				"The encrypted recovery keys are backed up to \"core/recovery-keys-backup\" " +
 					"in the storage backend. Remove these keys at any time using " +
 					"\"vault operator rekey -backup-delete -target=recovery\". Vault does not automatically " +
 					"remove these keys.",
@@ -736,33 +747,56 @@ func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, target string
 	switch status.VerificationRequired {
 	case false:
 		c.UI.Output("")
-		c.UI.Output(wrapAtLength(fmt.Sprintf(
-			"Vault rekeyed with %d key shares and a key threshold of %d. Please "+
-				"securely distribute the key shares printed above. When Vault is "+
-				"re-sealed, restarted, or stopped, you must supply at least %d of "+
-				"these keys to unseal it before it can start servicing requests.",
-			status.N,
-			status.T,
-			status.T)))
+		switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
+		case "barrier":
+			c.UI.Output(wrapAtLength(fmt.Sprintf(
+				"Vault unseal keys rekeyed with %d key shares and a key threshold of %d. Please "+
+					"securely distribute the key shares printed above. When Vault is "+
+					"re-sealed, restarted, or stopped, you must supply at least %d of "+
+					"these keys to unseal it before it can start servicing requests.",
+				status.N,
+				status.T,
+				status.T)))
+		case "recovery", "hsm":
+			c.UI.Output(wrapAtLength(fmt.Sprintf(
+				"Vault recovery keys rekeyed with %d key shares and a key threshold of %d. Please "+
+					"securely distribute the key shares printed above.",
+				status.N,
+				status.T)))
+		}
+
 	default:
 		c.UI.Output("")
-		c.UI.Output(wrapAtLength(fmt.Sprintf(
-			"Vault has created a new key, split into %d key shares and a key threshold "+
-				"of %d. These will not be active until after verification is complete. "+
-				"Please securely distribute the key shares printed above. When Vault "+
-				"is re-sealed, restarted, or stopped, you must supply at least %d of "+
-				"these keys to unseal it before it can start servicing requests.",
-			status.N,
-			status.T,
-			status.T)))
+		var warningText string
+		switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
+		case "barrier":
+			c.UI.Output(wrapAtLength(fmt.Sprintf(
+				"Vault has created a new unseal key, split into %d key shares and a key threshold "+
+					"of %d. These will not be active until after verification is complete. "+
+					"Please securely distribute the key shares printed above. When Vault "+
+					"is re-sealed, restarted, or stopped, you must supply at least %d of "+
+					"these keys to unseal it before it can start servicing requests.",
+				status.N,
+				status.T,
+				status.T)))
+			warningText = "unseal"
+		case "recovery", "hsm":
+			c.UI.Output(wrapAtLength(fmt.Sprintf(
+				"Vault has created a new recovery key, split into %d key shares and a key threshold "+
+					"of %d. These will not be active until after verification is complete. "+
+					"Please securely distribute the key shares printed above.",
+				status.N,
+				status.T)))
+			warningText = "authenticate with"
+
+		}
 		c.UI.Output("")
-		c.UI.Warn(wrapAtLength(
-			"Again, these key shares are _not_ valid until verification is performed. " +
-				"Do not lose or discard your current key shares until after verification " +
-				"is complete or you will be unable to unseal Vault. If you cancel the " +
-				"rekey process or seal Vault before verification is complete the new " +
-				"shares will be discarded and the current shares will remain valid.",
-		))
+		c.UI.Warn(wrapAtLength(fmt.Sprintf(
+			"Again, these key shares are _not_ valid until verification is performed. "+
+				"Do not lose or discard your current key shares until after verification "+
+				"is complete or you will be unable to %s Vault. If you cancel the "+
+				"rekey process or seal Vault before verification is complete the new "+
+				"shares will be discarded and the current shares will remain valid.", warningText)))
 		c.UI.Output("")
 		c.UI.Warn(wrapAtLength(
 			"The current verification status, including initial nonce, is shown below.",
