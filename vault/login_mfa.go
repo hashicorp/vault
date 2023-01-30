@@ -1730,10 +1730,6 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 			return fmt.Errorf("MFA secret for method name %q not present in entity %q", mConfig.Name, entity.ID)
 		}
 
-		if mfaFactors == nil {
-			return fmt.Errorf("MFA credentials not supplied")
-		}
-
 		return c.validateTOTP(ctx, mfaFactors, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
 
 	case mfaMethodTypeOkta:
@@ -1881,6 +1877,10 @@ func parseMfaFactors(creds []string) (*MFAFactor, error) {
 			}
 			mfaFactor.passcode = cred
 		}
+	}
+
+	if mfaFactor.passcode == "" {
+		return nil, nil
 	}
 
 	return mfaFactor, nil
@@ -2345,7 +2345,7 @@ func (c *Core) validatePingID(ctx context.Context, mConfig *mfa.Config, username
 }
 
 func (c *Core) validateTOTP(ctx context.Context, mfaFactors *MFAFactor, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
-	if mfaFactors.passcode == "" {
+	if mfaFactors == nil || mfaFactors.passcode == "" {
 		return fmt.Errorf("MFA credentials not supplied")
 	}
 	passcode := mfaFactors.passcode
