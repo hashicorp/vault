@@ -388,7 +388,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 			results.RecoveryShares = recoveryUnsealKeys
 
 			if !initParams.RecoveryConfig.DisableUnsealRecovery {
-				if err := c.initializeUnsealRecovery(ctx, recoveryKey, barrierKey); err != nil {
+				if _, err := c.initializeUnsealRecovery(ctx, recoveryKey, [][]byte{barrierKey}); err != nil {
 					return nil, err
 				}
 			}

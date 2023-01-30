@@ -1814,11 +1814,12 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		}
 
 		// Store the new master key
-		if err := c.seal.SetStoredKeys(ctx, [][]byte{newMasterKey}); err != nil {
+		rootKeys := [][]byte{newMasterKey}
+		if err := c.seal.SetStoredKeys(ctx, rootKeys); err != nil {
 			return fmt.Errorf("error storing new master key: %w", err)
 		}
 
-		if _, err := c.initializeUnsealRecovery(ctx, c.migrationInfo.unsealKey, newMasterKey); err != nil {
+		if _, err := c.initializeUnsealRecovery(ctx, c.migrationInfo.unsealKey, rootKeys); err != nil {
 			c.logger.Error("failed to store recovery unseal keys", "error", err)
 		}
 	default:
@@ -4047,7 +4048,7 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	return raftBackend.GetAutopilotServerState(ctx)
 }
 
-func (c *Core) initializeUnsealRecovery(ctx context.Context, recoveryKey, barrierKey []byte) (bool, error) {
+func (c *Core) initializeUnsealRecovery(ctx context.Context, recoveryKey []byte, rootKeys [][]byte) (bool, error) {
 	if !constants.IsEnterprise {
 		return false, nil
 	}
@@ -4059,7 +4060,7 @@ func (c *Core) initializeUnsealRecovery(ctx context.Context, recoveryKey, barrie
 		Wrapper: wrapper,
 	})
 	recoverySeal.SetCore(c)
-	if err := recoverySeal.SetStoredKeys(ctx, [][]byte{barrierKey}); err != nil {
+	if err := recoverySeal.SetStoredKeys(ctx, rootKeys); err != nil {
 		return false, fmt.Errorf("failed to store recover unseal keys: %v", err)
 	}
 	return true, nil
