@@ -1438,7 +1438,114 @@ auto_auth {
 	return config, cleanup
 }
 
-func TestAgent_Cache_Retry(t *testing.T) {
+func TestAgent_Cache_DynamicSecret(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	coreConfig := &vault.CoreConfig{
+		Logger: logger,
+		CredentialBackends: map[string]logical.Factory{
+			"approle": credAppRole.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	cacheConfig := `
+cache {
+}
+`
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+`, serverClient.Address(), cacheConfig, listenConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	_, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	agentClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentClient.SetToken(serverClient.Token())
+	agentClient.SetMaxRetries(0)
+	err = agentClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	renewable := true
+	tokenCreateRequest := &api.TokenCreateRequest{
+		Policies:  []string{"default"},
+		TTL:       "30m",
+		Renewable: &renewable,
+	}
+
+	secret, err := agentClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil {
+		t.Fatalf("secret not as expected: %v", secret)
+	}
+
+	token := secret.Auth.ClientToken
+
+	secret, err = agentClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil {
+		t.Fatalf("secret not as expected: %v", secret)
+	}
+
+	token2 := secret.Auth.ClientToken
+
+	if token != token2 {
+		t.Fatalf("token create response not cached when it should have been, as tokens differ")
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
+func TestAgent_ApiProxy_Retry(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
