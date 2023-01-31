@@ -2,6 +2,7 @@ package transit
 
 import (
 	"context"
+	"github.com/hashicorp/vault/sdk/framework"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -9,6 +10,7 @@ import (
 
 func TestTransit_ConfigKeys(t *testing.T) {
 	b, s := createBackendWithSysView(t)
+	paths := []*framework.Path{pathConfigIssuers(b)}
 
 	doReq := func(req *logical.Request) *logical.Response {
 		resp, err := b.HandleRequest(context.Background(), req)
@@ -33,6 +35,7 @@ func TestTransit_ConfigKeys(t *testing.T) {
 		Path:      "config/keys",
 	}
 	resp := doReq(req)
+	//
 	if resp.Data["disable_upsert"].(bool) != false {
 		t.Fatalf("expected disable_upsert to be false; got: %v", resp)
 	}

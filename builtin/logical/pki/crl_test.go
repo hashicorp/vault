@@ -5,6 +5,8 @@ import (
 	"encoding/asn1"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"strings"
 	"testing"
 	"time"
@@ -80,6 +82,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 		name := fmt.Sprintf("%s-%t-%t", tc.expiry, tc.disable, tc.ocspDisable)
 		t.Run(name, func(t *testing.T) {
 			b, s := CreateBackendWithStorage(t)
+			paths := []*framework.Path{pathConfigCRL(b)}
 
 			resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
 				"expiry":                    tc.expiry,
@@ -90,8 +93,11 @@ func TestBackend_CRLConfig(t *testing.T) {
 				"auto_rebuild_grace_period": tc.autoRebuildGracePeriod,
 			})
 			requireSuccessNonNilResponse(t, resp, err)
+			schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation), resp, true)
 
 			resp, err = CBRead(b, s, "config/crl")
+			schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.ReadOperation), resp, true)
+
 			requireSuccessNonNilResponse(t, resp, err)
 			requireFieldsSetInResp(t, resp, "disable", "expiry", "ocsp_disable", "auto_rebuild", "auto_rebuild_grace_period")
 
