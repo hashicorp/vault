@@ -29,6 +29,7 @@ message NewUserRequest {
     Statements rollback_statements = 5;
     int32 credential_type = 6;
     bytes public_key = 7;
+    string subject = 8;
 }
 
 message UsernameConfig {

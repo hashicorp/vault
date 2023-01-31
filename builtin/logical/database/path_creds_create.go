@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -154,6 +155,27 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 			// Set output credential
 			respData["rsa_private_key"] = string(private)
+		case v5.CredentialTypeClientCertificate:
+			generator, err := newClientCertificateGenerator(role.CredentialConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+			}
+
+			// Generate the client certificate
+			cb, subject, err := generator.generate(b.GetRandomReader(), expiration,
+				newUserReq.UsernameConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate client certificate: %w", err)
+			}
+
+			// Set input credential
+			newUserReq.CredentialType = dbplugin.CredentialTypeClientCertificate
+			newUserReq.Subject = subject
+
+			// Set output credential
+			respData["client_certificate"] = cb.Certificate
+			respData["private_key"] = cb.PrivateKey
+			respData["private_key_type"] = cb.PrivateKeyType
 		}
 
 		// Overwriting the password in the event this is a legacy database

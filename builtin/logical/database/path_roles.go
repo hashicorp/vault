@@ -628,6 +628,8 @@ func (r *roleEntry) setCredentialType(credentialType string) error {
 		r.CredentialType = v5.CredentialTypePassword
 	case v5.CredentialTypeRSAPrivateKey.String():
 		r.CredentialType = v5.CredentialTypeRSAPrivateKey
+	case v5.CredentialTypeClientCertificate.String():
+		r.CredentialType = v5.CredentialTypeClientCertificate
 	default:
 		return fmt.Errorf("invalid credential_type %q", credentialType)
 	}
@@ -659,6 +661,18 @@ func (r *roleEntry) setCredentialConfig(config map[string]string) error {
 		}
 	case v5.CredentialTypeRSAPrivateKey:
 		generator, err := newRSAKeyGenerator(c)
+		if err != nil {
+			return err
+		}
+		cm, err := generator.configMap()
+		if err != nil {
+			return err
+		}
+		if len(cm) > 0 {
+			r.CredentialConfig = cm
+		}
+	case v5.CredentialTypeClientCertificate:
+		generator, err := newClientCertificateGenerator(c)
 		if err != nil {
 			return err
 		}

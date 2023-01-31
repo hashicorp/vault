@@ -5,12 +5,17 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -163,6 +168,193 @@ func (kg *rsaKeyGenerator) generate(r io.Reader) ([]byte, []byte, error) {
 func (kg rsaKeyGenerator) configMap() (map[string]interface{}, error) {
 	config := make(map[string]interface{})
 	if err := mapstructure.WeakDecode(kg, &config); err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
+// TODO: subject_template also considered, but we'd need to be
+//       able to parse it from a string -> pkix.Name.
+type ClientCertificateGenerator struct {
+	CommonNameTemplate string `mapstructure:"common_name_template,omitempty"`
+	CAPrivateKey       string `mapstructure:"ca_private_key,omitempty"`
+	CACert             string `mapstructure:"ca_cert,omitempty"`
+	KeyType            string `mapstructure:"key_type,omitempty"`
+	KeyBits            int    `mapstructure:"key_bits,omitempty"`
+	SignatureBits      int    `mapstructure:"signature_bits,omitempty"`
+
+	parsedCABundle *certutil.ParsedCertBundle
+	cnProducer     template.StringTemplate
+}
+
+// newClientCertificateGenerator returns a new ClientCertificateGenerator
+// using the given config. Default values will be set on the returned
+// ClientCertificateGenerator if not provided in the config.
+func newClientCertificateGenerator(config map[string]interface{}) (ClientCertificateGenerator, error) {
+	var cg ClientCertificateGenerator
+	if err := mapstructure.WeakDecode(config, &cg); err != nil {
+		return cg, err
+	}
+
+	switch cg.KeyType {
+	case "rsa":
+		switch cg.KeyBits {
+		case 0, 2048, 3072, 4096:
+		default:
+			return cg, fmt.Errorf("invalid key_bits")
+		}
+	case "ec":
+		switch cg.KeyBits {
+		case 0, 224, 256, 384, 521:
+		default:
+			return cg, fmt.Errorf("invalid key_bits")
+		}
+	case "ed25519":
+		// key_bits ignored
+	default:
+		return cg, fmt.Errorf("invalid key_type")
+	}
+
+	switch cg.SignatureBits {
+	case 0, 256, 384, 512:
+	default:
+		return cg, fmt.Errorf("invalid signature_bits")
+	}
+
+	if cg.CommonNameTemplate == "" {
+		return cg, fmt.Errorf("missing required common_name_template")
+	}
+
+	// Validate the common name template
+	t, err := template.NewTemplate(template.Template(cg.CommonNameTemplate))
+	if err != nil {
+		return cg, fmt.Errorf("failed to create template: %w", err)
+	}
+
+	_, err = t.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return cg, fmt.Errorf("invalid common_name_template: %w", err)
+	}
+	cg.cnProducer = t
+
+	if cg.CACert == "" {
+		return cg, fmt.Errorf("missing required ca_cert")
+	}
+	if cg.CAPrivateKey == "" {
+		return cg, fmt.Errorf("missing required ca_private_key")
+	}
+	parsedBundle, err := certutil.ParsePEMBundle(strings.Join([]string{cg.CACert, cg.CAPrivateKey}, "\n"))
+	if err != nil {
+		return cg, err
+	}
+	if parsedBundle.PrivateKey == nil {
+		return cg, fmt.Errorf("private key not found in the PEM bundle")
+	}
+	if parsedBundle.PrivateKeyType == certutil.UnknownPrivateKey {
+		return cg, fmt.Errorf("unknown private key found in the PEM bundle")
+	}
+	if parsedBundle.Certificate == nil {
+		return cg, fmt.Errorf("certificate not found in the PEM bundle")
+	}
+	if !parsedBundle.Certificate.IsCA {
+		return cg, fmt.Errorf("the given certificate is not marked for CA use")
+	}
+
+	certBundle, err := parsedBundle.ToCertBundle()
+	if err != nil {
+		return cg, fmt.Errorf("error converting raw values into cert bundle: %w", err)
+	}
+
+	parsedCABundle, err := certBundle.ToParsedCertBundle()
+	if err != nil {
+		return cg, fmt.Errorf("failed to parse cert bundle: %w", err)
+	}
+	cg.parsedCABundle = parsedCABundle
+
+	return cg, nil
+}
+
+func (cg *ClientCertificateGenerator) generate(r io.Reader, expiration time.Time, userMeta dbplugin.UsernameMetadata) (*certutil.CertBundle, string, error) {
+	commonName, err := cg.cnProducer.Generate(userMeta)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Set defaults
+	keyBits := cg.KeyBits
+	signatureBits := cg.SignatureBits
+	switch cg.KeyType {
+	case "rsa":
+		if keyBits == 0 {
+			keyBits = 2048
+		}
+		if signatureBits == 0 {
+			signatureBits = 256
+		}
+	case "ec":
+		if keyBits == 0 {
+			keyBits = 256
+		}
+		if signatureBits == 0 {
+			signatureBits = keyBits
+		}
+	case "ed25519":
+		// key_bits ignored
+		if signatureBits == 0 {
+			signatureBits = 256
+		}
+	}
+
+	subject := pkix.Name{
+		CommonName: commonName,
+		// Additional subject DN options intentionally omitted for now
+	}
+
+	creation := &certutil.CreationBundle{
+		Params: &certutil.CreationParameters{
+			Subject:                       subject,
+			KeyType:                       cg.KeyType,
+			KeyBits:                       cg.KeyBits,
+			SignatureBits:                 cg.SignatureBits,
+			NotAfter:                      expiration,
+			KeyUsage:                      x509.KeyUsageDigitalSignature,
+			ExtKeyUsage:                   certutil.ClientAuthExtKeyUsage,
+			BasicConstraintsValidForNonCA: true,
+			NotBeforeDuration:             0,
+			URLs: &certutil.URLEntries{
+				IssuingCertificates:   []string{},
+				CRLDistributionPoints: []string{},
+				OCSPServers:           []string{},
+			},
+		},
+		SigningBundle: &certutil.CAInfoBundle{
+			ParsedCertBundle: *cg.parsedCABundle,
+			URLs: &certutil.URLEntries{
+				IssuingCertificates:   []string{},
+				CRLDistributionPoints: []string{},
+				OCSPServers:           []string{},
+			},
+		},
+	}
+
+	parsedClientBundle, err := certutil.CreateCertificateWithRandomSource(creation, r)
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to generate client certificate: %w", err)
+	}
+
+	cb, err := parsedClientBundle.ToCertBundle()
+	if err != nil {
+		return nil, "", fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
+	}
+
+	return cb, subject.String(), nil
+}
+
+// configMap returns the configuration of the rsaKeyGenerator
+// as a map from string to string.
+func (cg ClientCertificateGenerator) configMap() (map[string]interface{}, error) {
+	config := make(map[string]interface{})
+	if err := mapstructure.WeakDecode(cg, &config); err != nil {
 		return nil, err
 	}
 	return config, nil

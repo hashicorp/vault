@@ -98,6 +98,7 @@ func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
 		CredentialType: int32(req.CredentialType),
 		Password:       req.Password,
 		PublicKey:      req.PublicKey,
+		Subject:        req.Subject,
 		Expiration:     expiration,
 		Statements: &proto.Statements{
 			Commands: req.Statements.Commands,
