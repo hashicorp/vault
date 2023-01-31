@@ -32,6 +32,16 @@ check_pr_status() {
   pr_status=$($binpath read -format=json sys/replication/performance/status)
   cluster_state=$($binpath read -format=json sys/replication/performance/status | jq -r '.data.state')
 
+  if [[ "${REPLICATION_MODE}" == "primary" ]]; then
+    connection_status=$($binpath read -format=json sys/replication/performance/status | jq -r '.data.secondaries[0].connection_status')
+  else
+    connection_status=$($binpath read -format=json sys/replication/performance/status | jq -r '.data.primaries[0].connection_status')
+  fi
+
+  if [[ "$connection_status" == 'disconnected' ]]; then
+    fail "expected connection status to be connected"
+  fi
+
   if [[ "$cluster_state" == 'idle' ]]; then
     fail "expected cluster state to be not idle"
   fi
