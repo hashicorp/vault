@@ -28,8 +28,9 @@ retry() {
   return 0
 }
 
+test -x "$binpath" || fail "unable to locate vault binary at $binpath"
+
 check_pr_status() {
-  pr_status=$($binpath read -format=json sys/replication/performance/status)
   cluster_state=$($binpath read -format=json sys/replication/performance/status | jq -r '.data.state')
 
   if [[ "${REPLICATION_MODE}" == "primary" ]]; then
@@ -47,8 +48,6 @@ check_pr_status() {
   fi
 }
 
-test -x "$binpath" || fail "unable to locate vault binary at $binpath"
-
 # Retry a few times because it can take some time for replication to sync
 retry 5 check_pr_status
-echo $pr_status
+echo $($binpath read -format=json sys/replication/performance/status)
