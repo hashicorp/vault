@@ -5,6 +5,8 @@ import (
 	"encoding/asn1"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"strings"
 	"testing"
 	"time"
@@ -722,6 +724,7 @@ func TestIssuerRevocation(t *testing.T) {
 	t.Parallel()
 
 	b, s := CreateBackendWithStorage(t)
+	paths := []*framework.Path{pathSetSignedIntermediate(b)}
 
 	// Write a config with auto-rebuilding so that we can verify stuff doesn't
 	// appear on the delta CRL.
@@ -822,6 +825,8 @@ func TestIssuerRevocation(t *testing.T) {
 	resp, err = CBWrite(b, s, "intermediate/set-signed", map[string]interface{}{
 		"certificate": intCert,
 	})
+	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["imported_issuers"])

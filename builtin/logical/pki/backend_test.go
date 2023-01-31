@@ -16,6 +16,8 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"math"
 	"math/big"
 	mathrand "math/rand"
@@ -2110,6 +2112,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 func runTestSignVerbatim(t *testing.T, keyType string) {
 	// create the backend
 	b, storage := CreateBackendWithStorage(t)
+	paths := []*framework.Path{pathSignVerbatim(b)}
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2179,6 +2182,8 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		Data:       signVerbatimData,
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation), resp, true)
+
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to sign-verbatim basic CSR: %#v", *resp)
 	}
