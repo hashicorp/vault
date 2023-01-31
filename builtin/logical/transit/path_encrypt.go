@@ -113,6 +113,7 @@ will severely impact the ciphertext's security.`,
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
 			},
+
 			"partial_failure_response_code": {
 				Type: framework.TypeInt,
 				Description: `
@@ -120,6 +121,14 @@ Ordinarily, if a batch item fails to encrypt due to a bad input, but other batch
 the HTTP response code is 400 (Bad Request).  Some applications may want to treat partial failures differently.
 Providing the parameter returns the given response code integer instead of a 400 in this case. If all values fail
 HTTP 400 is still returned.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be encrypted in a single batch. When this parameter
+is set, if the parameters 'plaintext', 'context' and 'nonce' are also set, they
+will be ignored. Any batch output will preserve the order of the batch input.`,
 			},
 		},
 

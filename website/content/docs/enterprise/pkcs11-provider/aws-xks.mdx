@@ -158,11 +158,11 @@ to the XKS proxy. This helps to quickly setup a valid domain and TLS endpoint fo
    max_aad_in_base64 = 16384
 
    [hsm_capabilities]
-   can_generate_iv = true
-   is_zero_iv_required = true
+   can_generate_iv = false
+   is_zero_iv_required = false
    ```
 
-~> **Note**: This uses an IV of zero until the next release of `vault-pkcs11-provider`.
+~> **Note**: `vault-pkcs11-provider` versions of 0.1.0–0.1.2 require the last two lines to be changed to `can_generate_iv = true` and `is_zero_iv_required = true`.
 
 1. Create a file, `/etc/vault-pkcs11.hcl` with the following contents:
 

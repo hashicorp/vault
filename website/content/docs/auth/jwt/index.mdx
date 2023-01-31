@@ -258,6 +258,15 @@ management tool.
        default_role="demo"
    ```
 
+   If you need to perform JWT verification with JWT token validation, then leave the `oidc_client_id` and `oidc_client_secret` blank. 
+
+   ```text
+   $ vault write auth/jwt/config \
+      oidc_discovery_url="https://MYDOMAIN.eu.auth0.com/" \
+      oidc_client_id="" \
+      oidc_client_secret="" \
+  ```
+
 1. Create a named role:
 
    ```text

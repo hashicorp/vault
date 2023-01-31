@@ -13,11 +13,21 @@ description: The Consul secrets engine for Vault generates tokens for Consul dyn
 The Consul secrets engine generates [Consul](https://www.consul.io/) API tokens
 dynamically based on Consul ACL policies.
 
+-> **Note:** See the Consul Agent [config documentation](https://developer.hashicorp.com/consul/docs/agent/config/config-files#acl-parameters)
+for details on how to enable Consul's ACL system.
+
 ## Setup
 
 Most secrets engines must be configured in advance before they can perform their
 functions. These steps are usually completed by an operator or configuration
 management tool.
+
+1. (Optional) If you're only looking to set up a quick test environment, you can start a
+    Consul Agent in dev mode in a separate terminal window.
+
+    ```shell-session
+    $ consul agent -dev -hcl "acl { enabled = true }"
+    ```
 
 1.  Enable the Consul secrets engine:
 
@@ -31,10 +41,10 @@ management tool.
 
 1.  Configure Vault to connect and authenticate to Consul.
 
-    Vault can bootstrap the Consul ACL system automatically if it hasn't already been done. If you
-    have already bootstrapped the ACL system, then you will need to provide Vault with a management
-    token. This can either be the bootstrap token or another management token you've created
-    yourself.
+    Vault can bootstrap the Consul ACL system automatically if it is enabled and hasn't already
+    been bootstrapped. If you have already bootstrapped the ACL system, then you will need to
+    provide Vault with a management token. This can either be the bootstrap token or another
+    management token you've created yourself.
 
     1.  Configuring Vault without previously bootstrapping the Consul ACL system:
 
