@@ -197,7 +197,7 @@ close to the leader before adding additional nodes. Raft indexes are visible via
 ### Deployment Table
 
 Below is a table that shows quorum size and failure tolerance for various
-cluster sizes. The recommended deployment is either 3 or 5 servers. A single
+cluster sizes. The recommended deployment consists of a minimum of 5 or more servers that are odd in their total (5, 7, etc). A single
 server deployment is _**highly**_ discouraged as data loss is inevitable in a
 failure scenario.
 
