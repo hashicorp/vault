@@ -1432,8 +1432,8 @@
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Plugin Portal",
-        "path": "plugins/plugin-portal"
+        "title": "Integrations Library",
+        "href": "/vault/integrations"
       }
     ]
   },
