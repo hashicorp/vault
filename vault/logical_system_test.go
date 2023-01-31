@@ -2915,7 +2915,7 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 1, req.Operation),
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
