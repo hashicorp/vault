@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -169,9 +171,248 @@ func NewConfig() *Config {
 	}
 }
 
+// Merge merges two Agent configurations.
+func (c *Config) Merge(c2 *Config) *Config {
+	if c2 == nil {
+		return c
+	}
+
+	result := NewConfig()
+
+	result.SharedConfig = c.SharedConfig
+	if c2.SharedConfig != nil {
+		result.SharedConfig = c.SharedConfig.Merge(c2.SharedConfig)
+	}
+
+	result.AutoAuth = c.AutoAuth
+	if c2.AutoAuth != nil {
+		result.AutoAuth = c2.AutoAuth
+	}
+
+	result.Cache = c.Cache
+	if c2.Cache != nil {
+		result.Cache = c2.Cache
+	}
+
+	result.APIProxy = c.APIProxy
+	if c2.APIProxy != nil {
+		result.APIProxy = c2.APIProxy
+	}
+
+	result.DisableMlock = c.DisableMlock
+	if c2.DisableMlock {
+		result.DisableMlock = c2.DisableMlock
+	}
+
+	// For these, ignore the non-specific one and overwrite them all
+	result.DisableIdleConnsAutoAuth = c.DisableIdleConnsAutoAuth
+	if c2.DisableIdleConnsAutoAuth {
+		result.DisableIdleConnsAutoAuth = c2.DisableIdleConnsAutoAuth
+	}
+
+	result.DisableIdleConnsAPIProxy = c.DisableIdleConnsAPIProxy
+	if c2.DisableIdleConnsAPIProxy {
+		result.DisableIdleConnsAPIProxy = c2.DisableIdleConnsAPIProxy
+	}
+
+	result.DisableIdleConnsTemplating = c.DisableIdleConnsTemplating
+	if c2.DisableIdleConnsTemplating {
+		result.DisableIdleConnsTemplating = c2.DisableIdleConnsTemplating
+	}
+
+	result.DisableKeepAlivesAutoAuth = c.DisableKeepAlivesAutoAuth
+	if c2.DisableKeepAlivesAutoAuth {
+		result.DisableKeepAlivesAutoAuth = c2.DisableKeepAlivesAutoAuth
+	}
+
+	result.DisableKeepAlivesAPIProxy = c.DisableKeepAlivesAPIProxy
+	if c2.DisableKeepAlivesAPIProxy {
+		result.DisableKeepAlivesAPIProxy = c2.DisableKeepAlivesAPIProxy
+	}
+
+	result.DisableKeepAlivesTemplating = c.DisableKeepAlivesTemplating
+	if c2.DisableKeepAlivesTemplating {
+		result.DisableKeepAlivesTemplating = c2.DisableKeepAlivesTemplating
+	}
+
+	result.TemplateConfig = c.TemplateConfig
+	if c2.TemplateConfig != nil {
+		result.TemplateConfig = c2.TemplateConfig
+	}
+
+	for _, l := range c.Templates {
+		result.Templates = append(result.Templates, l)
+	}
+	for _, l := range c2.Templates {
+		result.Templates = append(result.Templates, l)
+	}
+
+	result.ExitAfterAuth = c.ExitAfterAuth
+	if c2.ExitAfterAuth {
+		result.ExitAfterAuth = c2.ExitAfterAuth
+	}
+
+	result.Vault = c.Vault
+	if c2.Vault != nil {
+		result.Vault = c2.Vault
+	}
+
+	result.PidFile = c.PidFile
+	if c2.PidFile != "" {
+		result.PidFile = c2.PidFile
+	}
+
+	return result
+}
+
+// ValidateConfig validates an Agent configuration after it has been fully merged together, to
+// ensure that required combinations of configs are there
+func (c *Config) ValidateConfig() error {
+	if c.APIProxy != nil && c.Cache != nil {
+		if c.Cache.UseAutoAuthTokenRaw != nil {
+			if c.APIProxy.UseAutoAuthTokenRaw != nil {
+				return fmt.Errorf("use_auto_auth_token defined in both api_proxy and cache config. Please remove this configuration from the cache block")
+			} else {
+				c.APIProxy.ForceAutoAuthToken = c.Cache.ForceAutoAuthToken
+			}
+		}
+	}
+
+	if c.Cache != nil {
+		if len(c.Listeners) < 1 && len(c.Templates) < 1 {
+			return fmt.Errorf("enabling the cache requires at least 1 template or 1 listener to be defined")
+		}
+
+		if c.Cache.UseAutoAuthToken {
+			if c.AutoAuth == nil {
+				return fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
+			}
+			if c.AutoAuth != nil && c.AutoAuth.Method != nil && c.AutoAuth.Method.WrapTTL > 0 {
+				return fmt.Errorf("cache.use_auto_auth_token is true and auto_auth uses wrapping")
+			}
+		}
+	}
+
+	if c.APIProxy != nil {
+		if len(c.Listeners) < 1 {
+			return fmt.Errorf("configuring the api_proxy requires at least 1 listener to be defined")
+		}
+
+		if c.APIProxy.UseAutoAuthToken {
+			if c.AutoAuth == nil {
+				return fmt.Errorf("api_proxy.use_auto_auth_token is true but auto_auth not configured")
+			}
+			if c.AutoAuth != nil && c.AutoAuth.Method != nil && c.AutoAuth.Method.WrapTTL > 0 {
+				return fmt.Errorf("api_proxy.use_auto_auth_token is true and auto_auth uses wrapping")
+			}
+		}
+	}
+
+	if c.AutoAuth != nil {
+		if len(c.AutoAuth.Sinks) == 0 &&
+			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) &&
+			len(c.Templates) == 0 {
+			return fmt.Errorf("auto_auth requires at least one sink or at least one template or api_proxy.use_auto_auth_token=true")
+		}
+	}
+
+	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
+		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
+	return nil
+}
+
 // LoadConfig loads the configuration at the given path, regardless if
-// its a file or directory.
+// it's a file or directory.
 func LoadConfig(path string) (*Config, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if fi.IsDir() {
+		return LoadConfigDir(path)
+	}
+	return LoadConfigFile(path)
+}
+
+// LoadConfigDir loads the configuration at the given path if it's a directory
+func LoadConfigDir(dir string) (*Config, error) {
+	f, err := os.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !fi.IsDir() {
+		return nil, fmt.Errorf("configuration path must be a directory: %q", dir)
+	}
+
+	var files []string
+	err = nil
+	for err != io.EOF {
+		var fis []os.FileInfo
+		fis, err = f.Readdir(128)
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+
+		for _, fi := range fis {
+			// Ignore directories
+			if fi.IsDir() {
+				continue
+			}
+
+			// Only care about files that are valid to load.
+			name := fi.Name()
+			skip := true
+			if strings.HasSuffix(name, ".hcl") {
+				skip = false
+			} else if strings.HasSuffix(name, ".json") {
+				skip = false
+			}
+			if skip || isTemporaryFile(name) {
+				continue
+			}
+
+			path := filepath.Join(dir, name)
+			files = append(files, path)
+		}
+	}
+
+	result := NewConfig()
+	for _, f := range files {
+		config, err := LoadConfigFile(f)
+		if err != nil {
+			return nil, fmt.Errorf("error loading %q: %w", f, err)
+		}
+
+		if result == nil {
+			result = config
+		} else {
+			result = result.Merge(config)
+		}
+	}
+
+	return result, nil
+}
+
+// isTemporaryFile returns true or false depending on whether the
+// provided file name is a temporary file for the following editors:
+// emacs or vim.
+func isTemporaryFile(name string) bool {
+	return strings.HasSuffix(name, "~") || // vim
+		strings.HasPrefix(name, ".#") || // emacs
+		(strings.HasPrefix(name, "#") && strings.HasSuffix(name, "#")) // emacs
+}
+
+// LoadConfigFile loads the configuration at the given path if it's a file
+func LoadConfigFile(path string) (*Config, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -236,16 +477,6 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'api_proxy':%w", err)
 	}
 
-	if result.APIProxy != nil && result.Cache != nil {
-		if result.Cache.UseAutoAuthTokenRaw != nil {
-			if result.APIProxy.UseAutoAuthTokenRaw != nil {
-				return nil, fmt.Errorf("use_auto_auth_token defined in both api_proxy and cache config. Please remove this configuration from the cache block")
-			} else {
-				result.APIProxy.ForceAutoAuthToken = result.Cache.ForceAutoAuthToken
-			}
-		}
-	}
-
 	if err := parseTemplateConfig(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'template_config': %w", err)
 	}
@@ -254,48 +485,10 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'template': %w", err)
 	}
 
-	if result.Cache != nil && result.APIProxy == nil && len(result.Listeners) > 0 {
+	if result.Cache != nil && result.APIProxy == nil {
 		result.APIProxy = &APIProxy{
 			UseAutoAuthToken:   result.Cache.UseAutoAuthToken,
 			ForceAutoAuthToken: result.Cache.ForceAutoAuthToken,
-		}
-	}
-
-	if result.Cache != nil {
-		if len(result.Listeners) < 1 && len(result.Templates) < 1 {
-			return nil, fmt.Errorf("enabling the cache requires at least 1 template or 1 listener to be defined")
-		}
-
-		if result.Cache.UseAutoAuthToken {
-			if result.AutoAuth == nil {
-				return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
-			}
-			if result.AutoAuth != nil && result.AutoAuth.Method != nil && result.AutoAuth.Method.WrapTTL > 0 {
-				return nil, fmt.Errorf("cache.use_auto_auth_token is true and auto_auth uses wrapping")
-			}
-		}
-	}
-
-	if result.APIProxy != nil {
-		if len(result.Listeners) < 1 {
-			return nil, fmt.Errorf("configuring the api_proxy requires at least 1 listener to be defined")
-		}
-
-		if result.APIProxy.UseAutoAuthToken {
-			if result.AutoAuth == nil {
-				return nil, fmt.Errorf("api_proxy.use_auto_auth_token is true but auto_auth not configured")
-			}
-			if result.AutoAuth != nil && result.AutoAuth.Method != nil && result.AutoAuth.Method.WrapTTL > 0 {
-				return nil, fmt.Errorf("api_proxy.use_auto_auth_token is true and auto_auth uses wrapping")
-			}
-		}
-	}
-
-	if result.AutoAuth != nil {
-		if len(result.AutoAuth.Sinks) == 0 &&
-			(result.APIProxy == nil || !result.APIProxy.UseAutoAuthToken) &&
-			len(result.Templates) == 0 {
-			return nil, fmt.Errorf("auto_auth requires at least one sink or at least one template or api_proxy.use_auto_auth_token=true")
 		}
 	}
 
@@ -304,19 +497,17 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'vault':%w", err)
 	}
 
-	if result.Vault == nil {
-		result.Vault = &Vault{}
-	}
-
-	// Set defaults
-	if result.Vault.Retry == nil {
-		result.Vault.Retry = &Retry{}
-	}
-	switch result.Vault.Retry.NumRetries {
-	case 0:
-		result.Vault.Retry.NumRetries = ctconfig.DefaultRetryAttempts
-	case -1:
-		result.Vault.Retry.NumRetries = 0
+	if result.Vault != nil {
+		// Set defaults
+		if result.Vault.Retry == nil {
+			result.Vault.Retry = &Retry{}
+		}
+		switch result.Vault.Retry.NumRetries {
+		case 0:
+			result.Vault.Retry.NumRetries = ctconfig.DefaultRetryAttempts
+		case -1:
+			result.Vault.Retry.NumRetries = 0
+		}
 	}
 
 	if disableIdleConnsEnv := os.Getenv(DisableIdleConnsEnv); disableIdleConnsEnv != "" {

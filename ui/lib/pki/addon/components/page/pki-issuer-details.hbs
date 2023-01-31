@@ -1,0 +1,127 @@
+<Toolbar>
+  <ToolbarActions>
+    {{!-- {{#if @canRotate}}
+      <ToolbarLink @route="issuers.generate-root" @type="rotate-cw" @issuer={{@issuer.id}} data-test-pki-issuer-rotate-root>
+        Rotate this root
+      </ToolbarLink>
+    {{/if}} --}}
+    {{#if @canCrossSign}}
+      <ToolbarLink
+        @route="issuers.issuer.cross-sign"
+        @type="pen-tool"
+        @issuer={{@issuer.id}}
+        data-test-pki-issuer-cross-sign
+      >
+        Cross-sign Issuer
+      </ToolbarLink>
+    {{/if}}
+    {{#if @canSignIntermediate}}
+      <ToolbarLink @route="issuers.issuer.sign" @type="pen-tool" @issuer={{@issuer.id}} data-test-pki-issuer-sign-int>
+        Sign Intermediate
+      </ToolbarLink>
+    {{/if}}
+    <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+      <D.Trigger
+        data-test-popup-menu-trigger="true"
+        class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+        @htmlTag="button"
+        data-test-issuer-download
+      >
+        Download
+        <Chevron @direction="down" @isButton={{true}} />
+      </D.Trigger>
+      <D.Content @defaultClass="popup-menu-content">
+        <nav class="box menu" aria-label="snapshots actions">
+          <ul class="menu-list">
+            {{#if @pem}}
+              {{! should never be null, but if it is we don't want to let users download an empty file }}
+              <li class="action">
+                <DownloadButton
+                  class="link"
+                  @filename={{@issuer.id}}
+                  @data={{@pem}}
+                  @extension="pem"
+                  data-test-issuer-download-type="pem"
+                >
+                  PEM format
+                </DownloadButton>
+              </li>
+            {{/if}}
+            {{#if @der}}
+              {{! should never be null, but if it is we don't want to let users download an empty file }}
+              <li class="action">
+                <DownloadButton
+                  class="link"
+                  @filename={{@issuer.id}}
+                  @data={{@der}}
+                  @extension="der"
+                  data-test-issuer-download-type="der"
+                >
+                  DER format
+                </DownloadButton>
+              </li>
+            {{/if}}
+          </ul>
+        </nav>
+      </D.Content>
+    </BasicDropdown>
+
+    {{#if @canConfigure}}
+      <ToolbarLink @route="issuers.issuer.edit" @issuer={{@issuer.id}} data-test-pki-issuer-configure>
+        Configure
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+{{#if @issuer.isDefault}}
+  <p class="has-top-margin-m">
+    This is your default issuer certificate. You will see it in your
+    <LinkTo @route="issuers.index">
+      list of Issuers.
+    </LinkTo>
+    You may also want to configure its usage and other behaviors.
+  </p>
+{{/if}}
+
+<main data-test-issuer-details>
+  {{#each @issuer.formFieldGroups as |fieldGroup|}}
+    {{#each-in fieldGroup as |group fields|}}
+      <div class="box is-sideless is-fullwidth is-shadowless" data-test-details-group={{group}}>
+        {{#if (not-eq group "default")}}
+          <h2 class="title is-5 has-margin-top" data-test-group-title>
+            {{group}}
+          </h2>
+        {{/if}}
+        {{#each fields as |attr|}}
+          {{#if attr.options.masked}}
+            <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
+              <MaskedInput
+                @name={{or attr.options.label (humanize (dasherize attr.name))}}
+                @value={{get @issuer attr.name}}
+                @displayOnly={{true}}
+                @allowCopy={{true}}
+              />
+            </InfoTableRow>
+          {{else if (eq attr.name "keyId")}}
+            <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
+              {{#if @issuer.keyId}}
+                <LinkTo @route="keys.key.details" @model={{@issuer.keyId}}>{{@issuer.keyId}}</LinkTo>
+              {{else}}
+                <Icon @name="minus" />
+              {{/if}}
+            </InfoTableRow>
+          {{else}}
+            <InfoTableRow
+              @label={{or attr.options.label (humanize (dasherize attr.name))}}
+              @value={{get @issuer attr.name}}
+              @formatDate={{if attr.options.formatDate "MMM d yyyy HH:mm:ss a zzzz"}}
+              @alwaysRender={{true}}
+            />
+          {{/if}}
+        {{/each}}
+      </div>
+    {{/each-in}}
+  {{/each}}
+
+</main>

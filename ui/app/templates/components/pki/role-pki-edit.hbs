@@ -83,7 +83,7 @@
   </form>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
-    {{#each this.model.formFieldGroups as |fieldGroup|}}
+    {{#each this.model.fieldGroups as |fieldGroup|}}
       {{#each-in fieldGroup as |group fields|}}
         {{#if (or (eq group "default") (eq group "Options"))}}
           {{#each fields as |attr|}}

@@ -39,7 +39,11 @@
 </Toolbar>
 {{#if this.model.issuersModel.length}}
   {{#each this.model.issuersModel as |pkiIssuer|}}
-    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiIssuer.id}} @linkPrefix={{this.mountPoint}}>
+    <LinkedBlock
+      class="list-item-row"
+      @params={{array "issuers.issuer.details" pkiIssuer.id}}
+      @linkPrefix={{this.mountPoint}}
+    >
       <div class="level is-mobile">
         <div class="level-left">
           <div>
@@ -63,12 +67,12 @@
               <nav class="menu" aria-label="issuer config options">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo @route="roles.role.details" @model={{pkiIssuer.id}}>
+                    <LinkTo @route="issuers.issuer.details" @model={{pkiIssuer.id}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo @route="roles.role.edit" @model={{pkiIssuer.id}}>
+                    <LinkTo @route="issuers.issuer.edit" @model={{pkiIssuer.id}}>
                       Edit
                     </LinkTo>
                   </li>
@@ -81,7 +85,7 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
+  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
     <LinkTo @route="configuration.create">
       Configure PKI
     </LinkTo>

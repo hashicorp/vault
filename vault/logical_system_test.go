@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
@@ -32,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
@@ -2193,6 +2195,7 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 
 func TestSystemBackend_auditHash(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
+	paths := b.(*SystemBackend).auditPaths()
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		view := &logical.InmemStorage{}
 		view.Put(namespace.RootContext(nil), &logical.StorageEntry{
@@ -2220,6 +2223,12 @@ func TestSystemBackend_auditHash(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 2, req.Operation),
+		resp,
+		true,
+	)
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "audit-hash/foo")
 	req.Data["input"] = "bar"
@@ -2231,6 +2240,13 @@ func TestSystemBackend_auditHash(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatalf("response or its data was nil")
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, req.Operation),
+		resp,
+		true,
+	)
+
 	hash, ok := resp.Data["hash"]
 	if !ok {
 		t.Fatalf("did not get hash back in response, response was %#v", resp.Data)
@@ -3602,13 +3618,66 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_OASGenericMount(t *testing.T) {
+	_, b, rootToken := testCoreSystemBackend(t)
+	var oapi map[string]interface{}
+
+	// Check that default paths are present with a root token
+	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
+	req.Data["generic_mount_paths"] = true
+	req.ClientToken = rootToken
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	body := resp.Data["http_raw_body"].([]byte)
+	err = jsonutil.DecodeJSON(body, &oapi)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	doc, err := framework.NewOASDocumentFromMap(oapi)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pathSamples := []struct {
+		path string
+		tag  string
+	}{
+		{"/auth/token/lookup", "auth"},
+		{"/cubbyhole/{path}", "secrets"},
+		{"/identity/group/id", "identity"},
+		{"/{secret_mount_path}/.*", "secrets"},
+		{"/sys/policy", "system"},
+	}
+
+	for _, path := range pathSamples {
+		if doc.Paths[path.path] == nil {
+			t.Fatalf("didn't find expected path '%s'.", path)
+		}
+		tag := doc.Paths[path.path].Get.Tags[0]
+		if tag != path.tag {
+			t.Fatalf("path: %s; expected tag: %s, actual: %s", path.path, tag, path.tag)
+		}
+	}
+
+	// Simple check of response size (which is much larger than most
+	// Vault responses), mainly to catch mass omission of expected path data.
+	const minLen = 70000
+	if len(body) < minLen {
+		t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
+	}
+}
+
 func TestSystemBackend_OpenAPI(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
 	var oapi map[string]interface{}
 
 	// Ensure no paths are reported if there is no token
 	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	resp, err := b.HandleRequest(namespace.RootContext(context.Background()), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -3662,10 +3731,10 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		path string
 		tag  string
 	}{
-		{"/auth/{token_mount_path}/lookup", "auth"},
-		{"/{cubbyhole_mount_path}/{path}", "secrets"},
+		{"/auth/token/lookup", "auth"},
+		{"/cubbyhole/{path}", "secrets"},
 		{"/identity/group/id", "identity"},
-		{"/{secret_mount_path}/.*", "secrets"}, // TODO update after kv repo update
+		{"/secret/.*", "secrets"},
 		{"/sys/policy", "system"},
 	}
 
@@ -5389,5 +5458,34 @@ func TestCanUnseal_WithNonExistentBuiltinPluginVersion_InMountStorage(t *testing
 		if !ok || pluginVersion != "" {
 			t.Errorf("expected empty plugin version in config: %#v", config)
 		}
+	}
+}
+
+func TestSystemBackend_ReadExperiments(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	for name, tc := range map[string][]string{
+		"no experiments enabled": {},
+		"one experiment enabled": {experiments.VaultExperimentEventsAlpha1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// Set the enabled experiments.
+			c.experiments = tc
+
+			req := logical.TestRequest(t, logical.ReadOperation, "experiments")
+			resp, err := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if resp == nil {
+				t.Fatal("Expected a response")
+			}
+			if !reflect.DeepEqual(experiments.ValidExperiments(), resp.Data["available"]) {
+				t.Fatalf("Expected %v but got %v", experiments.ValidExperiments(), resp.Data["available"])
+			}
+			if !reflect.DeepEqual(tc, resp.Data["enabled"]) {
+				t.Fatal("No experiments should be enabled by default")
+			}
+		})
 	}
 }

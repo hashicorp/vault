@@ -41,4 +41,126 @@ module('Unit | Model | secret-engine', function (hooks) {
       assert.strictEqual(model.get('modelTypeForKV'), 'secret-v2');
     });
   });
+
+  test('formFieldGroups returns correct values by default', function (assert) {
+    assert.expect(1);
+    let model;
+    run(() => {
+      model = run(() =>
+        this.owner.lookup('service:store').createRecord('secret-engine', {
+          type: 'aws',
+        })
+      );
+      assert.deepEqual(model.get('formFieldGroups'), [
+        { default: ['path'] },
+        {
+          'Method Options': [
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          ],
+        },
+      ]);
+    });
+  });
+
+  test('formFieldGroups returns correct values for KV', function (assert) {
+    assert.expect(1);
+    let model;
+    run(() => {
+      model = run(() =>
+        this.owner.lookup('service:store').createRecord('secret-engine', {
+          type: 'kv',
+        })
+      );
+      assert.deepEqual(model.get('formFieldGroups'), [
+        { default: ['path', 'maxVersions', 'casRequired', 'deleteVersionAfter'] },
+        {
+          'Method Options': [
+            'version',
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          ],
+        },
+      ]);
+    });
+  });
+
+  test('formFieldGroups returns correct values for generic', function (assert) {
+    assert.expect(1);
+    let model;
+    run(() => {
+      model = run(() =>
+        this.owner.lookup('service:store').createRecord('secret-engine', {
+          type: 'generic',
+        })
+      );
+      assert.deepEqual(model.get('formFieldGroups'), [
+        { default: ['path'] },
+        {
+          'Method Options': [
+            'version',
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          ],
+        },
+      ]);
+    });
+  });
+
+  test('formFieldGroups returns correct values for database', function (assert) {
+    assert.expect(1);
+    let model;
+    run(() => {
+      model = run(() =>
+        this.owner.lookup('service:store').createRecord('secret-engine', {
+          type: 'database',
+        })
+      );
+      assert.deepEqual(model.get('formFieldGroups'), [
+        { default: ['path', 'config.{defaultLeaseTtl}', 'config.{maxLeaseTtl}'] },
+        {
+          'Method Options': [
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          ],
+        },
+      ]);
+    });
+  });
+
+  test('formFieldGroups returns correct values for keymgmt', function (assert) {
+    assert.expect(1);
+    let model;
+    run(() => {
+      model = run(() =>
+        this.owner.lookup('service:store').createRecord('secret-engine', {
+          type: 'keymgmt',
+        })
+      );
+      assert.deepEqual(model.get('formFieldGroups'), [
+        { default: ['path'] },
+        {
+          'Method Options': [
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          ],
+        },
+      ]);
+    });
+  });
 });

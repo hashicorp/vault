@@ -10,9 +10,9 @@
       }}. Add a new license to your configuration and restart Vault."
       @marginless={{true}}
     >
-      <LearnLink @path="/tutorials/nomad/hashicorp-enterprise-license">
+      <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
         Read documentation
-      </LearnLink>
+      </DocLink>
     </AlertBanner>
   </div>
 {{else if (lte this.licenseExpiringInDays 30)}}
@@ -31,9 +31,9 @@
       }}"
       @marginless={{true}}
     >
-      <LearnLink @path="/tutorials/nomad/hashicorp-enterprise-license">
+      <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
         Read documentation
-      </LearnLink>
+      </DocLink>
     </AlertBanner>
   </div>
 {{/if}}

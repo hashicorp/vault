@@ -1,12 +1,14 @@
 package s3
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -27,6 +29,10 @@ func TestS3BackendSseKms(t *testing.T) {
 func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 	if enabled := os.Getenv("VAULT_ACC"); enabled == "" {
 		t.Skip()
+	}
+
+	if !hasAWSCredentials() {
+		t.Skip("Skipping because AWS credentials could not be resolved. See https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials for information on how to set up AWS credentials.")
 	}
 
 	logger := logging.NewVaultLogger(log.Debug)
@@ -108,4 +114,21 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 
 	physical.ExerciseBackend(t, b)
 	physical.ExerciseBackend_ListPrefix(t, b)
+}
+
+func hasAWSCredentials() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return false
+	}
+
+	creds, err := cfg.Credentials.Retrieve(ctx)
+	if err != nil {
+		return false
+	}
+
+	return creds.HasKeys()
 }

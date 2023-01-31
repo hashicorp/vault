@@ -9,7 +9,7 @@ description: Tokens are a core auth method in Vault. Concepts and important feat
 !> **Warning**: Since tokens are considered opaque values, their structure is undocumented and subject to change. For these reasons, we do not recommend using tokens within your scripts or for automation since it can cause breakage.
 
 Tokens are the core method for _authentication_ within Vault. Tokens
-can be used directly or [auth methods](/docs/concepts/auth)
+can be used directly or [auth methods](/vault/docs/concepts/auth)
 can be used to dynamically generate tokens based on external identities.
 
 If you've gone through the getting started guide, you probably noticed that
@@ -17,20 +17,20 @@ If you've gone through the getting started guide, you probably noticed that
 initial "root token." This is the first method of authentication for Vault.
 It is also the only auth method that cannot be disabled.
 
-As stated in the [authentication concepts](/docs/concepts/auth),
+As stated in the [authentication concepts](/vault/docs/concepts/auth),
 all external authentication mechanisms, such as GitHub, map down to dynamically
 created tokens. These tokens have all the same properties as a normal manually
 created token.
 
 Within Vault, tokens map to information. The most important information mapped
 to a token is a set of one or more attached
-[policies](/docs/concepts/policies). These policies control what the token
+[policies](/vault/docs/concepts/policies). These policies control what the token
 holder is allowed to do within Vault. Other mapped information includes
 metadata that can be viewed and is added to the audit log, such as creation
 time, last renewal time, and more.
 
 Read on for a deeper dive into token concepts.  See the
-[tokens tutorial](https://learn.hashicorp.com/tutorials/vault/tokens)
+[tokens tutorial](/vault/tutorials/tokens/tokens)
 for details on how these concepts play out in practice.
 
 ## Token Types
@@ -45,7 +45,7 @@ their applicability to batch tokens is discussed later.
 
 Often in documentation or in help channels, the "token store" is referenced.
 This is the same as the [`token` authentication
-backend](/docs/auth/token). This is a special
+backend](/vault/docs/auth/token). This is a special
 backend in that it is responsible for creating and storing tokens, and cannot
 be disabled. It is also the only auth method that has no login
 capability -- all actions require existing authenticated tokens.
@@ -62,7 +62,7 @@ there are only three ways to create root tokens:
    expiration
 1. By using another root token; a root token with an expiration cannot create a
    root token that never expires
-1. By using `vault operator generate-root` ([example](https://learn.hashicorp.com/tutorials/vault/generate-root))
+1. By using `vault operator generate-root` ([example](/vault/tutorials/operations/generate-root))
    with the permission of a quorum of unseal key holders
 
 Root tokens are useful in development but should be extremely carefully guarded
@@ -71,7 +71,7 @@ used for just enough initial setup (usually, setting up auth methods
 and policies necessary to allow administrators to acquire more limited tokens)
 or in emergencies, and are revoked immediately after they are no longer needed.
 If a new root token is needed, the `operator generate-root` command and associated
-[API endpoint](/api-docs/system/generate-root) can be used to generate one on-the-fly.
+[API endpoint](/vault/api-docs/system/generate-root) can be used to generate one on-the-fly.
 
 It is also good security practice for there to be multiple eyes on a terminal
 whenever a root token is live. This way multiple people can verify as to the
@@ -160,7 +160,7 @@ token's information is looked up. It is based on a combination of factors:
 1. The system max TTL, which is 32 days but can be changed in Vault's
    configuration file.
 1. The max TTL set on a mount using [mount
-   tuning](/api-docs/system/mounts). This value
+   tuning](/vault/api-docs/system/mounts). This value
    is allowed to override the system max TTL -- it can be longer or shorter,
    and if set this value will be respected.
 1. A value suggested by the auth method that issued the token. This

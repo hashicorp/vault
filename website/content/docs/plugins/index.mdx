@@ -18,7 +18,7 @@ A plugin is uniquely identified by its type (one of `secret`, `auth`, or
 implies either the built-in plugin or the single unversioned plugin that can
 be registered.
 
-See [Plugin Upgrade Procedure](/docs/upgrading/plugins#plugin-upgrade-procedure)
+See [Plugin Upgrade Procedure](/vault/docs/upgrading/plugins#plugin-upgrade-procedure)
 for details on how to upgrade a built-in plugin in-place.
 
 ## Built-In Plugins
@@ -33,12 +33,12 @@ intervention to run.
 
 To run an external plugin, a binary of the plugin is required. Plugin
 binaries can be obtained from [releases.hashicorp.com](https://releases.hashicorp.com/)
-or they can be [built from source](/docs/plugins/plugin-development#building-a-plugin-from-source).
+or they can be [built from source](/vault/docs/plugins/plugin-development#building-a-plugin-from-source).
 
 Vault's external plugins are completely separate, standalone applications that
 Vault executes and communicates with over RPC. Each time a Vault secret engine,
 auth method, or database plugin is mounted, a new process is spawned. However,
-plugins can be made to implement [plugin multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing)
+plugins can be made to implement [plugin multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing)
 to improve performance. Plugin multiplexing allows plugin processes to be
 reused across all mounts of a given type.
 

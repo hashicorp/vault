@@ -13,9 +13,9 @@
           Choose a file…
         </label>
         <span class="file-name has-text-grey-dark" data-test-text-file-input-label={{true}}>
-          {{or this.fileName "No file chosen"}}
+          {{or this.filename "No file chosen"}}
         </span>
-        {{#if this.fileName}}
+        {{#if this.filename}}
           <button
             type="button"
             class="file-delete-button"
@@ -29,7 +29,7 @@
       </div>
     </div>
   </div>
-  {{#if this.fileName}}
+  {{#if this.filename}}
     <p class="help has-text-grey">
       This file is
       {{this.fileSize}}

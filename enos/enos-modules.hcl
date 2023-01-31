@@ -47,8 +47,22 @@ module "get_local_metadata" {
   source = "./modules/get_local_metadata"
 }
 
+module "generate_secondary_token" {
+  source = "./modules/generate_secondary_token"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "read_license" {
   source = "./modules/read_license"
+}
+
+module "shutdown_node" {
+  source = "./modules/shutdown_node"
+}
+
+module "shutdown_multiple_nodes" {
+  source = "./modules/shutdown_multiple_nodes"
 }
 
 module "vault_agent" {
@@ -77,6 +91,19 @@ module "vault_cluster" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_get_cluster_ips" {
+  source = "./modules/vault_get_cluster_ips"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_unseal_nodes" {
+  source = "./modules/vault_unseal_nodes"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
 module "vault_upgrade" {
   source = "./modules/vault_upgrade"
 
@@ -99,15 +126,22 @@ module "vault_verify_raft_auto_join_voter" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_verify_undo_logs" {
+  source = "./modules/vault_verify_undo_logs"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
 module "vault_verify_replication" {
-  source = "./modules/vault-verify-replication"
+  source = "./modules/vault_verify_replication"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
 }
 
 module "vault_verify_ui" {
-  source = "./modules/vault-verify-ui"
+  source = "./modules/vault_verify_ui"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
@@ -120,6 +154,31 @@ module "vault_verify_unsealed" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_setup_perf_primary" {
+  source = "./modules/vault_setup_perf_primary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_setup_perf_secondary" {
+  source = "./modules/vault_setup_perf_secondary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_read_data" {
+  source = "./modules/vault_verify_read_data"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_verify_performance_replication" {
+  source = "./modules/vault_verify_performance_replication"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_verify_version" {
   source = "./modules/vault_verify_version"
 
@@ -127,9 +186,14 @@ module "vault_verify_version" {
   vault_instance_count = var.vault_instance_count
 }
 
-module "vault_verify_write_test_data" {
-  source = "./modules/vault-verify-write-data"
+module "vault_verify_write_data" {
+  source = "./modules/vault_verify_write_data"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
+}
+
+module "vault_raft_remove_peer" {
+  source            = "./modules/vault_raft_remove_peer"
+  vault_install_dir = var.vault_install_dir
 }

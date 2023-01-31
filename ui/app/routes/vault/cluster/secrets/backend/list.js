@@ -2,6 +2,7 @@ import { set } from '@ember/object';
 import { hash, all } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { inject as service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 
@@ -11,6 +12,7 @@ export default Route.extend({
   store: service(),
   templateName: 'vault/cluster/secrets/backend/list',
   pathHelp: service('path-help'),
+  router: service(),
 
   // By default assume user doesn't have permissions
   noMetadataPermissions: true,
@@ -62,11 +64,16 @@ export default Route.extend({
     const { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
     const secretEngine = this.store.peekRecord('secret-engine', backend);
     const type = secretEngine && secretEngine.get('engineType');
+    const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
-      return this.transitionTo('vault.cluster.secrets');
+      return this.router.transitionTo('vault.cluster.secrets');
     }
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
-      return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
+      return this.router.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
+    }
+    if (engineRoute) {
+      return this.router.transitionTo(`vault.cluster.secrets.backend.${engineRoute}`, backend);
     }
     const modelType = this.getModelType(backend, tab);
     return this.pathHelp.getNewModel(modelType, backend).then(() => {

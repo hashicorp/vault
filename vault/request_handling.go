@@ -111,6 +111,11 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 			return nil, nil, err
 		}
 
+		policyApplicationMode, err := c.GetGroupPolicyApplicationMode(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
 		// Filter and add the policies to the resultant set
 		for nsID, nsPolicies := range groupPolicies {
 			ns, err := NamespaceByID(ctx, nsID, c)
@@ -120,8 +125,13 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 			if ns == nil {
 				return nil, nil, namespace.ErrNoNamespace
 			}
-			if tokenNS.Path != ns.Path && !ns.HasParent(tokenNS) {
-				continue
+			// If we're only applying policies to namespaces within the same
+			// hierarchy, then skip any policies not found in the same
+			// hierarchy
+			if policyApplicationMode == groupPolicyApplicationModeWithinNamespaceHierarchy {
+				if tokenNS.Path != ns.Path && !ns.HasParent(tokenNS) {
+					continue
+				}
 			}
 			nsPolicies = strutil.RemoveDuplicates(nsPolicies, false)
 			if len(nsPolicies) != 0 {
@@ -243,10 +253,6 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	// performed on the token's namespace.
 	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			return nil, nil, nil, nil, logical.ErrPermissionDenied
-		}
 		c.logger.Error("failed to construct ACL", "error", err)
 		return nil, nil, nil, nil, ErrInternalError
 	}
@@ -790,7 +796,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	}
 
 	if walState.LocalIndex != 0 || walState.ReplicatedIndex != 0 {
-		walState.ClusterID = c.clusterID.Load()
+		walState.ClusterID = c.ClusterID()
 		if walState.LocalIndex == 0 {
 			if c.perfStandby {
 				walState.LocalIndex = LastRemoteWAL(c)
@@ -1195,26 +1201,28 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			switch resp.Auth.TokenType {
 			case logical.TokenTypeBatch:
 			case logical.TokenTypeService:
-				registeredTokenEntry := &logical.TokenEntry{
-					TTL:         auth.TTL,
-					Policies:    auth.TokenPolicies,
-					Path:        resp.Auth.CreationPath,
-					NamespaceID: ns.ID,
-				}
-				if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
-					// Best-effort clean up on error, so we log the cleanup error as
-					// a warning but still return as internal error.
-					if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
-						c.logger.Warn("failed to clean up token lease during auth/token/ request", "request_path", req.Path, "error", err)
+				if !c.perfStandby {
+					registeredTokenEntry := &logical.TokenEntry{
+						TTL:         auth.TTL,
+						Policies:    auth.TokenPolicies,
+						Path:        resp.Auth.CreationPath,
+						NamespaceID: ns.ID,
 					}
-					c.logger.Error("failed to register token lease during auth/token/ request", "request_path", req.Path, "error", err)
-					retErr = multierror.Append(retErr, ErrInternalError)
-					return nil, auth, retErr
+					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
+						// Best-effort clean up on error, so we log the cleanup error as
+						// a warning but still return as internal error.
+						if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
+							c.logger.Warn("failed to clean up token lease during auth/token/ request", "request_path", req.Path, "error", err)
+						}
+						c.logger.Error("failed to register token lease during auth/token/ request", "request_path", req.Path, "error", err)
+						retErr = multierror.Append(retErr, ErrInternalError)
+						return nil, auth, retErr
+					}
+					if registeredTokenEntry.ExternalID != "" {
+						resp.Auth.ClientToken = registeredTokenEntry.ExternalID
+					}
+					leaseGenerated = true
 				}
-				if registeredTokenEntry.ExternalID != "" {
-					resp.Auth.ClientToken = registeredTokenEntry.ExternalID
-				}
-				leaseGenerated = true
 			}
 		}
 
@@ -2053,6 +2061,7 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*
 			Type:         mConfig.Type,
 			ID:           methodID,
 			UsesPasscode: mConfig.Type == mfaMethodTypeTOTP || duoUsePasscode,
+			Name:         mConfig.Name,
 		}
 		mfaAny.Any = append(mfaAny.Any, mfaMethod)
 	}
@@ -2337,7 +2346,7 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 		return plainToken.Random, nil
 	}
 
-	requiredWalState := &logical.WALState{ClusterID: c.clusterID.Load(), LocalIndex: plainToken.LocalIndex, ReplicatedIndex: 0}
+	requiredWalState := &logical.WALState{ClusterID: c.ClusterID(), LocalIndex: plainToken.LocalIndex, ReplicatedIndex: 0}
 	if c.HasWALState(requiredWalState, isPerfStandby) {
 		return plainToken.Random, nil
 	}

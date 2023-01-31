@@ -488,6 +488,8 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKe
 }
 
 func requireOcspSignatureAlgoForKey(t *testing.T, expected x509.SignatureAlgorithm, actual x509.SignatureAlgorithm) {
+	t.Helper()
+
 	require.Equal(t, expected.String(), actual.String())
 }
 
@@ -570,6 +572,8 @@ func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, ca
 }
 
 func SendOcspRequest(t *testing.T, b *backend, s logical.Storage, getOrPost string, cert, issuer *x509.Certificate, requestHash crypto.Hash) (*logical.Response, error) {
+	t.Helper()
+
 	ocspRequest := generateRequest(t, requestHash, cert, issuer)
 
 	switch strings.ToLower(getOrPost) {
@@ -604,6 +608,8 @@ func sendOcspPostRequest(b *backend, s logical.Storage, ocspRequest []byte) (*lo
 }
 
 func generateRequest(t *testing.T, requestHash crypto.Hash, cert *x509.Certificate, issuer *x509.Certificate) []byte {
+	t.Helper()
+
 	opts := &ocsp.RequestOptions{Hash: requestHash}
 	ocspRequestDer, err := ocsp.CreateRequest(cert, issuer, opts)
 	require.NoError(t, err, "Failed generating OCSP request")
@@ -611,6 +617,8 @@ func generateRequest(t *testing.T, requestHash crypto.Hash, cert *x509.Certifica
 }
 
 func requireOcspResponseSignedBy(t *testing.T, ocspResp *ocsp.Response, issuer *x509.Certificate) {
+	t.Helper()
+
 	err := ocspResp.CheckSignatureFrom(issuer)
 	require.NoError(t, err, "Failed signature verification of ocsp response: %w", err)
 }
