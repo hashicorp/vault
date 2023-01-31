@@ -126,7 +126,23 @@ hyphen-separated octal`,
 // This returns the CRL in a non-raw format
 func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `cert/(crl|delta-crl|unified-crl|unified-delta-crl)`,
+		Pattern: `cert/(crl|delta-crl)`,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
+		},
+
+		HelpSynopsis:    pathFetchHelpSyn,
+		HelpDescription: pathFetchHelpDesc,
+	}
+}
+
+// This returns the CRL in a non-raw format
+func pathFetchUnifiedCRLViaCertPath(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: `cert/(unified-crl|unified-delta-crl)`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{

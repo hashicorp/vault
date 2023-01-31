@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/helper/constants"
+
 	"github.com/hashicorp/go-multierror"
 
 	atomic2 "go.uber.org/atomic"
@@ -152,8 +154,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathRevoke(&b),
 			pathRevokeWithKey(&b),
 			pathListCertsRevoked(&b),
-			pathListCertsRevocationQueue(&b),
-			pathListUnifiedRevoked(&b),
 			pathTidy(&b),
 			pathTidyCancel(&b),
 			pathTidyStatus(&b),
@@ -163,7 +163,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathListIssuers(&b),
 			pathGetIssuer(&b),
 			pathGetIssuerCRL(&b),
-			pathGetIssuerUnifiedCRL(&b),
 			pathImportIssuer(&b),
 			pathIssuerIssue(&b),
 			pathIssuerSign(&b),
@@ -190,7 +189,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathFetchCAChain(&b),
 			pathFetchCRL(&b),
 			pathFetchCRLViaCertPath(&b),
-			pathFetchUnifiedCRL(&b),
 			pathFetchValidRaw(&b),
 			pathFetchValid(&b),
 			pathFetchListCerts(&b),
@@ -198,8 +196,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// OCSP APIs
 			buildPathOcspGet(&b),
 			buildPathOcspPost(&b),
-			buildPathUnifiedOcspGet(&b),
-			buildPathUnifiedOcspPost(&b),
 
 			// CRL Signing
 			pathResignCrls(&b),
@@ -214,6 +210,20 @@ func Backend(conf *logical.BackendConfig) *backend {
 		InitializeFunc: b.initialize,
 		Invalidate:     b.invalidate,
 		PeriodicFunc:   b.periodicFunc,
+	}
+
+	if constants.IsEnterprise {
+		// Unified CRL/OCSP paths are ENT only
+		entOnly := []*framework.Path{
+			pathGetIssuerUnifiedCRL(&b),
+			pathListCertsRevocationQueue(&b),
+			pathListUnifiedRevoked(&b),
+			pathFetchUnifiedCRL(&b),
+			pathFetchUnifiedCRLViaCertPath(&b),
+			buildPathUnifiedOcspGet(&b),
+			buildPathUnifiedOcspPost(&b),
+		}
+		b.Backend.Paths = append(b.Backend.Paths, entOnly...)
 	}
 
 	b.tidyCASGuard = new(uint32)
