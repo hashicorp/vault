@@ -103,11 +103,11 @@ or remove a node or to commit any additional log entries. This results in
 _unavailability_. At this point, manual intervention is required to remove
 either A or B and restart the remaining node in bootstrap mode.
 
-A Raft cluster of 3 nodes can tolerate a single node failure while a cluster
-of 5 can tolerate 2 node failures. The recommended configuration is to either
-run 5 or 7 Vault servers per cluster. This maximizes availability without
-greatly sacrificing performance. The [deployment table](#deployment-table) below
-summarizes the potential cluster size options and the fault tolerance of each.
+A Raft cluster of 3 nodes can tolerate a single node failure while a cluster of
+5 can tolerate 2 node failures. The recommended Vault production deployment is
+to run 5 Vault servers per cluster. See the [Minimum &
+Scaling](#minimums-scaling) and [Deployment Table](#deployment-table) to learn
+more about the failure tolerance using Integrated Storage.
 
 #### Performance
 
@@ -197,9 +197,9 @@ close to the leader before adding additional nodes. Raft indexes are visible via
 ### Deployment Table
 
 Below is a table that shows quorum size and failure tolerance for various
-cluster sizes. The recommended deployment consists of a minimum of 5 or more servers that are odd in their total (5, 7, etc). A single
-server deployment is _**highly**_ discouraged as data loss is inevitable in a
-failure scenario.
+cluster sizes. The recommended production deployment consists of 5 servers. A
+single server deployment is _**highly**_ discouraged as data loss is inevitable
+in a failure scenario.
 
 <table class="table table-bordered table-striped">
   <thead>
