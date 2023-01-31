@@ -165,7 +165,6 @@ from any further requests until after the 'block_interval' has elapsed.`,
 									Required: true,
 								},
 								"block_interval": {
-
 									Type:     framework.TypeInt,
 									Required: true,
 								},
