@@ -1129,6 +1129,10 @@ func (c *TestClusterCore) TriggerRollbacks() {
 	c.rollback.triggerRollbacks()
 }
 
+func (c *TestClusterCore) TLSConfig() *tls.Config {
+	return c.tlsConfig.Clone()
+}
+
 func (c *TestCluster) Cleanup() {
 	c.Logger.Info("cleaning up vault cluster")
 	if tl, ok := c.Logger.(*TestLogger); ok {
@@ -1207,7 +1211,7 @@ type TestClusterCore struct {
 	ServerCertPEM        []byte
 	ServerKey            *ecdsa.PrivateKey
 	ServerKeyPEM         []byte
-	TLSConfig            *tls.Config
+	tlsConfig            *tls.Config
 	UnderlyingStorage    physical.Backend
 	UnderlyingRawStorage physical.Backend
 	UnderlyingHAStorage  physical.HABackend
@@ -1826,7 +1830,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Listeners:            listeners[i],
 			Handler:              handlers[i],
 			Server:               servers[i],
-			TLSConfig:            tlsConfigs[i],
+			tlsConfig:            tlsConfigs[i],
 			Barrier:              cores[i].barrier,
 			NodeID:               fmt.Sprintf("core-%d", i),
 			UnderlyingRawStorage: coreConfigs[i].Physical,
@@ -1924,7 +1928,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	}
 	tcc.Listeners = []*TestListener{
 		{
-			Listener: tls.NewListener(ln, tcc.TLSConfig),
+			Listener: tls.NewListener(ln, tcc.tlsConfig),
 			Address:  ln.Addr().(*net.TCPAddr),
 		},
 	}
@@ -1951,7 +1955,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 		t, idx, newCore, tcc.CoreConfig,
 		opts, tcc.Listeners, tcc.Handler)
 
-	tcc.Client = cluster.getAPIClient(t, opts, tcc.Listeners[0].Address.Port, tcc.TLSConfig)
+	tcc.Client = cluster.getAPIClient(t, opts, tcc.Listeners[0].Address.Port, tcc.tlsConfig)
 
 	testAdjustUnderlyingStorage(tcc)
 	testExtraTestCoreSetup(t, cluster.LicensePrivateKey, tcc)
