@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/logical"
-
 	"golang.org/x/crypto/ssh"
 
 	"github.com/hashicorp/vault/builtin/credential/userpass"
@@ -519,7 +519,7 @@ func newTestingFactory(t *testing.T) func(ctx context.Context, conf *logical.Bac
 		defaultLeaseTTLVal := 2 * time.Minute
 		maxLeaseTTLVal := 10 * time.Minute
 		return Factory(context.Background(), &logical.BackendConfig{
-			Logger:      vault.NewTestLogger(t),
+			Logger:      corehelpers.NewTestLogger(t),
 			StorageView: &logical.InmemStorage{},
 			System: &logical.StaticSystemView{
 				DefaultLeaseTTLVal: defaultLeaseTTLVal,
