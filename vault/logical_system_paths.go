@@ -1527,7 +1527,7 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							// response keys are dynamic
-							Fields: map[string]*framework.FieldSchema{},
+							Fields: nil,
 						}},
 					},
 				},
