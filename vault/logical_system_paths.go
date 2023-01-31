@@ -1616,7 +1616,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
+				logical.ReadOperation: &framework.PathOperation{
 					// currently only works for irrevocable leases with param: type=irrevocable
 					Callback: b.handleLeaseCount,
 					Responses: map[int][]framework.Response{
@@ -1664,7 +1664,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
+				logical.ReadOperation: &framework.PathOperation{
 					// currently only works for irrevocable leases with param: type=irrevocable
 					Callback: b.handleLeaseList,
 					Responses: map[int][]framework.Response{
@@ -1685,10 +1685,6 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 						}},
 					},
 				},
-			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.handleLeaseList,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["list-leases"][0]),
@@ -1985,7 +1981,6 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 			Pattern: "policy/?$",
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesList(PolicyTypeACL),
 					Responses: map[int][]framework.Response{
