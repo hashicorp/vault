@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -378,7 +379,8 @@ func TestHTTP_Wrapping(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	if respError, ok := err.(*api.ResponseError); !ok || respError.StatusCode != 403 {
+	var respError *api.ResponseError
+	if errors.As(err, &respError); respError.StatusCode != 403 {
 		t.Fatalf("expected 403 response, actual: %d", respError.StatusCode)
 	}
 }
