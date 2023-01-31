@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/plugins/database/mysql"
