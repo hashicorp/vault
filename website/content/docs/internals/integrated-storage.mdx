@@ -41,7 +41,7 @@ There are a few key terms to know when discussing Raft:
 
 - **Leader** - At any given time, the peer set elects a single node to be the leader.
 The leader is responsible for ingesting new log entries, replicating to followers,
-and managing when an entry is committed. The leader node is also the active Vault node and followers are standby nodes. Refer to the [High Availability](/docs/internals/high-availability#design-overview) document for more information.
+and managing when an entry is committed. The leader node is also the active Vault node and followers are standby nodes. Refer to the [High Availability](/vault/docs/internals/high-availability#design-overview) document for more information.
 
 - **Log** - An ordered sequence of entries (replicated log) to keep track of any cluster changes. The leader is responsible for _log replication_. When new data is written, for example, a new event creates a log entry. The leader then sends the new log entry to its followers. Any inconsistency within the replicated log entries will indicate an issue.
 
@@ -118,7 +118,7 @@ Thus, performance is bound by disk I/O and network latency.
 ### Raft in Vault
 
 When getting started, a single Vault server is
-[initialized](/docs/commands/operator/init/#operator-init). At this point, the
+[initialized](/vault/docs/commands/operator/init/#operator-init). At this point, the
 cluster is of size 1, which allows the node to self-elect as a leader. Once a
 leader is elected, other servers can be added to the peer set in a way that
 preserves consistency and safety.
@@ -140,13 +140,13 @@ will be encrypted by Vault's barrier.
 
 Vault does not currently offer automated dead server cleanup. If you wish to
 decommission a node, or a node dies and must be replaced, the node must manually
-be removed from the cluster with the `remove peer` [command](/docs/commands/operator/raft#remove-peer).
+be removed from the cluster with the `remove peer` [command](/vault/docs/commands/operator/raft#remove-peer).
 
 ### Quorum Management
 
 #### Autopilot
 
-An [Autopilot feature](https://www.vaultproject.io/docs/concepts/integrated-storage/autopilot) 
+An [Autopilot feature](/vault/docs/concepts/integrated-storage/autopilot) 
 is available since 1.7.x & later versions that include configurable parameters 
 for when a node is treated as healthy before it's considered an eligible voter in the 
 quorum list. Other features which may be enabled include the ability to remove nodes 
@@ -164,9 +164,9 @@ counted as voters before they are capable of voting.
 
 As of Vault 1.7, a dead server cleanup capability is available. With this feature 
 enabled, unhealthy nodes are automatically removed from the Raft cluster without 
-manual operator intervention. This is enabled via the [Autopilot API](/api-docs/system/storage/raftautopilot).
+manual operator intervention. This is enabled via the [Autopilot API](/vault/api-docs/system/storage/raftautopilot).
 If you wish to decommission a node manually, this can be done with the 
-`remove peer` [command](/docs/commands/operator/raft#remove-peer).
+`remove peer` [command](/vault/docs/commands/operator/raft#remove-peer).
 
 #### Without Autopilot
 
@@ -250,7 +250,7 @@ failure scenario.
 
 ### Minimums & Scaling
 
-The [Vault Reference Architecture](https://learn.hashicorp.com/tutorials/vault/raft-reference-architecture#recommended-architecture) 
+The [Vault Reference Architecture](/vault/tutorials/day-one-raft/raft-reference-architecture#recommended-architecture) 
 recommends a 5 node cluster to ensure a minimum failure tolerance of at least 2.
 
 It is good practise, wherever possible, to retain a failure tolerance of 2 or 

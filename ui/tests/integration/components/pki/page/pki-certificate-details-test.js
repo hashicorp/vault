@@ -65,7 +65,7 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
 
     assert
       .dom('[data-test-component="info-table-row"]')
-      .exists({ count: 6 }, 'Correct number of fields render when certificate has not been revoked');
+      .exists({ count: 5 }, 'Correct number of fields render when certificate has not been revoked');
     assert
       .dom('[data-test-value-div="Certificate"] [data-test-masked-input]')
       .exists('Masked input renders for certificate');

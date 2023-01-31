@@ -12,7 +12,6 @@ import { assert } from '@ember/debug';
  *   {
  *     label: 'Input label', // required key
  *     key: 'attrKey', // required key
- *     type: 'string',
  *     placeholder: 'Enter input here'
  *   }
  *

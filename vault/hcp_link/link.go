@@ -212,7 +212,7 @@ func (h *HCPLinkVault) start() error {
 
 	h.running = true
 
-	h.logger.Info("started HCP Link")
+	h.logger.Info("established connection to HCP")
 
 	return nil
 }
@@ -333,7 +333,7 @@ func (h *HCPLinkVault) Shutdown() error {
 		h.stopCh = nil
 	}
 
-	h.logger.Info("tearing down HCP Link")
+	h.logger.Info("tearing down connection to HCP")
 
 	var retErr *multierror.Error
 

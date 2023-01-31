@@ -147,7 +147,7 @@
     "ember-inflector": "4.0.2",
     "ember-load-initializers": "^2.1.2",
     "ember-maybe-in-element": "^2.0.3",
-    "ember-modal-dialog": "4.0.0",
+    "ember-modal-dialog": "^4.0.1",
     "ember-modifier": "^3.1.0",
     "ember-page-title": "^7.0.0",
     "ember-power-select": "6.0.1",
@@ -256,7 +256,6 @@
     "highlight.js": "^10.4.1",
     "js-yaml": "^3.13.1",
     "lodash": "^4.17.13",
-    "node-notifier": "^8.0.1",
-    "pvtsutils": "^1.3.2"
+    "node-notifier": "^8.0.1"
   }
 }

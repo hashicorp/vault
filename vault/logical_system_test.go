@@ -5486,7 +5486,7 @@ func TestSystemBackend_ReadExperiments(t *testing.T) {
 
 	for name, tc := range map[string][]string{
 		"no experiments enabled": {},
-		"one experiment enabled": {experiments.VaultExperimentEventsBeta1},
+		"one experiment enabled": {experiments.VaultExperimentEventsAlpha1},
 	} {
 		t.Run(name, func(t *testing.T) {
 			// Set the enabled experiments.

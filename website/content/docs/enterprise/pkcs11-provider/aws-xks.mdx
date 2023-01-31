@@ -10,7 +10,7 @@ description: |-
 ~> **Note**: AWS [`xks-proxy`](https://github.com/aws-samples/aws-kms-xks-proxy) is used in this document as a sample implementation.
 
 Vault's KMIP Secrets Engine can be used as an external key store for the AWS KMS [External Key Store (XKS)](https://aws.amazon.com/blogs/aws/announcing-aws-kms-external-key-store-xks/) protocol using the AWS [`xks-proxy`](https://github.com/aws-samples/aws-kms-xks-proxy) along
-with the [Vault PKCS#11 Provider](https://developer.hashicorp.com/vault/docs/enterprise/pkcs11-provider).
+with the [Vault PKCS#11 Provider](/vault/docs/enterprise/pkcs11-provider).
 
 ## Overview
 
@@ -35,9 +35,9 @@ to the desired KMS region.
 
 ## Vault Setup
 
-On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/kmip):
+On the Vault server, we need to [setup the KMIP Secrets Engine](/vault/docs/secrets/kmip):
 
-1. Start the [KMIP Secrets Engine](/docs/secrets/kmip) and listener:
+1. Start the [KMIP Secrets Engine](/vault/docs/secrets/kmip) and listener:
 
     ```sh
     vault secrets enable kmip
@@ -176,11 +176,11 @@ to the XKS proxy. This helps to quickly setup a valid domain and TLS endpoint fo
     ```
 
     This file is used by `libvault-pkcs11.so` to know how to find and communicate with the KMIP server.
-    See [the Vault docs](https://developer.hashicorp.com/vault/docs/enterprise/pkcs11-provider) for all available parameters and their usage.
+    See [the Vault docs](/vault/docs/enterprise/pkcs11-provider) for all available parameters and their usage.
 
 1. If you want to view the Vault logs (helpful when trying to find error messages), you can specify the `VAULT_LOG_FILE` (default is stdout) and `VAULT_LOG_LEVEL` (default is `INFO`). We'd recommend setting `VAULT_LOG_FILE` to something like `/tmp/vault.log` or `/var/log/vault.log`. Other useful log levels are `WARN` (quieter) and `TRACE` (very verbose, could possibly contain sensitive information, like raw network packets).
 
-1. Create an AES-256 key in KMIP, for example, using `pkcs11-tool` (usually installed with the OpenSC package). See the [Vault docs](https://developer.hashicorp.com/vault/docs/enterprise/pkcs11-provider) for the full setup.
+1. Create an AES-256 key in KMIP, for example, using `pkcs11-tool` (usually installed with the OpenSC package). See the [Vault docs](/vault/docs/enterprise/pkcs11-provider) for the full setup.
    ```sh
    VAULT_LOG_FILE=/dev/null pkcs11-tool --module ./libvault-pkcs11.so --keygen -a abc123 --key-type AES:32 \
        --extractable --allow-sw

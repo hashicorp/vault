@@ -69,7 +69,7 @@ require (
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
 	github.com/hashicorp/go-gcp-common v0.8.0
 	github.com/hashicorp/go-hclog v1.4.0
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.5
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.6
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.4
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.1
@@ -193,11 +193,11 @@ require (
 	go.opentelemetry.io/otel/trace v1.11.2
 	go.uber.org/atomic v1.9.0
 	go.uber.org/goleak v1.1.12
-	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8
-	golang.org/x/net v0.4.0
+	golang.org/x/crypto v0.5.0
+	golang.org/x/net v0.5.0
 	golang.org/x/oauth2 v0.1.0
 	golang.org/x/sys v0.4.0
-	golang.org/x/term v0.3.0
+	golang.org/x/term v0.4.0
 	golang.org/x/tools v0.1.12
 	google.golang.org/api v0.101.0
 	google.golang.org/grpc v1.50.1
@@ -398,7 +398,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/renier/xmlrpc v0.0.0-20170708154548-ce4a1a486c03 // indirect
-	github.com/rogpeppe/go-internal v1.8.1 // indirect
+	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/snowflakedb/gosnowflake v1.6.3 // indirect
@@ -429,7 +429,7 @@ require (
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/text v0.6.0 // indirect
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

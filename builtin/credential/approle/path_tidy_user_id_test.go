@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -15,6 +17,8 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+
+	paths := []*framework.Path{pathTidySecretID(b)}
 
 	// Create a role
 	createRole(t, b, storage, "role1", "a,b,c")
@@ -73,12 +77,18 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 		t.Fatalf("bad: len(accessorHashes); expect 3, got %d", len(accessorHashes))
 	}
 
-	_, err = b.tidySecretID(context.Background(), &logical.Request{
+	secret, err := b.tidySecretID(context.Background(), &logical.Request{
 		Storage: storage,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation),
+		secret,
+		true,
+	)
 
 	// It runs async so we give it a bit of time to run
 	time.Sleep(10 * time.Second)
@@ -96,6 +106,8 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+
+	paths := []*framework.Path{pathTidySecretID(b)}
 
 	// Create a role
 	createRole(t, b, storage, "role1", "a,b,c")
@@ -116,12 +128,18 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 	start := time.Now()
 	for time.Now().Sub(start) < 10*time.Second {
 		if time.Now().Sub(start) > 100*time.Millisecond && atomic.LoadUint32(b.tidySecretIDCASGuard) == 0 {
-			_, err = b.tidySecretID(context.Background(), &logical.Request{
+			secret, err := b.tidySecretID(context.Background(), &logical.Request{
 				Storage: storage,
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
+			schema.ValidateResponse(
+				t,
+				schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation),
+				secret,
+				true,
+			)
 		}
 		wg.Add(1)
 		go func() {
@@ -173,6 +191,12 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 	if err != nil || len(secret.Warnings) > 0 {
 		t.Fatal(err, secret.Warnings)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation),
+		secret,
+		true,
+	)
 
 	// Wait for tidy to start
 	for atomic.LoadUint32(b.tidySecretIDCASGuard) == 0 {

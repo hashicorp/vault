@@ -1,10 +1,10 @@
 <Toolbar>
   <ToolbarActions>
-    {{#if @canRotate}}
+    {{!-- {{#if @canRotate}}
       <ToolbarLink @route="issuers.generate-root" @type="rotate-cw" @issuer={{@issuer.id}} data-test-pki-issuer-rotate-root>
         Rotate this root
       </ToolbarLink>
-    {{/if}}
+    {{/if}} --}}
     {{#if @canCrossSign}}
       <ToolbarLink
         @route="issuers.issuer.cross-sign"
@@ -20,16 +20,52 @@
         Sign Intermediate
       </ToolbarLink>
     {{/if}}
-    <DownloadButton
-      class="toolbar-link"
-      @filename={{@issuer.id}}
-      @data={{@issuer.certificate}}
-      @extension="pem"
-      data-test-issuer-download
-    >
-      Download
-      <Chevron @direction="down" @isButton={{true}} />
-    </DownloadButton>
+    <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+      <D.Trigger
+        data-test-popup-menu-trigger="true"
+        class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+        @htmlTag="button"
+        data-test-issuer-download
+      >
+        Download
+        <Chevron @direction="down" @isButton={{true}} />
+      </D.Trigger>
+      <D.Content @defaultClass="popup-menu-content">
+        <nav class="box menu" aria-label="snapshots actions">
+          <ul class="menu-list">
+            {{#if @pem}}
+              {{! should never be null, but if it is we don't want to let users download an empty file }}
+              <li class="action">
+                <DownloadButton
+                  class="link"
+                  @filename={{@issuer.id}}
+                  @data={{@pem}}
+                  @extension="pem"
+                  data-test-issuer-download-type="pem"
+                >
+                  PEM format
+                </DownloadButton>
+              </li>
+            {{/if}}
+            {{#if @der}}
+              {{! should never be null, but if it is we don't want to let users download an empty file }}
+              <li class="action">
+                <DownloadButton
+                  class="link"
+                  @filename={{@issuer.id}}
+                  @data={{@der}}
+                  @extension="der"
+                  data-test-issuer-download-type="der"
+                >
+                  DER format
+                </DownloadButton>
+              </li>
+            {{/if}}
+          </ul>
+        </nav>
+      </D.Content>
+    </BasicDropdown>
+
     {{#if @canConfigure}}
       <ToolbarLink @route="issuers.issuer.edit" @issuer={{@issuer.id}} data-test-pki-issuer-configure>
         Configure
@@ -58,7 +94,7 @@
           </h2>
         {{/if}}
         {{#each fields as |attr|}}
-          {{#if (eq attr.options.displayType "masked")}}
+          {{#if attr.options.masked}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
               <MaskedInput
                 @name={{or attr.options.label (humanize (dasherize attr.name))}}
@@ -79,7 +115,7 @@
             <InfoTableRow
               @label={{or attr.options.label (humanize (dasherize attr.name))}}
               @value={{get @issuer attr.name}}
-              @formatDate={{if (eq attr.type "date") "MMM d yyyy HH:mm:ss a zzzz"}}
+              @formatDate={{if attr.options.formatDate "MMM d yyyy HH:mm:ss a zzzz"}}
               @alwaysRender={{true}}
             />
           {{/if}}

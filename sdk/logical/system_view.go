@@ -89,6 +89,11 @@ type SystemView interface {
 	// GeneratePasswordFromPolicy generates a password from the policy referenced.
 	// If the policy does not exist, this will return an error.
 	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
+
+	// ClusterID returns the replication ClusterID, for use with path-based
+	// write forwarding (WriteForwardedPaths). This value will be templated
+	// in for the {{cluterId}} sentinel.
+	ClusterID(ctx context.Context) (string, error)
 }
 
 type PasswordPolicy interface {
@@ -119,6 +124,7 @@ type StaticSystemView struct {
 	PluginEnvironment   *PluginEnvironment
 	PasswordPolicies    map[string]PasswordGenerator
 	VersionString       string
+	ClusterUUID         string
 }
 
 type noopAuditor struct{}
@@ -239,4 +245,8 @@ func (d *StaticSystemView) DeletePasswordPolicy(name string) (existed bool) {
 	_, existed = d.PasswordPolicies[name]
 	delete(d.PasswordPolicies, name)
 	return existed
+}
+
+func (d StaticSystemView) ClusterID(ctx context.Context) (string, error) {
+	return d.ClusterUUID, nil
 }
