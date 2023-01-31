@@ -172,7 +172,7 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
 			AutoJoin:  "provider=aws region=eu-west-1 tag_key=consul tag_value=tag access_key_id=a secret_access_key=a",
-			TLSConfig: leaderCore.TLSConfig,
+			TLSConfig: leaderCore.TLSConfig(),
 			Retry:     true,
 		},
 	}
@@ -218,7 +218,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
 			LeaderAPIAddr: leaderAPI,
-			TLSConfig:     leaderCore.TLSConfig,
+			TLSConfig:     leaderCore.TLSConfig(),
 			Retry:         true,
 		},
 	}
@@ -676,7 +676,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			}
 
 			transport := cleanhttp.DefaultPooledTransport()
-			transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
+			transport.TLSClientConfig = cluster.Cores[0].TLSConfig()
 			if err := http2.ConfigureTransport(transport); err != nil {
 				t.Fatal(err)
 			}
@@ -877,7 +877,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			}
 
 			transport := cleanhttp.DefaultPooledTransport()
-			transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
+			transport.TLSClientConfig = cluster.Cores[0].TLSConfig()
 			if err := http2.ConfigureTransport(transport); err != nil {
 				t.Fatal(err)
 			}
@@ -1064,7 +1064,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	}
 
 	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
+	transport.TLSClientConfig = cluster.Cores[0].TLSConfig()
 	if err := http2.ConfigureTransport(transport); err != nil {
 		t.Fatal(err)
 	}
@@ -1100,7 +1100,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 		leaderClient := cluster2.Cores[0].Client
 
 		transport := cleanhttp.DefaultPooledTransport()
-		transport.TLSClientConfig = cluster2.Cores[0].TLSConfig.Clone()
+		transport.TLSClientConfig = cluster2.Cores[0].TLSConfig()
 		if err := http2.ConfigureTransport(transport); err != nil {
 			t.Fatal(err)
 		}
