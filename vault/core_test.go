@@ -1290,10 +1290,10 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	if _, err := c.HandleRequest(namespace.RootContext(nil), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(noop.RespNonHMACKeys) != 1 || strutil.EquivalentSlices(noop.RespNonHMACKeys[0], []string{"baz"}) {
+	if len(noop.RespNonHMACKeys) != 1 || !strutil.EquivalentSlices(noop.RespNonHMACKeys[0], []string{"baz"}) {
 		t.Fatalf("Bad: %#v", noop.RespNonHMACKeys)
 	}
-	if len(noop.RespReqNonHMACKeys) != 1 || strutil.EquivalentSlices(noop.RespReqNonHMACKeys[0], []string{"foo"}) {
+	if len(noop.RespReqNonHMACKeys) != 1 || !strutil.EquivalentSlices(noop.RespReqNonHMACKeys[0], []string{"foo"}) {
 		t.Fatalf("Bad: %#v", noop.RespReqNonHMACKeys)
 	}
 }
