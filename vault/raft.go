@@ -447,9 +447,7 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				nextRotationTime = next
 
 			case <-stopCh:
-				if !timer.Stop() {
-					<-timer.C
-				}
+				timer.Stop()
 				return
 			}
 		}

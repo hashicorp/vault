@@ -652,9 +652,7 @@ func (i *ZooKeeperHALock) Unlock() error {
 					}
 					continue
 				case <-i.stopCh:
-					if !timer.Stop() {
-						<-timer.C
-					}
+					timer.Stop()
 					return
 				}
 			}

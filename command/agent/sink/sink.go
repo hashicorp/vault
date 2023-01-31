@@ -154,9 +154,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 				timer := time.NewTimer(backoff)
 				select {
 				case <-ctx.Done():
-					if !timer.Stop() {
-						<-timer.C
-					}
+					timer.Stop()
 					return nil
 				case <-timer.C:
 					atomic.AddInt32(ss.remaining, 1)

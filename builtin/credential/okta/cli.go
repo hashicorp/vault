@@ -64,9 +64,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 			timer := time.NewTimer(time.Second)
 			select {
 			case <-doneCh:
-				if !timer.Stop() {
-					<-timer.C
-				}
+				timer.Stop()
 				return
 			case <-timer.C:
 			}

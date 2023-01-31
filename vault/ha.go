@@ -666,10 +666,8 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 				timer := time.NewTimer(DefaultMaxRequestDuration)
 				select {
 				case <-activeCtx.Done():
-					if !timer.Stop() {
-						<-timer.C
-					}
-				// Attempt to drain any inflight requests
+					timer.Stop()
+					// Attempt to drain any inflight requests
 				case <-timer.C:
 					activeCtxCancel()
 				}
@@ -835,9 +833,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 				atomic.AddInt32(lopCount, -1)
 			}()
 		case <-stopCh:
-			if !timer.Stop() {
-				<-timer.C
-			}
+			timer.Stop()
 			return
 		}
 	}
@@ -908,9 +904,7 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				return
 			}()
 		case <-stopCh:
-			if !timer.Stop() {
-				<-timer.C
-			}
+			timer.Stop()
 			return
 		}
 	}
@@ -1046,9 +1040,7 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 		select {
 		case <-timer.C:
 		case <-stopCh:
-			if !timer.Stop() {
-				<-timer.C
-			}
+			timer.Stop()
 			return nil
 		}
 	}
@@ -1123,9 +1115,7 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 			}
 			keys = keys[1:]
 		case <-leaderLostCh:
-			if !timer.Stop() {
-				<-timer.C
-			}
+			timer.Stop()
 			return
 		}
 	}

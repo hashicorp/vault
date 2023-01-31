@@ -1990,9 +1990,7 @@ func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *
 
 		select {
 		case <-ctx.Done():
-			if !timer.Stop() {
-				<-timer.C
-			}
+			timer.Stop()
 			return fmt.Errorf("duo push verification operation canceled")
 		case <-timer.C:
 		}
@@ -2123,9 +2121,7 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 
 		select {
 		case <-ctx.Done():
-			if !timer.Stop() {
-				<-timer.C
-			}
+			timer.Stop()
 			return fmt.Errorf("push verification operation canceled")
 		case <-timer.C:
 		}

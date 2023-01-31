@@ -2323,9 +2323,7 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 		select {
 		case <-timer.C:
 		case <-c.ShutdownCh:
-			if !timer.Stop() {
-				<-timer.C
-			}
+			timer.Stop()
 			return true
 		}
 	}
@@ -2621,9 +2619,7 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 		timer := time.NewTimer(5 * time.Second)
 		select {
 		case <-c.ShutdownCh:
-			if !timer.Stop() {
-				<-timer.C
-			}
+			timer.Stop()
 			return
 		case <-timer.C:
 		}

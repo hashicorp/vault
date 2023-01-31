@@ -272,9 +272,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 				case <-timer.C:
 					// Continue
 				case <-ctx.Done():
-					if !timer.Stop() {
-						<-timer.C
-					}
+					timer.Stop()
 					return nil, logical.ErrorResponse("exiting pending mfa challenge"), nil, nil
 				}
 			case "REJECTED":
