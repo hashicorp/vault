@@ -219,7 +219,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathListCertsRevocationQueue(&b),
 			pathListUnifiedRevoked(&b),
 			pathFetchUnifiedCRL(&b),
-			pathFetchUnifiedCRLViaCertPath(&b),
 			buildPathUnifiedOcspGet(&b),
 			buildPathUnifiedOcspPost(&b),
 		}
