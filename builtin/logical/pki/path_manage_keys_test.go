@@ -7,6 +7,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -116,6 +118,7 @@ func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
 func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
+	paths := []*framework.Path{pathImportKey(b)}
 
 	bundle1, err := certutil.CreateKeyBundle("ec", 224, rand.Reader)
 	require.NoError(t, err, "failed generating an ec key bundle")
@@ -136,6 +139,9 @@ func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 		},
 		MountPoint: "pki/",
 	})
+
+	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err, "Failed importing ec key")
 	require.NotNil(t, resp, "Got nil response importing ec key")
 	require.False(t, resp.IsError(), "received an error response: %v", resp.Error())
