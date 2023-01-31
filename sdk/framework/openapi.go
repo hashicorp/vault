@@ -910,6 +910,9 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 				continue
 			}
 
+			// Discard "_mount_path" from any {thing_mount_path} parameters
+			path = strings.Replace(path, "_mount_path", "", 1)
+
 			// Space-split on non-words, title case everything, recombine
 			opID := nonWordRe.ReplaceAllString(strings.ToLower(path), " ")
 			opID = strings.Title(opID)
