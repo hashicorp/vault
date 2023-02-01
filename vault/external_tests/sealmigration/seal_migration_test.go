@@ -59,6 +59,11 @@ func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
 	testVariousBackends(t, ParamTestSealMigrationTransitToShamir_Post14, BasePort_TransitToShamir_Post14, true)
 }
 
+func TestSealMigration_TransitToShamir_Recovery(t *testing.T) {
+	t.Parallel()
+	testVariousBackends(t, ParamTestSealMigrationTransitToShamir_Recovery, BasePort_TransitToShamir_Recovery, true)
+}
+
 // TestSealMigration_TransitToTransit tests transit-to-shamir seal
 // migration, using the post-1.4 method of bring individual nodes in the
 // cluster to do the migration.
