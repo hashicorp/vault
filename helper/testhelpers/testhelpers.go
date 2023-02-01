@@ -462,7 +462,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
 			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig,
+			TLSConfig:     leader.TLSConfig(),
 		},
 	}
 

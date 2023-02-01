@@ -52,6 +52,7 @@ resource "enos_remote_exec" "verify_replication_on_primary" {
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
     VAULT_INSTALL_DIR = var.vault_install_dir
+    REPLICATION_MODE  = "primary"
   }
 
   scripts = ["${path.module}/scripts/verify-performance-replication.sh"]
@@ -76,6 +77,7 @@ resource "enos_remote_exec" "verify_replication_on_secondary" {
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
     VAULT_INSTALL_DIR = var.vault_install_dir
+    REPLICATION_MODE  = "secondary"
   }
 
   scripts = ["${path.module}/scripts/verify-performance-replication.sh"]

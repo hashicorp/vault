@@ -161,6 +161,10 @@ export default class PkiActionModel extends Model {
 
   @attr('string', { readOnly: true }) issuerId; // returned from generate-root action
 
+  // For generating and signing a CSR
+  @attr('string') csr;
+  @attr caChain;
+
   get backend() {
     return this.secretMountPath.currentPath;
   }

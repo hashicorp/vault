@@ -15,7 +15,7 @@ effect when using Vault with an HSM.
 
 Normally, Vault uses a single set of unseal keys to perform both decryption of
 the cryptographic barrier and to authorize recovery operations, such as the
-[`generate-root`](/api-docs/system/generate-root)
+[`generate-root`](/vault/api-docs/system/generate-root)
 functionality.
 
 When using an HSM, because the HSM automatically unseals the barrier but
@@ -23,7 +23,7 @@ recovery operations should still have human oversight, Vault instead uses two
 sets of keys: unseal keys and recovery keys. 
 
 -> **Recovery keys:** Refer to the
- [Seal/Unseal](/docs/concepts/seal#recovery-key) documentation to learn more
+ [Seal/Unseal](/vault/docs/concepts/seal#recovery-key) documentation to learn more
  about recovery keys.
 
 ## Unseal (Root) Key
@@ -32,7 +32,7 @@ Vault usually generates a root key and splits it using [Shamir's Secret
 Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to prevent a
 single operator from being able to modify and unseal Vault (see more
 information about Vault's security model
-[here](/docs/internals/security)).
+[here](/vault/docs/internals/security)).
 
 When using an HSM, Vault instead stores the root key, encrypted by the HSM,
 into its internal storage. As a result, during an `init` command, the number of

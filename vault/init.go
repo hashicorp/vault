@@ -386,6 +386,18 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 			}
 
 			results.RecoveryShares = recoveryUnsealKeys
+
+			if !initParams.RecoveryConfig.DisableUnsealRecovery {
+				wrapper := aeadwrapper.NewShamirWrapper()
+				wrapper.SetAesGcmKeyBytes(recoveryKey)
+				recoverySeal := NewRecoverySeal(&seal.Access{
+					Wrapper: wrapper,
+				})
+				recoverySeal.SetCore(c)
+				if err := recoverySeal.SetStoredKeys(ctx, [][]byte{barrierKey}); err != nil {
+					c.logger.Error("failed to store recovery unseal keys", "error", err)
+				}
+			}
 		}
 	}
 

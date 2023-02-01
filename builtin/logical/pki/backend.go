@@ -9,6 +9,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/helper/constants"
+
+	"github.com/hashicorp/go-multierror"
+
 	atomic2 "go.uber.org/atomic"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -150,8 +154,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathRevoke(&b),
 			pathRevokeWithKey(&b),
 			pathListCertsRevoked(&b),
-			pathListCertsRevocationQueue(&b),
-			pathListUnifiedRevoked(&b),
 			pathTidy(&b),
 			pathTidyCancel(&b),
 			pathTidyStatus(&b),
@@ -161,7 +163,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathListIssuers(&b),
 			pathGetIssuer(&b),
 			pathGetIssuerCRL(&b),
-			pathGetIssuerUnifiedCRL(&b),
 			pathImportIssuer(&b),
 			pathIssuerIssue(&b),
 			pathIssuerSign(&b),
@@ -188,7 +189,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathFetchCAChain(&b),
 			pathFetchCRL(&b),
 			pathFetchCRLViaCertPath(&b),
-			pathFetchUnifiedCRL(&b),
 			pathFetchValidRaw(&b),
 			pathFetchValid(&b),
 			pathFetchListCerts(&b),
@@ -196,8 +196,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// OCSP APIs
 			buildPathOcspGet(&b),
 			buildPathOcspPost(&b),
-			buildPathUnifiedOcspGet(&b),
-			buildPathUnifiedOcspPost(&b),
 
 			// CRL Signing
 			pathResignCrls(&b),
@@ -212,6 +210,19 @@ func Backend(conf *logical.BackendConfig) *backend {
 		InitializeFunc: b.initialize,
 		Invalidate:     b.invalidate,
 		PeriodicFunc:   b.periodicFunc,
+	}
+
+	if constants.IsEnterprise {
+		// Unified CRL/OCSP paths are ENT only
+		entOnly := []*framework.Path{
+			pathGetIssuerUnifiedCRL(&b),
+			pathListCertsRevocationQueue(&b),
+			pathListUnifiedRevoked(&b),
+			pathFetchUnifiedCRL(&b),
+			buildPathUnifiedOcspGet(&b),
+			buildPathUnifiedOcspPost(&b),
+		}
+		b.Backend.Paths = append(b.Backend.Paths, entOnly...)
 	}
 
 	b.tidyCASGuard = new(uint32)
@@ -239,6 +250,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.possibleDoubleCountedSerials = make([]string, 0, 250)
 	b.possibleDoubleCountedRevokedSerials = make([]string, 0, 250)
 
+	b.unifiedTransferStatus = newUnifiedTransferStatus()
+
 	return &b
 }
 
@@ -254,6 +267,8 @@ type backend struct {
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
 	lastTidy       time.Time
+
+	unifiedTransferStatus *unifiedTransferStatus
 
 	certCount                           *uint32
 	revokedCertCount                    *uint32
@@ -468,6 +483,12 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 				}
 			}
 		}
+	case strings.HasPrefix(key, unifiedRevocationReadPathPrefix):
+		// Three parts to this key: prefix, cluster, and serial.
+		split := strings.Split(key, "/")
+		cluster := split[len(split)-2]
+		serial := split[len(split)-1]
+		b.crlBuilder.addCertFromCrossRevocation(cluster, serial)
 	}
 }
 
@@ -489,6 +510,11 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 		// First handle any global revocation queue entries.
 		if err := b.crlBuilder.processRevocationQueue(sc); err != nil {
+			return err
+		}
+
+		// Then handle any unified cross-cluster revocations.
+		if err := b.crlBuilder.processCrossClusterRevocations(sc); err != nil {
 			return err
 		}
 
@@ -563,19 +589,23 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		return nil
 	}
 
+	backgroundSc := b.makeStorageContext(context.Background(), b.storage)
+	go runUnifiedTransfer(backgroundSc)
+
 	crlErr := doCRL()
 	tidyErr := doAutoTidy()
 
-	if crlErr != nil && tidyErr != nil {
-		return fmt.Errorf("Error building CRLs:\n - %v\n\nError running auto-tidy:\n - %w\n", crlErr, tidyErr)
-	}
-
+	var errors error
 	if crlErr != nil {
-		return fmt.Errorf("Error building CRLs:\n - %w\n", crlErr)
+		errors = multierror.Append(errors, fmt.Errorf("Error building CRLs:\n - %w\n", crlErr))
 	}
 
 	if tidyErr != nil {
-		return fmt.Errorf("Error running auto-tidy:\n - %w\n", tidyErr)
+		errors = multierror.Append(errors, fmt.Errorf("Error running auto-tidy:\n - %w\n", tidyErr))
+	}
+
+	if errors != nil {
+		return errors
 	}
 
 	// Check if the CRL was invalidated due to issuer swap and update

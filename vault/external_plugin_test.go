@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -42,7 +43,7 @@ type testPlugin struct {
 // version is used to override the plugin's self-reported version
 func testCoreWithPlugins(t *testing.T, typ consts.PluginType, versions ...string) (*Core, []testPlugin) {
 	t.Helper()
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	var plugins []testPlugin
@@ -50,7 +51,7 @@ func testCoreWithPlugins(t *testing.T, typ consts.PluginType, versions ...string
 		plugins = append(plugins, compilePlugin(t, typ, version, pluginDir))
 	}
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 	core := TestCoreWithSealAndUI(t, conf)
@@ -280,7 +281,7 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
@@ -291,7 +292,7 @@ func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
 		t.Fatal(err)
 	}
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 
@@ -352,7 +353,7 @@ func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
 // version store is cleared.  Vault sees the next unseal as a major upgrade and
 // should immediately shut down.
 func TestCore_Unseal_isMajorVersionFirstMount_PendingRemoval_Plugin(t *testing.T) {
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
@@ -363,7 +364,7 @@ func TestCore_Unseal_isMajorVersionFirstMount_PendingRemoval_Plugin(t *testing.T
 		t.Fatal(err)
 	}
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 	c := TestCoreWithSealAndUI(t, conf)
@@ -431,7 +432,7 @@ func TestCore_Unseal_isMajorVersionFirstMount_PendingRemoval_Plugin(t *testing.T
 }
 
 func TestCore_EnableExternalPlugin_PendingRemoval(t *testing.T) {
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
@@ -442,7 +443,7 @@ func TestCore_EnableExternalPlugin_PendingRemoval(t *testing.T) {
 		t.Fatal(err)
 	}
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 
@@ -466,7 +467,7 @@ func TestCore_EnableExternalPlugin_PendingRemoval(t *testing.T) {
 }
 
 func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	// create an external plugin to shadow the builtin "approle"
@@ -477,7 +478,7 @@ func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
 	}
 	pluginName := "approle"
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 	c := TestCoreWithSealAndUI(t, conf)
@@ -545,7 +546,7 @@ func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
 }
 
 func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	// new kv plugin can be registered but not mounted
@@ -556,7 +557,7 @@ func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 	}
 	pluginName := "kv"
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 	c := TestCoreWithSealAndUI(t, conf)
@@ -598,7 +599,7 @@ func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	// new noop plugin can be registered but not mounted
@@ -609,7 +610,7 @@ func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
 	}
 	pluginName := "noop"
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 	c := TestCoreWithSealAndUI(t, conf)

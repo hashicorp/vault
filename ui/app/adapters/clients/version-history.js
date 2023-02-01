@@ -1,6 +1,6 @@
-import Application from '../application';
+import ApplicationAdapter from '../application';
 
-export default Application.extend({
+export default class VersionHistoryAdapter extends ApplicationAdapter {
   findAll() {
     return this.ajax(this.buildURL() + '/version-history', 'GET', {
       data: {
@@ -9,5 +9,5 @@ export default Application.extend({
     }).then((resp) => {
       return resp;
     });
-  },
-});
+  }
+}

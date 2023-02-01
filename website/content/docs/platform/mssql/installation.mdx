@@ -7,7 +7,7 @@ description: Installation steps for the Vault EKM Provider for Microsoft SQL Ser
 # Installing the Vault EKM Provider
 
 This guide assumes you are installing the Vault EKM Provider for the first time.
-For upgrade instructions, see [upgrading](/docs/platform/mssql/upgrading).
+For upgrade instructions, see [upgrading](/vault/docs/platform/mssql/upgrading).
 
 ## Prerequisites
 
@@ -98,7 +98,7 @@ The remaining steps are all run on the database server.
   [releases.hashicorp.com](https://releases.hashicorp.com/vault-mssql-ekm-provider/)
 1. Enter your Vault server's address when prompted and complete the installer
 1. If you need to configure non-default namespace or mount paths for your AppRole and
-   Transit engines, see [configuration](/docs/platform/mssql/configuration).
+   Transit engines, see [configuration](/vault/docs/platform/mssql/configuration).
 
 ### Configure the EKM provider using SQL
 
@@ -161,7 +161,7 @@ installation.
 
     -> **Note:** This is the first step at which the EKM provider will communicate with Vault. If
     Vault is misconfigured, this step is likely to fail. See
-    [troubleshooting](/docs/platform/mssql/troubleshooting) for tips on specific error codes.
+    [troubleshooting](/vault/docs/platform/mssql/troubleshooting) for tips on specific error codes.
 
 1. Create another login from the new asymmetric key:
 
@@ -233,7 +233,7 @@ SELECT * FROM sys.dm_database_encryption_keys;
 ```
 
 To rotate the asymmetric key in Vault's Transit, you can use the standard
-[`/rotate`](/api-docs/secret/transit#rotate-key) endpoint:
+[`/rotate`](/vault/api-docs/secret/transit#rotate-key) endpoint:
 
 ```shell-session
 $ vault write -f transit/keys/ekm-encryption-key/rotate

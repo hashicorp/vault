@@ -1,0 +1,106 @@
+<h3 class="title is-4">Intermediates</h3>
+<div class="box is-fullwidth has-only-top-shadow">
+  <p class="has-bottom-margin-l">
+    Intermediates are identified by specifying the mount path and the issuer’s current name, as well as the new name it will
+    have when it is imported to Vault.
+  </p>
+  {{#if this.signedIssuers}}
+    <h2 data-test-cross-sign-status-count class="title is-5">Cross-signing complete ({{this.statusCount}})</h2>
+    <p class="has-bottom-margin-xl">
+      The next step is to
+      <DocLink class="has-font-weight-normal" @path="/vault/docs/secrets/pki/rotation-primitives#notes-on-manual_chain">
+        update the manual_chain<Icon @name="docs-link" />
+      </DocLink>
+      for each of your new certificates listed below,w and the existing issuer.
+    </p>
+    <div class="is-flex-start">
+      {{#each this.inputFields as |column|}}
+        <div class="is-flex-1 basis-0 has-text-grey has-bottom-margin-xs">
+          <h2 data-test-info-table-label={{column.key}}>
+            {{column.label}}
+            {{#if column.helpText}}
+              <InfoTooltip @verticalPosition="above" @horizontalPosition="center">{{column.helpText}}</InfoTooltip>
+            {{/if}}
+          </h2>
+        </div>
+      {{/each}}
+    </div>
+    <div class="box is-fullwidth is-sideless">
+      {{#each this.signedIssuers as |crossSignRow idx|}}
+        <div class="box is-marginless no-top-shadow has-slim-padding">
+          <div data-test-info-table-row={{idx}} class="is-flex-start">
+            <Icon
+              @name={{if crossSignRow.hasError "alert-circle-fill" "check-circle"}}
+              class={{if crossSignRow.hasError "has-text-danger" "has-text-success"}}
+            />
+            {{#each (map-by "key" this.inputFields) as |columnAttr|}}
+              {{#let (get crossSignRow columnAttr) as |data|}}
+                <div data-test-info-table-column={{columnAttr}} class="is-flex-1 basis-0 has-bottom-margin-xs">
+                  {{#if (eq columnAttr "intermediateMount")}}
+                    <LinkTo class="has-text-black has-text-weight-semibold" @route="overview" @model={{data}}>
+                      {{data}}
+                    </LinkTo>
+                  {{else if crossSignRow.hasError}}
+                    <span class="has-text-grey has-text-weight-semibold">
+                      {{data}}
+                    </span>
+                  {{else}}
+                    <LinkToExternal
+                      class="has-text-black has-text-weight-semibold"
+                      @route="externalMountIssuer"
+                      @models={{array (get crossSignRow "intermediateMount") data.issuerId}}
+                    >
+                      {{data.issuerName}}
+                    </LinkToExternal>
+                  {{/if}}
+                </div>
+              {{/let}}
+            {{/each}}
+          </div>
+          {{#if crossSignRow.hasError}}
+            <AlertBanner
+              @type="danger"
+              @title={{if crossSignRow.hasUnsupportedParams crossSignRow.hasError "Cross-sign failed"}}
+              @message={{if crossSignRow.hasUnsupportedParams crossSignRow.hasUnsupportedParams crossSignRow.hasError}}
+              @marginless={{true}}
+            />
+          {{/if}}
+        </div>
+      {{/each}}
+    </div>
+    <button
+      type="button"
+      class="button is-primary"
+      {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details")}}
+      data-test-cross-sign-done
+    >
+      Done
+    </button>
+    <button type="button" class="button has-left-margin-s" data-test-cross-sign-more {{on "click" this.reset}}>
+      Sign more issuers
+    </button>
+  {{else}}
+    <form {{on "submit" (perform this.submit)}} data-test-cross-sign-form>
+      <ObjectListInput @objectKeys={{this.inputFields}} @onChange={{fn (mut this.formData)}} />
+      <div class="control box is-fullwidth has-only-top-shadow">
+        <button
+          type="submit"
+          class="button is-primary {{if this.submit.isRunning 'is-loading'}}"
+          disabled={{this.submit.isRunning}}
+          data-test-cross-sign-submit
+        >
+          Cross-sign
+        </button>
+        <button
+          type="button"
+          class="button has-left-margin-s"
+          disabled={{this.submit.isRunning}}
+          {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details")}}
+          data-test-cross-sign-cancel
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  {{/if}}
+</div>
