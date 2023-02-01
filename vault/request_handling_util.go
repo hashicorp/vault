@@ -5,6 +5,7 @@ package vault
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -79,4 +80,8 @@ func possiblyForwardSaveCachedAuthResponse(ctx context.Context, c *Core, respAut
 	}
 
 	return nil
+}
+
+func forwardCreateTokenRegisterAuth(ctx context.Context, c *Core, te *logical.TokenEntry, roleName string, renewable bool, periodToUse, explicitMaxTTLToUse time.Duration) (*logical.TokenEntry, error) {
+	return nil, nil
 }

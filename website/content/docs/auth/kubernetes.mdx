@@ -83,7 +83,7 @@ management tool.
 1. Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use
   `kubectl cluster-info` to validate the Kubernetes host address and TCP port.
   For the list of available configuration options, please see the
-  [API documentation](/api-docs/auth/kubernetes).
+  [API documentation](/vault/api-docs/auth/kubernetes).
 
   ```bash
   vault write auth/kubernetes/config \
@@ -94,7 +94,7 @@ management tool.
 
   !> **Note:** The pattern Vault uses to authenticate Pods depends on sharing
   the JWT token over the network. Given the [security model of
-  Vault](/docs/internals/security), this is allowable because Vault is
+  Vault](/vault/docs/internals/security), this is allowable because Vault is
   part of the trusted compute base. In general, Kubernetes applications should
   **not** share this JWT with other applications, as it allows API calls to be
   made on behalf of the Pod and can result in unintended access being granted
@@ -114,7 +114,7 @@ management tool.
   namespace and it gives it the default policy.
 
   For the complete list of configuration options, please see the [API
-  documentation](/api-docs/auth/kubernetes).
+  documentation](/vault/api-docs/auth/kubernetes).
 
 ## Kubernetes 1.21
 
@@ -127,7 +127,7 @@ Kubernetes auth:
 * The value of the JWT's `"iss"` claim depends on the cluster's configuration.
 
 The changes to token lifetime are important when configuring the
-[`token_reviewer_jwt`](/api-docs/auth/kubernetes#token_reviewer_jwt) option.
+[`token_reviewer_jwt`](/vault/api-docs/auth/kubernetes#token_reviewer_jwt) option.
 If a short-lived token is used,
 Kubernetes will revoke it as soon as the pod or service account are deleted, or
 if the expiry time passes, and Vault will no longer be able to use the
@@ -166,7 +166,7 @@ injected service account tokens to a year to help smooth the transition to
 short-lived tokens. If you would like to disable this, set
 [--service-account-extend-token-expiration=false][k8s-extended-tokens] for
 `kube-apiserver` or specify your own `serviceAccountToken` volume mount. See
-[here](/docs/auth/jwt/oidc-providers/kubernetes#specifying-ttl-and-audience) for an example.
+[here](/vault/docs/auth/jwt/oidc-providers/kubernetes#specifying-ttl-and-audience) for an example.
 
 [k8s-extended-tokens]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options
 
@@ -239,7 +239,7 @@ JWT tokens Kubernetes generates can also be verified using Kubernetes as an OIDC
 provider. The JWT auth method documentation has [instructions][k8s-jwt-auth] for
 setting up JWT auth with Kubernetes as the OIDC provider.
 
-[k8s-jwt-auth]: /docs/auth/jwt/oidc-providers/kubernetes
+[k8s-jwt-auth]: /vault/docs/auth/jwt/oidc-providers/kubernetes
 
 This solution allows you to use short-lived tokens for all clients and removes
 the need for a reviewer JWT. However, the client tokens cannot be revoked before
@@ -256,7 +256,7 @@ value, but `disable_iss_validation=true` is the new recommended value for all
 versions of Vault.
 
 Kubernetes 1.21+ clusters may require setting the service account
-[`issuer`](/api-docs/auth/kubernetes#issuer) to the same value as
+[`issuer`](/vault/api-docs/auth/kubernetes#issuer) to the same value as
 `kube-apiserver`'s `--service-account-issuer` flag. This is because the service
 account JWTs for these clusters may have an issuer specific to the cluster
 itself, instead of the old default of `kubernetes/serviceaccount`. If you are
@@ -318,7 +318,7 @@ subjects:
 ## API
 
 The Kubernetes Auth Plugin has a full HTTP API. Please see the
-[API docs](/api-docs/auth/kubernetes) for more details.
+[API docs](/vault/api-docs/auth/kubernetes) for more details.
 
 [k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#tokenreview-v1-authentication-k8s-io
 

@@ -28,13 +28,13 @@ during, or after the upgrade.
 ## Integrated Storage Autopilot
 
 Vault 1.11 introduced [automated
-upgrades](/docs/concepts/integrated-storage/autopilot#automated-upgrades) as
+upgrades](/vault/docs/concepts/integrated-storage/autopilot#automated-upgrades) as
 part of the Integrated Storage Autopilot feature. If your Vault environment is
 configured to use Integrated Storage, consider leveraging this new feature to
 upgrade your Vault environment.
 
 -> **Tutorial:** Refer to the [Automate Upgrades with Vault
- Enterprise](https://learn.hashicorp.com/tutorials/vault/raft-upgrade-automation)
+ Enterprise](/vault/tutorials/raft/raft-upgrade-automation)
  tutorial for more details.
 
 ## Agent
@@ -58,7 +58,7 @@ along with the non-test cluster.
 
 ## OSS to Enterprise Installations
 
-Upgrading to Vault Enterprise installations follow the same steps as OSS upgrades except that the Vault Enterprise binary is to be used and the license file [applied](/api-docs/system/license#install-license), when applicable. The Enterprise binary and license file can be obtained through your HashiCorp sales team.
+Upgrading to Vault Enterprise installations follow the same steps as OSS upgrades except that the Vault Enterprise binary is to be used and the license file [applied](/vault/api-docs/system/license#install-license), when applicable. The Enterprise binary and license file can be obtained through your HashiCorp sales team.
 
 ## Non-HA Installations
 
@@ -77,10 +77,10 @@ upgrade notes.
 version of Vault greater than or equal to 1.11 and you have Autopilot enabled.
 If so, you should let Autopilot do the upgrade for you, as that's easier and
 less prone to human error. Please refer to our [automated
-upgrades](/docs/concepts/integrated-storage/autopilot#automated-upgrades)
+upgrades](/vault/docs/concepts/integrated-storage/autopilot#automated-upgrades)
 documentation for information on this feature and our
 [Automate Upgrades with Vault
-Enterprise](https://learn.hashicorp.com/tutorials/vault/raft-upgrade-automation)
+Enterprise](/vault/tutorials/raft/raft-upgrade-automation)
 tutorial for more details.
 
 This is our recommended upgrade procedure if you're on a version of Vault before
@@ -101,7 +101,7 @@ backend).
 Perform these steps on each standby:
 
 1. Properly shut down Vault on the standby node via `SIGINT` or `SIGTERM`
-2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration#disable_mlock)
+2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/vault/docs/configuration#disable_mlock)
 3. Start the standby node
 4. Unseal the standby node
 5. Verify `vault status` shows correct Version and HA Mode is `standby`
@@ -120,7 +120,7 @@ active duty. To do this:
    not be able to take over until the lock's timeout period has expired. This
    is backend-specific but could be ten seconds or more.
 
-2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration#disable_mlock)
+2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/vault/docs/configuration#disable_mlock)
 3. Start the node
 4. Unseal the node
 5. Verify `vault status` shows correct Version and HA Mode is `standby`
@@ -137,7 +137,7 @@ upgrade notes.
 -> **Note:** Prior to any upgrade, be sure to also read and follow any instructions in the version-specific
 upgrade notes which are found in the navigation menu for this documentation.
 
-Upgrading installations of Vault which participate in [Enterprise Replication](/docs/enterprise/replication) requires the following basic order of operations:
+Upgrading installations of Vault which participate in [Enterprise Replication](/vault/docs/enterprise/replication) requires the following basic order of operations:
 
 - **Upgrade the replication secondary instances first** using appropriate
   guidance from the previous sections depending on whether each secondary

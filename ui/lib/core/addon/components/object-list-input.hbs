@@ -9,7 +9,7 @@
           {{/if}}
           <Input
             data-test-object-list-input="{{field.key}}-{{index}}"
-            aria-label={{if field.placeholder "{{field.placeholder}} for {{index}}" "{{field.label}} for {{index}}"}}
+            aria-label="{{or field.placeholder field.label}} input for row index {{index}}"
             class="input"
             placeholder={{or field.placeholder ""}}
             @type="text"

@@ -3,13 +3,8 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
+import { SELECTORS } from 'vault/tests/helpers/pki/pki-configure-form';
 
-const SELECTORS = {
-  option: '[data-test-pki-config-option]',
-  optionByKey: (key) => `[data-test-pki-config-option="${key}"]`,
-  cancelButton: '[data-test-pki-config-cancel]',
-  saveButton: '[data-test-pki-config-save]',
-};
 module('Integration | Component | pki-configure-form', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');

@@ -28,7 +28,7 @@ func TestFeatureFlags(t *testing.T) {
 	// Create a raw http connection copying the configuration
 	// created by NewTestCluster
 	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
+	transport.TLSClientConfig = cluster.Cores[0].TLSConfig()
 	if err := http2.ConfigureTransport(transport); err != nil {
 		t.Fatal(err)
 	}

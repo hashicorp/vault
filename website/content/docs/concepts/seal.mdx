@@ -88,7 +88,7 @@ access to the root key shares.
 -> **Note:** The Seal Wrap functionality is enabled by default. For this
 reason, the seal provider (HSM or cloud KMS) must be available throughout
 Vault's runtime and not just during the unseal process. Refer to the [Seal
-Wrap](/docs/enterprise/sealwrap) documentation for more information.
+Wrap](/vault/docs/enterprise/sealwrap) documentation for more information.
 
 Auto Unseal was developed to aid in reducing the operational complexity of
 keeping the unseal key secure. This feature delegates the responsibility of
@@ -117,7 +117,7 @@ Unseal requires the recovery key fragments instead of the unseal key fragments
 that would be provided with Shamir. The process remains the same.
 
 For a list of examples and supported providers, please see the
-[seal documentation](/docs/configuration/seal).
+[seal documentation](/vault/docs/configuration/seal).
 
 ## Recovery Key
 
@@ -133,7 +133,7 @@ keys for this purpose, rather than the barrier unseal keys, is automatic.
 ### Initialization
 
 When initializing, the split is performed according to the following CLI flags
-and their API equivalents in the [/sys/init](/api-docs/system/init) endpoint:
+and their API equivalents in the [/sys/init](/vault/api-docs/system/init) endpoint:
 
 - `recovery-shares`: The number of shares into which to split the recovery
   key. This value is equivalent to the `recovery_shares` value in the API
@@ -148,7 +148,7 @@ and their API equivalents in the [/sys/init](/api-docs/system/init) endpoint:
 
 Additionally, Vault will refuse to initialize if the option has not been set to
 generate a key, and no key is found. See
-[Configuration](/docs/configuration/seal/pkcs11) for more details.
+[Configuration](/vault/docs/configuration/seal/pkcs11) for more details.
 
 ### Rekeying
 
@@ -168,7 +168,7 @@ this is performed by using the `-target=recovery` flag to `vault operator rekey`
 
 Via the API, the rekey operation is performed with the same parameters as the
 [normal `/sys/rekey`
-endpoint](/api-docs/system/rekey); however, the
+endpoint](/vault/api-docs/system/rekey); however, the
 API prefix for this operation is at `/sys/rekey-recovery-key` rather than
 `/sys/rekey`.
 
@@ -201,7 +201,7 @@ These steps are common for seal migrations between any supported kinds and for
 any storage backend.
 
 1. Take a standby node down and update the [seal
-   configuration](/docs/configuration/seal).
+   configuration](/vault/docs/configuration/seal).
 
    - If the migration is from Shamir seal to Auto seal, add the desired new Auto
      seal block to the configuration.
@@ -224,7 +224,7 @@ any storage backend.
    specifically when Integrated Storage is in use for it helps to retain the
    quorum.
 
-1. [Step down](https://www.vaultproject.io/docs/commands/operator/step-down) the
+1. [Step down](/vault/docs/commands/operator/step-down) the
    active node. One of the standby nodes will become the new active node.
    When using Integrated Storage, ensure that quorum is reached and a leader is
    elected.
@@ -250,7 +250,7 @@ any storage backend.
 #### Migration From Shamir to Auto Unseal
 
 To migrate from Shamir keys to Auto Unseal, take your server cluster offline and
-update the [seal configuration](/docs/configuration/seal) with the appropriate
+update the [seal configuration](/vault/docs/configuration/seal) with the appropriate
 seal configuration. Bring your server back up and leave the rest of the nodes
 offline if using multi-server mode, then run the unseal process with the
 `-migrate` flag and bring the rest of the cluster online.
@@ -264,7 +264,7 @@ keys.
 #### Migration From Auto Unseal to Shamir
 
 To migrate from Auto Unseal to Shamir keys, take your server cluster offline
-and update the [seal configuration](/docs/configuration/seal) and add `disabled
+and update the [seal configuration](/vault/docs/configuration/seal) and add `disabled
 = "true"` to the seal block. This allows the migration to use this information
 to decrypt the key but will not unseal Vault. When you bring your server back
 up, run the unseal process with the `-migrate` flag and use the Recovery Keys
@@ -280,7 +280,7 @@ one type of Auto Unseal to a different type (ie Transit -> AWSKMS).
 
 To migrate from Auto Unseal to a different Auto Unseal configuration, take your
 server cluster offline and update the existing [seal
-configuration](/docs/configuration/seal) and add `disabled = "true"` to the seal
+configuration](/vault/docs/configuration/seal) and add `disabled = "true"` to the seal
 block. Then add another seal block to describe the new seal.
 
 When you bring your server back up, run the unseal process with the `-migrate`

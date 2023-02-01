@@ -4606,9 +4606,10 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 						Description: "Path that the backend was mounted at",
 						In:          "path",
 						Schema: &framework.OASSchema{
-							Type: "string",
+							Type:    "string",
+							Default: strings.TrimRight(mount, "/"),
 						},
-						Required: true,
+						Required: false,
 					})
 				}
 

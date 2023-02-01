@@ -17,13 +17,13 @@ API before the server can respond to requests.
 
 For more information, please see:
 
-- [`operator init` command](/docs/commands/operator/init) for information
+- [`operator init` command](/vault/docs/commands/operator/init) for information
   on initializing a Vault server.
 
-- [`operator unseal` command](/docs/commands/operator/unseal) for
+- [`operator unseal` command](/vault/docs/commands/operator/unseal) for
   information on providing unseal keys.
 
-- [Vault configuration](/docs/configuration) for the syntax and
+- [Vault configuration](/vault/docs/configuration) for the syntax and
   various configuration options for a Vault server.
 
 ## Examples
@@ -43,7 +43,7 @@ $ vault server -dev -dev-root-token-id="root"
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
 ### Command Options
 
@@ -86,7 +86,7 @@ flags](/docs/commands) included on all commands.
   should NOT be used in production, and the associated APIs may have backwards incompatible
   changes between releases. Additional experiments can also be specified via the
   `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
-  [`experiments`](/docs/configuration#experiments) config key.
+  [`experiments`](/vault/docs/configuration#experiments) config key.
 
 - `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` `(bool: false)` - (environment variable)
   Allow Vault to be started with builtin engines which have the `Pending Removal`
@@ -94,7 +94,7 @@ flags](/docs/commands) included on all commands.
   upgrade and disable these engines. Once these engines are marked `Removed` (in
   the next major release of Vault), the environment variable will no longer work
   and a downgrade must be performed in order to remove the offending engines. For
-  more information, see the [deprecation faq](/docs/deprecation/faq/#q-what-are-the-phases-of-deprecation).
+  more information, see the [deprecation faq](/vault/docs/deprecation/faq/#q-what-are-the-phases-of-deprecation).
 
 ### Dev Options
 

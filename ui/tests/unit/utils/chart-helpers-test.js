@@ -38,24 +38,10 @@ module('Unit | Utility | chart-helpers', function () {
       { label: 'foo', value: undefined },
       { label: 'bar', value: 22 },
     ];
+    const testArray3 = [{ label: 'foo' }, { label: 'bar' }];
     const getAverage = (array) => array.reduce((a, b) => a + b, 0) / array.length;
     assert.strictEqual(calculateAverage(null), null, 'returns null if dataset it null');
     assert.strictEqual(calculateAverage([]), null, 'returns null if dataset it empty array');
-    assert.strictEqual(
-      calculateAverage([0]),
-      getAverage([0]),
-      `returns ${getAverage([0])} if array is just 0 0`
-    );
-    assert.strictEqual(
-      calculateAverage([1]),
-      getAverage([1]),
-      `returns ${getAverage([1])} if array is just 1`
-    );
-    assert.strictEqual(
-      calculateAverage([5, 1, 41, 5]),
-      getAverage([5, 1, 41, 5]),
-      `returns correct average for array of integers`
-    );
     assert.strictEqual(
       calculateAverage(testArray1, 'value'),
       getAverage([10, 22]),
@@ -65,6 +51,11 @@ module('Unit | Utility | chart-helpers', function () {
       calculateAverage(testArray2, 'value'),
       getAverage([0, 22]),
       `returns correct average for array of objects containing undefined values`
+    );
+    assert.strictEqual(
+      calculateAverage(testArray3, 'value'),
+      null,
+      'returns null when object key does not exist at all'
     );
   });
 });
