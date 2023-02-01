@@ -39,19 +39,26 @@ func pathLogin(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
+			logical.UpdateOperation:         b.loginPathWrapper(b.pathLogin),
 			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
-			logical.ResolveRoleOperation:    b.pathLoginResolveRole,
+			logical.ResolveRoleOperation:    b.loginPathWrapper(b.pathLoginResolveRole),
 		},
+	}
+}
+
+func (b *backend) loginPathWrapper(wrappedOp func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error)) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		// Make sure that the CRLs have been loaded before processing a login request,
+		// they might have been nil'd by an invalidate func call.
+		if err := b.populateCrlsIfNil(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+		return wrappedOp(ctx, req, data)
 	}
 }
 
 func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var matched *ParsedCert
-	// Make sure b.crls is populated if it was invalidated by replication
-	if err := b.populateCrlsIfNil(ctx, req.Storage); err != nil {
-		return nil, err
-	}
 
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
@@ -93,11 +100,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	}
 	if b.configUpdated.Load() {
 		b.updatedConfig(config)
-	}
-
-	// Probably invalidated due to replication, but we need these to proceed
-	if err := b.populateCrlsIfNil(ctx, req.Storage); err != nil {
-		return nil, err
 	}
 
 	var matched *ParsedCert
@@ -174,10 +176,6 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 	if b.configUpdated.Load() {
 		b.updatedConfig(config)
-	}
-
-	if err := b.populateCrlsIfNil(ctx, req.Storage); err != nil {
-		return nil, err
 	}
 
 	if !config.DisableBinding {
