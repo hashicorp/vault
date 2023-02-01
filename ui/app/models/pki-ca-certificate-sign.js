@@ -19,27 +19,27 @@ export default Certificate.extend({
   }),
   ou: attr({
     label: 'OU (OrganizationalUnit)',
-    editType: 'string',
+    editType: 'stringArray',
   }),
   organization: attr({
-    editType: 'string',
+    editType: 'stringArray',
   }),
   country: attr({
-    editType: 'string',
+    editType: 'stringArray',
   }),
   locality: attr({
-    editType: 'string',
+    editType: 'stringArray',
     label: 'Locality/City',
   }),
   province: attr({
-    editType: 'string',
+    editType: 'stringArray',
     label: 'Province/State',
   }),
   streetAddress: attr({
-    editType: 'string',
+    editType: 'stringArray',
   }),
   postalCode: attr({
-    editType: 'string',
+    editType: 'stringArray',
   }),
 
   fieldGroups: computed('useCsrValues', function () {
