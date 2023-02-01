@@ -117,30 +117,12 @@ export default class PkiActionModel extends Model {
     editType: 'stringArray',
   })
   ou;
-  @attr({
-    editType: 'stringArray',
-  })
-  organization;
-  @attr({
-    editType: 'stringArray',
-  })
-  country;
-  @attr({
-    editType: 'stringArray',
-  })
-  locality;
-  @attr({
-    editType: 'stringArray',
-  })
-  province;
-  @attr({
-    editType: 'stringArray',
-  })
-  streetAddress;
-  @attr({
-    editType: 'stringArray',
-  })
-  postalCode;
+  @attr({ editType: 'stringArray' }) organization;
+  @attr({ editType: 'stringArray' }) country;
+  @attr({ editType: 'stringArray' }) locality;
+  @attr({ editType: 'stringArray' }) province;
+  @attr({ editType: 'stringArray' }) streetAddress;
+  @attr({ editType: 'stringArray' }) postalCode;
 
   @attr('string', {
     subText: "Specifies the requested Subject's named Serial Number value.",
