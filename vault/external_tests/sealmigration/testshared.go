@@ -7,9 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
-	"github.com/hashicorp/vault/vault/seal"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
@@ -28,12 +25,11 @@ const (
 	keyShares    = 3
 	keyThreshold = 3
 
-	BasePort_ShamirToTransit_Pre14    = 20000
-	BasePort_TransitToShamir_Pre14    = 21000
-	BasePort_ShamirToTransit_Post14   = 22000
-	BasePort_TransitToShamir_Post14   = 23000
-	BasePort_TransitToTransit         = 24000
-	BasePort_TransitToShamir_Recovery = 25000
+	BasePort_ShamirToTransit_Pre14  = 20000
+	BasePort_TransitToShamir_Pre14  = 21000
+	BasePort_ShamirToTransit_Post14 = 22000
+	BasePort_TransitToShamir_Post14 = 23000
+	BasePort_TransitToTransit       = 24000
 )
 
 func ParamTestSealMigrationTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int) {
@@ -118,55 +114,6 @@ func ParamTestSealMigrationTransitToShamir_Post14(t *testing.T, logger hclog.Log
 	// can unseal without it.
 	tss.Cleanup()
 	tss = nil
-
-	// Run the backend with shamir.  Note that the recovery keys are now the
-	// barrier keys.
-	runShamir(t, logger, storage, basePort, rootToken, recoveryKeys)
-}
-
-func ParamTestSealMigrationTransitToShamir_Recovery(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int) {
-	// Create the transit server.
-	tss := sealhelper.NewTransitSealServer(t, 0)
-	defer func() {
-		if tss != nil {
-			tss.Cleanup()
-		}
-	}()
-	sealKeyName := "transit-seal-key-1"
-	tss.MakeKey(t, sealKeyName)
-
-	// Initialize the backend with transit.
-	cluster, opts := InitializeTransit(t, logger, storage, basePort, tss, sealKeyName)
-	rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
-
-	// Disable the transit seal, forcing recovery
-	tss.Cleanup()
-	tss = nil
-
-	// conf := cluster.Cores[0].GetCoreConfigInternal()
-	// conf.Seals[0].Recover = true
-
-	opts.UnwrapSealFunc = func() vault.Seal {
-		seal := vault.NewRecoverySeal(&seal.Access{
-			Wrapper:     aead.NewShamirWrapper(),
-			WrapperType: wrapping.WrapperTypeShamir,
-		})
-		seal.SetCachedBarrierConfig(&vault.SealConfig{
-			SecretShares:    len(recoveryKeys),
-			SecretThreshold: len(recoveryKeys),
-			StoredShares:    len(recoveryKeys),
-		})
-		return seal
-	}
-
-	// Migrate the backend from transit to shamir
-	// opts.UnwrapSealFunc = opts.SealFunc
-	opts.SealFunc = func() vault.Seal { return nil }
-	leaderIdx := migratePost14(t, storage, cluster, opts, cluster.RecoveryKeys)
-	validateMigration(t, storage, cluster, leaderIdx, verifySealConfigShamir)
-
-	cluster.Cleanup()
-	storage.Cleanup(t, cluster)
 
 	// Run the backend with shamir.  Note that the recovery keys are now the
 	// barrier keys.
