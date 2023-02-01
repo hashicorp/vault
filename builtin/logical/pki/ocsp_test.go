@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -588,7 +589,7 @@ func SendOcspRequest(t *testing.T, b *backend, s logical.Storage, getOrPost stri
 }
 
 func sendOcspGetRequest(b *backend, s logical.Storage, ocspRequest []byte) (*logical.Response, error) {
-	urlEncoded := base64.StdEncoding.EncodeToString(ocspRequest)
+	urlEncoded := url.QueryEscape(base64.StdEncoding.EncodeToString(ocspRequest))
 	return CBRead(b, s, "ocsp/"+urlEncoded)
 }
 
