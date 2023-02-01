@@ -612,7 +612,6 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				},
 			},
 
-			// TODO no callbacks here as well
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Responses: map[int][]framework.Response{

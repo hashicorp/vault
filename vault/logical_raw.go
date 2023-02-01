@@ -321,7 +321,7 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"value": {
-									Type:     framework.TypeString, // TODO not sure how to represent as this is an interface with type of string/[]byte
+									Type:     framework.TypeString,
 									Required: true,
 								},
 							},
