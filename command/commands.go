@@ -219,13 +219,10 @@ var (
 		"kubernetes": ksr.NewServiceRegistration,
 	}
 
-	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {}
+	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {}
 )
 
-// Commands is the mapping of all the available commands.
-var Commands map[string]cli.CommandFactory
-
-func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
+func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	loginHandlers := map[string]LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
@@ -258,7 +255,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		}
 	}
 
-	Commands = map[string]cli.CommandFactory{
+	commands := map[string]cli.CommandFactory{
 		"agent": func() (cli.Command, error) {
 			return &AgentCommand{
 				BaseCommand: &BaseCommand{
@@ -697,6 +694,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"transit import": func() (cli.Command, error) {
+			return &TransitImportCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit import-version": func() (cli.Command, error) {
+			return &TransitImportVersionCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"token": func() (cli.Command, error) {
 			return &TokenCommand{
 				BaseCommand: getBaseCommand(),
@@ -831,7 +838,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 	}
 
-	initCommandsEnt(ui, serverCmdUi, runOpts)
+	initCommandsEnt(ui, serverCmdUi, runOpts, commands)
+	return commands
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

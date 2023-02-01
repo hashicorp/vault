@@ -7,11 +7,15 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
 	"io"
+	"math"
+	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -260,5 +264,96 @@ func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, 
 	if resp != nil {
 		msg := fmt.Sprintf("expected nil response but got: %v", resp)
 		require.Nilf(t, resp, msg, msgAndArgs...)
+	}
+}
+
+func getCRLNumber(t *testing.T, crl pkix.TBSCertificateList) int {
+	t.Helper()
+
+	for _, extension := range crl.Extensions {
+		if extension.Id.Equal(certutil.CRLNumberOID) {
+			bigInt := new(big.Int)
+			leftOver, err := asn1.Unmarshal(extension.Value, &bigInt)
+			require.NoError(t, err, "Failed unmarshalling crl number extension")
+			require.Empty(t, leftOver, "leftover bytes from unmarshalling crl number extension")
+			require.True(t, bigInt.IsInt64(), "parsed crl number integer is not an int64")
+			require.False(t, math.MaxInt <= bigInt.Int64(), "parsed crl number integer can not fit in an int")
+			return int(bigInt.Int64())
+		}
+	}
+
+	t.Fatalf("failed to find crl number extension")
+	return 0
+}
+
+func getCrlReferenceFromDelta(t *testing.T, crl pkix.TBSCertificateList) int {
+	t.Helper()
+
+	for _, extension := range crl.Extensions {
+		if extension.Id.Equal(certutil.DeltaCRLIndicatorOID) {
+			bigInt := new(big.Int)
+			leftOver, err := asn1.Unmarshal(extension.Value, &bigInt)
+			require.NoError(t, err, "Failed unmarshalling delta crl indicator extension")
+			require.Empty(t, leftOver, "leftover bytes from unmarshalling delta crl indicator extension")
+			require.True(t, bigInt.IsInt64(), "parsed delta crl integer is not an int64")
+			require.False(t, math.MaxInt <= bigInt.Int64(), "parsed delta crl integer can not fit in an int")
+			return int(bigInt.Int64())
+		}
+	}
+
+	t.Fatalf("failed to find delta crl indicator extension")
+	return 0
+}
+
+// waitForUpdatedCrl will wait until the CRL at the provided path has been reloaded
+// up for a maxWait duration and gives up if the timeout has been reached. If a negative
+// value for lastSeenCRLNumber is provided, the method will load the current CRL and wait
+// for a newer CRL be generated.
+func waitForUpdatedCrl(t *testing.T, client *api.Client, crlPath string, lastSeenCRLNumber int, maxWait time.Duration) pkix.TBSCertificateList {
+	t.Helper()
+
+	newCrl, didTimeOut := waitForUpdatedCrlUntil(t, client, crlPath, lastSeenCRLNumber, maxWait)
+	if didTimeOut {
+		t.Fatalf("Timed out waiting for new CRL rebuild on path %s", crlPath)
+	}
+	return newCrl.TBSCertList
+}
+
+// waitForUpdatedCrlUntil is a helper method that will wait for a CRL to be updated up until maxWait duration
+// or give up and return the last CRL it loaded. It will not fail, if it does not see a new CRL within the
+// max duration unlike waitForUpdatedCrl. Returns the last loaded CRL at the provided path and a boolean
+// indicating if we hit maxWait duration or not.
+func waitForUpdatedCrlUntil(t *testing.T, client *api.Client, crlPath string, lastSeenCrlNumber int, maxWait time.Duration) (*pkix.CertificateList, bool) {
+	t.Helper()
+
+	crl := getParsedCrlAtPath(t, client, crlPath)
+	initialCrlRevision := getCRLNumber(t, crl.TBSCertList)
+	newCrlRevision := initialCrlRevision
+
+	// Short circuit the fetches if we have a version of the CRL we want
+	if lastSeenCrlNumber > 0 && getCRLNumber(t, crl.TBSCertList) > lastSeenCrlNumber {
+		return crl, false
+	}
+
+	start := time.Now()
+	iteration := 0
+	for {
+		iteration++
+
+		if time.Since(start) > maxWait {
+			t.Logf("Timed out waiting for new CRL on path %s after iteration %d, delay: %v",
+				crlPath, iteration, time.Now().Sub(start))
+			return crl, true
+		}
+
+		crl = getParsedCrlAtPath(t, client, crlPath)
+		newCrlRevision = getCRLNumber(t, crl.TBSCertList)
+		if newCrlRevision > initialCrlRevision {
+			t.Logf("Got new revision of CRL %s from %d to %d after iteration %d, delay %v",
+				crlPath, initialCrlRevision, newCrlRevision, iteration, time.Now().Sub(start))
+			return crl, false
+		}
+
+		time.Sleep(100 * time.Millisecond)
 	}
 }
