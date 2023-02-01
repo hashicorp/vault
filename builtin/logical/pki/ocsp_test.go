@@ -7,6 +7,8 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/vault"
 	"io"
 	"net/http"
 	"net/url"
@@ -361,6 +363,102 @@ func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 
 	requireOcspSignatureAlgoForKey(t, rotatedCert.SignatureAlgorithm, ocspResp.SignatureAlgorithm)
 	requireOcspResponseSignedBy(t, ocspResp, rotatedCert)
+}
+
+// Make sure OCSP GET/POST requests work through the entire stack, and not just
+// through the quicker backend layer the other tests are doing.
+func TestOcsp_HigherLevel(t *testing.T) {
+	t.Parallel()
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+	mountPKIEndpoint(t, client, "pki")
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"key_type":    "ec",
+		"common_name": "root-ca.com",
+		"ttl":         "600h",
+	})
+
+	require.NoError(t, err, "error generating root ca: %v", err)
+	require.NotNil(t, resp, "expected ca info from root")
+
+	issuerCert := parseCert(t, resp.Data["certificate"].(string))
+
+	resp, err = client.Logical().Write("pki/roles/example", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"no_store":         "false", // make sure we store this cert
+		"max_ttl":          "1h",
+		"key_type":         "ec",
+	})
+	require.NoError(t, err, "error setting up pki role: %v", err)
+
+	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{
+		"common_name": "test.example.com",
+		"ttl":         "15m",
+	})
+	require.NoError(t, err, "error issuing certificate: %v", err)
+	require.NotNil(t, resp, "got nil response from issuing request")
+	certToRevoke := parseCert(t, resp.Data["certificate"].(string))
+	serialNum := resp.Data["serial_number"].(string)
+
+	// Revoke the certificate
+	resp, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+		"serial_number": serialNum,
+	})
+	require.NoError(t, err, "error revoking certificate: %v", err)
+	require.NotNil(t, resp, "got nil response from revoke")
+
+	// Make sure that OCSP handler responds properly
+	ocspReq := generateRequest(t, crypto.SHA256, certToRevoke, issuerCert)
+	ocspPostReq := client.NewRequest(http.MethodPost, "/v1/pki/ocsp")
+	ocspPostReq.Headers.Set("Content-Type", "application/ocsp-request")
+	ocspPostReq.BodyBytes = ocspReq
+	rawResp, err := client.RawRequest(ocspPostReq)
+	require.NoError(t, err, "failed sending ocsp post request")
+
+	require.Equal(t, 200, rawResp.StatusCode)
+	require.Equal(t, ocspResponseContentType, rawResp.Header.Get("Content-Type"))
+	bodyReader := rawResp.Body
+	respDer, err := io.ReadAll(bodyReader)
+	bodyReader.Close()
+	require.NoError(t, err, "failed reading response body")
+
+	ocspResp, err := ocsp.ParseResponse(respDer, issuerCert)
+	require.NoError(t, err, "parsing ocsp get response")
+
+	require.Equal(t, ocsp.Revoked, ocspResp.Status)
+	require.Equal(t, issuerCert, ocspResp.Certificate)
+	require.Equal(t, certToRevoke.SerialNumber, ocspResp.SerialNumber)
+
+	// Test OCSP Get request for ocsp
+	urlEncoded := url.QueryEscape(base64.StdEncoding.EncodeToString(ocspReq))
+	ocspGetReq := client.NewRequest(http.MethodGet, "/v1/pki/ocsp/"+urlEncoded)
+	ocspGetReq.Headers.Set("Content-Type", "application/ocsp-request")
+	rawResp, err = client.RawRequest(ocspGetReq)
+	require.NoError(t, err, "failed sending ocsp get request")
+
+	require.Equal(t, 200, rawResp.StatusCode)
+	require.Equal(t, ocspResponseContentType, rawResp.Header.Get("Content-Type"))
+	bodyReader = rawResp.Body
+	respDer, err = io.ReadAll(bodyReader)
+	bodyReader.Close()
+	require.NoError(t, err, "failed reading response body")
+
+	ocspResp, err = ocsp.ParseResponse(respDer, issuerCert)
+	require.NoError(t, err, "parsing ocsp get response")
+
+	require.Equal(t, ocsp.Revoked, ocspResp.Status)
+	require.Equal(t, issuerCert, ocspResp.Certificate)
+	require.Equal(t, certToRevoke.SerialNumber, ocspResp.SerialNumber)
 }
 
 func TestOcsp_ValidRequests(t *testing.T) {
