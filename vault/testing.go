@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -770,6 +771,7 @@ type TestCluster struct {
 	CAKeyPEM           []byte
 	Cores              []*TestClusterCore
 	ID                 string
+	Plugins            []pluginhelpers.TestPlugin
 	RootToken          string
 	RootCAs            *x509.CertPool
 	TempDir            string
@@ -1180,6 +1182,13 @@ type TestClusterOptions struct {
 	EffectiveSDKVersionMap map[int]string
 
 	NoDefaultQuotas bool
+
+	Plugins TestPluginTypeAndVersions
+}
+
+type TestPluginTypeAndVersions struct {
+	Typ      consts.PluginType
+	Versions []string
 }
 
 var DefaultNumCores = 3
@@ -1612,6 +1621,19 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		opts.ClusterLayers = inmemCluster
 	}
+
+	var pluginDir string
+	var cleanup func(t testing.T)
+	if coreConfig.PluginDirectory == "" {
+		pluginDir, cleanup = corehelpers.MakeTestPluginDir(t)
+		t.Cleanup(func() { cleanup(t) })
+	}
+	coreConfig.PluginDirectory = pluginDir
+	var plugins []pluginhelpers.TestPlugin
+	for _, version := range opts.Plugins.Versions {
+		plugins = append(plugins, pluginhelpers.CompilePlugin(t, opts.Plugins.Typ, version, coreConfig.PluginDirectory))
+	}
+	testCluster.Plugins = plugins
 
 	// Create cores
 	testCluster.cleanupFuncs = []func(){}
