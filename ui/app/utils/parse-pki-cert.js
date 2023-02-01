@@ -134,8 +134,10 @@ export function parseExtensions(extensions) {
   const values = {};
   const errors = [];
   const allowedOids = Object.values({ ...EXTENSION_OIDs, ...IGNORED_OIDs });
-  if (extensions.any((ext) => !allowedOids.includes(ext.extnID))) {
-    errors.push(new Error('certificate contains unsupported extension OIDs'));
+  const isKnownExtension = (ext) => !allowedOids.includes(ext.extnID);
+  if (extensions.any(isKnownExtension)) {
+    const unknown = extensions.filter(isKnownExtension).map((ext) => ext.extnID);
+    errors.push(new Error('certificate contains unsupported extension OIDs: ' + unknown.join(', ')));
   }
 
   // make each extension its own key/value pair
