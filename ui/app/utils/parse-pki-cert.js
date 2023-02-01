@@ -4,8 +4,8 @@ import { Certificate } from 'pkijs';
 import { differenceInHours, getUnixTime } from 'date-fns';
 import {
   EXTENSION_OIDs,
-  KEY_USAGE_BITS,
   IGNORED_OIDs,
+  KEY_USAGE_BITS,
   SAN_TYPES,
   SIGNATURE_ALGORITHM_OIDs,
   SUBJECT_OIDs,

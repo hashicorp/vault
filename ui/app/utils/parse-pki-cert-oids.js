@@ -13,7 +13,7 @@ export const SUBJECT_OIDs = {
 };
 
 export const EXTENSION_OIDs = {
-  key_usage: '2.5.29.15', // contains keyUsage values
+  key_usage: '2.5.29.15', // contains keyUsage values (KEY_USAGE_BITS below)
   subject_alt_name: '2.5.29.17', // contains SAN_TYPES below
   basic_constraints: '2.5.29.19', // contains max_path_length
   name_constraints: '2.5.29.30', // contains permitted_dns_domains
@@ -28,6 +28,18 @@ export const IGNORED_OIDs = {
   // will automatically match the existing issuer's key material.
   subject_key_identifier: '2.5.29.14',
 };
+
+export const KEY_USAGE_BITS = [
+  'DigitalSignature',
+  'ContentCommitment',
+  'KeyEncipherment',
+  'DataEncipherment',
+  'KeyAgreement',
+  'CertSign',
+  'CRLSign',
+  'EncipherOnly',
+  'DecipherOnly',
+];
 
 // SubjectAltName/GeneralName types (scroll up to page 38 -> https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.7 )
 export const SAN_TYPES = {
@@ -57,15 +69,3 @@ export const SIGNATURE_ALGORITHM_OIDs = {
   '1.2.840.10045.4.3.4': '512', // ECDSA-SHA512
   '1.3.101.112': '0', // Ed25519
 };
-
-export const KEY_USAGE_BITS = [
-  'DigitalSignature',
-  'ContentCommitment',
-  'KeyEncipherment',
-  'DataEncipherment',
-  'KeyAgreement',
-  'CertSign',
-  'CRLSign',
-  'EncipherOnly',
-  'DecipherOnly',
-];
