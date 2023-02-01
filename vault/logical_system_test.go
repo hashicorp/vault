@@ -1138,8 +1138,6 @@ func TestSystemBackend_leases(t *testing.T) {
 func TestSystemBackend_leases_list(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
-	paths := b.(*SystemBackend).leasePaths()
-
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
@@ -2277,7 +2275,6 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 
 func TestSystemBackend_auditHash(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	paths := b.(*SystemBackend).auditPaths()
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
@@ -3085,8 +3082,6 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if len(resp.Data["keys"].([]string)) != len(c.builtinRegistry.Keys(consts.PluginTypeDatabase)) {
 		t.Fatalf("Wrong number of plugins, got %d, expected %d", len(resp.Data["keys"].([]string)), len(builtinplugins.Registry.Keys(consts.PluginTypeDatabase)))
 	}
-
-	catalogPaths := []*framework.Path{b.(*SystemBackend).pluginsCatalogCRUDPath()}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/mysql-database-plugin")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -4956,7 +4951,6 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			t.Parallel()
 
 			core, b, _ := testCoreSystemBackend(t)
-			paths := b.(*SystemBackend).configPaths()
 			// Test core overrides logging level outside of config,
 			// an initial delete will ensure that we an initial read
 			// to get expected values is based off of config and not
