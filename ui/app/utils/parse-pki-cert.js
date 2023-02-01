@@ -219,11 +219,14 @@ export function parseExtensions(extensions) {
         const ip_addr = ip.join('.');
         parsed_ips.push(ip_addr);
       } else if (ip.length === 16) {
-        const src = new Array(ip);
+        const src = new Array(...ip);
         const hex = src.map((value) => '0' + new Number(value).toString(16));
         const trimmed = hex.map((value) => value.substr(value.length - 2, 2));
-        const coloned = trimmed.map((index, value) => (index % 2 === 0 ? value : value + ':'));
-        const ip_addr = coloned.join('');
+        const coloned = trimmed.map((value, index) => (index % 2 === 0 ? value : value + ':'));
+        let ip_addr = coloned.join('');
+        if (ip_addr.charAt(ip_addr.length - 1) === ':') {
+          ip_addr = ip_addr.substr(0, ip_addr.length - 1); // Remove trailing :, if any.
+        }
         parsed_ips.push(ip_addr);
       } else {
         errors.push(
