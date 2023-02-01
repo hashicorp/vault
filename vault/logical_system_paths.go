@@ -1174,7 +1174,7 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							// response keys are dynamic
-							Fields: map[string]*framework.FieldSchema{},
+							Fields: nil,
 						}},
 					},
 				},
@@ -1210,7 +1210,7 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							// response keys are dynamic
-							Fields: map[string]*framework.FieldSchema{},
+							Fields: nil,
 						}},
 					},
 				},
@@ -1246,7 +1246,7 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							// response keys are dynamic
-							Fields: map[string]*framework.FieldSchema{},
+							Fields: nil,
 						}},
 					},
 				},
