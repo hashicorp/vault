@@ -7,8 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/vault"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,6 +14,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/vault"
 
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
