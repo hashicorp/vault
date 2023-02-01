@@ -1511,6 +1511,10 @@ vault {
 		Renewable: &renewable,
 	}
 
+	// This was the simplest test I could find to trigger the caching behaviour,
+	// i.e. the most concise I could make the test that I can tell
+	// creating an orphan token returns Auth, is renewable, and isn't a token
+	// that's managed elsewhere (since it's an orphan)
 	secret, err := agentClient.Auth().Token().CreateOrphan(tokenCreateRequest)
 	if err != nil {
 		t.Fatal(err)
