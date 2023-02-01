@@ -2378,7 +2378,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 		}
 	}
-	createdSeals := make([]vault.Seal, len(config.Seals))
+	var createdSeals []vault.Seal = make([]vault.Seal, len(config.Seals))
 	for _, configSeal := range config.Seals {
 		sealType := wrapping.WrapperTypeShamir.String()
 		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
@@ -2403,11 +2403,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 					"Error parsing Seal configuration: %s", sealConfigError)
 			}
 		}
-		if configSeal.Recover {
-			seal = vault.NewRecoverySeal(&vaultseal.Access{
-				Wrapper: aeadwrapper.NewShamirWrapper(),
-			})
-		} else if wrapper == nil {
+		if wrapper == nil {
 			seal = defaultSeal
 		} else {
 			var err error
@@ -2432,7 +2428,6 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		}
 		createdSeals = append(createdSeals, seal)
 	}
-
 	return barrierSeal, barrierWrapper, unwrapSeal, createdSeals, sealConfigError, nil
 }
 
@@ -2622,7 +2617,9 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 	}
 }
 
-func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal, metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader) vault.CoreConfig {
+func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal,
+	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader,
+) vault.CoreConfig {
 	coreConfig := &vault.CoreConfig{
 		RawConfig:                      config,
 		Physical:                       backend,

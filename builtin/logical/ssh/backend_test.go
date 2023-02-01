@@ -23,6 +23,8 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -2403,4 +2405,60 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 			return nil
 		},
 	}
+}
+
+func TestBackend_CleanupDynamicHostKeys(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Running on a clean mount shouldn't do anything.
+	cleanRequest := &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "tidy/dynamic-keys",
+		Storage:   config.StorageView,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), cleanRequest)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotNil(t, resp.Data["message"])
+	require.Contains(t, resp.Data["message"], "0 of 0")
+
+	// Write a bunch of bogus entries.
+	for i := 0; i < 15; i++ {
+		data := map[string]interface{}{
+			"host": "localhost",
+			"key":  "nothing-to-see-here",
+		}
+		entry, err := logical.StorageEntryJSON(fmt.Sprintf("%vexample-%v", keysStoragePrefix, i), &data)
+		require.NoError(t, err)
+		err = config.StorageView.Put(context.Background(), entry)
+		require.NoError(t, err)
+	}
+
+	// Should now have 15
+	resp, err = b.HandleRequest(context.Background(), cleanRequest)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotNil(t, resp.Data["message"])
+	require.Contains(t, resp.Data["message"], "15 of 15")
+
+	// Should have none left.
+	resp, err = b.HandleRequest(context.Background(), cleanRequest)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotNil(t, resp.Data["message"])
+	require.Contains(t, resp.Data["message"], "0 of 0")
 }
