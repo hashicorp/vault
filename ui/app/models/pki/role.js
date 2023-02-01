@@ -159,10 +159,14 @@ export default class PkiRoleModel extends Model {
   })
   allowedDomains;
 
-  @attr('boolean', {
-    label: 'Allow templates in allowed domains',
-  })
-  allowedDomainsTemplate;
+  @attr('boolean') allowedDomainsTemplate;
+  @attr('boolean') allowBareDomains;
+  @attr('boolean') allowSubdomains;
+  @attr('boolean') allowGlobDomains;
+  @attr('boolean') allowWildcardCertificates;
+  @attr('boolean', { defaultValue: 'true' }) allowLocalhost;
+  @attr('boolean') allowAnyName;
+  @attr('boolean', { defaultValue: 'true' }) enforceHostnames;
   /* End of overriding Domain handling options */
 
   /* Overriding OpenApi Key parameters options */
