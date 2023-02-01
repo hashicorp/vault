@@ -967,7 +967,7 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 								"keys": {
 									Type:        framework.TypeStringSlice,
 									Description: "List of plugin names in the catalog",
-									Required:    false,
+									Required:    true,
 								},
 							},
 						}},
