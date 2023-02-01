@@ -4607,7 +4607,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 						In:          "path",
 						Schema: &framework.OASSchema{
 							Type:    "string",
-							Default: mountPathParameterName,
+							Default: strings.TrimRight(mount, "/"),
 						},
 						Required: false,
 					})
