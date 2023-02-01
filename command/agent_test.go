@@ -1440,24 +1440,13 @@ auto_auth {
 
 func TestAgent_Cache_DynamicSecret(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
-	coreConfig := &vault.CoreConfig{
-		Logger: logger,
-		CredentialBackends: map[string]logical.Factory{
-			"approle": credAppRole.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
-
-	// Unset the environment variable so that agent picks up the right test
-	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
 
 	cacheConfig := `
 cache {
