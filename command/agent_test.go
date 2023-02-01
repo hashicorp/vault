@@ -1448,6 +1448,11 @@ func TestAgent_Cache_DynamicSecret(t *testing.T) {
 
 	serverClient := cluster.Cores[0].Client
 
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
 	cacheConfig := `
 cache {
 }
