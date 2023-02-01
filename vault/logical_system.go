@@ -4609,7 +4609,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 							Type:    "string",
 							Default: strings.TrimRight(mount, "/"),
 						},
-						Required: false,
+						Required: true,
 					})
 				}
 
