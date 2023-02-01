@@ -17,7 +17,6 @@ export const EXTENSION_OIDs = {
   subject_alt_name: '2.5.29.17', // contains SAN_TYPES below
   basic_constraints: '2.5.29.19', // contains max_path_length
   name_constraints: '2.5.29.30', // contains permitted_dns_domains
-  ext_key_usage: '2.5.29.37', // contains EXT_KEY_USAGE_OIDs OIDs below
 };
 
 // these are allowed ext oids, but not parsed and passed to cross-signed certs
@@ -70,16 +69,3 @@ export const KEY_USAGE_BITS = [
   'EncipherOnly',
   'DecipherOnly',
 ];
-
-export const EXT_KEY_USAGE_OIDs = {
-  '2.5.29.37.0': 'Any',
-  '1.3.6.1.5.5.7.3.1': 'ServerAuth',
-  '1.3.6.1.5.5.7.3.2': 'ClientAuth',
-  '1.3.6.1.5.5.7.3.3': 'CodeSigning',
-  '1.3.6.1.5.5.7.3.4': 'EmailProtection',
-  '1.3.6.1.5.5.7.3.5': 'IPSECEndSystem',
-  '1.3.6.1.5.5.7.3.6': 'IPSECTunnel',
-  '1.3.6.1.5.5.7.3.7': 'IPSECUser',
-  '1.3.6.1.5.5.7.3.8': 'TimeStamping',
-  '1.3.6.1.5.5.7.3.9': 'OCSPSigning',
-};
