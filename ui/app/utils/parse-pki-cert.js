@@ -203,7 +203,40 @@ export function parseExtensions(extensions) {
   }
 
   if (values.ip_sans) {
-    // TODO parse octet string for IP addresses
+    const parsed_ips = [];
+    for (const ip_san of values.ip_sans) {
+      const unused = ip_san.valueBlock.unusedBits;
+      if (unused !== undefined && unused !== null && unused !== 0) {
+        errors.push(new Error('unsupported ip_san value: non-zero unused bits in encoding'));
+        continue;
+      }
+
+      const ip = new Uint8Array(ip_san.valueBlock.valueHex);
+
+      // Length of the IP determines the type: 4 bytes for IPv4, 16 bytes for
+      // IPv6.
+      if (ip.length === 4) {
+        const ip_addr = ip.join('.');
+        parsed_ips.push(ip_addr);
+      } else if (ip.length === 16) {
+        const hex = ip.map((value) => '0' + new Number(value).toString(16));
+        const trimmed = hex.map((value) => value.substr(value.length - 2, 2));
+        const coloned = trimmed.map((index, value) => (index % 2 === 0 ? value : value + ':'));
+        const ip_addr = coloned.join('');
+        parsed_ips.push(ip_addr);
+      } else {
+        errors.push(
+          new Error(
+            'unsupported ip_san value: unknown IP address size (should be 4 or 16 bytes, was ' +
+              parseInt(ip.length / 2) +
+              ')'
+          )
+        );
+        continue;
+      }
+    }
+
+    values.ip_sans = parsed_ips;
   }
 
   if (values.key_usage) {
