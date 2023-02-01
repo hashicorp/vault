@@ -209,6 +209,10 @@ export function parseExtensions(extensions) {
     // TODO parse key_usage
   }
 
+  if (values.ext_key_usage) {
+    // TODO parse ext_key_usage
+  }
+
   delete values.subject_alt_name;
   delete values.basic_constraints;
   delete values.name_constraints;
