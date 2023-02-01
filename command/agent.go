@@ -729,7 +729,12 @@ func (c *AgentCommand) Run(args []string) int {
 			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
 		}
 
-		muxHandler := cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
+		var muxHandler http.Handler
+		if leaseCache != nil {
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, proxyVaultToken)
+		} else {
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
+		}
 
 		// Parse 'require_request_header' listener config option, and wrap
 		// the request handler if necessary
