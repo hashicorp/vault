@@ -5,4 +5,9 @@ module.exports = [
   //   destination: '/vault/docs/some/other/path',
   //   permanent: true,
   // },
+  {
+    source: '/vault/docs/plugins/plugin-portal',
+    destination: '/vault/integrations',
+    permanent: true,
+  }
 ]

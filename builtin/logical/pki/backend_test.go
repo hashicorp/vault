@@ -683,6 +683,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 }
 
 func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType string, keyBits int) (interface{}, []byte, string) {
+	t.Helper()
+
 	var priv interface{}
 	var err error
 	switch keyType {
@@ -814,6 +816,8 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 }
 
 func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int) (x509.CertificateRequest, string) {
+	t.Helper()
+
 	csrTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
 			Country:      []string{"MyCountry"},
@@ -5637,11 +5641,11 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	b.initializeStoredCertificateCounts(ctx)
 
 	// Test certificate count
-	if *(b.certCount) != 8 {
+	if atomic.LoadUint32(b.certCount) != 8 {
 		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", *(b.certCount))
 	}
 
-	if *(b.revokedCertCount) != 4 {
+	if atomic.LoadUint32(b.revokedCertCount) != 4 {
 		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", *(b.revokedCertCount))
 	}
 

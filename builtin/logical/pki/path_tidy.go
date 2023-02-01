@@ -1020,8 +1020,8 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
 	}
 
-	resp.Data["current_cert_store_count"] = b.certCount
-	resp.Data["current_revoked_cert_count"] = b.revokedCertCount
+	resp.Data["current_cert_store_count"] = atomic.LoadUint32(b.certCount)
+	resp.Data["current_revoked_cert_count"] = atomic.LoadUint32(b.revokedCertCount)
 
 	if !b.certsCounted.Load() {
 		resp.AddWarning("Certificates in storage are still being counted, current counts provided may be " +

@@ -1,0 +1,81 @@
+{{#if @model.id}}
+  {{! Model only has ID once form has been submitted and saved }}
+  <Toolbar />
+  <main data-test-sign-intermediate-result>
+    <div class="box is-sideless is-fullwidth is-shadowless">
+      <AlertBanner
+        @title="Next steps"
+        @type="warning"
+        @message="The CA Chain and Issuing CA values will only be available once. Make sure you copy and save it now."
+      />
+
+      {{#each this.showFields as |fieldName|}}
+        {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
+          <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
+            {{#if (and attr.options.masked (get @model attr.name))}}
+              <MaskedInput @value={{get @model attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
+            {{else if (eq attr.name "serialNumber")}}
+              <LinkTo
+                @route="certificates.certificate.details"
+                @model={{@model.serialNumber}}
+              >{{@model.serialNumber}}</LinkTo>
+            {{else}}
+              <Icon @name="minus" />
+            {{/if}}
+          </InfoTableRow>
+        {{/let}}
+      {{/each}}
+    </div>
+  </main>
+{{else}}
+  <form {{on "submit" (perform this.save)}} data-test-sign-intermediate-form>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+      <NamespaceReminder @mode={{"create"}} @noun="signed intermediate" />
+      {{#each @model.formFields as |attr|}}
+        <FormField
+          data-test-field={{attr}}
+          @attr={{attr}}
+          @model={{@model}}
+          @modelValidations={{this.modelValidations}}
+          @showHelpText={{false}}
+        >
+          {{! attr customTtl has editType yield and will show this component }}
+          <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+        </FormField>
+      {{/each}}
+
+      <PkiGenerateToggleGroups @model={{@model}} @groups={{this.groups}} />
+    </div>
+    <div class="has-top-padding-s">
+      <button
+        type="submit"
+        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+        disabled={{this.save.isRunning}}
+        data-test-pki-sign-intermediate-save
+      >
+        Save
+      </button>
+      <button
+        type="button"
+        class="button has-left-margin-s"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.cancel}}
+        data-test-pki-sign-intermediate-cancel
+      >
+        Cancel
+      </button>
+      {{#if this.inlineFormAlert}}
+        <div class="control">
+          <AlertInline
+            @type="danger"
+            @paddingTop={{true}}
+            @message={{this.inlineFormAlert}}
+            @mimicRefresh={{true}}
+            data-test-form-error
+          />
+        </div>
+      {{/if}}
+    </div>
+  </form>
+{{/if}}

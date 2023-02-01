@@ -561,7 +561,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			// be revoked after the call. So we have to do the validation here.
 			valid, err := c.validateWrappingToken(ctx, req)
 			if err != nil {
-				return nil, fmt.Errorf("error validating wrapping token: %w", err)
+				return logical.ErrorResponse(fmt.Sprintf("error validating wrapping token: %s", err.Error())), logical.ErrPermissionDenied
 			}
 			if !valid {
 				return nil, consts.ErrInvalidWrappingToken
