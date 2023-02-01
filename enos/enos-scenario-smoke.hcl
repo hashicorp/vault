@@ -296,6 +296,22 @@ scenario "smoke" {
     }
   }
 
+  step "verify_bruteforcing" {
+    skip_step  = semverconstraint(var.vault_product_version, "<1.13.0-0")
+    module     = module.vault_verify_bruteforcing
+    depends_on = [step.verify_read_test_data]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      node_public_ips   = step.get_vault_cluster_ips.follower_public_ips
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.vault_root_token
+    }
+  }
+
   output "vault_cluster_instance_ids" {
     description = "The Vault cluster instance IDs"
     value       = step.create_vault_cluster.instance_ids

@@ -197,3 +197,10 @@ module "vault_raft_remove_peer" {
   source            = "./modules/vault_raft_remove_peer"
   vault_install_dir = var.vault_install_dir
 }
+
+module "vault_verify_bruteforcing" {
+  source = "./modules/vault_verify_bruteforcing"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
