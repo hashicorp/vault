@@ -47,7 +47,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			SealWrapStorage: []string{
 				caPrivateKey,
 				caPrivateKeyStoragePath,
-				"keys/",
+				keysStoragePrefix,
 			},
 		},
 
@@ -62,6 +62,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathSign(&b),
 			pathIssue(&b),
 			pathFetchPublicKey(&b),
+			pathCleanupKeys(&b),
 		},
 
 		Secrets: []*framework.Secret{
