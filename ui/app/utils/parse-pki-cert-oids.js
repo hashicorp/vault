@@ -59,6 +59,18 @@ export const SIGNATURE_ALGORITHM_OIDs = {
   '1.3.101.112': '0', // Ed25519
 };
 
+export const KEY_USAGE_BITS = [
+  'DigitalSignature',
+  'ContentCommitment',
+  'KeyEncipherment',
+  'DataEncipherment',
+  'KeyAgreement',
+  'CertSign',
+  'CRLSign',
+  'EncipherOnly',
+  'DecipherOnly',
+];
+
 export const EXT_KEY_USAGE_OIDs = {
   '2.5.29.37.0': 'Any',
   '1.3.6.1.5.5.7.3.1': 'ServerAuth',

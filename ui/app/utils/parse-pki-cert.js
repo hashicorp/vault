@@ -1,13 +1,14 @@
 import * as asn1js from 'asn1js';
-import { fromBase64, stringToArrayBuffer } from 'pvutils';
+import { fromBase64, stringToArrayBuffer, arrayBufferToString } from 'pvutils';
 import { Certificate } from 'pkijs';
 import { differenceInHours, getUnixTime } from 'date-fns';
 import {
   EXTENSION_OIDs,
-  SUBJECT_OIDs,
+  KEY_USAGE_BITS,
   IGNORED_OIDs,
   SAN_TYPES,
   SIGNATURE_ALGORITHM_OIDs,
+  SUBJECT_OIDs,
 } from './parse-pki-cert-oids';
 
 /* 
@@ -87,8 +88,6 @@ export function formatValues(subject, extension) {
     }
   }
 
-  // TODO remove this deletion when key_usage is parsed, update test
-  delete extValues.key_usage;
   return {
     ...subjValues,
     ...extValues,
@@ -208,7 +207,44 @@ export function parseExtensions(extensions) {
   }
 
   if (values.key_usage) {
-    // TODO parse key_usage
+    // KeyUsage is a big-endian bit-packed enum. Unused right-most bits are
+    // truncated. So, a KeyUsage with CertSign+CRLSign would be "000001100",
+    // with the right two bits truncated, and packed into an 8-bit, one-byte
+    // string ("00000011"), introducing a leading zero. unused indicates that
+    // this bit can be discard, shifting our result over by one, to go back
+    // to its original form (minus trailing zeros).
+    //
+    // We can thus take our enumeration (KEY_USAGE_BITS), check whether the
+    // bits are asserted, and push in our pretty names as appropriate.
+    const unused = values.key_usage.valueBlock.unusedBits;
+    const keyUsage = arrayBufferToString(values.key_usage.valueBlock.valueHex);
+
+    const computedKeyUsages = [];
+    for (const enumIndex in KEY_USAGE_BITS) {
+      // May span two bytes.
+      const byteIndex = parseInt(enumIndex / 8);
+      const bitIndex = parseInt(enumIndex % 8);
+      const enumName = KEY_USAGE_BITS[enumIndex];
+      const mask = 1 << (8 - bitIndex); // Big endian.
+      if (byteIndex >= keyUsage.length) {
+        // DecipherOnly is rare and would push into a second byte, but we
+        // don't have one so exit.
+        break;
+      }
+
+      let codePoint = keyUsage.codePointAt(byteIndex); // Handle "unicode"-looking strings.
+      const needsAdjust = byteIndex + 1 === keyUsage.length && unused > 0;
+      if (needsAdjust) {
+        codePoint = parseInt(codePoint << unused);
+      }
+
+      const isSet = (mask & codePoint) === mask;
+      if (isSet) {
+        computedKeyUsages.push(enumName);
+      }
+    }
+
+    values.key_usage = computedKeyUsages;
   }
 
   if (values.ext_key_usage) {
