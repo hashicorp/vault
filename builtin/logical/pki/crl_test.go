@@ -979,7 +979,8 @@ func TestAutoRebuild(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	crl := getCrlCertificateList(t, client, "pki")
+	defaultCrlPath := "/v1/pki/crl"
+	crl := getParsedCrlAtPath(t, client, defaultCrlPath).TBSCertList
 	lastCRLNumber := getCRLNumber(t, crl)
 	lastCRLExpiry := crl.NextUpdate
 	requireSerialNumberInCRL(t, crl, leafSerial)
@@ -996,7 +997,7 @@ func TestAutoRebuild(t *testing.T) {
 
 	// Wait for the CRL to update based on the configuration change we just did
 	// so that it doesn't grab the revocation we are going to do afterwards.
-	crl = waitForUpdatedCrl(t, client, "pki", lastCRLNumber, lastCRLExpiry.Sub(time.Now()))
+	crl = waitForUpdatedCrl(t, client, defaultCrlPath, lastCRLNumber, lastCRLExpiry.Sub(time.Now()))
 	lastCRLNumber = getCRLNumber(t, crl)
 	lastCRLExpiry = crl.NextUpdate
 
@@ -1132,7 +1133,7 @@ func TestAutoRebuild(t *testing.T) {
 			deltaCrl := getParsedCrlAtPath(t, client, "/v1/pki/crl/delta").TBSCertList
 			if !requireSerialNumberInCRL(nil, deltaCrl, newLeafSerial) {
 				// Check if it is on the main CRL because its already regenerated.
-				mainCRL := getParsedCrlAtPath(t, client, "/v1/pki/crl").TBSCertList
+				mainCRL := getParsedCrlAtPath(t, client, defaultCrlPath).TBSCertList
 				requireSerialNumberInCRL(t, mainCRL, newLeafSerial)
 			} else {
 				referenceCrlNum := getCrlReferenceFromDelta(t, deltaCrl)
@@ -1149,7 +1150,7 @@ func TestAutoRebuild(t *testing.T) {
 		time.Sleep(expectedUpdate.Sub(now))
 	}
 
-	crl = waitForUpdatedCrl(t, client, "pki", lastCRLNumber, lastCRLExpiry.Sub(now)+delta)
+	crl = waitForUpdatedCrl(t, client, defaultCrlPath, lastCRLNumber, lastCRLExpiry.Sub(now)+delta)
 	requireSerialNumberInCRL(t, crl, leafSerial)
 	requireSerialNumberInCRL(t, crl, newLeafSerial)
 }

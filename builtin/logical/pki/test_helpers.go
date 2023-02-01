@@ -305,22 +305,55 @@ func getCrlReferenceFromDelta(t *testing.T, crl pkix.TBSCertificateList) int {
 	return 0
 }
 
-func waitForUpdatedCrl(t *testing.T, client *api.Client, mountPoint string, lastSeenCRLNumber int,
-	maxWait time.Duration,
-) pkix.TBSCertificateList {
+// waitForUpdatedCrl will wait until the CRL at the provided path has been reloaded
+// up for a maxWait duration and gives up if the timeout has been reached. If a negative
+// value for lastSeenCRLNumber is provided, the method will load the current CRL and wait
+// for a newer CRL be generated.
+func waitForUpdatedCrl(t *testing.T, client *api.Client, crlPath string, lastSeenCRLNumber int, maxWait time.Duration) pkix.TBSCertificateList {
 	t.Helper()
 
-	interruptChan := time.After(maxWait)
+	newCrl, didTimeOut := waitForUpdatedCrlUntil(t, client, crlPath, lastSeenCRLNumber, maxWait)
+	if didTimeOut {
+		t.Fatalf("Timed out waiting for new CRL rebuild on path %s", crlPath)
+	}
+	return newCrl.TBSCertList
+}
+
+// waitForUpdatedCrlUntil is a helper method that will wait for a CRL to be updated up until maxWait duration
+// or give up and return the last CRL it loaded. It will not fail, if it does not see a new CRL within the
+// max duration unlike waitForUpdatedCrl. Returns the last loaded CRL at the provided path and a boolean
+// indicating if we hit maxWait duration or not.
+func waitForUpdatedCrlUntil(t *testing.T, client *api.Client, crlPath string, lastSeenCrlNumber int, maxWait time.Duration) (*pkix.CertificateList, bool) {
+	t.Helper()
+
+	crl := getParsedCrlAtPath(t, client, crlPath)
+	initialCrlRevision := getCRLNumber(t, crl.TBSCertList)
+	newCrlRevision := initialCrlRevision
+
+	// Short circuit the fetches if we have a version of the CRL we want
+	if lastSeenCrlNumber > 0 && getCRLNumber(t, crl.TBSCertList) > lastSeenCrlNumber {
+		return crl, false
+	}
+
+	start := time.Now()
+	iteration := 0
 	for {
-		select {
-		case <-interruptChan:
-			t.Fatalf("expected CRL to regenerate after %s", maxWait)
-		default:
-			crl := getCrlCertificateList(t, client, mountPoint)
-			thisCRLNumber := getCRLNumber(t, crl)
-			if thisCRLNumber > lastSeenCRLNumber {
-				return crl
-			}
+		iteration++
+
+		if time.Since(start) > maxWait {
+			t.Logf("Timed out waiting for new CRL on path %s after iteration %d, delay: %v",
+				crlPath, iteration, time.Now().Sub(start))
+			return crl, true
 		}
+
+		crl = getParsedCrlAtPath(t, client, crlPath)
+		newCrlRevision = getCRLNumber(t, crl.TBSCertList)
+		if newCrlRevision > initialCrlRevision {
+			t.Logf("Got new revision of CRL %s from %d to %d after iteration %d, delay %v",
+				crlPath, initialCrlRevision, newCrlRevision, iteration, time.Now().Sub(start))
+			return crl, false
+		}
+
+		time.Sleep(100 * time.Millisecond)
 	}
 }
