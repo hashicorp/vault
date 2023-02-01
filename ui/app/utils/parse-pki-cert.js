@@ -277,6 +277,16 @@ export function parseExtensions(extensions) {
       }
     }
 
+    // Vault currently doesn't allow setting key_usage during issuer
+    // generation, but will allow it if it comes in via an externally
+    // generated CSR. Validate that key_usage matches expectations and
+    // prune accordingly.
+    if (computedKeyUsages !== ['CertSign', 'CRLSign']) {
+      errors.push(
+        new Error('unsupported key usage value on issuer certificate: ' + computedKeyUsages.join(', '))
+      );
+    }
+
     values.key_usage = computedKeyUsages;
   }
 
