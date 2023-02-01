@@ -219,7 +219,8 @@ export function parseExtensions(extensions) {
         const ip_addr = ip.join('.');
         parsed_ips.push(ip_addr);
       } else if (ip.length === 16) {
-        const hex = ip.map((value) => '0' + new Number(value).toString(16));
+        const src = new Array(ip);
+        const hex = src.map((value) => '0' + new Number(value).toString(16));
         const trimmed = hex.map((value) => value.substr(value.length - 2, 2));
         const coloned = trimmed.map((index, value) => (index % 2 === 0 ? value : value + ':'));
         const ip_addr = coloned.join('');
@@ -281,10 +282,12 @@ export function parseExtensions(extensions) {
     // generation, but will allow it if it comes in via an externally
     // generated CSR. Validate that key_usage matches expectations and
     // prune accordingly.
-    if (computedKeyUsages !== ['CertSign', 'CRLSign']) {
-      errors.push(
-        new Error('unsupported key usage value on issuer certificate: ' + computedKeyUsages.join(', '))
-      );
+    const expectedUsages = ['CertSign', 'CRLSign'];
+    const isUnexpectedKeyUsage = (ext) => !expectedUsages.includes(ext);
+
+    if (computedKeyUsages.any(isUnexpectedKeyUsage)) {
+      const unknown = computedKeyUsages.filter(isUnexpectedKeyUsage);
+      errors.push(new Error('unsupported key usage value on issuer certificate: ' + unknown.join(', ')));
     }
 
     values.key_usage = computedKeyUsages;
