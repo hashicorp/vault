@@ -483,31 +483,45 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 	}
 
 	// Check the capabilities using the root token
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req := &logical.Request{
 		Path:      "capabilities",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths": []string{path1, path2, path3, path4},
 			"token": rootToken,
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	rootCheckFunc(t, resp)
 
 	// Check the capabilities using capabilities-self
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req = &logical.Request{
 		ClientToken: rootToken,
 		Path:        "capabilities-self",
 		Operation:   logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths": []string{path1, path2, path3, path4},
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	rootCheckFunc(t, resp)
 
 	// Lookup the accessor of the root token
@@ -517,17 +531,24 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 	}
 
 	// Check the capabilities using capabilities-accessor endpoint
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req = &logical.Request{
 		Path:      "capabilities-accessor",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths":    []string{path1, path2, path3, path4},
 			"accessor": te.Accessor,
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	rootCheckFunc(t, resp)
 
 	// Create a non-root token
@@ -548,32 +569,46 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 	}
 
 	// Check the capabilities using a non-root token
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req = &logical.Request{
 		Path:      "capabilities",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths": []string{path1, path2, path3, path4},
 			"token": "tokenid",
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	nonRootCheckFunc(t, resp)
 
 	// Check the capabilities of a non-root token using capabilities-self
 	// endpoint
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req = &logical.Request{
 		ClientToken: "tokenid",
 		Path:        "capabilities-self",
 		Operation:   logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths": []string{path1, path2, path3, path4},
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	nonRootCheckFunc(t, resp)
 
 	// Lookup the accessor of the non-root token
@@ -584,17 +619,24 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 
 	// Check the capabilities using a non-root token using
 	// capabilities-accessor endpoint
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req = &logical.Request{
 		Path:      "capabilities-accessor",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths":    []string{path1, path2, path3, path4},
 			"accessor": te.Accessor,
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	nonRootCheckFunc(t, resp)
 }
 
