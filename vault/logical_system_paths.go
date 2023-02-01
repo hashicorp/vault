@@ -1892,7 +1892,7 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							// dynamic fields
-							Fields: map[string]*framework.FieldSchema{},
+							Fields: nil,
 						}},
 					},
 				},
@@ -1920,7 +1920,7 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							// dynamic fields
-							Fields: map[string]*framework.FieldSchema{},
+							Fields: nil,
 						}},
 						http.StatusNoContent: {{
 							Description: "No content",
@@ -2011,7 +2011,7 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							// dynamic fields
-							Fields: map[string]*framework.FieldSchema{},
+							Fields: nil,
 						}},
 					},
 				},
