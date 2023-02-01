@@ -112,14 +112,35 @@ export default class PkiActionModel extends Model {
 
   @attr('string', {
     label: 'Organizational Units (OU)',
+    subText:
+      'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
+    editType: 'stringArray',
   })
   ou;
-  @attr('string') organization;
-  @attr('string') country;
-  @attr('string') locality;
-  @attr('string') province;
-  @attr('string') streetAddress;
-  @attr('string') postalCode;
+  @attr({
+    editType: 'stringArray',
+  })
+  organization;
+  @attr({
+    editType: 'stringArray',
+  })
+  country;
+  @attr({
+    editType: 'stringArray',
+  })
+  locality;
+  @attr({
+    editType: 'stringArray',
+  })
+  province;
+  @attr({
+    editType: 'stringArray',
+  })
+  streetAddress;
+  @attr({
+    editType: 'stringArray',
+  })
+  postalCode;
 
   @attr('string', {
     subText: "Specifies the requested Subject's named Serial Number value.",
