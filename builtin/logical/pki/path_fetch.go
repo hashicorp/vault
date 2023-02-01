@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/constants"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -125,8 +127,13 @@ hyphen-separated octal`,
 
 // This returns the CRL in a non-raw format
 func pathFetchCRLViaCertPath(b *backend) *framework.Path {
+	pattern := `cert/(crl|delta-crl)`
+	if constants.IsEnterprise {
+		pattern = `cert/(crl|delta-crl|unified-crl|unified-delta-crl)`
+	}
+
 	return &framework.Path{
-		Pattern: `cert/(crl|delta-crl|unified-crl|unified-delta-crl)`,
+		Pattern: pattern,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
