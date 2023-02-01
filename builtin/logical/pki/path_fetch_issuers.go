@@ -945,6 +945,11 @@ func pathGetIssuerCRL(b *backend) *framework.Path {
 	return buildPathGetIssuerCRL(b, pattern)
 }
 
+func pathGetIssuerUnifiedCRL(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/unified-crl(/pem|/der|/delta(/pem|/der)?)?"
+	return buildPathGetIssuerCRL(b, pattern)
+}
+
 func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	fields = addIssuerRefNameFields(fields)
@@ -983,11 +988,20 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 	var certificate []byte
 	var contentType string
 
+	isUnified := strings.Contains(req.Path, "unified")
+	isDelta := strings.Contains(req.Path, "delta")
+
 	response := &logical.Response{}
 	var crlType ifModifiedReqType = ifModifiedCRL
-	if strings.Contains(req.Path, "delta") {
+
+	if !isUnified && isDelta {
 		crlType = ifModifiedDeltaCRL
+	} else if isUnified && !isDelta {
+		crlType = ifModifiedUnifiedCRL
+	} else if isUnified && isDelta {
+		crlType = ifModifiedUnifiedDeltaCRL
 	}
+
 	ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req, reqType: crlType}, sc, response)
 	if err != nil {
 		return nil, err
@@ -995,7 +1009,8 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 	if ret {
 		return response, nil
 	}
-	crlPath, err := sc.resolveIssuerCRLPath(issuerName)
+
+	crlPath, err := sc.resolveIssuerCRLPath(issuerName, isUnified)
 	if err != nil {
 		return nil, err
 	}

@@ -6,21 +6,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import Sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-
-const SELECTORS = {
-  mainSectionTitle: '[data-test-generate-root-title="Root parameters"]',
-  urlSectionTitle: '[data-test-generate-root-title="Issuer URLs"]',
-  keyParamsGroupToggle: '[data-test-toggle-group="Key parameters"]',
-  sanGroupToggle: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
-  additionalGroupToggle: '[data-test-toggle-group="Additional subject fields"]',
-  toggleGroupDescription: '[data-test-toggle-group-description]',
-  formField: '[data-test-field]',
-  typeField: '[data-test-input="type"]',
-  fieldByName: (name) => `[data-test-field="${name}"]`,
-  saveButton: '[data-test-pki-generate-root-save]',
-  cancelButton: '[data-test-pki-generate-root-cancel]',
-  formInvalidError: '[data-test-pki-generate-root-validation-error]',
-};
+import { SELECTORS } from 'vault/tests/helpers/pki/pki-generate-root';
 
 module('Integration | Component | pki-generate-root', function (hooks) {
   setupRenderingTest(hooks);
@@ -32,9 +18,8 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-test';
-    this.model = this.store.createRecord('pki/action', {
-      role: 'my-role',
-    });
+    this.urls = this.store.createRecord('pki/urls', { id: 'pki-test' });
+    this.model = this.store.createRecord('pki/action');
     this.onSave = Sinon.spy();
     this.onCancel = Sinon.spy();
   });
@@ -47,12 +32,8 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       }
     );
 
-    // Titles
+    assert.dom('h2').exists({ count: 1 }, 'One H2 title without @urls');
     assert.dom(SELECTORS.mainSectionTitle).hasText('Root parameters');
-    // TODO: Add this back once URLs section is added
-    // assert.dom('h2').exists({ count: 2 }, 'two H2 titles are visible on page load');
-    // assert.dom(SELECTORS.urlSectionTitle).hasText('Issuer URLs');
-
     assert.dom('[data-test-toggle-group]').exists({ count: 3 }, '3 toggle groups shown');
   });
 
@@ -184,8 +165,33 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       }
     );
 
-    await click(SELECTORS.saveButton);
+    await click(SELECTORS.generateRootSave);
     assert.dom(SELECTORS.formInvalidError).exists('Shows overall error form');
     assert.ok(saveSpy.notCalled);
+  });
+
+  module('URLs section', function () {
+    test('it does not render when no urls passed', async function (assert) {
+      await render(
+        hbs`<PkiGenerateRoot @model={{this.model}} @onSave={{this.onSave}} @onCancel={{this.onCancel}} />`,
+        {
+          owner: this.engine,
+        }
+      );
+
+      assert.dom(SELECTORS.urlsSection).doesNotExist();
+    });
+
+    test('it renders when urls model passed', async function (assert) {
+      await render(
+        hbs`<PkiGenerateRoot @model={{this.model}} @urls={{this.urls}} @onSave={{this.onSave}} @onCancel={{this.onCancel}} />`,
+        {
+          owner: this.engine,
+        }
+      );
+      assert.dom(SELECTORS.urlsSection).exists();
+      assert.dom('h2').exists({ count: 2 }, 'two H2 titles are visible on page load');
+      assert.dom(SELECTORS.urlSectionTitle).hasText('Issuer URLs');
+    });
   });
 });

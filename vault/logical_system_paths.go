@@ -874,12 +874,6 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"error": {
-								Required: false,
-								Type:     framework.TypeString,
-							},
-						},
 					}},
 				},
 				Summary: "Register a new plugin, or updates an existing one with the supplied name.",
@@ -1988,16 +1982,14 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"policies": {
-									Type:     framework.TypeStringSlice,
-									Required: false,
+									Type: framework.TypeStringSlice,
 								},
 								"keys": {
 									Type:     framework.TypeStringSlice,
 									Required: true,
 								},
-								"keys_info": {
-									Type:     framework.TypeMap,
-									Required: false,
+								"key_info": {
+									Type: framework.TypeMap,
 								},
 							},
 						}},
@@ -2010,16 +2002,14 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"policies": {
-									Type:     framework.TypeStringSlice,
-									Required: false,
+									Type: framework.TypeStringSlice,
 								},
 								"keys": {
 									Type:     framework.TypeStringSlice,
 									Required: true,
 								},
-								"keys_info": {
-									Type:     framework.TypeMap,
-									Required: false,
+								"key_info": {
+									Type: framework.TypeMap,
 								},
 							},
 						}},
@@ -2111,16 +2101,14 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"policies": {
-									Type:     framework.TypeStringSlice,
-									Required: false,
+									Type: framework.TypeStringSlice,
 								},
 								"keys": {
 									Type:     framework.TypeStringSlice,
 									Required: true,
 								},
-								"keys_info": {
-									Type:     framework.TypeMap,
-									Required: false,
+								"key_info": {
+									Type: framework.TypeMap,
 								},
 							},
 						}},

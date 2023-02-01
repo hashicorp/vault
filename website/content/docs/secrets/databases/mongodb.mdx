@@ -14,9 +14,9 @@ description: |-
 MongoDB is one of the supported plugins for the database secrets engine. This
 plugin generates database credentials dynamically based on configured roles for
 the MongoDB database and also supports
-[Static Roles](/docs/secrets/databases#static-roles).
+[Static Roles](/vault/docs/secrets/databases#static-roles).
 
-See the [database secrets engine](/docs/secrets/databases) docs for
+See the [database secrets engine](/vault/docs/secrets/databases) docs for
 more information about setting up the database secrets engine.
 
 ## Capabilities
@@ -103,13 +103,13 @@ for more information.
 ## Tutorial
 
 Refer to [Database Secrets Engine with
-MongoDB](https://learn.hashicorp.com/tutorials/vault/database-mongodb) for a
+MongoDB](/vault/tutorials/db-credentials/database-mongodb) for a
 step-by-step tutorial.
 
 ## API
 
 The full list of configurable options can be seen in the [MongoDB database
-plugin API](/api-docs/secret/databases/mongodb) page.
+plugin API](/vault/api-docs/secret/databases/mongodb) page.
 
 For more information on the database secrets engine's HTTP API please see the
-[Database secrets engine API](/api-docs/secret/databases) page.
+[Database secrets engine API](/vault/api-docs/secret/databases) page.

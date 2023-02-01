@@ -16,6 +16,8 @@ import (
 )
 
 func TestPKIHC_AllGood(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -70,6 +72,8 @@ func TestPKIHC_AllGood(t *testing.T) {
 }
 
 func TestPKIHC_AllBad(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -130,6 +134,8 @@ func TestPKIHC_AllBad(t *testing.T) {
 }
 
 func TestPKIHC_OnlyIssuer(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -152,6 +158,8 @@ func TestPKIHC_OnlyIssuer(t *testing.T) {
 }
 
 func TestPKIHC_NoMount(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -166,6 +174,8 @@ func TestPKIHC_NoMount(t *testing.T) {
 }
 
 func TestPKIHC_ExpectedEmptyMount(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -186,6 +196,8 @@ func TestPKIHC_ExpectedEmptyMount(t *testing.T) {
 }
 
 func TestPKIHC_NoPerm(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 

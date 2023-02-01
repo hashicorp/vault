@@ -232,7 +232,7 @@ These metrics are emitted on standbys when talking to the active node, and in so
 
 ## Replication Metrics
 
-These metrics relate to [Vault Enterprise Replication](/docs/enterprise/replication). The following metrics are not available in telemetry unless replication is in an unhealthy state: `replication.fetchRemoteKeys`, `replication.merkleDiff`, and `replication.merkleSync`.
+These metrics relate to [Vault Enterprise Replication](/vault/docs/enterprise/replication). The following metrics are not available in telemetry unless replication is in an unhealthy state: `replication.fetchRemoteKeys`, `replication.merkleDiff`, and `replication.merkleSync`.
 
 | Metric                                                        | Description                                                                                                                                | Unit            | Type    |
 | :------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------- | :-------------- | :------ |
@@ -509,7 +509,7 @@ indicate flapping leadership.
 
 ## Integrated Storage (Raft) Automated Snapshots
 
-These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs/enterprise/automated-integrated-storage-snapshots).
+These metrics related to the Enterprise feature [Raft Automated Snapshots](/vault/docs/enterprise/automated-integrated-storage-snapshots).
 
 | Metric                                      | Description                                                                                   | Unit       | Type    |
 | :------------------------------------------ | :-------------------------------------------------------------------------------------------- | :--------- | :------ |
@@ -538,48 +538,48 @@ These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs
 | `node_id`              | Unique identifier of a raft peer, same as peer_id.                                                                                                                                                                                                    | `node-1`                |
 | `snapshot_config_name` | For automated snapshots, the name of the configuration                                                                                                                                                                                                | `config1`               |
 
-[secrets-engines]: /docs/secrets
+[secrets-engines]: /vault/docs/secrets
 
-[storage-backends]: /docs/configuration/storage
+[storage-backends]: /vault/docs/configuration/storage
 
-[telemetry-stanza]: /docs/configuration/telemetry
+[telemetry-stanza]: /vault/docs/configuration/telemetry
 
-[cubbyhole-secrets-engine]: /docs/secrets/cubbyhole
+[cubbyhole-secrets-engine]: /vault/docs/secrets/cubbyhole
 
-[kv-secrets-engine]: /docs/secrets/kv
+[kv-secrets-engine]: /vault/docs/secrets/kv
 
-[ldap-auth-backend]: /docs/auth/ldap
+[ldap-auth-backend]: /vault/docs/auth/ldap
 
-[token-auth-backend]: /docs/auth/token
+[token-auth-backend]: /vault/docs/auth/token
 
-[azure-storage-backend]: /docs/configuration/storage/azure
+[azure-storage-backend]: /vault/docs/configuration/storage/azure
 
-[cassandra-storage-backend]: /docs/configuration/storage/cassandra
+[cassandra-storage-backend]: /vault/docs/configuration/storage/cassandra
 
-[cockroachdb-storage-backend]: /docs/configuration/storage/cockroachdb
+[cockroachdb-storage-backend]: /vault/docs/configuration/storage/cockroachdb
 
-[consul-storage-backend]: /docs/configuration/storage/consul
+[consul-storage-backend]: /vault/docs/configuration/storage/consul
 
-[couchdb-storage-backend]: /docs/configuration/storage/couchdb
+[couchdb-storage-backend]: /vault/docs/configuration/storage/couchdb
 
-[dynamodb-storage-backend]: /docs/configuration/storage/dynamodb
+[dynamodb-storage-backend]: /vault/docs/configuration/storage/dynamodb
 
-[etcd-storage-backend]: /docs/configuration/storage/etcd
+[etcd-storage-backend]: /vault/docs/configuration/storage/etcd
 
-[gcs-storage-backend]: /docs/configuration/storage/google-cloud-storage
+[gcs-storage-backend]: /vault/docs/configuration/storage/google-cloud-storage
 
-[spanner-storage-backend]: /docs/configuration/storage/google-cloud-spanner
+[spanner-storage-backend]: /vault/docs/configuration/storage/google-cloud-spanner
 
-[mssql-storage-backend]: /docs/configuration/storage/mssql
+[mssql-storage-backend]: /vault/docs/configuration/storage/mssql
 
-[mysql-storage-backend]: /docs/configuration/storage/mysql
+[mysql-storage-backend]: /vault/docs/configuration/storage/mysql
 
-[postgresql-storage-backend]: /docs/configuration/storage/postgresql
+[postgresql-storage-backend]: /vault/docs/configuration/storage/postgresql
 
-[s3-storage-backend]: /docs/configuration/storage/s3
+[s3-storage-backend]: /vault/docs/configuration/storage/s3
 
-[swift-storage-backend]: /docs/configuration/storage/swift
+[swift-storage-backend]: /vault/docs/configuration/storage/swift
 
-[zookeeper-storage-backend]: /docs/configuration/storage/zookeeper
+[zookeeper-storage-backend]: /vault/docs/configuration/storage/zookeeper
 
-[integrated-storage]: /docs/configuration/storage/raft
+[integrated-storage]: /vault/docs/configuration/storage/raft

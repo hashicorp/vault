@@ -8,7 +8,7 @@ description: |-
 
 # `awskms` Seal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/docs/enterprise/sealwrap) documenation for more information.
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documenation for more information.
 
 The AWS KMS seal configures Vault to use AWS KMS as the seal wrapping mechanism.
 The AWS KMS seal is activated by one of the following:
@@ -67,7 +67,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   Endpoint](https://docs.aws.amazon.com/kms/latest/developerguide/kms-vpc-endpoint.html).
   If not set, Vault will use the default API endpoint for your region.
 
-Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 
 ## Authentication
 
