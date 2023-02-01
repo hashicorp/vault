@@ -3,19 +3,14 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
+import { SELECTORS } from 'vault/tests/helpers/pki/pki-configure-form';
 
-const SELECTORS = {
-  option: '[data-test-pki-config-option]',
-  optionByKey: (key) => `[data-test-pki-config-option="${key}"]`,
-  cancelButton: '[data-test-pki-config-cancel]',
-  saveButton: '[data-test-pki-config-save]',
-};
 module('Integration | Component | pki-configure-form', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
   test('it renders', async function (assert) {
-    await render(hbs`<PkiConfigureForm />`, { owner: this.engine });
+    await render(hbs`<PkiConfigureForm @config={{this.config}} />`, { owner: this.engine });
 
     assert.dom(SELECTORS.option).exists({ count: 3 }, 'Three configuration options are shown');
     assert.dom(SELECTORS.cancelButton).exists('Cancel link is shown');

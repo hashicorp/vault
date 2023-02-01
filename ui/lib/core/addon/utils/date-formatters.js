@@ -23,17 +23,6 @@ export const parseAPITimestamp = (timestamp, style) => {
   return format(date, style);
 };
 
-// convert ISO timestamp '2021-03-21T00:00:00Z' to ['2021', 2]
-// (e.g. 2021 March, month is zero indexed) (used by calendar widget)
-export const parseRFC3339 = (timestamp) => {
-  if (Array.isArray(timestamp)) {
-    // return if already formatted correctly
-    return timestamp;
-  }
-  const date = parseAPITimestamp(timestamp);
-  return date ? [`${date.getFullYear()}`, date.getMonth()] : null;
-};
-
 // convert M/yy (format of dates in charts) to 'Month yyyy' (format in tooltip)
 export function formatChartDate(date) {
   const array = date.split('/');

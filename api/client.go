@@ -114,7 +114,11 @@ type Config struct {
 	// of three tries).
 	MaxRetries int
 
-	// Timeout is for setting custom timeout parameter in the HttpClient
+	// Timeout, given a non-negative value, will apply the request timeout
+	// to each request function unless an earlier deadline is passed to the
+	// request function through context.Context. Note that this timeout is
+	// not applicable to Logical().ReadRaw* (raw response) functions.
+	// Defaults to 60 seconds.
 	Timeout time.Duration
 
 	// If there is an error when creating the configuration, this will be the

@@ -124,10 +124,11 @@ func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
 	}
 
 	return &logical.Paths{
-		Root:            reply.Paths.Root,
-		Unauthenticated: reply.Paths.Unauthenticated,
-		LocalStorage:    reply.Paths.LocalStorage,
-		SealWrapStorage: reply.Paths.SealWrapStorage,
+		Root:                  reply.Paths.Root,
+		Unauthenticated:       reply.Paths.Unauthenticated,
+		LocalStorage:          reply.Paths.LocalStorage,
+		SealWrapStorage:       reply.Paths.SealWrapStorage,
+		WriteForwardedStorage: reply.Paths.WriteForwardedStorage,
 	}
 }
 

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -118,7 +120,7 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -150,7 +152,7 @@ func TestCore_BuiltinRegistry(t *testing.T) {
 		PluginDirectory: "/Users/foo",
 
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 	}
 	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
 
@@ -201,7 +203,7 @@ func TestCore_EnableCredential(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -260,7 +262,7 @@ func TestCore_EnableCredential_aws_ec2(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -462,7 +464,7 @@ func TestCore_DisableCredential(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}

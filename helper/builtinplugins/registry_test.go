@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
@@ -35,9 +35,16 @@ func Test_RegistryGet(t *testing.T) {
 		},
 		{
 			name:       "known builtin lookup",
+			builtin:    "userpass",
+			pluginType: consts.PluginTypeCredential,
+			want:       toFunc(credUserpass.Factory),
+			wantOk:     true,
+		},
+		{
+			name:       "removed builtin lookup",
 			builtin:    "app-id",
 			pluginType: consts.PluginTypeCredential,
-			want:       toFunc(credAppId.Factory),
+			want:       nil,
 			wantOk:     true,
 		},
 		{
@@ -81,7 +88,7 @@ func Test_RegistryKeyCounts(t *testing.T) {
 		{
 			name:       "number of auth plugins",
 			pluginType: consts.PluginTypeCredential,
-			want:       20,
+			want:       19,
 		},
 		{
 			name:       "number of database plugins",
@@ -91,7 +98,7 @@ func Test_RegistryKeyCounts(t *testing.T) {
 		{
 			name:       "number of secrets plugins",
 			pluginType: consts.PluginTypeSecrets,
-			want:       24,
+			want:       19,
 		},
 	}
 	for _, tt := range tests {
@@ -126,9 +133,15 @@ func Test_RegistryContains(t *testing.T) {
 		},
 		{
 			name:       "known builtin lookup",
-			builtin:    "app-id",
+			builtin:    "approle",
 			pluginType: consts.PluginTypeCredential,
 			want:       true,
+		},
+		{
+			name:       "removed builtin lookup",
+			builtin:    "app-id",
+			pluginType: consts.PluginTypeCredential,
+			want:       false,
 		},
 	}
 	for _, tt := range tests {
@@ -186,10 +199,10 @@ func Test_RegistryStatus(t *testing.T) {
 			wantOk:     true,
 		},
 		{
-			name:       "pending removal builtin lookup",
+			name:       "removed builtin lookup",
 			builtin:    "app-id",
 			pluginType: consts.PluginTypeCredential,
-			want:       consts.PendingRemoval,
+			want:       consts.Removed,
 			wantOk:     true,
 		},
 	}

@@ -197,68 +197,84 @@ can only be set during role creation and once set, it can't be reset later.`,
 						Fields: map[string]*framework.FieldSchema{
 							"bind_secret_id": {
 								Type:        framework.TypeBool,
+								Required:    true,
 								Description: "Impose secret ID to be presented when logging in using this role.",
 							},
 							"secret_id_bound_cidrs": {
 								Type:        framework.TypeCommaStringSlice,
+								Required:    true,
 								Description: "Comma separated string or list of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.",
 							},
 							"secret_id_num_uses": {
 								Type:        framework.TypeInt,
+								Required:    true,
 								Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
 							},
 							"secret_id_ttl": {
 								Type:        framework.TypeDurationSecond,
+								Required:    true,
 								Description: "Duration in seconds after which the issued secret ID expires.",
 							},
 							"local_secret_ids": {
 								Type:        framework.TypeBool,
+								Required:    true,
 								Description: "If true, the secret identifiers generated using this role will be cluster local. This can only be set during role creation and once set, it can't be reset later",
 							},
 							"token_bound_cidrs": {
 								Type:        framework.TypeCommaStringSlice,
+								Required:    true,
 								Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
 							},
 							"token_explicit_max_ttl": {
 								Type:        framework.TypeDurationSecond,
+								Required:    true,
 								Description: "If set, tokens created via this role carry an explicit maximum TTL. During renewal, the current maximum TTL values of the role and the mount are not checked for changes, and any updates to these values will have no effect on the token being renewed.",
 							},
 							"token_max_ttl": {
 								Type:        framework.TypeDurationSecond,
+								Required:    true,
 								Description: "The maximum lifetime of the generated token",
 							},
 							"token_no_default_policy": {
 								Type:        framework.TypeBool,
+								Required:    true,
 								Description: "If true, the 'default' policy will not automatically be added to generated tokens",
 							},
 							"token_period": {
 								Type:        framework.TypeDurationSecond,
+								Required:    true,
 								Description: "If set, tokens created via this role will have no max lifetime; instead, their renewal period will be fixed to this value.",
 							},
 							"token_policies": {
 								Type:        framework.TypeCommaStringSlice,
+								Required:    true,
 								Description: "Comma-separated list of policies",
 							},
 							"token_type": {
 								Type:        framework.TypeString,
+								Required:    true,
 								Default:     "default-service",
 								Description: "The type of token to generate, service or batch",
 							},
 							"token_ttl": {
 								Type:        framework.TypeDurationSecond,
+								Required:    true,
 								Description: "The initial ttl of the token to generate",
 							},
 							"token_num_uses": {
 								Type:        framework.TypeInt,
+								Required:    true,
 								Description: "The maximum number of times a token may be used, a value of zero means unlimited",
 							},
 							"period": {
 								Type:        framework.TypeDurationSecond,
+								Required:    false,
 								Description: tokenutil.DeprecationText("token_period"),
 								Deprecated:  true,
 							},
 							"policies": {
 								Type:        framework.TypeCommaStringSlice,
+								Required:    false,
 								Description: tokenutil.DeprecationText("token_policies"),
 								Deprecated:  true,
 							},
@@ -289,7 +305,8 @@ can only be set during role creation and once set, it can't be reset later.`,
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"keys": {
-									Type: framework.TypeStringSlice,
+									Type:     framework.TypeStringSlice,
+									Required: true,
 								},
 							},
 						}},
@@ -316,6 +333,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 							Fields: map[string]*framework.FieldSchema{
 								"local_secret_ids": {
 									Type:        framework.TypeBool,
+									Required:    true,
 									Description: "If true, the secret identifiers generated using this role will be cluster local. This can only be set during role creation and once set, it can't be reset later",
 								},
 							},
@@ -356,11 +374,13 @@ can only be set during role creation and once set, it can't be reset later.`,
 							Fields: map[string]*framework.FieldSchema{
 								"policies": {
 									Type:        framework.TypeCommaStringSlice,
+									Required:    false,
 									Description: tokenutil.DeprecationText("token_policies"),
 									Deprecated:  true,
 								},
 								"token_policies": {
 									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
 									Description: defTokenFields["token_policies"].Description,
 								},
 							},
@@ -401,8 +421,9 @@ of CIDR blocks. If set, specifies the blocks of IP addresses which can perform t
 							Fields: map[string]*framework.FieldSchema{
 								"bound_cidr_list": {
 									Type:        framework.TypeCommaStringSlice,
-									Deprecated:  true,
+									Required:    true,
 									Description: `Deprecated: Please use "secret_id_bound_cidrs" instead. Comma separated string or list of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
+									Deprecated:  true,
 								},
 							},
 						}},
@@ -442,6 +463,7 @@ IP addresses which can perform the login operation.`,
 							Fields: map[string]*framework.FieldSchema{
 								"secret_id_bound_cidrs": {
 									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
 									Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
 								},
 							},
@@ -481,6 +503,7 @@ IP addresses which can perform the login operation.`,
 							Fields: map[string]*framework.FieldSchema{
 								"token_bound_cidrs": {
 									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
 									Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,
 								},
 							},
@@ -521,6 +544,7 @@ IP addresses which can perform the login operation.`,
 							Fields: map[string]*framework.FieldSchema{
 								"bind_secret_id": {
 									Type:        framework.TypeBool,
+									Required:    true,
 									Description: "Impose secret_id to be presented when logging in using this role. Defaults to 'true'.",
 								},
 							},
@@ -560,6 +584,7 @@ IP addresses which can perform the login operation.`,
 							Fields: map[string]*framework.FieldSchema{
 								"secret_id_num_uses": {
 									Type:        framework.TypeInt,
+									Required:    true,
 									Description: "Number of times a secret ID can access the role, after which the SecretID will expire. Defaults to 0 meaning that the secret ID is of unlimited use.",
 								},
 							},
@@ -600,6 +625,7 @@ to 0, meaning no expiration.`,
 							Fields: map[string]*framework.FieldSchema{
 								"secret_id_ttl": {
 									Type:        framework.TypeDurationSecond,
+									Required:    true,
 									Description: "Duration in seconds after which the issued secret ID should expire. Defaults to 0, meaning no expiration.",
 								},
 							},
@@ -644,11 +670,13 @@ to 0, meaning no expiration.`,
 							Fields: map[string]*framework.FieldSchema{
 								"period": {
 									Type:        framework.TypeDurationSecond,
+									Required:    false,
 									Description: tokenutil.DeprecationText("token_period"),
 									Deprecated:  true,
 								},
 								"token_period": {
 									Type:        framework.TypeDurationSecond,
+									Required:    true,
 									Description: defTokenFields["token_period"].Description,
 								},
 							},
@@ -688,6 +716,7 @@ to 0, meaning no expiration.`,
 							Fields: map[string]*framework.FieldSchema{
 								"token_num_uses": {
 									Type:        framework.TypeInt,
+									Required:    true,
 									Description: defTokenFields["token_num_uses"].Description,
 								},
 							},
@@ -727,6 +756,7 @@ to 0, meaning no expiration.`,
 							Fields: map[string]*framework.FieldSchema{
 								"token_ttl": {
 									Type:        framework.TypeDurationSecond,
+									Required:    true,
 									Description: defTokenFields["token_ttl"].Description,
 								},
 							},
@@ -766,6 +796,7 @@ to 0, meaning no expiration.`,
 							Fields: map[string]*framework.FieldSchema{
 								"token_max_ttl": {
 									Type:        framework.TypeDurationSecond,
+									Required:    true,
 									Description: defTokenFields["token_max_ttl"].Description,
 								},
 							},
@@ -801,6 +832,7 @@ to 0, meaning no expiration.`,
 							Fields: map[string]*framework.FieldSchema{
 								"role_id": {
 									Type:        framework.TypeString,
+									Required:    false,
 									Description: "Identifier of the role. Defaults to a UUID.",
 								},
 							},
@@ -858,18 +890,22 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 							Fields: map[string]*framework.FieldSchema{
 								"secret_id": {
 									Type:        framework.TypeString,
+									Required:    true,
 									Description: "Secret ID attached to the role.",
 								},
 								"secret_id_accessor": {
 									Type:        framework.TypeString,
+									Required:    true,
 									Description: "Accessor of the secret ID",
 								},
 								"secret_id_ttl": {
 									Type:        framework.TypeDurationSecond,
+									Required:    true,
 									Description: "Duration in seconds after which the issued secret ID expires.",
 								},
 								"secret_id_num_uses": {
 									Type:        framework.TypeInt,
+									Required:    true,
 									Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
 								},
 							},
@@ -883,7 +919,8 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"keys": {
-									Type: framework.TypeStringSlice,
+									Required: true,
+									Type:     framework.TypeStringSlice,
 								},
 							},
 						}},
@@ -914,34 +951,43 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 							Fields: map[string]*framework.FieldSchema{
 								"secret_id_accessor": {
 									Type:        framework.TypeString,
+									Required:    true,
 									Description: "Accessor of the secret ID",
 								},
 								"secret_id_ttl": {
 									Type:        framework.TypeDurationSecond,
+									Required:    true,
 									Description: "Duration in seconds after which the issued secret ID expires.",
 								},
 								"secret_id_num_uses": {
 									Type:        framework.TypeInt,
+									Required:    true,
 									Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
 								},
 								"creation_time": {
-									Type: framework.TypeTime,
+									Type:     framework.TypeTime,
+									Required: true,
 								},
 								"expiration_time": {
-									Type: framework.TypeTime,
+									Type:     framework.TypeTime,
+									Required: true,
 								},
 								"last_updated_time": {
-									Type: framework.TypeTime,
+									Type:     framework.TypeTime,
+									Required: true,
 								},
 								"metadata": {
-									Type: framework.TypeMap,
+									Type:     framework.TypeKVPairs,
+									Required: true,
 								},
 								"cidr_list": {
 									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
 									Description: "List of CIDR blocks enforcing secret IDs to be used from specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the list of CIDR blocks listed here should be a subset of the CIDR blocks listed on the role.",
 								},
 								"token_bound_cidrs": {
 									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
 									Description: "List of CIDR blocks. If set, specifies the blocks of IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.",
 								},
 							},
@@ -998,34 +1044,43 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 							Fields: map[string]*framework.FieldSchema{
 								"secret_id_accessor": {
 									Type:        framework.TypeString,
+									Required:    true,
 									Description: "Accessor of the secret ID",
 								},
 								"secret_id_ttl": {
 									Type:        framework.TypeDurationSecond,
+									Required:    true,
 									Description: "Duration in seconds after which the issued secret ID expires.",
 								},
 								"secret_id_num_uses": {
 									Type:        framework.TypeInt,
+									Required:    true,
 									Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
 								},
 								"creation_time": {
-									Type: framework.TypeTime,
+									Type:     framework.TypeTime,
+									Required: true,
 								},
 								"expiration_time": {
-									Type: framework.TypeTime,
+									Type:     framework.TypeTime,
+									Required: true,
 								},
 								"last_updated_time": {
-									Type: framework.TypeTime,
+									Type:     framework.TypeTime,
+									Required: true,
 								},
 								"metadata": {
-									Type: framework.TypeMap,
+									Type:     framework.TypeKVPairs,
+									Required: true,
 								},
 								"cidr_list": {
 									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
 									Description: "List of CIDR blocks enforcing secret IDs to be used from specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the list of CIDR blocks listed here should be a subset of the CIDR blocks listed on the role.",
 								},
 								"token_bound_cidrs": {
 									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
 									Description: "List of CIDR blocks. If set, specifies the blocks of IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.",
 								},
 							},
@@ -1109,18 +1164,22 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 							Fields: map[string]*framework.FieldSchema{
 								"secret_id": {
 									Type:        framework.TypeString,
+									Required:    true,
 									Description: "Secret ID attached to the role.",
 								},
 								"secret_id_accessor": {
 									Type:        framework.TypeString,
+									Required:    true,
 									Description: "Accessor of the secret ID",
 								},
 								"secret_id_ttl": {
 									Type:        framework.TypeDurationSecond,
+									Required:    true,
 									Description: "Duration in seconds after which the issued secret ID expires.",
 								},
 								"secret_id_num_uses": {
 									Type:        framework.TypeInt,
+									Required:    true,
 									Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
 								},
 							},

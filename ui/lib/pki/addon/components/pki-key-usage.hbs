@@ -19,6 +19,7 @@
 />
 <div class="has-top-margin-xxl">
   <StringList
+    class="is-box-shadowless"
     data-test-input="extKeyUsageOids"
     @label="Extended key usage oids"
     @inputValue={{get @model "extKeyUsageOids"}}
@@ -26,6 +27,5 @@
     @attrName="extKeyUsageOids"
     @subText="A list of extended key usage oids. Add one item per row."
     @showHelpText={{false}}
-    @hideFormSection={{true}}
   />
 </div>

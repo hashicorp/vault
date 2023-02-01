@@ -10,53 +10,67 @@
 />
 {{outlet}}
 <Toolbar>
-  {{#if this.model.certificateModel.length}}
+  {{#if this.model.certificates.length}}
     <ToolbarFilters>
       {{! ARG TODO glimmerize the NavigateInput and refactor so you can use it in an engine }}
     </ToolbarFilters>
   {{/if}}
 </Toolbar>
-{{#if this.model.certificateModel.length}}
-  {{#each this.model.certificateModel as |pkiCertificate|}}
-    <LinkedBlock
-      class="list-item-row"
-      @params={{array "certificates.certificate.details" pkiCertificate.id}}
-      @linkPrefix={{this.mountPoint}}
-    >
-      <div class="level is-mobile">
-        <div class="level-left">
-          <div>
-            <Icon @name="certificate" class="has-text-grey-light" />
-            <span class="has-text-weight-semibold is-underline">
-              {{pkiCertificate.id}}
-            </span>
-            <div class="is-flex-row has-left-margin-l has-top-margin-xs">
+
+{{#if this.model.hasConfig}}
+  {{#if this.model.certificates.length}}
+    {{#each this.model.certificates as |pkiCertificate|}}
+      <LinkedBlock
+        class="list-item-row"
+        @params={{array "certificates.certificate.details" pkiCertificate.id}}
+        @linkPrefix={{this.mountPoint}}
+      >
+        <div class="level is-mobile">
+          <div class="level-left">
+            <div>
+              <Icon @name="certificate" class="has-text-grey-light" />
+              <span class="has-text-weight-semibold is-underline">
+                {{pkiCertificate.id}}
+              </span>
+              <div class="is-flex-row has-left-margin-l has-top-margin-xs">
+              </div>
+            </div>
+          </div>
+          <div class="level-right is-flex is-paddingless is-marginless">
+            <div class="level-item">
+              <PopupMenu>
+                <nav class="menu">
+                  <ul class="menu-list">
+                    <li>
+                      <LinkTo @route="certificates.certificate.details" @model={{pkiCertificate.id}}>
+                        Details
+                      </LinkTo>
+                    </li>
+                    {{! ARG TODO ask Ivana if we wnat revoke or maybe download action here? }}
+                  </ul>
+                </nav>
+              </PopupMenu>
             </div>
           </div>
         </div>
-        <div class="level-right is-flex is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu>
-              <nav class="menu">
-                <ul class="menu-list">
-                  <li>
-                    <LinkTo @route="certificates.certificate.details" @model={{pkiCertificate.id}}>
-                      Details
-                    </LinkTo>
-                  </li>
-                  {{! ARG TODO ask Ivana if we wnat revoke or maybe download action here? }}
-                </ul>
-              </nav>
-            </PopupMenu>
-          </div>
+      </LinkedBlock>
+    {{/each}}
+  {{else}}
+    <EmptyState @title="No certificates yet">
+      <div>
+        <p>When created, certificates will be listed here. Select a role to start generating certificates.</p>
+        <div class="has-top-margin-m">
+          <LinkTo @route="roles.index">
+            View roles
+          </LinkTo>
         </div>
       </div>
-    </LinkedBlock>
-  {{/each}}
+    </EmptyState>
+  {{/if}}
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
     <LinkTo @route="configuration.create">
-      {{! ARG TODO if configuration of engine not setup then direct toward setting that up otherwise replace with new design language }}
+      Configure PKI
     </LinkTo>
   </EmptyState>
 {{/if}}

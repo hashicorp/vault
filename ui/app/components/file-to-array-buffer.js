@@ -23,7 +23,7 @@ export default Component.extend({
   fileHelpText: null,
 
   file: null,
-  fileName: null,
+  filename: null,
   fileSize: null,
   fileLastModified: null,
 
@@ -54,7 +54,7 @@ export default Component.extend({
       const { name, size, lastModifiedDate } = fileMeta || {};
       const fileSize = size ? filesize(size) : null;
       this.set('file', fileAsBytes);
-      this.set('fileName', name);
+      this.set('filename', name);
       this.set('fileSize', fileSize);
       this.set('fileLastModified', lastModifiedDate);
       this.onChange(fileAsBytes, name);

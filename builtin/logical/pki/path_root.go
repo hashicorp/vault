@@ -80,8 +80,12 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 		}
 	}
 
-	// Delete legacy CA bundle.
+	// Delete legacy CA bundle and its backup, if any.
 	if err := req.Storage.Delete(ctx, legacyCertBundlePath); err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Delete(ctx, legacyCertBundleBackupPath); err != nil {
 		return nil, err
 	}
 

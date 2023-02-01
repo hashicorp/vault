@@ -20,8 +20,7 @@ Router.map(function () {
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
-        this.route('current');
-        this.route('history');
+        this.route('dashboard');
         this.route('config');
         this.route('edit');
       });
@@ -154,9 +153,8 @@ Router.map(function () {
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
-          if (config.environment !== 'production') {
-            this.mount('pki');
-          }
+          this.mount('kubernetes');
+          this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration');
           // because globs / params can't be empty,

@@ -621,8 +621,16 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	// Sync values to the cache
 	entry.SyncCache()
 
+	// Resolution to absolute storage paths (versus uuid-relative) needs
+	// to happen prior to calling into the forwarded writer. Thus we
+	// intercept writes just before they hit barrier storage.
+	forwarded, err := c.NewForwardedWriter(ctx, c.barrier, entry.Local)
+	if err != nil {
+		return fmt.Errorf("error creating forwarded writer: %v", err)
+	}
+
 	viewPath := entry.ViewPath()
-	view := NewBarrierView(c.barrier, viewPath)
+	view := NewBarrierView(forwarded, viewPath)
 
 	// Singleton mounts cannot be filtered manually on a per-secondary basis
 	// from replication.
@@ -1145,9 +1153,9 @@ func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.Moun
 	return nil
 }
 
-// From an input path that has a relative namespace heirarchy followed by a mount point, return the full
+// From an input path that has a relative namespace hierarchy followed by a mount point, return the full
 // namespace of the mount point, along with the mount point without the namespace related prefix.
-// For example, in a heirarchy ns1/ns2/ns3/secret-mount, when currNs is ns1 and path is ns2/ns3/secret-mount,
+// For example, in a hierarchy ns1/ns2/ns3/secret-mount, when currNs is ns1 and path is ns2/ns3/secret-mount,
 // this returns the namespace object for ns1/ns2/ns3/, and the string "secret-mount"
 func (c *Core) splitNamespaceAndMountFromPath(currNs, path string) namespace.MountPathDetails {
 	fullPath := currNs + path
@@ -1424,8 +1432,16 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Initialize the backend, special casing for system
 		barrierPath := entry.ViewPath()
 
-		// Create a barrier view using the UUID
-		view := NewBarrierView(c.barrier, barrierPath)
+		// Resolution to absolute storage paths (versus uuid-relative) needs
+		// to happen prior to calling into the forwarded writer. Thus we
+		// intercept writes just before they hit barrier storage.
+		forwarded, err := c.NewForwardedWriter(ctx, c.barrier, entry.Local)
+		if err != nil {
+			return fmt.Errorf("error creating forwarded writer: %v", err)
+		}
+
+		// Create a barrier storage view using the UUID
+		view := NewBarrierView(forwarded, barrierPath)
 
 		// Singleton mounts cannot be filtered manually on a per-secondary basis
 		// from replication
