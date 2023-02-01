@@ -43,12 +43,13 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         country: 'France',
         exclude_cn_from_sans: true,
         expiry_date: {},
-        ip_sans: 'OCTET STRING : C09E0126', // when parsed, should be 192.158.1.38
+        ip_sans: '192.158.1.38, 1234:fd2:5621:1:89::4500',
+        key_usage: 'CertSign, CRLSign',
         issue_date: {},
         locality: 'Paris',
         max_path_length: 17,
-        not_valid_after: 1989622380,
-        not_valid_before: 1674262350,
+        not_valid_after: 1678057874,
+        not_valid_before: 1675293044,
         organization: 'Widget',
         ou: 'Finance',
         parsing_errors: [],
@@ -56,13 +57,13 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         postal_code: '123456',
         province: 'Champagne',
         serial_number: 'cereal1292',
-        signature_bits: '512',
+        signature_bits: '256',
         street_address: '234 sesame',
-        ttl: '87600h',
+        ttl: '768h',
         uri_sans: 'testuri1, testuri2',
         use_pss: false,
       },
-      'it contains expected attrs, cn is excluded from alt_names (exclude_cn_from_sans: true)'
+      'it contains expected attrs, cn is excluded from alt_names (exclude_cn_from_sans: true) and ipV6 is compressed correctly'
     );
     assert.ok(
       isSameDay(
@@ -103,7 +104,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
       {
         alt_names: 'dns-NameSupported',
         common_name: 'fancy-cert-unsupported-subj-and-ext-oids',
-        ip_sans: 'OCTET STRING : C09E0126', // when parsed, should be 192.158.1.38
+        ip_sans: '192.158.1.38',
         parsing_errors: [{}, {}, {}],
         uri_sans: 'uriSupported',
       },
@@ -112,8 +113,8 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     assert.propEqual(
       parsingErrors,
       [
-        'certificate contains unsupported subject OIDs',
-        'certificate contains unsupported extension OIDs',
+        'certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1',
+        'certificate contains unsupported extension OIDs: 2.5.29.37',
         'subjectAltName contains unsupported types',
       ],
       'it contains expected error messages'
@@ -169,7 +170,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     const unsupportedSubj = parseSubject(this.parsableUnsupportedCert.subject.typesAndValues);
     assert.propEqual(
       this.getErrorMessages(unsupportedSubj.subjErrors),
-      ['certificate contains unsupported subject OIDs'],
+      ['certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1'],
       'it returns subject errors'
     );
     assert.ok(
@@ -196,7 +197,10 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     ({ extValues, extErrors } = unsupportedExt);
     assert.propEqual(
       this.getErrorMessages(extErrors),
-      ['certificate contains unsupported extension OIDs', 'subjectAltName contains unsupported types'],
+      [
+        'certificate contains unsupported extension OIDs: 2.5.29.37',
+        'subjectAltName contains unsupported types',
+      ],
       'it returns extension errors'
     );
     assert.ok(
@@ -214,7 +218,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
       formatValues(supportedSubj, supportedExtensions),
       {
         alt_names: 'altname1, altname2',
-        ip_sans: 'OCTET STRING : C09E0126', // when parsed, should be 192.158.1.38
+        ip_sans: '192.158.1.38, 1234:fd2:5621:1:89::4500',
         permitted_dns_domains: 'dnsname1.com, dsnname2.com',
         uri_sans: 'testuri1, testuri2',
         parsing_errors: [],
@@ -236,6 +240,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         exclude_cn_from_sans: false,
         expiry_date: {},
         issue_date: {},
+        key_usage: null,
         locality: null,
         max_path_length: 10,
         not_valid_after: 1989876490,
@@ -256,7 +261,10 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     const parsingErrors = this.getErrorMessages(parsedCert.parsing_errors);
     assert.propEqual(
       parsingErrors,
-      ['certificate contains unsupported subject OIDs', 'certificate contains unsupported extension OIDs'],
+      [
+        'certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1',
+        'certificate contains unsupported extension OIDs: 2.5.29.37',
+      ],
       'it returns correct errors'
     );
     assert.propEqual(

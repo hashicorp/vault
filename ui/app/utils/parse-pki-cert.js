@@ -113,9 +113,13 @@ export function parseSubject(subject) {
   if (!subject) return null;
   const values = {};
   const errors = [];
-  if (subject.any((rdn) => !Object.values(SUBJECT_OIDs).includes(rdn.type))) {
-    errors.push(new Error('certificate contains unsupported subject OIDs'));
+
+  const isUnexpectedSubjectOid = (rdn) => !Object.values(SUBJECT_OIDs).includes(rdn.type);
+  if (subject.any(isUnexpectedSubjectOid)) {
+    const unknown = subject.filter(isUnexpectedSubjectOid).map((rdn) => rdn.type);
+    errors.push(new Error('certificate contains unsupported subject OIDs: ' + unknown.join(', ')));
   }
+
   const returnValues = (OID) => {
     const values = subject.filter((rdn) => rdn?.type === OID).map((rdn) => rdn?.value?.valueBlock?.value);
     // Theoretically, there might be multiple (or no) CommonNames -- but Vault
@@ -133,15 +137,15 @@ export function parseExtensions(extensions) {
   const values = {};
   const errors = [];
   const allowedOids = Object.values({ ...EXTENSION_OIDs, ...IGNORED_OIDs });
-  const isKnownExtension = (ext) => !allowedOids.includes(ext.extnID);
-  if (extensions.any(isKnownExtension)) {
-    const unknown = extensions.filter(isKnownExtension).map((ext) => ext.extnID);
+  const isUnknownExtension = (ext) => !allowedOids.includes(ext.extnID);
+  if (extensions.any(isUnknownExtension)) {
+    const unknown = extensions.filter(isUnknownExtension).map((ext) => ext.extnID);
     errors.push(new Error('certificate contains unsupported extension OIDs: ' + unknown.join(', ')));
   }
 
   // make each extension its own key/value pair
   for (const attrName in EXTENSION_OIDs) {
-    values[attrName] = extensions.find((ext) => ext.extnID === EXTENSION_OIDs[attrName])?.parsedValue;
+    values[attrName] = extensions.find((ext) => ext.extnID === EXTENSION_OIDs[attrName])?.parsedValue || null;
   }
 
   if (values.subject_alt_name) {
@@ -243,10 +247,8 @@ export function parseExtensions(extensions) {
               ')'
           )
         );
-        continue;
       }
     }
-
     values.ip_sans = parsed_ips;
   }
 
@@ -314,8 +316,8 @@ export function parseExtensions(extensions) {
     "uri_sans": string[],
     "permitted_dns_domains": string[],
     "max_path_length": int,
-    "key_usage": BitString, <- to-be-parsed
-    "ip_sans": OctetString[], <- currently array of OctetStrings to-be-parsed
+    "key_usage": ['CertSign', 'CRLSign'],
+    "ip_sans": ['192.158.1.38', '1234:fd2:5621:1:89::4500'],
   }
   */
 }
