@@ -48,6 +48,11 @@ func pathLogin(b *backend) *framework.Path {
 
 func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var matched *ParsedCert
+	// Make sure b.crls is populated if it was invalidated by replication
+	if err := b.populateCrlsIfNil(ctx, req.Storage); err != nil {
+		return nil, err
+	}
+
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
 	} else if resp != nil {
@@ -90,11 +95,9 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		b.updatedConfig(config)
 	}
 
-	if b.crls == nil {
-		// Probably invalidated due to replication, but we need these to proceed
-		if err := b.populateCRLs(ctx, req.Storage); err != nil {
-			return nil, err
-		}
+	// Probably invalidated due to replication, but we need these to proceed
+	if err := b.populateCrlsIfNil(ctx, req.Storage); err != nil {
+		return nil, err
 	}
 
 	var matched *ParsedCert
@@ -173,10 +176,8 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		b.updatedConfig(config)
 	}
 
-	if b.crls == nil {
-		if err := b.populateCRLs(ctx, req.Storage); err != nil {
-			return nil, err
-		}
+	if err := b.populateCrlsIfNil(ctx, req.Storage); err != nil {
+		return nil, err
 	}
 
 	if !config.DisableBinding {
