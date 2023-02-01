@@ -108,13 +108,13 @@ func (d *autoSeal) RecoveryKeySupported() bool {
 // SetStoredKeys uses the autoSeal.Access.Encrypts method to wrap the keys. The stored entry
 // does not need to be seal wrapped in this case.
 func (d *autoSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
-	return writeStoredKeys(ctx, d.core.physical, d.Access, keys, StoredBarrierKeysPath)
+	return writeStoredKeys(ctx, d.core.physical, d.Access, keys)
 }
 
 // GetStoredKeys retrieves the key shares by unwrapping the encrypted key using the
 // autoseal.
 func (d *autoSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
-	return readStoredKeys(ctx, d.core.physical, d.Access, StoredBarrierKeysPath)
+	return readStoredKeys(ctx, d.core.physical, d.Access)
 }
 
 func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
@@ -435,22 +435,14 @@ func (d *autoSeal) RecoveryKey(ctx context.Context) ([]byte, error) {
 	return d.getRecoveryKeyInternal(ctx)
 }
 
-func (d *autoSeal) UnsealRecoveryKey(ctx context.Context) ([]byte, error) {
-	return nil, fmt.Errorf("unseal recovery not supported")
-}
-
 func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
-	return getRecoveryKeyInternal(ctx, d.core.physical, d.logger, d.Access)
-}
-
-func getRecoveryKeyInternal(ctx context.Context, storage physical.Backend, logger log.Logger, access *seal.Access) ([]byte, error) {
-	pe, err := storage.Get(ctx, recoveryKeyPath)
+	pe, err := d.core.physical.Get(ctx, recoveryKeyPath)
 	if err != nil {
-		logger.Error("failed to read recovery key", "error", err)
+		d.logger.Error("failed to read recovery key", "error", err)
 		return nil, fmt.Errorf("failed to read recovery key: %w", err)
 	}
 	if pe == nil {
-		logger.Warn("no recovery key found")
+		d.logger.Warn("no recovery key found")
 		return nil, fmt.Errorf("no recovery key found")
 	}
 
@@ -459,7 +451,7 @@ func getRecoveryKeyInternal(ctx context.Context, storage physical.Backend, logge
 		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
 	}
 
-	pt, err := access.Decrypt(ctx, blobInfo, nil)
+	pt, err := d.Decrypt(ctx, blobInfo, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt encrypted stored keys: %w", err)
 	}
