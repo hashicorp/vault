@@ -1,5 +1,5 @@
 import * as asn1js from 'asn1js';
-import { fromBase64, stringToArrayBuffer, arrayBufferToString } from 'pvutils';
+import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';
 import { differenceInHours, getUnixTime } from 'date-fns';
 import {
@@ -250,7 +250,7 @@ export function parseExtensions(extensions) {
     // We can thus take our enumeration (KEY_USAGE_BITS), check whether the
     // bits are asserted, and push in our pretty names as appropriate.
     const unused = values.key_usage.valueBlock.unusedBits;
-    const keyUsage = arrayBufferToString(values.key_usage.valueBlock.valueHex);
+    const keyUsage = new Uint8Array(values.key_usage.valueBlock.valueHex);
 
     const computedKeyUsages = [];
     for (const enumIndex in KEY_USAGE_BITS) {
@@ -265,13 +265,13 @@ export function parseExtensions(extensions) {
         break;
       }
 
-      let codePoint = keyUsage.codePointAt(byteIndex); // Handle "unicode"-looking strings.
+      let enumByte = keyUsage[byteIndex];
       const needsAdjust = byteIndex + 1 === keyUsage.length && unused > 0;
       if (needsAdjust) {
-        codePoint = parseInt(codePoint << unused);
+        enumByte = parseInt(enumByte << unused);
       }
 
-      const isSet = (mask & codePoint) === mask;
+      const isSet = (mask & enumByte) === mask;
       if (isSet) {
         computedKeyUsages.push(enumName);
       }
