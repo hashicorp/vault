@@ -745,7 +745,7 @@ func TestSystemBackend_remount_auth(t *testing.T) {
 	// validate the response structure for remount named read
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, b.(*SystemBackend).remountPaths(), 0, logical.ReadOperation),
+		schema.FindResponseSchema(t, b.(*SystemBackend).remountPaths(), 0, logical.UpdateOperation),
 		resp,
 		true,
 	)
