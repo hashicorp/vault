@@ -1431,7 +1431,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 								"last_renewal": {
 									Type:        framework.TypeTime,
 									Description: "Optional Timestamp of the last time the lease was renewed",
-									Required:    false,
+									Required:    true,
 								},
 								"ttl": {
 									Type:        framework.TypeInt,
