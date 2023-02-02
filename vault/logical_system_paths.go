@@ -2100,7 +2100,6 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 								},
 								"policies": {
 									Type:     framework.TypeStringSlice,
-									Required: true,
 								},
 							},
 						}},
