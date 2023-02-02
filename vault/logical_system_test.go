@@ -1340,7 +1340,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Validate lease renewal response structure
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
 		resp,
 		true,
 	)
