@@ -5995,7 +5995,6 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 		"path":     "http://localhost:8200/v1/pki",
 		"aia_path": "http://localhost:8200/cdn/pki",
 	})
-
 	require.NoError(t, err)
 
 	aiaData := map[string]interface{}{
