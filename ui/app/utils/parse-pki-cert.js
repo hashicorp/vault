@@ -304,9 +304,9 @@ export function parseExtensions(extensions) {
       let [objectId, constructed] = san.valueBlock.value;
       objectId = objectId.toJSON().valueBlock.value;
       constructed = constructed.valueBlock.value[0].toJSON(); // can I just grab the first element here?
-      const { blockName } = constructed; // need to remove 'String' from 'UTF8String'
+      const { blockName } = constructed;
       const value = constructed.valueBlock.value;
-      parsed_sans.push(`${objectId};${blockName}:${value}`);
+      parsed_sans.push(`${objectId};${blockName.replace('String', '')}:${value}`);
     }
     values.other_sans = parsed_sans;
   }
