@@ -80,7 +80,13 @@ Yes, there are several considerations to keep in mind, and possibly things that 
 - Ensure that your clients can retry for the best experience.
 - Starting with Go api version [1.1.0](https://pkg.go.dev/github.com/hashicorp/vault/api@v1.1.0), the Go client library enables automatic retries for 412 errors. By default, retries=2, or use client method [SetMaxRetries](https://pkg.go.dev/github.com/hashicorp/vault/api#Client.SetMaxRetries). Or, you can use the Vault environment variable [VAULT_MAX_RETRIES](/vault/docs/commands#vault_max_retries) to achieve the same result.
 - If you use a client library other than Go, you may still need to ensure that your client can handle 412 retries in order to achieve consistency.
-- If your client cannot retry, you can use the Vault server replication configuration `allow_forwarding_via_token = ["new_token"]` to allow for consistency. As stated earlier, this will incur extra load on the server due to forwarding of requests that don't have the up-to-date WAL-state to the server.
+- If your client cannot retry, you can use the Vault server replication configuration `allow_forwarding_via_token`  to allow for consistency. As stated earlier, this will incur extra load on the server due to forwarding of requests that don't have the up-to-date WAL-state to the server:
+
+```
+replication { 
+  allow_forwarding_via_token = "new_token"
+}
+```
 
 ~> **Note:** If you are generating root tokens or recovery tokens without using the Vault CLI, you will need to modify the OTP length used. refer [here](/vault/docs/upgrading/upgrade-to-1.10.x) for details.
 
