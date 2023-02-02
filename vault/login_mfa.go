@@ -686,6 +686,11 @@ func (b *LoginMFABackend) sanitizeMFACredsWithLoginEnforcementMethodIDs(ctx cont
 		if err != nil {
 			return nil, err
 		}
+		if mConfig == nil {
+			multiError = multierror.Append(multiError, fmt.Errorf("failed to find MFA config for method ID %s", methodID))
+			continue
+		}
+
 		// method name in the MFACredsMap should be the method full name,
 		// i.e., namespacePath+name. This is because, a user in a child
 		// namespace can reference an MFA method ID in a parent namespace
@@ -1874,6 +1879,10 @@ func parseMfaFactors(creds []string) (*MFAFactor, error) {
 		}
 	}
 
+	if mfaFactor.passcode == "" {
+		return nil, nil
+	}
+
 	return mfaFactor, nil
 }
 
@@ -2336,7 +2345,7 @@ func (c *Core) validatePingID(ctx context.Context, mConfig *mfa.Config, username
 }
 
 func (c *Core) validateTOTP(ctx context.Context, mfaFactors *MFAFactor, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
-	if mfaFactors.passcode == "" {
+	if mfaFactors == nil || mfaFactors.passcode == "" {
 		return fmt.Errorf("MFA credentials not supplied")
 	}
 	passcode := mfaFactors.passcode

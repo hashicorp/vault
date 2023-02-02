@@ -62,8 +62,10 @@ In the Single-phase login, the required MFA information is embedded in a login r
 the `X-Vault-MFA` header. In this case, the MFA validation is done
 as a part of the login request.
 
-MFA credentials are retrieved from the `X-Vault-MFA` HTTP header. The format of
-the header is `mfa_method_id[:passcode]`. The item in the `[]` is optional. If there are multiple MFA methods that need to be validated, a user can pass in multiple `X-Vault-MFA` HTTP headers.
+MFA credentials are retrieved from the `X-Vault-MFA` HTTP header. Before Vault 1.13.0, the format of
+the header is `mfa_method_id[:passcode]` for TOTP, Okta, and PingID. However, for Duo, it is `mfa_method_id[:passcode=<passcode>]`.
+The item in the `[]` is optional. From Vault 1.13.0, the format is consistent for all supported MFA methods, and one can use either of the above two formats.
+If there are multiple MFA methods that need to be validated, a user can pass in multiple `X-Vault-MFA` HTTP headers.
 
 #### Sample Request
 
@@ -81,6 +83,27 @@ If an MFA method does not require a passcode, the login request MFA header only 
      --header "X-Vault-Token: ..." \
      --header "X-Vault-MFA: d16fd3c2-50de-0b9b-eed3-0301dadeca10" \
      http://127.0.0.1:8200/v1/auth/userpass/login/alice
+```
+
+Starting in Vault 1.13.0, an operator can configure a name for an MFA method.
+This name should be unique in the namespace in which the MFA method is configured.
+The MFA method name can be used in the MFA header.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --header "X-Vault-MFA: sample_mfa_method_name:695452" \
+    http://127.0.0.1:8200/v1/auth/userpass/login/alice
+```
+
+In cases where the MFA method is configured in a specific namespace, the MFA method name should be prefixed with the namespace path.
+Below shows an example where an MFA method is configured in `ns1`.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --header "X-Vault-MFA: ns1/sample_mfa_method_name:695452" \
+    http://127.0.0.1:8200/v1/auth/userpass/login/alice
 ```
 
 ### Two-Phase Login
@@ -125,7 +148,8 @@ note that this can affect the login response on any auth mount protected by MFA 
             {
               "type": "totp",
               "id": "820997b3-110e-c251-7e8b-ff4aa428a6e1",
-              "uses_passcode": true
+              "uses_passcode": true,
+              "name": "sample_mfa_method_name",
             }
           ]
         }
@@ -152,6 +176,17 @@ credentials will be a list with one empty string.
   "mfa_request_id": "5879c74a-1418-1948-7be9-97b209d693a7",
   "mfa_payload": {
     "d16fd3c2-50de-0b9b-eed3-0301dadeca10": ["910201"]
+  }
+}
+```
+
+If an MFA method is configured in a namespace, the MFA method name prefixed with the namespace path can be used in the validation payload.
+
+```json
+{
+  "mfa_request_id": "5879c74a-1418-1948-7be9-97b209d693a7",
+  "mfa_payload": {
+    "ns1/sample_mfa_method_name": ["910201"]
   }
 }
 ```

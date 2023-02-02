@@ -81,12 +81,14 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   @attr('string', {
     label: 'CRL distribution points',
     subText: 'Specifies the URL values for the CRL Distribution Points field.',
+    editType: 'stringArray',
   })
   crlDistributionPoints;
 
   @attr('string', {
     label: 'OCSP servers',
     subText: 'Specifies the URL values for the OCSP Servers field.',
+    editType: 'stringArray',
   })
   ocspServers;
 
