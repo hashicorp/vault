@@ -5989,6 +5989,7 @@ func TestPKI_ListRevokedCerts(t *testing.T) {
 func TestPKI_TemplatedAIAs(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
+	paths := []*framework.Path{pathConfigCluster(b)}
 
 	// Setting templated AIAs should succeed.
 	resp, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
@@ -5996,6 +5997,7 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 		"aia_path": "http://localhost:8200/cdn/pki",
 	})
 	require.NoError(t, err)
+	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation), resp, true)
 
 	aiaData := map[string]interface{}{
 		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
