@@ -553,7 +553,6 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				if err != nil {
 					return err
 				}
-				// ToDo Add Schema check here for read opertation
 				if !reflect.DeepEqual(entries, expected) {
 					return fmt.Errorf("expected urls\n%#v\ndoes not match provided\n%#v\n", expected, entries)
 				}
