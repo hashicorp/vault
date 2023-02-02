@@ -1981,15 +1981,12 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"policies": {
-									Type: framework.TypeStringSlice,
-								},
 								"keys": {
 									Type:     framework.TypeStringSlice,
 									Required: true,
 								},
-								"key_info": {
-									Type: framework.TypeMap,
+								"policies": {
+									Type: framework.TypeStringSlice,
 								},
 							},
 						}},
@@ -2001,9 +1998,12 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"policies": {
+								"keys": {
 									Type:     framework.TypeStringSlice,
 									Required: true,
+								},
+								"policies": {
+									Type: framework.TypeStringSlice,
 								},
 							},
 						}},
@@ -2094,6 +2094,10 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
 								"policies": {
 									Type:     framework.TypeStringSlice,
 									Required: true,
