@@ -227,15 +227,7 @@ export function parseExtensions(extensions) {
         const hex = src.map((value) => '0' + new Number(value).toString(16));
         const trimmed = hex.map((value) => value.slice(value.length - 2, 3));
         // add a colon after every other number (those with an odd index)
-        const addColon = trimmed.map((value, index) => (index % 2 === 0 ? value : value + ':')).join('');
-        // compress ipV6 https://iplocation.io/ipv6-compress
-        let ip_addr = addColon
-          .replace(/\b(?:0+:){2,}/, ':')
-          .split(':')
-          .map(function (octet) {
-            return octet.replace(/\b0+/g, '');
-          })
-          .join(':');
+        let ip_addr = trimmed.map((value, index) => (index % 2 === 0 ? value : value + ':')).join('');
         // Remove trailing :, if any.
         ip_addr = ip_addr.slice(-1) === ':' ? ip_addr.slice(0, -1) : ip_addr;
         parsed_ips.push(ip_addr);

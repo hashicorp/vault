@@ -43,7 +43,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         country: 'France',
         exclude_cn_from_sans: true,
         expiry_date: {},
-        ip_sans: '192.158.1.38, 1234:fd2:5621:1:89::4500',
+        ip_sans: '192.158.1.38, 1234:0fd2:5621:0001:0089:0000:0000:4500',
         key_usage: 'CertSign, CRLSign',
         issue_date: {},
         locality: 'Paris',
@@ -218,7 +218,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
       formatValues(supportedSubj, supportedExtensions),
       {
         alt_names: 'altname1, altname2',
-        ip_sans: '192.158.1.38, 1234:fd2:5621:1:89::4500',
+        ip_sans: '192.158.1.38, 1234:0fd2:5621:0001:0089:0000:0000:4500',
         permitted_dns_domains: 'dnsname1.com, dsnname2.com',
         uri_sans: 'testuri1, testuri2',
         parsing_errors: [],
