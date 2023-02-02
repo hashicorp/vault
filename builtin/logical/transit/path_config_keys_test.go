@@ -33,7 +33,6 @@ func TestTransit_ConfigKeys(t *testing.T) {
 		Path:      "config/keys",
 	}
 	resp := doReq(req)
-	//
 	if resp.Data["disable_upsert"].(bool) != false {
 		t.Fatalf("expected disable_upsert to be false; got: %v", resp)
 	}
