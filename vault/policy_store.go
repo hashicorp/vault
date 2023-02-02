@@ -153,7 +153,12 @@ path "sys/control-group/request" {
 
 # Allow a token to make requests to the Authorization Endpoint for OIDC providers.
 path "identity/oidc/provider/+/authorize" {
-	capabilities = ["read", "update"]
+    capabilities = ["read", "update"]
+}
+
+# Allow checking what experiments are enabled
+path "sys/experiments" {
+    capabilities = ["read"]
 }
 `
 )
