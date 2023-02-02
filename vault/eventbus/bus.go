@@ -39,7 +39,8 @@ type pluginEventBus struct {
 
 type asyncChanNode struct {
 	// TODO: add bounded deque buffer of *EventReceived
-	ch chan *logical.EventReceived
+	ch        chan *logical.EventReceived
+	namespace *namespace.Namespace
 }
 
 var (
@@ -140,22 +141,6 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	}, nil
 }
 
-func nsEventTypeJoin(ns *namespace.Namespace, eventType logical.EventType) eventlogger.EventType {
-	if ns == nil {
-		ns = namespace.RootNamespace
-	}
-	return eventlogger.EventType(namespace.Canonicalize(ns.Path) + string(eventType))
-}
-
-func nsEventTypeSplit(eventType eventlogger.EventType) (string, logical.EventType) {
-	parts := strings.Split(string(eventType), "/")
-	ns := "/"
-	if len(parts) > 1 {
-		ns = strings.Join(parts[:len(parts)-1], "/")
-	}
-	return namespace.Canonicalize(ns), logical.EventType(parts[len(parts)-1])
-}
-
 func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, eventType logical.EventType) (chan *logical.EventReceived, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
@@ -168,8 +153,8 @@ func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, event
 		return nil, err
 	}
 
-	// TODO: should we have just one node, and handle all the routing ourselves?
-	asyncNode := newAsyncNode()
+	// TODO: should we have just one node per namespace, and handle all the routing ourselves?
+	asyncNode := newAsyncNode(ns)
 	err = bus.broker.RegisterNode(eventlogger.NodeID(nodeID), asyncNode)
 	if err != nil {
 		defer asyncNode.Close()
@@ -180,7 +165,7 @@ func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, event
 
 	pipeline := eventlogger.Pipeline{
 		PipelineID: eventlogger.PipelineID(pipelineID),
-		EventType:  nsEventTypeJoin(ns, eventType),
+		EventType:  eventlogger.EventType(eventType),
 		NodeIDs:    nodes,
 	}
 	err = bus.broker.RegisterPipeline(pipeline)
@@ -191,9 +176,10 @@ func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, event
 	return asyncNode.ch, nil
 }
 
-func newAsyncNode() *asyncChanNode {
+func newAsyncNode(namespace *namespace.Namespace) *asyncChanNode {
 	return &asyncChanNode{
-		ch: make(chan *logical.EventReceived),
+		ch:        make(chan *logical.EventReceived),
+		namespace: namespace,
 	}
 }
 
@@ -206,8 +192,14 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 	// TODO: add timeout on sending to node.ch
 	// sends to the channel async in another goroutine
 	go func() {
+		eventRecv := e.Payload.(*logical.EventReceived)
+		// drop if event is not in our namespace
+		// TODO: add wildcard processing here in some cases?
+		if node.namespace != nil && eventRecv.Namespace != node.namespace.ID {
+			return
+		}
 		select {
-		case node.ch <- e.Payload.(*logical.EventReceived):
+		case node.ch <- eventRecv:
 		case <-ctx.Done():
 		}
 	}()
