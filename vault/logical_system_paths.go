@@ -2002,14 +2002,8 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"policies": {
-									Type: framework.TypeStringSlice,
-								},
-								"keys": {
 									Type:     framework.TypeStringSlice,
 									Required: true,
-								},
-								"key_info": {
-									Type: framework.TypeMap,
 								},
 							},
 						}},
