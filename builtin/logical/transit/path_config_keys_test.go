@@ -2,7 +2,6 @@ package transit
 
 import (
 	"context"
-	"github.com/hashicorp/vault/sdk/framework"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -10,7 +9,6 @@ import (
 
 func TestTransit_ConfigKeys(t *testing.T) {
 	b, s := createBackendWithSysView(t)
-	paths := []*framework.Path{pathConfigIssuers(b)}
 
 	doReq := func(req *logical.Request) *logical.Response {
 		resp, err := b.HandleRequest(context.Background(), req)
