@@ -48,7 +48,7 @@ export default class SecretListHeader extends Component {
 
   @action
   transitionToNewPki() {
-    this.router.transitionTo('vault.cluster.secrets.backend.pki.overview', this.args.model.engineType);
+    this.router.transitionTo('vault.cluster.secrets.backend.pki.overview');
   }
 
   @action
