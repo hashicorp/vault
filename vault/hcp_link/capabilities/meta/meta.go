@@ -320,8 +320,14 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 		raftStatus.AutopilotStatus = autopilotStatus
 	}
 
+	clusterInfo, err := h.wrappedCore.Cluster(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get cluster information: %w", err)
+	}
+
 	resp := &meta.GetClusterStatusResponse{
-		ClusterID:   h.wrappedCore.ClusterID(),
+		ClusterID:   clusterInfo.ID,
+		ClusterName: clusterInfo.Name,
 		HAStatus:    haStatus,
 		RaftStatus:  raftStatus,
 		StorageType: h.wrappedCore.StorageType(),
