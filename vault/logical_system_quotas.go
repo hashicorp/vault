@@ -130,7 +130,7 @@ from any further requests until after the 'block_interval' has elapsed.`,
 					Callback: b.handleRateLimitQuotasUpdate(),
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
-							Description: "OK",
+							Description: http.StatusText(http.StatusNoContent),
 						}},
 					},
 				},
