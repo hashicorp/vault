@@ -229,7 +229,7 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 	}
 
 	events := &GRPCEventsServer{
-		impl: config.Events,
+		impl: config.EventsSender,
 	}
 
 	// Register the server in this closure.

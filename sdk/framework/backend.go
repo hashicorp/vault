@@ -404,7 +404,7 @@ func (b *Backend) InvalidateKey(ctx context.Context, key string) {
 func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	b.logger = config.Logger
 	b.system = config.System
-	b.events = config.Events
+	b.events = config.EventsSender
 	return nil
 }
 

@@ -95,12 +95,12 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 	events := newGRPCEventsClient(brokeredClient)
 
 	config := &logical.BackendConfig{
-		StorageView: storage,
-		Logger:      b.logger,
-		System:      sysView,
-		Config:      args.Config,
-		BackendUUID: args.BackendUUID,
-		Events:      events,
+		StorageView:  storage,
+		Logger:       b.logger,
+		System:       sysView,
+		Config:       args.Config,
+		BackendUUID:  args.BackendUUID,
+		EventsSender: events,
 	}
 
 	// Call the underlying backend factory after shims have been created

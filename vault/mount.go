@@ -1654,7 +1654,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,
-		Events: c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
+		EventsSender: c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
 			MountClass:    consts.PluginTypeSecrets.String(),
 			MountAccessor: entry.Accessor,
 			MountPath:     entry.Path,
