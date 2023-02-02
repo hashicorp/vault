@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func TestCanSubscribeToEventsFromBuiltinPlugin(t *testing.T) {
+func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
 	ctx := namespace.RootContext(nil)

@@ -44,7 +44,6 @@ type asyncChanNode struct {
 
 var (
 	_ eventlogger.Node    = (*asyncChanNode)(nil)
-	_ logical.EventSender = (*EventBus)(nil)
 	_ logical.EventSender = (*pluginEventBus)(nil)
 )
 
@@ -58,33 +57,27 @@ func (bus *EventBus) Start() {
 	}
 }
 
-// Send sends an event to the event bus and routes it to all relevant subscribers.
+// SendInternal sends an event to the event bus and routes it to all relevant subscribers.
 // This function does *not* wait for all subscribers to acknowledge before returning.
-func (bus *EventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
-	var nspace string
-	ns, err := namespace.FromContext(ctx)
-	if err == namespace.ErrNoNamespace {
-	} else if err != nil {
-		return err
-	} else {
-		nspace = ns.ID
-	}
+// This function is meant to be used by trusted internal code, so it can specify details like the namespace
+// and plugin info. Events from plugins should be routed through WithPlugin(), which will populate
+// the namespace and plugin info automatically.
+func (bus *EventBus) SendInternal(ctx context.Context, namespace *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
 	if !bus.started.Load() {
 		return ErrNotStarted
 	}
-	pluginInfo, ok := ctx.Value(contextEventPluginInfo).(*logical.EventPluginInfo)
-	if !ok {
-		pluginInfo = nil
+	var nspace string
+	if namespace != nil {
+		nspace = namespace.ID
 	}
-
-	bus.logger.Info("Sending event", "event", data)
 	eventReceived := &logical.EventReceived{
 		Event:      data,
 		Namespace:  nspace,
 		EventType:  string(eventType),
 		PluginInfo: pluginInfo,
 	}
-	_, err = bus.broker.Send(ctx, eventlogger.EventType(eventType), eventReceived)
+	bus.logger.Info("Sending event", "event", eventReceived)
+	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), eventReceived)
 	if err != nil {
 		// if no listeners for this event type are registered, that's okay, the event
 		// will just not be sent anywhere
@@ -106,9 +99,7 @@ func (bus *EventBus) WithPlugin(namespace *namespace.Namespace, eventPluginInfo 
 // Send sends an event to the event bus and routes it to all relevant subscribers.
 // This function does *not* wait for all subscribers to acknowledge before returning.
 func (bus *pluginEventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
-	ctx = namespace.ContextWithNamespace(ctx, bus.namespace)
-	ctx = context.WithValue(ctx, contextEventPluginInfo, bus.pluginInfo)
-	return bus.bus.Send(ctx, eventType, data)
+	return bus.bus.SendInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
 }
 
 func init() {
