@@ -49,6 +49,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	sr "github.com/hashicorp/vault/serviceregistration"
@@ -681,8 +682,15 @@ type Core struct {
 	expirationRevokeRetryBase   time.Duration
 
 	events *eventbus.EventBus
+
+	// writeForwardedPaths are a set of storage paths which are GRPC forwarded
+	// to the active node of the primary cluster, when present. This PathManager
+	// contains absolute paths that we intend to forward (and template) when
+	// we're on a secondary cluster.
+	writeForwardedPaths *pathmanager.PathManager
 }
 
+// c.stateLock needs to be held in read mode before calling this function.
 func (c *Core) HAState() consts.HAState {
 	switch {
 	case c.perfStandby:
@@ -1068,6 +1076,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		Enabled: new(uint32),
 	}
 
+	// Load write-forwarded path manager.
+	c.writeForwardedPaths = pathmanager.New()
+
+	// Load seal information.
 	if c.seal == nil {
 		wrapper := aeadwrapper.NewShamirWrapper()
 		wrapper.SetConfig(context.Background(), awskms.WithLogger(c.logger.Named("shamir")))
@@ -1257,7 +1269,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 	c.events = events
-	if c.isExperimentEnabled(experiments.VaultExperimentEventsBeta1) {
+	if c.isExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
 		c.events.Start()
 	}
 
@@ -3804,6 +3816,10 @@ func (c *Core) aliasNameFromLoginRequest(ctx context.Context, req *logical.Reque
 
 // ListMounts will provide a slice containing a deep copy each mount entry
 func (c *Core) ListMounts() ([]*MountEntry, error) {
+	if c.Sealed() {
+		return nil, fmt.Errorf("vault is sealed")
+	}
+
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 
@@ -3823,6 +3839,10 @@ func (c *Core) ListMounts() ([]*MountEntry, error) {
 
 // ListAuths will provide a slice containing a deep copy each auth entry
 func (c *Core) ListAuths() ([]*MountEntry, error) {
+	if c.Sealed() {
+		return nil, fmt.Errorf("vault is sealed")
+	}
+
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 
@@ -3959,8 +3979,4 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	}
 
 	return raftBackend.GetAutopilotServerState(ctx)
-}
-
-func (c *Core) Events() *eventbus.EventBus {
-	return c.events
 }

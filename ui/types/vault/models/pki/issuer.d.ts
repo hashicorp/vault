@@ -1,6 +1,5 @@
 import PkiCertificateBaseModel from './certificate/base';
-import { FormField, FormFieldGroups } from 'vault/app-types';
-
+import { FormField, FormFieldGroups, ModelValidations } from 'vault/app-types';
 export default class PkiIssuerModel extends PkiCertificateBaseModel {
   useOpenAPI(): boolean;
   issuerId: string;
@@ -18,12 +17,14 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   rotateInternal: any;
   rotateExisting: any;
   crossSignPath: any;
-  signIntermediate: any;  
+  signIntermediate: any;
   -------------------- **/
   formFields: Array<FormField>;
   formFieldGroups: FormFieldGroups;
+  allFields: Array<FormField>;
   get canRotateIssuer(): boolean;
   get canCrossSign(): boolean;
   get canSignIntermediate(): boolean;
   get canConfigure(): boolean;
+  validate(): ModelValidations;
 }

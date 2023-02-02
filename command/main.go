@@ -217,14 +217,14 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		return 1
 	}
 
-	initCommands(ui, serverCmdUi, runOpts)
+	commands := initCommands(ui, serverCmdUi, runOpts)
 
 	hiddenCommands := []string{"version"}
 
 	cli := &cli.CLI{
 		Name:     "vault",
 		Args:     args,
-		Commands: Commands,
+		Commands: commands,
 		HelpFunc: groupedHelpFunc(
 			cli.BasicHelpFunc("vault"),
 		),

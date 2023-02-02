@@ -32,10 +32,18 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     };
 
     this.newModel = store.createRecord('kubernetes/role', { backend: 'kubernetes-test' });
+    this.breadcrumbs = [
+      { label: this.newModel.backend, route: 'overview' },
+      { label: 'roles', route: 'roles' },
+      { label: 'create' },
+    ];
   });
 
   test('it should display placeholder when generation preference is not selected', async function (assert) {
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} />`, { owner: this.engine });
+    await render(
+      hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`,
+      { owner: this.engine }
+    );
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('Choose an option above', 'Empty state title renders');
@@ -49,7 +57,10 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
   });
 
   test('it should display different form fields based on generation preference selection', async function (assert) {
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} />`, { owner: this.engine });
+    await render(
+      hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`,
+      { owner: this.engine }
+    );
     const commonFields = [
       'name',
       'allowedKubernetesNamespaces',
@@ -76,7 +87,10 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
   });
 
   test('it should clear specific form fields when switching generation preference', async function (assert) {
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} />`, { owner: this.engine });
+    await render(
+      hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`,
+      { owner: this.engine }
+    );
 
     await click('[data-test-radio-card="basic"]');
     await fillIn('[data-test-input="serviceAccountName"]', 'test');
@@ -129,7 +143,10 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
 
     this.server.post('/kubernetes-test/roles/role-1', () => assert.ok('POST request made to save role'));
 
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} />`, { owner: this.engine });
+    await render(
+      hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`,
+      { owner: this.engine }
+    );
     await click('[data-test-radio-card="basic"]');
     await click('[data-test-save]');
     assert.dom('[data-test-inline-error-message]').hasText('Name is required', 'Validation error renders');
@@ -150,7 +167,10 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     for (const pref of ['basic', 'expanded', 'full']) {
       const trait = { expanded: 'withRoleName', full: 'withRoleRules' }[pref];
       this.role = this.getRole(trait);
-      await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} />`, { owner: this.engine });
+      await render(
+        hbs`<Page::Role::CreateAndEdit @model={{this.role}} @breadcrumbs={{this.breadcrumbs}} />`,
+        { owner: this.engine }
+      );
       assert.dom(`[data-test-radio-card="${pref}"] input`).isChecked('Correct radio card is checked');
       assert.dom('[data-test-input="name"]').hasValue(this.role.name, 'Role name is populated');
       const selector = {
@@ -176,7 +196,10 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
   });
 
   test('it should show and hide annotations and labels', async function (assert) {
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} />`, { owner: this.engine });
+    await render(
+      hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`,
+      { owner: this.engine }
+    );
     await click('[data-test-radio-card="basic"]');
     assert.dom('[data-test-annotations]').doesNotExist('Annotations and labels are hidden');
 
@@ -194,12 +217,16 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
 
   test('it should expand annotations and labels when editing if they were populated', async function (assert) {
     this.role = this.getRole();
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} />`, { owner: this.engine });
+    await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} @breadcrumbs={{this.breadcrumbs}}/>`, {
+      owner: this.engine,
+    });
     assert
       .dom('[data-test-annotations]')
       .doesNotExist('Annotations and labels are collapsed initially when not defined');
     this.role = this.getRole('withRoleRules');
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} />`, { owner: this.engine });
+    await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} @breadcrumbs={{this.breadcrumbs}}/>`, {
+      owner: this.engine,
+    });
     assert
       .dom('[data-test-annotations]')
       .exists('Annotations and labels are expanded initially when defined');
@@ -207,7 +234,9 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
 
   test('it should restore role rule example', async function (assert) {
     this.role = this.getRole('withRoleRules');
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} />`, { owner: this.engine });
+    await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} @breadcrumbs={{this.breadcrumbs}}/>`, {
+      owner: this.engine,
+    });
     const addedText = 'this will be add to the start of the first line in the JsonEditor';
     await fillIn('[data-test-component="code-mirror-modifier"] textarea', addedText);
     await click('[data-test-restore-example]');
@@ -227,7 +256,10 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       );
     });
 
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} />`, { owner: this.engine });
+    await render(
+      hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}}/>`,
+      { owner: this.engine }
+    );
     await click('[data-test-radio-card="full"]');
     await fillIn('[data-test-input="name"]', 'role-1');
     await fillIn('[data-test-select-template]', '5');
@@ -242,7 +274,10 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       assert.strictEqual(payload.generated_role_rules, null, 'Generated roles rules are not set');
     });
 
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} />`, { owner: this.engine });
+    await render(
+      hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}}/>`,
+      { owner: this.engine }
+    );
     await click('[data-test-radio-card="full"]');
     await fillIn('[data-test-input="name"]', 'role-1');
     await fillIn('[data-test-select-template]', '5');
@@ -253,14 +288,19 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
 
   test('it should go back to list route and clean up model', async function (assert) {
     const unloadSpy = sinon.spy(this.newModel, 'unloadRecord');
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} />`, { owner: this.engine });
+    await render(
+      hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}}/>`,
+      { owner: this.engine }
+    );
     await click('[data-test-cancel]');
     assert.ok(unloadSpy.calledOnce, 'New model is unloaded on cancel');
     assert.ok(this.transitionCalledWith('roles'), 'Transitions to roles list on cancel');
 
     this.role = this.getRole();
     const rollbackSpy = sinon.spy(this.role, 'rollbackAttributes');
-    await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} />`, { owner: this.engine });
+    await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
     await click('[data-test-cancel]');
     assert.ok(rollbackSpy.calledOnce, 'Attributes are rolled back for existing model on cancel');
     assert.ok(this.transitionCalledWith('roles'), 'Transitions to roles list on cancel');

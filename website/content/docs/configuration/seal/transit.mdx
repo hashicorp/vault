@@ -89,7 +89,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
 
-Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 
 ## Authentication
 
@@ -114,15 +114,15 @@ path "<mount path>/decrypt/<key name>" {
 ```
 
 Other considerations for the token used:
-* it should probably be an [orphan token](/docs/concepts/tokens#token-hierarchies-and-orphan-tokens),
+* it should probably be an [orphan token](/vault/docs/concepts/tokens#token-hierarchies-and-orphan-tokens),
 otherwise when the parent token expires or gets revoked the seal will break.
-* consider making it a [periodic token](/docs/concepts/tokens#periodic-tokens)
+* consider making it a [periodic token](/vault/docs/concepts/tokens#periodic-tokens)
 and not setting an explicit max TTL, otherwise at some point it will cease to be renewable.
 
 ## Key Rotation
 
 This seal supports key rotation using the Transit Secret Engine's key rotation endpoints. See
-[doc](/api-docs/secret/transit#rotate-key). Old keys must not be disabled or deleted and are
+[doc](/vault/api-docs/secret/transit#rotate-key). Old keys must not be disabled or deleted and are
 used to decrypt older data.
 
 ## Tutorial

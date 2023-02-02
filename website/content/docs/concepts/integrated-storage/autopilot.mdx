@@ -51,7 +51,7 @@ Raft clusters deployed with older versions of Vault will also transition to use
 Autopilot automatically.
 
 Autopilot exposes a [configuration
-API](/api-docs/system/storage/raftautopilot#set-configuration) to manage its
+API](/vault/api-docs/system/storage/raftautopilot#set-configuration) to manage its
 behavior. Autopilot gets initialized with the following default values.
 
 - `cleanup_dead_servers` - `false`
@@ -115,13 +115,13 @@ increase read scalability.
 DR secondary and Performance secondary clusters have their own Autopilot configurations, managed
 independently of their primary.
 
-The [Autopilot API](/api-docs/system/storage/raftautopilot) uses DR operation tokens for
+The [Autopilot API](/vault/api-docs/system/storage/raftautopilot) uses DR operation tokens for
 authorization when executed against a DR secondary cluster.
 
 ## Tutorial
 
 Refer to the following tutorials to learn more.
 
-- [Integrated Storage Autopilot](https://learn.hashicorp.com/tutorials/vault/raft-autopilot)
-- [Fault Tolerance with Redundancy Zones](https://learn.hashicorp.com/tutorials/vault/raft-redundancy-zones)
-- [Automate Upgrades with Vault Enterprise](https://learn.hashicorp.com/tutorials/vault/raft-upgrade-automation)
+- [Integrated Storage Autopilot](/vault/tutorials/raft/raft-autopilot)
+- [Fault Tolerance with Redundancy Zones](/vault/tutorials/raft/raft-redundancy-zones)
+- [Automate Upgrades with Vault Enterprise](/vault/tutorials/raft/raft-upgrade-automation)

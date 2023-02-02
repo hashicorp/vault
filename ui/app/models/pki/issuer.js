@@ -13,10 +13,10 @@ const issuerUrls = ['issuingCertificates', 'crlDistributionPoints', 'ocspServers
         'caChain',
         'commonName',
         'issuerName',
-        'notValidBefore',
         'serialNumber',
         'keyId',
         'uriSans',
+        'notValidBefore',
         'notValidAfter',
       ],
     },
@@ -32,12 +32,6 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
 
   @attr isDefault; // readonly
   @attr('string') issuerId;
-  @attr('string', { displayType: 'masked' }) certificate;
-  @attr('string', { displayType: 'masked', label: 'CA Chain' }) caChain;
-  @attr('date', {
-    label: 'Issue date',
-  })
-  notValidBefore;
 
   @attr('string', {
     label: 'Default key ID',
@@ -45,7 +39,7 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   keyId;
 
   @attr({
-    label: 'Subject Alternative Names',
+    label: 'URI Subject Alternative Names (URI SANs)',
   })
   uriSans;
 
@@ -91,12 +85,14 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   @attr('string', {
     label: 'CRL distribution points',
     subText: 'Specifies the URL values for the CRL Distribution Points field.',
+    editType: 'stringArray',
   })
   crlDistributionPoints;
 
   @attr('string', {
     label: 'OCSP servers',
     subText: 'Specifies the URL values for the OCSP Servers field.',
+    editType: 'stringArray',
   })
   ocspServers;
 

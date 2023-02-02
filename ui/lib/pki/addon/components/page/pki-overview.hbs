@@ -21,62 +21,52 @@
     </OverviewCard>
   {{/if}}
   <OverviewCard @cardTitle="Issue certificate" @subText="Begin issuing a certificate by choosing a role.">
-    <form
-      aria-label="issue certificate"
-      data-test-selectable-card="Issue certificate"
-      {{on "submit" this.transitionToIssueCertificates}}
-    >
-      <div class="has-top-padding-s is-flex">
-        <SearchSelect
-          class="is-flex-1"
-          @selectLimit="1"
-          @models={{array "pki/role"}}
-          @backend={{@engine.id}}
-          @placeholder="Type to find a role..."
-          @disallowNewItems={{true}}
-          @onChange={{this.handleRolesInput}}
-          @fallbackComponent="input-search"
-          data-test-issue-certificate-input
-        />
-        <button
-          type="submit"
-          class="button is-secondary has-left-margin-s"
-          disabled={{unless this.rolesValue true}}
-          data-test-issue-certificate-button
-        >
-          Issue
-        </button>
-      </div>
-    </form>
+    <div class="has-top-margin-m is-flex">
+      <SearchSelect
+        class="is-flex-1"
+        @selectLimit="1"
+        @models={{array "pki/role"}}
+        @backend={{@engine.id}}
+        @placeholder="Type to find a role..."
+        @disallowNewItems={{true}}
+        @onChange={{this.handleRolesInput}}
+        @fallbackComponent="input-search"
+        data-test-issue-certificate-input
+      />
+      <button
+        type="submit"
+        class="button is-secondary has-left-margin-s"
+        disabled={{unless this.rolesValue true}}
+        {{on "click" this.transitionToIssueCertificates}}
+        data-test-issue-certificate-button
+      >
+        Issue
+      </button>
+    </div>
   </OverviewCard>
 
   <OverviewCard @cardTitle="View certificate" @subText="Quickly view a certificate by typing its serial number.">
-    <form
-      aria-label="view certificate"
-      data-test-selectable-card="View certificate"
-      {{on "submit" this.transitionToViewCertificates}}
-    >
-      <div class="has-top-padding-s is-flex">
-        <SearchSelect
-          class="is-flex-1"
-          @selectLimit="1"
-          @models={{array "pki/certificate/base"}}
-          @backend={{@engine.id}}
-          @placeholder="33:a3:..."
-          @disallowNewItems={{true}}
-          @onChange={{this.handleCertificateInput}}
-          @fallbackComponent="input-search"
-          data-test-view-certificate-input
-        />
-        <button
-          type="submit"
-          class="button is-secondary has-left-margin-s"
-          disabled={{unless this.certificateValue true}}
-          data-test-view-certificate-button
-        >
-          View
-        </button>
-      </div>
-    </form>
+    <div class="has-top-margin-m is-flex">
+      <SearchSelect
+        class="is-flex-1"
+        @selectLimit="1"
+        @models={{array "pki/certificate/base"}}
+        @backend={{@engine.id}}
+        @placeholder="33:a3:..."
+        @disallowNewItems={{true}}
+        @onChange={{this.handleCertificateInput}}
+        @fallbackComponent="input-search"
+        data-test-view-certificate-input
+      />
+      <button
+        type="button"
+        class="button is-secondary has-left-margin-s"
+        disabled={{unless this.certificateValue true}}
+        {{on "click" this.transitionToViewCertificates}}
+        data-test-view-certificate-button
+      >
+        View
+      </button>
+    </div>
   </OverviewCard>
 </div>

@@ -13,6 +13,9 @@
 .is-bottomless {
   box-shadow: 0 -1px 0 0 $grey-light;
 }
+.has-only-top-shadow {
+  box-shadow: 0 -1px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+}
 .has-bottom-shadow {
   box-shadow: $box-shadow !important;
 }
@@ -70,6 +73,9 @@
 }
 .is-flex-1 {
   flex-grow: 1;
+  &.basis-0 {
+    flex-basis: 0;
+  }
 }
 .is-flex-wrap {
   flex-flow: row wrap;
@@ -218,6 +224,9 @@
 }
 .has-top-padding-l {
   padding-top: $spacing-l;
+}
+.has-left-padding-l {
+  padding-left: $spacing-l;
 }
 .has-top-padding-xxl {
   padding-top: $spacing-xxl;

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -320,7 +321,7 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 	if isLeader {
 		t.Fatal("core should not be leader")
 	}
-	RetryUntil(t, 5*time.Second, func() error {
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
 		state := c.ActiveNodeReplicationState()
 		if state == 0 {
 			return fmt.Errorf("heartbeats have not yet returned a valid active node replication state: %d", state)

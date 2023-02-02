@@ -7,7 +7,7 @@ description: AWS Method for Vault Agent Auto-Auth
 # Vault Agent Auto-Auth AWS Method
 
 The `aws` method performs authentication against the [AWS Auth
-method](/docs/auth/aws). Both `ec2` and `iam`
+method](/vault/docs/auth/aws). Both `ec2` and `iam`
 authentication types are supported. If `ec2` is used, the agent will store the
 reauthentication value in memory and use it for reauthenticating, but will not
 persist it to disk.
@@ -48,17 +48,17 @@ parameters unset in your configuration.
 
 - `region` `(string: "us-east-1")` - The region to use for signing the authentication request. The
   region Agent uses should match that corresponding to
-  [`sts_endpoint`](/api-docs/auth/aws#sts_endpoint),
+  [`sts_endpoint`](/vault/api-docs/auth/aws#sts_endpoint),
   if a custom endpoint has been configured on the Vault server.
 
 - `session_token` `(string: optional)` - The session token to use for authentication, if needed.
 
 - `header_value` `(string: optional)` - If configured in Vault, the value to use for
-  [`iam_server_id_header_value`](/api-docs/auth/aws#iam_server_id_header_value).
+  [`iam_server_id_header_value`](/vault/api-docs/auth/aws#iam_server_id_header_value).
 
 - `nonce` `(string: optional)` - If not provided, Vault will generate a new UUID every time `vault agent` runs.
   If set, make sure you understand the importance of generating a good, unique `nonce` and protecting it.
-  See [Client Nonce](/docs/auth/aws#client-nonce) for more information.
+  See [Client Nonce](/vault/docs/auth/aws#client-nonce) for more information.
 
 ## Tutorial
 

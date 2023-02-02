@@ -15,7 +15,6 @@ const certDisplayFields = [
   'certificate',
   'commonName',
   'revocationTime',
-  'issueDate',
   'serialNumber',
   'notValidBefore',
   'notValidAfter',
@@ -38,24 +37,28 @@ export default class PkiCertificateBaseModel extends Model {
   @attr('string') commonName;
 
   // Attrs that come back from API POST request
-  @attr() caChain;
+  @attr({ masked: true, label: 'CA Chain' }) caChain;
   @attr('string', { masked: true }) certificate;
   @attr('number') expiration;
   @attr('number', { formatDate: true }) revocationTime;
-  @attr('string') issuingCa;
+  @attr('string', { label: 'Issuing CA', masked: true }) issuingCa;
   @attr('string') privateKey;
   @attr('string') privateKeyType;
   @attr('string') serialNumber;
 
   // Parsed from cert in serializer
-  @attr('number', { formatDate: true }) issueDate;
   @attr('number', { formatDate: true }) notValidAfter;
   @attr('number', { formatDate: true }) notValidBefore;
+  @attr('string') uriSans;
+  @attr('string') altNames;
+  @attr('string') signatureBits;
 
   // For importing
   @attr('string') pemBundle;
+  // readonly attrs returned after importing
   @attr importedIssuers;
   @attr importedKeys;
+  @attr mapping;
 
   @lazyCapabilities(apiPath`${'backend'}/revoke`, 'backend') revokePath;
   get canRevoke() {
