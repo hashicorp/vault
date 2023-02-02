@@ -3277,7 +3277,6 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 
 func TestSystemBackend_ToolsRandom(t *testing.T) {
 	b := testSystemBackend(t)
-	paths := b.(*SystemBackend).toolsPaths()
 	req := logical.TestRequest(t, logical.UpdateOperation, "tools/random")
 
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
@@ -3286,7 +3285,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 1, req.Operation),
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -3309,7 +3308,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 			} else {
 				schema.ValidateResponse(
 					t,
-					schema.FindResponseSchema(t, paths, 1, req.Operation),
+					schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
 					resp,
 					true,
 				)
