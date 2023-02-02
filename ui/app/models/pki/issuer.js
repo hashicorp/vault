@@ -39,7 +39,7 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   keyId;
 
   @attr({
-    label: 'Subject Alternative Names',
+    label: 'URI Subject Alternative Names (URI SANs)',
   })
   uriSans;
 
