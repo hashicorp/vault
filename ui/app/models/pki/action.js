@@ -50,21 +50,25 @@ export default class PkiActionModel extends Model {
 
   @attr('string', {
     label: 'Subject Alternative Names (SANs)',
+    editType: 'stringArray',
   })
   altNames; // comma sep strings
 
   @attr('string', {
     label: 'IP Subject Alternative Names (IP SANs)',
+    editType: 'stringArray',
   })
   ipSans;
 
   @attr('string', {
     label: 'URI Subject Alternative Names (URI SANs)',
+    editType: 'stringArray',
   })
   uriSans;
 
   @attr('string', {
     label: 'Other SANs',
+    editType: 'stringArray',
   })
   otherSans;
 
