@@ -143,8 +143,10 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 
 		DisableCache:    true,
 		DisableCacheRaw: true,
-		EnableUI:        true,
-		EnableUIRaw:     true,
+
+		UIConfig: UIConfig{
+			Enabled: true,
+		},
 
 		EnableRawEndpoint:    true,
 		EnableRawEndpointRaw: true,
@@ -242,8 +244,9 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 
 		CacheSize: 45678,
 
-		EnableUI:    true,
-		EnableUIRaw: true,
+		UIConfig: UIConfig{
+			Enabled: true,
+		},
 
 		EnableRawEndpoint:    true,
 		EnableRawEndpointRaw: true,
@@ -368,8 +371,9 @@ func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) 
 
 		DisableCache:    true,
 		DisableCacheRaw: true,
-		EnableUI:        true,
-		EnableUIRaw:     true,
+		UIConfig: UIConfig{
+			Enabled: true,
+		},
 	}
 
 	config.Prune()
@@ -446,8 +450,9 @@ func testLoadConfigFile(t *testing.T) {
 		DisableCacheRaw:          true,
 		DisablePrintableCheckRaw: true,
 		DisablePrintableCheck:    true,
-		EnableUI:                 true,
-		EnableUIRaw:              true,
+		UIConfig: UIConfig{
+			Enabled: true,
+		},
 
 		EnableRawEndpoint:    true,
 		EnableRawEndpointRaw: true,
@@ -500,8 +505,8 @@ func testUnknownFieldValidation(t *testing.T) {
 			Problem: "unknown or unsupported field bad_value found in configuration",
 			Position: token.Pos{
 				Filename: "./test-fixtures/config.hcl",
-				Offset:   583,
-				Line:     34,
+				Offset:   604,
+				Line:     36,
 				Column:   5,
 			},
 		},
@@ -632,13 +637,14 @@ func testLoadConfigFile_json(t *testing.T) {
 
 		ClusterCipherSuites: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
 
-		MaxLeaseTTL:          10 * time.Hour,
-		MaxLeaseTTLRaw:       "10h",
-		DefaultLeaseTTL:      10 * time.Hour,
-		DefaultLeaseTTLRaw:   "10h",
-		DisableCacheRaw:      interface{}(nil),
-		EnableUI:             true,
-		EnableUIRaw:          true,
+		MaxLeaseTTL:        10 * time.Hour,
+		MaxLeaseTTLRaw:     "10h",
+		DefaultLeaseTTL:    10 * time.Hour,
+		DefaultLeaseTTLRaw: "10h",
+		DisableCacheRaw:    interface{}(nil),
+		UIConfig: UIConfig{
+			Enabled: true,
+		},
 		EnableRawEndpoint:    true,
 		EnableRawEndpointRaw: true,
 		DisableSealWrap:      true,
@@ -702,7 +708,9 @@ func testLoadConfigDir(t *testing.T) {
 			DisableClustering: false,
 		},
 
-		EnableUI: true,
+		UIConfig: UIConfig{
+			Enabled: true,
+		},
 
 		EnableRawEndpoint: true,
 
@@ -726,28 +734,32 @@ func testConfig_Sanitized(t *testing.T) {
 	sanitizedConfig := config.Sanitized()
 
 	expected := map[string]interface{}{
-		"api_addr":                            "top_level_api_addr",
-		"cache_size":                          0,
-		"cluster_addr":                        "top_level_cluster_addr",
-		"cluster_cipher_suites":               "",
-		"cluster_name":                        "testcluster",
-		"default_lease_ttl":                   (365 * 24 * time.Hour) / time.Second,
-		"default_max_request_duration":        0 * time.Second,
-		"disable_cache":                       true,
-		"disable_clustering":                  false,
-		"disable_indexing":                    false,
-		"disable_mlock":                       true,
-		"disable_performance_standby":         false,
-		"experiments":                         []string(nil),
-		"plugin_file_uid":                     0,
-		"plugin_file_permissions":             0,
-		"disable_printable_check":             false,
-		"disable_sealwrap":                    true,
-		"raw_storage_endpoint":                true,
-		"introspection_endpoint":              false,
-		"disable_sentinel_trace":              true,
-		"detect_deadlocks":                    "",
-		"enable_ui":                           true,
+		"api_addr":                     "top_level_api_addr",
+		"cache_size":                   0,
+		"cluster_addr":                 "top_level_cluster_addr",
+		"cluster_cipher_suites":        "",
+		"cluster_name":                 "testcluster",
+		"default_lease_ttl":            (365 * 24 * time.Hour) / time.Second,
+		"default_max_request_duration": 0 * time.Second,
+		"disable_cache":                true,
+		"disable_clustering":           false,
+		"disable_indexing":             false,
+		"disable_mlock":                true,
+		"disable_performance_standby":  false,
+		"experiments":                  []string(nil),
+		"plugin_file_uid":              0,
+		"plugin_file_permissions":      0,
+		"disable_printable_check":      false,
+		"disable_sealwrap":             true,
+		"raw_storage_endpoint":         true,
+		"introspection_endpoint":       false,
+		"disable_sentinel_trace":       true,
+		"detect_deadlocks":             "",
+		"enable_ui":                    true,
+		"ui": map[string]interface{}{
+			"enabled": true,
+			"dir":     "",
+		},
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
 		"log_requests_level":                  "basic",
@@ -1170,8 +1182,9 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 		DisableCacheRaw:          true,
 		DisablePrintableCheckRaw: true,
 		DisablePrintableCheck:    true,
-		EnableUI:                 true,
-		EnableUIRaw:              true,
+		UIConfig: UIConfig{
+			Enabled: true,
+		},
 
 		EnableRawEndpoint:    true,
 		EnableRawEndpointRaw: true,

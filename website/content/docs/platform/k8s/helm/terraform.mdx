@@ -80,7 +80,9 @@ server:
       enabled: true
       setNodeId: true
       config: |
-        ui = false
+        ui_config {
+          enabled = false
+        }
 
         listener "tcp" {
           tls_disable = 1
@@ -124,7 +126,9 @@ resource "helm_release" "vault" {
   set {
     name  = "server.ha.raft.config"
     value = <<EOT
-ui = false
+ui_config {
+  enabled = false
+}
 
 listener "tcp" {
   tls_disable = 1

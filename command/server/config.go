@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -60,8 +61,9 @@ type Config struct {
 	DisablePrintableCheck    bool        `hcl:"-"`
 	DisablePrintableCheckRaw interface{} `hcl:"disable_printable_check"`
 
-	EnableUI    bool        `hcl:"-"`
 	EnableUIRaw interface{} `hcl:"ui"`
+
+	UIConfig UIConfig `hcl:"ui_config"`
 
 	MaxLeaseTTL        time.Duration `hcl:"-"`
 	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl,alias:MaxLeaseTTL"`
@@ -116,6 +118,25 @@ type Config struct {
 	DisableSSCTokens bool   `hcl:"-"`
 }
 
+type UIConfig struct {
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+
+	Enabled bool   `hcl:"enabled"`
+	Dir     string `hcl:"dir"`
+}
+
+func (c *UIConfig) Validate(enableUIRaw interface{}, source string) (results []configutil.ConfigError) {
+	if enableUIRaw != nil {
+		results = append(results, configutil.ConfigError{
+			Problem:  "The 'ui' field is deprecated. Use the 'ui_config.enabled' field instead",
+			Position: token.Pos{Filename: source},
+		})
+	}
+
+	results = append(results, configutil.ValidateUnusedFields(c.UnusedKeys, source)...)
+	return
+}
+
 const (
 	sectionSeal = "Seal"
 )
@@ -132,6 +153,8 @@ func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 		results = append(results, l.Validate(sourceFilePath)...)
 	}
 	results = append(results, c.validateEnt(sourceFilePath)...)
+	results = append(results, c.UIConfig.Validate(c.EnableUIRaw, sourceFilePath)...)
+
 	return results
 }
 
@@ -160,7 +183,9 @@ enable_raw_endpoint = true
 storage "%s" {
 }
 
-ui = true
+ui_config {
+  enabled = true
+}
 `
 
 	hclStr = fmt.Sprintf(hclStr, storageType)
@@ -215,7 +240,10 @@ enable_raw_endpoint = true
 storage "%s" {
 }
 
-ui = true
+
+ui_config {
+  enabled = true
+}
 `
 
 	hclStr = fmt.Sprintf(hclStr, certDir, certDir, storageType)
@@ -310,6 +338,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisablePrintableCheck = c2.DisablePrintableCheck
 	}
 
+	result.UIConfig.Enabled = c.UIConfig.Enabled
+	if c2.UIConfig.Enabled {
+		result.UIConfig.Enabled = c2.UIConfig.Enabled
+	}
+
 	// merge these integers via a MAX operation
 	result.MaxLeaseTTL = c.MaxLeaseTTL
 	if c2.MaxLeaseTTL > result.MaxLeaseTTL {
@@ -326,9 +359,8 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.ClusterCipherSuites = c2.ClusterCipherSuites
 	}
 
-	result.EnableUI = c.EnableUI
-	if c2.EnableUI {
-		result.EnableUI = c2.EnableUI
+	if c2.UIConfig.Dir != "" {
+		result.UIConfig.Dir = c2.UIConfig.Dir
 	}
 
 	result.EnableRawEndpoint = c.EnableRawEndpoint
@@ -576,9 +608,11 @@ func ParseConfig(d, source string) (*Config, error) {
 	}
 
 	if result.EnableUIRaw != nil {
-		if result.EnableUI, err = parseutil.ParseBool(result.EnableUIRaw); err != nil {
+		enableUI, err := parseutil.ParseBool(result.EnableUIRaw)
+		if err != nil {
 			return nil, err
 		}
+		result.UIConfig.Enabled = enableUI
 	}
 
 	if result.DisableCacheRaw != nil {
@@ -1078,7 +1112,11 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"disable_cache":           c.DisableCache,
 		"disable_printable_check": c.DisablePrintableCheck,
 
-		"enable_ui": c.EnableUI,
+		"enable_ui": c.UIConfig.Enabled,
+		"ui": map[string]interface{}{
+			"enabled": c.UIConfig.Enabled,
+			"dir":     c.UIConfig.Dir,
+		},
 
 		"max_lease_ttl":     c.MaxLeaseTTL / time.Second,
 		"default_lease_ttl": c.DefaultLeaseTTL / time.Second,

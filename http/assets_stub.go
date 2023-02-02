@@ -4,6 +4,7 @@ package http
 
 import (
 	"net/http"
+	"os"
 )
 
 func init() {
@@ -12,7 +13,12 @@ func init() {
 	uiBuiltIn = false
 }
 
-// assetFS is a stub for building Vault without a UI.
-func assetFS() http.FileSystem {
+// assetFS serves the UI from the given directory or defaults to a stub when
+// Vault is built without a UI.
+func assetFS(uiDir string) http.FileSystem {
+	if uiDir != "" {
+		return http.FS(os.DirFS(uiDir))
+	}
+
 	return nil
 }

@@ -19,12 +19,12 @@ func TestConfig_Enabled(t *testing.T) {
 	}
 	logl := &logical.InmemStorage{}
 
-	config := NewUIConfig(true, phys, logl)
+	config := NewUIConfig(true, "", phys, logl)
 	if !config.Enabled() {
 		t.Fatal("ui should be enabled")
 	}
 
-	config = NewUIConfig(false, phys, logl)
+	config = NewUIConfig(false, "", phys, logl)
 	if config.Enabled() {
 		t.Fatal("ui should not be enabled")
 	}
@@ -38,7 +38,7 @@ func TestConfig_Headers(t *testing.T) {
 	}
 	logl := &logical.InmemStorage{}
 
-	config := NewUIConfig(true, phys, logl)
+	config := NewUIConfig(true, "", phys, logl)
 	headers, err := config.Headers(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -138,7 +138,7 @@ func TestConfig_DefaultHeaders(t *testing.T) {
 	}
 	logl := &logical.InmemStorage{}
 
-	config := NewUIConfig(true, phys, logl)
+	config := NewUIConfig(true, "", phys, logl)
 	headers, err := config.Headers(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)

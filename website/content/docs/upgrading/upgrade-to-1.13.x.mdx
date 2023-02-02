@@ -18,9 +18,14 @@ for Vault 1.13.x compared to 1.12. Please read it carefully.
 
 @include 'consul-dataplane-upgrade-note.mdx'
 
+### UI Parameter change
+
+The `ui` parameter in the Vault configuration file has been deprecated and has
+been replaced by the `ui_config.enabled` option. The `ui` parameter will be
+removed in a future version of Vault.
+
 ### AliCloud Auth Role Parameter
 
 The AliCloud auth plugin will now require the `role` parameter on login. This
 has always been documented as a required field but the requirement will now be
 enforced.
-

@@ -26,11 +26,12 @@ type UIConfig struct {
 	barrierStorage  logical.Storage
 
 	enabled        bool
+	dir            string
 	defaultHeaders http.Header
 }
 
 // NewUIConfig creates a new UI config
-func NewUIConfig(enabled bool, physicalStorage physical.Backend, barrierStorage logical.Storage) *UIConfig {
+func NewUIConfig(enabled bool, dir string, physicalStorage physical.Backend, barrierStorage logical.Storage) *UIConfig {
 	defaultHeaders := http.Header{}
 	defaultHeaders.Set("Service-Worker-Allowed", "/")
 	defaultHeaders.Set("X-Content-Type-Options", "nosniff")
@@ -40,6 +41,7 @@ func NewUIConfig(enabled bool, physicalStorage physical.Backend, barrierStorage 
 		physicalStorage: physicalStorage,
 		barrierStorage:  barrierStorage,
 		enabled:         enabled,
+		dir:             dir,
 		defaultHeaders:  defaultHeaders,
 	}
 }

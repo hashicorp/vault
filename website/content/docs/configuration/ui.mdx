@@ -15,22 +15,36 @@ more with the Vault UI.
 
 -> The UI requires **Vault 0.10 or higher** or Vault Enterprise.
 
+~> **Vault 1.13** deprecated the `ui` parameter. The UI can now be enabled using
+the `ui_config.enabled` configuration option.
+
 ## Activating the Vault UI
 
-The Vault UI is not activated by default. To activate the UI, set the `ui`
+The Vault UI is not activated by default. To activate the UI, set the `ui_config.enabled`
 configuration option in the Vault server configuration. Vault clients do not
 need to set this option, since they will not be serving the UI.
 
 ```hcl
-ui = true
+ui_config {
+  enabled = true
+}
 
 listener "tcp" {
   # ...
 }
 ```
 
-For more information, please see the
-[Vault configuration options](/vault/docs/configuration).
+## `ui_config` Parameters
+
+The `ui_config` stanza supports the following parameters:
+
+  - `enabled` `bool: false` - Whether to enable the Vault UI. This must be a
+    boolean value and defaults to `false`. In `-dev` mode this defaults to `true`.
+    This parameter replaces the `ui` parameter since Vault 1.13.0.
+  - `dir` `string: ""` - This specifies that the web UI should be served from an
+    external directory rather than the build in one. This allows for customization
+    or development.
+
 
 ## Accessing the Vault UI
 

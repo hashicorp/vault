@@ -1,4 +1,7 @@
-ui = true
+ui_config {
+  enabled = true
+}
+
 listener "tcp" {
   address = "[::]:8200"
   cluster_address = "[::]:8201"

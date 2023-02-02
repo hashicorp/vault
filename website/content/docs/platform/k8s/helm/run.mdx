@@ -268,7 +268,9 @@ server:
     replicas: 3
 
     config: |
-      ui = true
+      ui_config {
+        enabled = true
+      }
 
       listener "tcp" {
         tls_disable = 1
@@ -328,7 +330,9 @@ server:
   ha:
     enabled: true
     config: |
-      ui = true
+      ui_config {
+        enabled = true
+      }
 
       listener "tcp" {
         tls_disable = 1

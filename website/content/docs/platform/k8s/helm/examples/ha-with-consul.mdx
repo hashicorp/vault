@@ -51,7 +51,9 @@ server:
     replicas: 5
 
     config: |
-      ui = true
+      ui_config {
+        enabled = true
+      }
 
       listener "tcp" {
         tls_disable = 1

@@ -858,16 +858,20 @@ and consider if they're appropriate for your deployment.
     ```yaml
     # ExtraConfig values are formatted as a multi-line string:
     config: |
-      ui = true
       api_addr = "http://POD_IP:8200"
+
+      ui_config {
+        enabled = true
+      }
+
       listener "tcp" {
-          tls_disable = 1
-          address     = "0.0.0.0:8200"
+        tls_disable = 1
+        address     = "0.0.0.0:8200"
       }
 
       storage "consul" {
-          path = "vault/"
-          address = "HOST_IP:8500"
+        path = "vault/"
+        address = "HOST_IP:8500"
       }
     ```
 

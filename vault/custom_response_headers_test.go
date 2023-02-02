@@ -55,7 +55,7 @@ func TestConfigCustomHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 	logl := &logical.InmemStorage{}
-	uiConfig := NewUIConfig(true, phys, logl)
+	uiConfig := NewUIConfig(true, "", phys, logl)
 
 	rawListenerConfig := []*configutil.Listener{
 		{
