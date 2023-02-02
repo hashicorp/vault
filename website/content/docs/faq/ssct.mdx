@@ -64,7 +64,12 @@ With the exception of the prefix changes detailed above that apply to all token 
 
 There is a new configuration in the replication section as follows:
 
-`replication { allow_forwarding_via_token = ["new_token"] } `
+```
+replication { 
+  allow_forwarding_via_token = "new_token"
+}
+```
+
 This configuration allows Vault clusters to be configured so that requests made to performance standbys that don’t yet have the most up-to-date WAL index are forwarded to the active node. Please note that there will be extra load on the active node with this type of configuration.
 
 ### Q: Is there anything else I need to consider to achieve consistency, besides upgrading to Vault 1.10?
