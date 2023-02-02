@@ -1623,8 +1623,7 @@ func (b *SystemBackend) inFlightRequestPath() *framework.Path {
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						// dynamic fields
-						Fields: map[string]*framework.FieldSchema{},
+						Fields: nil, // dynamic fields
 					}},
 				},
 			},
