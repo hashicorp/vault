@@ -154,7 +154,7 @@ export function parseExtensions(extensions) {
     const supportedNames = Object.keys(SAN_TYPES);
     const sans = values.subject_alt_name?.altNames;
     if (!sans) {
-      errors.push(new Error('certificate contains unsupported subjectAltName values'));
+      errors.push(new Error('certificate contains an unsupported subjectAltName construction'));
     } else if (sans.any((san) => !supportedTypes.includes(san.type))) {
       // pass along error that unsupported values exist
       errors.push(new Error('subjectAltName contains unsupported types'));
@@ -295,6 +295,20 @@ export function parseExtensions(extensions) {
     }
 
     values.key_usage = computedKeyUsages;
+  }
+
+  if (values.other_sans) {
+    // We need to parse these into their server-side values.
+    const parsed_sans = [];
+    for (const san of values.other_sans) {
+      let [objectId, constructed] = san.valueBlock.value;
+      objectId = objectId.toJSON().valueBlock.value;
+      constructed = constructed.valueBlock.value[0].toJSON(); // can I just grab the first element here?
+      const { blockName } = constructed; // need to remove 'String' from 'UTF8String'
+      const value = constructed.valueBlock.value;
+      parsed_sans.push(`${objectId};${blockName}:${value}`);
+    }
+    values.other_sans = parsed_sans;
   }
 
   delete values.subject_alt_name;
