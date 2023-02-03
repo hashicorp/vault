@@ -20,17 +20,17 @@ var pathFetchReadSchema = map[int][]framework.Response{
 			"certificate": {
 				Type:        framework.TypeString,
 				Description: `Certificate`,
-				Required:    true,
+				Required:    false,
 			},
 			"revocation_time": {
 				Type:        framework.TypeInt,
 				Description: `Revocation time`,
-				Required:    true,
+				Required:    false,
 			},
 			"revocation_time_rfc3339": {
 				Type:        framework.TypeInt,
 				Description: `Revocation time RFC 3339 formatted`,
-				Required:    true,
+				Required:    false,
 			},
 			"issuer_id": {
 				Type:        framework.TypeString,
@@ -40,6 +40,18 @@ var pathFetchReadSchema = map[int][]framework.Response{
 			"ca_chain": {
 				Type:        framework.TypeStringSlice,
 				Description: `Issuing CA Chain`,
+				Required:    false,
+			},
+			"http_content_type": {
+				Type:        framework.TypeString,
+				Required:    false,
+			},
+			"http_raw_body": {
+				Type:        framework.TypeString,
+				Required:    false,
+			},
+			"http_status_code": {
+				Type:        framework.TypeString,
 				Required:    false,
 			},
 		},
