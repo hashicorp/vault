@@ -34,8 +34,10 @@
     <div class="control has-icon-right">
       <Textarea
         id="input-{{this.elementId}}"
-        class="textarea {{if (and (not this.showValue) this.content) 'masked-font'}}"
         @value={{this.content}}
+        class="textarea {{if (and (not this.showValue) this.content) 'masked-font'}}"
+        {{on "change" this.handleTextInput}}
+        data-test-text-file-textarea
       />
       <button
         type="button"
