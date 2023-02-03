@@ -16,8 +16,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"math"
 	"math/big"
 	mathrand "math/rand"
@@ -32,6 +30,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 
 	"github.com/stretchr/testify/require"
 
