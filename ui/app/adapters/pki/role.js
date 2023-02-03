@@ -34,6 +34,13 @@ export default class PkiRoleAdapter extends ApplicationAdapter {
     });
   }
 
+  updateRecord(store, type, snapshot) {
+    const { name, backend } = snapshot.record;
+    const data = this.serialize(snapshot);
+    const url = this._urlForRole(backend, name);
+    return this.ajax(url, 'POST', { data });
+  }
+
   fetchByQuery(store, query) {
     const { id, backend } = query;
 
