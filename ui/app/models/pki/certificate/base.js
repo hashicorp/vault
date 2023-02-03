@@ -49,8 +49,9 @@ export default class PkiCertificateBaseModel extends Model {
   // Parsed from cert in serializer
   @attr('number', { formatDate: true }) notValidAfter;
   @attr('number', { formatDate: true }) notValidBefore;
-  @attr('string') uriSans;
-  @attr('string') altNames;
+  @attr('string', { label: 'URI Subject Alternative Names (URI SANs)' }) uriSans;
+  @attr('string', { label: 'IP Subject Alternative Names (IP SANs)' }) ipSans;
+  @attr('string', { label: 'Subject Alternative Names (SANs)' }) altNames;
   @attr('string') signatureBits;
 
   // For importing
