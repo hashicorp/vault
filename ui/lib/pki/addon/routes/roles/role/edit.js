@@ -1,8 +1,12 @@
 import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
 @withConfirmLeave()
 export default class PkiRoleEditRoute extends Route {
+  @service store;
+  @service secretMountPath;
+
   model() {
     const { role } = this.paramsFor('roles/role');
     return this.store.queryRecord('pki/role', {
