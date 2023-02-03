@@ -181,7 +181,7 @@ func canUseUnifiedStorage(req *logical.Request, cfg *crlConfig) bool {
 
 	// We are operating on the existing /pki/ocsp path, both of these fields need to be enabled
 	// for us to use the unified path.
-	return cfg.UnifiedCRL && cfg.UnifiedCRLOnExistingPaths
+	return shouldLegacyPathUseUnified(cfg)
 }
 
 func isUnifiedOcspPath(req *logical.Request) bool {
