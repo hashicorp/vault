@@ -337,7 +337,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     assert
       .dom('[data-test-alert-banner="alert"] .alert-banner-message-body')
       .hasText(
-        'certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1, certificate contains unsupported extension OIDs: 2.5.29.37, subjectAltName contains unsupported types'
+        'certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1, certificate contains unsupported extension OIDs: 2.5.29.37'
       );
 
     for (const field of FIELDS) {

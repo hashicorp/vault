@@ -145,7 +145,7 @@ export function parseExtensions(extensions) {
 
   // make each extension its own key/value pair
   for (const attrName in EXTENSION_OIDs) {
-    values[attrName] = extensions.find((ext) => ext.extnID === EXTENSION_OIDs[attrName])?.parsedValue || null;
+    values[attrName] = extensions.find((ext) => ext.extnID === EXTENSION_OIDs[attrName])?.parsedValue;
   }
 
   if (values.subject_alt_name) {

@@ -41,6 +41,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         can_parse: true,
         common_name: 'common-name.com',
         country: 'France',
+        other_sans: '1.3.1.4.1.5.9.2.6;UTF8:some-utf-string',
         exclude_cn_from_sans: true,
         expiry_date: {},
         ip_sans: '192.158.1.38, 1234:0fd2:5621:0001:0089:0000:0000:4500',
@@ -48,8 +49,8 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         issue_date: {},
         locality: 'Paris',
         max_path_length: 17,
-        not_valid_after: 1678057874,
-        not_valid_before: 1675293044,
+        not_valid_after: 1678210083,
+        not_valid_before: 1675445253,
         organization: 'Widget',
         ou: 'Finance',
         parsing_errors: [],
@@ -98,14 +99,13 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     assert.expect(2);
     const parsedCert = parseCertificate(unsupportedOids); // contains unsupported subject and extension OIDs
     const parsingErrors = this.getErrorMessages(parsedCert.parsing_errors);
-
     assert.propContains(
       parsedCert,
       {
         alt_names: 'dns-NameSupported',
         common_name: 'fancy-cert-unsupported-subj-and-ext-oids',
         ip_sans: '192.158.1.38',
-        parsing_errors: [{}, {}, {}],
+        parsing_errors: [{}, {}],
         uri_sans: 'uriSupported',
       },
       'supported values are present when unsupported values exist'
@@ -115,7 +115,6 @@ module('Integration | Util | parse pki certificate', function (hooks) {
       [
         'certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1',
         'certificate contains unsupported extension OIDs: 2.5.29.37',
-        'subjectAltName contains unsupported types',
       ],
       'it contains expected error messages'
     );
@@ -180,7 +179,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
   });
 
   test('the helper parseExtensions returns object with correct key/value pairs', async function (assert) {
-    assert.expect(9);
+    assert.expect(11);
     // assert supported extensions return correct type
     const supportedExtensions = parseExtensions(this.parsableLoadedCert.extensions);
     let { extValues, extErrors } = supportedExtensions;
@@ -189,7 +188,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     }
     assert.ok(Array.isArray(extValues.permitted_dns_domains), 'permitted_dns_domains is an array');
     assert.ok(Number.isInteger(extValues.max_path_length), 'max_path_length is an integer');
-    // TODO add assertion for key_usage
+    assert.propEqual(extValues.key_usage, ['CertSign', 'CRLSign'], 'parses key_usage');
     assert.strictEqual(extErrors.length, 0, 'no extension errors');
 
     // assert unsupported extensions return errors
@@ -197,10 +196,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     ({ extValues, extErrors } = unsupportedExt);
     assert.propEqual(
       this.getErrorMessages(extErrors),
-      [
-        'certificate contains unsupported extension OIDs: 2.5.29.37',
-        'subjectAltName contains unsupported types',
-      ],
+      ['certificate contains unsupported extension OIDs: 2.5.29.37'],
       'it returns extension errors'
     );
     assert.ok(
