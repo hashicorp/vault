@@ -986,8 +986,9 @@ func TestAutoRebuild(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	crl := getCrlCertificateList(t, client, "pki")
-	lastCRLNumber := crl.Version
+	defaultCrlPath := "/v1/pki/crl"
+	crl := getParsedCrlAtPath(t, client, defaultCrlPath).TBSCertList
+	lastCRLNumber := getCRLNumber(t, crl)
 	lastCRLExpiry := crl.NextUpdate
 	requireSerialNumberInCRL(t, crl, leafSerial)
 
@@ -1000,6 +1001,12 @@ func TestAutoRebuild(t *testing.T) {
 		"delta_rebuild_interval":    deltaPeriod,
 	})
 	require.NoError(t, err)
+
+	// Wait for the CRL to update based on the configuration change we just did
+	// so that it doesn't grab the revocation we are going to do afterwards.
+	crl = waitForUpdatedCrl(t, client, defaultCrlPath, lastCRLNumber, lastCRLExpiry.Sub(time.Now()))
+	lastCRLNumber = getCRLNumber(t, crl)
+	lastCRLExpiry = crl.NextUpdate
 
 	// Issue a cert and revoke it.
 	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
@@ -1048,7 +1055,7 @@ func TestAutoRebuild(t *testing.T) {
 
 	// New serial should not appear on CRL.
 	crl = getCrlCertificateList(t, client, "pki")
-	thisCRLNumber := crl.Version
+	thisCRLNumber := getCRLNumber(t, crl)
 	requireSerialNumberInCRL(t, crl, leafSerial) // But the old one should.
 	now := time.Now()
 	graceInterval, _ := time.ParseDuration(gracePeriod)
@@ -1069,7 +1076,7 @@ func TestAutoRebuild(t *testing.T) {
 	}
 
 	// This serial should exist in the delta WAL section for the mount...
-	resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+	resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + localDeltaWALPath)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data)
@@ -1089,7 +1096,7 @@ func TestAutoRebuild(t *testing.T) {
 		default:
 			// Check and see if there's a storage entry for the last rebuild
 			// serial. If so, validate the delta CRL contains this entry.
-			resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+			resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + localDeltaWALPath)
 			require.NoError(t, err)
 			require.NotNil(t, resp)
 			require.NotEmpty(t, resp.Data)
@@ -1110,7 +1117,7 @@ func TestAutoRebuild(t *testing.T) {
 			}
 
 			// Read the marker and see if its correct.
-			resp, err = client.Logical().Read("sys/raw/logical/" + pkiMount + "/" + deltaWALLastBuildSerial)
+			resp, err = client.Logical().Read("sys/raw/logical/" + pkiMount + "/" + localDeltaWALLastBuildSerial)
 			require.NoError(t, err)
 			if resp == nil {
 				time.Sleep(1 * time.Second)
@@ -1133,8 +1140,13 @@ func TestAutoRebuild(t *testing.T) {
 			deltaCrl := getParsedCrlAtPath(t, client, "/v1/pki/crl/delta").TBSCertList
 			if !requireSerialNumberInCRL(nil, deltaCrl, newLeafSerial) {
 				// Check if it is on the main CRL because its already regenerated.
-				mainCRL := getParsedCrlAtPath(t, client, "/v1/pki/crl").TBSCertList
+				mainCRL := getParsedCrlAtPath(t, client, defaultCrlPath).TBSCertList
 				requireSerialNumberInCRL(t, mainCRL, newLeafSerial)
+			} else {
+				referenceCrlNum := getCrlReferenceFromDelta(t, deltaCrl)
+				if lastCRLNumber < referenceCrlNum {
+					lastCRLNumber = referenceCrlNum
+				}
 			}
 		}
 	}
@@ -1145,32 +1157,9 @@ func TestAutoRebuild(t *testing.T) {
 		time.Sleep(expectedUpdate.Sub(now))
 	}
 
-	// Otherwise, the absolute latest we're willing to wait is some delta
-	// after CRL expiry (to let stuff regenerate &c).
-	interruptChan = time.After(lastCRLExpiry.Sub(now) + delta)
-	for {
-		select {
-		case <-interruptChan:
-			t.Fatalf("expected CRL to regenerate prior to CRL expiry (plus %v grace period)", delta)
-		default:
-			crl = getCrlCertificateList(t, client, "pki")
-			if crl.NextUpdate.Equal(lastCRLExpiry) {
-				// Hack to ensure we got a net-new CRL. If we didn't, we can
-				// exit this default conditional and wait for the next
-				// go-round. When the timer fires, it'll populate the channel
-				// and we'll exit correctly.
-				time.Sleep(1 * time.Second)
-				break
-			}
-
-			now := time.Now()
-			require.True(t, crl.ThisUpdate.Before(now))
-			require.True(t, crl.NextUpdate.After(now))
-			requireSerialNumberInCRL(t, crl, leafSerial)
-			requireSerialNumberInCRL(t, crl, newLeafSerial)
-			return
-		}
-	}
+	crl = waitForUpdatedCrl(t, client, defaultCrlPath, lastCRLNumber, lastCRLExpiry.Sub(now)+delta)
+	requireSerialNumberInCRL(t, crl, leafSerial)
+	requireSerialNumberInCRL(t, crl, newLeafSerial)
 }
 
 func TestTidyIssuerAssociation(t *testing.T) {

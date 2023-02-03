@@ -88,6 +88,7 @@ message GetClusterStatusResponse {
   HAStatus HAStatus = 2;
   RaftStatus RaftStatus = 3;
   string StorageType = 4;
+  string ClusterName = 5;
 }
 
 service HCPLinkMeta {

@@ -1,0 +1,4 @@
+```release-note:bug
+core: removes strings.ToLower for alias name from pathLoginAliasLookahead function in userpass. This fixes
+the storage entry for locked users by having the correct alias name in path. 
+``

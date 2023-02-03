@@ -31,11 +31,11 @@
       </p>
     {{/if}}
     {{#if (has-block)}}
-      <div class="empty-state-actions">
+      <div class="empty-state-actions" data-test-empty-state-actions>
         {{yield}}
       </div>
     {{else if this.emptyActions}}
-      <div class="empty-state-actions">
+      <div class="empty-state-actions" data-test-empty-state-actions>
         {{component this.emptyActions}}
       </div>
     {{/if}}

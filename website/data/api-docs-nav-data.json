@@ -532,6 +532,10 @@
         "path": "system/license"
       },
       {
+        "title": "<code>/sys/locked-users</code>",
+        "path": "system/user-lockout"
+      },
+      {
         "title": "<code>/sys/loggers</code>",
         "path": "system/loggers"
       },

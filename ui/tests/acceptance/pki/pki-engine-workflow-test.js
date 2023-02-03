@@ -1,42 +1,13 @@
-import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
-
-const consoleComponent = create(consoleClass);
-
-const tokenWithPolicy = async function (name, policy) {
-  await consoleComponent.runCommands([
-    `write sys/policies/acl/${name} policy=${btoa(policy)}`,
-    `write -field=client_token auth/token/create policies=${name}`,
-  ]);
-  return consoleComponent.lastLogOutput;
-};
-
-const runCommands = async function (commands) {
-  try {
-    await consoleComponent.runCommands(commands);
-    const res = consoleComponent.lastLogOutput;
-    if (res.includes('Error')) {
-      throw new Error(res);
-    }
-    return res;
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error(
-      `The following occurred when trying to run the command(s):\n ${commands.join('\n')} \n\n ${
-        consoleComponent.lastLogOutput
-      }`
-    );
-    throw error;
-  }
-};
+import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { rootPem } from 'vault/tests/helpers/pki/values';
 
 /**
  * This test module should test the PKI workflow, including:
@@ -64,7 +35,7 @@ module('Acceptance | pki workflow', function (hooks) {
   });
 
   test('empty state messages are correct when PKI not configured', async function (assert) {
-    assert.expect(10);
+    assert.expect(17);
     const assertEmptyState = (assert, resource) => {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
       assert
@@ -73,6 +44,7 @@ module('Acceptance | pki workflow', function (hooks) {
           'PKI not configured',
           `${resource} index renders correct empty state title when PKI not configured`
         );
+      assert.dom(SELECTORS.emptyStateLink).hasText('Configure PKI');
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText(
@@ -84,9 +56,8 @@ module('Acceptance | pki workflow', function (hooks) {
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
 
-    // TODO comment in when roles index empty state updated & update assert.expect() number
-    // await click(SELECTORS.rolesTab);
-    // assertEmptyState(assert, 'roles');
+    await click(SELECTORS.rolesTab);
+    assertEmptyState(assert, 'roles');
 
     await click(SELECTORS.issuersTab);
     assertEmptyState(assert, 'issuers');
@@ -96,6 +67,81 @@ module('Acceptance | pki workflow', function (hooks) {
 
     await click(SELECTORS.keysTab);
     assertEmptyState(assert, 'keys');
+  });
+  test('shows pki beta banner to return to old pki on new pki configuration page', async function (assert) {
+    assert.expect(3);
+    await authPage.login(this.pkiAdminToken);
+    await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
+    assert.dom(SELECTORS.configTab).exists('Configuration tab is present');
+    assert.dom(SELECTORS.configuration.pkiBetaBanner).exists('Configuration beta banner exists');
+    await click(SELECTORS.configuration.pkiBetaBannerLink);
+    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/configuration`);
+  });
+
+  module('configuration', function (hooks) {
+    hooks.beforeEach(function () {
+      this.pemBundle = rootPem;
+    });
+    test('import happy path', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.emptyStateLink);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      assert.dom(SELECTORS.configuration.title).hasText('Configure PKI');
+      assert.dom(SELECTORS.configuration.emptyState).exists({ count: 1 }, 'Shows empty state by default');
+      await click(SELECTORS.configuration.optionByKey('import'));
+      assert.dom(SELECTORS.configuration.emptyState).doesNotExist();
+      await click('[data-test-text-toggle]');
+      await fillIn('[data-test-text-file-textarea]', this.pemBundle);
+      await click('[data-test-pki-ca-cert-import]');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/issuers`,
+        'redirects to issuers list on success'
+      );
+    });
+
+    test('generate-root happy path', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.emptyStateLink);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      assert.dom(SELECTORS.configuration.title).hasText('Configure PKI');
+      assert.dom(SELECTORS.configuration.emptyState).exists({ count: 1 }, 'Shows empty state by default');
+      await click(SELECTORS.configuration.optionByKey('generate-root'));
+      assert.dom(SELECTORS.configuration.emptyState).doesNotExist();
+      // The URLs section is populated based on params returned from OpenAPI. This test will break when
+      // the backend adds fields. We should update the count accordingly.
+      assert.dom(SELECTORS.configuration.urlField).exists({ count: 4 });
+      // Fill in form
+      await fillIn(SELECTORS.configuration.typeField, 'exported');
+      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
+      await fillIn(SELECTORS.configuration.inputByName('issuerName'), 'my-first-issuer');
+      await click(SELECTORS.configuration.generateRootSave);
+
+      assert
+        .dom(SELECTORS.issuerDetails.title)
+        .hasText('View issuer certificate', 'Redirects to view issuer page');
+      assert.dom(SELECTORS.issuerDetails.valueByName('Common name')).hasText('my-common-name');
+      assert.dom(SELECTORS.issuerDetails.valueByName('Issuer name')).hasText('my-first-issuer');
+    });
+
+    test('it should generate intermediate csr', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.emptyStateLink);
+      await click(SELECTORS.configuration.optionByKey('generate-csr'));
+      await fillIn(SELECTORS.configuration.typeField, 'exported');
+      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
+      await click('[data-test-save]');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/issuers`,
+        'Transitions to issuers on save success'
+      );
+    });
   });
 
   module('roles', function (hooks) {
@@ -109,6 +155,7 @@ module('Acceptance | pki workflow', function (hooks) {
       allow_subdomains=true \
       max_ttl="720h"`,
       ]);
+      await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       const pki_reader_policy = readerPolicy(this.mountPath, 'roles');
       const pki_editor_policy = updatePolicy(this.mountPath, 'roles');
@@ -380,7 +427,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
       assert
         .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 9 }, 'Renders 9 info table items under default group');
+        .exists({ count: 10 }, 'Renders 10 info table items under default group');
       assert
         .dom(`${SELECTORS.issuerDetails.urlsGroup} ${SELECTORS.issuerDetails.row}`)
         .exists({ count: 3 }, 'Renders 4 info table items under URLs group');

@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	token_file "github.com/hashicorp/vault/command/agent/auth/token-file"
+
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-multierror"
 
@@ -368,6 +370,8 @@ func (c *AgentCommand) Run(args []string) int {
 			method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
 		case "approle":
 			method, err = approle.NewApproleAuthMethod(authConfig)
+		case "token_file":
+			method, err = token_file.NewTokenFileAuthMethod(authConfig)
 		case "pcf": // Deprecated.
 			method, err = cf.NewCFAuthMethod(authConfig)
 		default:
@@ -725,7 +729,12 @@ func (c *AgentCommand) Run(args []string) int {
 			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
 		}
 
-		muxHandler := cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
+		var muxHandler http.Handler
+		if leaseCache != nil {
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, proxyVaultToken)
+		} else {
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
+		}
 
 		// Parse 'require_request_header' listener config option, and wrap
 		// the request handler if necessary

@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -48,11 +49,13 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
@@ -677,8 +680,17 @@ type Core struct {
 
 	pendingRemovalMountsAllowed bool
 	expirationRevokeRetryBase   time.Duration
+
+	events *eventbus.EventBus
+
+	// writeForwardedPaths are a set of storage paths which are GRPC forwarded
+	// to the active node of the primary cluster, when present. This PathManager
+	// contains absolute paths that we intend to forward (and template) when
+	// we're on a secondary cluster.
+	writeForwardedPaths *pathmanager.PathManager
 }
 
+// c.stateLock needs to be held in read mode before calling this function.
 func (c *Core) HAState() consts.HAState {
 	switch {
 	case c.perfStandby:
@@ -1064,6 +1076,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		Enabled: new(uint32),
 	}
 
+	// Load write-forwarded path manager.
+	c.writeForwardedPaths = pathmanager.New()
+
+	// Load seal information.
 	if c.seal == nil {
 		wrapper := aeadwrapper.NewShamirWrapper()
 		wrapper.SetConfig(context.Background(), awskms.WithLogger(c.logger.Named("shamir")))
@@ -1243,6 +1259,18 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if c.versionHistory == nil {
 		c.logger.Info("Initializing version history cache for core")
 		c.versionHistory = make(map[string]VaultVersion)
+	}
+
+	// start the event system
+	eventsLogger := conf.Logger.Named("events")
+	c.allLoggers = append(c.allLoggers, eventsLogger)
+	events, err := eventbus.NewEventBus(eventsLogger)
+	if err != nil {
+		return nil, err
+	}
+	c.events = events
+	if c.isExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
+		c.events.Start()
 	}
 
 	return c, nil
@@ -3422,6 +3450,7 @@ func (c *Core) runLockedUserEntryUpdates(ctx context.Context) error {
 		return err
 	}
 
+	totalLockedUsersCount := 0
 	for _, nsID := range nsIDs {
 		// get the list of mount accessors of locked users for each namespace
 		mountAccessors, err := c.barrier.List(ctx, coreLockedUsersPath+nsID)
@@ -3436,18 +3465,23 @@ func (c *Core) runLockedUserEntryUpdates(ctx context.Context) error {
 		// if incorrect, update the entry in userFailedLoginInfo map
 		for _, mountAccessorPath := range mountAccessors {
 			mountAccessor := strings.TrimSuffix(mountAccessorPath, "/")
-			if err := c.runLockedUserEntryUpdatesForMountAccessor(ctx, mountAccessor, coreLockedUsersPath+nsID+mountAccessorPath); err != nil {
+			lockedAliasesCount, err := c.runLockedUserEntryUpdatesForMountAccessor(ctx, mountAccessor, coreLockedUsersPath+nsID+mountAccessorPath)
+			if err != nil {
 				return err
 			}
+			totalLockedUsersCount = totalLockedUsersCount + lockedAliasesCount
 		}
 	}
+
+	// emit locked user count metrics
+	metrics.SetGaugeWithLabels([]string{"core", "locked_users"}, float32(totalLockedUsersCount), nil)
 	return nil
 }
 
 // runLockedUserEntryUpdatesForMountAccessor updates the storage entry for each locked user (alias name)
 // if the entry is stale, it removes it from storage and userFailedLoginInfo map if present
 // if the entry is not stale, it updates the userFailedLoginInfo map with correct values for entry if incorrect
-func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mountAccessor string, path string) error {
+func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mountAccessor string, path string) (int, error) {
 	// get mount entry for mountAccessor
 	mountEntry := c.router.MatchingMountByAccessor(mountAccessor)
 	if mountEntry == nil {
@@ -3459,8 +3493,10 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 	// get the list of aliases for mount accessor
 	aliases, err := c.barrier.List(ctx, path)
 	if err != nil {
-		return err
+		return 0, err
 	}
+
+	lockedAliasesCount := len(aliases)
 
 	// check storage entry for each alias to update
 	for _, alias := range aliases {
@@ -3471,7 +3507,7 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 
 		existingEntry, err := c.barrier.Get(ctx, path+alias)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		if existingEntry == nil {
@@ -3481,7 +3517,7 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 		var lastLoginTime int
 		err = jsonutil.DecodeJSON(existingEntry.Value, &lastLoginTime)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		lastFailedLoginTimeFromStorageEntry := time.Unix(int64(lastLoginTime), 0)
@@ -3494,15 +3530,16 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 		if time.Now().After(lastFailedLoginTimeFromStorageEntry.Add(lockoutDurationFromConfiguration)) {
 			// stale entry, remove from storage
 			if err := c.barrier.Delete(ctx, path+alias); err != nil {
-				return err
+				return 0, err
 			}
 
 			// remove entry for this user from userFailedLoginInfo map if present as the user is not locked
 			if failedLoginInfoFromMap != nil {
 				if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true); err != nil {
-					return err
+					return 0, err
 				}
 			}
+			lockedAliasesCount -= 1
 			continue
 		}
 
@@ -3516,11 +3553,11 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 		if failedLoginInfoFromMap != &actualFailedLoginInfo {
 			// entry is invalid, updating the entry in userFailedLoginMap with correct information
 			if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, &actualFailedLoginInfo, false); err != nil {
-				return err
+				return 0, err
 			}
 		}
 	}
-	return nil
+	return lockedAliasesCount, nil
 }
 
 // PopMFAResponseAuthByID pops an item from the mfaResponseAuthQueue by ID
@@ -3779,6 +3816,10 @@ func (c *Core) aliasNameFromLoginRequest(ctx context.Context, req *logical.Reque
 
 // ListMounts will provide a slice containing a deep copy each mount entry
 func (c *Core) ListMounts() ([]*MountEntry, error) {
+	if c.Sealed() {
+		return nil, fmt.Errorf("vault is sealed")
+	}
+
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 
@@ -3798,6 +3839,10 @@ func (c *Core) ListMounts() ([]*MountEntry, error) {
 
 // ListAuths will provide a slice containing a deep copy each auth entry
 func (c *Core) ListAuths() ([]*MountEntry, error) {
+	if c.Sealed() {
+		return nil, fmt.Errorf("vault is sealed")
+	}
+
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 

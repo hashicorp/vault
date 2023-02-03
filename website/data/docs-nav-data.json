@@ -194,6 +194,10 @@
       {
         "title": "Duration String Format",
         "path": "concepts/duration-format"
+      },
+      {
+        "title": "User Lockout",
+        "path": "concepts/user-lockout"
       }
     ]
   },
@@ -396,6 +400,10 @@
       {
         "title": "<code>ui</code>",
         "path": "configuration/ui"
+      },
+      {
+        "title": "<code>user_lockout</code>",
+        "path": "configuration/user-lockout"
       },
       {
         "title": "<code>Log Completed Requests</code>",
@@ -893,6 +901,10 @@
               {
                 "title": "Kubernetes",
                 "path": "agent/autoauth/methods/kubernetes"
+              },
+              {
+                "title": "Token File",
+                "path": "agent/autoauth/methods/token_file"
               }
             ]
           },
@@ -1203,10 +1215,6 @@
           {
             "title": "SSH OTP",
             "path": "secrets/ssh/one-time-ssh-passwords"
-          },
-          {
-            "title": "Dynamic Key",
-            "path": "secrets/ssh/dynamic-ssh-keys"
           }
         ]
       },
@@ -1457,8 +1465,8 @@
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Plugin Portal",
-        "path": "plugins/plugin-portal"
+        "title": "Integrations Library",
+        "href": "/vault/integrations"
       }
     ]
   },

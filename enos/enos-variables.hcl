@@ -165,3 +165,29 @@ variable "vault_upgrade_initial_release" {
     version = "1.10.4"
   }
 }
+
+variable "operator_instance" {
+  type        = string
+  description = "The ip address of the operator (Voter) node"
+}
+
+variable "remove_vault_instances" {
+  type = map(object({
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The old vault nodes to be removed"
+}
+
+
+variable "ui_test_filter" {
+  type        = string
+  description = "A test filter to limit the ui tests to execute. Will be appended to the ember test command as '-f=\"<filter>\"'"
+  default     = null
+}
+
+variable "ui_run_tests" {
+  type        = bool
+  description = "Whether to run the UI tests or not. If set to false a cluster will be created but no tests will be run"
+  default     = true
+}

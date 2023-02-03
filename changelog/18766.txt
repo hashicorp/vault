@@ -1,0 +1,3 @@
+```release-note:bug
+core/activity: add namespace breakdown for new clients when date range spans multiple months, including the current month.
+```

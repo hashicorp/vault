@@ -1,0 +1,4 @@
+```release-note:improvement
+auth: Allow naming login MFA methods and using those names instead of IDs in satisfying MFA requirement for requests.
+Make passcode arguments consistent across login MFA method types.
+```

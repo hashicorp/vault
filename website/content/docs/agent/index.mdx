@@ -26,7 +26,7 @@ request secrets from Vault. This implies code changes to client applications
 along with additional testing and maintenance of the application.
 
 The following code example implements Vault API to authenticate with Vault
-through [AppRole auth method](/docs/auth/approle#code-example), and then uses
+through [AppRole auth method](/vault/docs/auth/approle#code-example), and then uses
 the returned client token to read secrets at `kv-v2/data/creds`.
 
 ```go
@@ -111,7 +111,7 @@ the Auto-Auth token for these requests. Please see the [API Proxy docs][apiproxy
 for more information.
 
 API Proxy functionality takes place within a defined `listener`, and its behaviour can be configured with an
-[`api_proxy` stanza](/docs/agent/apiproxy#configuration-api_proxy).
+[`api_proxy` stanza](/vault/docs/agent/apiproxy#configuration-api_proxy).
 
 ## Caching
 
@@ -133,7 +133,7 @@ to only enable this on trusted interfaces, as it does not require any authorizat
 
 ### Cache
 
-See the [caching](/docs/agent/caching#api) page for details on the cache API.
+See the [caching](/vault/docs/agent/caching#api) page for details on the cache API.
 
 ## Configuration
 
@@ -211,7 +211,7 @@ These are the currently-available general configuration options:
 - `template_config` <code>([template_config][template-config]: <optional\>)</code> - Specifies templating engine behavior.
 
 - `telemetry` <code>([telemetry][telemetry]: <optional\>)</code> – Specifies the telemetry
-  reporting system. See the [telemetry Stanza](/docs/agent#telemetry-stanza) section below
+  reporting system. See the [telemetry Stanza](/vault/docs/agent#telemetry-stanza) section below
   for a list of metrics specific to Agent.
 
 - `log_level` - Equivalent to the [`-log-level` command-line flag](#_log_level).
@@ -326,7 +326,7 @@ listener configuration, an Agent's listener configuration also supports the foll
 
 #### agent_api Stanza
 
-- `enable_quit` `(bool: false)` - If set to `true`, the agent will enable the [quit](/docs/agent#quit) API.
+- `enable_quit` `(bool: false)` - If set to `true`, the agent will enable the [quit](/vault/docs/agent#quit) API.
 
 ### telemetry Stanza
 
@@ -347,7 +347,7 @@ runtime metrics about its performance, the auto-auth and the cache status:
 
 To run Vault Agent:
 
-1. [Download](/downloads) the Vault binary where the client application runs
+1. [Download](/vault/downloads) the Vault binary where the client application runs
    (virtual machine, Kubernetes pod, etc.)
 
 1. Create a Vault Agent configuration file. (See the [Example
@@ -446,15 +446,15 @@ template {
 }
 ```
 
-[vault]: /docs/agent#vault-stanza
-[autoauth]: /docs/agent/autoauth
-[caching]: /docs/agent/caching
-[apiproxy]: /docs/agent/apiproxy
-[persistent-cache]: /docs/agent/caching/persistent-caches
-[template]: /docs/agent/template
-[template-config]: /docs/agent/template#template-configurations
-[agent-api]: /docs/agent/#agent_api-stanza
-[listener]: /docs/agent#listener-stanza
-[listener_main]: /docs/configuration/listener/tcp
-[winsvc]: /docs/agent/winsvc
-[telemetry]: /docs/configuration/telemetry
+[vault]: /vault/docs/agent#vault-stanza
+[autoauth]: /vault/docs/agent/autoauth
+[caching]: /vault/docs/agent/caching
+[apiproxy]: /vault/docs/agent/apiproxy
+[persistent-cache]: /vault/docs/agent/caching/persistent-caches
+[template]: /vault/docs/agent/template
+[template-config]: /vault/docs/agent/template#template-configurations
+[agent-api]: /vault/docs/agent/#agent_api-stanza
+[listener]: /vault/docs/agent#listener-stanza
+[listener_main]: /vault/docs/configuration/listener/tcp
+[winsvc]: /vault/docs/agent/winsvc
+[telemetry]: /vault/docs/configuration/telemetry
