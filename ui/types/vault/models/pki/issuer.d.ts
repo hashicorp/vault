@@ -4,7 +4,7 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   useOpenAPI(): boolean;
   issuerId: string;
   issuerName: string;
-  issuerRef: string;
+  issuerRef(): string;
   keyId: string;
   uriSans: string;
   leafNotAfterBehavior: string;
