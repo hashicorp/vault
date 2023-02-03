@@ -32,14 +32,11 @@
 <div class="field text-file box is-fullwidth is-marginless is-shadowless is-paddingless" data-test-component="text-file">
   {{#if this.showTextArea}}
     <div class="control has-icon-right">
-      <textarea
+      <Textarea
         id="input-{{this.elementId}}"
         class="textarea {{if (and (not this.showValue) this.content) 'masked-font'}}"
-        {{on "input" this.handleTextInput}}
-        data-test-text-file-textarea
-      >
-        {{this.content}}
-      </textarea>
+        @value={{this.content}}
+      />
       <button
         type="button"
         class="masked-input-toggle button is-compact"
