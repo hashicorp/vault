@@ -1648,20 +1648,24 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	backendLogger := c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor))
 	c.AddLogger(backendLogger)
+	pluginEventSender, err := c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
+		MountClass:    consts.PluginTypeSecrets.String(),
+		MountAccessor: entry.Accessor,
+		MountPath:     entry.Path,
+		Plugin:        entry.Type,
+		PluginVersion: entry.RunningVersion,
+		Version:       entry.Version,
+	})
+	if err != nil {
+		return nil, "", err
+	}
 	config := &logical.BackendConfig{
-		StorageView: view,
-		Logger:      backendLogger,
-		Config:      conf,
-		System:      sysView,
-		BackendUUID: entry.BackendAwareUUID,
-		EventsSender: c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
-			MountClass:    consts.PluginTypeSecrets.String(),
-			MountAccessor: entry.Accessor,
-			MountPath:     entry.Path,
-			Plugin:        entry.Type,
-			PluginVersion: entry.RunningVersion,
-			Version:       entry.Version,
-		}),
+		StorageView:  view,
+		Logger:       backendLogger,
+		Config:       conf,
+		System:       sysView,
+		BackendUUID:  entry.BackendAwareUUID,
+		EventsSender: pluginEventSender,
 	}
 
 	ctx = context.WithValue(ctx, "core_number", c.coreNumber)

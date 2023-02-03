@@ -988,20 +988,25 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
 	c.AddLogger(authLogger)
+	pluginEventSender, err := c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
+		MountClass:    consts.PluginTypeCredential.String(),
+		MountAccessor: entry.Accessor,
+		MountPath:     entry.Path,
+		Plugin:        entry.Type,
+		PluginVersion: entry.RunningVersion,
+		Version:       entry.Version,
+	})
+	if err != nil {
+		return nil, "", err
+	}
+
 	config := &logical.BackendConfig{
-		StorageView: view,
-		Logger:      authLogger,
-		Config:      conf,
-		System:      sysView,
-		BackendUUID: entry.BackendAwareUUID,
-		EventsSender: c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
-			MountClass:    consts.PluginTypeCredential.String(),
-			MountAccessor: entry.Accessor,
-			MountPath:     entry.Path,
-			Plugin:        entry.Type,
-			PluginVersion: entry.RunningVersion,
-			Version:       entry.Version,
-		}),
+		StorageView:  view,
+		Logger:       authLogger,
+		Config:       conf,
+		System:       sysView,
+		BackendUUID:  entry.BackendAwareUUID,
+		EventsSender: pluginEventSender,
 	}
 
 	b, err := f(ctx, config)

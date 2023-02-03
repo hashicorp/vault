@@ -15,10 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var (
-	ErrNotStarted          = errors.New("event broker has not been started")
-	contextEventPluginInfo = struct{}{}
-)
+var ErrNotStarted = errors.New("event broker has not been started")
 
 var cloudEventsFormatterFilter *cloudevents.FormatterFilter
 
@@ -63,17 +60,16 @@ func (bus *EventBus) Start() {
 // This function is meant to be used by trusted internal code, so it can specify details like the namespace
 // and plugin info. Events from plugins should be routed through WithPlugin(), which will populate
 // the namespace and plugin info automatically.
-func (bus *EventBus) SendInternal(ctx context.Context, namespace *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
+func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
+	if ns == nil {
+		return namespace.ErrNoNamespace
+	}
 	if !bus.started.Load() {
 		return ErrNotStarted
 	}
-	var nspace string
-	if namespace != nil {
-		nspace = namespace.ID
-	}
 	eventReceived := &logical.EventReceived{
 		Event:      data,
-		Namespace:  nspace,
+		Namespace:  ns.Path,
 		EventType:  string(eventType),
 		PluginInfo: pluginInfo,
 	}
@@ -89,12 +85,15 @@ func (bus *EventBus) SendInternal(ctx context.Context, namespace *namespace.Name
 	return err
 }
 
-func (bus *EventBus) WithPlugin(namespace *namespace.Namespace, eventPluginInfo *logical.EventPluginInfo) *pluginEventBus {
+func (bus *EventBus) WithPlugin(ns *namespace.Namespace, eventPluginInfo *logical.EventPluginInfo) (*pluginEventBus, error) {
+	if ns == nil {
+		return nil, namespace.ErrNoNamespace
+	}
 	return &pluginEventBus{
 		bus:        bus,
-		namespace:  namespace,
+		namespace:  ns,
 		pluginInfo: eventPluginInfo,
-	}
+	}, nil
 }
 
 // Send sends an event to the event bus and routes it to all relevant subscribers.
@@ -195,7 +194,7 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 		eventRecv := e.Payload.(*logical.EventReceived)
 		// drop if event is not in our namespace
 		// TODO: add wildcard processing here in some cases?
-		if node.namespace != nil && eventRecv.Namespace != node.namespace.ID {
+		if eventRecv.Namespace != node.namespace.Path {
 			return
 		}
 		select {

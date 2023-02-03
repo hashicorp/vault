@@ -23,14 +23,14 @@ func TestBusBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, nil, nil, eventType, event)
+	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 	if err != ErrNotStarted {
 		t.Errorf("Expected not started error but got: %v", err)
 	}
 
 	bus.Start()
 
-	err = bus.SendInternal(ctx, nil, nil, eventType, event)
+	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 	if err != nil {
 		t.Errorf("Expected no error sending: %v", err)
 	}
@@ -86,19 +86,6 @@ func TestNamespaceFiltering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, nil, nil, eventType, event)
-	if err != nil {
-		t.Error(err)
-	}
-
-	timeout := time.After(100 * time.Millisecond)
-	select {
-	case <-ch:
-		t.Errorf("Got root namespace message when no namespace was specified")
-	case <-timeout:
-		// okay
-	}
-
 	err = bus.SendInternal(ctx, &namespace.Namespace{
 		ID:   "abc",
 		Path: "/abc",
@@ -107,10 +94,10 @@ func TestNamespaceFiltering(t *testing.T) {
 		t.Error(err)
 	}
 
-	timeout = time.After(100 * time.Millisecond)
+	timeout := time.After(100 * time.Millisecond)
 	select {
 	case <-ch:
-		t.Errorf("Got abc namespace message when no namespace was specified")
+		t.Errorf("Got abc namespace message when root namespace was specified")
 	case <-timeout:
 		// okay
 	}
@@ -162,11 +149,11 @@ func TestBus2Subscriptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, nil, nil, eventType2, event2)
+	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType2, event2)
 	if err != nil {
 		t.Error(err)
 	}
-	err = bus.SendInternal(ctx, nil, nil, eventType1, event1)
+	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType1, event1)
 	if err != nil {
 		t.Error(err)
 	}
