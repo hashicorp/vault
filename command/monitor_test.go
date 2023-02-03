@@ -79,7 +79,7 @@ func TestMonitorCommand_Run(t *testing.T) {
 			}()
 
 			<-time.After(3 * time.Second)
-			stopCh <- struct{}{}
+			close(stopCh)
 			close(shutdownCh)
 
 			if atomic.LoadInt64(&code) != tc.code {
