@@ -10,6 +10,10 @@ import (
 	"github.com/hashicorp/vault/helper/timeutil"
 )
 
+func TestSomething(t *testing.T) {
+	fmt.Println("this is a new test")
+}
+
 func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) {
 	// populate the first month with clients 1-10
 	monthOneHLL := hyperloglog.New()

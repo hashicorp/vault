@@ -102,6 +102,15 @@ vet:
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
+# godoctests builds the custom analyzer to check for godocs for tests
+godoctests:
+	@$(GO_CMD) build -o ./tools/godoctests/.bin/godoctests ./tools/godoctests
+
+# vet-godoctests runs godoctests on the test functions. All output gets piped to revgrep
+# which will only return an error if a new function is missing a godoc
+vet-godoctests: godoctests
+	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep
+
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
 lint:
 	@$(GO_CMD) list -f '{{.Dir}}' ./... | grep -v /vendor/ \
