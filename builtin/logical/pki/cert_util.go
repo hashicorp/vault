@@ -1392,7 +1392,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 				fallthrough
 			default:
 				return nil, nil, errutil.UserError{Err: fmt.Sprintf(
-					"cannot satisfy request, as TTL would result in notAfter %s that is beyond the expiration of the CA certificate at %s", notAfter.Format(time.RFC3339Nano), caSign.Certificate.NotAfter.Format(time.RFC3339Nano))}
+					"cannot satisfy request, as TTL would result in notAfter of %s that is beyond the expiration of the CA certificate at %s", notAfter.UTC().Format(time.RFC3339Nano), caSign.Certificate.NotAfter.UTC().Format(time.RFC3339Nano))}
 			}
 		}
 	}
