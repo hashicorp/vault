@@ -3174,7 +3174,6 @@ func TestSystemBackend_PluginCatalog_CannotRegisterBuiltinPlugins(t *testing.T) 
 
 func TestSystemBackend_ToolsHash(t *testing.T) {
 	b := testSystemBackend(t)
-	paths := b.(*SystemBackend).toolsPaths()
 	req := logical.TestRequest(t, logical.UpdateOperation, "tools/hash")
 	req.Data = map[string]interface{}{
 		"input": "dGhlIHF1aWNrIGJyb3duIGZveA==",
@@ -3185,7 +3184,7 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 0, req.Operation),
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -3208,7 +3207,7 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 		} else {
 			schema.ValidateResponse(
 				t,
-				schema.FindResponseSchema(t, paths, 0, req.Operation),
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
 				resp,
 				true,
 			)
