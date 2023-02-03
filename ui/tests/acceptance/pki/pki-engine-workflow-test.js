@@ -1,4 +1,4 @@
-import { module, test } from 'qunit';
+import { module, skip, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
@@ -8,6 +8,7 @@ import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
 import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 import { rootPem } from 'vault/tests/helpers/pki/values';
+import { jsonToCert } from 'vault/utils/parse-pki-cert';
 
 /**
  * This test module should test the PKI workflow, including:
@@ -438,25 +439,24 @@ module('Acceptance | pki workflow', function (hooks) {
   module('cross-sign', function (hooks) {
     hooks.beforeEach(function () {
       this.pemBundle = rootPem;
+      this.verifyCrossSigning = async (intermediate, crossSignedInt, leaf) => {
+        // generate a leaf under my-new-cross-signed-cert and verify that it validates both under a chain with
+        // my-parent-issuer-name->my-new-cross-signed-cert->[same-leaf]
+        // old-parent-issuer-name->source-int-name->[same-leaf]
+        const parsedInt = jsonToCert(intermediate);
+        const parsedNewInt = jsonToCert(crossSignedInt);
+        const parsedLeaf = jsonToCert(leaf);
+        const chain1 = await parsedLeaf.verify(parsedInt);
+        const chain2 = await parsedLeaf.verify(parsedNewInt);
+        const isEqual1 = parsedLeaf.issuer.isEqual(parsedInt.subject);
+        const isEqual2 = parsedLeaf.issuer.isEqual(parsedNewInt.subject);
+        return chain1 && chain2 && isEqual1 && isEqual2;
+      };
     });
-    skip('import happy path', async function (assert) {
+    skip('it cross-signs an issuer', async function (assert) {
       await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
-      await click(SELECTORS.emptyStateLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
-      assert.dom(SELECTORS.configuration.title).hasText('Configure PKI');
-      assert.dom(SELECTORS.configuration.emptyState).exists({ count: 1 }, 'Shows empty state by default');
-      await click(SELECTORS.configuration.optionByKey('import'));
-      assert.dom(SELECTORS.configuration.emptyState).doesNotExist();
-      await click('[data-test-text-toggle]');
-      await fillIn('[data-test-text-file-textarea]', this.pemBundle);
-      await click('[data-test-pki-ca-cert-import]');
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/issuers`,
-        'redirects to issuers list on success'
-      );
+      await visit(`/vault/secrets/pki-parent-mount/pki/issuers`);
+      assert.strictEqual(currentURL(), `/vault/secrets/pki-parent-mount/pki/issuers`);
     });
   });
 });
