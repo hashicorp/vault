@@ -36,7 +36,7 @@
         id="input-{{this.elementId}}"
         @value={{this.content}}
         class="textarea {{if (and (not this.showValue) this.content) 'masked-font'}}"
-        {{on "change" this.handleTextInput}}
+        {{on "input" this.handleTextInput}}
         data-test-text-file-textarea
       />
       <button
