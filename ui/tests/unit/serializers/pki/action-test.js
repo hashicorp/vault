@@ -22,7 +22,7 @@ module('Unit | Serializer | pki/action', function (hooks) {
       const store = this.owner.lookup('service:store');
       const record = store.createRecord('pki/action', {
         pemBundle: this.pemBundle,
-        issuerName: 'do-not-send',
+        issuerRef: 'do-not-send',
         keyType: 'do-not-send',
       });
       const expectedResult = {

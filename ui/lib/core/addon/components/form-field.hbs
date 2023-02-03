@@ -307,7 +307,7 @@
           {{on "input" this.onChangeWithEvent}}
           {{on "change" this.onChangeWithEvent}}
           {{on "keyup" this.handleKeyUp}}
-          class="input {{if this.validationError 'has-error-border' 'has-bottom-margin-m'}}"
+          class="input {{if this.validationError 'has-error-border'}}"
           maxLength={{@attr.options.characterLimit}}
         />
         {{#if @attr.options.validationAttr}}

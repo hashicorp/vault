@@ -428,7 +428,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
       assert
         .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 9 }, 'Renders 9 info table items under default group');
+        .exists({ count: 10 }, 'Renders 10 info table items under default group');
       assert
         .dom(`${SELECTORS.issuerDetails.urlsGroup} ${SELECTORS.issuerDetails.row}`)
         .exists({ count: 3 }, 'Renders 4 info table items under URLs group');

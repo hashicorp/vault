@@ -5,13 +5,6 @@ import { hash } from 'rsvp';
 export default class PkiRolesIndexRoute extends PkiOverviewRoute {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
-
-  beforeModel() {
-    // Must call this promise before the model hook otherwise
-    // the model doesn't hydrate from OpenAPI correctly.
-    return this.pathHelp.getNewModel('pki/role', this.secretMountPath.currentPath);
-  }
 
   async fetchRoles() {
     try {

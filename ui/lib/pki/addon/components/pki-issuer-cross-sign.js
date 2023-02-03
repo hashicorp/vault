@@ -21,7 +21,7 @@ import { parseCertificate } from 'vault/utils/parse-pki-cert';
  * 2. Create a new CSR based on this existing issuer ID
  *    -> POST /:intermediateMount/intermediate/generate/existing
  * 3. Sign it with the new parent issuer, minting a new certificate.
- *    -> POST /this.args.parentIssuer.backend/issuer/this.args.parentIssuer.issuerName/sign-intermediate
+ *    -> POST /this.args.parentIssuer.backend/issuer/this.args.parentIssuer.issuerRef/sign-intermediate
  * 4. Import it back into the existing mount
  *    -> POST /:intermediateMount/issuers/import/bundle
  * 5. Read the imported issuer
@@ -99,6 +99,8 @@ export default class PkiIssuerCrossSign extends Component {
   @action
   async crossSignIntermediate(intMount, intName, newCrossSignedIssuer) {
     // 1. Fetch issuer we want to sign
+    //
+    // What/Recovery: any failure is early enough that you can bail safely/normally.
     const existingIssuer = await this.store.queryRecord('pki/issuer', {
       backend: intMount,
       id: intName,
@@ -115,6 +117,8 @@ export default class PkiIssuerCrossSign extends Component {
     }
 
     // 2. Create the new CSR
+    //
+    // What/Recovery: any failure is early enough that you can bail safely/normally.
     const newCsr = await this.store
       .createRecord('pki/action', {
         keyRef: existingIssuer.keyId,
@@ -127,7 +131,10 @@ export default class PkiIssuerCrossSign extends Component {
       })
       .then(({ csr }) => csr);
 
-    // 3. Sign newCSR with correct parent to create cross-signed cert
+    // 3. Sign newCSR with correct parent to create cross-signed cert, "issuing"
+    // an intermediate certificate.
+    //
+    // What/Recovery: any failure is early enough that you can bail safely/normally.
     const signedCaChain = await this.store
       .createRecord('pki/action', {
         csr: newCsr,
@@ -138,12 +145,41 @@ export default class PkiIssuerCrossSign extends Component {
         adapterOptions: {
           actionType: 'sign-intermediate',
           mount: this.args.parentIssuer.backend,
-          issuerName: this.args.parentIssuer.issuerName,
+          issuerRef: this.args.parentIssuer.issuerRef,
         },
       })
       .then(({ caChain }) => caChain.join('\n'));
 
     // 4. Import the newly cross-signed cert to become an issuer
+    //
+    // What/Recovery:
+    //
+    //   1. Permission issue -> give the cert (`signedCaChain`) to the user,
+    //      let them import & name. (Issue you have is that you already issued
+    //      it (step 3) and so "undo" would mean revoking the cert, which
+    //      you might not have permissions to do either).
+    //
+    //   2. CRL rebuilding fails ("the CRL" in error message). Server returns
+    //      an error, we wanted the CRL rebuilt -- but the issuer was still
+    //      imported anyways. Only way to detect would be to do a list issuers
+    //      before and after. Recovery would be on the operator in this case;
+    //      reproduce the error and let them deal with it.
+    //
+    // End result: user should solve this issue, but we shouldn't undo anything
+    // either.
+    //
+    //    -> For 1 though, make sure to give the `signedCaChain` in the
+    //       error message for them.
+    //    -> For 2, you could list before and after to find the id of the
+    //       new issuer(s) so they can name them and fix any issues with
+    //       them.
+    //
+    // If its not a permissions error _and_ you did two lists, not finding
+    // a new issuer...
+    //
+    //    -> Unknown error. Could give them `signedCaChain` and serial of
+    //       the newly issued intermediate CA, so that they can do recovery
+    //       as they'd like.
     const issuerId = await this.store
       .createRecord('pki/issuer', { pemBundle: signedCaChain })
       .save({ adapterOptions: { import: true, mount: intMount } })
@@ -155,9 +191,15 @@ export default class PkiIssuerCrossSign extends Component {
       });
 
     // 5. Fetch issuer imported above by issuer_id, name and save
+    // Recovery: cosmetic issue; can let the user deal with it. Usually
+    // fails because the name is in use.
+    // Pre-fix: list all issuers, check the desired name isn't either
+    // an existing issuer_id or an issuer_name.
     const crossSignedIssuer = await this.store.queryRecord('pki/issuer', { backend: intMount, id: issuerId });
     crossSignedIssuer.issuerName = newCrossSignedIssuer;
-    crossSignedIssuer.save({ adapterOptions: { mount: intMount } });
+    await crossSignedIssuer.save({ adapterOptions: { mount: intMount } });
+
+    // 6. Return the data to our caller.
     return {
       intermediateIssuer: existingIssuer,
       newCrossSignedIssuer: crossSignedIssuer,

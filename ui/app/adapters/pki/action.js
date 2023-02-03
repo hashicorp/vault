@@ -7,7 +7,7 @@ export default class PkiActionAdapter extends ApplicationAdapter {
 
   urlForCreateRecord(modelName, snapshot) {
     const { type } = snapshot.record;
-    const { actionType, useIssuer, issuerName, mount } = snapshot.adapterOptions;
+    const { actionType, useIssuer, issuerRef, mount } = snapshot.adapterOptions;
     // if the backend mount is passed, we want that to override the URL's mount path
     const backend = mount || snapshot.record.backend;
     if (!backend || !actionType) {
@@ -24,7 +24,7 @@ export default class PkiActionAdapter extends ApplicationAdapter {
           ? `${baseUrl}/issuers/generate/intermediate/${type}`
           : `${baseUrl}/intermediate/generate/${type}`;
       case 'sign-intermediate':
-        return `${baseUrl}/issuer/${encodePath(issuerName)}/sign-intermediate`;
+        return `${baseUrl}/issuer/${encodePath(issuerRef)}/sign-intermediate`;
       default:
         assert('actionType must be one of import, generate-root, generate-csr or sign-intermediate');
     }
