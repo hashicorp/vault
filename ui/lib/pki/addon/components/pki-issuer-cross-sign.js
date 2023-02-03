@@ -21,7 +21,7 @@ import { parseCertificate } from 'vault/utils/parse-pki-cert';
  * 2. Create a new CSR based on this existing issuer ID
  *    -> POST /:intermediateMount/intermediate/generate/existing
  * 3. Sign it with the new parent issuer, minting a new certificate.
- *    -> POST /this.args.parentIssuer.backend/issuer/this.args.parentIssuer.issuerName/sign-intermediate
+ *    -> POST /this.args.parentIssuer.backend/issuer/this.args.parentIssuer.issuerRef/sign-intermediate
  * 4. Import it back into the existing mount
  *    -> POST /:intermediateMount/issuers/import/bundle
  * 5. Read the imported issuer
@@ -138,7 +138,7 @@ export default class PkiIssuerCrossSign extends Component {
         adapterOptions: {
           actionType: 'sign-intermediate',
           mount: this.args.parentIssuer.backend,
-          issuerName: this.args.parentIssuer.issuerName,
+          issuerRef: this.args.parentIssuer.issuerRef,
         },
       })
       .then(({ caChain }) => caChain.join('\n'));

@@ -3,9 +3,10 @@ import { FormField, FormFieldGroups, ModelValidations } from 'vault/app-types';
 export default class PkiIssuerModel extends PkiCertificateBaseModel {
   useOpenAPI(): boolean;
   issuerId: string;
+  issuerName: string;
+  issuerRef: string;
   keyId: string;
   uriSans: string;
-  issuerName: string;
   leafNotAfterBehavior: string;
   usage: string;
   manualChain: string;

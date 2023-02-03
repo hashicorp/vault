@@ -22,7 +22,7 @@ module('Unit | Serializer | pki/action', function (hooks) {
       const store = this.owner.lookup('service:store');
       const record = store.createRecord('pki/action', {
         pemBundle: this.pemBundle,
-        issuerName: 'do-not-send',
+        issuerRef: 'do-not-send',
         keyType: 'do-not-send',
       });
       const expectedResult = {
@@ -68,7 +68,7 @@ module('Unit | Serializer | pki/action', function (hooks) {
         privateKeyFormat: 'der',
         type: 'external', // only used for endpoint in adapter
         customTtl: '40m', // UI-only value
-        issuerName: 'my issuer',
+        issuerRef: 'my issuer',
         commonName: undefined,
         foo: 'bar',
       });
@@ -91,7 +91,7 @@ module('Unit | Serializer | pki/action', function (hooks) {
         ...this.allKeyFields,
         type: 'external',
         customTtl: '40m',
-        issuerName: 'my issuer',
+        issuerRef: 'my issuer',
         commonName: 'my common name',
       });
       const expectedResult = {
@@ -113,7 +113,7 @@ module('Unit | Serializer | pki/action', function (hooks) {
         ...this.allKeyFields,
         type: 'internal',
         customTtl: '40m',
-        issuerName: 'my issuer',
+        issuerRef: 'my issuer',
         commonName: 'my common name',
       });
       const expectedResult = {
@@ -135,7 +135,7 @@ module('Unit | Serializer | pki/action', function (hooks) {
         ...this.allKeyFields,
         type: 'existing',
         customTtl: '40m',
-        issuerName: 'my issuer',
+        issuerRef: 'my issuer',
         commonName: 'my common name',
       });
       const expectedResult = {
@@ -155,7 +155,7 @@ module('Unit | Serializer | pki/action', function (hooks) {
         ...this.allKeyFields,
         type: 'kms',
         customTtl: '40m',
-        issuerName: 'my issuer',
+        issuerRef: 'my issuer',
         commonName: 'my common name',
       });
       const expectedResult = {
