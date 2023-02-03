@@ -31,6 +31,10 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
     return false;
   }
 
+  get issuerRef() {
+    return this.issuerName || this.issuerId;
+  }
+
   @attr isDefault; // readonly
   @attr('string') issuerId;
 
