@@ -2076,8 +2076,8 @@ WRITE:
 	return &nextUpdate, nil
 }
 
-// shouldLegacyPathUseUnified assuming a legacy path for a CRL/OCSP request, does our
+// shouldLocalPathsUseUnified assuming a legacy path for a CRL/OCSP request, does our
 // configuration say we should be returning the unified response or not
-func shouldLegacyPathUseUnified(cfg *crlConfig) bool {
+func shouldLocalPathsUseUnified(cfg *crlConfig) bool {
 	return cfg.UnifiedCRL && cfg.UnifiedCRLOnExistingPaths
 }

@@ -231,7 +231,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		if strings.Contains(req.Path, "delta") {
 			isDelta = true
 		}
-		if strings.Contains(req.Path, "unified") || shouldLegacyPathUseUnified(config) {
+		if strings.Contains(req.Path, "unified") || shouldLocalPathsUseUnified(config) {
 			isUnified = true
 		}
 
