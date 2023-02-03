@@ -1,8 +1,8 @@
+import Route from '@ember/routing/route';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
-import PkiRolesIndexRoute from '../index';
 
 @withConfirmLeave()
-export default class PkiRoleEditRoute extends PkiRolesIndexRoute {
+export default class PkiRoleEditRoute extends Route {
   model() {
     const { role } = this.paramsFor('roles/role');
     return this.store.queryRecord('pki/role', {
