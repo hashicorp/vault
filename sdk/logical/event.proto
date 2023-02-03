@@ -42,6 +42,7 @@ message EventData {
 // the event type and plugin information.
 message EventReceived {
     EventData event = 1;
+    // namespace path
     string namespace = 2;
     string event_type = 3;
     EventPluginInfo plugin_info = 4;

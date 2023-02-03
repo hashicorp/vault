@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -27,14 +28,21 @@ type EventBus struct {
 	formatterNodeID eventlogger.NodeID
 }
 
+type pluginEventBus struct {
+	bus        *EventBus
+	namespace  *namespace.Namespace
+	pluginInfo *logical.EventPluginInfo
+}
+
 type asyncChanNode struct {
-	// TODO: add bounded deque buffer of *any
-	ch chan *logical.EventData
+	// TODO: add bounded deque buffer of *EventReceived
+	ch        chan *logical.EventReceived
+	namespace *namespace.Namespace
 }
 
 var (
 	_ eventlogger.Node    = (*asyncChanNode)(nil)
-	_ logical.EventSender = (*EventBus)(nil)
+	_ logical.EventSender = (*pluginEventBus)(nil)
 )
 
 // Start starts the event bus, allowing events to be written.
@@ -47,14 +55,26 @@ func (bus *EventBus) Start() {
 	}
 }
 
-// Send sends an event to the event bus and routes it to all relevant subscribers.
+// SendInternal sends an event to the event bus and routes it to all relevant subscribers.
 // This function does *not* wait for all subscribers to acknowledge before returning.
-func (bus *EventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
+// This function is meant to be used by trusted internal code, so it can specify details like the namespace
+// and plugin info. Events from plugins should be routed through WithPlugin(), which will populate
+// the namespace and plugin info automatically.
+func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
+	if ns == nil {
+		return namespace.ErrNoNamespace
+	}
 	if !bus.started.Load() {
 		return ErrNotStarted
 	}
-	bus.logger.Info("Sending event", "event", data)
-	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), data)
+	eventReceived := &logical.EventReceived{
+		Event:      data,
+		Namespace:  ns.Path,
+		EventType:  string(eventType),
+		PluginInfo: pluginInfo,
+	}
+	bus.logger.Info("Sending event", "event", eventReceived)
+	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), eventReceived)
 	if err != nil {
 		// if no listeners for this event type are registered, that's okay, the event
 		// will just not be sent anywhere
@@ -63,6 +83,23 @@ func (bus *EventBus) Send(ctx context.Context, eventType logical.EventType, data
 		}
 	}
 	return err
+}
+
+func (bus *EventBus) WithPlugin(ns *namespace.Namespace, eventPluginInfo *logical.EventPluginInfo) (*pluginEventBus, error) {
+	if ns == nil {
+		return nil, namespace.ErrNoNamespace
+	}
+	return &pluginEventBus{
+		bus:        bus,
+		namespace:  ns,
+		pluginInfo: eventPluginInfo,
+	}, nil
+}
+
+// Send sends an event to the event bus and routes it to all relevant subscribers.
+// This function does *not* wait for all subscribers to acknowledge before returning.
+func (bus *pluginEventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
+	return bus.bus.SendInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
 }
 
 func init() {
@@ -103,7 +140,7 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	}, nil
 }
 
-func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (chan *logical.EventData, error) {
+func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, eventType logical.EventType) (chan *logical.EventReceived, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -115,8 +152,8 @@ func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (
 		return nil, err
 	}
 
-	// TODO: should we have just one node, and handle all the routing ourselves?
-	asyncNode := newAsyncNode()
+	// TODO: should we have just one node per namespace, and handle all the routing ourselves?
+	asyncNode := newAsyncNode(ns)
 	err = bus.broker.RegisterNode(eventlogger.NodeID(nodeID), asyncNode)
 	if err != nil {
 		defer asyncNode.Close()
@@ -138,9 +175,10 @@ func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (
 	return asyncNode.ch, nil
 }
 
-func newAsyncNode() *asyncChanNode {
+func newAsyncNode(namespace *namespace.Namespace) *asyncChanNode {
 	return &asyncChanNode{
-		ch: make(chan *logical.EventData),
+		ch:        make(chan *logical.EventReceived),
+		namespace: namespace,
 	}
 }
 
@@ -153,8 +191,14 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 	// TODO: add timeout on sending to node.ch
 	// sends to the channel async in another goroutine
 	go func() {
+		eventRecv := e.Payload.(*logical.EventReceived)
+		// drop if event is not in our namespace
+		// TODO: add wildcard processing here in some cases?
+		if eventRecv.Namespace != node.namespace.Path {
+			return
+		}
 		select {
-		case node.ch <- e.Payload.(*logical.EventData):
+		case node.ch <- eventRecv:
 		case <-ctx.Done():
 		}
 	}()
