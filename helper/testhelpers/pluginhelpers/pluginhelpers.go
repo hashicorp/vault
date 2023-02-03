@@ -70,13 +70,21 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 	var pluginBytes []byte
 
 	dir := ""
-	// detect if we are in the "vault/" or the root directory and compensate
-	if _, err := os.Stat("builtin"); os.IsNotExist(err) {
-		wd, err := os.Getwd()
+	var err error
+	for {
+		dir, err = os.Getwd()
 		if err != nil {
 			t.Fatal(err)
 		}
-		dir = filepath.Dir(wd)
+		// detect if we are in a subdirectory or the root directory and compensate
+		if _, err := os.Stat("builtin"); os.IsNotExist(err) {
+			err := os.Chdir("..")
+			if err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			break
+		}
 	}
 
 	pluginPath := path.Join(pluginDir, pluginName)
@@ -109,7 +117,6 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 	}
 
 	// write the cached plugin if necessary
-	var err error
 	if _, err := os.Stat(pluginPath); os.IsNotExist(err) {
 		err = os.WriteFile(pluginPath, pluginBytes, 0o755)
 	}
