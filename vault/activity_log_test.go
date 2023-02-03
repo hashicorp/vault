@@ -3987,6 +3987,10 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 	}
 }
 
+// TestActivityLog_partialMonthClientCountWithMultipleMountPaths verifies that logic in refreshFromStoredLog includes all mount paths
+// in its mount data. In this test we create 3 entity records with different mount accessors: one is empty, one is
+// valid, one can't be found (so it's assumed the mount is deleted). These records are written to storage, then this data is
+// refreshed in refreshFromStoredLog, and finally we verify the results returned with partialMonthClientCount.
 func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
 
@@ -4003,24 +4007,34 @@ func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T)
 
 	a := core.activityLog
 	path := "auth/foo/bar"
-	err = core.router.Mount(&NoopBackend{}, "auth/foo/", &MountEntry{UUID: meUUID, Accessor: "authfooaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace, Path: path}, view)
+	accessor := "authfooaccessor"
+
+	// we mount a path using the accessor 'authfooaccessor' which has mount path "auth/foo/bar"
+	// when an entity record references this accessor, activity log will be able to find it on its mounts and translate the mount accessor
+	// into a mount path
+	err = core.router.Mount(&NoopBackend{}, "auth/foo/", &MountEntry{UUID: meUUID, Accessor: accessor, NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace, Path: path}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	entityRecords := []*activity.EntityRecord{
 		{
+			// this record has no mount accessor, so it'll get recorded as a pre-1.10 upgrade
 			ClientID:    "11111111-1111-1111-1111-111111111111",
 			NamespaceID: namespace.RootNamespaceID,
 			Timestamp:   time.Now().Unix(),
 		},
 		{
+			// this record's mount path won't be able to be found, because there's no mount with the accessor 'deleted'
+			// the code in mountAccessorToMountPath assumes that if the mount accessor isn't empty but the mount path
+			// can't be found, then the mount must have been deleted
 			ClientID:      "22222222-2222-2222-2222-222222222222",
 			NamespaceID:   namespace.RootNamespaceID,
 			Timestamp:     time.Now().Unix(),
 			MountAccessor: "deleted",
 		},
 		{
+			// this record will have mount path 'auth/foo/bar', because we set up the mount above
 			ClientID:      "33333333-2222-2222-2222-222222222222",
 			NamespaceID:   namespace.RootNamespaceID,
 			Timestamp:     time.Now().Unix(),
@@ -4034,7 +4048,8 @@ func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T)
 		if err != nil {
 			t.Fatalf(err.Error())
 		}
-		WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(timeutil.StartOfMonth(now).Unix())+"/"+strconv.Itoa(i), entityData)
+		storagePath := fmt.Sprintf("%sentity/%d/%d", ActivityLogPrefix, timeutil.StartOfMonth(now).Unix(), i)
+		WriteToStorage(t, core, storagePath, entityData)
 	}
 
 	a.SetEnable(true)
@@ -4064,19 +4079,21 @@ func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T)
 		t.Fatal(err)
 	}
 	if len(clientCountResponse) != 1 {
-		t.Fatal("incorrect client count responses")
+		t.Fatalf("incorrect client count responses, expected 1 but got %d", len(clientCountResponse))
 	}
-	if len(clientCountResponse[0].Mounts) != 3 {
-		t.Fatal("incorrect client mounts")
+	if len(clientCountResponse[0].Mounts) != len(entityRecords) {
+		t.Fatalf("incorrect client mounts, expected %d but got %d", len(entityRecords), len(clientCountResponse[0].Mounts))
 	}
 	byPath := make(map[string]int, len(clientCountResponse[0].Mounts))
 	for _, mount := range clientCountResponse[0].Mounts {
 		byPath[mount.MountPath] = byPath[mount.MountPath] + mount.Counts.Clients
 	}
+
+	// these are the paths that are expected and correspond with the entity records created above
 	expectedPaths := []string{
-		path,
 		noMountAccessor,
 		fmt.Sprintf(deletedMountFmt, "deleted"),
+		path,
 	}
 	for _, expectedPath := range expectedPaths {
 		count, ok := byPath[expectedPath]
