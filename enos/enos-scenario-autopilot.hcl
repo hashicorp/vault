@@ -380,7 +380,7 @@ scenario "autopilot" {
   }
 
   step "verify_undo_logs_status" {
-    skip_step = semverconstraint(var.vault_product_version, "<1.13.0-0")
+    skip_step = try(semverconstraint(var.vault_product_version, "<1.13.0-0"), true)
     module    = module.vault_verify_undo_logs
     depends_on = [
       step.remove_old_nodes,
