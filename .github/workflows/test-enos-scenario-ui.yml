@@ -118,14 +118,14 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-      - name: Setup Cluster
+      - name: Set Up Cluster
         id: setup_cluster
         env:
           ENOS_VAR_ui_run_tests: false
         # Continue once and retry to handle occasional blips when creating infrastructure.
         continue-on-error: true
         run: enos scenario launch --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
-      - name: Retry Setup Cluster
+      - name: Retry Set Up Cluster
         id: setup_cluster_retry
         if: steps.setup_cluster.outcome == 'failure'
         env:
