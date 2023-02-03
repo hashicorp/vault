@@ -1179,6 +1179,8 @@ github.com/hashicorp/vault-testing-stepwise v0.1.2 h1:3obC/ziAPGnsz2IQxr5e4Ayb7t
 github.com/hashicorp/vault-testing-stepwise v0.1.2/go.mod h1:TeU6B+5NqxUjto+Zey+QQEH1iywuHn0ciHZNYh4q3uI=
 github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203181409-3a889bf3fcb0 h1:QVL9Q+yya4rtdumOWGUR4bYBCOkVE3heaUZGQfs48YM=
 github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203181409-3a889bf3fcb0/go.mod h1:8zCPiYcaasC/X/OR+NjbvaO48k1enp+WfhiJLJ/rkJ8=
+github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203193428-3a789cb2c68f h1:7ASzAq/gPihP/HAd8RmS9c7LiJtDMnjkPbfWKhm/XiI=
+github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203193428-3a789cb2c68f/go.mod h1:8zCPiYcaasC/X/OR+NjbvaO48k1enp+WfhiJLJ/rkJ8=
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77 h1:Y/+BtwxmRak3Us9jrByARvYW6uNeqZlEpMylIdXVIjY=
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77/go.mod h1:a2crHoMWwY6aiL8GWT8hYj7vKD64uX0EdRPbnsHF5wU=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 h1:O/pT5C1Q3mVXMyuqg7yuAWUg/jMZR1/0QTzTRdNR6Uw=

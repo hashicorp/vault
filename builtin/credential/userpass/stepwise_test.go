@@ -16,7 +16,7 @@ func TestAccBackend_stepwise_UserCrud(t *testing.T) {
 	customPluginName := "my-userpass"
 	envOptions := &stepwise.MountOptions{
 		RegistryName:    customPluginName,
-		PluginType:      stepwise.PluginTypeCredential,
+		PluginType:      api.PluginTypeCredential,
 		PluginName:      "userpass",
 		MountPathPrefix: customPluginName,
 	}
