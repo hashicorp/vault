@@ -259,7 +259,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		if secret.Auth == nil {
 			isTokenFileMethod = path == "auth/token/lookup-self"
 			if isTokenFileMethod {
-				token, _ := data["token"].(string)
+				var token string
+				token, _ = data["token"].(string)
 				lookupSelfClient, err := clientToUse.Clone()
 				if err != nil {
 					ah.logger.Error("failed to clone client to perform token lookup")
