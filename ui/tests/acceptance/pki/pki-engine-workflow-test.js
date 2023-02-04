@@ -14,6 +14,7 @@ import { jsonToCert } from 'vault/utils/parse-pki-cert';
  * This test module should test the PKI workflow, including:
  * - link between pages and confirm that the url is as expected
  * - log in as user with a policy and ensure expected UI elements are shown/hidden
+ * - leaf certs issued after cross-signing are verified against both the original and new cross-signed issuer
  */
 module('Acceptance | pki workflow', function (hooks) {
   setupApplicationTest(hooks);
@@ -335,7 +336,6 @@ module('Acceptance | pki workflow', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`,
         'navigates to details after save'
       );
-      await this.pauseTest;
       assert.dom(SELECTORS.keyPages.keyNameValue).hasText('test-key', 'updates key name');
 
       // key generate and delete navigation
@@ -435,10 +435,25 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.issuerDetails.groupTitle).exists({ count: 1 }, 'only 1 group title rendered');
     });
   });
-
+  /*
+vault write "$intermediate_mount/issuers/import/bundle" 
+  pem_bundle="$(vault write -format=json "$parent_issuer_mount/issuer/old-parent-issuer-name/sign-intermediate"
+    csr="$(vault write -field=csr "$intermediate_mount/intermediate/generate/internal" common_name="Short-Lived Int R1")" | jq -r '.data.ca_chain | join("\u000A")')"
+      vault patch "$intermediate_mount/issuer/default" issuer_name="$intermediate_name"
+     
+*/
   module('cross-sign', function (hooks) {
-    hooks.beforeEach(function () {
-      this.pemBundle = rootPem;
+    hooks.beforeEach(async function () {
+      await authPage.login();
+      const intMountPath = `cross-sign-${new Date().getTime()}`;
+      await enablePage.enable('pki', intMountPath);
+      this.intMountPath = intMountPath;
+      this.parentIssuerName = 'pki-parent-mount';
+      await runCommands([
+        `write "${this.mountPath}/root/generate/internal" common_name="Long-Lived Root X1" ttl=8960h issuer_name="old-parent-issuer-name"`,
+        `write "${this.mountPath}/root/generate/internal" common_name="Long-Lived Root X2" ttl=8960h issuer_name="${this.parentIssuerName}"`,
+        `write "${this.mountPath}/config/issuers" default="${this.parentIssuerName}"`,
+      ]);
       this.verifyCrossSigning = async (intermediate, crossSignedInt, leaf) => {
         // generate a leaf under my-new-cross-signed-cert and verify that it validates both under a chain with
         // my-parent-issuer-name->my-new-cross-signed-cert->[same-leaf]
@@ -453,10 +468,16 @@ module('Acceptance | pki workflow', function (hooks) {
         return chain1 && chain2 && isEqual1 && isEqual2;
       };
     });
+    hooks.afterEach(async function () {
+      await logout.visit();
+      await authPage.login();
+      // Cleanup engine
+      await runCommands([`delete sys/mounts/${this.intMountPath}`]);
+      await logout.visit();
+    });
     skip('it cross-signs an issuer', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/pki-parent-mount/pki/issuers`);
-      assert.strictEqual(currentURL(), `/vault/secrets/pki-parent-mount/pki/issuers`);
+      await visit(`/vault/secrets/${this.mount}/pki/issuers`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mount}/pki/issuers`);
     });
   });
 });
