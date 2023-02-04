@@ -1972,7 +1972,6 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	t.Parallel()
 	// create the backend
 	b, storage := CreateBackendWithStorage(t)
-	paths := []*framework.Path{pathConfigURLs(b)}
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2008,7 +2007,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		Data:       urlsData,
 		MountPoint: "pki/",
 	})
-	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation), resp, true)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/urls"), logical.UpdateOperation), resp, true)
 
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to config urls, %#v", resp)
