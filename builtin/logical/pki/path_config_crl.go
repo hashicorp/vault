@@ -157,6 +157,25 @@ the NextUpdate field); defaults to 12 hours`,
 								Description: `The time between delta CRL rebuilds if a new revocation has occurred. Must be shorter than the CRL expiry. Defaults to 15m.`,
 								Required:    true,
 							},
+							"cross_cluster_revocation": {
+								Type: framework.TypeBool,
+								Description: `Whether to enable a global, cross-cluster revocation queue.
+Must be used with auto_rebuild=true.`,
+								Required: true,
+							},
+							"unified_crl": {
+								Type: framework.TypeBool,
+								Description: `If set to true enables global replication of revocation entries,
+also enabling unified versions of OCSP and CRLs if their respective features are enabled.
+disable for CRLs and ocsp_disable for OCSP.`,
+								Required: true,
+							},
+							"unified_crl_on_existing_paths": {
+								Type: framework.TypeBool,
+								Description: `If set to true, 
+existing CRL and OCSP paths will return the unified CRL instead of a response based on cluster-local data`,
+								Required: true,
+							},
 						},
 					}},
 				},
@@ -204,6 +223,25 @@ the NextUpdate field); defaults to 12 hours`,
 								Type:        framework.TypeString,
 								Description: `The time between delta CRL rebuilds if a new revocation has occurred. Must be shorter than the CRL expiry. Defaults to 15m.`,
 								Default:     "15m",
+							},
+							"cross_cluster_revocation": {
+								Type: framework.TypeBool,
+								Description: `Whether to enable a global, cross-cluster revocation queue.
+Must be used with auto_rebuild=true.`,
+								Required: false,
+							},
+							"unified_crl": {
+								Type: framework.TypeBool,
+								Description: `If set to true enables global replication of revocation entries,
+also enabling unified versions of OCSP and CRLs if their respective features are enabled.
+disable for CRLs and ocsp_disable for OCSP.`,
+								Required: false,
+							},
+							"unified_crl_on_existing_paths": {
+								Type: framework.TypeBool,
+								Description: `If set to true, 
+existing CRL and OCSP paths will return the unified CRL instead of a response based on cluster-local data`,
+								Required: false,
 							},
 						},
 					}},
