@@ -2375,8 +2375,6 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
 
-	paths := []*framework.Path{pathConfigCA(b)}
-
 	// This is a change within 1.11, we are no longer idempotent across generate/internal calls.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
@@ -2418,7 +2416,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
 		"pem_bundle": pemBundleRootCA,
 	})
-	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation), resp, true)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/ca"), logical.UpdateOperation), resp, true)
 
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected ca info")
