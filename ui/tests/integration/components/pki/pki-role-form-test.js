@@ -111,7 +111,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(SELECTORS.roleCreateButton);
   });
 
-  test('meep it should rollback attributes or unload record on cancel', async function (assert) {
+  test('it should rollback attributes or unload record on cancel', async function (assert) {
     assert.expect(5);
     this.onCancel = () => assert.ok(true, 'onCancel callback fires');
     await render(
@@ -132,6 +132,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     this.store.pushPayload('pki/role', {
       modelName: 'pki/role',
       name: 'test-role',
+      backend: 'pki-test',
       id: 'role-id',
     });
 
@@ -155,11 +156,4 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(SELECTORS.roleCreateButton);
     assert.strictEqual(this.model.issuerRef, 'not-default', 'Issuer Ref correctly saved on create');
   });
-
-  // TODO: ('it should update role', async function (assert) {}
-
-  /* FUTURE TEST TODO:
-   * it should update role
-   * it should unload the record on cancel
-   */
 });
