@@ -111,6 +111,28 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(SELECTORS.roleCreateButton);
   });
 
+  test('meep it should rollback attributes or unload record on cancel', async function (assert) {
+    assert.expect(1);
+    this.onCancel = () => assert.ok(true, 'onCancel callback fires');
+    await render(
+      hbs`
+      <PkiRoleForm
+        @model={{this.model}}
+        @onCancel={{this.onCancel}}
+        @onSave={{this.onSave}}
+      />
+      `,
+      { owner: this.engine }
+    );
+
+    await fillIn(SELECTORS.roleName, 'test-role');
+    await click(SELECTORS.roleCancelButton);
+    // console.log(this.model, 'model name');
+    // await this.pauseTest();
+  });
+
+  // TODO: ('it should update role', async function (assert) {}
+
   /* FUTURE TEST TODO:
    * it should update role
    * it should unload the record on cancel
