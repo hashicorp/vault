@@ -62,6 +62,7 @@ export default class PkiRoleAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     return this.fetchByQuery(store, query);
   }
+
   deleteRecord(store, type, snapshot) {
     const { id, record } = snapshot;
     return this.ajax(this._urlForRole(record.backend, id), 'DELETE');
