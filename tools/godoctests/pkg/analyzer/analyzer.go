@@ -11,7 +11,7 @@ import (
 
 var Analyzer = &analysis.Analyzer{
 	Name:     "godoctests",
-	Doc:      "Verifies that every go test has a godoc",
+	Doc:      "Verifies that every go test has a go doc",
 	Run:      run,
 	Requires: []*analysis.Analyzer{inspect.Analyzer},
 }
@@ -66,8 +66,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		// then there must be a godoc
-		if funcDecl.Doc == nil || !strings.HasPrefix(funcDecl.Doc.Text(), funcDecl.Name.Name) {
-			pass.Reportf(node.Pos(), "Test %s is missing go-doc",
+		if funcDecl.Doc == nil {
+			pass.Reportf(node.Pos(), "Test %s is missing a go doc",
+				funcDecl.Name.Name)
+		} else if !strings.HasPrefix(funcDecl.Doc.Text(), funcDecl.Name.Name) {
+			pass.Reportf(node.Pos(), "Test %s must have a go doc beginning with the function name",
 				funcDecl.Name.Name)
 		}
 	})
