@@ -9,8 +9,8 @@
       <div class="column">
         <div class="message-title">
           {{or @title this.alertType.text}}
-          {{#if @secondIconType}}
-            <Icon class={{this.secondAlertType.glyphClass}} aria-hidden="true" @name={{this.secondAlertType.glyph}} />
+          {{#if @showLoading}}
+            <Icon class="loading" aria-hidden="true" @name="loading" />
           {{/if}}
           {{#if @progressBar}}
             <progress
@@ -21,7 +21,7 @@
           {{/if}}
         </div>
         {{#if @message}}
-          <p class="alert-banner-message-body">
+          <p class={{concat "alert-banner-message-body" (if @learnLink " has-bottom-margin-xs")}}>
             {{@message}}
           </p>
         {{/if}}
@@ -29,6 +29,12 @@
           <p class="message-actions">
             {{yield}}
           </p>
+        {{/if}}
+        {{#if @learnLink}}
+          <DocLink @path={{@learnLink}} class="info-message-link">
+            <Icon @name="learn-link" />
+            {{@learnLinkMessage}}
+          </DocLink>
         {{/if}}
       </div>
     {{/if}}

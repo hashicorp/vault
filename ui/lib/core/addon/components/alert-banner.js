@@ -15,9 +15,11 @@ import { messageTypes } from 'core/helpers/message-types';
  * @param {boolean} [marginless=false] - xx
  * @param {String} [message=null] - The message to display within the banner.
  * @param {Object} [progressBar=null] - An object containing a value and maximum for a progress bar. Will be displayed next to the message title.
- * @param {String} [secondIconType=null] - If you want a second icon to appear to the right of the title. This comes from the message-types helper.
+ * @param {boolean} [showLoading=false] - Showing a loading icon to the right of the title.
  * @param {String} [title=null] - A title to show above the message. If this is not provided, there are default values for each type of alert.
  * @param {boolean} [yieldWithoutColumn=false] - If true, do not show message or title, just yield with no formatting.
+ * @param {string} [learnLink=null] -display a DocLink pointing to this path.
+ * @param {string} [learnLinkMessage=null] -show a learn link message to the right of a link icon, displayed below the main message.
  *
  */
 
@@ -33,9 +35,5 @@ export default class AlertBanner extends Component {
 
   get alertType() {
     return messageTypes([this.args.type]);
-  }
-
-  get secondAlertType() {
-    return messageTypes([this.args.secondIconType]);
   }
 }
