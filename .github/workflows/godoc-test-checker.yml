@@ -15,6 +15,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
+      - name: get metadata
         id: get-metadata
         run: echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
       - name: Set Up Go
