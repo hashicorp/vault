@@ -774,7 +774,9 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NotZero(t, resp.Data["revocation_time"])
 
 	// Regenerate the CRLs
-	_, err = CBRead(b, s, "crl/rotate")
+	resp, err = CBRead(b, s, "crl/rotate")
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("crl/rotate"), logical.ReadOperation), resp, true)
+
 	require.NoError(t, err)
 
 	// Ensure the old cert isn't on its own CRL.
