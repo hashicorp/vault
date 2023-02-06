@@ -212,8 +212,8 @@ github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRF
 github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
 github.com/alexflint/go-filemutex v0.0.0-20171022225611-72bdc8eae2ae/go.mod h1:CgnQgUtFrFz9mxFNtED3jI5tLDjKlOM+oUF/sTk6ps0=
 github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f/go.mod h1:myCDvQSzCW+wB1WAlocEru4wMGJxy+vlxHdhegi1CDQ=
-github.com/aliyun/alibaba-cloud-sdk-go v1.61.1842 h1:OU/hXgBKAQRNqGflA3cxC9NZNMnAAKrQjHDCo0/6ND4=
-github.com/aliyun/alibaba-cloud-sdk-go v1.61.1842/go.mod h1:RcDobYh8k5VP6TNybz9m++gL3ijVI5wueVr0EM10VsU=
+github.com/aliyun/alibaba-cloud-sdk-go v1.62.146 h1:zAH0YjWzonbKHvNkfbxqTmX51uHbkQYu+jJah2IAiCA=
+github.com/aliyun/alibaba-cloud-sdk-go v1.62.146/go.mod h1:Api2AkmMgGaSUAhmk76oaFObkoeCPc/bKAqcyplPODs=
 github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5 h1:nWDRPCyCltiTsANwC/n3QZH7Vww33Npq9MKqlwRzI/c=
 github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5/go.mod h1:T/Aws4fEfogEE9v+HPhhw+CntffsBHJ8nXQCwKr0/g8=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
@@ -1122,8 +1122,8 @@ github.com/hashicorp/raft-snapshot v1.0.4 h1:EuDuayAJPdiDmVk1ygTDnG2zDzrs0/6/yBu
 github.com/hashicorp/raft-snapshot v1.0.4/go.mod h1:5sL9eUn72lH5DzsFIJ9jaysITbHksSSszImWSOTC8Ic=
 github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY=
 github.com/hashicorp/serf v0.10.1/go.mod h1:yL2t6BqATOLGc5HF7qbFkTfXoPIY0WZdWHfEvMqbG+4=
-github.com/hashicorp/vault-plugin-auth-alicloud v0.5.4-beta1.0.20221117202053-722c59caa2d0 h1:f4Ay9naDgZwW77q6Jpiy/zMlXC1MDWV2Kwop6uud3f8=
-github.com/hashicorp/vault-plugin-auth-alicloud v0.5.4-beta1.0.20221117202053-722c59caa2d0/go.mod h1:EjGPliIfEWITTGsi8KD/aZgIActKDfDVwStpqpCtrM0=
+github.com/hashicorp/vault-plugin-auth-alicloud v0.14.0 h1:O6tNk0s/arubLUbLeCyaRs5xGo9VwmbQazISY/BfPK4=
+github.com/hashicorp/vault-plugin-auth-alicloud v0.14.0/go.mod h1:We3fJplmALwK1VpjwrLuXr/4QCQHYMdnXLHmLUU6Ntg=
 github.com/hashicorp/vault-plugin-auth-azure v0.11.2-0.20221108185759-ac6743d5f0f2 h1:cVT7MJAl5uwXFtLMQBA7DDE5GDLEU+1BE03ew1ygY88=
 github.com/hashicorp/vault-plugin-auth-azure v0.11.2-0.20221108185759-ac6743d5f0f2/go.mod h1:AhoXnb4AfiYU9Q3k2njrdovIIftmyaQtdt6cm8Q6sQc=
 github.com/hashicorp/vault-plugin-auth-centrify v0.13.0 h1:IbtgJAY3EFyY+8n9A3QMn3MDGsvfQKDdH60r8G/C0nA=
@@ -1175,10 +1175,6 @@ github.com/hashicorp/vault-plugin-secrets-openldap v0.9.0/go.mod h1:o7mF9tWgDkAD
 github.com/hashicorp/vault-plugin-secrets-terraform v0.6.0 h1:N5s1ojXyG8gBZlx6BdqE04LviR0rw4vX1dDDMdnEzX8=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.6.0/go.mod h1:GzYAJYytgbNNyT3S7rspz1cLE53E1oajFbEtaDUlVGU=
 github.com/hashicorp/vault-testing-stepwise v0.1.1/go.mod h1:3vUYn6D0ZadvstNO3YQQlIcp7u1a19MdoOC0NQ0yaOE=
-github.com/hashicorp/vault-testing-stepwise v0.1.2 h1:3obC/ziAPGnsz2IQxr5e4Ayb7tu7WL6pm6mmZ5gwhhs=
-github.com/hashicorp/vault-testing-stepwise v0.1.2/go.mod h1:TeU6B+5NqxUjto+Zey+QQEH1iywuHn0ciHZNYh4q3uI=
-github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203181409-3a889bf3fcb0 h1:QVL9Q+yya4rtdumOWGUR4bYBCOkVE3heaUZGQfs48YM=
-github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203181409-3a889bf3fcb0/go.mod h1:8zCPiYcaasC/X/OR+NjbvaO48k1enp+WfhiJLJ/rkJ8=
 github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203193428-3a789cb2c68f h1:7ASzAq/gPihP/HAd8RmS9c7LiJtDMnjkPbfWKhm/XiI=
 github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203193428-3a789cb2c68f/go.mod h1:8zCPiYcaasC/X/OR+NjbvaO48k1enp+WfhiJLJ/rkJ8=
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77 h1:Y/+BtwxmRak3Us9jrByARvYW6uNeqZlEpMylIdXVIjY=
@@ -1566,6 +1562,8 @@ github.com/opencontainers/selinux v1.8.2/go.mod h1:MUIHuUEvKB1wtJjQdOyYRgOnLD2xA
 github.com/opencontainers/selinux v1.10.0/go.mod h1:2i0OySw99QjzBBQByd1Gr9gSjvuho1lHsJxIJ3gGbJI=
 github.com/openlyinc/pointy v1.1.2 h1:LywVV2BWC5Sp5v7FoP4bUD+2Yn5k0VNeRbU5vq9jUMY=
 github.com/openlyinc/pointy v1.1.2/go.mod h1:w2Sytx+0FVuMKn37xpXIAyBNhFNBIJGR/v2m7ik1WtM=
+github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b h1:FfH+VrHHk6Lxt9HdVS0PXzSXFyS2NbZKXv33FYPol0A=
+github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b/go.mod h1:AC62GU6hc0BrNm+9RK9VSiwa/EUe1bkIeFORAMcHvJU=
 github.com/oracle/oci-go-sdk v7.0.0+incompatible/go.mod h1:VQb79nF8Z2cwLkLS35ukwStZIg5F66tcBccjip/j888=
 github.com/oracle/oci-go-sdk v13.1.0+incompatible h1:inwbT0b/mMbnTfzYoW2xcU1cCMIlU6Fz973at5phRXM=
 github.com/oracle/oci-go-sdk v13.1.0+incompatible/go.mod h1:VQb79nF8Z2cwLkLS35ukwStZIg5F66tcBccjip/j888=
@@ -1606,7 +1604,6 @@ github.com/pkg/browser v0.0.0-20210706143420-7d21f8c997e2/go.mod h1:HKlIX3XHQyzL
 github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 h1:KoWmjvw+nsYOo29YJK9vDA65RGE3NrOnUtO7a+RF9HU=
 github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8/go.mod h1:HKlIX3XHQyzLZPlr7++PzdhaXEj94dEiJgZDTsxEqUI=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e h1:aoZm08cpOy4WuID//EZDgcC4zIxODThtZNPirFr42+A=
-github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1-0.20171018195549-f15c970de5b7/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
@@ -1799,6 +1796,10 @@ github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
 github.com/tv42/httpunix v0.0.0-20191220191345-2ba4b9c3382c h1:u6SKchux2yDvFQnDHS3lPnIRmfVJ5Sxy3ao2SIdysLQ=
 github.com/tv42/httpunix v0.0.0-20191220191345-2ba4b9c3382c/go.mod h1:hzIxponao9Kjc7aWznkXaL4U4TWaDSs8zcsY4Ka08nM=
+github.com/uber/jaeger-client-go v2.30.0+incompatible h1:D6wyKGCecFaSRUpo8lCVbaOOb6ThwMmTEbhRwtKR97o=
+github.com/uber/jaeger-client-go v2.30.0+incompatible/go.mod h1:WVhlPFC8FDjOFMMWRy2pZqQJSXxYSwNYOkTr/Z6d3Kk=
+github.com/uber/jaeger-lib v2.4.1+incompatible h1:td4jdvLcExb4cBISKIpHuGoVXh+dVKhn2Um6rjCsSsg=
+github.com/uber/jaeger-lib v2.4.1+incompatible/go.mod h1:ComeNDZlWwrWnDv8aPp0Ba6+uUTzImX/AauajbLI56U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/ulikunitz/xz v0.5.8/go.mod h1:nbz6k7qbPmH4IRqmfOplQw/tblSgqTqBwxkY0oWt/14=
