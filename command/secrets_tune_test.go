@@ -7,7 +7,6 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 )
 
@@ -179,7 +178,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				t.Errorf("expected %q to be %q", mountInfo.PluginVersion, exp)
 			}
 
-			_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, "pki", consts.PluginTypeSecrets)
+			_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, "pki", api.PluginTypeSecrets)
 
 			code := cmd.Run([]string{
 				"-description", "new description",

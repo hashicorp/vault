@@ -1,7 +1,7 @@
-package consts
+package api
 
-// NOTE: this file has been copied to
-// https://github.com/hashicorp/vault/blob/main/api/plugin_types.go
+// NOTE: this file was copied from
+// https://github.com/hashicorp/vault/blob/main/sdk/helper/consts/plugin_types.go
 // Any changes made should be made to both files at the same time.
 
 import "fmt"

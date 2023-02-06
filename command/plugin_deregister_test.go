@@ -84,14 +84,14 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		defer closer()
 
 		pluginName := "my-plugin"
-		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential, "")
+		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, api.PluginTypeCredential, "")
 
 		ui, cmd := testPluginDeregisterCommand(t)
 		cmd.client = client
 
 		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 			Name:    pluginName,
-			Type:    consts.PluginTypeCredential,
+			Type:    api.PluginTypeCredential,
 			Command: pluginName,
 			SHA256:  sha256Sum,
 		}); err != nil {
@@ -113,7 +113,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 
 		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
-			Type: consts.PluginTypeCredential,
+			Type: api.PluginTypeCredential,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -142,7 +142,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		defer closer()
 
 		pluginName := "my-plugin"
-		_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
+		_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, pluginName, api.PluginTypeCredential)
 
 		ui, cmd := testPluginDeregisterCommand(t)
 		cmd.client = client
@@ -163,7 +163,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 
 		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
-			Type: consts.PluginTypeUnknown,
+			Type: api.PluginTypeUnknown,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -190,7 +190,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		defer closer()
 
 		pluginName := "my-plugin"
-		testPluginCreateAndRegisterVersioned(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
+		testPluginCreateAndRegisterVersioned(t, client, pluginDir, pluginName, api.PluginTypeCredential)
 
 		ui, cmd := testPluginDeregisterCommand(t)
 		cmd.client = client
@@ -210,7 +210,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 
 		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
-			Type: consts.PluginTypeUnknown,
+			Type: api.PluginTypeUnknown,
 		})
 		if err != nil {
 			t.Fatal(err)
