@@ -1168,17 +1168,13 @@ github.com/hashicorp/vault-plugin-secrets-kubernetes v0.0.0-20221215173052-6b199
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.0.0-20221215173052-6b1994edb14e/go.mod h1:NJeYBRgLVqjvkrVyZEe42oaqP3+xvVNMYdJoMWVoByU=
 github.com/hashicorp/vault-plugin-secrets-kv v0.13.3 h1:TUKpQY6fmTiUhaZ71/WTamEuK2JH7ESB92T4VZsq4+g=
 github.com/hashicorp/vault-plugin-secrets-kv v0.13.3/go.mod h1:ikPuEWi2rHaGQCHZuPdn/6D3Bq/25ElX3G9pGeDr0Yg=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.8.0 h1:VREm+cJGUXcPCakaYVxQt8wTVqTwJclsIIk2XuqpPbs=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.8.0/go.mod h1:PLx2vxXukfsKsDRo/PlG4fxmJ1d+H2h82wT3vf4buuI=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.0 h1:H3r1gPwzg/lAtXWYpLE2km2eh3tYEbXUxcvV6OyhCEo=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.0/go.mod h1:PLx2vxXukfsKsDRo/PlG4fxmJ1d+H2h82wT3vf4buuI=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.9.0 h1:/6FQzNB4zjep7O14pkVOapwRJvnQ4gINGAc1Ss1IYg8=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.9.0/go.mod h1:o7mF9tWgDkAD5OvvXWM3bOCqN+n/cCpaMm1CrEUZkHc=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.6.0 h1:N5s1ojXyG8gBZlx6BdqE04LviR0rw4vX1dDDMdnEzX8=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.6.0/go.mod h1:GzYAJYytgbNNyT3S7rspz1cLE53E1oajFbEtaDUlVGU=
 github.com/hashicorp/vault-testing-stepwise v0.1.1/go.mod h1:3vUYn6D0ZadvstNO3YQQlIcp7u1a19MdoOC0NQ0yaOE=
-github.com/hashicorp/vault-testing-stepwise v0.1.2 h1:3obC/ziAPGnsz2IQxr5e4Ayb7tu7WL6pm6mmZ5gwhhs=
-github.com/hashicorp/vault-testing-stepwise v0.1.2/go.mod h1:TeU6B+5NqxUjto+Zey+QQEH1iywuHn0ciHZNYh4q3uI=
-github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203181409-3a889bf3fcb0 h1:QVL9Q+yya4rtdumOWGUR4bYBCOkVE3heaUZGQfs48YM=
-github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203181409-3a889bf3fcb0/go.mod h1:8zCPiYcaasC/X/OR+NjbvaO48k1enp+WfhiJLJ/rkJ8=
 github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203193428-3a789cb2c68f h1:7ASzAq/gPihP/HAd8RmS9c7LiJtDMnjkPbfWKhm/XiI=
 github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203193428-3a789cb2c68f/go.mod h1:8zCPiYcaasC/X/OR+NjbvaO48k1enp+WfhiJLJ/rkJ8=
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77 h1:Y/+BtwxmRak3Us9jrByARvYW6uNeqZlEpMylIdXVIjY=
@@ -1606,7 +1602,6 @@ github.com/pkg/browser v0.0.0-20210706143420-7d21f8c997e2/go.mod h1:HKlIX3XHQyzL
 github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 h1:KoWmjvw+nsYOo29YJK9vDA65RGE3NrOnUtO7a+RF9HU=
 github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8/go.mod h1:HKlIX3XHQyzLZPlr7++PzdhaXEj94dEiJgZDTsxEqUI=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e h1:aoZm08cpOy4WuID//EZDgcC4zIxODThtZNPirFr42+A=
-github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1-0.20171018195549-f15c970de5b7/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
