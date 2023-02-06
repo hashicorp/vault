@@ -128,8 +128,9 @@ To mitigate this risk, we recommend careful controls around management of the se
 mechanism, for example using 
 [AWS Service Control Policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)
 or similar.  
-With Vault Enterprise one may use Disaster Recovery replicated clusters to act as a
-backup in the case of a lost seal mechanism.
+With Vault Enterprise secondary clusters (disaster or performance) can have a
+seal configured independently of the primary, and if properly configured guard 
+against this risk.
 
 
 ## Recovery Key
