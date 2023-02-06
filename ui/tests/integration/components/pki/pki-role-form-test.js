@@ -112,7 +112,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
   });
 
   test('it should rollback attributes or unload record on cancel', async function (assert) {
-    assert.expect(5);
+    assert.expect(6);
     this.onCancel = () => assert.ok(true, 'onCancel callback fires');
     await render(
       hbs`
@@ -127,6 +127,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
 
     await fillIn(SELECTORS.roleName, 'dont-save-me');
     await click(SELECTORS.roleCancelButton);
+    assert.notEqual(this.model.roleName, 'dont-save-me');
     assert.true(this.model.isDestroyed, 'new model is unloaded on cancel');
 
     this.store.pushPayload('pki/role', {
