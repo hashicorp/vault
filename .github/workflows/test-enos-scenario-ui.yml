@@ -98,17 +98,20 @@ jobs:
       - name: Set Up Vault Enterprise License
         if: contains(${{ github.event.repository.name }}, 'ent')
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
+      - name: Check Chrome Installed
+        id: chrome-check
+        run: echo "chrome-version=$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null || echo 'not-installed')" >> $GITHUB_OUTPUT
       - name: Install Chrome Dependencies
-        if: ${{ needs.get-metadata.outputs.vault_edition == 'ent' }}
+        if: steps.chrome-check.outputs.chrome-version == 'not-installed'
         run: |
           sudo apt update
           sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
       - name: Install Chrome
-        if: ${{ needs.get-metadata.outputs.vault_edition == 'ent' }}
+        if: steps.chrome-check.outputs.chrome-version == 'not-installed'
         uses: browser-actions/setup-chrome@v1
-      - name: Chrome Version
-        if: ${{ needs.get-metadata.outputs.vault_edition == 'ent' }}
-        run: chrome --version
+      - name: Installed Chrome Version
+        run: |
+          echo "Installed Chrome Version = [$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null)]"
       - name: Configure AWS credentials from Test account
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
@@ -135,6 +138,7 @@ jobs:
         id: run_ui_tests
         env:
           ENOS_VAR_ui_test_filter: "${{ inputs.test_filter }}"
+        run: enos scenario run --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
       - name: Ensure scenario has been destroyed
         if: ${{ always() }}
         run: enos scenario destroy --timeout 60m0s --chdir ./enos ui edition:${{ needs.get-metadata.outputs.vault_edition }} backend:${{ inputs.storage_backend }}
