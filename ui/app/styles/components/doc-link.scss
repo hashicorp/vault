@@ -6,10 +6,18 @@
     text-decoration: underline !important;
   }
 
-  &.info-message-link {
-    color: $blue !important;
-    text-decoration: none !important;
-    font-size: $size-7;
+  &.alert-banner-doc-link {
+    @extend .button;
+    @extend .is-ghost;
+    margin-left: -15px;
+    &:active,
+    &.is-active,
+    &:focus,
+    &.is-focused,
+    &:hover {
+      background-color: none;
+      border: 0;
+    }
   }
 }
 

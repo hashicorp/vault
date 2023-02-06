@@ -21,7 +21,7 @@
           {{/if}}
         </div>
         {{#if @message}}
-          <p class={{concat "alert-banner-message-body" (if @learnLink " has-bottom-margin-xs")}}>
+          <p class="alert-banner-message-body">
             {{@message}}
           </p>
         {{/if}}
@@ -31,7 +31,7 @@
           </p>
         {{/if}}
         {{#if @learnLink}}
-          <DocLink @path={{@learnLink}} class="info-message-link">
+          <DocLink @path={{@learnLink}} class="alert-banner-doc-link">
             <Icon @name="learn-link" />
             {{@learnLinkMessage}}
           </DocLink>
