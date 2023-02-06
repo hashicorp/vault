@@ -87,7 +87,6 @@ func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
 	t.Parallel()
 	// We tested a lot of the logic above within the internal test, so just make sure we honor the exported contract
 	b, s := CreateBackendWithStorage(t)
-	paths := []*framework.Path{pathGenerateKey(b)}
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -99,7 +98,7 @@ func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
 		},
 		MountPoint: "pki/",
 	})
-	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation), resp, true)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("keys/generate/exported"), logical.UpdateOperation), resp, true)
 
 	require.NoError(t, err, "Failed generating exported key")
 	require.NotNil(t, resp, "Got nil response generating exported key")
