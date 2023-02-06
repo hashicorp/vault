@@ -5,13 +5,7 @@
   </h2>
   {{#each this.defaultFields as |field|}}
     {{#let (find-by "name" field @model.allFields) as |attr|}}
-      <FormField
-        @attr={{attr}}
-        @model={{@model}}
-        @modelValidations={{this.modelValidations}}
-        @onChange={{this.checkFormValidity}}
-        data-test-field
-      >
+      <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} data-test-field>
         {{#if (eq field "customTtl")}}
           {{! customTtl attr has editType yield, which will render this }}
           <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
