@@ -38,7 +38,7 @@ scenario "ui" {
       ubuntu = "/usr/bin"
     }
     vault_install_dir = var.vault_install_dir
-    ui_test_filter    = var.ui_test_filter != null ? var.ui_test_filter : (matrix.edition == "oss") ? "!enterprise" : null
+    ui_test_filter    = var.ui_test_filter != null && try(trimspace(var.ui_test_filter), "") != "" ? var.ui_test_filter : (matrix.edition == "oss") ? "!enterprise" : null
   }
 
   step "get_local_metadata" {
