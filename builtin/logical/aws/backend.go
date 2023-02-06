@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/queue"
 )
 
 const (
@@ -27,6 +28,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 func Backend() *backend {
 	var b backend
+	b.credRotationQueue = queue.New()
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
@@ -35,7 +37,8 @@ func Backend() *backend {
 				framework.WALPrefix,
 			},
 			SealWrapStorage: []string{
-				"config/root",
+				rootConfigPath,
+				pathStaticCreds + "/",
 			},
 		},
 
@@ -45,6 +48,8 @@ func Backend() *backend {
 			pathConfigLease(&b),
 			pathRoles(&b),
 			pathListRoles(&b),
+			pathStaticRoles(&b),
+			pathStaticCredentials(&b),
 			pathUser(&b),
 		},
 
@@ -55,6 +60,8 @@ func Backend() *backend {
 		Invalidate:        b.invalidate,
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minAwsUserRollbackAge,
+		InitializeFunc:    b.initQueue,
+		PeriodicFunc:      b.rotateExpiredStaticCreds,
 		BackendType:       logical.TypeLogical,
 	}
 
@@ -74,6 +81,8 @@ type backend struct {
 	// to enable mocking with AWS iface for tests
 	iamClient iamiface.IAMAPI
 	stsClient stsiface.STSAPI
+
+	credRotationQueue *queue.PriorityQueue
 }
 
 const backendHelp = `
