@@ -8,4 +8,5 @@ export const SELECTORS = {
   signIntermediate: '[data-test-pki-issuer-sign-int]',
   download: '[data-test-issuer-download]',
   configure: '[data-test-pki-issuer-configure]',
+  valueByName: (name) => `[data-test-value-div="${name}"]`,
 };

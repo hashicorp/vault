@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -571,9 +572,21 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 					Type: framework.TypeString,
 				},
 			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleAuditHash,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleAuditHash,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"hash": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
@@ -587,6 +600,13 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditTable,
 					Summary:  "List the enabled audit devices.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							// this response has dynamic keys
+							Description: "OK",
+							Fields:      nil,
+						}},
+					},
 				},
 			},
 
@@ -625,10 +645,20 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAudit,
 					Summary:  "Enable a new audit device at the supplied path.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDisableAudit,
 					Summary:  "Disable the audit device at the given path.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 
@@ -652,14 +682,31 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderUpdate,
 					Summary:  "Enable auditing of a header.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderDelete,
 					Summary:  "Disable auditing of the given request header.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderRead,
 					Summary:  "List the information for the given request header.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// the response keys are dynamic
+							Fields: nil,
+						}},
+					},
 				},
 			},
 
@@ -674,6 +721,17 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeadersRead,
 					Summary:  "List the request headers that are configured to be audited.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"headers": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -2069,7 +2127,7 @@ func (b *SystemBackend) experimentPaths() []*framework.Path {
 func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "lockedusers/(?P<mount_accessor>.+?)/unlock/(?P<alias_identifier>.+)",
+			Pattern: "locked-users/(?P<mount_accessor>.+?)/unlock/(?P<alias_identifier>.+)",
 			Fields: map[string]*framework.FieldSchema{
 				"mount_accessor": {
 					Type:        framework.TypeString,
@@ -2088,6 +2146,23 @@ func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
+		},
+		{
+			Pattern: "locked-users",
+			Fields: map[string]*framework.FieldSchema{
+				"mount_accessor": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLockedUsersMetricQuery,
+					Summary:  "Report the locked user count metrics, for this namespace and all child namespaces.",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["locked_users"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["locked_users"][1]),
 		},
 	}
 }

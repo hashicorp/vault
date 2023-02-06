@@ -10,7 +10,7 @@ description: This is the API documentation for the Vault LDAP auth method.
 
 This is the API documentation for the Vault LDAP auth method. For
 general information about the usage and operation of the LDAP method, please
-see the [Vault LDAP method documentation](/docs/auth/ldap).
+see the [Vault LDAP method documentation](/vault/docs/auth/ldap).
 
 This documentation assumes the LDAP method is mounted at the `/auth/ldap`
 path in Vault. Since it is possible to enable auth methods at any location,

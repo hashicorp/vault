@@ -49,7 +49,7 @@
           <div>
             <Icon @name="certificate" class="has-text-grey-light" />
             <span class="has-text-weight-semibold is-underline">
-              {{or pkiIssuer.issuerName pkiIssuer.id}}
+              {{pkiIssuer.issuerRef}}
             </span>
             <div class="is-flex-row has-left-margin-l has-top-margin-xs">
               {{#if pkiIssuer.isDefault}}

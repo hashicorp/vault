@@ -342,7 +342,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			}
 		}
 		doc := NewOASDocument(vaultVersion)
-		if err := documentPath(p, b.SpecialPaths(), requestResponsePrefix, false, b.BackendType, doc); err != nil {
+		if err := documentPath(p, b.SpecialPaths(), requestResponsePrefix, b.BackendType, doc); err != nil {
 			b.Logger().Warn("error generating OpenAPI", "error", err)
 		}
 

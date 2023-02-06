@@ -54,10 +54,10 @@ const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
       // we want to link to the right JSON in swagger UI so
       // it's already been pre-pended
       if (!req.loadSpec) {
-        const { protocol, host, pathname } = parseURL(req.url);
+        const { protocol, host, pathname, search } = parseURL(req.url);
         //paths in the spec don't have /v1 in them, so we need to add that here
         //           http(s):  vlt.io:4200  /sys/mounts
-        req.url = `${protocol}//${host}/v1${pathname}`;
+        req.url = `${protocol}//${host}/v1${pathname}${search}`;
       }
       return req;
     },

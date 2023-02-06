@@ -199,6 +199,15 @@ func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, p
 	return resp.Password, nil
 }
 
+func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
+	reply, err := s.client.ClusterInfo(ctx, &pb.Empty{})
+	if err != nil {
+		return "", err
+	}
+
+	return reply.ClusterID, nil
+}
+
 type gRPCSystemViewServer struct {
 	pb.UnimplementedSystemViewServer
 
@@ -366,4 +375,19 @@ func (s *gRPCSystemViewServer) GeneratePasswordFromPolicy(ctx context.Context, r
 		Password: password,
 	}
 	return resp, nil
+}
+
+func (s *gRPCSystemViewServer) ClusterInfo(ctx context.Context, _ *pb.Empty) (*pb.ClusterInfoReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	clusterId, err := s.impl.ClusterID(ctx)
+	if err != nil {
+		return &pb.ClusterInfoReply{}, status.Errorf(codes.Internal, "failed to fetch cluster id")
+	}
+
+	return &pb.ClusterInfoReply{
+		ClusterID: clusterId,
+	}, nil
 }

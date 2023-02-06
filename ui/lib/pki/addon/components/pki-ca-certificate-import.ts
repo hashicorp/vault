@@ -7,7 +7,7 @@ import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
 import PkiBaseCertificateModel from 'vault/models/pki/certificate/base';
-import PkiConfigModel from 'vault/models/pki/config';
+import PkiActionModel from 'vault/models/pki/action';
 
 /**
  * @module PkiCaCertificateImport
@@ -27,7 +27,7 @@ import PkiConfigModel from 'vault/models/pki/config';
 interface Args {
   onSave: CallableFunction;
   onCancel: CallableFunction;
-  model: PkiBaseCertificateModel | PkiConfigModel;
+  model: PkiBaseCertificateModel | PkiActionModel;
   adapterOptions: object | undefined;
 }
 

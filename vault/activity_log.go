@@ -1664,6 +1664,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			a.logger.Warn("no month data found, returning query with no namespace attribution for current month")
 		} else {
 			currentMonth.Namespaces = currentMonthNamespaceAttribution[0].Namespaces
+			currentMonth.NewClients.Namespaces = currentMonthNamespaceAttribution[0].NewClients.Namespaces
 		}
 		pq.Months = append(pq.Months, currentMonth)
 		distinctEntitiesResponse += pq.Months[len(pq.Months)-1].NewClients.Counts.EntityClients

@@ -13,6 +13,9 @@
 .is-bottomless {
   box-shadow: 0 -1px 0 0 $grey-light;
 }
+.has-only-top-shadow {
+  box-shadow: 0 -1px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+}
 .has-bottom-shadow {
   box-shadow: $box-shadow !important;
 }
@@ -70,6 +73,9 @@
 }
 .is-flex-1 {
   flex-grow: 1;
+  &.basis-0 {
+    flex-basis: 0;
+  }
 }
 .is-flex-wrap {
   flex-flow: row wrap;
@@ -92,8 +98,14 @@
 .is-no-flex-grow {
   flex-grow: 0 !important;
 }
+.is-flex-half {
+  flex: 50%;
+}
 .is-auto-width {
   width: auto;
+}
+.is-min-width-0 {
+  min-width: 0;
 }
 
 .is-flex-between,
@@ -134,8 +146,19 @@
 .has-tall-padding {
   padding: 2.25rem;
 }
+.has-side-padding-s {
+  padding-left: $spacing-s;
+  padding-right: $spacing-s;
+}
+.has-padding-m {
+  padding: $spacing-m;
+}
 .has-top-bottom-margin {
   margin: 1.25rem 0rem;
+}
+.has-top-bottom-margin-negative-m {
+  margin-top: -$spacing-m;
+  margin-bottom: -$spacing-m;
 }
 
 .is-sideless.has-short-padding {
@@ -152,6 +175,13 @@
   word-wrap: break-word;
   word-break: break-word;
   white-space: pre-wrap;
+}
+.truncate-second-line {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 .is-font-mono {
   font-family: $family-monospace;
@@ -175,6 +205,9 @@
 .has-background-transparent {
   background: transparent !important;
 }
+.has-background-gray-200 {
+  background-color: $ui-gray-200;
+}
 @each $name, $pair in $colors {
   $color: nth($pair, 1);
   .has-background-#{$name} {
@@ -191,6 +224,9 @@
 }
 .has-top-padding-l {
   padding-top: $spacing-l;
+}
+.has-left-padding-l {
+  padding-left: $spacing-l;
 }
 .has-top-padding-xxl {
   padding-top: $spacing-xxl;
@@ -283,6 +319,12 @@ ul.bullet {
 }
 .has-text-grey-400 {
   color: $ui-gray-400;
+}
+.has-text-red {
+  color: $red;
+}
+.has-text-green {
+  color: $green;
 }
 .has-text-align-center {
   text-align: center;

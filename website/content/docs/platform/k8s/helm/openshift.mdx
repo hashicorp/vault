@@ -21,7 +21,7 @@ using `hostPath` mounting in production or
 [certify Helm charts](https://github.com/redhat-certification/chart-verifier/blob/dbf89bff2d09142e4709d689a9f4037a739c2244/docs/helm-chart-checks.md#table-2-helm-chart-default-checks)
 using CSI objects because pods must run as privileged. If you would like to run the Secrets Store
 CSI driver on a development or testing cluster, refer to
-[installation instructions for the Vault CSI provider](/docs/platform/k8s/csi/installation).
+[installation instructions for the Vault CSI provider](/vault/docs/platform/k8s/csi/installation).
 
 ## Requirements
 
@@ -42,8 +42,8 @@ deployments, Raft integrated storage is recommended.
 The documentation, configuration and examples for Vault Helm and Vault K8s Agent Injector
 are applicable to OpenShift installations. For more examples see the existing documentation:
 
-- [Vault Helm documentation](/docs/platform/k8s/helm)
-- [Vault K8s documentation](/docs/platform/k8s/injector)
+- [Vault Helm documentation](/vault/docs/platform/k8s/helm)
+- [Vault K8s documentation](/vault/docs/platform/k8s/injector)
 
 ## Helm Chart
 
@@ -64,8 +64,8 @@ secure and less resilient installation that is **NOT** appropriate for a
 production setup. It is highly recommended to use a [properly secured Kubernetes
 cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/),
 [learn the available configuration
-options](/docs/platform/k8s/helm/configuration), and read the [production deployment
-checklist](/docs/platform/k8s/helm/run#architecture).
+options](/vault/docs/platform/k8s/helm/configuration), and read the [production deployment
+checklist](/vault/docs/platform/k8s/helm/run#architecture).
 
 ## How-To
 

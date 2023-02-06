@@ -66,10 +66,10 @@ module('Integration | Component | pki key list page', function (hooks) {
       `,
       { owner: this.engine }
     );
+    assert.dom(SELECTORS.keyName).hasText('test-key', 'linked block renders key id');
     assert
       .dom(SELECTORS.keyId)
-      .hasText('724862ff-6438-bad0-b598-77a6c7f4e934', 'linked block renders key id');
-    assert.dom(SELECTORS.keyName).hasText('test-key', 'linked block renders key name');
+      .hasText('724862ff-6438-bad0-b598-77a6c7f4e934', 'linked block renders key name');
     assert.dom(SELECTORS.importKey).exists('renders import action');
     assert.dom(SELECTORS.generateKey).exists('renders generate action');
     await click(SELECTORS.popupMenuTrigger);

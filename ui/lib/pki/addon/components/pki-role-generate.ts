@@ -24,10 +24,6 @@ export default class PkiRoleGenerate extends Component<Args> {
 
   @tracked errorBanner = '';
 
-  transitionToRole() {
-    this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.role.details');
-  }
-
   get verb() {
     return this.args.type === 'sign' ? 'sign' : 'generate';
   }
@@ -45,29 +41,8 @@ export default class PkiRoleGenerate extends Component<Args> {
     }
   }
 
-  @task
-  *revoke() {
-    try {
-      yield this.args.model.destroyRecord();
-      this.flashMessages.success('The certificate has been revoked.');
-      this.transitionToRole();
-    } catch (err) {
-      this.errorBanner = errorMessage(err, 'Could not revoke certificate. See Vault logs for details.');
-    }
-  }
-
-  @action downloadCert() {
-    try {
-      const formattedSerial = this.args.model.serialNumber?.replace(/(\s|:)+/g, '-');
-      this.download.pem(formattedSerial, this.args.model.certificate);
-      this.flashMessages.info('Your download has started.');
-    } catch (err) {
-      this.flashMessages.danger(errorMessage(err, 'Unable to prepare certificate for download.'));
-    }
-  }
-
   @action cancel() {
     this.args.model.unloadRecord();
-    this.transitionToRole();
+    this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.role.details');
   }
 }

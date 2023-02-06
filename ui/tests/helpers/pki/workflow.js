@@ -3,6 +3,7 @@ import { SELECTORS as GENERATECERT } from './pki-role-generate';
 import { SELECTORS as KEYFORM } from './pki-key-form';
 import { SELECTORS as KEYPAGES } from './page/pki-keys';
 import { SELECTORS as ISSUERDETAILS } from './pki-issuer-details';
+import { SELECTORS as CONFIGURATION } from './pki-configure-form';
 
 export const SELECTORS = {
   breadcrumbContainer: '[data-test-breadcrumbs]',
@@ -10,6 +11,7 @@ export const SELECTORS = {
   pageTitle: '[data-test-pki-role-page-title]',
   alertBanner: '[data-test-alert-banner="alert"]',
   emptyStateTitle: '[data-test-empty-state-title]',
+  emptyStateLink: '.empty-state-actions a',
   emptyStateMessage: '[data-test-empty-state-message]',
   // TABS
   overviewTab: '[data-test-secret-list-tab="Overview"]',
@@ -41,5 +43,13 @@ export const SELECTORS = {
   issuerDetails: {
     title: '[data-test-pki-issuer-page-title]',
     ...ISSUERDETAILS,
+  },
+  // CONFIGURATION
+  configuration: {
+    title: '[data-test-pki-configuration-page-title]',
+    emptyState: '[data-test-configuration-empty-state]',
+    pkiBetaBanner: '[data-test-pki-configuration-banner]',
+    pkiBetaBannerLink: '[data-test-pki-configuration-banner] a',
+    ...CONFIGURATION,
   },
 };

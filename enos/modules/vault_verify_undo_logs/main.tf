@@ -29,12 +29,6 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-variable "vault_undo_logs_status" {
-  type        = string
-  description = "An integer either 0 or 1 which indicates whether undo_logs are disabled or enabled"
-  default     = null
-}
-
 locals {
   public_ips = {
     for idx in range(var.vault_instance_count) : idx => {
@@ -48,9 +42,8 @@ resource "enos_remote_exec" "smoke-verify-undo-logs" {
   for_each = local.public_ips
 
   environment = {
-    VAULT_TOKEN            = var.vault_root_token
-    VAULT_ADDR             = "http://localhost:8200"
-    VAULT_UNDO_LOGS_STATUS = var.vault_undo_logs_status
+    VAULT_TOKEN = var.vault_root_token
+    VAULT_ADDR  = "http://localhost:8200"
   }
 
   scripts = [abspath("${path.module}/scripts/smoke-verify-undo-logs.sh")]

@@ -14,9 +14,9 @@ description: >-
   the HSM for encryption rather than splitting into key shares
 - Automatic Unsealing: Vault stores its HSM-wrapped root key in storage,
   allowing for automatic unsealing
-- [Seal Wrapping](/docs/enterprise/sealwrap) to provide FIPS
+- [Seal Wrapping](/vault/docs/enterprise/sealwrap) to provide FIPS
   KeyStorage-conforming functionality for Critical Security Parameters
-- [Entropy Augmentation](/docs/enterprise/entropy-augmentation) to
+- [Entropy Augmentation](/vault/docs/enterprise/entropy-augmentation) to
   allow Vault to sample entropy from an external cryptographic module.
 
 HSM support is available for devices that support PKCS#11 version 2.20+
@@ -31,11 +31,11 @@ within PKCS#11 vary depending on HSM model and configuration. Consult your
 HSM's documentation for more details.
 
 Some parts of Vault work differently when using an HSM. Please see the
-[Behavioral Changes](/docs/enterprise/hsm/behavior) page for
+[Behavioral Changes](/vault/docs/enterprise/hsm/behavior) page for
 important information on these differences.
 
-The [Configuration](/docs/configuration/seal/pkcs11) page contains
+The [Configuration](/vault/docs/configuration/seal/pkcs11) page contains
 configuration information.
 
-Finally, the [Security](/docs/enterprise/hsm/security) page contains
+Finally, the [Security](/vault/docs/enterprise/hsm/security) page contains
 information about deploying Vault's HSM support in a secure fashion.
