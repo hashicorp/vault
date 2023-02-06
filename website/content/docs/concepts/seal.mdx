@@ -121,13 +121,15 @@ are purely an authorization mechanism.  Using Auto Unseal
 creates a strict Vault lifecycle dependency on the underlying seal mechanism. 
 This means that if the seal mechanism (such as the Cloud KMS key) becomes unavailable, 
 or deleted before the seal is migrated, then there is no ability to recover 
-access to the Vault cluster until the mechanism is available again. **If the seal 
+access to the Vault cluster until the mechanism is available again. **If seal the 
 mechanism or its keys are permanently deleted, then the Vault cluster cannot be recovered, even
 from backups.**
 To mitigate this risk, we recommend careful controls around management of the seal
 mechanism, for example using 
 [AWS Service Control Policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)
 or similar.  
+With Vault Enterprise one may use Disaster Recovery replicated clusters to act as a
+backup in the case of a lost seal mechanism.
 
 
 ## Recovery Key
