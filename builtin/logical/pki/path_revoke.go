@@ -241,6 +241,23 @@ func pathListUnifiedRevoked(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListUnifiedRevokedCertsHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `List of Keys`,
+								Required:    false,
+							},
+							"key_info": {
+								Type:        framework.TypeString,
+								Description: `Key information`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
