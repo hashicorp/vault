@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
@@ -55,6 +57,7 @@ func TestResignCrls_NormalCrl(t *testing.T) {
 		"format":      "pem",
 		"crls":        []string{crl1, crl2},
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b1.Route("issuer/default/resign-crls"), logical.UpdateOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err)
 	requireFieldsSetInResp(t, resp, "crl")
 	pemCrl := resp.Data["crl"].(string)
@@ -351,6 +354,7 @@ func TestSignRevocationList_NoRevokedCerts(t *testing.T) {
 		"next_update": "12h",
 		"format":      "pem",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/default/sign-revocation-list"), logical.UpdateOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err)
 	requireFieldsSetInResp(t, resp, "crl")
 	pemCrl := resp.Data["crl"].(string)

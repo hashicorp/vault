@@ -31,6 +31,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/armon/go-metrics"
@@ -5916,6 +5918,7 @@ func TestPKI_ListRevokedCerts(t *testing.T) {
 
 	// Test empty cluster
 	resp, err := CBList(b, s, "certs/revoked")
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("certs/revoked"), logical.ListOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err, "failed listing empty cluster")
 	require.Empty(t, resp.Data, "response map contained data that we did not expect")
 

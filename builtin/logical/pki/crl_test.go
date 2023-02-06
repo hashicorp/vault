@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -593,10 +595,11 @@ func TestPoP(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["certificate"])
 
-	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+	resp, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
 		"certificate": resp.Data["certificate"],
 		"private_key": resp.Data["private_key"],
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("revoke-with-key"), logical.UpdateOperation), resp, true)
 	require.NoError(t, err)
 
 	// Issue a second leaf, but hold onto it for now.

@@ -144,11 +144,16 @@ be in PEM format.`,
 							"revocation_time": {
 								Type:        framework.TypeInt,
 								Description: `Revocation Time`,
-								Required:    true,
+								Required:    false,
 							},
 							"revocation_time_rfc3339": {
-								Type:        framework.TypeInt,
+								Type:        framework.TypeTime,
 								Description: `Revocation Time`,
+								Required:    false,
+							},
+							"state": {
+								Type:        framework.TypeString,
+								Description: `Revocation State`,
 								Required:    false,
 							},
 						},
