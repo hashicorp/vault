@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-uuid"
+
 	"github.com/axiomhq/hyperloglog"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
@@ -3981,6 +3983,125 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 		totalCount := int(clientCounts[clientCount.NamespaceID])
 		if totalCount != clientCount.Counts.Clients {
 			t.Errorf("bad client count for namespace %s . expected %d, got %d", clientCount.NamespaceID, totalCount, clientCount.Counts.Clients)
+		}
+	}
+}
+
+// TestActivityLog_partialMonthClientCountWithMultipleMountPaths verifies that logic in refreshFromStoredLog includes all mount paths
+// in its mount data. In this test we create 3 entity records with different mount accessors: one is empty, one is
+// valid, one can't be found (so it's assumed the mount is deleted). These records are written to storage, then this data is
+// refreshed in refreshFromStoredLog, and finally we verify the results returned with partialMonthClientCount.
+func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	core, _, _ := TestCoreUnsealed(t)
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "auth/")
+
+	ctx := namespace.RootContext(nil)
+	now := time.Now().UTC()
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	a := core.activityLog
+	path := "auth/foo/bar"
+	accessor := "authfooaccessor"
+
+	// we mount a path using the accessor 'authfooaccessor' which has mount path "auth/foo/bar"
+	// when an entity record references this accessor, activity log will be able to find it on its mounts and translate the mount accessor
+	// into a mount path
+	err = core.router.Mount(&NoopBackend{}, "auth/foo/", &MountEntry{UUID: meUUID, Accessor: accessor, NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace, Path: path}, view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	entityRecords := []*activity.EntityRecord{
+		{
+			// this record has no mount accessor, so it'll get recorded as a pre-1.10 upgrade
+			ClientID:    "11111111-1111-1111-1111-111111111111",
+			NamespaceID: namespace.RootNamespaceID,
+			Timestamp:   time.Now().Unix(),
+		},
+		{
+			// this record's mount path won't be able to be found, because there's no mount with the accessor 'deleted'
+			// the code in mountAccessorToMountPath assumes that if the mount accessor isn't empty but the mount path
+			// can't be found, then the mount must have been deleted
+			ClientID:      "22222222-2222-2222-2222-222222222222",
+			NamespaceID:   namespace.RootNamespaceID,
+			Timestamp:     time.Now().Unix(),
+			MountAccessor: "deleted",
+		},
+		{
+			// this record will have mount path 'auth/foo/bar', because we set up the mount above
+			ClientID:      "33333333-2222-2222-2222-222222222222",
+			NamespaceID:   namespace.RootNamespaceID,
+			Timestamp:     time.Now().Unix(),
+			MountAccessor: "authfooaccessor",
+		},
+	}
+	for i, entityRecord := range entityRecords {
+		entityData, err := proto.Marshal(&activity.EntityActivityLog{
+			Clients: []*activity.EntityRecord{entityRecord},
+		})
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+		storagePath := fmt.Sprintf("%sentity/%d/%d", ActivityLogPrefix, timeutil.StartOfMonth(now).Unix(), i)
+		WriteToStorage(t, core, storagePath, entityData)
+	}
+
+	a.SetEnable(true)
+	var wg sync.WaitGroup
+	err = a.refreshFromStoredLog(ctx, &wg, now)
+	if err != nil {
+		t.Fatalf("error loading clients: %v", err)
+	}
+	wg.Wait()
+
+	results, err := a.partialMonthClientCount(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results == nil {
+		t.Fatal("no results to test")
+	}
+
+	byNamespace, ok := results["by_namespace"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+
+	clientCountResponse := make([]*ResponseNamespace, 0)
+	err = mapstructure.Decode(byNamespace, &clientCountResponse)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(clientCountResponse) != 1 {
+		t.Fatalf("incorrect client count responses, expected 1 but got %d", len(clientCountResponse))
+	}
+	if len(clientCountResponse[0].Mounts) != len(entityRecords) {
+		t.Fatalf("incorrect client mounts, expected %d but got %d", len(entityRecords), len(clientCountResponse[0].Mounts))
+	}
+	byPath := make(map[string]int, len(clientCountResponse[0].Mounts))
+	for _, mount := range clientCountResponse[0].Mounts {
+		byPath[mount.MountPath] = byPath[mount.MountPath] + mount.Counts.Clients
+	}
+
+	// these are the paths that are expected and correspond with the entity records created above
+	expectedPaths := []string{
+		noMountAccessor,
+		fmt.Sprintf(deletedMountFmt, "deleted"),
+		path,
+	}
+	for _, expectedPath := range expectedPaths {
+		count, ok := byPath[expectedPath]
+		if !ok {
+			t.Fatalf("path %s not found", expectedPath)
+		}
+		if count != 1 {
+			t.Fatalf("incorrect count value %d for path %s", count, expectedPath)
 		}
 	}
 }
