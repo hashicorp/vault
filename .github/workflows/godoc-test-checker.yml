@@ -23,4 +23,4 @@ jobs:
         with:
           go-version: ${{ steps.get-metadata.outputs.go-version }}
       - name: Verify new tests have go docs
-        run: make vet-godoctests
+        run: make ci-bootstrap && make vet-godoctests

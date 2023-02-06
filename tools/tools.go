@@ -29,4 +29,6 @@ import (
 	_ "google.golang.org/grpc/cmd/protoc-gen-go-grpc"
 
 	_ "github.com/favadi/protoc-go-inject-tag"
+
+	_ "github.com/golangci/revgrep/cmd/revgrep"
 )
