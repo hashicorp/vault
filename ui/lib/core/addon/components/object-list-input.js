@@ -22,6 +22,7 @@ import { assert } from '@ember/debug';
  * @param {array} objectKeys - an array of objects (sample above), the length determines the number of columns the component renders
  * @callback onChange - callback triggered when any input changes or when a row is deleted, called with array of objects containing each input's key and value ex: [ { attrKey: 'some input value' } ]
  * @param {string} [inputValue] - an array of objects to pre-fill the component inputs, key name must match objectKey[key]
+ * @param {array} [validationErrors] - an array of validation strings, the index of each string corresponds to the row with an invalid input
  */
 
 export default class ObjectListInput extends Component {
