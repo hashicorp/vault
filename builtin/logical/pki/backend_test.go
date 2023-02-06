@@ -6342,6 +6342,7 @@ func TestUserIDsInLeafCerts(t *testing.T) {
 	resp, err = CBWrite(b, s, "sign/testing", map[string]interface{}{
 		"csr": csrPem,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("sign/testing"), logical.UpdateOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
 	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
 
