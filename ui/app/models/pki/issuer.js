@@ -16,6 +16,7 @@ const issuerUrls = ['issuingCertificates', 'crlDistributionPoints', 'ocspServers
         'serialNumber',
         'keyId',
         'uriSans',
+        'ipSans',
         'notValidBefore',
         'notValidAfter',
       ],
@@ -30,6 +31,10 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
     return false;
   }
 
+  get issuerRef() {
+    return this.issuerName || this.issuerId;
+  }
+
   @attr isDefault; // readonly
   @attr('string') issuerId;
 
@@ -37,11 +42,6 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
     label: 'Default key ID',
   })
   keyId;
-
-  @attr({
-    label: 'URI Subject Alternative Names (URI SANs)',
-  })
-  uriSans;
 
   @attr('string') issuerName;
 
