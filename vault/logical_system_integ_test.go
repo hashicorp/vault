@@ -8,6 +8,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -169,7 +170,7 @@ func TestSystemBackend_HAStatus(t *testing.T) {
 	cluster.Start()
 	defer cluster.Cleanup()
 
-	vault.RetryUntil(t, 15*time.Second, func() error {
+	corehelpers.RetryUntil(t, 15*time.Second, func() error {
 		// Use standby deliberately to make sure it forwards
 		client := cluster.Cores[1].Client
 		resp, err := client.Sys().HAStatus()

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -64,12 +65,12 @@ var (
 	// This is used to reduce disk I/O for the recently committed entries.
 	raftLogCacheSize = 512
 
-	raftState     = "raft/"
-	peersFileName = "peers.json"
-
+	raftState              = "raft/"
+	peersFileName          = "peers.json"
 	restoreOpDelayDuration = 5 * time.Second
+	defaultMaxEntrySize    = uint64(2 * raftchunking.ChunkSize)
 
-	defaultMaxEntrySize = uint64(2 * raftchunking.ChunkSize)
+	GetInTxnDisabledError = errors.New("get operations inside transactions are disabled in raft backend")
 )
 
 // RaftBackend implements the backend interfaces and uses the raft protocol to
@@ -181,6 +182,7 @@ type RaftBackend struct {
 	nonVoter bool
 
 	effectiveSDKVersion string
+	failGetInTxn        *uint32
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -515,6 +517,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		redundancyZone:             conf["autopilot_redundancy_zone"],
 		nonVoter:                   nonVoter,
 		upgradeVersion:             upgradeVersion,
+		failGetInTxn:               new(uint32),
 	}, nil
 }
 
@@ -555,7 +558,7 @@ func (b *RaftBackend) Close() error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	if err := b.fsm.db.Close(); err != nil {
+	if err := b.fsm.Close(); err != nil {
 		return err
 	}
 
@@ -564,6 +567,14 @@ func (b *RaftBackend) Close() error {
 	}
 
 	return nil
+}
+
+func (b *RaftBackend) FailGetInTxn(fail bool) {
+	var val uint32
+	if fail {
+		val = 1
+	}
+	atomic.StoreUint32(b.failGetInTxn, val)
 }
 
 func (b *RaftBackend) SetEffectiveSDKVersion(sdkVersion string) {
@@ -612,7 +623,7 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	b.l.RLock()
 	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
-	fsmStats := b.fsm.db.Stats()
+	fsmStats := b.fsm.Stats()
 	stats := b.raft.Stats()
 	b.l.RUnlock()
 	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
@@ -1561,6 +1572,13 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 
 	if err := ctx.Err(); err != nil {
 		return err
+	}
+
+	failGetInTxn := atomic.LoadUint32(b.failGetInTxn)
+	for _, t := range txns {
+		if t.Operation == physical.GetOperation && failGetInTxn != 0 {
+			return GetInTxnDisabledError
+		}
 	}
 
 	txnMap := make(map[string]*physical.TxnEntry)

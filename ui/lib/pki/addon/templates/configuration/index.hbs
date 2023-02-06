@@ -1,0 +1,32 @@
+<SecretListHeader
+  @model={{this.model}}
+  @backendCrumb={{hash
+    label=this.model.id
+    text=this.model.id
+    path="vault.cluster.secrets.backend.list-root"
+    model=this.model.id
+  }}
+  @isEngine={{true}}
+/>
+{{! <Toolbar>
+  <ToolbarActions>
+    <ToolbarLink @route="configuration.tidy">
+      Tidy
+    </ToolbarLink>
+    <ToolbarLink @route="configuration.edit">
+      Edit configuration
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar> }}
+
+<AlertBanner
+  @type="info"
+  @title="PKI beta in use"
+  @message="To configure the engine, you'll have to return to the regular version."
+  class="has-top-margin-m"
+  data-test-pki-configuration-banner
+>
+  <LinkToExternal @route="secretsListRootConfiguration" class="info">
+    Return to old PKI to configure
+  </LinkToExternal>
+</AlertBanner>

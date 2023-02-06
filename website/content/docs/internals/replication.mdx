@@ -215,7 +215,7 @@ primary.
 version of Vault to an older version. When upgrading replicated clusters,
 ensure that upstream clusters are always on older version of Vault than
 downstream clusters. See
-[Upgrading Vault](/docs/upgrading#replication-installations) for an example.
+[Upgrading Vault](/vault/docs/upgrading#replication-installations) for an example.
 
 - **Read-After-Write Consistency**: All write requests are forwarded from
   secondaries to the primary cluster in order to avoid potential conflicts.
@@ -225,7 +225,7 @@ downstream clusters. See
   client making subsequent requests by stalling write requests until the write
   is replicated or a timeout is reached (2 seconds). If the timeout is reached,
   the client will receive a warning. Clients can also take steps to protect
-  against this, see [Consistency](/docs/enterprise/consistency#mitigations).
+  against this, see [Consistency](/vault/docs/enterprise/consistency#mitigations).
 
 - **Stale Reads**: Secondary clusters service reads based on their
   locally-replicated data. During normal operation updates from a primary are

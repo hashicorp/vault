@@ -371,3 +371,37 @@ func TestTidyIssuers(t *testing.T) {
 	require.Equal(t, statusResp.Data["issuer_safety_buffer"], 1)
 	require.Equal(t, statusResp.Data["tidy_expired_issuers"], true)
 }
+
+func TestTidyIssuerConfig(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+
+	// Ensure the default auto-tidy config matches expectations
+	resp, err := CBRead(b, s, "config/auto-tidy")
+	requireSuccessNonNilResponse(t, resp, err)
+
+	jsonBlob, err := json.Marshal(&defaultTidyConfig)
+	require.NoError(t, err)
+	var defaultConfigMap map[string]interface{}
+	err = json.Unmarshal(jsonBlob, &defaultConfigMap)
+	require.NoError(t, err)
+
+	// Coerce defaults to API response types.
+	defaultConfigMap["interval_duration"] = int(time.Duration(defaultConfigMap["interval_duration"].(float64)) / time.Second)
+	defaultConfigMap["issuer_safety_buffer"] = int(time.Duration(defaultConfigMap["issuer_safety_buffer"].(float64)) / time.Second)
+	defaultConfigMap["safety_buffer"] = int(time.Duration(defaultConfigMap["safety_buffer"].(float64)) / time.Second)
+	defaultConfigMap["pause_duration"] = time.Duration(defaultConfigMap["pause_duration"].(float64)).String()
+	defaultConfigMap["revocation_queue_safety_buffer"] = int(time.Duration(defaultConfigMap["revocation_queue_safety_buffer"].(float64)) / time.Second)
+
+	require.Equal(t, defaultConfigMap, resp.Data)
+
+	// Ensure setting issuer-tidy related fields stick.
+	resp, err = CBWrite(b, s, "config/auto-tidy", map[string]interface{}{
+		"tidy_expired_issuers": true,
+		"issuer_safety_buffer": "5s",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	require.Equal(t, true, resp.Data["tidy_expired_issuers"])
+	require.Equal(t, 5, resp.Data["issuer_safety_buffer"])
+}

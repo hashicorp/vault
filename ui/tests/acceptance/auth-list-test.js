@@ -1,7 +1,6 @@
 /* eslint qunit/no-conditional-assertions: "warn" */
 import {
   click,
-  findAll,
   fillIn,
   settled,
   visit,
@@ -17,6 +16,10 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
+import { create } from 'ember-cli-page-object';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+
+const consoleComponent = create(consoleClass);
 
 module('Acceptance | auth backend list', function (hooks) {
   setupApplicationTest(hooks);
@@ -99,24 +102,22 @@ module('Acceptance | auth backend list', function (hooks) {
 
   test('auth methods are linkable and link to correct view', async function (assert) {
     assert.expect(16);
-
+    const timestamp = new Date().getTime();
     await visit('/vault/access');
 
     const supportManaged = supportedManagedAuthBackends();
     const backends = supportedAuthBackends();
-
     for (const backend of backends) {
       const { type } = backend;
-
+      const path = `${type}-${timestamp}`;
       if (type !== 'token') {
-        await enablePage.enable(type, type);
+        await enablePage.enable(type, path);
       }
       await settled();
       await visit('/vault/access');
 
       // all auth methods should be linkable
-      await click(`[data-test-auth-backend-link="${type}"]`);
-
+      await click(`[data-test-auth-backend-link="${type === 'token' ? type : path}"]`);
       if (!supportManaged.includes(type)) {
         assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
         assert
@@ -124,12 +125,15 @@ module('Acceptance | auth backend list', function (hooks) {
           .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
         assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
       } else {
-        // managed auth methods should have more than 1 tab
-        assert.notEqual(
-          findAll('[data-test-auth-section-tab]').length,
-          1,
-          `has management tabs for ${type} auth method`
-        );
+        let expectedTabs = 2;
+        if (type == 'ldap' || type === 'okta') {
+          expectedTabs = 3;
+        }
+        assert
+          .dom('[data-test-auth-section-tab]')
+          .exists({ count: expectedTabs }, `has management tabs for ${type} auth method`);
+        // cleanup method
+        await consoleComponent.runCommands(`delete sys/auth/${path}`);
       }
     }
   });

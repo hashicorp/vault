@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -17,7 +19,7 @@ import (
 func TestMountTableMetrics(t *testing.T) {
 	clusterName := "mycluster"
 	conf := &vault.CoreConfig{
-		BuiltinRegistry: vault.NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		ClusterName:     clusterName,
 	}
 	cluster := vault.NewTestCluster(t, conf, &vault.TestClusterOptions{
@@ -107,7 +109,7 @@ func gaugeConditionCheck(comparator string, compareVal int, compareToVal int) er
 func TestLeaderReElectionMetrics(t *testing.T) {
 	clusterName := "mycluster"
 	conf := &vault.CoreConfig{
-		BuiltinRegistry: vault.NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		ClusterName:     clusterName,
 	}
 	cluster := vault.NewTestCluster(t, conf, &vault.TestClusterOptions{

@@ -1,6 +1,7 @@
 import { action } from '@ember/object';
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import Ember from 'ember';
 
 /**
  * Confirm that the user wants to discard unsaved changes before leaving the page.
@@ -30,6 +31,7 @@ export function withConfirmLeave() {
         const model = this.controller.get('model');
         if (model && model.hasDirtyAttributes) {
           if (
+            Ember.testing ||
             window.confirm(
               'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'
             )

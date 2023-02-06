@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update language on database role to "Connection name" [[GH-18261](https://github.com/hashicorp/vault/issues/18261)]
+```

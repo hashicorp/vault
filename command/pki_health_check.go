@@ -79,6 +79,9 @@ Usage: vault pki health-check [options] MOUNT
       6 - A permission denied message was returned from Vault Server for
 	      one or more health checks.
 
+For more detailed information, refer to the online documentation about the
+vault pki health-check command.
+
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)

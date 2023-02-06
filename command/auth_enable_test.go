@@ -2,7 +2,6 @@ package command
 
 import (
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 
@@ -50,18 +49,6 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			"",
 			2,
 		},
-		{
-			"deprecated builtin with standard mount",
-			[]string{"app-id"},
-			"",
-			2,
-		},
-		{
-			"deprecated builtin with different mount",
-			[]string{"-path=/tmp", "app-id"},
-			"",
-			2,
-		},
 	}
 
 	for _, tc := range cases {
@@ -78,12 +65,12 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
-				t.Errorf("expected %d to be %d", code, tc.code)
+				t.Errorf("expected command return code to be %d, got %d", tc.code, code)
 			}
 
 			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 			if !strings.Contains(combined, tc.out) {
-				t.Errorf("expected %q to contain %q", combined, tc.out)
+				t.Errorf("expected %q in response\n got: %+v", tc.out, combined)
 			}
 		})
 	}
@@ -225,13 +212,6 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 
 		for _, b := range backends {
 			var expectedResult int = 0
-			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeCredential)
-			allowDeprecated := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv)
-
-			// Need to handle deprecated builtins specially
-			if (status == consts.PendingRemoval && allowDeprecated == "") || status == consts.Removed {
-				expectedResult = 2
-			}
 
 			// Not a builtin
 			if b == "token" {
@@ -244,6 +224,13 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			actualResult := cmd.Run([]string{
 				b,
 			})
+
+			// Need to handle deprecated builtins specially
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeCredential)
+			if status == consts.PendingRemoval || status == consts.Removed {
+				expectedResult = 2
+			}
+
 			if actualResult != expectedResult {
 				t.Errorf("type: %s - got: %d, expected: %d - %s", b, actualResult, expectedResult, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}

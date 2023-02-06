@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,12 +15,14 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
+	"github.com/hashicorp/vault/version"
 )
 
 const vaultTestingMockPluginEnv = "VAULT_TESTING_MOCK_PLUGIN"
@@ -40,7 +43,7 @@ type testPlugin struct {
 // version is used to override the plugin's self-reported version
 func testCoreWithPlugins(t *testing.T, typ consts.PluginType, versions ...string) (*Core, []testPlugin) {
 	t.Helper()
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	var plugins []testPlugin
@@ -48,7 +51,7 @@ func testCoreWithPlugins(t *testing.T, typ consts.PluginType, versions ...string
 		plugins = append(plugins, compilePlugin(t, typ, version, pluginDir))
 	}
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 	core := TestCoreWithSealAndUI(t, conf)
@@ -278,7 +281,7 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
@@ -289,7 +292,7 @@ func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
 		t.Fatal(err)
 	}
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 
@@ -342,8 +345,129 @@ func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
 	}
 }
 
+// TestCore_Unseal_isMajorVersionFirstMount_PendingRemoval_Plugin tests the
+// behavior of deprecated builtins when attempting to unseal Vault after a major
+// version upgrade. It simulates this behavior by instantiating a Vault cluster,
+// registering a shadow plugin to mount a builtin, and deregistering the shadow
+// plugin. The first unseal should work. Before sealing and unsealing again, the
+// version store is cleared.  Vault sees the next unseal as a major upgrade and
+// should immediately shut down.
+func TestCore_Unseal_isMajorVersionFirstMount_PendingRemoval_Plugin(t *testing.T) {
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+
+	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
+	pluginName := "pending-removal-test-plugin"
+	plugin := compilePlugin(t, consts.PluginTypeCredential, "", pluginDir)
+	err := os.Link(path.Join(pluginDir, plugin.fileName), path.Join(pluginDir, pluginName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := &CoreConfig{
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		PluginDirectory: pluginDir,
+	}
+	c := TestCoreWithSealAndUI(t, conf)
+	c, keys, root := testCoreUnsealed(t, c)
+
+	// Register a shadow plugin
+	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "", plugin.sha256, plugin.fileName)
+	mountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+
+	// Deregister shadow plugin
+	deregisterPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "", plugin.sha256, plugin.fileName)
+
+	// Make sure this isn't the first mount for the current major version.
+	if c.isMajorVersionFirstMount(context.Background()) {
+		t.Fatalf("expected major version to register as mounted")
+	}
+
+	if err := c.Seal(root); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("err: should be unsealed")
+		}
+	}
+
+	// Now remove version history and try again
+	vaultVersionPath := "core/versions/"
+	key := vaultVersionPath + version.Version
+	if err := c.barrier.Delete(context.Background(), key); err != nil {
+		t.Fatal(err)
+	}
+
+	// loadVersionHistory doesn't care about invalidating old entries, since
+	// they shouldn't really be deleted from the version store. It just updates
+	// the map, so we need to manually delete the current entry.
+	delete(c.versionHistory, version.Version)
+
+	// Make sure this appears to be the first mount for the current major
+	// version.
+	if !c.isMajorVersionFirstMount(context.Background()) {
+		t.Fatalf("expected major version first mount")
+	}
+
+	// Seal again and check for unseal failure.
+	if err := c.Seal(root); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c, key)
+		if i+1 == len(keys) {
+			if !errors.Is(err, errLoadAuthFailed) {
+				t.Fatalf("expected error: %q, got: %q", errLoadAuthFailed, err)
+			}
+
+			if unseal {
+				t.Fatalf("err: should not be unsealed")
+			}
+		}
+	}
+}
+
+func TestCore_EnableExternalPlugin_PendingRemoval(t *testing.T) {
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+
+	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
+	pluginName := "pending-removal-test-plugin"
+	plugin := compilePlugin(t, consts.PluginTypeCredential, "v1.2.3", pluginDir)
+	err := os.Link(path.Join(pluginDir, plugin.fileName), path.Join(pluginDir, pluginName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := &CoreConfig{
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		PluginDirectory: pluginDir,
+	}
+
+	c := TestCoreWithSealAndUI(t, conf)
+	c, _, _ = testCoreUnsealed(t, c)
+
+	pendingRemovalString := "pending removal"
+
+	// Create a new auth method with builtin pending-removal-test-plugin
+	resp, err := mountPluginWithResponse(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+	if err == nil {
+		t.Fatalf("expected error when mounting deprecated backend")
+	}
+	if resp == nil || resp.Data == nil || !strings.Contains(resp.Data["error"].(string), pendingRemovalString) {
+		t.Fatalf("expected error response to contain %q but got %+v", pendingRemovalString, resp)
+	}
+
+	// Register a shadow plugin
+	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "v1.2.3", plugin.sha256, plugin.fileName)
+	mountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+}
+
 func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	// create an external plugin to shadow the builtin "approle"
@@ -354,7 +478,7 @@ func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
 	}
 	pluginName := "approle"
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 	c := TestCoreWithSealAndUI(t, conf)
@@ -422,7 +546,7 @@ func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
 }
 
 func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	// new kv plugin can be registered but not mounted
@@ -433,7 +557,7 @@ func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 	}
 	pluginName := "kv"
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 	c := TestCoreWithSealAndUI(t, conf)
@@ -475,7 +599,7 @@ func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
-	pluginDir, cleanup := MakeTestPluginDir(t)
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
 	// new noop plugin can be registered but not mounted
@@ -486,7 +610,7 @@ func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
 	}
 	pluginName := "noop"
 	conf := &CoreConfig{
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 	c := TestCoreWithSealAndUI(t, conf)
@@ -880,7 +1004,7 @@ func registerPlugin(t *testing.T, sys *SystemBackend, pluginName, pluginType, ve
 	}
 }
 
-func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType consts.PluginType, version, path string) {
+func mountPluginWithResponse(t *testing.T, sys *SystemBackend, pluginName string, pluginType consts.PluginType, version, path string) (*logical.Response, error) {
 	t.Helper()
 	var mountPath string
 	if path == "" {
@@ -897,7 +1021,12 @@ func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType
 			"plugin_version": version,
 		}
 	}
-	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
+	return sys.HandleRequest(namespace.RootContext(nil), req)
+}
+
+func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType consts.PluginType, version, path string) {
+	t.Helper()
+	resp, err := mountPluginWithResponse(t, sys, pluginName, pluginType, version, path)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}

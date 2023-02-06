@@ -1,1 +1,16 @@
-route: issuers.generate-root
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-pki-issuers-page-title>
+      Generate root
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<PkiGenerateRoot
+  @model={{this.model}}
+  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
+  @adapterOptions={{hash actionType="generate-root" useIssuer=this.model.canGenerateIssuerRoot}}
+/>

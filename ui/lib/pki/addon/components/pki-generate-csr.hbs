@@ -1,0 +1,28 @@
+<form {{on "submit" (perform this.save)}}>
+  <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
+  <h2 class="title is-size-5 has-border-bottom-light page-header">
+    CSR parameters
+  </h2>
+
+  {{#each this.formFields as |field|}}
+    <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+  {{/each}}
+
+  <PkiGenerateToggleGroups @model={{@model}} />
+
+  <div class="field is-grouped box is-fullwidth is-bottomless has-top-margin-l">
+    <div class="control">
+      <button type="submit" class="button is-primary" data-test-save>
+        Done
+      </button>
+      <button {{on "click" this.cancel}} type="button" class="button has-left-margin-s" data-test-cancel>
+        Cancel
+      </button>
+    </div>
+    {{#if this.alert}}
+      <div class="control">
+        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
+      </div>
+    {{/if}}
+  </div>
+</form>

@@ -452,6 +452,9 @@ func testLoadConfigFile(t *testing.T) {
 		EnableRawEndpoint:    true,
 		EnableRawEndpointRaw: true,
 
+		EnableIntrospectionEndpoint:    true,
+		EnableIntrospectionEndpointRaw: true,
+
 		DisableSealWrap:    true,
 		DisableSealWrapRaw: true,
 
@@ -735,12 +738,15 @@ func testConfig_Sanitized(t *testing.T) {
 		"disable_indexing":                    false,
 		"disable_mlock":                       true,
 		"disable_performance_standby":         false,
+		"experiments":                         []string(nil),
 		"plugin_file_uid":                     0,
 		"plugin_file_permissions":             0,
 		"disable_printable_check":             false,
 		"disable_sealwrap":                    true,
 		"raw_storage_endpoint":                true,
+		"introspection_endpoint":              false,
 		"disable_sentinel_trace":              true,
+		"detect_deadlocks":                    "",
 		"enable_ui":                           true,
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,

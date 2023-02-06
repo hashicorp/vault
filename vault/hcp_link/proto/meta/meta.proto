@@ -34,6 +34,63 @@ message ListAuthResponse {
   repeated Auth Auths = 1;
 }
 
+message GetClusterStatusRequest {}
+
+message HANode {
+  string Hostname = 1;
+}
+
+message HAStatus {
+  bool Enabled = 1;
+  repeated HANode Nodes = 2;
+}
+
+message RaftServer {
+  // NodeID is the name of the server
+  string NodeID = 1;
+
+  // Address is the IP:port of the server, used for Raft communications
+  string Address = 2;
+
+  // Leader is true if this server is the current cluster leader
+  bool Leader = 3;
+
+  // Protocol version is the raft protocol version used by the server
+  string ProtocolVersion = 4;
+
+  // Voter is true if this server has a vote in the cluster. This might
+  // be false if the server is staging and still coming online.
+  bool Voter = 5;
+}
+
+message RaftConfiguration {
+  repeated RaftServer Servers = 1;
+}
+
+message AutopilotServer {
+  string ID = 1;
+  bool Healthy = 2;
+}
+
+message AutopilotStatus {
+  bool Healthy = 1;
+  repeated AutopilotServer Servers = 2;
+}
+
+message RaftStatus {
+  RaftConfiguration RaftConfiguration = 1;
+  AutopilotStatus AutopilotStatus = 2;
+  string QuorumWarning = 3;
+}
+
+message GetClusterStatusResponse {
+  string ClusterID = 1;
+  HAStatus HAStatus = 2;
+  RaftStatus RaftStatus = 3;
+  string StorageType = 4;
+  string ClusterName = 5;
+}
+
 service HCPLinkMeta {
   // ListNamespaces will be used to recursively list all namespaces
   rpc ListNamespaces(ListNamespacesRequest) returns (ListNamespacesResponse);
@@ -43,4 +100,7 @@ service HCPLinkMeta {
 
   // ListAuths will be used to recursively list all auths in all namespaces
   rpc ListAuths(ListAuthsRequest) returns (ListAuthResponse);
+
+  // GetClusterStatus will provide various cluster-level information
+  rpc GetClusterStatus(GetClusterStatusRequest) returns (GetClusterStatusResponse);
 }
