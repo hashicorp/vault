@@ -130,3 +130,59 @@ func TestCertAuthMethod_AuthClient_withCerts(t *testing.T) {
 		t.Fatal("expected client from AuthClient to return back a cached client")
 	}
 }
+
+func TestCertAuthMethod_AuthClient_withCertsReload(t *testing.T) {
+	clientCert, err := os.Open("./test-fixtures/keys/cert.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer clientCert.Close()
+
+	clientKey, err := os.Open("./test-fixtures/keys/key.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer clientKey.Close()
+
+	config := &auth.AuthConfig{
+		Logger:    hclog.NewNullLogger(),
+		MountPath: "cert-test",
+		Config: map[string]interface{}{
+			"name":        "with-certs-reloaded",
+			"client_cert": clientCert.Name(),
+			"client_key":  clientKey.Name(),
+			"reload":      true,
+		},
+	}
+
+	method, err := NewCertAuthMethod(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client, err := api.NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	clientToUse, err := method.(auth.AuthMethodWithClient).AuthClient(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if client == clientToUse {
+		t.Fatal("expected client from AuthClient to be different from original client")
+	}
+
+	// Call AuthClient again to get back a new client with reloaded certificates
+	reloadedClient, err := method.(auth.AuthMethodWithClient).AuthClient(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if reloadedClient == clientToUse {
+		t.Fatal("expected client from AuthClient to return back a new client")
+	}
+}
