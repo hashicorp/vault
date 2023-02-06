@@ -2502,6 +2502,8 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	resp, err := CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "myint.com",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b_root.Route("intermediate/generate/internal"), logical.UpdateOperation), resp, true)
+
 	if err != nil {
 		t.Fatal(err)
 	}

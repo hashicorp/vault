@@ -122,6 +122,11 @@ func buildPathGenerateIntermediate(b *backend, pattern string) *framework.Path {
 								Description: `Certificate signing request.`,
 								Required:    true,
 							},
+							"key_id": {
+								Type: framework.TypeString,
+								Description: `Id of the key.`,
+								Required: true,
+							},
 							"private_key": {
 								Type:        framework.TypeString,
 								Description: `Generated private key.`,
