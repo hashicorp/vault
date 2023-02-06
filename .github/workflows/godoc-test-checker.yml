@@ -21,6 +21,7 @@ jobs:
       - name: Set Up Go
         uses: actions/setup-go@v3
         with:
+          cache: true
           go-version: ${{ steps.get-metadata.outputs.go-version }}
       - name: Verify new tests have go docs
-        run: make ci-bootstrap && make vet-godoctests
+        run: make ci-vet-godoctests

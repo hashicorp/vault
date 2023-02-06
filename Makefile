@@ -15,7 +15,6 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 SED?=$(shell command -v gsed || command -v sed)
 
-
 GO_VERSION_MIN=$$(cat $(CURDIR)/.go-version)
 PROTOC_VERSION_MIN=3.21.12
 GO_CMD?=go
@@ -103,14 +102,19 @@ vet:
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
-# godoctests builds the custom analyzer to check for godocs for tests
-godoctests:
-	@$(GO_CMD) build -o ./tools/godoctests/.bin/godoctests ./tools/godoctests
+# tools/godoctests/.bin/godoctests builds the custom analyzer to check for godocs for tests
+tools/godoctests/.bin/godoctests:
+	@cd tools/godoctests && $(GO_CMD) build -o .bin/godoctests .
 
 # vet-godoctests runs godoctests on the test functions. All output gets piped to revgrep
 # which will only return an error if a new function is missing a godoc
-vet-godoctests: godoctests
+vet-godoctests: bootstrap tools/godoctests/.bin/godoctests
 	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep
+
+# ci-vet-godoctests runs godoctests on the test functions. All output gets piped to revgrep
+# which will only return an error if a new function that is not on main is missing a godoc
+ci-vet-godoctests: ci-bootstrap tools/godoctests/.bin/godoctests
+	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep origin/main
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
 lint:
@@ -260,7 +264,7 @@ ci-config:
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-godoctests ci-vet-godoctests
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 

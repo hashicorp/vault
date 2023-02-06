@@ -8,6 +8,7 @@ import (
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 
+// TestAnalyzer runs the analyzer on the test functions in testdata/funcs.go
 func TestAnalyzer(t *testing.T) {
 	f, err := os.Getwd()
 	if err != nil {
