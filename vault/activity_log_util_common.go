@@ -207,9 +207,9 @@ func (a *ActivityLog) limitNamespacesInALResponse(byNamespaceResponse []*Respons
 // For more details, please see the function comment for transformMonthlyNamespaceBreakdowns
 func (a *ActivityLog) transformActivityLogMounts(mts map[string]*processMount) []*activity.MountRecord {
 	mounts := make([]*activity.MountRecord, 0)
-	for mountpath, mountCounts := range mts {
+	for mountAccessor, mountCounts := range mts {
 		mount := activity.MountRecord{
-			MountPath: mountpath,
+			MountPath: a.mountAccessorToMountPath(mountAccessor),
 			Counts: &activity.CountsRecord{
 				EntityClients:    len(mountCounts.Counts.Entities),
 				NonEntityClients: len(mountCounts.Counts.NonEntities) + int(mountCounts.Counts.Tokens),
@@ -258,4 +258,26 @@ func (a *ActivityLog) sortActivityLogMonthsResponse(months []*ResponseMonth) {
 			})
 		}
 	}
+}
+
+const (
+	noMountAccessor = "no mount accessor (pre-1.10 upgrade?)"
+	deletedMountFmt = "deleted mount; accessor %q"
+)
+
+// mountAccessorToMountPath transforms the mount accessor to the mount path
+// returns a placeholder string if the mount accessor is empty or deleted
+func (a *ActivityLog) mountAccessorToMountPath(mountAccessor string) string {
+	var displayPath string
+	if mountAccessor == "" {
+		displayPath = noMountAccessor
+	} else {
+		valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
+		if valResp == nil {
+			displayPath = fmt.Sprintf(deletedMountFmt, mountAccessor)
+		} else {
+			displayPath = valResp.MountPath
+		}
+	}
+	return displayPath
 }
