@@ -123,9 +123,9 @@ func buildPathGenerateIntermediate(b *backend, pattern string) *framework.Path {
 								Required:    true,
 							},
 							"key_id": {
-								Type: framework.TypeString,
+								Type:        framework.TypeString,
 								Description: `Id of the key.`,
-								Required: true,
+								Required:    true,
 							},
 							"private_key": {
 								Type:        framework.TypeString,

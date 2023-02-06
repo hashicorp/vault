@@ -7,9 +7,10 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"testing"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
-	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
