@@ -107,10 +107,6 @@ keys_ instead.
 Just as the initialization process with a Shamir seal yields unseal keys,
 initializing with an Auto Unseal yields recovery keys.
 
--> **Note:** Recovery keys cannot decrypt the root key, and thus are not
-sufficient to unseal Vault if the Auto Unseal mechanism isn't working. They
-are purely an authorization mechanism.
-
 It is still possible to seal a Vault node using the API. In this case Vault
 will remain sealed until restarted, or the unseal API is used, which with Auto
 Unseal requires the recovery key fragments instead of the unseal key fragments
@@ -118,6 +114,22 @@ that would be provided with Shamir. The process remains the same.
 
 For a list of examples and supported providers, please see the
 [seal documentation](/vault/docs/configuration/seal).
+
+-> **Warning:** Recovery keys cannot decrypt the root key, and thus are not
+sufficient to unseal Vault if the Auto Unseal mechanism isn't working. They
+are purely an authorization mechanism.  Using Auto Unseal 
+creates a strict Vault lifecycle dependency on the underlying seal mechanism. 
+This means that if the seal mechanism (such as the Cloud KMS key) becomes unavailable, 
+or deleted before the seal is migrated, then there is no ability to recover 
+access to the Vault cluster until the mechanism is available again. **If seal the 
+mechanism or its keys are permanently deleted, then the Vault cluster cannot be recovered, even
+from backups.**
+ 
+To mitigate this risk, we recommend careful controls around management of the seal
+mechanism, for example using 
+[AWS Service Control Policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)
+or similar.  
+
 
 ## Recovery Key
 
