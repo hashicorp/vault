@@ -10,4 +10,5 @@ export const SELECTORS = {
   certificate: '[data-test-value-div="Certificate"]',
   inlineAlert: '[data-test-alert]',
   commonNameInlineError: '[data-test-field="commonName"] [data-test-inline-alert]',
+  commonNameErrorBorder: '[data-test-input="commonName"]',
 };

@@ -37,14 +37,14 @@ export default class PkiRoleGenerate extends Component<Args> {
     const { model, onSuccess } = this.args;
     const { isValid, state, invalidFormMessage } = model.validate();
 
+    this.modelValidations = isValid ? null : state;
+    this.invalidFormAlert = invalidFormMessage;
+
+    if (!isValid) return;
+
     try {
-      if (isValid) {
-        yield model.save();
-        onSuccess();
-      } else {
-        this.modelValidations = state;
-        this.invalidFormAlert = invalidFormMessage;
-      }
+      yield model.save();
+      onSuccess();
     } catch (err) {
       this.errorBanner = errorMessage(err, `Could not ${this.verb} certificate. See Vault logs for details.`);
     }

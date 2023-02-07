@@ -71,7 +71,7 @@ module('Integration | Component | pki-role-generate', function (hooks) {
   });
 
   test('it should display validation errors', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
 
     await render(
       hbs`
@@ -90,5 +90,6 @@ module('Integration | Component | pki-role-generate', function (hooks) {
       .dom(SELECTORS.commonNameInlineError)
       .hasText('Common name is required.', 'Common name validation error renders');
     assert.dom(SELECTORS.inlineAlert).hasText('There is an error with this form.', 'Alert renders');
+    assert.dom(SELECTORS.commonNameErrorBorder).hasClass('has-error-border');
   });
 });
