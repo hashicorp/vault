@@ -367,7 +367,6 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 
 // calculateSleepDuration calculates the amount of time the LifeTimeWatcher should sleep
 // before re-entering its loop.
-// The sleep period is 2/3 of the ramining leaseDuration + 1/3 of the grace period.
 func (r *LifetimeWatcher) calculateSleepDuration(remainingLeaseDuration, priorDuration time.Duration) time.Duration {
 	// We keep evaluating a new grace period so long as the lease is
 	// extending. Once it stops extending, we've hit the max and need to
