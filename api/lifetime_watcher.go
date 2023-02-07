@@ -335,10 +335,8 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 			remainingLeaseDuration = time.Duration(initLeaseDuration) * time.Second
 		}
 
-		if errorBackoff != nil {
-			if errorBackoff.NextBackOff() == backoff.Stop {
-				return err
-			}
+		if errorBackoff != nil && errorBackoff.NextBackOff() == backoff.Stop {
+			return err
 		}
 
 		sleepDuration := r.calculateSleepDuration(remainingLeaseDuration, priorDuration)
