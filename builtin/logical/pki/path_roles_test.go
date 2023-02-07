@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -141,12 +143,14 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	}
 
 	resp, err = b.HandleRequest(context.Background(), roleReq)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("roles/testrole"), logical.UpdateOperation), resp, true)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("roles/testrole"), logical.ReadOperation), resp, true)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}

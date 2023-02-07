@@ -62,6 +62,12 @@ value or the value of max_ttl, whichever is shorter.`,
 			Description: `The maximum allowed lease duration. If not
 set, defaults to the system maximum lease TTL.`,
 		},
+		"allow_token_displayname": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `Whether to allow "localhost" and "localdomain"
+as a valid common name in a request, independent of allowed_domains value.`,
+		},
 
 		"allow_localhost": {
 			Type:     framework.TypeBool,
@@ -168,7 +174,10 @@ Any valid URI is accepted, these values support globbing.`,
 			Required:    true,
 			Description: `If set, an array of allowed serial numbers to put in Subject. These values support globbing.`,
 		},
-
+		"allowed_user_ids": {
+			Type:        framework.TypeCommaStringSlice,
+			Description: `If set, an array of allowed user-ids to put in user system login name specified here: https://www.rfc-editor.org/rfc/rfc1274#section-9.3.1`,
+		},
 		"server_flag": {
 			Type:    framework.TypeBool,
 			Default: true,
