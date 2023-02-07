@@ -10,10 +10,6 @@
     @extend .button;
     @extend .is-ghost;
     margin-left: -15px;
-    &:active,
-    &.is-active,
-    &:focus,
-    &.is-focused,
     &:hover {
       background-color: none;
       border: 0;
