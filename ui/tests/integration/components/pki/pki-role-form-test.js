@@ -6,7 +6,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-module('Integration | Component | meep pki-role-form', function (hooks) {
+module('Integration | Component | pki-role-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
   setupEngine(hooks, 'pki'); // https://github.com/ember-engines/ember-engines/pull/653
@@ -131,7 +131,7 @@ module('Integration | Component | meep pki-role-form', function (hooks) {
     assert.true(this.model.isDestroyed, 'new model is unloaded on cancel');
   });
 
-  test('it should save update attributes on update', async function (assert) {
+  test('it should update attributes on the model on update', async function (assert) {
     assert.expect(1);
     this.store.pushPayload('pki/role', {
       modelName: 'pki/role',
