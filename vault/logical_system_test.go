@@ -2906,7 +2906,6 @@ func TestSystemBackend_keyStatus(t *testing.T) {
 
 func TestSystemBackend_rotateConfig(t *testing.T) {
 	b := testSystemBackend(t)
-	paths := b.(*SystemBackend).sealPaths()
 	req := logical.TestRequest(t, logical.ReadOperation, "rotate/config")
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
@@ -2940,7 +2939,7 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 1, req2.Operation),
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
 		resp,
 		true,
 	)
@@ -2951,8 +2950,7 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 1, req.Operation),
-		resp,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation), resp,
 		true,
 	)
 
