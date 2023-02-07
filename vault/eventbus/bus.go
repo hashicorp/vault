@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var ErrNotStarted = errors.New("event broker has not been started")
@@ -38,6 +40,7 @@ type asyncChanNode struct {
 	// TODO: add bounded deque buffer of *EventReceived
 	ch        chan *logical.EventReceived
 	namespace *namespace.Namespace
+	logger    hclog.Logger
 }
 
 var (
@@ -72,6 +75,7 @@ func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, 
 		Namespace:  ns.Path,
 		EventType:  string(eventType),
 		PluginInfo: pluginInfo,
+		Timestamp:  timestamppb.New(time.Now()),
 	}
 	bus.logger.Info("Sending event", "event", eventReceived)
 	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), eventReceived)
@@ -153,7 +157,7 @@ func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, event
 	}
 
 	// TODO: should we have just one node per namespace, and handle all the routing ourselves?
-	asyncNode := newAsyncNode(ns)
+	asyncNode := newAsyncNode(ns, bus.logger)
 	err = bus.broker.RegisterNode(eventlogger.NodeID(nodeID), asyncNode)
 	if err != nil {
 		defer asyncNode.Close()
@@ -175,10 +179,11 @@ func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, event
 	return asyncNode.ch, nil
 }
 
-func newAsyncNode(namespace *namespace.Namespace) *asyncChanNode {
+func newAsyncNode(namespace *namespace.Namespace, logger hclog.Logger) *asyncChanNode {
 	return &asyncChanNode{
 		ch:        make(chan *logical.EventReceived),
 		namespace: namespace,
+		logger:    logger,
 	}
 }
 
@@ -191,6 +196,12 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 	// TODO: add timeout on sending to node.ch
 	// sends to the channel async in another goroutine
 	go func() {
+		// there is no great way to tell if the channel was closed before our write, so it will panic
+		defer func() {
+			if err := recover(); err != nil {
+				node.logger.Debug("Error writing to asyncChanNode", "error", err)
+			}
+		}()
 		eventRecv := e.Payload.(*logical.EventReceived)
 		// drop if event is not in our namespace
 		// TODO: add wildcard processing here in some cases?

@@ -1269,7 +1269,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 	c.events = events
-	if c.isExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
+	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
 		c.events.Start()
 	}
 
@@ -3921,7 +3921,8 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 	return status, resourceID
 }
 
-func (c *Core) isExperimentEnabled(experiment string) bool {
+// IsExperimentEnabled is true if the experiment is enabled in the core.
+func (c *Core) IsExperimentEnabled(experiment string) bool {
 	return strutil.StrListContains(c.experiments, experiment)
 }
 
@@ -3979,4 +3980,8 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	}
 
 	return raftBackend.GetAutopilotServerState(ctx)
+}
+
+func (c *Core) Events() *eventbus.EventBus {
+	return c.events
 }
