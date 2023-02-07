@@ -23,6 +23,8 @@ export default class PkiRoleGenerate extends Component<Args> {
   @service declare readonly download: DownloadService;
 
   @tracked errorBanner = '';
+  @tracked invalidFormAlert = '';
+  @tracked modelValidations = null;
 
   get verb() {
     return this.args.type === 'sign' ? 'sign' : 'generate';
@@ -33,9 +35,16 @@ export default class PkiRoleGenerate extends Component<Args> {
     evt.preventDefault();
     this.errorBanner = '';
     const { model, onSuccess } = this.args;
+    const { isValid, state, invalidFormMessage } = model.validate();
+
     try {
-      yield model.save();
-      onSuccess();
+      if (isValid) {
+        yield model.save();
+        onSuccess();
+      } else {
+        this.modelValidations = state;
+        this.invalidFormAlert = invalidFormMessage;
+      }
     } catch (err) {
       this.errorBanner = errorMessage(err, `Could not ${this.verb} certificate. See Vault logs for details.`);
     }
