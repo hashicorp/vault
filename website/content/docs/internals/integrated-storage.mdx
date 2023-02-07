@@ -174,7 +174,7 @@ Older versions of Vault, 1.6.x & lower, as well as cases where Autopilot may be
 disabled or misconfigured, behave differently.
 
 In scenarios involving those when a node joins a Raft cluster, it attempts to 
-catch up with the reset of the nodes through the data that it's replicating from 
+catch up with the rest of the nodes through the data that it's replicating from 
 the leader. While in this initial synchronisation state, the node cannot 
 vote but is counted for the purposes of quorum. If a number of new nodes join 
 the cluster simultaneously or at similar times, and thereby exceeding the failure
