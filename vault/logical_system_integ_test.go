@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
@@ -20,8 +21,9 @@ import (
 func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
+		HandlerFunc:             vaulthttp.Handler,
+		NumCores:                1,
+		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -164,7 +166,8 @@ func TestSystemBackend_HAStatus(t *testing.T) {
 		HAPhysical: inmha.(physical.HABackend),
 	}
 	opts := &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
+		HandlerFunc:             vaulthttp.Handler,
+		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	}
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
@@ -191,8 +194,9 @@ func TestSystemBackend_HAStatus(t *testing.T) {
 func TestSystemBackend_VersionHistory_unauthenticated(t *testing.T) {
 	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
+		HandlerFunc:             vaulthttp.Handler,
+		NumCores:                1,
+		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -221,8 +225,9 @@ func TestSystemBackend_VersionHistory_unauthenticated(t *testing.T) {
 func TestSystemBackend_VersionHistory_authenticated(t *testing.T) {
 	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
+		HandlerFunc:             vaulthttp.Handler,
+		NumCores:                1,
+		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
