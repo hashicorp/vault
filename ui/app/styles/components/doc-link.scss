@@ -5,16 +5,6 @@
   &:hover {
     text-decoration: underline !important;
   }
-
-  &.alert-banner-doc-link {
-    @extend .button;
-    @extend .is-ghost;
-    margin-left: -15px;
-    &:hover {
-      background-color: none;
-      border: 0;
-    }
-  }
 }
 
 .doc-link-subtle {
