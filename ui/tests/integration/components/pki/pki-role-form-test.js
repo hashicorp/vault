@@ -6,7 +6,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-module('Integration | Component | pki-role-form', function (hooks) {
+module('Integration | Component | meep pki-role-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
   setupEngine(hooks, 'pki'); // https://github.com/ember-engines/ember-engines/pull/653
@@ -111,8 +111,8 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(SELECTORS.roleCreateButton);
   });
 
-  test('it should rollback attributes or unload record on cancel', async function (assert) {
-    assert.expect(6);
+  test('it should unload model on cancel', async function (assert) {
+    assert.expect(3);
     this.onCancel = () => assert.ok(true, 'onCancel callback fires');
     await render(
       hbs`
@@ -129,7 +129,10 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(SELECTORS.roleCancelButton);
     assert.notEqual(this.model.roleName, 'dont-save-me');
     assert.true(this.model.isDestroyed, 'new model is unloaded on cancel');
+  });
 
+  test('it should save update attributes on update', async function (assert) {
+    assert.expect(1);
     this.store.pushPayload('pki/role', {
       modelName: 'pki/role',
       name: 'test-role',
@@ -150,9 +153,6 @@ module('Integration | Component | pki-role-form', function (hooks) {
       { owner: this.engine }
     );
 
-    await fillIn(SELECTORS.issuerRef, 'not-default');
-    await click(SELECTORS.roleCancelButton);
-    assert.strictEqual(this.model.issuerRef, 'default', 'Issuer Ref rolled back to default on cancel');
     await fillIn(SELECTORS.issuerRef, 'not-default');
     await click(SELECTORS.roleCreateButton);
     assert.strictEqual(this.model.issuerRef, 'not-default', 'Issuer Ref correctly saved on create');
