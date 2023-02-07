@@ -8,18 +8,18 @@
             {{#if (eq index 0)}}
               <h2 data-test-object-list-label={{inputKey}}>{{field.label}}</h2>
             {{/if}}
-            <Input
-              data-test-object-list-input="{{field.key}}-{{index}}"
-              aria-label="{{or field.placeholder field.label}} input for row index {{index}}"
-              class="input"
-              placeholder={{or field.placeholder ""}}
-              @type="text"
-              @value={{value}}
-              name={{field.key}}
-              id="{{field.key}}-{{index}}"
-              {{on "input" (fn this.handleInput index)}}
-            />
             {{#let (get rowValidations field.key) as |inputError|}}
+              <Input
+                data-test-object-list-input="{{field.key}}-{{index}}"
+                aria-label="{{or field.placeholder field.label}} input for row index {{index}}"
+                class="input {{if (and (not inputError.isValid) inputError.errors) 'has-error-border'}}"
+                placeholder={{or field.placeholder ""}}
+                @type="text"
+                @value={{value}}
+                name={{field.key}}
+                id="{{field.key}}-{{index}}"
+                {{on "input" (fn this.handleInput index)}}
+              />
               {{#if (and (not inputError.isValid) inputError.errors)}}
                 <AlertInline @type="danger" @message={{inputError.errors}} @paddingTop={{true}} />
               {{/if}}
