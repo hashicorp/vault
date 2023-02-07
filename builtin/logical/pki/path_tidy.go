@@ -410,6 +410,22 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 								Description: `Duration to pause between tidying certificates`,
 								Required:    true,
 							},
+							"tidy_move_legacy_ca_bundle": {
+								Type:        framework.TypeBool,
+								Required:    true,
+							},
+							"tidy_cross_cluster_revoked_certs": {
+								Type:        framework.TypeBool,
+								Required:    true,
+							},
+							"tidy_revocation_queue": {
+								Type:        framework.TypeBool,
+								Required:    true,
+							},
+							"revocation_queue_safety_buffer": {
+								Type:        framework.TypeDurationSecond,
+								Required:    true,
+							},
 						},
 					}},
 				},
@@ -463,6 +479,22 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 							"pause_duration": {
 								Type:        framework.TypeString,
 								Description: `Duration to pause between tidying certificates`,
+								Required:    true,
+							},
+							"tidy_cross_cluster_revoked_certs": {
+								Type:        framework.TypeBool,
+								Required:    true,
+							},
+							"tidy_revocation_queue": {
+								Type:        framework.TypeBool,
+								Required:    true,
+							},
+							"tidy_move_legacy_ca_bundle": {
+								Type:        framework.TypeBool,
+								Required:    true,
+							},
+							"revocation_queue_safety_buffer": {
+								Type:        framework.TypeDurationSecond,
 								Required:    true,
 							},
 						},

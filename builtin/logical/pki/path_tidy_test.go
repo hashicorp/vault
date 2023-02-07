@@ -383,6 +383,7 @@ func TestTidyIssuerConfig(t *testing.T) {
 
 	// Ensure the default auto-tidy config matches expectations
 	resp, err := CBRead(b, s, "config/auto-tidy")
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/auto-tidy"), logical.ReadOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err)
 
 	jsonBlob, err := json.Marshal(&defaultTidyConfig)
@@ -405,6 +406,8 @@ func TestTidyIssuerConfig(t *testing.T) {
 		"tidy_expired_issuers": true,
 		"issuer_safety_buffer": "5s",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/auto-tidy"), logical.UpdateOperation), resp, true)
+
 	requireSuccessNonNilResponse(t, resp, err)
 	require.Equal(t, true, resp.Data["tidy_expired_issuers"])
 	require.Equal(t, 5, resp.Data["issuer_safety_buffer"])
