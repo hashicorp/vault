@@ -121,6 +121,10 @@ To mitigate this risk, we recommend careful controls around management of the se
 mechanism, for example using 
 [AWS Service Control Policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)
 or similar.  
+With Vault Enterprise secondary clusters (disaster or performance) can have a
+seal configured independently of the primary, and when properly configured guards 
+against *some* of this risk.  Unreplicated items such as local mounts could still 
+be lost.
 
 
 ## Recovery Key
