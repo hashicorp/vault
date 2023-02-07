@@ -67,29 +67,4 @@ export default class PkiRoleAdapter extends ApplicationAdapter {
     const { id, record } = snapshot;
     return this.ajax(this._urlForRole(record.backend, id), 'DELETE');
   }
-
-  generateCertificate(backend, roleName, data) {
-    const url = `${this.buildURL()}/${encodePath(backend)}/issue/${roleName}`;
-    const options = {
-      data,
-    };
-    return this.ajax(url, 'POST', options).then((resp) => {
-      return resp.data;
-    });
-  }
-
-  signCertificate(backend, roleName, data) {
-    const url = `${this.buildURL()}/${encodePath(backend)}/sign/${roleName}`;
-    const options = {
-      data,
-    };
-    return this.ajax(url, 'POST', options);
-  }
-
-  revokeCertificate(backend, data) {
-    const url = `${this.buildURL()}/${encodePath(backend)}/revoke`;
-    return this.ajax(url, 'POST', {
-      data,
-    });
-  }
 }
