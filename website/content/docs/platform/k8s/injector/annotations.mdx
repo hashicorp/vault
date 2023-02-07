@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the injector and is usually
-  not needed. Defaults to `hashicorp/vault:1.12.1`.
+  not needed. Defaults to `hashicorp/vault:1.12.3`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -192,6 +192,10 @@ them, optional commands to run, etc.
   ~> **Note**: If the first application container in the pod is running as root
   (uid 0), the `run-as-same-user` annotation will fail injection with an error.
 
+- `vault.hashicorp.com/agent-share-process-namespace` - sets
+  [shareProcessNamespace] in the Pod spec where Vault Agent is injected.
+  Defaults to `false`.
+
 - `vault.hashicorp.com/agent-cache-enable` - configures Vault Agent to enable
   [caching](/docs/agent/caching). In Vault 1.7+ this annotation will also enable
   a Vault Agent persistent cache. This persistent cache will be shared between the init
@@ -324,3 +328,4 @@ etc.
   Agents.
 
 [k8s-resources]: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-requests-and-limits-of-pod-and-container
+[shareProcessNamespace]: https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/
