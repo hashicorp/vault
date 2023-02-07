@@ -126,3 +126,19 @@ func GetResponseSchema(t *testing.T, path *framework.Path, operation logical.Ope
 
 	return &schemaResponses[0]
 }
+
+func ResponseValidatingCallback(t *testing.T) func(logical.Backend, *logical.Request, *logical.Response) {
+	return func(b logical.Backend, req *logical.Request, resp *logical.Response) {
+		backend, ok := b.(*framework.Backend)
+		if !ok {
+			t.Fatalf("could not cast %T to *framework.Backend", b)
+		}
+
+		ValidateResponse(
+			t,
+			GetResponseSchema(t, backend.Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
+	}
+}

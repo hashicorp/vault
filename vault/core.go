@@ -691,7 +691,7 @@ type Core struct {
 
 	// if populated, is called for every non-login request
 	// for testing purposes
-	requestResponseCallback func(*Router, *logical.Request, *logical.Response)
+	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
