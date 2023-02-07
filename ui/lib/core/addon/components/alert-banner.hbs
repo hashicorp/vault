@@ -1,42 +1,32 @@
-<div data-test-alert-banner={{this.bannerType}} class={{this.containerClass}}>
+<div data-test-alert-banner="alert" class={{concat "message " this.alertType.class}} ...attributes>
   <div class="columns is-mobile is-variable is-1">
     <div class="column is-narrow message-icon">
       <Icon class={{this.alertType.glyphClass}} aria-hidden="true" @name={{this.alertType.glyph}} />
     </div>
-    {{#if @yieldWithoutColumn}}
-      {{yield}}
-    {{else}}
-      <div class="column">
-        <div class="message-title">
-          {{or @title this.alertType.text}}
-          {{#if @showLoading}}
-            <Icon class="loading" aria-hidden="true" @name="loading" />
-          {{/if}}
-          {{#if @progressBar}}
-            <progress
-              value={{@progressBar.value}}
-              max={{@progressBar.max}}
-              class="progress is-success is-medium is-inline-block"
-            ></progress>
-          {{/if}}
-        </div>
-        {{#if @message}}
-          <p class="alert-banner-message-body">
-            {{@message}}
-          </p>
+    <div class="column">
+      <div class="message-title">
+        {{or @title this.alertType.text}}
+        {{#if @showLoading}}
+          <Icon class="loading" aria-hidden="true" @name="loading" />
         {{/if}}
-        {{#if (has-block)}}
-          <p class="message-actions">
-            {{yield}}
-          </p>
-        {{/if}}
-        {{#if @learnLink}}
-          <DocLink @path={{@learnLink}} class="alert-banner-doc-link">
-            <Icon @name="learn-link" />
-            {{@learnLinkMessage}}
-          </DocLink>
+        {{#if @progressBar}}
+          <progress
+            value={{@progressBar.value}}
+            max={{@progressBar.max}}
+            class="progress is-success is-medium is-inline-block"
+          ></progress>
         {{/if}}
       </div>
-    {{/if}}
+      {{#if @message}}
+        <p class="alert-banner-message-body">
+          {{@message}}
+        </p>
+      {{/if}}
+      {{#if (has-block)}}
+        <p class="message-actions">
+          {{yield}}
+        </p>
+      {{/if}}
+    </div>
   </div>
 </div>
