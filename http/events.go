@@ -85,11 +85,9 @@ func handleEventsSubscribe(core *vault.Core) http.Handler {
 		ctx := r.Context()
 		ns, err := namespace.FromContext(ctx)
 		if err != nil {
-			if err != nil {
-				core.Logger().Info("Could not find namespace", "error", err)
-				respondError(w, http.StatusInternalServerError, fmt.Errorf("could not find namespace"))
-				return
-			}
+			core.Logger().Info("Could not find namespace", "error", err)
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("could not find namespace"))
+			return
 		}
 
 		conn, err := websocket.Accept(w, r, nil)
