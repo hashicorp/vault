@@ -676,7 +676,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	}
 
 	if err != nil && c.requestResponseCallback != nil {
-		c.requestResponseCallback(c.router, req, resp)
+		c.requestResponseCallback(c.router.MatchingBackend(ctx, req.Path), req, resp)
 	}
 
 	// If we saved the token in the request, we should return it in the response
