@@ -202,6 +202,30 @@ func pathTidyCancel(b *backend) *framework.Path {
 								Description: `The number of revoked certificate entries deleted`,
 								Required:    true,
 							},
+							"missing_issuer_cert_count": {
+								Type:        framework.TypeInt,
+								Required:    true,
+							},
+							"tidy_move_legacy_ca_bundle": {
+								Type:        framework.TypeBool,
+								Required:    true,
+							},
+							"tidy_cross_cluster_revoked_certs": {
+								Type:        framework.TypeBool,
+								Required:    true,
+							},
+							"tidy_revocation_queue": {
+								Type:        framework.TypeBool,
+								Required:    true,
+							},
+							"revocation_queue_deleted_count": {
+								Type:        framework.TypeInt,
+								Required:    true,
+							},
+							"cross_revoked_cert_deleted_count": {
+								Type:        framework.TypeInt,
+								Required:    true,
+							},
 						},
 					}},
 				},
@@ -315,22 +339,18 @@ func pathTidyStatus(b *backend) *framework.Path {
 							},
 							"revocation_queue_deleted_count": {
 								Type:        framework.TypeInt,
-								Description: ``,
 								Required:    true,
 							},
 							"tidy_move_legacy_ca_bundle": {
-								Type:        framework.TypeInt,
-								Description: ``,
+								Type:        framework.TypeBool,
 								Required:    true,
 							},
 							"tidy_revocation_queue": {
 								Type:        framework.TypeBool,
-								Description: ``,
 								Required:    true,
 							},
 							"missing_issuer_cert_count": {
 								Type:        framework.TypeInt,
-								Description: ``,
 								Required:    true,
 							},
 						},

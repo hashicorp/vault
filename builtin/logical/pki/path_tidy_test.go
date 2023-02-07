@@ -239,6 +239,7 @@ func TestTidyCancellation(t *testing.T) {
 
 	// If we now cancel the operation, the response should say Cancelling.
 	cancelResp, err := CBWrite(b, s, "tidy-cancel", map[string]interface{}{})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("tidy-cancel"), logical.UpdateOperation), resp, true)
 	require.NoError(t, err)
 	require.NotNil(t, cancelResp)
 	require.NotNil(t, cancelResp.Data)
