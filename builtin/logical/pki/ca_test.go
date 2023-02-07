@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -25,6 +26,7 @@ import (
 )
 
 func TestBackend_CA_Steps(t *testing.T) {
+	t.Parallel()
 	var b *backend
 
 	factory := func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -49,7 +51,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Set RSA/EC CA certificates
-	var rsaCAKey, rsaCACert, ecCAKey, ecCACert string
+	var rsaCAKey, rsaCACert, ecCAKey, ecCACert, edCAKey, edCACert string
 	{
 		cak, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
@@ -119,10 +121,40 @@ func TestBackend_CA_Steps(t *testing.T) {
 			Bytes: caBytes,
 		}
 		rsaCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
+
+		_, edk, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			panic(err)
+		}
+		marshaledKey, err = x509.MarshalPKCS8PrivateKey(edk)
+		if err != nil {
+			panic(err)
+		}
+		keyPEMBlock = &pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: marshaledKey,
+		}
+		edCAKey = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+		if err != nil {
+			panic(err)
+		}
+		_, err = certutil.GetSubjKeyID(edk)
+		if err != nil {
+			panic(err)
+		}
+		caBytes, err = x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, edk.Public(), edk)
+		if err != nil {
+			panic(err)
+		}
+		caCertPEMBlock = &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: caBytes,
+		}
+		edCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 	}
 
 	// Setup backends
-	var rsaRoot, rsaInt, ecRoot, ecInt *backend
+	var rsaRoot, rsaInt, ecRoot, ecInt, edRoot, edInt *backend
 	{
 		if err := client.Sys().Mount("rsaroot", &api.MountInput{
 			Type: "pki",
@@ -167,6 +199,28 @@ func TestBackend_CA_Steps(t *testing.T) {
 			t.Fatal(err)
 		}
 		ecInt = b
+
+		if err := client.Sys().Mount("ed25519root", &api.MountInput{
+			Type: "pki",
+			Config: api.MountConfigInput{
+				DefaultLeaseTTL: "16h",
+				MaxLeaseTTL:     "60h",
+			},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		edRoot = b
+
+		if err := client.Sys().Mount("ed25519int", &api.MountInput{
+			Type: "pki",
+			Config: api.MountConfigInput{
+				DefaultLeaseTTL: "16h",
+				MaxLeaseTTL:     "60h",
+			},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		edInt = b
 	}
 
 	t.Run("teststeps", func(t *testing.T) {
@@ -188,6 +242,15 @@ func TestBackend_CA_Steps(t *testing.T) {
 			subClient.SetToken(client.Token())
 			runSteps(t, ecRoot, ecInt, subClient, "ecroot/", "ecint/", ecCACert, ecCAKey)
 		})
+		t.Run("ed25519", func(t *testing.T) {
+			t.Parallel()
+			subClient, err := client.Clone()
+			if err != nil {
+				t.Fatal(err)
+			}
+			subClient.SetToken(client.Token())
+			runSteps(t, edRoot, edInt, subClient, "ed25519root/", "ed25519int/", edCACert, edCAKey)
+		})
 	})
 }
 
@@ -195,13 +258,13 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 	//  Load CA cert/key in and ensure we can fetch it back in various formats,
 	//  unauthenticated
 	{
-		// Attempt import but only provide one the cert
+		// Attempt import but only provide one the cert; this should work.
 		{
 			_, err := client.Logical().Write(rootName+"config/ca", map[string]interface{}{
 				"pem_bundle": caCert,
 			})
-			if err == nil {
-				t.Fatal("expected error")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 		}
 
@@ -210,41 +273,55 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			_, err := client.Logical().Write(rootName+"config/ca", map[string]interface{}{
 				"pem_bundle": caKey,
 			})
-			if err == nil {
-				t.Fatal("expected error")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 		}
 
-		// Import CA bundle
+		// Import entire CA bundle; this should work as well
 		{
 			_, err := client.Logical().Write(rootName+"config/ca", map[string]interface{}{
 				"pem_bundle": strings.Join([]string{caKey, caCert}, "\n"),
 			})
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("unexpected error: %v", err)
 			}
 		}
 
 		prevToken := client.Token()
 		client.SetToken("")
 
-		// cert/ca path
-		{
-			resp, err := client.Logical().Read(rootName + "cert/ca")
+		// cert/ca and issuer/default/json path
+		for _, path := range []string{"cert/ca", "issuer/default/json"} {
+			resp, err := client.Logical().Read(rootName + path)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if resp == nil {
 				t.Fatal("nil response")
 			}
-			if diff := deep.Equal(resp.Data["certificate"].(string), caCert); diff != nil {
+			expected := caCert
+			if path == "issuer/default/json" {
+				// Preserves the new line.
+				expected += "\n"
+				_, present := resp.Data["issuer_id"]
+				if !present {
+					t.Fatalf("expected issuer/default/json to include issuer_id")
+				}
+				_, present = resp.Data["issuer_name"]
+				if !present {
+					t.Fatalf("expected issuer/default/json to include issuer_name")
+				}
+			}
+			if diff := deep.Equal(resp.Data["certificate"].(string), expected); diff != nil {
 				t.Fatal(diff)
 			}
 		}
-		// ca/pem path (raw string)
-		{
+
+		// ca/pem and issuer/default/pem path (raw string)
+		for _, path := range []string{"ca/pem", "issuer/default/pem"} {
 			req := &logical.Request{
-				Path:      "ca/pem",
+				Path:      path,
 				Operation: logical.ReadOperation,
 				Storage:   rootB.storage,
 			}
@@ -255,18 +332,23 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			if resp == nil {
 				t.Fatal("nil response")
 			}
-			if diff := deep.Equal(resp.Data["http_raw_body"].([]byte), []byte(caCert)); diff != nil {
+			expected := []byte(caCert)
+			if path == "issuer/default/pem" {
+				// Preserves the new line.
+				expected = []byte(caCert + "\n")
+			}
+			if diff := deep.Equal(resp.Data["http_raw_body"].([]byte), expected); diff != nil {
 				t.Fatal(diff)
 			}
-			if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
+			if resp.Data["http_content_type"].(string) != "application/pem-certificate-chain" {
 				t.Fatal("wrong content type")
 			}
 		}
 
-		// ca (raw DER bytes)
-		{
+		// ca and issuer/default/der (raw DER bytes)
+		for _, path := range []string{"ca", "issuer/default/der"} {
 			req := &logical.Request{
-				Path:      "ca",
+				Path:      path,
 				Operation: logical.ReadOperation,
 				Storage:   rootB.storage,
 			}
@@ -402,8 +484,8 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			if err != nil {
 				t.Fatal(err)
 			}
-			if resp != nil {
-				t.Fatal("expected nil response")
+			if resp == nil {
+				t.Fatal("nil response")
 			}
 		}
 
@@ -459,9 +541,16 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		}
 
 		// Fetch the CRL and make sure it shows up
-		{
+		for path, derPemOrJSON := range map[string]int{
+			"crl":                    0,
+			"issuer/default/crl/der": 0,
+			"crl/pem":                1,
+			"issuer/default/crl/pem": 1,
+			"cert/crl":               2,
+			"issuer/default/crl":     3,
+		} {
 			req := &logical.Request{
-				Path:      "crl",
+				Path:      path,
 				Operation: logical.ReadOperation,
 				Storage:   rootB.storage,
 			}
@@ -472,7 +561,25 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			if resp == nil {
 				t.Fatal("nil response")
 			}
-			crlBytes := resp.Data["http_raw_body"].([]byte)
+
+			var crlBytes []byte
+			if derPemOrJSON == 2 {
+				// Old endpoint
+				crlBytes = []byte(resp.Data["certificate"].(string))
+			} else if derPemOrJSON == 3 {
+				// New endpoint
+				crlBytes = []byte(resp.Data["crl"].(string))
+			} else {
+				// DER or PEM
+				crlBytes = resp.Data["http_raw_body"].([]byte)
+			}
+
+			if derPemOrJSON >= 1 {
+				// Do for both PEM and JSON endpoints
+				pemBlock, _ := pem.Decode(crlBytes)
+				crlBytes = pemBlock.Bytes
+			}
+
 			certList, err := x509.ParseCRL(crlBytes)
 			if err != nil {
 				t.Fatal(err)
@@ -493,6 +600,32 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 					t.Fatalf("bad length of revoked list: %d", len(revokedList))
 				}
 			}
+		}
+	}
+
+	verifyTidyStatus := func(expectedCertStoreDeleteCount int, expectedRevokedCertDeletedCount int) {
+		tidyStatus, err := client.Logical().Read(rootName + "tidy-status")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if tidyStatus.Data["state"] != "Finished" {
+			t.Fatalf("Expected tidy operation to be finished, but tidy-status reports its state is %v", tidyStatus.Data)
+		}
+
+		var count int64
+		if count, err = tidyStatus.Data["cert_store_deleted_count"].(json.Number).Int64(); err != nil {
+			t.Fatal(err)
+		}
+		if int64(expectedCertStoreDeleteCount) != count {
+			t.Fatalf("Expected %d for cert_store_deleted_count, but got %d", expectedCertStoreDeleteCount, count)
+		}
+
+		if count, err = tidyStatus.Data["revoked_cert_deleted_count"].(json.Number).Int64(); err != nil {
+			t.Fatal(err)
+		}
+		if int64(expectedRevokedCertDeletedCount) != count {
+			t.Fatalf("Expected %d for revoked_cert_deleted_count, but got %d", expectedRevokedCertDeletedCount, count)
 		}
 	}
 
@@ -523,6 +656,8 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 			// Check to make sure we still find the cert and see it on the CRL
 			verifyRevocation(t, intSerialNumber, true)
+
+			verifyTidyStatus(0, 0)
 		}
 
 		// Run with both values set false, nothing should happen
@@ -544,6 +679,8 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 			// Check to make sure we still find the cert and see it on the CRL
 			verifyRevocation(t, intSerialNumber, true)
+
+			verifyTidyStatus(0, 0)
 		}
 
 		// Run with a short safety buffer and both set to true, both should be cleared
@@ -565,6 +702,8 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 			// Check to make sure we still find the cert and see it on the CRL
 			verifyRevocation(t, intSerialNumber, false)
+
+			verifyTidyStatus(1, 1)
 		}
 	}
 }

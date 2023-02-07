@@ -22,8 +22,7 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	mysql "github.com/go-sql-driver/mysql"
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -84,7 +83,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -97,7 +96,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	var schemaExist bool
 	schemaRows, err := db.Query("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?", database)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to check mysql schema exist: {{err}}", err)
+		return nil, fmt.Errorf("failed to check mysql schema exist: %w", err)
 	}
 	defer schemaRows.Close()
 	schemaExist = schemaRows.Next()
@@ -106,7 +105,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	var tableExist bool
 	tableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", table, database)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
+		return nil, fmt.Errorf("failed to check mysql table exist: %w", err)
 	}
 	defer tableRows.Close()
 	tableExist = tableRows.Next()
@@ -114,16 +113,16 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	// Create the required database if it doesn't exists.
 	if !schemaExist {
 		if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS `" + database + "`"); err != nil {
-			return nil, errwrap.Wrapf("failed to create mysql database: {{err}}", err)
+			return nil, fmt.Errorf("failed to create mysql database: %w", err)
 		}
 	}
 
 	// Create the required table if it doesn't exists.
 	if !tableExist {
 		create_query := "CREATE TABLE IF NOT EXISTS " + dbTable +
-			" (vault_key varbinary(512), vault_value mediumblob, PRIMARY KEY (vault_key))"
+			" (vault_key varbinary(3072), vault_value mediumblob, PRIMARY KEY (vault_key))"
 		if _, err := db.Exec(create_query); err != nil {
-			return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
+			return nil, fmt.Errorf("failed to create mysql table: %w", err)
 		}
 	}
 
@@ -150,7 +149,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		var lockTableExist bool
 		lockTableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", locktable, database)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
+			return nil, fmt.Errorf("failed to check mysql table exist: %w", err)
 		}
 		defer lockTableRows.Close()
 		lockTableExist = lockTableRows.Next()
@@ -160,7 +159,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			create_query := "CREATE TABLE IF NOT EXISTS " + dbLockTable +
 				" (node_job varbinary(512), current_leader varbinary(512), PRIMARY KEY (node_job))"
 			if _, err := db.Exec(create_query); err != nil {
-				return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
+				return nil, fmt.Errorf("failed to create mysql table: %w", err)
 			}
 		}
 	}
@@ -286,7 +285,7 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	if ok {
 		maxIdleConnInt, err = strconv.Atoi(maxIdleConnStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_idle_connections parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_idle_connections parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_idle_connections set", "max_idle_connections", maxIdleConnInt)
@@ -298,7 +297,7 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	if ok {
 		maxConnLifeInt, err = strconv.Atoi(maxConnLifeStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_connection_lifetime parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_connection_lifetime parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_connection_lifetime set", "max_connection_lifetime", maxConnLifeInt)
@@ -310,7 +309,7 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -323,7 +322,7 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	tlsCaFile, tlsOk := conf["tls_ca_file"]
 	if tlsOk {
 		if err := setupMySQLTLSConfig(tlsCaFile); err != nil {
-			return nil, errwrap.Wrapf("failed register TLS config: {{err}}", err)
+			return nil, fmt.Errorf("failed register TLS config: %w", err)
 		}
 
 		dsnParams.Add("tls", mysqlTLSKey)
@@ -337,7 +336,7 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	dsn := username + ":" + password + "@tcp(" + address + ")/?" + dsnParams.Encode()
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to connect to mysql: {{err}}", err)
+		return nil, fmt.Errorf("failed to connect to mysql: %w", err)
 	}
 	db.SetMaxOpenConns(maxParInt)
 	if maxIdleConnInt != 0 {
@@ -354,7 +353,7 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 func (m *MySQLBackend) prepare(name, query string) error {
 	stmt, err := m.client.Prepare(query)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to prepare %q: {{err}}", name), err)
+		return fmt.Errorf("failed to prepare %q: %w", name, err)
 	}
 	m.statements[name] = stmt
 	return nil
@@ -423,7 +422,7 @@ func (m *MySQLBackend) List(ctx context.Context, prefix string) ([]string, error
 	likePrefix := prefix + "%"
 	rows, err := m.statements["list"].Query(likePrefix)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to execute statement: {{err}}", err)
+		return nil, fmt.Errorf("failed to execute statement: %w", err)
 	}
 
 	var keys []string
@@ -431,7 +430,7 @@ func (m *MySQLBackend) List(ctx context.Context, prefix string) ([]string, error
 		var key string
 		err = rows.Scan(&key)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to scan rows: {{err}}", err)
+			return nil, fmt.Errorf("failed to scan rows: %w", err)
 		}
 
 		key = strings.TrimPrefix(key, prefix)
@@ -672,7 +671,7 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock
 func (m *MySQLLock) prepare(name, query string) error {
 	stmt, err := m.in.Prepare(query)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to prepare %q: {{err}}", name), err)
+		return fmt.Errorf("failed to prepare %q: %w", name, err)
 	}
 	m.statements[name] = stmt
 	return nil

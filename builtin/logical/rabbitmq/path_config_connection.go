@@ -2,11 +2,12 @@ package rabbitmq
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
-	rabbithole "github.com/michaelklishin/rabbit-hole"
+	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 )
 
 const (
@@ -38,6 +39,10 @@ func pathConfigConnection(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the password policy to use to generate passwords for dynamic credentials.",
 			},
+			"username_template": {
+				Type:        framework.TypeString,
+				Description: "Template describing how dynamic usernames are generated.",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -65,6 +70,19 @@ func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("missing password"), nil
 	}
 
+	usernameTemplate := data.Get("username_template").(string)
+	if usernameTemplate != "" {
+		up, err := template.NewTemplate(template.Template(usernameTemplate))
+		if err != nil {
+			return logical.ErrorResponse("unable to initialize username template: %w", err), nil
+		}
+
+		_, err = up.Generate(UsernameMetadata{})
+		if err != nil {
+			return logical.ErrorResponse("invalid username template: %w", err), nil
+		}
+	}
+
 	passwordPolicy := data.Get("password_policy").(string)
 
 	// Don't check the connection_url if verification is disabled
@@ -73,21 +91,22 @@ func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request
 		// Create RabbitMQ management client
 		client, err := rabbithole.NewClient(uri, username, password)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to create client: {{err}}", err)
+			return nil, fmt.Errorf("failed to create client: %w", err)
 		}
 
 		// Verify that configured credentials is capable of listing
 		if _, err = client.ListUsers(); err != nil {
-			return nil, errwrap.Wrapf("failed to validate the connection: {{err}}", err)
+			return nil, fmt.Errorf("failed to validate the connection: %w", err)
 		}
 	}
 
 	// Store it
 	config := connectionConfig{
-		URI:            uri,
-		Username:       username,
-		Password:       password,
-		PasswordPolicy: passwordPolicy,
+		URI:              uri,
+		Username:         username,
+		Password:         password,
+		PasswordPolicy:   passwordPolicy,
+		UsernameTemplate: usernameTemplate,
 	}
 	err := writeConfig(ctx, req.Storage, config)
 	if err != nil {
@@ -140,6 +159,9 @@ type connectionConfig struct {
 
 	// PasswordPolicy for generating passwords for dynamic credentials
 	PasswordPolicy string `json:"password_policy"`
+
+	// UsernameTemplate for storing the raw template in Vault's backing data store
+	UsernameTemplate string `json:"username_template"`
 }
 
 const pathConfigConnectionHelpSyn = `

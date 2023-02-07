@@ -1,0 +1,95 @@
+rules:
+  - id: odd-sequence-ifs
+    patterns:
+        - pattern-either:
+          - pattern: |
+                  if $X { return ... }
+                  if $X { ... }
+          - pattern: |
+                  if ! $X { return ... }
+                  if $X { ... }
+          - pattern: |
+                  if $X { return ... }
+                  if ! $X { ... }
+          - pattern: |
+                  if $X == $Y { return ... }
+                  if $X != $Y { ... }
+          - pattern: |
+                  if $X != $Y { return ... }
+                  if $X == $Y { ... }
+          - pattern: |
+                  if $X { return  ... }
+                  for $X { ... }
+          - pattern: |
+                  if $X {
+                          if $X { ... }
+                          ...
+                  }
+          - pattern: |
+                  if $X {
+                          if ! $X { ... }
+                          ...
+                  }
+          - pattern: |
+                  if ! $X {
+                          if $X { ... }
+                        ...
+                  }
+          - pattern: |
+                  if $X == $Y {
+                          if $X != $Y { ... }
+                          ...
+                  }
+          - pattern: |
+                  if $X != $Y {
+                          if $X == $Y { ... }
+                          ...
+                  }
+          - pattern: |
+                  if $X {
+                          for ! $X { ... }
+                          ...
+                  }
+          - pattern: |
+                  if ! $X {
+                          for $X { ... }
+                        ...
+                  }
+          - pattern: |
+                  if $X == $Y {
+                          for $X != $Y { ... }
+                          ...
+                  }
+          - pattern: |
+                  if $X != $Y {
+                          for $X == $Y { ... }
+                          ...
+                  }
+          - pattern: |
+                  for $X {
+                          if $X { ... }
+                          ...
+                  }
+          - pattern: |
+                  for $X {
+                          if ! $X { ... }
+                          ...
+                  }
+          - pattern: |
+                  for ! $X {
+                          if $X { ... }
+                          ...
+                  }
+          - pattern: |
+                  for $X == $Y {
+                          if $X != $Y { ... }
+                          ...
+                  }
+          - pattern: |
+                  for $X != $Y {
+                          if $X == $Y { ... }
+                          ...
+                  }
+    message: "Odd sequence of ifs"
+    languages: [go]
+    severity: ERROR

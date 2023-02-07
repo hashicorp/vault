@@ -50,6 +50,14 @@ message Alias {
 	// NamespaceID is the identifier of the namespace to which this alias
 	// belongs.
 	string namespace_id = 6;
+
+	// Custom Metadata represents the custom data tied to this alias
+	map<string, string> custom_metadata = 7;
+
+	// Local indicates if the alias only belongs to the cluster where it was
+	// created. If true, the alias will be stored in a location that are ignored
+	// by the performance replication subsystem.
+	bool local = 8;
 }
 
 message Group {
@@ -65,4 +73,20 @@ message Group {
 	// NamespaceID is the identifier of the namespace to which this group 
 	// belongs to.
 	string namespace_id = 4;
-}   
+}
+
+message MFAMethodID {
+	string type = 1;
+	string id = 2;
+	bool uses_passcode = 3;
+	string name = 4;
+}
+
+message MFAConstraintAny {
+	repeated MFAMethodID any = 1;
+}
+
+message MFARequirement {
+	string mfa_request_id = 1;
+	map<string, MFAConstraintAny> mfa_constraints = 2;
+}

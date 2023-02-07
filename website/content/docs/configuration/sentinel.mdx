@@ -8,7 +8,7 @@ description: |-
 # `sentinel` Stanza
 
 The sentinel stanza specifies configurations for
-[Vault's Sentinel](https://www.vaultproject.io/docs/enterprise/sentinel) integration.
+[Vault's Sentinel](/vault/docs/enterprise/sentinel) integration.
 
 ```hcl
 sentinel {
@@ -27,7 +27,7 @@ The sentinel stanza currently supports only one parameter, `additional_enabled_m
 - `additional_enabled_modules` `(string array: [])`` - This parameter specifies a list of imports (modules)
   to allow in Sentinel policies.
 
-  Vault currently enables all of Sentinel's [standard imports](https://docs.hashicorp.com/sentinel/imports/)
+  Vault currently enables all of Sentinel's [standard imports](https://docs.hashicorp.com/sentinel/imports)
   except the "http" import, which has performance and security implications. In the future, if any new Sentinel
   imports are not automatically enabled by Vault, users could enable them in this stanza.
   Note that this setting cannot be used to load custom import plugins.
@@ -36,5 +36,5 @@ The sentinel stanza currently supports only one parameter, `additional_enabled_m
   could have performance and security implications in policies. Enabling the "http" import could cause your Vault
   servers to submit outbound requests to arbitrary endpoints.  
    See the
-  [Sentinel HTTP Import](https://docs.hashicorp.com/sentinel/imports/http/)
+  [Sentinel HTTP Import](https://docs.hashicorp.com/sentinel/imports/http)
   documentation for more information.

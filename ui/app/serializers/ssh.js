@@ -4,7 +4,7 @@ import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 
 export default RESTSerializer.extend({
-  keyForAttribute: function(attr) {
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
@@ -28,8 +28,8 @@ export default RESTSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const responseJSON = this.normalizeItems(payload);
     const { modelName } = primaryModelClass;
-    let transformedPayload = { [modelName]: responseJSON };
-    let ret = this._super(store, primaryModelClass, transformedPayload, id, requestType);
+    const transformedPayload = { [modelName]: responseJSON };
+    const ret = this._super(store, primaryModelClass, transformedPayload, id, requestType);
     return ret;
   },
 

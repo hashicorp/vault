@@ -205,10 +205,25 @@ type Request struct {
 	// request that generated this logical.Request object.
 	ResponseWriter *HTTPResponseWriter `json:"-" sentinel:""`
 
+	// requiredState is used internally to propagate the X-Vault-Index request
+	// header to later levels of request processing that operate only on
+	// logical.Request.
+	requiredState []string
+
 	// responseState is used internally to propagate the state that should appear
 	// in response headers; it's attached to the request rather than the response
 	// because not all requests yields non-nil responses.
 	responseState *WALState
+
+	// ClientID is the identity of the caller. If the token is associated with an
+	// entity, it will be the same as the EntityID . If the token has no entity,
+	// this will be the sha256(sorted policies + namespace) associated with the
+	// client token.
+	ClientID string `json:"client_id" structs:"client_id" mapstructure:"client_id" sentinel:""`
+
+	// InboundSSCToken is the token that arrives on an inbound request, supplied
+	// by the vault user.
+	InboundSSCToken string
 }
 
 // Clone returns a deep copy of the request by using copystructure
@@ -271,6 +286,14 @@ func (r *Request) LastRemoteWAL() uint64 {
 
 func (r *Request) SetLastRemoteWAL(last uint64) {
 	r.lastRemoteWAL = last
+}
+
+func (r *Request) RequiredState() []string {
+	return r.requiredState
+}
+
+func (r *Request) SetRequiredState(state []string) {
+	r.requiredState = state
 }
 
 func (r *Request) ResponseState() *WALState {
@@ -337,10 +360,12 @@ const (
 	CreateOperation         Operation = "create"
 	ReadOperation                     = "read"
 	UpdateOperation                   = "update"
+	PatchOperation                    = "patch"
 	DeleteOperation                   = "delete"
 	ListOperation                     = "list"
 	HelpOperation                     = "help"
 	AliasLookaheadOperation           = "alias-lookahead"
+	ResolveRoleOperation              = "resolve-role"
 
 	// The operations below are called globally, the path is less relevant.
 	RevokeOperation   Operation = "revoke"
@@ -353,7 +378,17 @@ type MFACreds map[string][]string
 // InitializationRequest stores the parameters and context of an Initialize()
 // call being made to a logical.Backend.
 type InitializationRequest struct {
-
 	// Storage can be used to durably store and retrieve state.
 	Storage Storage
+}
+
+type CustomHeader struct {
+	Name  string
+	Value string
+}
+
+type CtxKeyInFlightRequestID struct{}
+
+func (c CtxKeyInFlightRequestID) String() string {
+	return "in-flight-request-ID"
 }

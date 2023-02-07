@@ -1,0 +1,3 @@
+```release-note:bug
+core/identity: Cleanup alias in the in-memory entity after an alias deletion by ID
+```

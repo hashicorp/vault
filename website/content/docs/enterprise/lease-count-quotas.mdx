@@ -13,36 +13,47 @@ number of leases in the cluster hits the configured limit, `max_leases`, additio
 lease creations will be forbidden for all clients until a lease has been revoked
 or has expired.
 
+It is important to note that lease count quotas do not apply to the root tokens.
+If the number of leases in the cluster hits the configured limit, `max_leases`,
+an operator could still create a root token and access the cluster to try to recover.
+
+Additionally, batch token creation is blocked when the lease count quota is
+exceeded, but batch tokens do not count towards the quota.
+
 All the nodes in the Vault cluster will share the lease quota rules, meaning that
 the lease counters will be shared, regardless of which node in the Vault cluster
 receives lease generation requests. Lease quotas can be imposed across Vault's API,
 or scoped down to API pertaining to specific namespaces or specific mounts.
 
-Lease count quotas defined in a namespace will be inherited by all the child
-namespaces. By extension, this means that a quota that is defined in the `root`
-namespace is inherited by all namespaces and mounts, essentially to the entire
-Vault API.
+A quota that is defined in the `root` namespace with no specified path is inherited by all namespaces.
+Essentially, it applies to the entire Vault API unless a more specific quota has been defined
+for a specific API path.
 
-Lease count quotas defined on a namespace will take precedence over the inherited
-quotas. Lease count quotas defined for a mount will take precedence over inherited
-and namespace quotas. The limits on the namespace and mount quotas can either be
-increased or decreased. If the inherited quota is very restrictive and if it is
-desired to relax the limits in one namespace, or on a specific mount, it can be
-done using this precedence model. On the other hand, if the inherited quota is
-very liberal and if it is desired to further restrict usages in a specific
-namespace or mount, that can be done using the precedence model too.
+Lease count quotas defined on a namespace take precedence over the global
+quotas. Lease count quotas defined for a mount will take precedence over global
+and namespace quotas. Lease count quotas defined for a specific path will take precedence
+over global, namespace, and mount quotas. Lease count quotas defined with a login role for
+a specific auth mount will take precedence over every other quota when applying to
+login requests using that auth method and the specified role.
+
+The limits on quotas can either be increased or decreased. If a lower precedence quota
+is very restrictive and if it is desired to relax the limits in one namespace,
+or on a specific mount, it can be done using this precedence model. On the
+other hand, if a lower precedence quota is very liberal and if it is desired to
+further restrict usages in a specific namespace or mount, that can be done
+using the precedence model too.
 
 Vault also allows the inspection into the state of lease count quotas in a Vault
-cluster through various [metrics](/docs/internals/telemetry#Resource-Quota-Metrics)
+cluster through various [metrics](/vault/docs/internals/telemetry#Resource-Quota-Metrics)
 exposed and through enabling optional audit logging.
 
-## Learn
+## Tutorial
 
 Refer to [Protecting Vault with Resource
-Quotas](https://learn.hashicorp.com/vault/security/resource-quotas) for a
+Quotas](/vault/tutorials/operations/resource-quotas) for a
 step-by-step tutorial.
 
 ## API
 
 Lease count quotas can be managed over the HTTP API. Please see
-[Lease Count Quotas API](/api/system/lease-count-quotas) for more details.
+[Lease Count Quotas API](/vault/api-docs/system/lease-count-quotas) for more details.

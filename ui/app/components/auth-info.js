@@ -1,42 +1,60 @@
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import { or, alias } from '@ember/object/computed';
-import Component from '@ember/component';
-import { run } from '@ember/runloop';
+import { later } from '@ember/runloop';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
-export default Component.extend({
-  auth: service(),
-  wizard: service(),
-  router: service(),
-  version: service(),
+/**
+ * @module AuthInfo
+ *
+ * @example
+ * ```js
+ * <AuthInfo @activeClusterName={{cluster.name}} @onLinkClick={{action "onLinkClick"}} />
+ * ```
+ *
+ * @param {string} activeClusterName - name of the current cluster, passed from the parent.
+ * @param {Function} onLinkClick - parent action which determines the behavior on link click
+ */
+export default class AuthInfoComponent extends Component {
+  @service auth;
+  @service wizard;
+  @service router;
 
-  transitionToRoute: function() {
+  @tracked fakeRenew = false;
+
+  get hasEntityId() {
+    // root users will not have an entity_id because they are not associated with an entity.
+    // in order to use the MFA end user setup they need an entity_id
+    return !!this.auth.authData.entity_id;
+  }
+
+  get isRenewing() {
+    return this.fakeRenew || this.auth.isRenewing;
+  }
+
+  transitionToRoute() {
     this.router.transitionTo(...arguments);
-  },
+  }
 
-  classNames: 'user-menu auth-info',
+  @action
+  restartGuide() {
+    this.wizard.restartGuide();
+  }
 
-  isRenewing: or('fakeRenew', 'auth.isRenewing'),
-
-  canExpire: alias('auth.allowExpiration'),
-
-  isOSS: alias('version.isOSS'),
-
-  actions: {
-    restartGuide() {
-      this.wizard.restartGuide();
-    },
-    renewToken() {
-      this.set('fakeRenew', true);
-      run.later(() => {
-        this.set('fakeRenew', false);
-        this.auth.renew();
-      }, 200);
-    },
-
-    revokeToken() {
-      this.auth.revokeCurrentToken().then(() => {
-        this.transitionToRoute('vault.cluster.logout');
+  @action
+  renewToken() {
+    this.fakeRenew = true;
+    later(() => {
+      this.auth.renew().then(() => {
+        this.fakeRenew = this.auth.isRenewing;
       });
-    },
-  },
-});
+    }, 200);
+  }
+
+  @action
+  revokeToken() {
+    this.auth.revokeCurrentToken().then(() => {
+      this.transitionToRoute('vault.cluster.logout');
+    });
+  }
+}

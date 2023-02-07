@@ -12,8 +12,8 @@ description: >-
 ## Overview
 
 -> **Note**: All versions of [Vault Enterprise](https://www.hashicorp.com/products/vault/)
-have support for Disaster Recovery replication. Performance Replication requires the
-Multi-Datacenter & Scale module.
+have support for Disaster Recovery replication. Performance Replication requires
+Vault Enterprise Premium.
 
 Many organizations have infrastructure that spans multiple datacenters. Vault
 provides the critical services of identity management, secrets storage, and
@@ -26,7 +26,7 @@ applications that need to interoperate.
 Vault replication addresses both of these needs in providing consistency,
 scalability, and highly-available disaster recovery.
 
-Note: Using replication requires a storage backend that supports transactional updates, such as Consul.
+Note: Using replication requires a storage backend that supports transactional updates, such as [Integrated Storage](/vault/docs/concepts/integrated-storage) or Consul.
 
 ## Architecture
 
@@ -47,10 +47,20 @@ replication that is configured between the primary and secondary. These types
 of relationships are either **disaster recovery** or **performance**
 relationships.
 
-## Performance Replication and Disaster Recovery (DR) Replication
+![](/img/replication-overview.png)
 
-_Performance Replication_:
-In performance replication, secondaries keep track of their own tokens and leases
+The following table shows a capability comparison between Disaster Recovery and Performance Replication.
+
+| Capability                                                                                                           | Disaster Recovery | Performance Replication                                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mirrors the configuration of a primary cluster                                                                       | Yes               | Yes                                                                                                                                                                                |
+| Mirrors the configuration of a primary cluster’s backends (i.e., auth methods, secrets engines, audit devices, etc.) | Yes               | Yes                                                                                                                                                                                |
+| Mirrors the tokens and leases for applications and users interacting with the primary cluster                        | Yes               | No. Secondaries keep track of their own tokens and leases. When the secondary is promoted, applications must reauthenticate and obtain new leases from the newly-promoted primary. |
+| Allows the secondary cluster to handle client requests                                                               | No                | Yes                                            |
+
+## Performance Replication
+
+In Performance Replication, secondaries keep track of their own tokens and leases
 but share the underlying configuration, policies, and supporting secrets (K/V values,
 encryption keys for `transit`, etc).
 
@@ -61,7 +71,48 @@ in `transit`, etc.) can be satisfied by the local secondary, allowing Vault to s
 relatively horizontally with the number of secondaries rather than vertically as
 in the past.
 
-_Disaster Recovery (DR) Replication_:
+### Paths Filter
+
+The primary cluster's mount configuration gets replicated across its secondary
+clusters when you enable Performance Replication. In some cases, you may not
+want all data to be replicated. For example, your primary cluster is in the EU
+region, and you have a secondary cluster outside of the EU region. [General Data
+Protection Regulation (GDPR)](https://www.eugdpr.org/) requires that personally
+identifiable data not be physically transferred to locations outside the
+European Union unless the region or country has an equal rigor of data
+protection regulation as the EU.
+
+To comply with GDPR, leverage Vault's **paths filter**  feature to abide by
+data movements and sovereignty regulations while ensuring performance access
+across geographically distributed regions.
+
+You can set filters based on the mount path of the secrets engines and
+namespaces.
+
+![Performance Replication - primary](/img/vault-mount-filter-7.png)
+
+In the above example, the `EU_GDPR_data/` path and `office_FR` namespace will
+not be replicated and remain only on the primary cluster.
+
+On a similar note, if you want to avoid secondary cluster's data to be
+replicated, you can mark those secrets engine and/or auth methods **local**.
+Local secrets engines and auth methods are not replicated or removed by
+replication.
+
+**Example:** When you enable a secrets engine on a secondary cluster, use the
+`-local` flag.
+
+```shell-session
+$ vault secrets enable -local -path=us_west_data kv-v2
+```
+
+-> **Learn:** Refer to the [Performance Replication with Paths
+Filter](/vault/tutorials/enterprise/paths-filter) tutorial for
+step-by-step instructions.
+
+
+## Disaster Recovery (DR) Replication
+
 In disaster recovery (or DR) replication, secondaries share the same underlying configuration,
 policy, and supporting secrets (K/V values, encryption keys for `transit`, etc) infrastructure
 as the primary. They also share the same token and lease infrastructure as the primary, as
@@ -71,14 +122,10 @@ original primary on the election of the DR secondary.
 DR is designed to be a mechanism to protect against catastrophic failure of entire clusters.
 They do not forward service read or write requests until they are elected and become a new primary.
 
-| Capability                                                                                                           | Disaster Recovery | Performance                                                                                                                                                                        |
-| -------------------------------------------------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mirrors the configuration of a primary cluster                                                                       | Yes               | Yes                                                                                                                                                                                |
-| Mirrors the configuration of a primary cluster’s backends (i.e.: auth methods, secrets engines, audit devices, etc.) | Yes               | Yes                                                                                                                                                                                |
-| Mirrors the tokens and leases for applications and users interacting with the primary cluster                        | Yes               | No. Secondaries keep track of their own tokens and leases. When the secondary is promoted, applications must reauthenticate and obtain new leases from the newly-promoted primary. |
-| Allows the secondary cluster to handle client requests                                                               | No                | Yes                                                                                                                                                                                |
+-> **Note**: Unlike with Performance Replication, local secret engines, auth methods and audit devices are replicated to a DR secondary.
 
-For more information on the capabilities of performance and disaster recovery replication, see the Vault Replication [API Documentation](/api/system/replication).
+
+For more information on the capabilities of performance and disaster recovery replication, see the Vault Replication [API Documentation](/vault/api-docs/system/replication).
 
 ## Primary and Secondary Cluster Compatibility
 
@@ -89,7 +136,7 @@ There is no requirement that both clusters use the same storage engine.
 ### Seals
 
 There is no requirement that both clusters use the same seal type, but see
-[sealwrap](/docs/enterprise/sealwrap#seal-wrap-and-replication) for the full
+[sealwrap](/vault/docs/enterprise/sealwrap#seal-wrap-and-replication) for the full
 details.
 
 Also note that enabling replication will modify the secondary seal.
@@ -99,17 +146,19 @@ keys will be replaced. Here seal/recovery configuration means the number of
 seal/recovery key fragments and the required threshold of those
 fragments.
 
-| Primary seal | Secondary seal | Impact on secondary of enabling replication                                                |
-| ------------ | -------------- | ------------------------------------------------------------------------------------------ |
-| Shamir       | Shamir         | Seal config and unseal keys replaced with primary's                                        |
-| Shamir       | Auto           | Seal recovery config and recovery keys replaced with primary's seal config and unseal keys |
-| Auto         | Auto           | Seal recovery config and recovery keys replaced with primary's                             |
-| Auto         | Shamir         | Seal config and unseal keys replaced with primary's recovery seal config and recovery keys |
+| Primary Seal | Secondary Seal (before) | Secondary Seal (after)                 | Secondary Recovery Key (after) | Impact on Secondary of Enabling Replication                                 |
+|--------------|-------------------------|----------------------------------------|--------------------------------|-----------------------------------------------------------------------------|
+| Shamir       | Shamir                  | Primary's shamir config & unseal keys  | N/A                            | Seal config and unseal keys replaced with primary's                         |
+| Shamir       | Auto                    | Unchanged                              | Receives primary seal          | Seal recovery config and keys replaced with primary's seal config and keys  |
+| Auto         | Auto                    | Unchanged                              | Receives primary recovery      | Seal recovery config and recovery keys replaced with primary's              |
+| Auto         | Shamir                  | Receives primary recovery              | N/A                            | Seal config and keys replaced with primary's recovery seal config and keys  |
+
+Note: Clusters with Shamir seal config do not have separate recovery keys. Auto includes HSM, Cloud KMS, and Transit auto-unseal.
 
 ### Vault versions
 
 Vault changes are designed and tested to ensure that the
-[upgrade instructions](/docs/upgrading#replication-installations) are viable, i.e.
+[upgrade instructions](/vault/docs/upgrading#replication-installations) are viable, i.e.
 that a secondary can run a newer Vault version than its primary.
 
 That said, we do not recommend running replicated Vault clusters with different
@@ -118,7 +167,7 @@ versions any longer than necessary to perform the upgrade.
 ## Internals
 
 Details on the internal design of the replication feature can be found in the
-[replication internals](/docs/internals/replication) document.
+[replication internals](/vault/docs/internals/replication) document.
 
 ## Security Model
 
@@ -171,17 +220,24 @@ generation until it is used.
 Once a secondary is activated, its cluster information is stored safely behind
 its encrypted barrier.
 
-## Learn
+## Mutual TLS and Load Balancers
+
+Vault generates its own certificates for cluster members. All replication traffic 
+uses the cluster port using these Vault-generated certificates after initial 
+bootstrapping. Because of this, the cluster traffic can NOT be terminated at the 
+cluster port at a load balancer level.
+
+## Tutorial
 
 Refer to the following tutorials replication setup and best practices:
 
-- [Setting up Performance Replication](https://learn.hashicorp.com/vault/operations/ops-replication)
-- [Disaster Recovery Replication Setup](https://learn.hashicorp.com/vault/operations/ops-disaster-recovery)
-- [Performance Replication with Mount Filters](https://learn.hashicorp.com/vault/operations/mount-filter)
-- [Monitoring Vault Replication](https://learn.hashicorp.com/vault/operations/monitor-replication)
+- [Setting up Performance Replication](/vault/tutorials/enterprise/performance-replication)
+- [Disaster Recovery Replication Setup](/vault/tutorials/enterprise/disaster-recovery)
+- [Performance Replication with Paths Filters](/vault/tutorials/enterprise/paths-filter)
+- [Monitoring Vault Replication](/vault/tutorials/monitoring/monitor-replication)
 
 ## API
 
 The Vault replication component has a full HTTP API. Please see the
-[Vault Replication API](/api/system/replication) for more
+[Vault Replication API](/vault/api-docs/system/replication) for more
 details.

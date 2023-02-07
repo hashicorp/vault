@@ -3,13 +3,13 @@ package sink
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/dhutil"
@@ -151,10 +151,12 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 			if err := writeSink(st.sink, st.token); err != nil {
 				backoff := 2*time.Second + time.Duration(ss.random.Int63()%int64(time.Second*2)-int64(time.Second))
 				ss.logger.Error("error returned by sink function, retrying", "error", err, "backoff", backoff.String())
+				timer := time.NewTimer(backoff)
 				select {
 				case <-ctx.Done():
+					timer.Stop()
 					return nil
-				case <-time.After(backoff):
+				case <-timer.C:
 					atomic.AddInt32(ss.remaining, 1)
 					sinkCh <- st
 				}
@@ -177,17 +179,17 @@ func (s *SinkConfig) encryptToken(token string) (string, error) {
 			_, err = os.Lstat(s.DHPath)
 			if err != nil {
 				if !os.IsNotExist(err) {
-					return "", errwrap.Wrapf("error stat-ing dh parameters file: {{err}}", err)
+					return "", fmt.Errorf("error stat-ing dh parameters file: %w", err)
 				}
 				return "", errors.New("no dh parameters file found, and no cached pub key")
 			}
 			fileBytes, err := ioutil.ReadFile(s.DHPath)
 			if err != nil {
-				return "", errwrap.Wrapf("error reading file for dh parameters: {{err}}", err)
+				return "", fmt.Errorf("error reading file for dh parameters: %w", err)
 			}
 			theirPubKey := new(dhutil.PublicKeyInfo)
 			if err := jsonutil.DecodeJSON(fileBytes, theirPubKey); err != nil {
-				return "", errwrap.Wrapf("error decoding public key: {{err}}", err)
+				return "", fmt.Errorf("error decoding public key: %w", err)
 			}
 			if len(theirPubKey.Curve25519PublicKey) == 0 {
 				return "", errors.New("public key is nil")
@@ -197,7 +199,7 @@ func (s *SinkConfig) encryptToken(token string) (string, error) {
 		if len(s.cachedPubKey) == 0 {
 			s.cachedPubKey, s.cachedPriKey, err = dhutil.GeneratePublicPrivateKey()
 			if err != nil {
-				return "", errwrap.Wrapf("error generating pub/pri curve25519 keys: {{err}}", err)
+				return "", fmt.Errorf("error generating pub/pri curve25519 keys: %w", err)
 			}
 		}
 		resp.Curve25519PublicKey = s.cachedPubKey
@@ -205,7 +207,7 @@ func (s *SinkConfig) encryptToken(token string) (string, error) {
 
 	secret, err := dhutil.GenerateSharedSecret(s.cachedPriKey, s.cachedRemotePubKey)
 	if err != nil {
-		return "", errwrap.Wrapf("error calculating shared key: {{err}}", err)
+		return "", fmt.Errorf("error calculating shared key: %w", err)
 	}
 	if s.DeriveKey {
 		aesKey, err = dhutil.DeriveSharedKey(secret, s.cachedPubKey, s.cachedRemotePubKey)
@@ -214,7 +216,7 @@ func (s *SinkConfig) encryptToken(token string) (string, error) {
 	}
 
 	if err != nil {
-		return "", errwrap.Wrapf("error deriving shared key: {{err}}", err)
+		return "", fmt.Errorf("error deriving shared key: %w", err)
 	}
 	if len(aesKey) == 0 {
 		return "", errors.New("derived AES key is empty")
@@ -222,30 +224,32 @@ func (s *SinkConfig) encryptToken(token string) (string, error) {
 
 	resp.EncryptedPayload, resp.Nonce, err = dhutil.EncryptAES(aesKey, []byte(token), []byte(s.AAD))
 	if err != nil {
-		return "", errwrap.Wrapf("error encrypting with shared key: {{err}}", err)
+		return "", fmt.Errorf("error encrypting with shared key: %w", err)
 	}
 	m, err := jsonutil.EncodeJSON(resp)
 	if err != nil {
-		return "", errwrap.Wrapf("error encoding encrypted payload: {{err}}", err)
+		return "", fmt.Errorf("error encoding encrypted payload: %w", err)
 	}
 
 	return string(m), nil
 }
 
 func (s *SinkConfig) wrapToken(client *api.Client, wrapTTL time.Duration, token string) (string, error) {
-	wrapClient, err := client.Clone()
+	wrapClient, err := client.CloneWithHeaders()
 	if err != nil {
-		return "", errwrap.Wrapf("error deriving client for wrapping, not writing out to sink: {{err}})", err)
+		return "", fmt.Errorf("error deriving client for wrapping, not writing out to sink: %w)", err)
 	}
+
 	wrapClient.SetToken(token)
 	wrapClient.SetWrappingLookupFunc(func(string, string) string {
 		return wrapTTL.String()
 	})
+
 	secret, err := wrapClient.Logical().Write("sys/wrapping/wrap", map[string]interface{}{
 		"token": token,
 	})
 	if err != nil {
-		return "", errwrap.Wrapf("error wrapping token, not writing out to sink: {{err}})", err)
+		return "", fmt.Errorf("error wrapping token, not writing out to sink: %w)", err)
 	}
 	if secret == nil {
 		return "", errors.New("nil secret returned, not writing out to sink")
@@ -256,7 +260,7 @@ func (s *SinkConfig) wrapToken(client *api.Client, wrapTTL time.Duration, token 
 
 	m, err := jsonutil.EncodeJSON(secret.WrapInfo)
 	if err != nil {
-		return "", errwrap.Wrapf("error marshaling token, not writing out to sink: {{err}})", err)
+		return "", fmt.Errorf("error marshaling token, not writing out to sink: %w)", err)
 	}
 
 	return string(m), nil

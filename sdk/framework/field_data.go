@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -25,7 +25,7 @@ type FieldData struct {
 	Schema map[string]*FieldSchema
 }
 
-// Validate cycles through raw data and validate conversions in
+// Validate cycles through raw data and validates conversions in
 // the schema, so we don't get an error/panic later when
 // trying to get data out.  Data not in the schema is not
 // an error at this point, so we don't worry about it.
@@ -38,7 +38,7 @@ func (d *FieldData) Validate() error {
 		}
 
 		switch schema.Type {
-		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
+		case TypeBool, TypeInt, TypeInt64, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
 			TypeLowerCaseString, TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
 			TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat, TypeTime:
 			_, _, err := d.getPrimitive(field, schema)
@@ -47,6 +47,40 @@ func (d *FieldData) Validate() error {
 			}
 		default:
 			return fmt.Errorf("unknown field type %q for field %q", schema.Type, field)
+		}
+	}
+
+	return nil
+}
+
+// ValidateStrict cycles through raw data and validates conversions in the
+// schema. In addition to the checks done by Validate, this function ensures
+// that the raw data has all of the schema's required fields and does not
+// have any fields outside of the schema. It will return a non-nil error if:
+//
+//  1. a conversion (parsing of the field's value) fails
+//  2. a raw field does not exist in the schema (unless the schema is nil)
+//  3. a required schema field is missing from the raw data
+//
+// This function is currently used for validating response schemas in tests.
+func (d *FieldData) ValidateStrict() error {
+	// the schema is nil, nothing to validate
+	if d.Schema == nil {
+		return nil
+	}
+
+	for field := range d.Raw {
+		if _, _, err := d.GetOkErr(field); err != nil {
+			return fmt.Errorf("field %q: %w", field, err)
+		}
+	}
+
+	for field, schema := range d.Schema {
+		if !schema.Required {
+			continue
+		}
+		if _, ok := d.Raw[field]; !ok {
+			return fmt.Errorf("missing required field %q", field)
 		}
 	}
 
@@ -131,7 +165,7 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	}
 
 	switch schema.Type {
-	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
+	case TypeBool, TypeInt, TypeInt64, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
 		TypeLowerCaseString, TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
 		TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat, TypeTime:
 		return d.getPrimitive(k, schema)
@@ -157,6 +191,13 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 
 	case TypeInt:
 		var result int
+		if err := mapstructure.WeakDecode(raw, &result); err != nil {
+			return nil, false, err
+		}
+		return result, true, nil
+
+	case TypeInt64:
+		var result int64
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, false, err
 		}
@@ -236,6 +277,12 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 
 	case TypeCommaIntSlice:
 		var result []int
+
+		jsonIn, ok := raw.(json.Number)
+		if ok {
+			raw = jsonIn.String()
+		}
+
 		config := &mapstructure.DecoderConfig{
 			Result:           &result,
 			WeaklyTypedInput: true,

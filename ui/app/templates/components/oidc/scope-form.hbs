@@ -1,0 +1,113 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          {{#if @model.isNew}}
+            <LinkTo @route={{"vault.cluster.access.oidc.scopes"}}>
+              Scopes
+            </LinkTo>
+          {{else}}
+            {{! You're editing in this view }}
+            <LinkTo @route={{"vault.cluster.access.oidc.scopes.scope.details"}} @model={{@model.name}}>
+              Details
+            </LinkTo>
+          {{/if}}
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-oidc-scope-title>
+      {{if @model.isNew "Create" "Edit"}}
+      scope
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<form {{on "submit" (perform this.save)}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <p class="has-bottom-margin-l">
+      Providers may reference a set of scopes to make specific identity information available as claims
+    </p>
+    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    {{#each @model.formFields as |field|}}
+      <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+    {{/each}}
+    <p class="is-size-9 has-text-grey has-bottom-margin-l">
+      You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field. See
+      <button
+        type="button"
+        class="text-button has-text-info"
+        {{on "click" (fn (mut this.showTemplateModal))}}
+        data-test-oidc-scope-example
+      >
+        example template
+      </button>.
+    </p>
+  </div>
+  <div class="has-top-margin-l has-bottom-margin-l">
+    <button
+      type="submit"
+      class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+      disabled={{this.save.isRunning}}
+      data-test-oidc-scope-save
+    >
+      {{if @model.isNew "Create" "Update"}}
+    </button>
+    <button
+      type="button"
+      class="button has-left-margin-s"
+      disabled={{this.save.isRunning}}
+      {{on "click" this.cancel}}
+      data-test-oidc-scope-cancel
+    >
+      Cancel
+    </button>
+  </div>
+  {{#if this.invalidFormAlert}}
+    <div class="control">
+      <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+    </div>
+  {{/if}}
+</form>
+
+<Modal
+  @title="Scope template"
+  @onClose={{fn (mut this.showTemplateModal) false}}
+  @isActive={{this.showTemplateModal}}
+  @showCloseButton={{true}}
+>
+  <section class="modal-card-body">
+    <div class="is-flex-between is-flex-center has-bottom-margin-s">
+      <p data-test-modal-copy>
+        Example of a JSON template for scopes:
+      </p>
+      <CopyButton
+        class="button is-transparent"
+        @clipboardText={{this.exampleTemplate}}
+        @buttonType="button"
+        @success={{fn (set-flash-message "Example template copied!")}}
+      >
+        <Icon @name="clipboard-copy" aria-label="Copy" />
+      </CopyButton>
+    </div>
+    {{! code-mirror modifier does not render value initially in wormhole until focus event fires }}
+    {{! wait until the Modal is rendered and then show the JsonEditor }}
+    {{#if this.showTemplateModal}}
+      <JsonEditor @value={{this.exampleTemplate}} @mode="ruby" @readOnly={{true}} @showToolbar={{false}} />
+    {{/if}}
+    <p class="has-top-margin-m">
+      The full list of template parameters can be found
+      <DocLink @path="/docs/concepts/oidc-provider#scopes">
+        here.
+      </DocLink>
+    </p>
+  </section>
+  <div class="modal-card-head has-border-top-light">
+    <button type="button" class="button" {{on "click" (fn (mut this.showTemplateModal) false)}} data-test-close-modal>
+      Close
+    </button>
+  </div>
+</Modal>

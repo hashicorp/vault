@@ -1,0 +1,3 @@
+```release-note:improvement
+sys/internal/inspect: Creates an endpoint to look to inspect internal subsystems.
+```

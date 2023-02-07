@@ -1,0 +1,7 @@
+## Entity Alias mapping
+
+Previously, an entity in Vault could be mapped to multiple entity aliases on the same authentication backend. This
+led to a potential security vulnerability (CVE-2021-43998), as ACL policies templated with alias information would match the first
+alias created. Thus, tokens created from all aliases of the entity, will have access to the paths containing alias 
+metadata of the first alias due to templated policies being incorrectly applied. As a result, the mapping behavior was updated 
+such that an entity can only have one alias per authentication backend. This change exists in Vault 1.9.0+, 1.8.5+ and 1.7.6+.

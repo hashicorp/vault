@@ -6,9 +6,11 @@ import removeRecord from 'vault/utils/remove-record';
 export default Mixin.create({
   modelPath: 'model',
   unloadModel() {
-    let { modelPath } = this;
-    let model = this.controller.get(modelPath);
-    if (!model || !model.unloadRecord) {
+    const { modelPath } = this;
+    /* eslint-disable-next-line ember/no-controller-access-in-routes */
+    const model = this.controller.get(modelPath);
+    // error is thrown when you attempt to unload a record that is inFlight (isSaving)
+    if (!model || !model.unloadRecord || model.isSaving) {
       return;
     }
     removeRecord(this.store, model);

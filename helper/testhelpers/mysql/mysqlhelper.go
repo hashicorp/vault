@@ -29,10 +29,11 @@ func PrepareTestContainer(t *testing.T, legacy bool, pw string) (func(), string)
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo: "mysql",
-		ImageTag:  imageVersion,
-		Ports:     []string{"3306/tcp"},
-		Env:       []string{"MYSQL_ROOT_PASSWORD=" + pw},
+		ContainerName: "mysql",
+		ImageRepo:     "docker.mirror.hashicorp.services/library/mysql",
+		ImageTag:      imageVersion,
+		Ports:         []string{"3306/tcp"},
+		Env:           []string{"MYSQL_ROOT_PASSWORD=" + pw},
 	})
 	if err != nil {
 		t.Fatalf("could not start docker mysql: %s", err)

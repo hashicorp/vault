@@ -1,12 +1,12 @@
 ---
 layout: api
 page_title: /sys/mounts - HTTP API
-description: The `/sys/mounts` endpoint is used manage secrets engines in Vault.
+description: The `/sys/mounts` endpoint is used to manage secrets engines in Vault.
 ---
 
 # `/sys/mounts`
 
-The `/sys/mounts` endpoint is used manage secrets engines in Vault.
+The `/sys/mounts` endpoint is used to manage secrets engines in Vault.
 
 ## List Mounted Secrets Engines
 
@@ -44,6 +44,9 @@ $ curl \
       "external_entropy_access": false,
       "local": true,
       "options": null,
+      "plugin_version": "",
+      "running_plugin_version": "v1.12.0+builtin.vault",
+      "running_sha256": "",
       "seal_wrap": false,
       "type": "cubbyhole",
       "uuid": "79ddaa52-fa07-6f19-653a-f0777f6439fd"
@@ -59,6 +62,9 @@ $ curl \
       "external_entropy_access": false,
       "local": false,
       "options": null,
+      "plugin_version": "",
+      "running_plugin_version": "v1.12.0+builtin.vault",
+      "running_sha256": "",
       "seal_wrap": false,
       "type": "identity",
       "uuid": "45f79a67-58f7-3f87-892c-9032084e7801"
@@ -70,12 +76,16 @@ $ curl \
         "force_no_cache": false,
         "max_lease_ttl": 0
       },
+      "deprecation_status": "supported",
       "description": "key/value secret storage",
       "external_entropy_access": false,
       "local": false,
       "options": {
         "version": "2"
       },
+      "plugin_version": "",
+      "running_plugin_version": "v0.13.0+builtin",
+      "running_sha256": "",
       "seal_wrap": false,
       "type": "kv",
       "uuid": "8074a73f-6921-c0cd-589a-016405dc46ec"
@@ -92,6 +102,9 @@ $ curl \
       "external_entropy_access": false,
       "local": false,
       "options": null,
+      "plugin_version": "",
+      "running_plugin_version": "v1.12.0+builtin.vault",
+      "running_sha256": "",
       "seal_wrap": false,
       "type": "system",
       "uuid": "c79f4f66-4cfa-4521-9d31-b1238b0a6800"
@@ -137,21 +150,26 @@ This endpoint enables a new secrets engine at the given path.
 
   - `force_no_cache` `(bool: false)` - Disable caching.
 
-  - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
-    that will not be HMAC'd by audit devices in the request data object.
+  - `audit_non_hmac_request_keys` `(array: [])` - List of keys that will not be
+    HMAC'd by audit devices in the request data object.
 
-  - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
-    that will not be HMAC'd by audit devices in the response data object.
+  - `audit_non_hmac_response_keys` `(array: [])` - List of keys that will not be
+    HMAC'd by audit devices in the response data object.
 
   - `listing_visibility` `(string: "")` - Specifies whether to show this mount
     in the UI-specific listing endpoint. Valid values are `"unauth"` or
     `"hidden"`. If not set, behaves like `"hidden"`.
 
-  - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-    to whitelist and pass from the request to the plugin.
+  - `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+    and pass from the request to the plugin.
 
-  - `allowed_response_headers` `(array: [])` - Comma-separated list of headers
-    to whitelist, allowing a plugin to include them in the response.
+  - `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+    allowing a plugin to include them in the response.
+
+  - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
+    to use, e.g. "v1.0.0". If unspecified, the server will select any matching
+    unversioned plugin that may have been registered, the latest versioned plugin
+    registered, or a built-in plugin in that order of precendence.
 
 - `options` `(map<string|string>: nil)` - Specifies mount type specific options
   that are passed to the backend.
@@ -199,7 +217,7 @@ $ curl \
 
 This endpoint disables the mount point specified in the URL.
 
-| Method   | Path                |
+| Method   | Path                |                    |
 | :------- | :------------------ | ------------------ |
 | `DELETE` | `/sys/mounts/:path` | `204 (empty body)` |
 
@@ -210,6 +228,84 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
     http://127.0.0.1:8200/v1/sys/mounts/my-mount
+```
+
+### Force Disable
+
+Because disabling a secrets engine revokes secrets associated with this mount,
+possible errors can prevent the secrets engine from being disabled if the
+revocation fails.
+
+The best way to resolve this is to figure out the underlying issue and then
+disable the secrets engine once the underlying issue is resolved. Often, this can be as
+simple as increasing the timeout (in the event of timeout errors).
+
+For recovery situations where the secret was manually removed from the
+secrets backing service, one can force a secrets engine disable in Vault by
+performing a [force revoke](/vault/api-docs/system/leases)
+on the mount prefix, followed by a secrets disable when that completes. 
+If the underlying secrets were not manually cleaned up, this method might result
+in dangling credentials. This is meant for extreme circumstances.
+
+## Get the configuration of a Secret Engine
+
+This endpoint returns the configuration of a specific secret engine.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `GET`  | `/sys/mounts/:path` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/mounts/cubbyhole
+```
+
+### Sample Response
+
+```json
+{
+  "config": {
+    "default_lease_ttl": 0,
+    "force_no_cache": false,
+    "max_lease_ttl": 0
+  },
+  "description": "per-token private secret storage",
+  "accessor": "cubbyhole_db85f061",
+  "external_entropy_access": false,
+  "options": null,
+  "uuid": "9c0e211a-904d-e41d-e1a2-7f1ff2bb8461",
+  "type": "cubbyhole",
+  "local": true,
+  "seal_wrap": false,
+  "request_id": "efdab917-ade2-1802-b8fa-fe2e6486d4e5",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "accessor": "cubbyhole_db85f061",
+    "config": {
+      "default_lease_ttl": 0,
+      "force_no_cache": false,
+      "max_lease_ttl": 0
+    },
+    "description": "per-token private secret storage",
+    "external_entropy_access": false,
+    "local": true,
+    "options": null,
+    "plugin_version": "",
+    "running_plugin_version": "v1.12.0+builtin.vault",
+    "running_sha256": "",
+    "seal_wrap": false,
+    "type": "cubbyhole",
+    "uuid": "9c0e211a-904d-e41d-e1a2-7f1ff2bb8461"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
 ```
 
 ## Read Mount Configuration
@@ -261,23 +357,27 @@ This endpoint tunes configuration parameters for a given mount point.
 - `description` `(string: "")` – Specifies the description of the mount. This
   overrides the current stored value, if any.
 
-- `audit_non_hmac_request_keys` `(array: [])` - Specifies the comma-separated
-  list of keys that will not be HMAC'd by audit devices in the request data
-  object.
+- `audit_non_hmac_request_keys` `(array: [])` - Specifies the list of keys that
+  will not be HMAC'd by audit devices in the request data object.
 
-- `audit_non_hmac_response_keys` `(array: [])` - Specifies the comma-separated
-  list of keys that will not be HMAC'd by audit devices in the response data
-  object.
+- `audit_non_hmac_response_keys` `(array: [])` - Specifies the list of keys that
+  will not be HMAC'd by audit devices in the response data object.
 
 - `listing_visibility` `(string: "")` - Specifies whether to show this mount in
   the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
   If not set, behaves like `"hidden"`.
 
-- `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-  to whitelist and pass from the request to the plugin.
+- `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+  and pass from the request to the plugin.
 
-- `allowed_response_headers` `(array: [])` - Comma-separated list of headers
-  to whitelist, allowing a plugin to include them in the response.
+- `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+  allowing a plugin to include them in the response.
+
+- `allowed_managed_keys` `(array: [])` - List of managed key registry entry names
+  that the mount in question is allowed to access.
+
+- `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
+  to use, e.g. "v1.0.0". Changes will not take effect until the mount is reloaded.
 
 ### Sample Payload
 

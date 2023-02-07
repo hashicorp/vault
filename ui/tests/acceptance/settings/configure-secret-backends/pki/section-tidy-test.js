@@ -5,24 +5,24 @@ import page from 'vault/tests/pages/settings/configure-secret-backends/pki/secti
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
-module('Acceptance | settings/configure/secrets/pki/tidy', function(hooks) {
+module('Acceptance | settings/configure/secrets/pki/tidy', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test('it saves tidy config', async function(assert) {
+  test('it saves tidy config', async function (assert) {
     const path = `pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await settled();
     await page.visit({ backend: path, section: 'tidy' });
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
     await page.form.fields.objectAt(0).clickLabel();
 
     await page.form.submit();
     await settled();
-    assert.equal(page.lastMessage, 'The tidy config for this backend has been updated.');
+    assert.strictEqual(page.lastMessage, 'The tidy config for this backend has been updated.');
   });
 });

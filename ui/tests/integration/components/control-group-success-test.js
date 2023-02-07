@@ -1,4 +1,4 @@
-import { later, run } from '@ember/runloop';
+import { later, run, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
@@ -16,10 +16,6 @@ const controlGroupService = Service.extend({
   markTokenForUnwrap: sinon.stub(),
 });
 
-const routerService = Service.extend({
-  transitionTo: sinon.stub().returns(resolve()),
-});
-
 const storeService = Service.extend({
   adapterFor() {
     return {
@@ -30,17 +26,19 @@ const storeService = Service.extend({
   },
 });
 
-module('Integration | Component | control group success', function(hooks) {
+module('Integration | Component | control group success', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:control-group', controlGroupService);
       this.controlGroup = this.owner.lookup('service:control-group');
-      this.owner.register('service:router', routerService);
       this.owner.register('service:store', storeService);
       this.router = this.owner.lookup('service:router');
+      this.router.reopen({
+        transitionTo: sinon.stub().returns(resolve()),
+      });
     });
   });
 
@@ -51,30 +49,32 @@ module('Integration | Component | control group success', function(hooks) {
     requestEntity: { id: 'requestor', name: 'entity8509' },
     reload: sinon.stub(),
   };
-  test('render with saved token', async function(assert) {
-    let response = {
+  test('render with saved token', async function (assert) {
+    assert.expect(3);
+    const response = {
       uiParams: { url: '/foo' },
       token: 'token',
     };
     this.set('model', MODEL);
     this.set('response', response);
-    await render(hbs`{{control-group-success model=model controlGroupResponse=response }}`);
+    await render(hbs`{{control-group-success model=this.model controlGroupResponse=this.response }}`);
     assert.ok(component.showsNavigateMessage, 'shows unwrap message');
     await component.navigate();
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     return settled().then(() => {
       assert.ok(this.controlGroup.markTokenForUnwrap.calledOnce, 'marks token for unwrap');
       assert.ok(this.router.transitionTo.calledOnce, 'calls router transition');
     });
   });
 
-  test('render without token', async function(assert) {
+  test('render without token', async function (assert) {
+    assert.expect(2);
     this.set('model', MODEL);
-    await render(hbs`{{control-group-success model=model}}`);
+    await render(hbs`{{control-group-success model=this.model}}`);
     assert.ok(component.showsUnwrapForm, 'shows unwrap form');
     await component.token('token');
     component.unwrap();
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     return settled().then(() => {
       assert.ok(component.showsJsonViewer, 'shows unwrapped data');
     });

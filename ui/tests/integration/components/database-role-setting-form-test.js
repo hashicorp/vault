@@ -11,7 +11,7 @@ const testCases = [
     staticRoleFields: ['name', 'username', 'rotation_period', 'rotation_statements'],
     dynamicRoleFields: [
       'name',
-      'ttl',
+      'default_ttl',
       'max_ttl',
       'creation_statements',
       'revocation_statements',
@@ -20,21 +20,51 @@ const testCases = [
     ],
   },
   {
+    pluginType: 'elasticsearch-database-plugin',
+    staticRoleFields: ['username', 'rotation_period'],
+    dynamicRoleFields: ['creation_statement', 'default_ttl', 'max_ttl'],
+  },
+  {
     pluginType: 'mongodb-database-plugin',
     staticRoleFields: ['username', 'rotation_period'],
-    dynamicRoleFields: ['creation_statement', 'revocation_statement', 'ttl', 'max_ttl'],
+    dynamicRoleFields: ['creation_statement', 'revocation_statement', 'default_ttl', 'max_ttl'],
     statementsHidden: true,
   },
   {
     pluginType: 'mssql-database-plugin',
     staticRoleFields: ['username', 'rotation_period'],
-    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'ttl', 'max_ttl'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
+  },
+  {
+    pluginType: 'mysql-database-plugin',
+    staticRoleFields: ['username', 'rotation_period'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
+  },
+  {
+    pluginType: 'mysql-aurora-database-plugin',
+    staticRoleFields: ['username', 'rotation_period'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
+  },
+  {
+    pluginType: 'mysql-rds-database-plugin',
+    staticRoleFields: ['username', 'rotation_period'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
+  },
+  {
+    pluginType: 'mysql-legacy-database-plugin',
+    staticRoleFields: ['username', 'rotation_period'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
+  },
+  {
+    pluginType: 'vault-plugin-database-oracle',
+    staticRoleFields: ['username', 'rotation_period'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
 ];
 
 // used to calculate checks that fields do NOT show up
 const ALL_ATTRS = [
-  { name: 'ttl', type: 'string', options: {} },
+  { name: 'default_ttl', type: 'string', options: {} },
   { name: 'max_ttl', type: 'string', options: {} },
   { name: 'username', type: 'string', options: {} },
   { name: 'rotation_period', type: 'string', options: {} },
@@ -46,16 +76,16 @@ const ALL_ATTRS = [
   { name: 'rollback_statements', type: 'string', options: {} },
   { name: 'renew_statements', type: 'string', options: {} },
 ];
-const getFields = nameArray => {
-  const show = ALL_ATTRS.filter(attr => nameArray.indexOf(attr.name) >= 0);
-  const hide = ALL_ATTRS.filter(attr => nameArray.indexOf(attr.name) < 0);
+const getFields = (nameArray) => {
+  const show = ALL_ATTRS.filter((attr) => nameArray.indexOf(attr.name) >= 0);
+  const hide = ALL_ATTRS.filter((attr) => nameArray.indexOf(attr.name) < 0);
   return { show, hide };
 };
 
-module('Integration | Component | database-role-setting-form', function(hooks) {
+module('Integration | Component | database-role-setting-form', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set(
       'model',
       EmberObject.create({
@@ -65,41 +95,42 @@ module('Integration | Component | database-role-setting-form', function(hooks) {
     );
   });
 
-  test('it shows empty states when no roleType passed in', async function(assert) {
-    await render(hbs`<DatabaseRoleSettingForm @attrs={{model.attrs}} @model={{model}}/>`);
+  test('it shows empty states when no roleType passed in', async function (assert) {
+    await render(hbs`<DatabaseRoleSettingForm @attrs={{this.model.attrs}} @model={{this.model}}/>`);
     assert.dom('[data-test-component="empty-state"]').exists({ count: 2 }, 'Two empty states exist');
   });
 
-  test('it shows appropriate fields based on roleType and db plugin', async function(assert) {
+  test('it shows appropriate fields based on roleType and db plugin', async function (assert) {
     this.set('roleType', 'static');
     this.set('dbType', '');
     await render(hbs`
       <DatabaseRoleSettingForm
-        @attrs={{model.attrs}}
-        @model={{model}}
-        @roleType={{roleType}}
-        @dbType={{dbType}}
+        @attrs={{this.model.attrs}}
+        @model={{this.model}}
+        @roleType={{this.roleType}}
+        @dbType={{this.dbType}}
       />
     `);
     assert.dom('[data-test-component="empty-state"]').doesNotExist('Does not show empty states');
-    for (let testCase of testCases) {
-      let staticFields = getFields(testCase.staticRoleFields);
-      let dynamicFields = getFields(testCase.dynamicRoleFields);
+    for (const testCase of testCases) {
+      const staticFields = getFields(testCase.staticRoleFields);
+      const dynamicFields = getFields(testCase.dynamicRoleFields);
       this.set('dbType', testCase.pluginType);
       this.set('roleType', 'static');
-      staticFields.show.forEach(attr => {
+      staticFields.show.forEach((attr) => {
         assert
           .dom(`[data-test-input="${attr.name}"]`)
           .exists(
             `${attr.name} attribute exists on static role for ${testCase.pluginType || 'default'} db type`
           );
       });
-      staticFields.hide.forEach(attr => {
+      staticFields.hide.forEach((attr) => {
         assert
           .dom(`[data-test-input="${attr.name}"]`)
           .doesNotExist(
-            `${attr.name} attribute does not exist on static role for ${testCase.pluginType ||
-              'default'} db type`
+            `${attr.name} attribute does not exist on static role for ${
+              testCase.pluginType || 'default'
+            } db type`
           );
       });
       if (testCase.statementsHidden) {
@@ -108,19 +139,20 @@ module('Integration | Component | database-role-setting-form', function(hooks) {
           .doesNotExist(`Statements section is hidden for static ${testCase.pluginType} role`);
       }
       this.set('roleType', 'dynamic');
-      dynamicFields.show.forEach(attr => {
+      dynamicFields.show.forEach((attr) => {
         assert
           .dom(`[data-test-input="${attr.name}"]`)
           .exists(
             `${attr.name} attribute exists on dynamic role for ${testCase.pluginType || 'default'} db type`
           );
       });
-      dynamicFields.hide.forEach(attr => {
+      dynamicFields.hide.forEach((attr) => {
         assert
           .dom(`[data-test-input="${attr.name}"]`)
           .doesNotExist(
-            `${attr.name} attribute does not exist on dynamic role for ${testCase.pluginType ||
-              'default'} db type`
+            `${attr.name} attribute does not exist on dynamic role for ${
+              testCase.pluginType || 'default'
+            } db type`
           );
       });
     }

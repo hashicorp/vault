@@ -1,0 +1,3 @@
+```release-note:bug
+core: Prevent changing file permissions of audit logs when mode 0000 is used.
+```

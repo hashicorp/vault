@@ -11,9 +11,9 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/internalshared/reloadutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/jefferai/isbadcipher"
 	"github.com/mitchellh/cli"
 )
@@ -75,7 +75,8 @@ func UnixSocketListener(path string, unixSocketsConfig *UnixSocketsConfig) (net.
 func TLSConfig(
 	l *configutil.Listener,
 	props map[string]string,
-	ui cli.Ui) (*tls.Config, reloadutil.ReloadFunc, error) {
+	ui cli.Ui,
+) (*tls.Config, reloadutil.ReloadFunc, error) {
 	props["tls"] = "disabled"
 
 	if l.TLSDisable {
@@ -96,15 +97,14 @@ func TLSConfig(
 				}
 			}
 		}
-		return nil, nil, errwrap.Wrapf("error loading TLS cert: {{err}}", err)
+		return nil, nil, fmt.Errorf("error loading TLS cert: %w", err)
 	}
 
 PASSPHRASECORRECT:
 	tlsConf := &tls.Config{
-		GetCertificate:           cg.GetCertificate,
-		NextProtos:               []string{"h2", "http/1.1"},
-		ClientAuth:               tls.RequestClientCert,
-		PreferServerCipherSuites: l.TLSPreferServerCipherSuites,
+		GetCertificate: cg.GetCertificate,
+		NextProtos:     []string{"h2", "http/1.1"},
+		ClientAuth:     tls.RequestClientCert,
 	}
 
 	if l.TLSMinVersion == "" {
@@ -142,7 +142,7 @@ PASSPHRASECORRECT:
 				// Get the name of the current cipher.
 				cipherStr, err := tlsutil.GetCipherName(cipher)
 				if err != nil {
-					return nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
+					return nil, nil, fmt.Errorf("invalid value for 'tls_cipher_suites': %w", err)
 				}
 				badCiphers = append(badCiphers, cipherStr)
 			}
@@ -167,7 +167,7 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 			caPool := x509.NewCertPool()
 			data, err := ioutil.ReadFile(l.TLSClientCAFile)
 			if err != nil {
-				return nil, nil, errwrap.Wrapf("failed to read tls_client_ca_file: {{err}}", err)
+				return nil, nil, fmt.Errorf("failed to read tls_client_ca_file: %w", err)
 			}
 
 			if !caPool.AppendCertsFromPEM(data) {

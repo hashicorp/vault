@@ -4,35 +4,47 @@ import (
 	"errors"
 	"fmt"
 	"net/textproto"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-sockaddr/template"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 )
 
 type ListenerTelemetry struct {
-	UnauthenticatedMetricsAccess    bool        `hcl:"-"`
-	UnauthenticatedMetricsAccessRaw interface{} `hcl:"unauthenticated_metrics_access"`
+	UnusedKeys                      UnusedKeyMap `hcl:",unusedKeyPositions"`
+	UnauthenticatedMetricsAccess    bool         `hcl:"-"`
+	UnauthenticatedMetricsAccessRaw interface{}  `hcl:"unauthenticated_metrics_access,alias:UnauthenticatedMetricsAccess"`
 }
 
 type ListenerProfiling struct {
-	UnauthenticatedPProfAccess    bool        `hcl:"-"`
-	UnauthenticatedPProfAccessRaw interface{} `hcl:"unauthenticated_pprof_access"`
+	UnusedKeys                    UnusedKeyMap `hcl:",unusedKeyPositions"`
+	UnauthenticatedPProfAccess    bool         `hcl:"-"`
+	UnauthenticatedPProfAccessRaw interface{}  `hcl:"unauthenticated_pprof_access,alias:UnauthenticatedPProfAccessRaw"`
+}
+
+type ListenerInFlightRequestLogging struct {
+	UnusedKeys                       UnusedKeyMap `hcl:",unusedKeyPositions"`
+	UnauthenticatedInFlightAccess    bool         `hcl:"-"`
+	UnauthenticatedInFlightAccessRaw interface{}  `hcl:"unauthenticated_in_flight_requests_access,alias:unauthenticatedInFlightAccessRaw"`
 }
 
 // Listener is the listener configuration for the server.
 type Listener struct {
-	RawConfig map[string]interface{}
+	UnusedKeys UnusedKeyMap `hcl:",unusedKeyPositions"`
+	RawConfig  map[string]interface{}
 
 	Type       string
 	Purpose    []string    `hcl:"-"`
 	PurposeRaw interface{} `hcl:"purpose"`
+	Role       string      `hcl:"role"`
 
 	Address                 string        `hcl:"address"`
 	ClusterAddress          string        `hcl:"cluster_address"`
@@ -51,8 +63,6 @@ type Listener struct {
 	TLSMaxVersion                    string      `hcl:"tls_max_version"`
 	TLSCipherSuites                  []uint16    `hcl:"-"`
 	TLSCipherSuitesRaw               string      `hcl:"tls_cipher_suites"`
-	TLSPreferServerCipherSuites      bool        `hcl:"-"`
-	TLSPreferServerCipherSuitesRaw   interface{} `hcl:"tls_prefer_server_cipher_suites"`
 	TLSRequireAndVerifyClientCert    bool        `hcl:"-"`
 	TLSRequireAndVerifyClientCertRaw interface{} `hcl:"tls_require_and_verify_client_cert"`
 	TLSClientCAFile                  string      `hcl:"tls_client_ca_file"`
@@ -70,23 +80,26 @@ type Listener struct {
 
 	ProxyProtocolBehavior           string                        `hcl:"proxy_protocol_behavior"`
 	ProxyProtocolAuthorizedAddrs    []*sockaddr.SockAddrMarshaler `hcl:"-"`
-	ProxyProtocolAuthorizedAddrsRaw interface{}                   `hcl:"proxy_protocol_authorized_addrs"`
+	ProxyProtocolAuthorizedAddrsRaw interface{}                   `hcl:"proxy_protocol_authorized_addrs,alias:ProxyProtocolAuthorizedAddrs"`
 
 	XForwardedForAuthorizedAddrs        []*sockaddr.SockAddrMarshaler `hcl:"-"`
-	XForwardedForAuthorizedAddrsRaw     interface{}                   `hcl:"x_forwarded_for_authorized_addrs"`
+	XForwardedForAuthorizedAddrsRaw     interface{}                   `hcl:"x_forwarded_for_authorized_addrs,alias:XForwardedForAuthorizedAddrs"`
 	XForwardedForHopSkips               int64                         `hcl:"-"`
-	XForwardedForHopSkipsRaw            interface{}                   `hcl:"x_forwarded_for_hop_skips"`
+	XForwardedForHopSkipsRaw            interface{}                   `hcl:"x_forwarded_for_hop_skips,alias:XForwardedForHopSkips"`
 	XForwardedForRejectNotPresent       bool                          `hcl:"-"`
-	XForwardedForRejectNotPresentRaw    interface{}                   `hcl:"x_forwarded_for_reject_not_present"`
+	XForwardedForRejectNotPresentRaw    interface{}                   `hcl:"x_forwarded_for_reject_not_present,alias:XForwardedForRejectNotPresent"`
 	XForwardedForRejectNotAuthorized    bool                          `hcl:"-"`
-	XForwardedForRejectNotAuthorizedRaw interface{}                   `hcl:"x_forwarded_for_reject_not_authorized"`
+	XForwardedForRejectNotAuthorizedRaw interface{}                   `hcl:"x_forwarded_for_reject_not_authorized,alias:XForwardedForRejectNotAuthorized"`
 
 	SocketMode  string `hcl:"socket_mode"`
 	SocketUser  string `hcl:"socket_user"`
 	SocketGroup string `hcl:"socket_group"`
 
-	Telemetry ListenerTelemetry `hcl:"telemetry"`
-	Profiling ListenerProfiling `hcl:"profiling"`
+	AgentAPI *AgentAPI `hcl:"agent_api"`
+
+	Telemetry              ListenerTelemetry              `hcl:"telemetry"`
+	Profiling              ListenerProfiling              `hcl:"profiling"`
+	InFlightRequestLogging ListenerInFlightRequestLogging `hcl:"inflight_requests_logging"`
 
 	// RandomPort is used only for some testing purposes
 	RandomPort bool `hcl:"-"`
@@ -95,11 +108,25 @@ type Listener struct {
 	CorsEnabled           bool        `hcl:"-"`
 	CorsAllowedOrigins    []string    `hcl:"cors_allowed_origins"`
 	CorsAllowedHeaders    []string    `hcl:"-"`
-	CorsAllowedHeadersRaw []string    `hcl:"cors_allowed_headers"`
+	CorsAllowedHeadersRaw []string    `hcl:"cors_allowed_headers,alias:cors_allowed_headers"`
+
+	// Custom Http response headers
+	CustomResponseHeaders    map[string]map[string]string `hcl:"-"`
+	CustomResponseHeadersRaw interface{}                  `hcl:"custom_response_headers"`
+}
+
+// AgentAPI allows users to select which parts of the Agent API they want enabled.
+type AgentAPI struct {
+	EnableQuit bool `hcl:"enable_quit"`
 }
 
 func (l *Listener) GoString() string {
 	return fmt.Sprintf("*%#v", *l)
+}
+
+func (l *Listener) Validate(path string) []ConfigError {
+	results := append(ValidateUnusedFields(l.UnusedKeys, path), ValidateUnusedFields(l.Telemetry.UnusedKeys, path)...)
+	return append(results, ValidateUnusedFields(l.Profiling.UnusedKeys, path)...)
 }
 
 func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
@@ -109,6 +136,16 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 		var l Listener
 		if err := hcl.DecodeObject(&l, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("listeners.%d:", i))
+		}
+		if rendered, err := ParseSingleIPTemplate(l.Address); err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("listeners.%d:", i))
+		} else {
+			l.Address = rendered
+		}
+		if rendered, err := ParseSingleIPTemplate(l.ClusterAddress); err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("listeners.%d:", i))
+		} else {
+			l.ClusterAddress = rendered
 		}
 
 		// Hacky way, for now, to get the values we want for sanitizing
@@ -131,6 +168,7 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 			l.Type = strings.ToLower(l.Type)
 			switch l.Type {
 			case "tcp", "unix":
+				result.found(l.Type, l.Type)
 			default:
 				return multierror.Prefix(fmt.Errorf("unsupported listener type %q", l.Type), fmt.Sprintf("listeners.%d:", i))
 			}
@@ -144,6 +182,13 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.PurposeRaw = nil
+			}
+
+			switch l.Role {
+			case "default", "metrics_only", "":
+				result.found(l.Type, l.Type)
+			default:
+				return multierror.Prefix(fmt.Errorf("unsupported listener role %q", l.Role), fmt.Sprintf("listeners.%d:", i))
 			}
 		}
 
@@ -191,14 +236,6 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				if l.TLSCipherSuites, err = tlsutil.ParseCiphers(l.TLSCipherSuitesRaw); err != nil {
 					return multierror.Prefix(fmt.Errorf("invalid value for tls_cipher_suites: %w", err), fmt.Sprintf("listeners.%d", i))
 				}
-			}
-
-			if l.TLSPreferServerCipherSuitesRaw != nil {
-				if l.TLSPreferServerCipherSuites, err = parseutil.ParseBool(l.TLSPreferServerCipherSuitesRaw); err != nil {
-					return multierror.Prefix(fmt.Errorf("invalid value for tls_prefer_server_cipher_suites: %w", err), fmt.Sprintf("listeners.%d", i))
-				}
-
-				l.TLSPreferServerCipherSuitesRaw = nil
 			}
 
 			if l.TLSRequireAndVerifyClientCertRaw != nil {
@@ -332,6 +369,17 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 			}
 		}
 
+		// InFlight Request logging
+		{
+			if l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw != nil {
+				if l.InFlightRequestLogging.UnauthenticatedInFlightAccess, err = parseutil.ParseBool(l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw); err != nil {
+					return multierror.Prefix(fmt.Errorf("invalid value for inflight_requests_logging.unauthenticated_in_flight_requests_access: %w", err), fmt.Sprintf("listeners.%d", i))
+				}
+
+				l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw = ""
+			}
+		}
+
 		// CORS
 		{
 			if l.CorsEnabledRaw != nil {
@@ -353,8 +401,45 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 			}
 		}
 
+		// HTTP Headers
+		{
+			// if CustomResponseHeadersRaw is nil, we still need to set the default headers
+			customHeadersMap, err := ParseCustomResponseHeaders(l.CustomResponseHeadersRaw)
+			if err != nil {
+				return multierror.Prefix(fmt.Errorf("failed to parse custom_response_headers: %w", err), fmt.Sprintf("listeners.%d", i))
+			}
+			l.CustomResponseHeaders = customHeadersMap
+			l.CustomResponseHeadersRaw = nil
+		}
+
 		result.Listeners = append(result.Listeners, &l)
 	}
 
 	return nil
+}
+
+// ParseSingleIPTemplate is used as a helper function to parse out a single IP
+// address from a config parameter.
+// If the input doesn't appear to contain the 'template' format,
+// it will return the specified input unchanged.
+func ParseSingleIPTemplate(ipTmpl string) (string, error) {
+	r := regexp.MustCompile("{{.*?}}")
+	if !r.MatchString(ipTmpl) {
+		return ipTmpl, nil
+	}
+
+	out, err := template.Parse(ipTmpl)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse address template %q: %v", ipTmpl, err)
+	}
+
+	ips := strings.Split(out, " ")
+	switch len(ips) {
+	case 0:
+		return "", errors.New("no addresses found, please configure one")
+	case 1:
+		return strings.TrimSpace(ips[0]), nil
+	default:
+		return "", fmt.Errorf("multiple addresses found (%q), please configure one", out)
+	}
 }

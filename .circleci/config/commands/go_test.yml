@@ -12,13 +12,15 @@ parameters:
   save_cache:
     type: boolean
     default: false
-  go_image:
-    type: string
-    default: "docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster"
   use_docker:
     type: boolean
     default: false
+  arch:
+    type: string
+    # Only supported for use_docker=false, and only other value allowed is 386
+    default: amd64 # must be 386 or amd64
 steps:
+  - configure-git
   - run:
       name: Compute test cache key
       command: |
@@ -26,14 +28,19 @@ steps:
   - restore_cache:
       keys:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+  - restore_go_mod_cache
   - run:
       name: Run Go tests
       no_output_timeout: 60m
+      environment:
+        GOPRIVATE: 'github.com/hashicorp/*'
       command: |
-        set -x
+        set -exo pipefail
 
+        EXTRA_TAGS=
         case "<< parameters.extra_flags >>" in
         *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+        *)       EXTRA_TAGS=deadlock;;
         esac
 
         # Install CircleCI CLI
@@ -48,21 +55,36 @@ steps:
         USE_DOCKER=1
         <</ parameters.use_docker >>
 
-        # Split Go tests by prior test times.  If use_docker is true, only run
-        # tests that depend on docker, otherwise only those that don't.
-        if [ $USE_DOCKER == 1 ]; then
-          package_names=$(go list -test -json ./... |
-            jq -r 'select(.Deps != null) |
-              select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-              .ForTest | select(. != null)' |
-              sort -u | circleci tests split --split-by=timings --timings-type=classname)
-        else
-          package_names=$(go list -test -json ./... |
-            jq -r 'select(.Deps != null) |
-              select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-              .ForTest | select(. != null)' |
-              sort -u | circleci tests split --split-by=timings --timings-type=classname)
-        fi
+        # Check all directories with a go.mod file
+        modules=("." "api" "sdk")
+        all_package_names=""
+
+        for dir in "${modules[@]}"
+        do
+          pushd "$dir"
+          # On its own line so that -e will fail the tests if we detect errors here.
+          go list -test -json ./... > test-list.json
+          # Split Go tests by prior test times.  If use_docker is true, only run
+          # tests that depend on docker, otherwise only those that don't.
+          # The appended true condition ensures the command will succeed if no packages are found
+          if [ $USE_DOCKER == 1 ]; then
+            package_names=$(< test-list.json jq -r 'select(.Deps != null) |
+                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                .ForTest | select(. != null)' |
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname || true)
+          else
+            package_names=$(< test-list.json jq -r 'select(.Deps != null) |
+                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                .ForTest | select(. != null)' |
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname || true)
+          fi
+          # Move back into root directory
+          popd
+          # Append the test packages into the global list, if any are found
+          if [ -n "$package_names" ]; then
+            all_package_names+=" ${package_names}"
+          fi
+        done
 
         # After running tests split step, we are now running the following steps
         # in multiple different containers, each getting a different subset of
@@ -70,9 +92,20 @@ steps:
         # has its own remote docker VM.
 
         make prep
+
         mkdir -p test-results/go-test
 
-        # Create a docker network for our testcontainer
+        # We don't want VAULT_LICENSE set when running Go tests, because that's
+        # not what developers have in their environments and it could break some
+        # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+        # CI commands, like the UI tests, shouldn't have to worry about licensing.
+        # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+        # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+        # an externally supplied license can opt-in to using it.
+        export VAULT_LICENSE_CI="$VAULT_LICENSE"
+        VAULT_LICENSE=
+
+        # Create a docker network for our test container
         if [ $USE_DOCKER == 1 ]; then
           # Despite the fact that we're using a circleci image (thus getting the
           # version they chose for the docker cli) and that we're specifying a
@@ -81,48 +114,97 @@ steps:
           # reasons unclear.
           export DOCKER_API_VERSION=1.39
 
-          export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+          TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+          export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
           if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-            TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+            docker network prune -f
+            TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
           fi
 
-          # Start a docker testcontainer to run the tests in
-          docker run -d -e TEST_DOCKER_NETWORK_ID \
-            -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+
+
+          # Start a docker test container to run the tests in
+          CONTAINER_ID="$(docker run -d \
+            -e TEST_DOCKER_NETWORK_ID \
+            -e GOPRIVATE \
+            -e DOCKER_CERT_PATH \
+            -e DOCKER_HOST \
+            -e DOCKER_MACHINE_NAME \
+            -e DOCKER_TLS_VERIFY \
+            -e NO_PROXY \
             -e VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
-            --network vaulttest --name \
-            testcontainer << parameters.go_image >> \
-            tail -f /dev/null
+            --network ${TEST_DOCKER_NETWORK_NAME} \
+            $GO_IMAGE \
+            tail -f /dev/null)"
+          mkdir workspace
+          echo ${CONTAINER_ID} > workspace/container_id
+
+          # Hack: Docker permissions appear to have changed; let's explicitly
+          # add a new user/group with the correct host uid to the docker
+          # container, fixing all of these permissions issues correctly. We
+          # then have to run with this user consistently in the future.
+          #
+          # Notably, in this shell pipeline we see:
+          # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+          #
+          # but inside the docker image below, we see:
+          # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+          #
+          # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+          export HOST_GID="$(id -g)"
+          export HOST_UID="$(id -u)"
+          export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+          export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+          export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+          if (( HOST_UID != CONT_UID )); then
+            # Only provision a group if necessary; otherwise reuse the
+            # existing one.
+            if (( HOST_GID != CONT_GID )); then
+              docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+            fi
+
+            docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+          fi
 
           # Run tests
-          test -d << parameters.cache_dir >> && docker cp << parameters.cache_dir >> testcontainer:/tmp/gocache
-          docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-          docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
-          docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+          test -d << parameters.cache_dir >> && docker cp << parameters.cache_dir >> ${CONTAINER_ID}:/tmp/gocache
+          docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+          docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
+          docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
-          docker exec -w /go/src/github.com/hashicorp/vault/ \
-            -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
-            testcontainer \
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
-              -tags "${GO_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-              << parameters.extra_flags >> \
-              ${package_names}
+          # Copy the downloaded modules inside the container.
+          docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/pkg'
+          docker cp "$(go env GOPATH)/pkg/mod" ${CONTAINER_ID}:/home/circleci/go/pkg/mod
+
+          docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
+            -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+            -e GOCACHE=/tmp/gocache \
+            -e GO_TAGS \
+            -e GOPROXY="off" \
+            -e VAULT_LICENSE_CI \
+            -e GOARCH=<< parameters.arch >> \
+            ${CONTAINER_ID} \
+              gotestsum --format=short-verbose \
+                --junitfile test-results/go-test/results.xml \
+                --jsonfile test-results/go-test/results.json \
+                -- \
+              -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                -timeout=60m \
+                -parallel=20 \
+                << parameters.extra_flags >> \
+                ${all_package_names}
         else
-          GOCACHE=<< parameters.cache_dir >> \
+          GOARCH=<< parameters.arch >> \
+            GOCACHE=<< parameters.cache_dir >> \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
               -- \
-              -tags "${GO_TAGS}" \
+              -tags "${GO_TAGS} ${EXTRA_TAGS}" \
               -timeout=60m \
               -parallel=20 \
               << parameters.extra_flags >> \
-              ${package_names}
+              ${all_package_names}
         fi
 
   - when:
@@ -132,8 +214,8 @@ steps:
             name: Copy test results
             when: always
             command: |
-              docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
-              docker cp testcontainer:/tmp/gocache << parameters.cache_dir >>
+              docker cp $(cat workspace/container_id):/home/circleci/go/src/github.com/hashicorp/vault/test-results .
+              docker cp $(cat workspace/container_id):/tmp/gocache << parameters.cache_dir >>
   - when:
       condition: << parameters.save_cache >>
       steps:

@@ -1,0 +1,13 @@
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-key-details-title>
+      <Icon @name="certificate" @size="24" class="has-text-grey-light" />
+      View key
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<Page::PkiKeyDetails @key={{this.model}} @canDelete={{this.model.canDelete}} @canEdit={{this.model.canEdit}} />

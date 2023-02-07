@@ -1,0 +1,3 @@
+```release-note:bug
+cli: Fix issue preventing kv commands from executing properly when the mount path provided by `-mount` flag and secret key path are the same.
+```

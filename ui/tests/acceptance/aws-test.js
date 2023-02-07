@@ -1,18 +1,18 @@
-import { click, fillIn, findAll, currentURL, find, settled } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
-module('Acceptance | aws secret backend', function(hooks) {
+module('Acceptance | aws secret backend', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     return logout.visit();
   });
 
@@ -26,7 +26,7 @@ module('Acceptance | aws secret backend', function(hooks) {
       },
     ],
   };
-  test('aws backend', async function(assert) {
+  test('aws backend', async function (assert) {
     const now = new Date().getTime();
     const path = `aws-${now}`;
     const roleName = 'awsrole';
@@ -34,10 +34,10 @@ module('Acceptance | aws secret backend', function(hooks) {
     await enablePage.enable('aws', path);
     await settled();
     await click('[data-test-configuration-tab]');
-    await settled();
+
     await click('[data-test-secret-backend-configure]');
-    await settled();
-    assert.equal(currentURL(), `/vault/settings/secrets/configure/${path}`);
+
+    assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${path}`);
     assert.ok(findAll('[data-test-aws-root-creds-form]').length, 'renders the empty root creds form');
     assert.ok(findAll('[data-test-aws-link="root-creds"]').length, 'renders the root creds link');
     assert.ok(findAll('[data-test-aws-link="leases"]').length, 'renders the leases config link');
@@ -46,48 +46,48 @@ module('Acceptance | aws secret backend', function(hooks) {
     await fillIn('[data-test-aws-input="secretKey"]', 'bar');
 
     await click('[data-test-aws-input="root-save"]');
-    await settled();
+
     assert.ok(
       find('[data-test-flash-message]').textContent.trim(),
       `The backend configuration saved successfully!`
     );
 
     await click('[data-test-aws-link="leases"]');
-    await settled();
+
     await click('[data-test-aws-input="lease-save"]');
-    await settled();
+
     assert.ok(
       find('[data-test-flash-message]').textContent.trim(),
       `The backend configuration saved successfully!`
     );
 
     await click('[data-test-backend-view-link]');
-    await settled();
-    assert.equal(currentURL(), `/vault/secrets/${path}/list`, `navigates to the roles list`);
+
+    assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`, `navigates to the roles list`);
 
     await click('[data-test-secret-create]');
-    await settled();
+
     assert.ok(
       find('[data-test-secret-header]').textContent.includes('AWS Role'),
       `aws: renders the create page`
     );
 
     await fillIn('[data-test-input="name"]', roleName);
-    await settled();
+
     findAll('.CodeMirror')[0].CodeMirror.setValue(JSON.stringify(POLICY));
 
     // save the role
     await click('[data-test-role-aws-create]');
-    await settled();
-    assert.equal(
+    await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/show/${roleName}`,
       `$aws: navigates to the show page on creation`
     );
 
     await click('[data-test-secret-root-link]');
-    await settled();
-    assert.equal(currentURL(), `/vault/secrets/${path}/list`);
+
+    assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`);
     assert.ok(findAll(`[data-test-secret-link="${roleName}"]`).length, `aws: role shows in the list`);
 
     //and delete

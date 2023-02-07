@@ -7,22 +7,25 @@ import (
 	"strings"
 
 	_ "github.com/SAP/go-hdb/driver"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 )
 
 const (
-	hanaTypeName        = "hdb"
-	maxIdentifierLength = 127
+	hanaTypeName = "hdb"
+
+	defaultUserNameTemplate = `{{ printf "v_%s_%s_%s_%s" (.DisplayName | truncate 32) (.RoleName | truncate 20) (random 20) (unix_time) | truncate 127 | replace "-" "_" | uppercase }}`
 )
 
 // HANA is an implementation of Database interface
 type HANA struct {
 	*connutil.SQLConnectionProducer
+
+	usernameProducer template.StringTemplate
 }
 
 var _ dbplugin.Database = (*HANA)(nil)
@@ -55,6 +58,25 @@ func (h *HANA) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (
 	conf, err := h.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
 		return dbplugin.InitializeResponse{}, fmt.Errorf("error initializing db: %w", err)
+	}
+
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	h.usernameProducer = up
+
+	_, err = h.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
 	}
 
 	return dbplugin.InitializeResponse{
@@ -94,19 +116,13 @@ func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (respon
 	}
 
 	// Generate username
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, 32),
-		credsutil.RoleName(req.UsernameConfig.RoleName, 20),
-		credsutil.MaxLength(maxIdentifierLength),
-		credsutil.Separator("_"),
-		credsutil.ToUpper(),
-	)
+	username, err := h.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}
 
 	// HANA does not allow hyphens in usernames, and highly prefers capital letters
-	username = strings.Replace(username, "-", "_", -1)
+	username = strings.ReplaceAll(username, "-", "_")
 	username = strings.ToUpper(username)
 
 	// If expiration is in the role SQL, HANA will deactivate the user when time is up,
@@ -134,7 +150,7 @@ func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (respon
 				"expiration": expirationStr,
 			}
 
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, err
 			}
 		}
@@ -223,7 +239,7 @@ func (h *HANA) updateUserPassword(ctx context.Context, tx *sql.Tx, username stri
 				"password": password,
 			}
 
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
@@ -259,7 +275,7 @@ func (h *HANA) updateUserExpiration(ctx context.Context, tx *sql.Tx, username st
 				"expiration": expirationStr,
 			}
 
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
@@ -302,7 +318,7 @@ func (h *HANA) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (
 			m := map[string]string{
 				"name": req.Username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.DeleteUserResponse{}, err
 			}
 		}

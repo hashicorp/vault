@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add support to list version history via API at `sys/version-history` and via CLI with `vault version-history`
+```

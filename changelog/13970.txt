@@ -1,0 +1,3 @@
+```release-note:feature
+ui: Add support for time-based key autorotation in transit secrets engine.
+```

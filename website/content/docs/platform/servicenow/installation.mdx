@@ -1,0 +1,88 @@
+---
+layout: docs
+page_title: Install Vault ServiceNow Credential Resolver
+description: Installation steps for the Vault ServiceNow Credential Resolver.
+---
+
+# Installing the Vault Credential Resolver
+
+## Prerequisites
+
+* ServiceNow version Quebec+ (untested on previous versions)
+* MID server version Quebec+ (untested on previous versions)
+* Discovery and external credential plugins activated on ServiceNow
+* Working Vault deployment accessible from the MID server
+
+## Installing Vault Agent
+
+* Select your desired auth method from Agent's [supported auth methods](/vault/docs/agent/autoauth/methods)
+  and set it up in Vault
+  * For example, to set up AppRole auth and a role called `role1` with the `demo` policy attached:
+
+    ```bash
+    vault auth enable approle
+    vault write auth/approle/role/role1 bind_secret_id=true token_policies=demo
+    ```
+
+  * To get the files required for the example Agent config below, you can then
+    run:
+
+    ```bash
+    echo -n $(vault read -format json auth/approle/role/role1/role-id | jq -r '.data.role_id') > /path/to/roleID
+    echo -n $(vault write -format json -f auth/approle/role/role1/secret-id | jq -r '.data.secret_id') > /path/to/secretID
+    ```
+
+* Create an `agent.hcl` config file. Your exact configuration may vary, but you
+  must set `cache.use_auto_auth_token = true`, and the `listener`, `vault` and
+  `auto_auth` blocks are also required to set up a working Agent, e.g.:
+
+  ```hcl
+  listener "tcp" {
+    address = "127.0.0.1:8200"
+    tls_disable = false
+    tls_cert_file = "/path/to/cert.pem"
+    tls_key_file = "/path/to/key.pem"
+  }
+
+  cache {
+    use_auto_auth_token = true
+  }
+
+  vault {
+    address = "http://vault.example.com:8200"
+  }
+
+  auto_auth {
+      method {
+          type = "approle"
+          config = {
+              role_id_file_path = "/path/to/roleID"
+              secret_id_file_path = "/path/to/secretID"
+              remove_secret_id_file_after_reading = false
+          }
+      }
+  }
+  ```
+
+* Install Vault Agent as a service running `vault agent -config=/path/to/agent.hcl`
+  * Documentation for Windows service installation [here](/vault/docs/agent/winsvc)
+
+## Uploading JAR file to MID server
+
+* Download the latest version of the Vault Credential Resolver JAR file from
+  [releases.hashicorp.com](https://releases.hashicorp.com/vault-servicenow-credential-resolver/)
+* In ServiceNow, navigate to "MID server - JAR files" -> New
+  * Manage Attachments -> upload Vault Credential Resolver JAR
+  * Fill in name, version etc as desired
+  * Click Submit
+* Navigate to "MID server - Properties" -> New
+  * Set Name: `mid.external_credentials.vault.address`, Value: Address of Vault
+    Agent listener from previous step, e.g. `http://127.0.0.1:8200`
+  * **Optional:** Set the property `mid.external_credentials.vault.ca` to the
+    trusted CA in PEM format if using TLS between the MID server and Vault
+    Agent with a self-signed certificate.
+
+## Next steps
+
+See [configuration](/vault/docs/platform/servicenow/configuration) for details on
+configuring the resolver and using credentials for discovery.

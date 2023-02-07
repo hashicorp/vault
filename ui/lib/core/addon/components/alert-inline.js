@@ -1,7 +1,8 @@
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { later } from '@ember/runloop';
+import { tracked } from '@glimmer/tracking';
 import { messageTypes } from 'core/helpers/message-types';
-import layout from '../templates/components/alert-inline';
 
 /**
  * @module AlertInline
@@ -12,27 +13,51 @@ import layout from '../templates/components/alert-inline';
  * <AlertInline @type="danger" @message="{{model.keyId}} is not a valid lease ID"/>
  * ```
  *
- * @param type=null{String} - The alert type. This comes from the message-types helper.
- * @param [message=null]{String} - The message to display within the alert.
- *
+ * @param {string} type=null - The alert type passed to the message-types helper.
+ * @param {string} [message=null] - The message to display within the alert.
+ * @param {boolean} [paddingTop=false] - Whether or not to add padding above component.
+ * @param {boolean} [isMarginless=false] - Whether or not to remove margin bottom below component.
+ * @param {boolean} [sizeSmall=false] - Whether or not to display a small font with padding below of alert message.
+ * @param {boolean} [mimicRefresh=false] - If true will display a loading icon when attributes change (e.g. when a form submits and the alert message changes).
  */
 
-export default Component.extend({
-  layout,
-  type: null,
-  message: null,
+export default class AlertInlineComponent extends Component {
+  @tracked isRefreshing = false;
 
-  classNames: ['message-inline'],
+  get mimicRefresh() {
+    return this.args.mimicRefresh || false;
+  }
 
-  textClass: computed('type', function() {
-    if (this.type == 'danger') {
-      return messageTypes([this.type]).glyphClass;
+  get paddingTop() {
+    return this.args.paddingTop ? ' padding-top' : '';
+  }
+
+  get isMarginless() {
+    return this.args.isMarginless ? ' is-marginless' : '';
+  }
+
+  get sizeSmall() {
+    return this.args.sizeSmall ? ' size-small' : '';
+  }
+
+  get textClass() {
+    if (this.args.type === 'danger') {
+      return this.alertType.glyphClass;
     }
+    return null;
+  }
 
-    return;
-  }),
+  get alertType() {
+    return messageTypes([this.args.type]);
+  }
 
-  alertType: computed('type', function() {
-    return messageTypes([this.type]);
-  }),
-});
+  @action
+  refresh() {
+    if (this.mimicRefresh) {
+      this.isRefreshing = true;
+      later(() => {
+        this.isRefreshing = false;
+      }, 200);
+    }
+  }
+}

@@ -6,7 +6,7 @@ export default create({
   visit: visitable('/vault/settings/auth/enable'),
   ...backendForm,
   flash: flashMessages,
-  enable: async function(type, path) {
+  enable: async function (type, path) {
     await this.visit();
     await this.mount(type, path);
   },

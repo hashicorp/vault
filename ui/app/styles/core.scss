@@ -23,6 +23,7 @@
 @import './core/buttons';
 @import './core/footer';
 @import './core/forms';
+@import './core/charts';
 @import './core/helpers';
 @import './core/hero';
 @import './core/level';
@@ -45,12 +46,15 @@
 @import './components/auth-buttons';
 @import './components/auth-form';
 @import './components/b64-toggle';
+
 @import './components/box-label';
 @import './components/box-radio';
+@import './components/calendar-widget';
 @import './components/codemirror';
 @import './components/confirm';
 @import './components/console-ui-panel';
 @import './components/control-group';
+@import './components/diff-version-selector';
 @import './components/doc-link';
 @import './components/empty-state';
 @import './components/env-banner';
@@ -64,6 +68,8 @@
 @import './components/input-hint';
 @import './components/kmip-role-edit';
 @import './components/known-secondaries-card.scss';
+@import './components/license-banners';
+@import './components/linkable-item';
 @import './components/linked-block';
 @import './components/list-item-row';
 @import './components/list-pagination';
@@ -76,12 +82,12 @@
 @import './components/navigate-input';
 @import './components/page-header';
 @import './components/popup-menu';
-@import './components/pricing-metrics-dates';
 @import './components/radio-card';
 @import './components/radial-progress';
 @import './components/raft-join';
+@import './components/read-more';
+@import './components/regex-validator';
 @import './components/replication-dashboard';
-@import './components/replication-doc-link';
 @import './components/replication-header';
 @import './components/replication-mode-summary';
 @import './components/replication-page';
@@ -97,14 +103,16 @@
 @import './components/shamir-progress';
 @import './components/sidebar';
 @import './components/splash-page';
+@import './components/stat-text';
 @import './components/status-menu';
 @import './components/tabs';
+@import './components/text-file';
 @import './components/token-expire-warning';
 @import './components/toolbar';
 @import './components/tool-tip';
 @import './components/transform-edit.scss';
 @import './components/transit-card';
-@import './components/ttl-picker2';
+@import './components/ttl-picker';
 @import './components/unseal-warning';
 @import './components/ui-wizard';
 @import './components/vault-loading';
@@ -112,4 +120,4 @@
 @import './components/vlt-table';
 
 // bulma-free-zone
-@import './components/hs-icon';
+@import './components/icon';

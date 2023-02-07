@@ -2,7 +2,7 @@ import { module, test } from 'qunit';
 import { Machine } from 'xstate';
 import PoliciesMachineConfig from 'vault/machines/policies-machine';
 
-module('Unit | Machine | policies-machine', function() {
+module('Unit | Machine | policies-machine', function () {
   const policiesMachine = Machine(PoliciesMachineConfig);
 
   const testCases = [
@@ -50,10 +50,10 @@ module('Unit | Machine | policies-machine', function() {
     },
   ];
 
-  testCases.forEach(testCase => {
-    test(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${testCase.params}`, function(assert) {
-      let result = policiesMachine.transition(testCase.currentState, testCase.event, testCase.params);
-      assert.equal(result.value, testCase.expectedResults.value);
+  testCases.forEach((testCase) => {
+    test(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${testCase.params}`, function (assert) {
+      const result = policiesMachine.transition(testCase.currentState, testCase.event, testCase.params);
+      assert.strictEqual(result.value, testCase.expectedResults.value);
       assert.deepEqual(result.actions, testCase.expectedResults.actions);
     });
   });

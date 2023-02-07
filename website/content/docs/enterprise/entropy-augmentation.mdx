@@ -8,11 +8,12 @@ description: |-
 
 # Entropy Augmentation
 
--> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
-with the Governance & Policy Module.
+-> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
+
+~> **Warning** This feature is not available with FIPS 140-2 Inside variants of Vault.
 
 Vault Enterprise features a mechanism to sample entropy (or randomness for
-cryptographic operations) from external cryptographic modules via the [seals](/docs/configuration/seal)
+cryptographic operations) from external cryptographic modules via the [seals](/vault/docs/configuration/seal)
 interface. While the system entropy used by Vault is more than capable of
 operating in most threat models, there are some situations where additional
 entropy from hardware-based random number generators is desirable.
@@ -34,7 +35,7 @@ These CSPs have been selected from our previous work in [evaluating Vault for co
 FIPS 140-2 guidelines for key storage and key transport](https://www.datocms-assets.com/2885/1510600487-vault_compliance_letter_fips_140-2.pdf)
 and include the following:
 
-- Vault’s master key
+- Vault’s root key
 - Keyring encryption keys
 - Auto Unseal recovery keys
 - TLS private keys for inter-node and inter cluster communication (HA leader, raft, and replication)
@@ -42,17 +43,22 @@ and include the following:
 - JWT token wrapping keys
 - Root tokens
 - DR operation tokens
-- [Transit](/docs/secrets/transit) backend key generation
+- [Transit](/vault/docs/secrets/transit) backend key generation and `/random` endpoint (`/random` only on Vault 1.11+)
+- [PKI](/vault/docs/secrets/pki) issuer key generation, but not for leaf certificate private keys
+- [`/sys/tools/random`](/vault/api-docs/system/tools#generate-random-bytes) endpoint (Vault 1.11+)
+- [SSH](/vault/docs/secrets/ssh) CA key generation, but not for key pair generation
+- [KMIP](/vault/docs/secrets/kmip) uses EA for its TLS CA, server, and client
+  certificates.
 
 ## Enabling/Disabling
 
 Entropy augmentation is disabled by default. To enable entropy augmentation Vault's
-[configuration file][configuration] must include a properly configured [entropy and seal stanza](/docs/configuration/entropy-augmentation)
+[configuration file][configuration] must include a properly configured [entropy and seal stanza](/vault/docs/configuration/entropy-augmentation)
 for a supported seal type.
 
-[configuration]: /docs/configuration
+[configuration]: /vault/docs/configuration
 
-## Learn
+## Tutorial
 
-Refer to the [HSM Integration - Entropy Augmentation](https://learn.hashicorp.com/vault/operations/hsm-entropy) guide
-for a step-by-step tutorial.
+Refer to the [HSM Integration - Entropy Augmentation](/vault/tutorials/enterprise/hsm-entropy) tutorial
+to learn how to use the Entropy Augmentation function to leverage an external Hardware Security Module to augment system entropy.

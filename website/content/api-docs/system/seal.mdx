@@ -16,13 +16,13 @@ Standby nodes should be restarted to get the same effect. Requires a token with
 
 | Method | Path        |
 | :----- | :---------- |
-| `PUT`  | `/sys/seal` |
+| `POST` | `/sys/seal` |
 
 ### Sample Request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/seal
 ```

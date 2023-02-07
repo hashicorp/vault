@@ -20,7 +20,7 @@ code {
 }
 code,
 pre {
-  font-smoothing: inherit;
+  font-smooth: inherit;
   -webkit-font-smoothing: inherit;
 }
 
@@ -45,6 +45,11 @@ input::-webkit-inner-spin-button {
   -moz-user-select: text; /* Firefox all */
   -ms-user-select: text; /* IE 10+ */
   user-select: text;
+
+  &[disabled] {
+    opacity: 0.5;
+    cursor: default;
+  }
 }
 
 .link-plain {

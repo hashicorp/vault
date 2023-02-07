@@ -19,6 +19,7 @@ import (
 	agentaws "github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -46,6 +47,14 @@ func TestAWSEndToEnd(t *testing.T) {
 	if !runAcceptanceTests {
 		t.SkipNow()
 	}
+
+	// Ensure each cred is populated.
+	credNames := []string{
+		envVarAwsTestAccessKey,
+		envVarAwsTestSecretKey,
+		envVarAwsTestRoleArn,
+	}
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{

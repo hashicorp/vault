@@ -88,6 +88,7 @@ func (c *OperatorRaftAutopilotGetConfigCommand) Run(args []string) int {
 	entries = append(entries, fmt.Sprintf("%s | %s", "Server Stabilization Time", config.ServerStabilizationTime.String()))
 	entries = append(entries, fmt.Sprintf("%s | %d", "Min Quorum", config.MinQuorum))
 	entries = append(entries, fmt.Sprintf("%s | %d", "Max Trailing Logs", config.MaxTrailingLogs))
+	entries = append(entries, fmt.Sprintf("%s | %t", "Disable Upgrade Migration", config.DisableUpgradeMigration))
 
 	return OutputData(c.UI, entries)
 }

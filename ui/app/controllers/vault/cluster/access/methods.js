@@ -1,7 +1,10 @@
 import Controller from '@ember/controller';
 import { task } from 'ember-concurrency';
+import { inject as service } from '@ember/service';
 
 export default Controller.extend({
+  flashMessages: service(),
+
   queryParams: {
     page: 'page',
     pageFilter: 'pageFilter',
@@ -11,7 +14,7 @@ export default Controller.extend({
   pageFilter: null,
   filter: null,
 
-  disableMethod: task(function*(method) {
+  disableMethod: task(function* (method) {
     const { type, path } = method;
     try {
       yield method.destroyRecord();

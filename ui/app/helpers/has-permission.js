@@ -9,14 +9,14 @@ export default Helper.extend({
     'permissions.exactPaths',
     'permissions.globPaths',
     'permissions.canViewAll',
-    function() {
+    function () {
       this.recompute();
     }
   ),
 
   compute([route], params) {
-    let { routeParams } = params;
-    let permissions = this.permissions;
+    const { routeParams } = params;
+    const permissions = this.permissions;
 
     return permissions.hasNavPermission(route, routeParams);
   },

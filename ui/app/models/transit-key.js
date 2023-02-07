@@ -8,12 +8,12 @@ const ACTION_VALUES = {
   encrypt: {
     isSupported: 'supportsEncryption',
     description: 'Looks up wrapping properties for the given token',
-    glyph: 'lock-closed',
+    glyph: 'lock-fill',
   },
   decrypt: {
     isSupported: 'supportsDecryption',
     description: 'Decrypts the provided ciphertext using this key',
-    glyph: 'envelope-unsealed--outline',
+    glyph: 'mail-open',
   },
   datakey: {
     isSupported: 'supportsEncryption',
@@ -23,20 +23,28 @@ const ACTION_VALUES = {
   rewrap: {
     isSupported: 'supportsEncryption',
     description: 'Rewraps the ciphertext using the latest version of the named key',
-    glyph: 'refresh-default',
+    glyph: 'reload',
   },
   sign: {
     isSupported: 'supportsSigning',
     description: 'Get the cryptographic signature of the given data',
-    glyph: 'edit',
+    glyph: 'pencil-tool',
   },
-  hmac: { isSupported: true, description: 'Generate a data digest using a hash algorithm', glyph: 'remix' },
+  hmac: {
+    isSupported: true,
+    description: 'Generate a data digest using a hash algorithm',
+    glyph: 'shuffle',
+  },
   verify: {
     isSupported: true,
     description: 'Validate the provided signature for the given data',
-    glyph: 'check-circle-outline',
+    glyph: 'check-circle',
   },
-  export: { isSupported: 'exportable', description: 'Get the named key', glyph: 'exit' },
+  export: {
+    isSupported: 'exportable',
+    description: 'Get the named key',
+    glyph: 'external-link',
+  },
 };
 
 export default Model.extend({
@@ -47,6 +55,12 @@ export default Model.extend({
     label: 'Name',
     fieldValue: 'id',
     readOnly: true,
+  }),
+  autoRotatePeriod: attr({
+    defaultValue: '0',
+    defaultShown: 'Key is not automatically rotated',
+    editType: 'ttl',
+    label: 'Auto-rotation period',
   }),
   deletionAllowed: attr('boolean'),
   derived: attr('boolean'),
@@ -81,26 +95,26 @@ export default Model.extend({
     set(this, 'derived', val);
   },
 
-  supportedActions: computed('type', function() {
+  supportedActions: computed('type', function () {
     return Object.keys(ACTION_VALUES)
-      .filter(name => {
+      .filter((name) => {
         const { isSupported } = ACTION_VALUES[name];
         return typeof isSupported === 'boolean' || get(this, isSupported);
       })
-      .map(name => {
+      .map((name) => {
         const { description, glyph } = ACTION_VALUES[name];
         return { name, description, glyph };
       });
   }),
 
-  canDelete: computed('deletionAllowed', 'lastLoadTS', function() {
+  canDelete: computed('deletionAllowed', 'lastLoadTS', function () {
     const deleteAttrChanged = Boolean(this.changedAttributes().deletionAllowed);
     return this.deletionAllowed && deleteAttrChanged === false;
   }),
 
-  keyVersions: computed('validKeyVersions', function() {
+  keyVersions: computed('validKeyVersions', function () {
     let maxVersion = Math.max(...this.validKeyVersions);
-    let versions = [];
+    const versions = [];
     while (maxVersion > 0) {
       versions.unshift(maxVersion);
       maxVersion--;
@@ -113,21 +127,21 @@ export default Model.extend({
     'keyVersions',
     'latestVersion',
     'minDecryptionVersion',
-    function() {
+    function () {
       const { keyVersions, minDecryptionVersion } = this;
 
       return keyVersions
-        .filter(version => {
+        .filter((version) => {
           return version >= minDecryptionVersion;
         })
         .reverse();
     }
   ),
 
-  keysForEncryption: computed('minEncryptionVersion', 'latestVersion', function() {
+  keysForEncryption: computed('minEncryptionVersion', 'latestVersion', function () {
     let { minEncryptionVersion, latestVersion } = this;
-    let minVersion = clamp(minEncryptionVersion - 1, 0, latestVersion);
-    let versions = [];
+    const minVersion = clamp(minEncryptionVersion - 1, 0, latestVersion);
+    const versions = [];
     while (latestVersion > minVersion) {
       versions.push(latestVersion);
       latestVersion--;
@@ -135,12 +149,12 @@ export default Model.extend({
     return versions;
   }),
 
-  validKeyVersions: computed('keys', function() {
+  validKeyVersions: computed('keys', function () {
     return Object.keys(this.keys);
   }),
 
-  exportKeyTypes: computed('exportable', 'supportsEncryption', 'supportsSigning', 'type', function() {
-    let types = ['hmac'];
+  exportKeyTypes: computed('exportable', 'supportsEncryption', 'supportsSigning', 'type', function () {
+    const types = ['hmac'];
     if (this.supportsSigning) {
       types.unshift('signing');
     }

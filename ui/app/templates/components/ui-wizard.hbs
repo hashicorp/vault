@@ -1,21 +1,22 @@
-<div class="app-content {{if (and shouldRender featureComponent) "wizard-open"}}">
+<div class="app-content {{if (and this.shouldRender this.featureComponent) 'wizard-open'}}">
   {{yield}}
 </div>
-{{#if featureComponent}}
+{{#if this.featureComponent}}
   {{#component
-    (if shouldRender tutorialComponent)
+    (if this.shouldRender this.tutorialComponent)
     onAdvance=(action "advanceWizard")
     onDismiss=(action "dismissWizard")
   }}
     {{component
-      featureComponent
-      componentState=componentState
-      nextFeature=nextFeature
-      nextStep=nextStep
+      this.featureComponent
+      componentState=this.componentState
+      nextFeature=this.nextFeature
+      nextStep=this.nextStep
       onDone=(action "finishFeature")
       onRepeat=(action "repeatStep")
       onReset=(action "resetFeature")
       onAdvance=(action "advanceFeature")
+      currentRouteName=this.currentRouteName
     }}
   {{/component}}
 {{/if}}

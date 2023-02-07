@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Support cluster address change for nodes in a cluster managed by autopilot
+```

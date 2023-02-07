@@ -1,24 +1,34 @@
-<form {{action "onSubmit" "secondary-token" "primary" (hash ttl=ttl id=id) on="submit"}}>
+<form {{action "onSubmit" "secondary-token" "primary" (hash ttl=this.ttl id=this.id) on="submit"}}>
   <div class="box is-fullwidth is-shadowless is-marginless">
     <h4 class="title is-5">
       Generate a secondary token
     </h4>
-    <p>Generate a token to enable {{model.replicationModeForDisplay}} replication or change primaries on secondary cluster.</p>
+    <p>
+      Generate a token to enable
+      {{this.model.replicationModeForDisplay}}
+      replication or change primaries on secondary cluster.
+    </p>
   </div>
-  {{message-error errors=errors}}
+  <MessageError @errors={{this.errors}} />
   <div class="field">
     <label for="activation-token-id" class="is-label">
       Secondary ID
     </label>
     <div class="control">
-      {{input class="input" name="activation-token-id" id="activation-token-id" value=id data-test-replication-secondary-id=true}}
+      <Input
+        class="input"
+        name="activation-token-id"
+        id="activation-token-id"
+        @value={{this.id}}
+        data-test-replication-secondary-id={{true}}
+      />
     </div>
     <p class="help has-text-grey">
       This will be used to identify a secondary cluster once a connection has been established with the primary.
     </p>
   </div>
   <div class="field">
-    <TtlPicker2
+    <TtlPicker
       @initialValue="30m"
       @label="Time to Live (TTL) for generated secondary token"
       @helperTextDisabled="If not set, the default value (30 minutes) will be used"
@@ -27,55 +37,53 @@
       @changeOnInit={{true}}
     />
   </div>
-  {{#if (eq replicationMode "performance")}}
-    <PathFilterConfigList
-      @paths={{paths}}
-      @config={{filterConfig}}
-      @id={{id}}
-    />
+  {{#if (eq this.replicationMode "performance")}}
+    <PathFilterConfigList @paths={{this.paths}} @config={{this.filterConfig}} @id={{this.id}} />
   {{/if}}
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button
-        type="submit"
-        class="button is-primary"
-        data-test-secondary-add=true
-        >
+      <button type="submit" class="button is-primary" data-test-secondary-add={{true}}>
         Generate token
       </button>
-      </div>
+    </div>
     <div class="control">
-      {{#link-to "mode.secondaries" replicationMode class="button"}}
+      <LinkTo @route="mode.secondaries" @model={{this.replicationMode}} class="button">
         Cancel
-      {{/link-to}}
+      </LinkTo>
     </div>
   </div>
 </form>
 
-{{#if isModalActive}}
-  <Modal @title="Copy your token" @onClose={{action "toggleModal" "Token copied!"}} @isActive={{isModalActive}}>
+{{#if this.isModalActive}}
+  <Modal @title="Copy your token" @onClose={{action "toggleModal" "Token copied!"}} @isActive={{this.isModalActive}}>
     <section class="modal-card-body">
-      <p>This token can be used to enable {{model.replicationModeForDisplay}} replication or change primaries on the secondary cluster.</p>
+      <p>
+        This token can be used to enable
+        {{this.model.replicationModeForDisplay}}
+        replication or change primaries on the secondary cluster.
+      </p>
       <div class="box is-shadowless is-fullwidth is-sideless">
         <h2 class="title is-6">Activation token</h2>
         <div class="copy-text level">
           <div class="is-fullwidth">
-            <textarea readonly value={{token}} id="token-textarea" class="textarea level-left"/>
+            <textarea readonly value={{this.token}} id="token-textarea" class="textarea level-left"></textarea>
           </div>
         </div>
         <div class="has-top-margin-xl has-bottom-margin-s">
-          {{info-table-row
-            label="TTL"
-            value=ttl}}
-          {{info-table-row
-            label="Expires"
-            value=(date-format expirationDate 'MMM dd, yyyy hh:mm:ss a')}}
+          <InfoTableRow @label="TTL" @value={{this.ttl}} />
+          <InfoTableRow @label="Expires" @value={{date-format this.expirationDate "MMM dd, yyyy hh:mm:ss a"}} />
         </div>
       </div>
     </section>
     <footer class="modal-card-foot">
-      <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{token}}
-        @buttonType="button" @type="copy" @success={{action "copyClose" "Token copied!"}}>
+      <CopyButton
+        class="button is-primary copy-close"
+        data-test-button="modal-copy-close"
+        @clipboardText={{this.token}}
+        @buttonType="button"
+        @type="copy"
+        @success={{action "copyClose" "Token copied!"}}
+      >
         Copy &amp; Close
       </CopyButton>
     </footer>

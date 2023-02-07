@@ -2,8 +2,8 @@ package nomad
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -76,7 +76,7 @@ func (b *backend) readConfigAccess(ctx context.Context, storage logical.Storage)
 
 	conf := &accessConfig{}
 	if err := entry.DecodeJSON(conf); err != nil {
-		return nil, errwrap.Wrapf("error reading nomad access configuration: {{err}}", err)
+		return nil, fmt.Errorf("error reading nomad access configuration: %w", err)
 	}
 
 	return conf, nil
@@ -95,6 +95,8 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 		Data: map[string]interface{}{
 			"address":               conf.Address,
 			"max_token_name_length": conf.MaxTokenNameLength,
+			"ca_cert":               conf.CACert,
+			"client_cert":           conf.ClientCert,
 		},
 	}, nil
 }
@@ -127,6 +129,18 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 	clientKey, ok := data.GetOk("client_key")
 	if ok {
 		conf.ClientKey = clientKey.(string)
+	}
+
+	if conf.Token == "" {
+		client, err := clientFromConfig(conf)
+		if err != nil {
+			return logical.ErrorResponse("Token not provided and failed to constuct client"), err
+		}
+		token, _, err := client.ACLTokens().Bootstrap(nil)
+		if err != nil {
+			return logical.ErrorResponse("Token not provided and failed to bootstrap ACLs"), err
+		}
+		conf.Token = token.SecretID
 	}
 
 	conf.MaxTokenNameLength = data.Get("max_token_name_length").(int)

@@ -6,13 +6,12 @@ description: Performance Standby Nodes - Vault Enterprise
 
 # Performance Standby Nodes
 
--> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
-with the Multi-Datacenter & Scale Module.
+-> **Note**: This feature requires [Vault Enterprise Premium](https://www.hashicorp.com/products/vault/).
 
 Vault supports a multi-server mode for high availability. This mode protects
 against outages by running multiple Vault servers. High availability mode
 is automatically enabled when using a data store that supports it. You can
-learn more about HA mode on the [Concepts](/docs/concepts/ha) page.
+learn more about HA mode on the [Concepts](/vault/docs/concepts/ha) page.
 
 Vault Enterprise offers additional features that allow HA nodes to service
 read-only requests on the local standby node. Read-only requests are requests
@@ -21,7 +20,7 @@ that do not modify Vault's storage.
 ## Server-to-Server Communication
 
 Performance Standbys require the request forwarding method described in the [HA
-Server-to-Server](/docs/concepts/ha#server-to-server-communication) docs.
+Server-to-Server](/vault/docs/concepts/ha#server-to-server-communication) docs.
 
 A performance standby will connect to the active node over the existing request
 forwarding connection. If selected by the active node to be promoted to a
@@ -54,7 +53,7 @@ based on consul configuration).
 
 Additionally, if you wish to point your load balancers at performance standby
 nodes, the `sys/health` endpoint can be used to determine if a node is a
-performance standby. See the [sys/health API](/api/system/health) docs for
+performance standby. See the [sys/health API](/vault/api-docs/system/health) docs for
 more info.
 
 ## Disabling Performance Standbys
@@ -79,7 +78,7 @@ Seal Type                              shamir
 Sealed                                 false
 Total Shares                           1
 Threshold                              1
-Version                                0.11.0+prem
+Version                                0.11.0+ent
 Cluster Name                           vault-cluster-d040e74c
 Cluster ID                             9f82e03b-71fb-97a6-9c5a-46fa6715d6e4
 HA Enabled                             true

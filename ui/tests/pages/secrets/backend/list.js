@@ -34,7 +34,7 @@ export default create({
   confirmDelete: clickable('[data-test-confirm-button]', {
     testContainer: '#ember-testing',
   }),
-  backendIsEmpty: getter(function() {
+  backendIsEmpty: getter(function () {
     return this.secrets.length === 0;
   }),
 });

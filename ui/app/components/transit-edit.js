@@ -3,7 +3,7 @@ import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
 import { task, waitForEvent } from 'ember-concurrency';
-import { set, get } from '@ember/object';
+import { set } from '@ember/object';
 
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
@@ -18,6 +18,7 @@ export default Component.extend(FocusOnInsertMixin, {
   onDataChange() {},
   onRefresh() {},
   key: null,
+  autoRotateInvalid: false,
   requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
 
   willDestroyElement() {
@@ -27,9 +28,9 @@ export default Component.extend(FocusOnInsertMixin, {
     }
   },
 
-  waitForKeyUp: task(function*() {
+  waitForKeyUp: task(function* () {
     while (true) {
-      let event = yield waitForEvent(document.body, 'keyup');
+      const event = yield waitForEvent(document.body, 'keyup');
       this.onEscape(event);
     }
   })
@@ -54,7 +55,7 @@ export default Component.extend(FocusOnInsertMixin, {
   persistKey(method, successCallback) {
     const key = this.key;
     return key[method]().then(() => {
-      if (!get(key, 'isError')) {
+      if (!key.isError) {
         if (this.wizard.featureState === 'secret') {
           this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
         } else {
@@ -90,6 +91,15 @@ export default Component.extend(FocusOnInsertMixin, {
 
     setValueOnKey(key, event) {
       set(this.key, key, event.target.checked);
+    },
+
+    handleAutoRotateChange(ttlObj) {
+      if (ttlObj.enabled) {
+        set(this.key, 'autoRotatePeriod', ttlObj.goSafeTimeString);
+        this.set('autoRotateInvalid', ttlObj.seconds < 3600);
+      } else {
+        set(this.key, 'autoRotatePeriod', 0);
+      }
     },
 
     derivedChange(val) {

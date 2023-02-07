@@ -1,19 +1,22 @@
-<Identity::EntityNav @identityType={{identityType}} @model={{model}} />
-{{#if model.meta.total}}
-  {{#each model as |item|}}
-    {{#linked-block
-      "vault.cluster.access.identity.aliases.show"
-      item.id
-      "details"
+<Identity::EntityNav @identityType={{this.identityType}} @model={{this.model}} />
+{{#if this.model.meta.total}}
+  {{#each this.model as |item|}}
+    <LinkedBlock
+      @params={{array "vault.cluster.access.identity.aliases.show" item.id "details"}}
       class="list-item-row"
-      data-test-identity-row=true
-      }}
+      data-test-identity-row
+    >
       <div class="columns is-mobile">
         <div class="column is-10">
-          <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array item.id "details"}} class="is-block has-text-black has-text-weight-semibold" data-test-identity-link={{item.id}}><Icon
-              @glyph="user-square-outline"
-              class="has-text-grey-light"
-            /><span class="has-text-weight-semibold">{{item.name}}</span></LinkTo>
+          <LinkTo
+            @route="vault.cluster.access.identity.aliases.show"
+            @models={{array item.id "details"}}
+            class="is-block has-text-black has-text-weight-semibold"
+            data-test-identity-link={{item.id}}
+          >
+            <Icon @name="user" class="has-text-grey-light" />
+            <span class="has-text-weight-semibold">{{item.name}}</span>
+          </LinkTo>
           <div class="has-text-grey">
             {{item.id}}
           </div>
@@ -26,21 +29,28 @@
           <Identity::PopupAlias @params={{array item}} @onSuccess={{action "onDelete"}} />
         </div>
       </div>
-    {{/linked-block}}
+    </LinkedBlock>
   {{/each}}
-  {{#if (gt model.meta.lastPage 1) }}
-    <ListPagination @page={{model.meta.currentPage}} @lastPage={{model.meta.lastPage}} @link="vault.cluster.access.identity.aliases.index" />
+  {{#if (gt this.model.meta.lastPage 1)}}
+    <ListPagination
+      @page={{this.model.meta.currentPage}}
+      @lastPage={{this.model.meta.lastPage}}
+      @link="vault.cluster.access.identity.aliases.index"
+    />
   {{/if}}
 {{else}}
   <EmptyState
-    @title="No {{identityType}} aliases yet"
-    @message="A list of {{identityType}} aliases in this namespace will be listed here. Choose one of the {{pluralize identityType}} and click &quot;Create Alias&quot; to get started."
+    @title="No {{this.identityType}} aliases yet"
+    @message="A list of {{this.identityType}} aliases in this namespace will be listed here. Choose one of the {{pluralize
+      this.identityType
+    }} and click &quot;Create Alias&quot; to get started."
   >
-    <LinkTo @route="vault.cluster.access.identity.create" @model={{pluralize identityType}} @tagName="button" class="link">
-      Create {{identityType}}
+    <LinkTo @route="vault.cluster.access.identity.create" @model={{pluralize this.identityType}} class="link">
+      Create
+      {{this.identityType}}
     </LinkTo>
-    <LearnLink @path="/vault/identity-access-management/iam-identity">
+    <DocLink @path="/vault/tutorials/auth-methods/identity">
       Learn more
-    </LearnLink>
+    </DocLink>
   </EmptyState>
 {{/if}}

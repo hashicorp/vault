@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/ssh: Allow the use of Identity templates in the `default_user` field
+```

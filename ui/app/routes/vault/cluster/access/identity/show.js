@@ -4,13 +4,16 @@ import { hash } from 'rsvp';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
+import { inject as service } from '@ember/service';
 
 export default Route.extend({
+  store: service(),
+
   model(params) {
-    let { section } = params;
-    let itemType = this.modelFor('vault.cluster.access.identity');
-    let tabs = TABS[itemType];
-    let modelType = `identity/${itemType}`;
+    const { section } = params;
+    const itemType = this.modelFor('vault.cluster.access.identity');
+    const tabs = TABS[itemType];
+    const modelType = `identity/${itemType}`;
     if (!tabs.includes(section)) {
       const error = new AdapterError();
       set(error, 'httpStatus', 404);
@@ -41,20 +44,21 @@ export default Route.extend({
     // reload to make sure we have the newest info
     if (this.currentModel) {
       next(() => {
+        /* eslint-disable-next-line ember/no-controller-access-in-routes */
         this.controller.get('model').reload();
       });
     }
   },
 
   afterModel(resolvedModel) {
-    let { section, model } = resolvedModel;
+    const { section, model } = resolvedModel;
     if (model.get('identityType') === 'group' && model.get('type') === 'internal' && section === 'aliases') {
       return this.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
     }
   },
 
   setupController(controller, resolvedModel) {
-    let { model, section } = resolvedModel;
+    const { model, section } = resolvedModel;
     controller.setProperties({
       model,
       section,

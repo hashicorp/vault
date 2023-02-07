@@ -8,17 +8,19 @@ description: |-
 
 # Highly Available Vault Enterprise Cluster with Integrated Storage (Raft)
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
+@include 'helm/version.mdx'
 
-Integrated storage (raft) can be enabled using the `server.ha.raft.enabled` value:
+Integrated Storage (raft) can be enabled using the `server.ha.raft.enabled` value:
 
 ```shell
 helm install vault hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.7.0_ent' \
+  --set='server.image.tag=1.12.1-ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
+
+-> For license configuration refer to [Running Vault Enterprise](/vault/docs/platform/k8s/helm/enterprise).
 
 Next, initialize and unseal `vault-0` pod:
 
@@ -57,39 +59,4 @@ Node                                    Address                        State    
 a1799962-8711-7f28-23f0-cea05c8a527d    vault-0.vault-internal:8201    leader      true
 e6876c97-aaaa-a92e-b99a-0aafab105745    vault-1.vault-internal:8201    follower    true
 4b5d7383-ff31-44df-e008-6a606828823b    vault-2.vault-internal:8201    follower    true
-```
-
-## Add License to Vault Enterprise
-
-First, setup a port-forward tunnel to the Vault Enterprise cluster:
-
-```shell
-kubectl port-forward vault-0 8200:8200
-```
-
-Next, in a separate terminal, create a `payload.json` file that contains the license key like this example:
-
-```json
-{
-  "text": "01ABCDEFG..."
-}
-```
-
-Finally, using curl, apply the license key to the Vault API:
-
-```bash
-curl \
-  --header "X-Vault-Token: VAULT_LOGIN_TOKEN_HERE" \
-  --request PUT \
-  --data @payload.json \
-  http://127.0.0.1:8200/v1/sys/license
-
-```
-
-To verify that the license installation worked correctly, using `curl`, run the following:
-
-```shell
-curl \
-  --header "X-Vault-Token: VAULT_LOGIN_TOKEN_HERE" \
-  http://127.0.0.1:8200/v1/sys/license
 ```

@@ -19,26 +19,32 @@ normal get requests.
 Delete the latest version of the key "creds":
 
 ```shell-session
-$ vault kv delete secret/creds
+$ vault kv delete -mount=secret creds
 Success! Data deleted (if it existed) at: secret/creds
 ```
 
 **[K/V Version 2]** Delete version 11 of key "creds":
 
 ```shell-session
-$ vault kv delete -versions=11 secret/creds
-Success! Data deleted (if it existed) at: secret/creds
+$ vault kv delete -mount=secret -versions=11 creds
+Success! Data deleted (if it existed) at: secret/data/creds
 ```
 
 ## Usage
 
-There are no flags beyond the [standard set of flags](/docs/commands)
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
 included on all commands.
 
 ### Command Options
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
+  If specified, the next argument will be interpreted as the secret path. If 
+  this flag is not specified, the next argument will be interpreted as the 
+  combined mount path and secret path, with /data/ automatically inserted for 
+  KV v2 secrets.
 
 - `-versions` `([]int: <required>)` - The versions to be deleted. The versioned
   data will not be deleted, but it will no longer be returned in normal get
   requests.
 
-~> **NOTE:** This command option is only for K/V v2.
+~> **NOTE:** The `-versions` command option is only for K/V v2.

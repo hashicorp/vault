@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -18,8 +17,15 @@ func pathTidySecretID(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/secret-id$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathTidySecretIDUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathTidySecretIDUpdate,
+				Responses: map[int][]framework.Response{
+					http.StatusAccepted: {{
+						Description: http.StatusText(http.StatusAccepted),
+					}},
+				},
+			},
 		},
 
 		HelpSynopsis:    pathTidySecretIDSyn,
@@ -114,7 +120,7 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 			entryIndex := fmt.Sprintf("%s%s%s", secretIDPrefixToUse, roleNameHMAC, secretIDHMAC)
 			secretIDEntry, err := s.Get(ctx, entryIndex)
 			if err != nil {
-				return errwrap.Wrapf(fmt.Sprintf("error fetching SecretID %q: {{err}}", secretIDHMAC), err)
+				return fmt.Errorf("error fetching SecretID %q: %w", secretIDHMAC, err)
 			}
 
 			if secretIDEntry == nil {
@@ -135,12 +141,12 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 			// entry, revoke the secret ID immediately
 			accessorEntry, err := b.secretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
 			if err != nil {
-				return errwrap.Wrapf("failed to read secret ID accessor entry: {{err}}", err)
+				return fmt.Errorf("failed to read secret ID accessor entry: %w", err)
 			}
 			if accessorEntry == nil {
 				logger.Trace("found nil accessor")
 				if err := s.Delete(ctx, entryIndex); err != nil {
-					return errwrap.Wrapf(fmt.Sprintf("error deleting secret ID %q from storage: {{err}}", secretIDHMAC), err)
+					return fmt.Errorf("error deleting secret ID %q from storage: %w", secretIDHMAC, err)
 				}
 				return nil
 			}
@@ -151,11 +157,11 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 				// Clean up the accessor of the secret ID first
 				err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
 				if err != nil {
-					return errwrap.Wrapf("failed to delete secret ID accessor entry: {{err}}", err)
+					return fmt.Errorf("failed to delete secret ID accessor entry: %w", err)
 				}
 
 				if err := s.Delete(ctx, entryIndex); err != nil {
-					return errwrap.Wrapf(fmt.Sprintf("error deleting SecretID %q from storage: {{err}}", secretIDHMAC), err)
+					return fmt.Errorf("error deleting SecretID %q from storage: %w", secretIDHMAC, err)
 				}
 
 				return nil

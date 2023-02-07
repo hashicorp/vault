@@ -3,18 +3,24 @@ package testhelpers
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/url"
+	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/go-testing-interface"
 )
@@ -27,7 +33,7 @@ const (
 	GenerateRecovery
 )
 
-// Generates a root token on the target cluster.
+// GenerateRoot generates a root token on the target cluster.
 func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
 	t.Helper()
 	token, err := GenerateRootWithError(t, cluster, kind)
@@ -208,7 +214,7 @@ func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.Test
 	activeCore := DeriveActiveCore(t, cluster)
 	minDuration := time.NewTimer(3 * time.Second)
 
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 60; i++ {
 		leaderResp, err := activeCore.Client.Sys().Leader()
 		if err != nil {
 			t.Fatal(err)
@@ -234,7 +240,7 @@ func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.Test
 
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	t.Helper()
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 60; i++ {
 		for _, core := range cluster.Cores {
 			leaderResp, err := core.Client.Sys().Leader()
 			if err != nil {
@@ -325,7 +331,7 @@ func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 
 func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	t.Helper()
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 60; i++ {
 		for _, core := range cluster.Cores {
 			if standby, _ := core.Core.Standby(); !standby {
 				return core
@@ -343,6 +349,9 @@ func WaitForStandbyNode(t testing.T, core *vault.TestClusterCore) {
 	t.Helper()
 	for i := 0; i < 30; i++ {
 		if isLeader, _, clusterAddr, _ := core.Core.Leader(); isLeader != true && clusterAddr != "" {
+			return
+		}
+		if core.Core.ActiveNodeReplicationState() == 0 {
 			return
 		}
 
@@ -453,7 +462,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
 			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig,
+			TLSConfig:     leader.TLSConfig(),
 		},
 	}
 
@@ -560,7 +569,7 @@ func WaitForRaftApply(t testing.T, core *vault.TestClusterCore, index uint64) {
 
 // AwaitLeader waits for one of the cluster's nodes to become leader.
 func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
-	timeout := time.Now().Add(30 * time.Second)
+	timeout := time.Now().Add(60 * time.Second)
 	for {
 		if time.Now().After(timeout) {
 			break
@@ -587,18 +596,16 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	t.Helper()
 
 	stopCh := make(chan struct{})
-	ticker := time.NewTicker(time.Second)
-	var err error
 
 	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-stopCh:
-				ticker.Stop()
-				stopCh <- struct{}{}
 				return
 			case <-ticker.C:
-				err = client.Sys().Mount("foo", &api.MountInput{
+				err := client.Sys().Mount("foo", &api.MountInput{
 					Type: "kv",
 					Options: map[string]string{
 						"version": "1",
@@ -619,7 +626,12 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	return stopCh
 }
 
-func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) {
+// VerifyRaftPeers verifies that the raft configuration contains a given set of peers.
+// The `expected` contains a map of expected peers. Existing entries are deleted
+// from the map by removing entries whose keys are in the raft configuration.
+// Remaining entries result in an error return so that the caller can poll for
+// an expected configuration.
+func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) error {
 	t.Helper()
 
 	resp, err := client.Logical().Read("sys/storage/raft/configuration")
@@ -651,6 +663,340 @@ func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) 
 	// If the collection is non-empty, it means that the peer was not found in
 	// the response.
 	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
+		return fmt.Errorf("failed to read configuration successfully, expected peers not found in configuration list: %v", expected)
+	}
+
+	return nil
+}
+
+func TestMetricSinkProvider(gaugeInterval time.Duration) func(string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+	return func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+		inm := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+		clusterSink := metricsutil.NewClusterMetricSink(clusterName, inm)
+		clusterSink.GaugeInterval = gaugeInterval
+		return clusterSink, metricsutil.NewMetricsHelper(inm, false)
+	}
+}
+
+func SysMetricsReq(client *api.Client, cluster *vault.TestCluster, unauth bool) (*SysMetricsJSON, error) {
+	r := client.NewRequest("GET", "/v1/sys/metrics")
+	if !unauth {
+		r.Headers.Set("X-Vault-Token", cluster.RootToken)
+	}
+	var data SysMetricsJSON
+	resp, err := client.RawRequestWithContext(context.Background(), r)
+	if err != nil {
+		return nil, err
+	}
+	bodyBytes, err := ioutil.ReadAll(resp.Response.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err := json.Unmarshal(bodyBytes, &data); err != nil {
+		return nil, errors.New("failed to unmarshal:" + err.Error())
+	}
+	return &data, nil
+}
+
+type SysMetricsJSON struct {
+	Gauges   []gaugeJSON   `json:"Gauges"`
+	Counters []counterJSON `json:"Counters"`
+
+	// note: this is referred to as a "Summary" type in our telemetry docs, but
+	// the field name in the JSON is "Samples"
+	Summaries []summaryJSON `json:"Samples"`
+}
+
+type baseInfoJSON struct {
+	Name   string                 `json:"Name"`
+	Labels map[string]interface{} `json:"Labels"`
+}
+
+type gaugeJSON struct {
+	baseInfoJSON
+	Value int `json:"Value"`
+}
+
+type counterJSON struct {
+	baseInfoJSON
+	Count  int     `json:"Count"`
+	Rate   float64 `json:"Rate"`
+	Sum    int     `json:"Sum"`
+	Min    int     `json:"Min"`
+	Max    int     `json:"Max"`
+	Mean   float64 `json:"Mean"`
+	Stddev float64 `json:"Stddev"`
+}
+
+type summaryJSON struct {
+	baseInfoJSON
+	Count  int     `json:"Count"`
+	Rate   float64 `json:"Rate"`
+	Sum    float64 `json:"Sum"`
+	Min    float64 `json:"Min"`
+	Max    float64 `json:"Max"`
+	Mean   float64 `json:"Mean"`
+	Stddev float64 `json:"Stddev"`
+}
+
+// SetNonRootToken sets a token on :client: with a fairly generic policy.
+// This is useful if a test needs to examine differing behavior based on if a
+// root token is passed with the request.
+func SetNonRootToken(client *api.Client) error {
+	policy := `path "*" { capabilities = ["create", "update", "read"] }`
+	if err := client.Sys().PutPolicy("policy", policy); err != nil {
+		return fmt.Errorf("error putting policy: %v", err)
+	}
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"policy"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		return fmt.Errorf("error creating token secret: %v", err)
+	}
+
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		return fmt.Errorf("missing token auth data")
+	}
+
+	client.SetToken(secret.Auth.ClientToken)
+	return nil
+}
+
+// RetryUntilAtCadence runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+func RetryUntilAtCadence(t testing.T, timeout, sleepTime time.Duration, f func() error) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var err error
+	for time.Now().Before(deadline) {
+		if err = f(); err == nil {
+			return
+		}
+		time.Sleep(sleepTime)
+	}
+	t.Fatalf("did not complete before deadline, err: %v", err)
+}
+
+// RetryUntil runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var err error
+	for time.Now().Before(deadline) {
+		if err = f(); err == nil {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatalf("did not complete before deadline, err: %v", err)
+}
+
+// CreateEntityAndAlias clones an existing client and creates an entity/alias.
+// It returns the cloned client, entityID, and aliasID.
+func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entityName, aliasName string) (*api.Client, string, string) {
+	t.Helper()
+	userClient, err := client.Clone()
+	if err != nil {
+		t.Fatalf("failed to clone the client:%v", err)
+	}
+	userClient.SetToken(client.Token())
+
+	resp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{
+		"name": entityName,
+	})
+	if err != nil {
+		t.Fatalf("failed to create an entity:%v", err)
+	}
+	entityID := resp.Data["id"].(string)
+
+	aliasResp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
+		"name":           aliasName,
+		"canonical_id":   entityID,
+		"mount_accessor": mountAccessor,
+	})
+	if err != nil {
+		t.Fatalf("failed to create an entity alias:%v", err)
+	}
+	aliasID := aliasResp.Data["id"].(string)
+	if aliasID == "" {
+		t.Fatal("Alias ID not present in response")
+	}
+	_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("auth/userpass/users/%s", aliasName), map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatalf("failed to configure userpass backend: %v", err)
+	}
+
+	return userClient, entityID, aliasID
+}
+
+// SetupTOTPMount enables the totp secrets engine by mounting it. This requires
+// that the test cluster has a totp backend available.
+func SetupTOTPMount(t testing.T, client *api.Client) {
+	t.Helper()
+	// Mount the TOTP backend
+	mountInfo := &api.MountInput{
+		Type: "totp",
+	}
+	if err := client.Sys().Mount("totp", mountInfo); err != nil {
+		t.Fatalf("failed to mount totp backend: %v", err)
+	}
+}
+
+// SetupTOTPMethod configures the TOTP secrets engine with a provided config map.
+func SetupTOTPMethod(t testing.T, client *api.Client, config map[string]interface{}) string {
+	t.Helper()
+
+	resp1, err := client.Logical().Write("identity/mfa/method/totp", config)
+
+	if err != nil || (resp1 == nil) {
+		t.Fatalf("bad: resp: %#v\n err: %v", resp1, err)
+	}
+
+	methodID := resp1.Data["method_id"].(string)
+	if methodID == "" {
+		t.Fatalf("method ID is empty")
+	}
+
+	return methodID
+}
+
+// SetupMFALoginEnforcement configures a single enforcement method using the
+// provided config map. "name" field is required in the config map.
+func SetupMFALoginEnforcement(t testing.T, client *api.Client, config map[string]interface{}) {
+	t.Helper()
+	enfName, ok := config["name"]
+	if !ok {
+		t.Fatalf("couldn't find name in login-enforcement config")
+	}
+	_, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("identity/mfa/login-enforcement/%s", enfName), config)
+	if err != nil {
+		t.Fatalf("failed to configure MFAEnforcementConfig: %v", err)
+	}
+}
+
+// SetupUserpassMountAccessor sets up userpass auth and returns its mount
+// accessor. This requires that the test cluster has a "userpass" auth method
+// available.
+func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
+	t.Helper()
+	// Enable Userpass authentication
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatalf("failed to enable userpass auth: %v", err)
+	}
+
+	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	if err != nil {
+		t.Fatalf("failed to list auth methods: %v", err)
+	}
+	if auths == nil || auths["userpass/"] == nil {
+		t.Fatalf("failed to get userpass mount accessor")
+	}
+
+	return auths["userpass/"].Accessor
+}
+
+// RegisterEntityInTOTPEngine registers an entity with a methodID and returns
+// the generated name.
+func RegisterEntityInTOTPEngine(t testing.T, client *api.Client, entityID, methodID string) string {
+	t.Helper()
+	totpGenName := fmt.Sprintf("%s-%s", entityID, methodID)
+	secret, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/method/totp/admin-generate", map[string]interface{}{
+		"entity_id": entityID,
+		"method_id": methodID,
+	})
+	if err != nil {
+		t.Fatalf("failed to generate a TOTP secret on an entity: %v", err)
+	}
+	totpURL := secret.Data["url"].(string)
+	if totpURL == "" {
+		t.Fatalf("failed to get TOTP url in secret response: %+v", secret)
+	}
+	_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("totp/keys/%s", totpGenName), map[string]interface{}{
+		"url": totpURL,
+	})
+	if err != nil {
+		t.Fatalf("failed to register a TOTP URL: %v", err)
+	}
+	enfPath := fmt.Sprintf("identity/mfa/login-enforcement/%s", methodID[0:4])
+	_, err = client.Logical().WriteWithContext(context.Background(), enfPath, map[string]interface{}{
+		"name":                methodID[0:4],
+		"identity_entity_ids": []string{entityID},
+		"mfa_method_ids":      []string{methodID},
+	})
+	if err != nil {
+		t.Fatalf("failed to create login enforcement")
+	}
+
+	return totpGenName
+}
+
+// GetTOTPCodeFromEngine requests a TOTP code from the specified enginePath.
+func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) string {
+	t.Helper()
+	totpPath := fmt.Sprintf("totp/code/%s", enginePath)
+	secret, err := client.Logical().ReadWithContext(context.Background(), totpPath)
+	if err != nil {
+		t.Fatalf("failed to create totp passcode: %v", err)
+	}
+	if secret == nil || secret.Data == nil {
+		t.Fatalf("bad secret returned from %s", totpPath)
+	}
+	return secret.Data["code"].(string)
+}
+
+// SetupLoginMFATOTP setups up a TOTP MFA using some basic configuration and
+// returns all relevant information to the client.
+func SetupLoginMFATOTP(t testing.T, client *api.Client, methodName string, waitPeriod int) (*api.Client, string, string) {
+	t.Helper()
+	// Mount the totp secrets engine
+	SetupTOTPMount(t, client)
+
+	// Create a mount accessor to associate with an entity
+	mountAccessor := SetupUserpassMountAccessor(t, client)
+
+	// Create a test entity and alias
+	entityClient, entityID, _ := CreateEntityAndAlias(t, client, mountAccessor, "entity1", "testuser1")
+
+	// Configure a default TOTP method
+	totpConfig := map[string]interface{}{
+		"issuer":                  "yCorp",
+		"period":                  waitPeriod,
+		"algorithm":               "SHA256",
+		"digits":                  6,
+		"skew":                    1,
+		"key_size":                20,
+		"qr_size":                 200,
+		"max_validation_attempts": 5,
+		"method_name":             methodName,
+	}
+	methodID := SetupTOTPMethod(t, client, totpConfig)
+
+	// Configure a default login enforcement
+	enforcementConfig := map[string]interface{}{
+		"auth_method_types": []string{"userpass"},
+		"name":              methodID[0:4],
+		"mfa_method_ids":    []string{methodID},
+	}
+
+	SetupMFALoginEnforcement(t, client, enforcementConfig)
+	return entityClient, entityID, methodID
+}
+
+func SkipUnlessEnvVarsSet(t testing.T, envVars []string) {
+	t.Helper()
+
+	for _, i := range envVars {
+		if os.Getenv(i) == "" {
+			t.Skipf("%s must be set for this test to run", strings.Join(envVars, " "))
+		}
 	}
 }

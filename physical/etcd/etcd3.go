@@ -12,14 +12,13 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
-	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/clientv3/concurrency"
-	"go.etcd.io/etcd/pkg/transport"
+	"go.etcd.io/etcd/client/pkg/v3/transport"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
 // EtcdBackend is a physical backend that stores data at specific
@@ -115,7 +114,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		// grpc converts this to uint32 internally, so parse as that to avoid passing invalid values
 		val, err := strconv.ParseUint(maxReceive, 10, 32)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("value of 'max_receive_size' (%v) could not be understood: {{err}}", maxReceive), err)
+			return nil, fmt.Errorf("value of 'max_receive_size' (%v) could not be understood: %w", maxReceive, err)
 		}
 		cfg.MaxCallRecvMsgSize = int(val)
 	}
@@ -133,7 +132,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 	reqTimeout, err := parseutil.ParseDurationSecond(sReqTimeout)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("value [%v] of 'request_timeout' could not be understood: {{err}}", sReqTimeout), err)
+		return nil, fmt.Errorf("value [%v] of 'request_timeout' could not be understood: %w", sReqTimeout, err)
 	}
 
 	ssync, ok := conf["sync"]
@@ -142,7 +141,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 	sync, err := strconv.ParseBool(ssync)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("value of 'sync' (%v) could not be understood: {{err}}", ssync), err)
+		return nil, fmt.Errorf("value of 'sync' (%v) could not be understood: %w", ssync, err)
 	}
 
 	if sync {
@@ -161,7 +160,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 	lock, err := parseutil.ParseDurationSecond(sLock)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("value [%v] of 'lock_timeout' could not be understood: {{err}}", sLock), err)
+		return nil, fmt.Errorf("value [%v] of 'lock_timeout' could not be understood: %w", sLock, err)
 	}
 
 	return &EtcdBackend{

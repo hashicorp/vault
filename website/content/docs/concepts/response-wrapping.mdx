@@ -25,10 +25,13 @@ in persistent storage, you cannot encrypt this key in transit.
 To help address this problem, Vault includes a feature called _response
 wrapping_. When requested, Vault can take the response it would have sent to an
 HTTP client and instead insert it into the
-[`cubbyhole`](/docs/secrets/cubbyhole) of a single-use token,
-returning that single-use token instead. Logically speaking, the response is
+[`cubbyhole`](/vault/docs/secrets/cubbyhole) of a single-use token,
+returning that single-use token instead.
+
+Logically speaking, the response is
 wrapped by the token, and retrieving it requires an unwrap operation against
-this token.
+this token. Functionally speaking, the token provides authorization to use
+an encryption key from Vault's keyring to decrypt the data.
 
 This provides a powerful mechanism for information sharing in many
 environments. In the types of scenarios, described above, often the best
@@ -131,7 +134,7 @@ If a client requests wrapping:
 5. The new response is returned to the caller
 
 Note that policies can control minimum/maximum wrapping TTLs; see the [policies
-concepts page](/docs/concepts/policies) for
+concepts page](/vault/docs/concepts/policies) for
 more information.
 
 ## Response-Wrapping Token Validation

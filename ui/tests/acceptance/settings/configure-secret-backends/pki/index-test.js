@@ -5,20 +5,20 @@ import page from 'vault/tests/pages/settings/configure-secret-backends/pki/index
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
-module('Acceptance | settings/configure/secrets/pki', function(hooks) {
+module('Acceptance | settings/configure/secrets/pki', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test('it redirects to the cert section', async function(assert) {
+  test('it redirects to the cert section', async function (assert) {
     const path = `pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await settled();
     await page.visit({ backend: path });
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.settings.configure-secret-backend.section',
       'redirects from the index'

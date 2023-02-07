@@ -1,0 +1,67 @@
+---
+layout: docs
+page_title: license - Command
+description: |-
+  The "license" command groups subcommands for interacting with Vault licenses.
+---
+
+# license
+
+The `license` command groups subcommands for interacting with Vault licenses
+
+For more information, please see the [license documentation](/vault/docs/enterprise/license)
+
+## Examples
+
+Query current license in use by a node:
+
+```shell-session
+$ vault license get
+Key                          Value
+---                          -----
+expiration_time              2022-05-17T23:59:59.999Z
+features                     [HSM Performance Replication DR Replication MFA Sentinel Seal Wrapping Control Groups Performance Standby Namespaces KMIP Entropy Augmentation Transform Secrets Engine Lease Count Quotas Key Management Secrets Engine Automated Snapshots]
+license_id                   060d7820-fa59-f95c-832b-395db0aeb9ba
+performance_standby_count    9999
+start_time                   2021-05-17T00:00:00Z
+```
+
+Query signed license string (only when using a deprecated stored license)
+
+```shell-session
+$ vault license get -signed
+02MV4UU43BK5H...
+```
+
+Inspect a signed a license string:
+
+```shell-session
+$ vault license inspect ~/vaults/license
+Source: /Users/ncc/vaults/license
+Product: vault
+License ID: 060d7820-fa59-f95c-832b-395db0aeb9ba
+Customer ID: 5401ae3b-136b-3e47-3b43-432927fa03e7
+Installation ID: *
+Issue Time: 2021-05-17 19:33:47.93981585 +0000 UTC
+Start Time: 2021-05-17 00:00:00 +0000 UTC
+Expiration Time: 2022-05-17 23:59:59.999 +0000 UTC
+{"license_id":"060d7820-fa59-f95c-832b-395db0aeb9ba","customer_id":"5401ae3b-136b-3e47-3b43-432927fa03e7","installation_id":"*","issue_time":"2021-05-17T19:33:47.93981585Z","start_time":"2021-05-17T00:00:00Z","expiration_time":"2022-05-17T23:59:59.999Z","flags":{"modules":["multi-dc-scale","governance-policy","advanced-data-protection"]},"features":["HSM","Performance Replication","DR Replication","MFA","Sentinel","Seal Wrapping","Control Groups","Performance Standby","Namespaces","KMIP","Entropy Augmentation","Transform Secrets Engine","Lease Count Quotas","Key Management Secrets Engine","Automated Snapshots"],"performance_standby_count":9999}
+
+License is valid
+
+```
+
+## Usage
+
+```text
+Usage: vault license <subcommand> [options] [args]
+
+  # ...
+
+Subcommands:
+    get      Query Vault's license
+    inspect  View the contents of a license string
+```
+
+For more information, examples, and usage about a subcommand, click on the name
+of the subcommand in the sidebar.

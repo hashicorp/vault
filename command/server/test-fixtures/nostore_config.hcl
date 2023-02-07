@@ -5,7 +5,7 @@ ui = true
 
 listener "tcp" {
     address = "127.0.0.1:1024"
-	tls_disable = true
+    tls_disable = true
 }
 
 ha_backend "consul" {

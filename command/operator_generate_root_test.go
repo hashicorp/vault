@@ -1,4 +1,4 @@
-// +build !race
+//go:build !race
 
 package command
 
@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/xor"
+	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -158,6 +158,96 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("decode_from_stdin", func(t *testing.T) {
+		t.Parallel()
+
+		encoded := "Bxg9JQQqOCNKBRICNwMIRzo2J3cWCBRi"
+		otp := "3JhHkONiyiaNYj14nnD9xZQS"
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		stdinR, stdinW := io.Pipe()
+		go func() {
+			stdinW.Write([]byte(encoded))
+			stdinW.Close()
+		}()
+
+		ui, cmd := testOperatorGenerateRootCommand(t)
+		cmd.client = client
+		cmd.testStdin = stdinR
+
+		// Simulate piped output to print raw output
+		old := os.Stdout
+		_, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		os.Stdout = w
+
+		code := cmd.Run([]string{
+			"-decode", "-", // read from stdin
+			"-otp", otp,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		w.Close()
+		os.Stdout = old
+
+		expected := "4RUmoevJ3lsLni9sTXcNnRE1"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if combined != expected {
+			t.Errorf("expected %q to be %q", combined, expected)
+		}
+	})
+
+	t.Run("decode_from_stdin_empty", func(t *testing.T) {
+		t.Parallel()
+
+		encoded := ""
+		otp := "3JhHkONiyiaNYj14nnD9xZQS"
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		stdinR, stdinW := io.Pipe()
+		go func() {
+			stdinW.Write([]byte(encoded))
+			stdinW.Close()
+		}()
+
+		ui, cmd := testOperatorGenerateRootCommand(t)
+		cmd.client = client
+		cmd.testStdin = stdinR
+
+		// Simulate piped output to print raw output
+		old := os.Stdout
+		_, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		os.Stdout = w
+
+		code := cmd.Run([]string{
+			"-decode", "-", // read from stdin
+			"-otp", otp,
+		})
+		if exp := 1; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		w.Close()
+		os.Stdout = old
+
+		expected := "Missing encoded value"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
 	t.Run("cancel", func(t *testing.T) {
 		t.Parallel()
 
@@ -231,7 +321,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		t.Parallel()
 
 		pgpKey := "keybase:hashicorp"
-		pgpFingerprint := "91a6e7f85d05c65630bef18951852d87348ffc4c"
+		pgpFingerprint := "c874011f0ab405110d02105534365d9472d7468f"
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -345,7 +435,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(token), vault.TokenLength+2; l != exp {
+		if l, exp := len(token), vault.TokenLength+vault.TokenPrefixLength; l != exp {
 			t.Errorf("expected %d to be %d: %s", l, exp, token)
 		}
 	})
@@ -431,7 +521,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(token), vault.TokenLength+2; l != exp {
+		if l, exp := len(token), vault.TokenLength+vault.TokenPrefixLength; l != exp {
 			t.Errorf("expected %d to be %d: %s", l, exp, token)
 		}
 	})

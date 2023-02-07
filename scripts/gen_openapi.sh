@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -9,6 +9,9 @@ set -e
 #   1. Vault has been checked out at an appropriate version and built
 #   2. vault executable is in your path
 #   3. Vault isn't already running
+#   4. jq is installed
+
+cd "$(dirname "${BASH_SOURCE[0]}")"
 
 echo "Starting Vault..."
 if pgrep -x "vault" > /dev/null
@@ -21,70 +24,109 @@ vault server -dev -dev-root-token-id=root &
 sleep 2
 VAULT_PID=$!
 
-echo "Mounting all builtin backends..."
+export VAULT_ADDR=http://127.0.0.1:8200
 
-#  auth backends
-vault auth enable alicloud
-vault auth enable app-id
-vault auth enable approle
-vault auth enable aws
-vault auth enable azure
-vault auth enable centrify
-vault auth enable cert
-vault auth enable cf
-vault auth enable gcp
-vault auth enable github
-vault auth enable jwt
-vault auth enable kerberos
-vault auth enable kubernetes
-vault auth enable ldap
-vault auth enable oci
-vault auth enable oidc
-vault auth enable okta
-vault auth enable radius
-vault auth enable userpass
+echo "Mounting all builtin plugins..."
 
-# secrets backends
-vault secrets enable ad
-vault secrets enable alicloud
-vault secrets enable aws
-vault secrets enable azure
-vault secrets enable cassandra
-vault secrets enable consul
-vault secrets enable database
-vault secrets enable gcp
-vault secrets enable gcpkms
-vault secrets enable kv
-vault secrets enable mongodb
-vault secrets enable mongodbatlas
-vault secrets enable mssql
-vault secrets enable mysql
-vault secrets enable nomad
-vault secrets enable openldap
-vault secrets enable pki
-vault secrets enable postgresql
-vault secrets enable rabbitmq
-vault secrets enable ssh
-vault secrets enable terraform
-vault secrets enable totp
-vault secrets enable transit
+# Enable auth plugins
+codeLinesStarted=false
+
+while read -r line; do
+    if [[ $line == *"credentialBackends:"* ]] ; then
+        codeLinesStarted=true
+    elif [[ $line == *"databasePlugins:"* ]] ; then
+        break
+    elif [ $codeLinesStarted = true ] && [[ $line == *"consts.Deprecated"* || $line == *"consts.PendingRemoval"* || $line == *"consts.Removed"* ]] ; then
+        auth_plugin_previous=""
+    elif [ $codeLinesStarted = true ] && [[ $line =~ ^\s*\"(.*)\"\:.*$ ]] ; then
+        auth_plugin_current=${BASH_REMATCH[1]}
+
+        if [[ -n "${auth_plugin_previous}" ]] ; then
+            echo "enabling auth plugin: ${auth_plugin_previous}"
+            vault auth enable "${auth_plugin_previous}"
+        fi
+
+        auth_plugin_previous="${auth_plugin_current}"
+    fi
+done <../../vault/helper/builtinplugins/registry.go
+
+if [[ -n "${auth_plugin_previous}" ]] ; then
+    echo "enabling auth plugin: ${auth_plugin_previous}"
+    vault auth enable "${auth_plugin_previous}"
+fi
+
+# Enable secrets plugins
+codeLinesStarted=false
+
+while read -r line; do
+    if [[ $line == *"logicalBackends:"* ]] ; then
+        codeLinesStarted=true
+    elif [[ $line == *"addExternalPlugins("* ]] ; then
+        break
+    elif [ $codeLinesStarted = true ] && [[ $line == *"consts.Deprecated"* || $line == *"consts.PendingRemoval"* || $line == *"consts.Removed"* ]] ; then
+        secrets_plugin_previous=""
+    elif [ $codeLinesStarted = true ] && [[ $line =~ ^\s*\"(.*)\"\:.*$ ]] ; then
+        secrets_plugin_current=${BASH_REMATCH[1]}
+
+        if [[ -n "${secrets_plugin_previous}" ]] ; then
+            echo "enabling secrets plugin: ${secrets_plugin_previous}"
+            vault secrets enable "${secrets_plugin_previous}"
+        fi
+
+        secrets_plugin_previous="${secrets_plugin_current}"
+    fi
+done <../../vault/helper/builtinplugins/registry.go
+
+if [[ -n "${secrets_plugin_previous}" ]] ; then
+    echo "enabling secrets plugin: ${secrets_plugin_previous}"
+    vault secrets enable "${secrets_plugin_previous}"
+fi
 
 # Enable enterprise features
-if [[ ! -z "$VAULT_LICENSE" ]]
-then
-  vault write sys/license text="$VAULT_LICENSE"
-  vault secrets enable kmip
-  vault secrets enable transform
+entRegFile=../../vault/helper/builtinplugins/registry_util_ent.go
+if [ -f $entRegFile ] && [[ -n "${VAULT_LICENSE}" ]]; then
+    vault write sys/license text="${VAULT_LICENSE}"
+
+    codeLinesStarted=false
+
+    while read -r line; do
+        if [[ $line == *"ExternalPluginsEnt:"* ]] ; then
+            codeLinesStarted=true
+        elif [[ $line == *"addExtPluginsEntImpl("* ]] ; then
+            break
+        elif [ $codeLinesStarted = true ] && [[ $line == *"consts.Deprecated"* || $line == *"consts.PendingRemoval"* || $line == *"consts.Removed"* ]] ; then
+            secrets_plugin_previous=""
+        elif [ $codeLinesStarted = true ] && [[ $line =~ ^\s*\"(.*)\"\:.*$ ]] ; then
+            ent_plugin_current=${BASH_REMATCH[1]}
+
+            if [[ -n "${ent_plugin_previous}" ]] ; then
+                echo "enabling enterprise plugin: ${ent_plugin_previous}"
+                vault secrets enable "${ent_plugin_previous}"
+            fi
+
+            ent_plugin_previous="${ent_plugin_current}"
+        fi
+    done <$entRegFile
+
+    if [[ -n "${ent_plugin_previous}" ]] ; then
+        echo "enabling enterprise plugin: ${ent_plugin_previous}"
+        vault secrets enable "${ent_plugin_previous}"
+    fi
 fi
 
 # Output OpenAPI, optionally formatted
 if [ "$1" == "-p" ]; then
-  curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" | jq > openapi.json
+    curl --header 'X-Vault-Token: root' \
+         --data '{"generic_mount_paths": true}' \
+            'http://127.0.0.1:8200/v1/sys/internal/specs/openapi' | jq > openapi.json
 else
-  curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" > openapi.json
+    curl --header 'X-Vault-Token: root' \
+         --data '{"generic_mount_paths": true}' \
+            'http://127.0.0.1:8200/v1/sys/internal/specs/openapi' > openapi.json
 fi
 
 kill $VAULT_PID
 sleep 1
 
-echo "\nopenapi.json generated."
+echo
+echo "openapi.json generated"

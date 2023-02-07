@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Added auth method descriptions to UI login page
+```

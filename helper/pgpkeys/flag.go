@@ -8,8 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
-	"github.com/keybase/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp"
 )
 
 // PubKeyFileFlag implements flag.Value and command.Example to receive exactly
@@ -128,7 +127,7 @@ func ReadPGPFile(path string) (string, error) {
 		serializedEntity := bytes.NewBuffer(nil)
 		err = entityList[0].Serialize(serializedEntity)
 		if err != nil {
-			return "", errwrap.Wrapf(fmt.Sprintf("error serializing entity for file %q: {{err}}", path), err)
+			return "", fmt.Errorf("error serializing entity for file %q: %w", path, err)
 		}
 
 		return base64.StdEncoding.EncodeToString(serializedEntity.Bytes()), nil

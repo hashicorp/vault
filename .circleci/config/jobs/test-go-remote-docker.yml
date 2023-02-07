@@ -1,10 +1,10 @@
 executor: docker-env-go-test-remote-docker
 parallelism: 8
 steps:
-  - check-branch-name
+  - exit-if-ui-or-docs-branch
   - checkout
   - setup_remote_docker:
-      version: 18.09.3
+      version: 20.10.17
       docker_layer_caching: true
   - go_test:
       log_dir: "/tmp/testlogs"

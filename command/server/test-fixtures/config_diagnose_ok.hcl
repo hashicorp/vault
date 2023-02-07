@@ -9,17 +9,18 @@ listener "tcp" {
 }
 
 backend "consul" {
-    foo = "bar"
-    advertise_addr = "foo"
+    address = "127.0.0.1:1025"
 }
 
 ha_backend "consul" {
+    address = "127.0.0.1:8500"
     bar = "baz"
-    advertise_addr = "snafu"
+    advertise_addr = "https://127.0.0.1:8500"
     disable_clustering = "true"
 }
 
 service_registration "consul" {
+    address = "127.0.0.1:8500"
     foo = "bar"
 }
 
@@ -32,10 +33,6 @@ telemetry {
     dogstatsd_addr = "127.0.0.1:7254"
     dogstatsd_tags = ["tag_1:val_1", "tag_2:val_2"]
     metrics_prefix = "myprefix"
-}
-
-sentinel {
-    additional_enabled_modules = []
 }
 
 max_lease_ttl = "10h"

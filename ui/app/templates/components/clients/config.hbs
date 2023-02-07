@@ -1,0 +1,131 @@
+{{#if (eq @mode "edit")}}
+  <form onsubmit={{action "onSaveChanges"}} data-test-pricing-metrics-config-form>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @model={{@model}} @errorMessage={{this.error}} />
+      {{#each @model.configAttrs as |attr|}}
+        {{#if (and (eq attr.type "string") (eq attr.options.editType "boolean"))}}
+          <label class="is-label">Usage data collection</label>
+          {{#if attr.options.helpText}}
+            <p class="sub-text">
+              {{attr.options.helpText}}
+              {{#if attr.options.docLink}}
+                <DocLink @path={{attr.options.docLink}}>
+                  See our documentation
+                </DocLink>
+                for help.
+              {{/if}}
+            </p>
+          {{/if}}
+          <div class="control is-flex has-bottom-margin-l">
+            <input
+              data-test-field
+              type="checkbox"
+              id={{attr.name}}
+              name={{attr.name}}
+              class="switch is-rounded is-success is-small"
+              checked={{eq (get @model attr.name) attr.options.trueValue}}
+              onchange={{action (action "updateBooleanValue" attr) value="target.checked"}}
+            />
+            <label for={{attr.name}}>
+              {{#if (eq @model.enabled "Off")}}
+                Data collection is off
+              {{else}}
+                Data collection is on
+              {{/if}}
+            </label>
+          </div>
+        {{else if (eq attr.type "number")}}
+          <div class="has-top-margin-s">
+            <label for={{attr.name}} class="is-label">
+              {{attr.options.label}}
+            </label>
+            {{#if attr.options.subText}}
+              <p class="sub-text">
+                {{attr.options.subText}}
+                {{#if attr.options.docLink}}
+                  <DocLink @path={{attr.options.docLink}}>
+                    See our documentation
+                  </DocLink>
+                  for help.
+                {{/if}}
+              </p>
+            {{/if}}
+            <div class="control">
+              <input
+                data-test-field
+                id={{attr.name}}
+                disabled={{eq @model.enabled "Off"}}
+                autocomplete="off"
+                spellcheck="false"
+                onchange={{action (mut (get @model attr.name)) value="target.value"}}
+                value={{or (get @model attr.name) attr.options.defaultValue}}
+                class="input"
+                maxLength={{attr.options.characterLimit}}
+              />
+            </div>
+          </div>
+        {{/if}}
+      {{/each}}
+    </div>
+    <div class="field is-grouped-split box is-fullwidth is-bottomless">
+      <div class="control">
+        <button
+          type="submit"
+          disabled={{this.buttonDisabled}}
+          class="button is-primary"
+          data-test-edit-metrics-config-save={{true}}
+        >
+          Save
+        </button>
+        <LinkTo @route="vault.cluster.clients.config" class="button">
+          Cancel
+        </LinkTo>
+      </div>
+    </div>
+  </form>
+  <Modal
+    @title={{this.modalTitle}}
+    @onClose={{action (mut this.modalOpen) false}}
+    @isActive={{this.modalOpen}}
+    @type="warning"
+    @showCloseButton={{true}}
+  >
+    <section class="modal-card-body">
+      {{#if (eq @model.enabled "On")}}
+        <p class="has-bottom-margin-s">
+          Vault will start tracking data starting from today’s date,
+          {{date-format (now) "d MMMM yyyy"}}. You will not be able to see or query usage until the end of the month.
+        </p>
+        <p>If you’ve previously enabled usage tracking, that historical data will still be available to you.</p>
+      {{else}}
+        <p class="has-bottom-margin-s">
+          Turning usage tracking off means that all data for the current month will be deleted. You will still be able to
+          query previous months.
+        </p>
+        <p>Are you sure?</p>
+      {{/if}}
+    </section>
+    <footer class="modal-card-foot modal-card-foot-outlined">
+      <button
+        type="button"
+        class="button is-secondary"
+        onclick={{action (mut this.modalOpen) false}}
+        data-test-metrics-config-cancel
+      >
+        Cancel
+      </button>
+      <button type="button" class="button is-primary" onclick={{perform this.save}}>
+        Continue
+      </button>
+    </footer>
+  </Modal>
+{{else}}
+  <div
+    class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless"
+    data-test-pricing-metrics-config-table
+  >
+    {{#each this.infoRows as |item|}}
+      <InfoTableRow @label={{item.label}} @helperText={{item.helperText}} @value={{get @model item.valueKey}} />
+    {{/each}}
+  </div>
+{{/if}}

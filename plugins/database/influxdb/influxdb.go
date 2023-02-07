@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	influx "github.com/influxdata/influxdb/client/v2"
+	"github.com/hashicorp/vault/sdk/helper/template"
+	influx "github.com/influxdata/influxdb1-client/v2"
 )
 
 const (
@@ -18,6 +18,8 @@ const (
 	defaultUserDeletionIFQL           = `DROP USER "{{username}}";`
 	defaultRootCredentialRotationIFQL = `SET PASSWORD FOR "{{username}}" = '{{password}}';`
 	influxdbTypeName                  = "influxdb"
+
+	defaultUserNameTemplate = `{{ printf "v_%s_%s_%s_%s" (.DisplayName | truncate 15) (.RoleName | truncate 15) (random 20) (unix_time) | truncate 100 | replace "-" "_" | lowercase }}`
 )
 
 var _ dbplugin.Database = &Influxdb{}
@@ -25,6 +27,8 @@ var _ dbplugin.Database = &Influxdb{}
 // Influxdb is an implementation of Database interface
 type Influxdb struct {
 	*influxdbConnectionProducer
+
+	usernameProducer template.StringTemplate
 }
 
 // New returns a new Cassandra instance
@@ -58,6 +62,29 @@ func (i *Influxdb) getConnection(ctx context.Context) (influx.Client, error) {
 	return cli.(influx.Client), nil
 }
 
+func (i *Influxdb) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (resp dbplugin.InitializeResponse, err error) {
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	i.usernameProducer = up
+
+	_, err = i.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
+	}
+
+	return i.influxdbConnectionProducer.Initialize(ctx, req)
+}
+
 // NewUser generates the username/password on the underlying Influxdb secret backend as instructed by
 // the statements provided.
 func (i *Influxdb) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (resp dbplugin.NewUserResponse, err error) {
@@ -79,17 +106,10 @@ func (i *Influxdb) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (re
 		rollbackIFQL = []string{defaultUserDeletionIFQL}
 	}
 
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, 15),
-		credsutil.RoleName(req.UsernameConfig.RoleName, 15),
-		credsutil.MaxLength(100),
-		credsutil.Separator("_"),
-		credsutil.ToLower(),
-	)
+	username, err := i.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
-		return dbplugin.NewUserResponse{}, fmt.Errorf("failed to generate username: %w", err)
+		return dbplugin.NewUserResponse{}, err
 	}
-	username = strings.Replace(username, "-", "_", -1)
 
 	for _, stmt := range creationIFQL {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {

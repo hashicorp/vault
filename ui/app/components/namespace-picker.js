@@ -27,8 +27,8 @@ export default Component.extend({
   didReceiveAttrs() {
     this._super(...arguments);
 
-    let ns = this.namespace;
-    let oldNS = this.oldNamespace;
+    const ns = this.namespace;
+    const oldNS = this.oldNamespace;
     if (!oldNS || ns !== oldNS) {
       this.setForAnimation.perform();
       this.fetchListCapability.perform();
@@ -36,9 +36,9 @@ export default Component.extend({
     this.set('oldNamespace', ns);
   },
 
-  fetchListCapability: task(function*() {
+  fetchListCapability: task(function* () {
     try {
-      let capability = yield this.store.findRecord('capabilities', 'sys/namespaces/');
+      const capability = yield this.store.findRecord('capabilities', 'sys/namespaces/');
       this.set('listCapability', capability);
       this.set('canList', true);
     } catch (e) {
@@ -47,16 +47,16 @@ export default Component.extend({
       this.set('canList', false);
     }
   }),
-  setForAnimation: task(function*() {
-    let leaves = this.menuLeaves;
-    let lastLeaves = this.lastMenuLeaves;
+  setForAnimation: task(function* () {
+    const leaves = this.menuLeaves;
+    const lastLeaves = this.lastMenuLeaves;
     if (!lastLeaves) {
       this.set('lastMenuLeaves', leaves);
       yield timeout(0);
       return;
     }
-    let isAdding = leaves.length > lastLeaves.length;
-    let changedLeaf = (isAdding ? leaves : lastLeaves).get('lastObject');
+    const isAdding = leaves.length > lastLeaves.length;
+    const changedLeaf = (isAdding ? leaves : lastLeaves).get('lastObject');
     this.set('isAdding', isAdding);
     this.set('changedLeaf', changedLeaf);
 
@@ -81,8 +81,8 @@ export default Component.extend({
   accessibleNamespaces: alias('namespaceService.accessibleNamespaces'),
   inRootNamespace: alias('namespaceService.inRootNamespace'),
 
-  namespaceTree: computed('accessibleNamespaces', function() {
-    let nsList = this.accessibleNamespaces;
+  namespaceTree: computed('accessibleNamespaces', function () {
+    const nsList = this.accessibleNamespaces;
 
     if (!nsList) {
       return [];
@@ -91,7 +91,7 @@ export default Component.extend({
   }),
 
   maybeAddRoot(leaves) {
-    let userRoot = this.auth.authData.userRootNamespace;
+    const userRoot = this.auth.authData.userRootNamespace;
     if (userRoot === '') {
       leaves.unshift('');
     }
@@ -123,7 +123,7 @@ export default Component.extend({
   // to render the nodes of each leaf
 
   // gets set as  'lastMenuLeaves' in the ember concurrency task above
-  menuLeaves: computed('namespacePath', 'namespaceTree', 'pathToLeaf', function() {
+  menuLeaves: computed('namespacePath', 'namespaceTree', 'pathToLeaf', function () {
     let ns = this.namespacePath;
     ns = (ns || '').replace(/^\//, '');
     let leaves = ancestorKeysForKey(ns);
@@ -136,22 +136,22 @@ export default Component.extend({
 
   // the nodes at the root of the namespace tree
   // these will get rendered as the bottom layer
-  rootLeaves: computed('namespaceTree', function() {
-    let tree = this.namespaceTree;
-    let leaves = Object.keys(tree);
+  rootLeaves: computed('namespaceTree', function () {
+    const tree = this.namespaceTree;
+    const leaves = Object.keys(tree);
     return leaves;
   }),
 
   currentLeaf: alias('lastMenuLeaves.lastObject'),
   canAccessMultipleNamespaces: gt('accessibleNamespaces.length', 1),
-  isUserRootNamespace: computed('auth.authData.userRootNamespace', 'namespacePath', function() {
+  isUserRootNamespace: computed('auth.authData.userRootNamespace', 'namespacePath', function () {
     return this.auth.authData.userRootNamespace === this.namespacePath;
   }),
 
-  namespaceDisplay: computed('namespacePath', 'accessibleNamespaces', 'accessibleNamespaces.[]', function() {
-    let namespace = this.namespacePath;
+  namespaceDisplay: computed('namespacePath', 'accessibleNamespaces', 'accessibleNamespaces.[]', function () {
+    const namespace = this.namespacePath;
     if (!namespace) return '';
-    let parts = namespace?.split('/');
+    const parts = namespace?.split('/');
     return parts[parts.length - 1];
   }),
 

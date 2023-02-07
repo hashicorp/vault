@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/aws: add ability to provide a role session name when generating STS credentials
+```

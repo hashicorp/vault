@@ -5,340 +5,18 @@
 # Orb 'circleci/slack@3.2.0' resolved to 'circleci/slack@3.2.0'
 version: 2
 jobs:
-  bundle-releases:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    steps:
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-all-package-cache-keys
-        name: Write all package cache keys
-    - run:
-        command: mkdir -p .buildcache && echo "*" > .buildcache/.gitignore
-        name: Ignore .buildcache
-    - restore_cache:
-        key: package-a8bdeecb59f5f37dc83943709455b9fd277df5f8-{{checksum ".buildcache/cache-keys/package-a8bdeecb59f5f37dc83943709455b9fd277df5f8"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-6d19c35fee4eeaaa71e4d6b5d7f98a4d5284797c-{{checksum ".buildcache/cache-keys/package-6d19c35fee4eeaaa71e4d6b5d7f98a4d5284797c"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-26548a1820e022c07891751a5b3d80a890a7e0d8-{{checksum ".buildcache/cache-keys/package-26548a1820e022c07891751a5b3d80a890a7e0d8"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-742a10216a7104fb2a7f388acfc2be9c4f2ff92f-{{checksum ".buildcache/cache-keys/package-742a10216a7104fb2a7f388acfc2be9c4f2ff92f"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-6a593aceca132304bca5fcbe09492f85d15f19b9-{{checksum ".buildcache/cache-keys/package-6a593aceca132304bca5fcbe09492f85d15f19b9"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-e730bb044f5b2560007b10e7309eded908b42179-{{checksum ".buildcache/cache-keys/package-e730bb044f5b2560007b10e7309eded908b42179"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-11accf54a2b93c17a80905f75cab9d7c43312823-{{checksum ".buildcache/cache-keys/package-11accf54a2b93c17a80905f75cab9d7c43312823"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-a18b5d9fac6f184229c558fa0ee57c4c8a6c8b4a-{{checksum ".buildcache/cache-keys/package-a18b5d9fac6f184229c558fa0ee57c4c8a6c8b4a"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-d535a486cf6375a6078958e472821d1506659d35-{{checksum ".buildcache/cache-keys/package-d535a486cf6375a6078958e472821d1506659d35"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-9becf8a7354d6a337ef68b8544e6c2fd503a8074-{{checksum ".buildcache/cache-keys/package-9becf8a7354d6a337ef68b8544e6c2fd503a8074"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-161730071382b8929c0762a6234463e31e0b61e0-{{checksum ".buildcache/cache-keys/package-161730071382b8929c0762a6234463e31e0b61e0"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-d2104dcce3d0fac8c63b2183cbb5f42270bb3046-{{checksum ".buildcache/cache-keys/package-d2104dcce3d0fac8c63b2183cbb5f42270bb3046"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-46e7a3f4aa0d855a98d6b2e21578abac72be7d99-{{checksum ".buildcache/cache-keys/package-46e7a3f4aa0d855a98d6b2e21578abac72be7d99"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-339135fa2b357caf760bc40a5290222f7be2cff4-{{checksum ".buildcache/cache-keys/package-339135fa2b357caf760bc40a5290222f7be2cff4"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-b4b8f35824e48ca099d7bc6cf9b9fc60f5af0ebb-{{checksum ".buildcache/cache-keys/package-b4b8f35824e48ca099d7bc6cf9b9fc60f5af0ebb"}}
-        name: Restore package cache
-    - restore_cache:
-        key: package-4ecc34b0623444ae14f47a9065565cd7e1f7448b-{{checksum ".buildcache/cache-keys/package-4ecc34b0623444ae14f47a9065565cd7e1f7448b"}}
-        name: Restore package cache
-    - run:
-        command: make package-meta-all
-        name: Write Package Metadata
-    - run:
-        command: make aliases
-        name: Write package aliases
-    - run:
-        command: ls -lahR .buildcache
-        name: List Build Cache
-    - run:
-        command: cp packages*.lock/pkgs.yml lockfile-146a431e832db58c.yml
-        name: Update Lockfile Name
-    - run:
-        command: tar -czf packages-146a431e832db58c.tar.gz .buildcache/packages lockfile-146a431e832db58c.yml
-        name: Create Raw Package Tarball
-    - run:
-        command: tar -czf meta-146a431e832db58c.tar.gz .buildcache/packages/store/*.json lockfile-146a431e832db58c.yml
-        name: Create Metadata Tarball
-    - store_artifacts:
-        path: lockfile-146a431e832db58c.yml
-    - store_artifacts:
-        path: packages-146a431e832db58c.tar.gz
-    - store_artifacts:
-        path: meta-146a431e832db58c.tar.gz
-    - store_artifacts:
-        path: .buildcache/packages
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-  darwin_amd64_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: a8bdeecb59f5f37dc83943709455b9fd277df5f8
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-a8bdeecb59f5f37dc83943709455b9fd277df5f8-{{checksum ".buildcache/cache-keys/package-a8bdeecb59f5f37dc83943709455b9fd277df5f8"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-a8bdeecb59f5f37dc83943709455b9fd277df5f8-{{checksum ".buildcache/cache-keys/package-a8bdeecb59f5f37dc83943709455b9fd277df5f8"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  darwin_arm64_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 6d19c35fee4eeaaa71e4d6b5d7f98a4d5284797c
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-6d19c35fee4eeaaa71e4d6b5d7f98a4d5284797c-{{checksum ".buildcache/cache-keys/package-6d19c35fee4eeaaa71e4d6b5d7f98a4d5284797c"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-6d19c35fee4eeaaa71e4d6b5d7f98a4d5284797c-{{checksum ".buildcache/cache-keys/package-6d19c35fee4eeaaa71e4d6b5d7f98a4d5284797c"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  windows_386_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: b4b8f35824e48ca099d7bc6cf9b9fc60f5af0ebb
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-b4b8f35824e48ca099d7bc6cf9b9fc60f5af0ebb-{{checksum ".buildcache/cache-keys/package-b4b8f35824e48ca099d7bc6cf9b9fc60f5af0ebb"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-b4b8f35824e48ca099d7bc6cf9b9fc60f5af0ebb-{{checksum ".buildcache/cache-keys/package-b4b8f35824e48ca099d7bc6cf9b9fc60f5af0ebb"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
   install-ui-dependencies:
     docker:
-    - image: docker.mirror.hashicorp.services/node:10-buster
+    - environment:
+        JOBS: 2
+      image: docker.mirror.hashicorp.services/circleci/node:14-browsers
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
     - run:
         command: |
           cd ui
@@ -346,277 +24,41 @@ jobs:
           npm rebuild node-sass
         name: Install UI dependencies
     - save_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
+        name: Save yarn cache
         paths:
         - ui/node_modules
-  build-common-layers:
-    machine:
-      image: ubuntu-1604:202007-01
-    resource_class: xlarge
-    shell: /usr/bin/env bash -euo pipefail -c
-    steps:
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        keys:
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Layer Cache: build-ui'
-    - run:
-        command: LAYER_SPEC_ID=06-build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47 make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -f packages*.lock/layer.mk 00-base-c6cdf1b224722d2520e082320f2a71875913247c-image
-        name: Build base layer
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -f packages*.lock/layer.mk 01-install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b-image
-        name: Build install-go layer
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -f packages*.lock/layer.mk 02-install-go-tools-a10e38af920222100809a5d52ac413e922688b48-image
-        name: Build install-go-tools layer
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -f packages*.lock/layer.mk 03-set-workdir-577aad3893a929a48a2ce7319179c253507dee67-image
-        name: Build set-workdir layer
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -f packages*.lock/layer.mk 04-install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea-image
-        name: Build install-yarn layer
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -f packages*.lock/layer.mk 05-ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9-image
-        name: Build ui-dependencies layer
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -f packages*.lock/layer.mk 06-build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47-image
-        name: Build build-ui layer
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -f packages*.lock/layer.mk 06-build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47-save
-        name: Build build-ui layer
-    - save_cache:
-        key: build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        name: 'Save Layer Cache: build-ui'
-        paths:
-        - .buildcache/archives/06-build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47.tar.gz
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-  linux_arm64_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: d535a486cf6375a6078958e472821d1506659d35
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-d535a486cf6375a6078958e472821d1506659d35-{{checksum ".buildcache/cache-keys/package-d535a486cf6375a6078958e472821d1506659d35"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-d535a486cf6375a6078958e472821d1506659d35-{{checksum ".buildcache/cache-keys/package-d535a486cf6375a6078958e472821d1506659d35"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
   test-ui:
     docker:
-    - image: docker.mirror.hashicorp.services/node:10-buster
+    - environment:
+        JOBS: 2
+      image: docker.mirror.hashicorp.services/circleci/node:14-browsers
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
+    - run:
+        command: |
+          case "$CIRCLE_BRANCH" in
+          main|ui/*|backport/ui/*|release/*|merge*) ;;
+          *) # If the branch being tested doesn't match one of the above patterns,
+             # we don't need to run test-ui and can abort the job.
+             circleci-agent step halt
+             ;;
+          esac
+
+          # exit with success either way
+          exit 0
+        name: Check branch name
+        working_directory: ~/
     - checkout
     - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
     - attach_workspace:
         at: .
     - run:
         command: |
-          set -x
-
-          # Install Chrome
-          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \
-            | apt-key add -
-          echo "deb http://dl.google.com/linux/chrome/deb/ stable main" \
-            | tee /etc/apt/sources.list.d/google-chrome.list
-          apt-get update
-          apt-get -y install google-chrome-stable
-          rm /etc/apt/sources.list.d/google-chrome.list
-          rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-
           # Add ./bin to the PATH so vault binary can be run by Ember tests
           export PATH="${PWD}/bin:${PATH}"
 
@@ -629,125 +71,38 @@ jobs:
         path: ui/test-results
     - store_test_results:
         path: ui/test-results
-  linux_arm_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
+  build-go-dev:
+    machine:
+      image: ubuntu-2004:2022.10.1
     shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: a18b5d9fac6f184229c558fa0ee57c4c8a6c8b4a
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-a18b5d9fac6f184229c558fa0ee57c4c8a6c8b4a-{{checksum ".buildcache/cache-keys/package-a18b5d9fac6f184229c558fa0ee57c4c8a6c8b4a"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-a18b5d9fac6f184229c558fa0ee57c4c8a6c8b4a-{{checksum ".buildcache/cache-keys/package-a18b5d9fac6f184229c558fa0ee57c4c8a6c8b4a"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  test-ui-browserstack:
-    docker:
-    - image: docker.mirror.hashicorp.services/node:10-buster
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
-    resource_class: xlarge
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - checkout
-    - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
-    - attach_workspace:
-        at: .
     - run:
         command: |
-          # Add ./bin to the PATH so vault binary can be found.
-          export PATH="${PWD}"/bin:${PATH}
-          make test-ui-browserstack
-        name: Run Browserstack Tests
-  build-go-dev:
-    machine: true
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
-    steps:
-    - run:
-        command: |
+          GO_VERSION=$(cat .go-version)
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
+          cd ~
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
+          GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+          echo "export GOPROXY=off" >> "$BASH_ENV"
+          echo "export GOPRIVATE=github.com/hashicorp/*" >> "$BASH_ENV"
 
           echo "$ go version"
           go version
         name: Setup Go
-        working_directory: ~/
-    - checkout
+    - restore_cache:
+        keys:
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - attach_workspace:
         at: .
     - run:
@@ -765,114 +120,21 @@ jobs:
         root: .
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
-    - GO_VERSION: 1.16.2
-    - GO111MODULE: 'off'
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
-  algolia-index:
-    docker:
-    - image: node:12
-    steps:
-    - checkout
-    - run:
-        command: |
-          if  [ "$CIRCLE_REPOSITORY_URL" != "git@github.com:hashicorp/vault.git" ]; then
-            echo "Not Vault OSS Repo, not indexing Algolia"
-            exit 0
-          fi
-          cd website/
-          npm install
-          node scripts/index_search_content.js
-        name: Push content to Algolia Index
-  linux_386_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: e730bb044f5b2560007b10e7309eded908b42179
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-e730bb044f5b2560007b10e7309eded908b42179-{{checksum ".buildcache/cache-keys/package-e730bb044f5b2560007b10e7309eded908b42179"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-e730bb044f5b2560007b10e7309eded908b42179-{{checksum ".buildcache/cache-keys/package-e730bb044f5b2560007b10e7309eded908b42179"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.20
     resource_class: medium
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
         command: |
           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
             # stop the job from this step
             circleci-agent step halt
           }
@@ -883,7 +145,13 @@ jobs:
     - checkout
     - setup_remote_docker:
         docker_layer_caching: true
-        version: 18.09.3
+        version: 20.10.17
+    - add_ssh_keys:
+        fingerprints:
+        - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
     - run:
         command: |
           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
@@ -891,12 +159,18 @@ jobs:
     - restore_cache:
         keys:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
-          set -x
+          set -exo pipefail
 
+          EXTRA_TAGS=
           case "" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -909,21 +183,36 @@ jobs:
           USE_DOCKER=0
           USE_DOCKER=1
 
-          # Split Go tests by prior test times.  If use_docker is true, only run
-          # tests that depend on docker, otherwise only those that don't.
-          if [ $USE_DOCKER == 1 ]; then
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-                .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
-          else
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-                .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
-          fi
+          # Check all directories with a go.mod file
+          modules=("." "api" "sdk")
+          all_package_names=""
+
+          for dir in "${modules[@]}"
+          do
+            pushd "$dir"
+            # On its own line so that -e will fail the tests if we detect errors here.
+            go list -test -json ./... > test-list.json
+            # Split Go tests by prior test times.  If use_docker is true, only run
+            # tests that depend on docker, otherwise only those that don't.
+            # The appended true condition ensures the command will succeed if no packages are found
+            if [ $USE_DOCKER == 1 ]; then
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
+                  select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname || true)
+            else
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
+                  select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname || true)
+            fi
+            # Move back into root directory
+            popd
+            # Append the test packages into the global list, if any are found
+            if [ -n "$package_names" ]; then
+              all_package_names+=" ${package_names}"
+            fi
+          done
 
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
@@ -931,9 +220,20 @@ jobs:
           # has its own remote docker VM.
 
           make prep
+
           mkdir -p test-results/go-test
 
-          # Create a docker network for our testcontainer
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
+
+          # Create a docker network for our test container
           if [ $USE_DOCKER == 1 ]; then
             # Despite the fact that we're using a circleci image (thus getting the
             # version they chose for the docker cli) and that we're specifying a
@@ -942,55 +242,106 @@ jobs:
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
 
-            export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+            TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+            export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-              TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+              docker network prune -f
+              TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
-            # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+
+
+            # Start a docker test container to run the tests in
+            CONTAINER_ID="$(docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
-              --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster \
-              tail -f /dev/null
+              --network ${TEST_DOCKER_NETWORK_NAME} \
+              $GO_IMAGE \
+              tail -f /dev/null)"
+            mkdir workspace
+            echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
-            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
-            docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+            test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
+            docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
-              testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                 \
-                ${package_names}
+            # Copy the downloaded modules inside the container.
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" ${CONTAINER_ID}:/home/circleci/go/pkg/mod
+
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
+              ${CONTAINER_ID} \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                   \
+                  ${all_package_names}
           else
-            GOCACHE=/tmp/go-cache \
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                  \
-                ${package_names}
+                ${all_package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - run:
         command: |
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
-          docker cp testcontainer:/tmp/gocache /tmp/go-cache
+          docker cp $(cat workspace/container_id):/home/circleci/go/src/github.com/hashicorp/vault/test-results .
+          docker cp $(cat workspace/container_id):/tmp/gocache /tmp/go-cache
         name: Copy test results
         when: always
     - store_artifacts:
@@ -1001,717 +352,79 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
-    - GO111MODULE: 'off'
-  freebsd_386_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
+  fmt:
+    machine:
+      image: ubuntu-2004:2022.10.1
     shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 26548a1820e022c07891751a5b3d80a890a7e0d8
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-26548a1820e022c07891751a5b3d80a890a7e0d8-{{checksum ".buildcache/cache-keys/package-26548a1820e022c07891751a5b3d80a890a7e0d8"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-26548a1820e022c07891751a5b3d80a890a7e0d8-{{checksum ".buildcache/cache-keys/package-26548a1820e022c07891751a5b3d80a890a7e0d8"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  test-go-race:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster
-    resource_class: xlarge
-    working_directory: /go/src/github.com/hashicorp/vault
-    parallelism: 8
-    steps:
-    - run:
-        command: |
-          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
-            # stop the job from this step
-            circleci-agent step halt
-          }
-          # exit with success either way
-          exit 0
-        name: Check branch name
-        working_directory: ~/
     - checkout
     - run:
         command: |
-          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
-        name: Compute test cache key
-    - restore_cache:
-        keys:
-        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
-    - run:
-        command: |
-          set -x
-
-          case "-race" in
-          *-race*) export VAULT_CI_GO_TEST_RACE=1;;
-          esac
-
-          # Install CircleCI CLI
-          curl -sSL \
-              "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
-            | sudo tar --overwrite -xz \
-              -C /usr/local/bin \
-              "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
-
-          USE_DOCKER=0
-
-          # Split Go tests by prior test times.  If use_docker is true, only run
-          # tests that depend on docker, otherwise only those that don't.
-          if [ $USE_DOCKER == 1 ]; then
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-                .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
-          else
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-                .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
-          fi
-
-          # After running tests split step, we are now running the following steps
-          # in multiple different containers, each getting a different subset of
-          # the test packages in their package_names variable.  Each container
-          # has its own remote docker VM.
-
-          make prep
-          mkdir -p test-results/go-test
-
-          # Create a docker network for our testcontainer
-          if [ $USE_DOCKER == 1 ]; then
-            # Despite the fact that we're using a circleci image (thus getting the
-            # version they chose for the docker cli) and that we're specifying a
-            # docker version to use for the remote docker instances, we occasionally
-            # see "client version too new, max supported version 1.39" errors for
-            # reasons unclear.
-            export DOCKER_API_VERSION=1.39
-
-            export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
-            if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-              TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
-            fi
-
-            # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
-              -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
-              --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster \
-              tail -f /dev/null
-
-            # Run tests
-            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
-            docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
-
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
-              testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                -race \
-                ${package_names}
-          else
-            GOCACHE=/tmp/go-cache \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                -race \
-                ${package_names}
-          fi
-        name: Run Go tests
-        no_output_timeout: 60m
-    - store_artifacts:
-        path: test-results
-    - store_test_results:
-        path: test-results
-    - store_artifacts:
-        path: /tmp/testlogs
-    environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: ''
-    - GO111MODULE: 'off'
-  freebsd_amd64_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 742a10216a7104fb2a7f388acfc2be9c4f2ff92f
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-742a10216a7104fb2a7f388acfc2be9c4f2ff92f-{{checksum ".buildcache/cache-keys/package-742a10216a7104fb2a7f388acfc2be9c4f2ff92f"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-742a10216a7104fb2a7f388acfc2be9c4f2ff92f-{{checksum ".buildcache/cache-keys/package-742a10216a7104fb2a7f388acfc2be9c4f2ff92f"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  openbsd_386_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: d2104dcce3d0fac8c63b2183cbb5f42270bb3046
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-d2104dcce3d0fac8c63b2183cbb5f42270bb3046-{{checksum ".buildcache/cache-keys/package-d2104dcce3d0fac8c63b2183cbb5f42270bb3046"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-d2104dcce3d0fac8c63b2183cbb5f42270bb3046-{{checksum ".buildcache/cache-keys/package-d2104dcce3d0fac8c63b2183cbb5f42270bb3046"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  linux_amd64_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 11accf54a2b93c17a80905f75cab9d7c43312823
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-11accf54a2b93c17a80905f75cab9d7c43312823-{{checksum ".buildcache/cache-keys/package-11accf54a2b93c17a80905f75cab9d7c43312823"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-11accf54a2b93c17a80905f75cab9d7c43312823-{{checksum ".buildcache/cache-keys/package-11accf54a2b93c17a80905f75cab9d7c43312823"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  website-docker-image:
-    docker:
-    - image: circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    steps:
-    - checkout
-    - setup_remote_docker
-    - run:
-        command: |
-          IMAGE_TAG="$(git rev-list -n1 HEAD -- website/Dockerfile website/package-lock.json)"
-          echo "Using $IMAGE_TAG"
-          if  [ "$CIRCLE_REPOSITORY_URL" != "git@github.com:hashicorp/vault.git" ]; then
-            echo "Not Vault OSS Repo, not building website docker image"
-          elif curl https://hub.docker.com/v2/repositories/hashicorp/vault-website/tags/$IMAGE_TAG -fsL > /dev/null; then
-              echo "Dependencies have not changed, not building a new website docker image."
-          else
-              cd website/
-              docker build -t hashicorp/vault-website:$IMAGE_TAG .
-              docker tag hashicorp/vault-website:$IMAGE_TAG hashicorp/vault-website:latest
-              docker login -u $WEBSITE_DOCKER_USER -p $WEBSITE_DOCKER_PASS
-              docker push hashicorp/vault-website
-          fi
-        name: Build Docker Image if Necessary
-  solaris_amd64_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 339135fa2b357caf760bc40a5290222f7be2cff4
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-339135fa2b357caf760bc40a5290222f7be2cff4-{{checksum ".buildcache/cache-keys/package-339135fa2b357caf760bc40a5290222f7be2cff4"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-339135fa2b357caf760bc40a5290222f7be2cff4-{{checksum ".buildcache/cache-keys/package-339135fa2b357caf760bc40a5290222f7be2cff4"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  test-go:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster
-    resource_class: large
-    working_directory: /go/src/github.com/hashicorp/vault
-    parallelism: 8
-    steps:
-    - run:
-        command: |
-          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
-            # stop the job from this step
-            circleci-agent step halt
-          }
-          # exit with success either way
-          exit 0
-        name: Check branch name
-        working_directory: ~/
-    - checkout
-    - run:
-        command: |
-          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
-        name: Compute test cache key
-    - restore_cache:
-        keys:
-        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
-    - run:
-        command: |
-          set -x
-
-          case "" in
-          *-race*) export VAULT_CI_GO_TEST_RACE=1;;
-          esac
-
-          # Install CircleCI CLI
-          curl -sSL \
-              "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
-            | sudo tar --overwrite -xz \
-              -C /usr/local/bin \
-              "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
-
-          USE_DOCKER=0
-
-          # Split Go tests by prior test times.  If use_docker is true, only run
-          # tests that depend on docker, otherwise only those that don't.
-          if [ $USE_DOCKER == 1 ]; then
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-                .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
-          else
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-                .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
-          fi
-
-          # After running tests split step, we are now running the following steps
-          # in multiple different containers, each getting a different subset of
-          # the test packages in their package_names variable.  Each container
-          # has its own remote docker VM.
-
-          make prep
-          mkdir -p test-results/go-test
-
-          # Create a docker network for our testcontainer
-          if [ $USE_DOCKER == 1 ]; then
-            # Despite the fact that we're using a circleci image (thus getting the
-            # version they chose for the docker cli) and that we're specifying a
-            # docker version to use for the remote docker instances, we occasionally
-            # see "client version too new, max supported version 1.39" errors for
-            # reasons unclear.
-            export DOCKER_API_VERSION=1.39
-
-            export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
-            if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-              TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
-            fi
-
-            # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
-              -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
-              --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster \
-              tail -f /dev/null
-
-            # Run tests
-            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
-            docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
-
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
-              testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                 \
-                ${package_names}
-          else
-            GOCACHE=/tmp/go-cache \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                 \
-                ${package_names}
-          fi
-        name: Run Go tests
-        no_output_timeout: 60m
-    - store_artifacts:
-        path: test-results
-    - store_test_results:
-        path: test-results
-    - store_artifacts:
-        path: /tmp/testlogs
-    environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: ''
-    - GO111MODULE: 'off'
-  test-go-nightly:
-    machine: true
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
-    steps:
-    - run:
-        command: |
-          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
-            # stop the job from this step
-            circleci-agent step halt
-          }
-          # exit with success either way
-          exit 0
-        name: Check branch name
-        working_directory: ~/
-    - run:
-        command: |
+          GO_VERSION=$(cat .go-version)
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
+          cd ~
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
+          GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+          echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
+          echo "export GOPRIVATE=github.com/hashicorp/*" >> "$BASH_ENV"
 
           echo "$ go version"
           go version
         name: Setup Go
+    - run:
+        command: |
+          echo "Using gofumpt version ${GOFUMPT_VERSION}"
+          go install "mvdan.cc/gofumpt@v${GOFUMPT_VERSION}"
+          make fmt
+          if ! git diff --exit-code; then
+            echo "Code has formatting errors. Run 'make fmt' to fix"
+            exit 1
+          fi
+        name: make fmt
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
+    - GO_TAGS: ''
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
+  test-go-race:
+    docker:
+    - image: docker.mirror.hashicorp.services/cimg/go:1.20
+    resource_class: xlarge
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
+    parallelism: 8
+    steps:
+    - run:
+        command: |
+          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
+            # stop the job from this step
+            circleci-agent step halt
+          }
+          # exit with success either way
+          exit 0
+        name: Check branch name
         working_directory: ~/
     - checkout
+    - add_ssh_keys:
+        fingerprints:
+        - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
     - run:
         command: |
           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
@@ -1719,12 +432,18 @@ jobs:
     - restore_cache:
         keys:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
-          set -x
+          set -exo pipefail
 
-          case "" in
+          EXTRA_TAGS=
+          case "-race" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -1736,21 +455,36 @@ jobs:
 
           USE_DOCKER=0
 
-          # Split Go tests by prior test times.  If use_docker is true, only run
-          # tests that depend on docker, otherwise only those that don't.
-          if [ $USE_DOCKER == 1 ]; then
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-                .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
-          else
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-                .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
-          fi
+          # Check all directories with a go.mod file
+          modules=("." "api" "sdk")
+          all_package_names=""
+
+          for dir in "${modules[@]}"
+          do
+            pushd "$dir"
+            # On its own line so that -e will fail the tests if we detect errors here.
+            go list -test -json ./... > test-list.json
+            # Split Go tests by prior test times.  If use_docker is true, only run
+            # tests that depend on docker, otherwise only those that don't.
+            # The appended true condition ensures the command will succeed if no packages are found
+            if [ $USE_DOCKER == 1 ]; then
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
+                  select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname || true)
+            else
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
+                  select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname || true)
+            fi
+            # Move back into root directory
+            popd
+            # Append the test packages into the global list, if any are found
+            if [ -n "$package_names" ]; then
+              all_package_names+=" ${package_names}"
+            fi
+          done
 
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
@@ -1758,9 +492,20 @@ jobs:
           # has its own remote docker VM.
 
           make prep
+
           mkdir -p test-results/go-test
 
-          # Create a docker network for our testcontainer
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
+
+          # Create a docker network for our test container
           if [ $USE_DOCKER == 1 ]; then
             # Despite the fact that we're using a circleci image (thus getting the
             # version they chose for the docker cli) and that we're specifying a
@@ -1769,56 +514,102 @@ jobs:
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
 
-            export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+            TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+            export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-              TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+              docker network prune -f
+              TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
-            # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+
+
+            # Start a docker test container to run the tests in
+            CONTAINER_ID="$(docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
-              --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster \
-              tail -f /dev/null
+              --network ${TEST_DOCKER_NETWORK_NAME} \
+              $GO_IMAGE \
+              tail -f /dev/null)"
+            mkdir workspace
+            echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
-            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
-            docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+            test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
+            docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
-              testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                 \
-                ${package_names}
+            # Copy the downloaded modules inside the container.
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" ${CONTAINER_ID}:/home/circleci/go/pkg/mod
+
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
+              ${CONTAINER_ID} \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                  -race \
+                  ${all_package_names}
           else
-            GOCACHE=/tmp/go-cache \
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
-                 \
-                ${package_names}
+                -race \
+                ${all_package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
-    - save_cache:
-        key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
-        paths:
-        - /tmp/go-cache
-        when: always
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -1827,414 +618,278 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
-    - GO_VERSION: 1.16.2
-    - GO111MODULE: 'off'
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
-  netbsd_amd64_package:
+  test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 161730071382b8929c0762a6234463e31e0b61e0
+    - image: docker.mirror.hashicorp.services/cimg/go:1.20
+    resource_class: large
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
+    parallelism: 8
     steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
+    - run:
+        command: |
+          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
+            # stop the job from this step
+            circleci-agent step halt
+          }
+          # exit with success either way
+          exit 0
+        name: Check branch name
+        working_directory: ~/
+    - checkout
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
+        - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
     - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
+    - run:
+        command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
     - restore_cache:
-        key: package-161730071382b8929c0762a6234463e31e0b61e0-{{checksum ".buildcache/cache-keys/package-161730071382b8929c0762a6234463e31e0b61e0"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
         keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
+        command: |
+          set -exo pipefail
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
+          EXTRA_TAGS=
+          case "" in
+          *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
+          esac
+
+          # Install CircleCI CLI
+          curl -sSL \
+              "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar --overwrite -xz \
+              -C /usr/local/bin \
+              "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
+
+          USE_DOCKER=0
+
+          # Check all directories with a go.mod file
+          modules=("." "api" "sdk")
+          all_package_names=""
+
+          for dir in "${modules[@]}"
+          do
+            pushd "$dir"
+            # On its own line so that -e will fail the tests if we detect errors here.
+            go list -test -json ./... > test-list.json
+            # Split Go tests by prior test times.  If use_docker is true, only run
+            # tests that depend on docker, otherwise only those that don't.
+            # The appended true condition ensures the command will succeed if no packages are found
+            if [ $USE_DOCKER == 1 ]; then
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
+                  select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname || true)
+            else
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
+                  select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname || true)
+            fi
+            # Move back into root directory
+            popd
+            # Append the test packages into the global list, if any are found
+            if [ -n "$package_names" ]; then
+              all_package_names+=" ${package_names}"
+            fi
+          done
+
+          # After running tests split step, we are now running the following steps
+          # in multiple different containers, each getting a different subset of
+          # the test packages in their package_names variable.  Each container
+          # has its own remote docker VM.
+
+          make prep
+
+          mkdir -p test-results/go-test
+
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
+
+          # Create a docker network for our test container
+          if [ $USE_DOCKER == 1 ]; then
+            # Despite the fact that we're using a circleci image (thus getting the
+            # version they chose for the docker cli) and that we're specifying a
+            # docker version to use for the remote docker instances, we occasionally
+            # see "client version too new, max supported version 1.39" errors for
+            # reasons unclear.
+            export DOCKER_API_VERSION=1.39
+
+            TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+            export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
+            if [ -z $TEST_DOCKER_NETWORK_ID ]; then
+              docker network prune -f
+              TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
+            fi
+
+
+
+            # Start a docker test container to run the tests in
+            CONTAINER_ID="$(docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
+              -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
+              --network ${TEST_DOCKER_NETWORK_NAME} \
+              $GO_IMAGE \
+              tail -f /dev/null)"
+            mkdir workspace
+            echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
+
+            # Run tests
+            test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
+            docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
+
+            # Copy the downloaded modules inside the container.
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" ${CONTAINER_ID}:/home/circleci/go/pkg/mod
+
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
+              ${CONTAINER_ID} \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                   \
+                  ${all_package_names}
           else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
+              gotestsum --format=short-verbose \
+                --junitfile test-results/go-test/results.xml \
+                --jsonfile test-results/go-test/results.json \
+                -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                -timeout=60m \
+                -parallel=20 \
+                 \
+                ${all_package_names}
           fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-161730071382b8929c0762a6234463e31e0b61e0-{{checksum ".buildcache/cache-keys/package-161730071382b8929c0762a6234463e31e0b61e0"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  openbsd_amd64_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
+        name: Run Go tests
+        no_output_timeout: 60m
+    - store_artifacts:
+        path: test-results
+    - store_test_results:
+        path: test-results
+    - store_artifacts:
+        path: /tmp/testlogs
     environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 46e7a3f4aa0d855a98d6b2e21578abac72be7d99
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-46e7a3f4aa0d855a98d6b2e21578abac72be7d99-{{checksum ".buildcache/cache-keys/package-46e7a3f4aa0d855a98d6b2e21578abac72be7d99"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-46e7a3f4aa0d855a98d6b2e21578abac72be7d99-{{checksum ".buildcache/cache-keys/package-46e7a3f4aa0d855a98d6b2e21578abac72be7d99"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  netbsd_386_package:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
+    - GO_TAGS: ''
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
+  semgrep:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 9becf8a7354d6a337ef68b8544e6c2fd503a8074
+    - image: docker.mirror.hashicorp.services/returntocorp/semgrep:0.113.0
+    shell: /bin/sh
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
+    - checkout
+    - attach_workspace:
+        at: .
     - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-9becf8a7354d6a337ef68b8544e6c2fd503a8074-{{checksum ".buildcache/cache-keys/package-9becf8a7354d6a337ef68b8544e6c2fd503a8074"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-9becf8a7354d6a337ef68b8544e6c2fd503a8074-{{checksum ".buildcache/cache-keys/package-9becf8a7354d6a337ef68b8544e6c2fd503a8074"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  freebsd_arm_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 6a593aceca132304bca5fcbe09492f85d15f19b9
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-6a593aceca132304bca5fcbe09492f85d15f19b9-{{checksum ".buildcache/cache-keys/package-6a593aceca132304bca5fcbe09492f85d15f19b9"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-6a593aceca132304bca5fcbe09492f85d15f19b9-{{checksum ".buildcache/cache-keys/package-6a593aceca132304bca5fcbe09492f85d15f19b9"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  windows_amd64_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 4ecc34b0623444ae14f47a9065565cd7e1f7448b
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-4ecc34b0623444ae14f47a9065565cd7e1f7448b-{{checksum ".buildcache/cache-keys/package-4ecc34b0623444ae14f47a9065565cd7e1f7448b"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_4c1e_{{checksum ".buildcache/cache-keys/copy-source-4c1ebdd7e5676d7830250c9ccb4600e937128808"}}
-        keys:
-        - warm-go-build-vendor-cache_33b0_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-33b04d5c76259ee7c98c82d08215552a97c76439"}}
-        - build-static-assets_9ad4_{{checksum ".buildcache/cache-keys/build-static-assets-9ad4d7bfb12bb41ea259f917763c635da5fece63"}}
-        - build-ui_3f5e_{{checksum ".buildcache/cache-keys/build-ui-3f5e0479b9b1a145c921617b0e2e0f6c05d5dd47"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-4ecc34b0623444ae14f47a9065565cd7e1f7448b-{{checksum ".buildcache/cache-keys/package-4ecc34b0623444ae14f47a9065565cd7e1f7448b"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
+        command: "# Alpine images can't run the make file due to a bash requirement. Run\n# semgrep explicitly here. \nexport PATH=\"$HOME/.local/bin:$PATH\" \necho -n 'Semgrep Version: '\nsemgrep --version\nsemgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .\n"
+        name: Run Semgrep Rules
   pre-flight-checks:
-    docker:
-    - image: circleci/buildpack-deps
-    environment:
-    - CCI_VERSION: 0.1.5691
-    shell: /usr/bin/env bash -euo pipefail
+    machine:
+      image: ubuntu-2004:2022.10.1
+    shell: /usr/bin/env bash -euo pipefail -c
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - checkout
     - run:
         command: |
-          export CCI_PATH=/tmp/circleci-cli/$CCI_VERSION
+          GO_VERSION=$(cat .go-version)
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
+          # Install Go
+          cd ~
+          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+          GOPATH="/home/circleci/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
+          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
+          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+          echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
+          echo "export GOPRIVATE=github.com/hashicorp/*" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
+        name: Setup Go
+    - run:
+        command: |
+          export CCI_PATH=/tmp/circleci-cli/$CIRCLECI_CLI_VERSION
           mkdir -p $CCI_PATH
-          NAME=circleci-cli_${CCI_VERSION}_${ARCH}
-          URL=$BASE/v${CCI_VERSION}/${NAME}.tar.gz
+          NAME=circleci-cli_${CIRCLECI_CLI_VERSION}_${ARCH}
+          URL=$BASE/v${CIRCLECI_CLI_VERSION}/${NAME}.tar.gz
           curl -sSL $URL \
             | tar --overwrite --strip-components=1 -xz -C $CCI_PATH "${NAME}/circleci"
           # Add circleci to the path for subsequent steps.
@@ -2249,54 +904,64 @@ jobs:
           BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
         name: Install CircleCI CLI
     - run:
-        command: make ci-verify
-  go-mod-vendor:
-    machine: true
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
-    steps:
+        command: |
+          set -x
+          . $BASH_ENV
+          make ci-verify
+        name: Verify CircleCI
+    - add_ssh_keys:
+        fingerprints:
+        - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
     - run:
         command: |
-          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
-          # Install Go
-          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
-          sudo rm -rf /usr/local/go
-          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
-          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
-          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
-          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
-          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
-
-          echo "$ go version"
-          go version
-        name: Setup Go
-        working_directory: ~/
-    - checkout
-    - attach_workspace:
-        at: .
+          git config --global url."git@github.com:".insteadOf https://github.com/
+    - restore_cache:
+        keys:
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}
+        name: Restore closest matching go modules cache
     - run:
         command: |
-          GO111MODULE=on go mod vendor
-          git diff --exit-code
-        name: Run go mod vendor
+          # set GOPATH explicitly to download to the right cache
+          export GOPATH=$HOME/go
+          # go list ./... forces downloading some additional versions of modules that 'go mod
+          # download' misses. We need this because we make use of go list itself during
+          # code generation in later builds that rely on this module cache.
+          go list ./...
+          go mod download -json
+          ( cd sdk && go mod download -json; )
+          ( cd api && go mod download -json; )
+        name: go mod download
+    - run:
+        command: |
+          git --no-pager diff --exit-code || {
+            echo "ERROR: Files modified by go mod download, see above."
+            exit 1
+          }
+        name: Verify downloading modules did not modify any files
+    - save_cache:
+        key: v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Save go modules cache
+        paths:
+        - /home/circleci/go/pkg/mod
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
-    - GO_VERSION: 1.16.2
-    - GO111MODULE: 'off'
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.20
     resource_class: medium
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
         command: |
           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
             # stop the job from this step
             circleci-agent step halt
           }
@@ -2307,7 +972,13 @@ jobs:
     - checkout
     - setup_remote_docker:
         docker_layer_caching: true
-        version: 18.09.3
+        version: 20.10.17
+    - add_ssh_keys:
+        fingerprints:
+        - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
     - run:
         command: |
           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
@@ -2315,12 +986,18 @@ jobs:
     - restore_cache:
         keys:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
-          set -x
+          set -exo pipefail
 
+          EXTRA_TAGS=
           case "-race" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -2333,21 +1010,36 @@ jobs:
           USE_DOCKER=0
           USE_DOCKER=1
 
-          # Split Go tests by prior test times.  If use_docker is true, only run
-          # tests that depend on docker, otherwise only those that don't.
-          if [ $USE_DOCKER == 1 ]; then
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-                .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
-          else
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-                .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
-          fi
+          # Check all directories with a go.mod file
+          modules=("." "api" "sdk")
+          all_package_names=""
+
+          for dir in "${modules[@]}"
+          do
+            pushd "$dir"
+            # On its own line so that -e will fail the tests if we detect errors here.
+            go list -test -json ./... > test-list.json
+            # Split Go tests by prior test times.  If use_docker is true, only run
+            # tests that depend on docker, otherwise only those that don't.
+            # The appended true condition ensures the command will succeed if no packages are found
+            if [ $USE_DOCKER == 1 ]; then
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
+                  select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname || true)
+            else
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
+                  select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname || true)
+            fi
+            # Move back into root directory
+            popd
+            # Append the test packages into the global list, if any are found
+            if [ -n "$package_names" ]; then
+              all_package_names+=" ${package_names}"
+            fi
+          done
 
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
@@ -2355,9 +1047,20 @@ jobs:
           # has its own remote docker VM.
 
           make prep
+
           mkdir -p test-results/go-test
 
-          # Create a docker network for our testcontainer
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
+
+          # Create a docker network for our test container
           if [ $USE_DOCKER == 1 ]; then
             # Despite the fact that we're using a circleci image (thus getting the
             # version they chose for the docker cli) and that we're specifying a
@@ -2366,55 +1069,106 @@ jobs:
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
 
-            export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+            TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+            export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-              TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+              docker network prune -f
+              TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
-            # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+
+
+            # Start a docker test container to run the tests in
+            CONTAINER_ID="$(docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
-              --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster \
-              tail -f /dev/null
+              --network ${TEST_DOCKER_NETWORK_NAME} \
+              $GO_IMAGE \
+              tail -f /dev/null)"
+            mkdir workspace
+            echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
-            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
-            docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+            test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
+            docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
-              testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                -race \
-                ${package_names}
+            # Copy the downloaded modules inside the container.
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" ${CONTAINER_ID}:/home/circleci/go/pkg/mod
+
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
+              ${CONTAINER_ID} \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                  -race \
+                  ${all_package_names}
           else
-            GOCACHE=/tmp/go-cache \
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                 -race \
-                ${package_names}
+                ${all_package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - run:
         command: |
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
-          docker cp testcontainer:/tmp/gocache /tmp/go-cache
+          docker cp $(cat workspace/container_id):/home/circleci/go/src/github.com/hashicorp/vault/test-results .
+          docker cp $(cat workspace/container_id):/tmp/gocache /tmp/go-cache
         name: Copy test results
         when: always
     - store_artifacts:
@@ -2425,98 +1179,22 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
-    - GO111MODULE: 'off'
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
 workflows:
-  build-146a431e832db58c:
-    jobs:
-    - build-common-layers
-    - darwin_amd64_package:
-        requires:
-        - build-common-layers
-    - bundle-releases:
-        requires:
-        - darwin_amd64_package
-        - darwin_arm64_package
-        - freebsd_386_package
-        - freebsd_amd64_package
-        - freebsd_arm_package
-        - linux_386_package
-        - linux_amd64_package
-        - linux_arm_package
-        - linux_arm64_package
-        - netbsd_386_package
-        - netbsd_amd64_package
-        - openbsd_386_package
-        - openbsd_amd64_package
-        - solaris_amd64_package
-        - windows_386_package
-        - windows_amd64_package
-    - darwin_arm64_package:
-        requires:
-        - build-common-layers
-    - freebsd_386_package:
-        requires:
-        - build-common-layers
-    - freebsd_amd64_package:
-        requires:
-        - build-common-layers
-    - freebsd_arm_package:
-        requires:
-        - build-common-layers
-    - linux_386_package:
-        requires:
-        - build-common-layers
-    - linux_amd64_package:
-        requires:
-        - build-common-layers
-    - linux_arm_package:
-        requires:
-        - build-common-layers
-    - linux_arm64_package:
-        requires:
-        - build-common-layers
-    - netbsd_386_package:
-        requires:
-        - build-common-layers
-    - netbsd_amd64_package:
-        requires:
-        - build-common-layers
-    - openbsd_386_package:
-        requires:
-        - build-common-layers
-    - openbsd_amd64_package:
-        requires:
-        - build-common-layers
-    - solaris_amd64_package:
-        requires:
-        - build-common-layers
-    - windows_386_package:
-        requires:
-        - build-common-layers
-    - windows_amd64_package:
-        requires:
-        - build-common-layers
   ci:
     jobs:
     - pre-flight-checks
+    - fmt
     - install-ui-dependencies:
         requires:
         - pre-flight-checks
     - build-go-dev:
         requires:
         - pre-flight-checks
-    - go-mod-vendor:
-        requires:
-        - pre-flight-checks
     - test-ui:
-        requires:
-        - install-ui-dependencies
-        - build-go-dev
-    - test-ui-browserstack:
-        filters:
-          branches:
-            ignore: /pull\/[0-9]+/
         requires:
         - install-ui-dependencies
         - build-go-dev
@@ -2527,42 +1205,12 @@ workflows:
         requires:
         - pre-flight-checks
     - test-go-race:
-        filters:
-          branches:
-            ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
         requires:
         - pre-flight-checks
     - test-go-race-remote-docker:
-        filters:
-          branches:
-            ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
         requires:
         - pre-flight-checks
-    - website-docker-image:
-        filters:
-          branches:
-            only:
-            - master
-        context: vault-docs
-    - algolia-index:
-        filters:
-          branches:
-            only:
-            - stable-website
-        context: vault-docs
-  nightly-cachebuilder:
-    jobs:
-    - pre-flight-checks
-    - test-go-nightly
-    triggers:
-    - schedule:
-        cron: 0 9 * * *
-        filters:
-          branches:
-            only:
-            - master
+    - semgrep:
+        requires:
+        - pre-flight-checks
   version: 2

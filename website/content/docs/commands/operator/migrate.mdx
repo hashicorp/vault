@@ -48,7 +48,7 @@ $ vault operator migrate -config migrate.hcl -start "data/logical/fd"
 
 The `operator migrate` command uses a dedicated configuration file to specify the source
 and destination storage backends. The format of the storage stanzas is identical
-to that used to [configure Vault](/docs/configuration/storage),
+to that used to [configure Vault](/vault/docs/configuration/storage),
 with the only difference being that two stanzas are required: `storage_source` and `storage_destination`.
 
 ```hcl
@@ -60,7 +60,7 @@ storage_source "mysql" {
 
 storage_destination "consul" {
   address = "127.0.0.1:8500"
-  path    = "vault"
+  path    = "vault/"
 }
 ```
 
@@ -71,9 +71,9 @@ storage_destination "consul" {
 The below configuration will migrate away from Consul storage to integrated
 raft storage. The raft data will be stored on the local filesystem in the
 defined `path`. `node_id` can optionally be set to identify this node.
-[cluster_addr](/docs/configuration#cluster_addr) must be set to the
+[cluster_addr](/vault/docs/configuration#cluster_addr) must be set to the
 cluster hostname of this node. For more configuration options see the [raft
-storage configuration documentation](/docs/configuration/storage/raft).
+storage configuration documentation](/vault/docs/configuration/storage/raft).
 
 If the original configuration uses "raft" for `ha_storage` a different
 `path` needs to be declared for the path in `storage_destination` and the new
@@ -110,7 +110,7 @@ $ vault operator migrate -config migrate.hcl
 After migration has completed, the data is stored on the local file system. To
 use the new storage backend with Vault, update Vault's configuration file as
 described in the [raft storage configuration
-documentation](/docs/configuration/storage/raft). Then start and unseal the
+documentation](/vault/docs/configuration/storage/raft). Then start and unseal the
 vault server.
 
 ### Join additional nodes
@@ -132,3 +132,11 @@ The following flags are available for the `operator migrate` command.
 - `-reset` - Reset the migration lock. A lock file is added during migration to prevent
   starting the Vault server or another migration. The `-reset` option can be used to
   remove a stale lock file if present.
+
+- `-max-parallel` `int: 10` - Allows the operator to specify the maximum number of lightweight threads (goroutines)
+  which may be used to migrate data in parallel. This can potentially speed up migration on slower backends at
+  the cost of more resources (e.g. CPU, memory). Permitted values range from `1` (synchronous) to the maximum value
+  for an `integer`. If not supplied, a default of `10` parallel goroutines will be used.
+
+  ~> Note: The maximum number of concurrent requests handled by a storage backend is ultimately governed by the
+  storage backend configuration setting, which enforces a maximum number of concurrent requests (`max_parallel`).

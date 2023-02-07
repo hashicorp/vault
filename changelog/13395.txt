@@ -1,0 +1,3 @@
+```release-note:improvement
+core/identity: Support updating an alias' `custom_metadata` to be empty.
+```

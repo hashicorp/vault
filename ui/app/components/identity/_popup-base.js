@@ -25,14 +25,14 @@ export default Component.extend({
 
   actions: {
     performTransaction() {
-      let args = [...arguments];
-      let messageArgs = this.messageArgs(...args);
+      const args = [...arguments];
+      const messageArgs = this.messageArgs(...args);
       return this.transaction(...args)
         .then(() => {
           this.onSuccess();
           this.flashMessages.success(this.successMessage(...messageArgs));
         })
-        .catch(e => {
+        .catch((e) => {
           this.onError(...messageArgs);
           this.flashMessages.success(this.errorMessage(e, ...messageArgs));
         });

@@ -14,13 +14,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/ory/dockertest"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"gopkg.in/mgo.v2"
 )
 
 func TestInit_clientTLS(t *testing.T) {
@@ -103,7 +101,7 @@ net:
 		"connectionStatus": 1,
 	}
 
-	client, err := mongo.getConnection(ctx)
+	client, err := mongo.Connection(ctx)
 	if err != nil {
 		t.Fatalf("Unable to make connection to Mongo: %s", err)
 	}
@@ -215,19 +213,12 @@ func startMongoWithTLS(t *testing.T, version string, confDir string) (retURL str
 	// exponential backoff-retry
 	err = pool.Retry(func() error {
 		var err error
-		dialInfo, err := mongodb.ParseMongoURL(retURL)
-		if err != nil {
-			return err
+		ctx, _ := context.WithTimeout(context.Background(), 1*time.Minute)
+		client, err := mongo.Connect(ctx, options.Client().ApplyURI(retURL))
+		if err = client.Disconnect(ctx); err != nil {
+			t.Fatal()
 		}
-
-		session, err := mgo.DialWithInfo(dialInfo)
-		if err != nil {
-			return err
-		}
-		defer session.Close()
-		session.SetSyncTimeout(1 * time.Minute)
-		session.SetSocketTimeout(1 * time.Minute)
-		return session.Ping()
+		return client.Ping(ctx, readpref.Primary())
 	})
 	if err != nil {
 		cleanup()

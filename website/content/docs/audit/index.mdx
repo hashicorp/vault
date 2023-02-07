@@ -6,14 +6,27 @@ description: Audit devices are mountable devices that log requests and responses
 
 # Audit Devices
 
-Audit devices are the components in Vault that keep a detailed log of all
+Audit devices are the components in Vault that collectively keep a detailed log of all
 requests and response to Vault. Because every operation with Vault is an API
-request/response, the audit log contains _every authenticated_ interaction with
+request/response, when using a single audit device, the audit log contains _every authenticated_ interaction with
 Vault, including errors.
 
-Multiple audit devices can be enabled and Vault will send the audit logs to
-all of them. This allows you to not only have a redundant copy, but also a second copy
-in case the first is tampered with.
+## Enabling Multiple Devices
+
+When multiple audit devices are enabled, Vault will attempt to send the audit
+logs to all of them. This allows you to not only have redundant copies, but also
+a way to check for data tampering in the logs themselves.
+
+Vault considers a request to be successful if it can log to *at least* one
+configured audit device (see: [Blocked Audit
+Devices](/vault/docs/audit#blocked-audit-devices) section below).  Therefore in order
+to build a complete picture of all audited actions, use the aggregate/union of
+the logs from each audit device.
+
+~> Note: It is **highly recommended** that you configure Vault to use multiple audit
+devices. Audit failures can prevent Vault from servicing requests, so it is
+important to provide at least one other device.
+
 
 ## Format
 
@@ -29,16 +42,22 @@ The audit logs contain the full request and response objects for every
 interaction with Vault. The request and response can be matched utilizing a
 unique identifier assigned to each request.
 
-With a few specific exceptions, all strings (including authentication tokens and lease information) contained within requests and
-responses are hashed with a salt using HMAC-SHA256. The purpose of the hash is
-so that secrets aren't in plaintext within your audit logs. However, you're
-still able to check the value of secrets by generating HMACs yourself; this can
-be done with the audit device's hash function and salt by using the
-`/sys/audit-hash` API endpoint (see the documentation for more details).
+Most strings contained within requests and responses are hashed with a salt using HMAC-SHA256. The purpose of the hash is so that secrets aren't in plaintext within your audit logs. However, you're still able to check the value of secrets by generating HMACs yourself; this can be done with the audit device's hash function and salt by using the `/sys/audit-hash` API endpoint (see the documentation for more details).
 
-Note that currently only strings coming from JSON or being returned in JSON are
+~> Currently, only strings that come from JSON or returned in JSON are
 HMAC'd. Other data types, like integers, booleans, and so on, are passed
-through in plaintext.
+through in plaintext. We recommend that all sensitive data be provided as string values
+inside all JSON sent to Vault (i.e., that integer values are provided in quotes).
+
+While most strings are hashed, Vault does make some exceptions, such as auth and secrets, and users can enable additional exceptions using the [secrets enable](/vault/docs/commands/secrets/enable) command, and then tune it afterward.
+
+**see also**:
+
+[secrets tune](/vault/docs/commands/secrets/tune)
+
+[auth enable](/vault/docs/commands/auth/enable)
+
+[auth tune](/vault/docs/commands/auth/tune)
 
 ## Enabling/Disabling Audit Devices
 
@@ -56,27 +75,99 @@ In the command above, we passed the "file_path" parameter to specify the path
 where the audit log will be written to. Each audit device has its own
 set of parameters. See the documentation to the left for more details.
 
+~> Note: Audit device configuration is replicated to all nodes within a
+cluster by default, and to performance/DR secondaries for Vault Enterprise clusters.
+Before enabling an audit device, ensure that all nodes within the cluster(s)
+will be able to successfully log to the audit device to avoid Vault being
+blocked from serving requests.
+An audit device can be limited to only within the node's cluster with the [`local`](/vault/api-docs/system/audit#local) parameter.
+
 When an audit device is disabled, it will stop receiving logs immediately.
 The existing logs that it did store are untouched.
 
 ## Blocked Audit Devices
 
-If there are any audit devices enabled, Vault requires that at least
-one be able to persist the log before completing a Vault request.
+Audit device logs are critically important and ignoring auditing failures opens an avenue for attack. Vault will not respond to requests when no enabled audit devices can record them.
 
-!> If you have only one audit device enabled, and it is blocking (network
-block, etc.), then Vault will be _unresponsive_. Vault **will not** complete
-any requests until the audit device can write.
+Vault can distinguish between two types of audit device failures.
 
-If you have more than one audit device, then Vault will complete the request
-as long as one audit device persists the log.
+- A blocking failure is one where an attempt to write to the audit device never completes. This is unlikely with a local disk device, but could occure with a network-based audit device.
 
-Vault will not respond to requests if audit devices are blocked because
-audit logs are critically important and ignoring blocked requests opens
-an avenue for attack. Be absolutely certain that your audit devices cannot
-block.
+- When multiple audit devices are enabled, if any of them fail in a non-blocking fashion, Vault requests can still complete successfully provided at least one audit device successfully writes the audit record. If any of the audit devices fail in a blocking fashion however, Vault requests will hang until the blocking is resolved.
+
+In other words, Vault will not complete any requests until the blocked audit device can write.
+
+## Tutorial
+
+Refer to [Blocked Audit Devices](/vault/tutorials/monitoring/blocked-audit-devices) for a step-by-step tutorial.
 
 ## API
 
 Audit devices also have a full HTTP API. Please see the [Audit device API
-docs](/api/system/audit) for more details.
+docs](/vault/api-docs/system/audit) for more details.
+
+## Common configuration options
+
+- `elide_list_responses` `(bool: false)` - See [Eliding list response
+  bodies](/vault/docs/audit#eliding-list-response-bodies) below.
+
+- `format` `(string: "json")` - Allows selecting the output format. Valid values
+  are `"json"` and `"jsonx"`, which formats the normal log entries as XML.
+
+- `hmac_accessor` `(bool: true)` - If enabled, enables the hashing of token
+  accessor.
+
+- `log_raw` `(bool: false)` - If enabled, logs the security sensitive
+  information without hashing, in the raw format.
+
+- `prefix` `(string: "")` - A customizable string prefix to write before the
+  actual log line.
+
+## Eliding list response bodies
+
+Some Vault responses can be very large. Primarily, this affects list operations -
+as Vault lacks pagination in its APIs, listing a very large collection can result
+in a response that is tens of megabytes long. Some audit backends are unable to
+process individual audit records of larger sizes.
+
+The contents of the response for a list operation is often not very interesting;
+most contain only a "keys" field, containing a list of IDs. Select API endpoints
+additionally return a "key_info" field, a map from ID to some additional
+information about the list entry - `identity/entity/id/` is an example of this.
+Even in this case, the response to a list operation is usually less-confidential
+or public information, for which having the full response in the audit logs is of
+lesser importance.
+
+The `elide_list_responses` audit option provides the flexibility to not write the
+full list response data from the audit log, to mitigate the creation of very long
+individual audit records.
+
+When enabled, it affects only audit records of `type=response` and
+`request.operation=list`. The values of `response.data.keys` and
+`response.data.key_info` will be replaced with a simple integer, recording how
+many entries were contained in the list (`keys`) or map (`key_info`) - therefore
+even with this feature enabled, it is still possible to see how many items were
+returned by a list operation.
+
+This extra processing only affects the response data fields `keys` and `key_info`,
+and only when they have the expected data types - in the event a list response
+contains data outside of the usual conventions that apply to Vault list responses,
+it will be left as is by this feature.
+
+Here is an example of an audit record that has been processed by this feature
+(formatted with extra whitespace, and with fields not relevant to the example
+omitted):
+```json
+{
+  "type": "response",
+  "request": {
+    "operation": "list"
+  },
+  "response": {
+    "data": {
+      "key_info": 4,
+      "keys": 4
+    }
+  }
+}
+```

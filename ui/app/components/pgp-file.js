@@ -1,10 +1,13 @@
 import Component from '@ember/component';
 import { set } from '@ember/object';
 import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
+
 const BASE_64_REGEX = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/gi;
 
 export default Component.extend({
   'data-test-pgp-file': true,
+  attributeBindings: ['data-test-pgp-file'],
   classNames: ['box', 'is-fullwidth', 'is-marginless', 'is-shadowless'],
   key: null,
   index: null,
@@ -41,17 +44,19 @@ export default Component.extend({
     reader.readAsDataURL(file);
   },
 
-  setPGPKey: task(function*(dataURL, filename) {
-    const b64File = dataURL.split(',')[1].trim();
-    const decoded = atob(b64File).trim();
+  setPGPKey: task(
+    waitFor(function* (dataURL, filename) {
+      const b64File = dataURL.split(',')[1].trim();
+      const decoded = atob(b64File).trim();
 
-    // If a b64-encoded file was uploaded, then after decoding, it
-    // will still be b64.
-    // If after decoding it's not b64, we want
-    // the original as it was only encoded when we used `readAsDataURL`.
-    const fileData = decoded.match(BASE_64_REGEX) ? decoded : b64File;
-    yield this.onChange(this.index, { value: fileData, fileName: filename });
-  }).withTestWaiter(),
+      // If a b64-encoded file was uploaded, then after decoding, it
+      // will still be b64.
+      // If after decoding it's not b64, we want
+      // the original as it was only encoded when we used `readAsDataURL`.
+      const fileData = decoded.match(BASE_64_REGEX) ? decoded : b64File;
+      yield this.onChange(this.index, { value: fileData, filename: filename });
+    })
+  ),
 
   actions: {
     pickedFile(e) {

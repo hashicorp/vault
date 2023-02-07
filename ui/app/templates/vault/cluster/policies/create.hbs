@@ -1,88 +1,24 @@
 <PageHeader as |p|>
   <p.top>
     <div class="breadcrumb">
-      <LinkTo @route="vault.cluster.policies" @model={{policyType}} data-test-policy-list-link={{true}}>
+      <LinkTo @route="vault.cluster.policies" @model={{this.policyType}} data-test-policy-list-link={{true}}>
         <span class="sep">&#x0002f;</span>
-        {{uppercase policyType}} Policies
+        {{uppercase this.policyType}}
+        Policies
       </LinkTo>
     </div>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      Create {{uppercase policyType}} policy
+      Create
+      {{uppercase this.policyType}}
+      policy
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-<form {{ action "savePolicy" model on="submit"}}>
-  <div class="box is-bottomless is-fullwidth is-marginless">
-    <MessageError @model={{model}} />
-    <NamespaceReminder @mode="create" @noun="policy" />
-    <div class="field">
-      <label for="policy-name" class="is-label">Name</label>
-      <div class="control">
-        <input
-         type="text"
-         id="policy-name"
-         class="input"
-         value={{model.name}}
-         oninput={{action "setModelName" model}}
-         data-test-policy-input="name"
-         />
-      </div>
-    </div>
-    <div class="field">
-      <div class="level is-mobile">
-        <div class="level-left">
-          <label for="policy" class="is-label">Policy</label>
-        </div>
-        <div class="level-right">
-          <div class="field is-horizontal is-flex-end is-single-line">
-            <div class="control is-flex">
-              <Input @id="fileUploadToggle" @type="checkbox" @name="fileUploadToggle" class="switch is-rounded is-success is-small" @checked={{showFileUpload}} @change={{toggle-action "showFileUpload" this}} data-test-policy-edit-toggle={{true}} />
-              <label for="fileUploadToggle">Upload file</label>
-            </div>
-          </div>
-        </div>
-      </div>
-      {{#if showFileUpload}}
-        <TextFile @inputOnly={{true}} @index="" @file={{file}} @onChange={{action "setPolicyFromFile"}} />
-      {{else}}
-        <IvyCodemirror @value={{model.policy}} @id="policy" @valueUpdated={{action (mut model.policy)}} @options={{hash
-            lineNumbers=true
-            tabSize=2
-            mode='ruby'
-            theme='hashi'
-            extraKeys=(hash
-              Shift-Enter=(action "savePolicy" model)
-            )
-          }} />
-        <div class="box is-shadowless is-fullwidth has-short-padding">
-          <p class="help-text has-text-grey-dark is-size-7">
-            You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field
-          </p>
-        </div>
-      {{/if}}
-    </div>
-    {{#each model.additionalAttrs as |attr|}}
-      {{form-field data-test-field attr=attr model=model}}
-    {{/each}}
-  </div>
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <button
-        type="submit"
-        disabled={{buttonDisabled}}
-        class="button is-primary"
-        data-test-policy-save=true
-      >
-        Create policy
-      </button>
-    </div>
-    <div class="control">
-      <LinkTo @route="vault.cluster.policies" @replace={{true}} class="button">
-        Cancel
-      </LinkTo>
-    </div>
-  </div>
-</form>
+<PolicyForm
+  @model={{this.model}}
+  @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
+  @onCancel={{transition-to "vault.cluster.policies.index"}}
+/>

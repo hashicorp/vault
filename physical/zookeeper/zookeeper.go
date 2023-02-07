@@ -13,13 +13,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/physical"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/samuel/go-zookeeper/zk"
 )
 
@@ -129,14 +128,14 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	// We have all of the configuration in hand - let's try and connect to ZK
 	client, _, err := createClient(conf, machines, time.Second)
 	if err != nil {
-		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
+		return nil, fmt.Errorf("client setup failed: %w", err)
 	}
 
 	// ZK AddAuth API if the user asked for it
 	if useAddAuth {
 		err = client.AddAuth(schema, []byte(owner))
 		if err != nil {
-			return nil, errwrap.Wrapf("ZooKeeper rejected authentication information provided at auth_info: {{err}}", err)
+			return nil, fmt.Errorf("ZooKeeper rejected authentication information provided at auth_info: %w", err)
 		}
 	}
 
@@ -163,7 +162,7 @@ func createClient(conf map[string]string, machines string, timeout time.Duration
 	if ok && isTlsEnabledStr != "" {
 		parsedBoolval, err := parseutil.ParseBool(isTlsEnabledStr)
 		if err != nil {
-			return nil, nil, errwrap.Wrapf("failed parsing tls_enabled parameter: {{err}}", err)
+			return nil, nil, fmt.Errorf("failed parsing tls_enabled parameter: %w", err)
 		}
 		isTlsEnabled = parsedBoolval
 	}
@@ -194,7 +193,7 @@ func customTLSDial(conf map[string]string, machines string) zk.Dialer {
 			if strings.Contains(sParseErr.Error(), "missing port") {
 				serverName = addr
 			} else {
-				return nil, errwrap.Wrapf("failed parsing the server address for 'serverName' setting {{err}}", sParseErr)
+				return nil, fmt.Errorf("failed parsing the server address for 'serverName' setting %w", sParseErr)
 			}
 		}
 
@@ -204,7 +203,7 @@ func customTLSDial(conf map[string]string, machines string) zk.Dialer {
 		if ok && tlsSkipVerify != "" {
 			b, err := parseutil.ParseBool(tlsSkipVerify)
 			if err != nil {
-				return nil, errwrap.Wrapf("failed parsing tls_skip_verify parameter: {{err}}", err)
+				return nil, fmt.Errorf("failed parsing tls_skip_verify parameter: %w", err)
 			}
 			insecureSkipVerify = b
 		}
@@ -220,7 +219,7 @@ func customTLSDial(conf map[string]string, machines string) zk.Dialer {
 			if lookupOk && configVal != "" {
 				parsedIpSanCheck, ipSanErr := parseutil.ParseBool(configVal)
 				if ipSanErr != nil {
-					return nil, errwrap.Wrapf("failed parsing tls_verify_ip parameter: {{err}}", ipSanErr)
+					return nil, fmt.Errorf("failed parsing tls_verify_ip parameter: %w", ipSanErr)
 				}
 				ipSanCheck = parsedIpSanCheck
 			}
@@ -270,7 +269,7 @@ func customTLSDial(conf map[string]string, machines string) zk.Dialer {
 		if okCert && okKey {
 			tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])
 			if err != nil {
-				return nil, errwrap.Wrapf("client tls setup failed for ZK: {{err}}", err)
+				return nil, fmt.Errorf("client tls setup failed for ZK: %w", err)
 			}
 
 			tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
@@ -281,7 +280,7 @@ func customTLSDial(conf map[string]string, machines string) zk.Dialer {
 
 			data, err := ioutil.ReadFile(tlsCaFile)
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to read ZK CA file: {{err}}", err)
+				return nil, fmt.Errorf("failed to read ZK CA file: %w", err)
 			}
 
 			if !caPool.AppendCertsFromPEM(data) {
@@ -346,7 +345,7 @@ func (c *ZooKeeperBackend) cleanupLogicalPath(path string) error {
 
 		_, stat, err := c.client.Exists(fullPath)
 		if err != nil {
-			return errwrap.Wrapf("failed to acquire node data: {{err}}", err)
+			return fmt.Errorf("failed to acquire node data: %w", err)
 		}
 
 		if stat.DataLength > 0 && stat.NumChildren > 0 {
@@ -358,7 +357,7 @@ func (c *ZooKeeperBackend) cleanupLogicalPath(path string) error {
 		} else {
 			// Empty node, lets clean it up!
 			if err := c.client.Delete(fullPath, -1); err != nil && err != zk.ErrNoNode {
-				return errwrap.Wrapf(fmt.Sprintf("removal of node %q failed: {{err}}", fullPath), err)
+				return fmt.Errorf("removal of node %q failed: %w", fullPath, err)
 			}
 		}
 	}
@@ -426,7 +425,7 @@ func (c *ZooKeeperBackend) Delete(ctx context.Context, key string) error {
 
 	// Mask if the node does not exist
 	if err != nil && err != zk.ErrNoNode {
-		return errwrap.Wrapf(fmt.Sprintf("failed to remove %q: {{err}}", fullPath), err)
+		return fmt.Errorf("failed to remove %q: %w", fullPath, err)
 	}
 
 	err = c.cleanupLogicalPath(key)
@@ -545,7 +544,7 @@ func (i *ZooKeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 	// Watch for Events which could result in loss of our zkLock and close(i.leaderCh)
 	currentVal, _, lockeventCh, err := i.in.client.GetW(lockpath)
 	if err != nil {
-		return nil, errwrap.Wrapf("unable to watch HA lock: {{err}}", err)
+		return nil, fmt.Errorf("unable to watch HA lock: %w", err)
 	}
 	if i.value != string(currentVal) {
 		return nil, fmt.Errorf("lost HA lock immediately before watch")
@@ -643,8 +642,9 @@ func (i *ZooKeeperHALock) Unlock() error {
 					return
 				}
 
+				timer := time.NewTimer(time.Second)
 				select {
-				case <-time.After(time.Second):
+				case <-timer.C:
 					attempts := attempts + 1
 					if attempts >= 10 {
 						i.logger.Error("release lock max attempts reached. Lock may not be released", "error", err)
@@ -652,6 +652,7 @@ func (i *ZooKeeperHALock) Unlock() error {
 					}
 					continue
 				case <-i.stopCh:
+					timer.Stop()
 					return
 				}
 			}

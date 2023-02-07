@@ -8,6 +8,8 @@ description: |-
 
 # LDAP Auth Method
 
+@include 'x509-sha1-deprecation.mdx'
+
 The `ldap` auth method allows authentication using an existing LDAP
 server and user/password credentials. This allows Vault to be integrated
 into environments using LDAP without duplicating the user/pass configuration
@@ -116,14 +118,20 @@ There are two alternate methods of resolving the user object used to authenticat
 - `bindpass` (string, optional) - Password to use along with `binddn` when performing user search.
 - `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
 - `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
+- `userfilter` (string, optional) - Go template used to construct a ldap user search filter. The template can access the following context variables: \[`UserAttr`, `Username`\]. The default userfilter is `({{.UserAttr}}={{.Username}})` or `(userPrincipalName={{.Username}}@UPNDomain)` if the `upndomain` parameter is set. The user search filter can be used to restrict what user can attempt to log in. For example, to limit login to users that are not contractors, you could write `(&(objectClass=user)({{.UserAttr}}={{.Username}})(!(employeeType=Contractor)))`.
+
+@include 'ldap-auth-userfilter-warning.mdx'
 
 #### Binding - Anonymous Search
 
 - `discoverdn` (bool, optional) - If true, use anonymous bind to discover the bind DN of a user
 - `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
 - `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
+- `userfilter` (string, optional) - Go template used to construct a ldap user search filter. The template can access the following context variables: \[`UserAttr`, `Username`\]. The default userfilter is `({{.UserAttr}}={{.Username}})` or `(userPrincipalName={{.Username}}@UPNDomain)` if the `upndomain` parameter is set. The user search filter can be used to restrict what user can attempt to log in. For example, to limit login to users that are not contractors, you could write `(&(objectClass=user)({{.UserAttr}}={{.Username}})(!(employeeType=Contractor)))`.
 - `deny_null_bind` (bool, optional) - This option prevents users from bypassing authentication when providing an empty password. The default is `true`.
 - `anonymous_group_search` (bool, optional) - Use anonymous binds when performing LDAP group searches. Defaults to `false`.
+
+@include 'ldap-auth-userfilter-warning.mdx'
 
 #### Binding - User Principal Name (AD)
 
@@ -140,6 +148,11 @@ Once a user has been authenticated, the LDAP auth method must know how to resolv
 _Note_: When using _Authenticated Search_ for binding parameters (see above) the distinguished name defined for `binddn` is used for the group search. Otherwise, the authenticating user is used to perform the group search.
 
 Use `vault path-help` for more details.
+
+### Other
+
+- `username_as_alias` (bool, optional) - If set to true, forces the auth method to use the username passed by the user as the alias name.
+
 
 ## Examples:
 
@@ -256,5 +269,5 @@ It should be noted that user -> policy mapping happens at token creation time. A
 ## API
 
 The LDAP auth method has a full HTTP API. Please see the
-[LDAP auth method API](/api/auth/ldap) for more
+[LDAP auth method API](/vault/api-docs/auth/ldap) for more
 details.

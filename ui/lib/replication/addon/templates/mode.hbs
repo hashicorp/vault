@@ -1,55 +1,49 @@
 <section class="section">
   <div class="container is-widescreen">
-    {{#if (and (eq model.drMode "secondary") (eq model.drModeInit "primary"))}}
-      <nav class="navbar"></nav>
+    {{#if (and (eq this.model.drMode "secondary") (eq this.model.drModeInit "primary"))}}
+      <nav class="navbar" aria-label="loading nav"></nav>
       <LayoutLoading />
     {{else}}
-      {{#if model.replicationAttrs.replicationEnabled}}
+      {{#if this.model.replicationAttrs.replicationEnabled}}
         <PageHeader as |p|>
           <p.top>
-            <nav class="key-value-header breadcrumb">
+            <nav class="key-value-header breadcrumb" aria-label="breadcrumbs">
               <ul>
                 <li>
-                  {{#link-to "index"}}
-                    <span class="sep" data-test-replication-breadcrumb />
+                  <LinkTo @route="index">
+                    <span class="sep" data-test-replication-breadcrumb></span>
                     Replication
-                  {{/link-to}}
+                  </LinkTo>
                 </li>
                 <li>
                   <span class="sep"></span>
-                    {{model.replicationModeForDisplay}}
+                  {{this.model.replicationModeForDisplay}}
                 </li>
               </ul>
             </nav>
-            </p.top>
-            <p.levelLeft>
-              <h1 class="has-top-margin-m title is-3 " data-test-replication-title=true>
-                {{model.replicationModeForDisplay}}
-                <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
-                  {{model.replicationAttrs.modeForHeader}}
-                </span>
-              </h1>
+          </p.top>
+          <p.levelLeft>
+            <h1 class="has-top-margin-m title is-3" data-test-replication-title={{true}}>
+              {{this.model.replicationModeForDisplay}}
+              <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display={{true}}>
+                {{this.model.replicationAttrs.modeForHeader}}
+              </span>
+            </h1>
           </p.levelLeft>
         </PageHeader>
         <div class="tabs-container box is-bottomless is-fullwidth is-paddingless is-marginless">
-          <nav class="tabs sub-nav">
+          <nav class="tabs sub-nav" aria-label="tab navigation">
             <ul>
-              <li class="{{if (is-active-route 'vault.cluster.replication.mode.index') 'is-active' ''}}">
-                {{#link-to "mode" replicationMode data-test-replication-link="details"}}
-                  Details
-                {{/link-to}}
-              </li>
-              <li class="{{if (is-active-route 'vault.cluster.replication.mode.manage') 'is-active' ''}}">
-                {{#link-to "mode.manage" replicationMode data-test-replication-link="manage"}}
-                  Manage
-                {{/link-to}}
-              </li>
-              {{#if model.replicationAttrs.isPrimary}}
-                <li class="{{if (is-active-route 'vault.cluster.replication.mode.secondaries') 'is-active' ''}}">
-                  {{#link-to "mode.secondaries" replicationMode data-test-replication-link="secondaries"}}
-                    Secondaries
-                  {{/link-to}}
-                </li>
+              <LinkTo @route="mode.index" @model={{this.replicationMode}} data-test-replication-link="details">
+                Details
+              </LinkTo>
+              <LinkTo @route="mode.manage" @model={{this.replicationMode}} data-test-replication-link="manage">
+                Manage
+              </LinkTo>
+              {{#if this.model.replicationAttrs.isPrimary}}
+                <LinkTo @route="mode.secondaries" @model={{this.replicationMode}} data-test-replication-link="secondaries">
+                  Secondaries
+                </LinkTo>
               {{/if}}
             </ul>
           </nav>
@@ -59,4 +53,3 @@
     {{/if}}
   </div>
 </section>
-

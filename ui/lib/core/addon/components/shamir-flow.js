@@ -4,18 +4,20 @@ import { camelize } from '@ember/string';
 import Component from '@ember/component';
 import { get, computed } from '@ember/object';
 import layout from '../templates/components/shamir-flow';
+import { A } from '@ember/array';
 
+const pgpKeyFileDefault = () => ({ value: '' });
 const DEFAULTS = {
   key: null,
   loading: false,
-  errors: [],
+  errors: A(),
   threshold: null,
   progress: null,
   pgp_key: null,
   haveSavedPGPKey: false,
   started: false,
   generateWithPGP: false,
-  pgpKeyFile: { value: '' },
+  pgpKeyFile: pgpKeyFileDefault(),
   nonce: '',
 };
 
@@ -42,6 +44,7 @@ export default Component.extend(DEFAULTS, {
   },
 
   onUpdate() {},
+  onLicenseError() {},
   onShamirSuccess() {},
   // can be overridden w/an attr
   isComplete(data) {
@@ -63,9 +66,9 @@ export default Component.extend(DEFAULTS, {
   hasProgress: gt('progress', 0),
 
   actionSuccess(resp) {
-    let { onUpdate, isComplete, onShamirSuccess, thresholdPath } = this;
-    let threshold = get(resp, thresholdPath);
-    let props = {
+    const { onUpdate, isComplete, onShamirSuccess, thresholdPath } = this;
+    const threshold = get(resp, thresholdPath);
+    const props = {
       ...resp,
       threshold,
     };
@@ -88,12 +91,16 @@ export default Component.extend(DEFAULTS, {
     if (e.httpStatus === 400) {
       this.set('errors', e.errors);
     } else {
+      // if licensing error, trigger parent method to handle
+      if (e.httpStatus === 500 && e.errors?.join(' ').includes('licensing is in an invalid state')) {
+        this.onLicenseError();
+      }
       throw e;
     }
   },
 
-  generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'pgp_key', function() {
-    let { generateWithPGP, pgp_key, haveSavedPGPKey } = this;
+  generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'pgp_key', function () {
+    const { generateWithPGP, pgp_key, haveSavedPGPKey } = this;
     if (!generateWithPGP && !pgp_key) {
       return 'chooseMethod';
     }
@@ -139,9 +146,10 @@ export default Component.extend(DEFAULTS, {
     const adapter = this.store.adapterFor('cluster');
     const method = adapter[action];
 
-    method
-      .call(adapter, data, { checkStatus })
-      .then(resp => this.actionSuccess(resp), (...args) => this.actionError(...args));
+    method.call(adapter, data, { checkStatus }).then(
+      (resp) => this.actionSuccess(resp),
+      (...args) => this.actionError(...args)
+    );
   },
 
   actions: {

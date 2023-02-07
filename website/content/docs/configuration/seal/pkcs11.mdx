@@ -8,6 +8,8 @@ description: |-
 
 # `pkcs11` Seal
 
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, HSM must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documentation for more information.
+
 The PKCS11 seal configures Vault to use an HSM with PKCS11 as the seal wrapping
 mechanism. Vault Enterprise's HSM PKCS11 support is activated by one of the
 following:
@@ -43,7 +45,7 @@ file by providing all the required values:
 ```hcl
 seal "pkcs11" {
   lib            = "/usr/vault/lib/libCryptoki2_64.so"
-  slot           = "0"
+  slot           = "2305843009213693953"
   pin            = "AAAA-BBBB-CCCC-DDDD"
   key_label      = "vault-hsm-key"
   hmac_key_label = "vault-hsm-hmac-key"
@@ -56,22 +58,28 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `lib` `(string: <required>)`: The path to the PKCS#11 library shared object
   file. May also be specified by the `VAULT_HSM_LIB` environment variable.
-  **Note:** Depending on your HSM, this may be either a binary or a dynamic
-  library, and its use may require other libraries depending on which system the
-  Vault binary is currently running on (e.g.: a Linux system may require other
-  libraries to interpret Windows .dll files).
+
+  ~> **Note:** Depending on your HSM, the value of the `lib` parameter may be
+  either a binary or a dynamic library, and its use may require other libraries
+  depending on which system the Vault binary is currently running on (e.g.: a
+  Linux system may require other libraries to interpret Windows .dll files).
 
 - `slot` `(string: <slot or token label required>)`: The slot number to use,
-  specified as a string (e.g. `"0"`). May also be specified by the `VAULT_HSM_SLOT`
-  environment variable.
+  specified as a string (e.g. `"2305843009213693953"`). May also be specified by
+  the `VAULT_HSM_SLOT` environment variable.
+
+  ~> **Note**: Slots are typically listed as hex-decimal values in the OS setup
+  utility but this configuration uses their decimal equivalent. For example, using the
+  HSM command-line `pkcs11-tool`, a slot listed as `0x2000000000000001`in hex is equal
+  to `2305843009213693953` in decimal; these values may be listed shorter or
+  differently as determined by the HSM in use.
 
 - `token_label` `(string: <slot or token label required>)`: The slot token label to
   use. May also be specified by the `VAULT_HSM_TOKEN_LABEL` environment variable.
 
 - `pin` `(string: <required>)`: The PIN for login. May also be specified by the
   `VAULT_HSM_PIN` environment variable. _If set via the environment variable,
-  Vault will obfuscate the environment variable after reading it, and it will
-  need to be re-set if Vault is restarted._
+  it will need to be re-set if Vault is restarted._
 
 - `key_label` `(string: <required>)`: The label of the key to use. If the key
   does not exist and generation is enabled, this is the label that will be given
@@ -84,6 +92,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   for this field is the `key_label`. If `key_label` is rotated and this value is not
   set, decryption may fail. May also be specified by the `VAULT_HSM_DEFAULT_KEY_LABEL`
   environment variable. This value is ignored in new installations.
+
+- `key_id` `(string: "")`: The ID of the key to use. The value should be a hexadecimal
+  string (e.g., "0x33333435363434373537"). May also be specified by the
+  `VAULT_HSM_KEY_ID` environment variable.
 
 - `hmac_key_label` `(string: <required>)`: The label of the key to use for
   HMACing. This needs to be a suitable type. If Vault tries to create this it
@@ -100,9 +112,13 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   `VAULT_HSM_HMAC_DEFAULT_KEY_LABEL` environment variable. This value is ignored in
   new installations.
 
+- `hmac_key_id` `(string: "")`: The ID of the HMAC key to use. The value should be a
+  hexadecimal string (e.g., "0x33333435363434373537"). May also be specified by the
+  `VAULT_HSM_HMAC_KEY_ID` environment variable.
+
 - `mechanism` `(string: <best available>)`: The encryption/decryption mechanism to use,
   specified as a decimal or hexadecimal (prefixed by `0x`) string. May also be
-  specified by the `VAULT_HSM_MECHANISM` environment variable.  
+  specified by the `VAULT_HSM_MECHANISM` environment variable.
   Currently supported mechanisms (in order of precedence):
 
   - `0x1085` `CKM_AES_CBC_PAD` (HMAC mechanism required)
@@ -130,6 +146,16 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   circumstances, such as if proprietary vendor extensions are required to
   create keys of a suitable type.
 
+- `force_rw_session` `(string: "false")`: Force all operations to open up
+  a read-write session to the HSM. This is a boolean expressed as a string (e.g.
+  `"true"`). May also be specified by the `VAULT_HSM_FORCE_RW_SESSION` environment
+  variable. This key is mainly to work around a limitation within AWS's CloudHSM v5
+  pkcs11 implementation.
+
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+  
 ### Mechanism Specific Flags
 
 - `rsa_encrypt_local` `(string: "false")`: For HSMs that do not support encryption
@@ -159,13 +185,16 @@ VAULT_HSM_TOKEN_LABEL
 VAULT_HSM_PIN
 VAULT_HSM_KEY_LABEL
 VAULT_HSM_DEFAULT_KEY_LABEL
+VAULT_HSM_KEY_ID
 VAULT_HSM_HMAC_KEY_LABEL
 VAULT_HSM_HMAC_DEFAULT_KEY_LABEL
+VAULT_HSM_HMAC_KEY_ID
 VAULT_HSM_MECHANISM
 VAULT_HSM_HMAC_MECHANISM
 VAULT_HSM_GENERATE_KEY
 VAULT_HSM_RSA_ENCRYPT_LOCAL
 VAULT_HSM_RSA_OAEP_HASH
+VAULT_HSM_FORCE_RW_SESSION
 ```
 
 ## Vault Key Generation Attributes
@@ -244,7 +273,7 @@ or deleted and are used to decrypt older data.
 rotation is desired for data that was seal wrapped prior to this version must also set
 `default_key_label` and `hmac_default_key_label` to allow for decryption of older values.
 
-## Learn
+## Tutorial
 
-Refer to the [HSM Integration - Seal Wrap](https://learn.hashicorp.com/vault/operations/ops-seal-wrap)
-guide for a step-by-step tutorial.
+Refer to the [HSM Integration - Seal Wrap](/vault/tutorials/auto-unseal/seal-wrap)
+tutorial to learn how to enable the Seal Wrap feature to protect your data.

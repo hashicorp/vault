@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	pwd "github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
-	pwd "github.com/hashicorp/vault/sdk/helper/password"
 )
 
 type CLIHandler struct{}
@@ -39,15 +39,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		"password": password,
 	}
 
-	mfa_method, ok := m["method"]
-	if ok {
-		data["method"] = mfa_method
-	}
-	mfa_passcode, ok := m["passcode"]
-	if ok {
-		data["passcode"] = mfa_passcode
-	}
-
 	path := fmt.Sprintf("auth/%s/login/%s", mount, username)
 	secret, err := c.Logical().Write(path, data)
 	if err != nil {
@@ -67,11 +58,6 @@ Usage: vault login -method=ldap [CONFIG K=V...]
   The LDAP auth method allows users to authenticate using LDAP or
   Active Directory.
 
-  If MFA is enabled, a "method" and/or "passcode" may be required depending on
-  the MFA method. To check which MFA is in use, run:
-
-      $ vault read auth/<mount>/mfa_config
-
   Authenticate as "sally":
 
       $ vault login -method=ldap username=sally
@@ -82,12 +68,6 @@ Usage: vault login -method=ldap [CONFIG K=V...]
       $ vault login -method=ldap username=bob password=password
 
 Configuration:
-
-  method=<string>
-      MFA method.
-
-  passcode=<string>
-      MFA OTP/passcode.
 
   password=<string>
       LDAP password to use for authentication. If not provided, the CLI will

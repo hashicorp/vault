@@ -1,0 +1,83 @@
+{
+  "extends": "@tsconfig/ember/tsconfig.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "allowJs": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noEmitOnError": true,
+    "skipLibCheck": true,
+    // The combination of `baseUrl` with `paths` allows Ember's classic package
+    // layout, which is not resolvable with the Node resolution algorithm, to
+    // work with TypeScript.
+    "baseUrl": ".",
+    "paths": {
+      "vault/tests/*": ["tests/*"],
+      "vault/mirage/*": ["mirage/*"],
+      "vault/*": [
+        "types/*",
+        "types/vault/*",
+        "app/*",
+        "lib/core/app/*",
+        "lib/css/app/*",
+        "lib/kmip/app/*",
+        "lib/open-api-explorer/app/*",
+        "lib/pki/app/*",
+        "lib/replication/app/*",
+        "lib/service-worker-authenticated-download/app/*"
+      ],
+      "core": ["lib/core/addon"],
+      "core/*": ["lib/core/addon/*"],
+      "core/test-support": ["lib/core/addon-test-support"],
+      "core/test-support/*": ["lib/core/addon-test-support/*"],
+      "css": ["lib/css/addon"],
+      "css/*": ["lib/css/addon/*"],
+      "css/test-support": ["lib/css/addon-test-support"],
+      "css/test-support/*": ["lib/css/addon-test-support/*"],
+      "kmip": ["lib/kmip/addon"],
+      "kmip/*": ["lib/kmip/addon/*"],
+      "kmip/test-support": ["lib/kmip/addon-test-support"],
+      "kmip/test-support/*": ["lib/kmip/addon-test-support/*"],
+      "open-api-explorer": ["lib/open-api-explorer/addon"],
+      "open-api-explorer/*": ["lib/open-api-explorer/addon/*"],
+      "open-api-explorer/test-support": ["lib/open-api-explorer/addon-test-support"],
+      "open-api-explorer/test-support/*": ["lib/open-api-explorer/addon-test-support/*"],
+      "pki": ["lib/pki/addon"],
+      "pki/*": ["lib/pki/addon/*"],
+      "pki/test-support": ["lib/pki/addon-test-support"],
+      "pki/test-support/*": ["lib/pki/addon-test-support/*"],
+      "replication": ["lib/replication/addon"],
+      "replication/*": ["lib/replication/addon/*"],
+      "replication/test-support": ["lib/replication/addon-test-support"],
+      "replication/test-support/*": ["lib/replication/addon-test-support/*"],
+      "service-worker-authenticated-download": ["lib/service-worker-authenticated-download/addon"],
+      "service-worker-authenticated-download/*": ["lib/service-worker-authenticated-download/addon/*"],
+      "service-worker-authenticated-download/test-support": [
+        "lib/service-worker-authenticated-download/addon-test-support"
+      ],
+      "service-worker-authenticated-download/test-support/*": [
+        "lib/service-worker-authenticated-download/addon-test-support/*"
+      ],
+      "*": ["types/*"]
+    }
+  },
+  "include": [
+    "app/**/*",
+    "tests/**/*",
+    "types/**/*",
+    "lib/core/**/*",
+    "lib/css/**/*",
+    "lib/kmip/**/*",
+    "lib/open-api-explorer/**/*",
+    "lib/pki/**/*",
+    "lib/replication/**/*",
+    "lib/service-worker-authenticated-download/**/*",
+    "mirage/**/*"
+  ],
+  "exclude": ["node_modules"]
+}

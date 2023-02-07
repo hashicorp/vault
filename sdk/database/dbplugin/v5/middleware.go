@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/grpc/status"
 )
 
@@ -17,13 +18,31 @@ import (
 // Tracing Middleware
 // ///////////////////////////////////////////////////
 
-var _ Database = databaseTracingMiddleware{}
+var (
+	_ Database                = databaseTracingMiddleware{}
+	_ logical.PluginVersioner = databaseTracingMiddleware{}
+)
 
 // databaseTracingMiddleware wraps a implementation of Database and executes
 // trace logging on function call.
 type databaseTracingMiddleware struct {
 	next   Database
 	logger log.Logger
+}
+
+func (mw databaseTracingMiddleware) PluginVersion() (resp logical.PluginVersion) {
+	defer func(then time.Time) {
+		mw.logger.Trace("version",
+			"status", "finished",
+			"version", resp,
+			"took", time.Since(then))
+	}(time.Now())
+
+	mw.logger.Trace("version", "status", "started")
+	if versioner, ok := mw.next.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
 }
 
 func (mw databaseTracingMiddleware) Initialize(ctx context.Context, req InitializeRequest) (resp InitializeResponse, err error) {
@@ -98,7 +117,10 @@ func (mw databaseTracingMiddleware) Close() (err error) {
 // Metrics Middleware Domain
 // ///////////////////////////////////////////////////
 
-var _ Database = databaseMetricsMiddleware{}
+var (
+	_ Database                = databaseMetricsMiddleware{}
+	_ logical.PluginVersioner = databaseMetricsMiddleware{}
+)
 
 // databaseMetricsMiddleware wraps an implementation of Databases and on
 // function call logs metrics about this instance.
@@ -106,6 +128,21 @@ type databaseMetricsMiddleware struct {
 	next Database
 
 	typeStr string
+}
+
+func (mw databaseMetricsMiddleware) PluginVersion() logical.PluginVersion {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"database", "PluginVersion"}, now)
+		metrics.MeasureSince([]string{"database", mw.typeStr, "PluginVersion"}, now)
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"database", "PluginVersion"}, 1)
+	metrics.IncrCounter([]string{"database", mw.typeStr, "PluginVersion"}, 1)
+
+	if versioner, ok := mw.next.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
 }
 
 func (mw databaseMetricsMiddleware) Initialize(ctx context.Context, req InitializeRequest) (resp InitializeResponse, err error) {
@@ -196,7 +233,10 @@ func (mw databaseMetricsMiddleware) Close() (err error) {
 // Error Sanitizer Middleware Domain
 // ///////////////////////////////////////////////////
 
-var _ Database = DatabaseErrorSanitizerMiddleware{}
+var (
+	_ Database                = (*DatabaseErrorSanitizerMiddleware)(nil)
+	_ logical.PluginVersioner = (*DatabaseErrorSanitizerMiddleware)(nil)
+)
 
 // DatabaseErrorSanitizerMiddleware wraps an implementation of Databases and
 // sanitizes returned error messages
@@ -243,6 +283,13 @@ func (mw DatabaseErrorSanitizerMiddleware) Close() (err error) {
 	return mw.sanitize(mw.next.Close())
 }
 
+func (mw DatabaseErrorSanitizerMiddleware) PluginVersion() logical.PluginVersion {
+	if versioner, ok := mw.next.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
+}
+
 // sanitize errors by removing any sensitive strings within their messages. This uses
 // the secretsFn to determine what fields should be sanitized.
 func (mw DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
@@ -264,11 +311,11 @@ func (mw DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 		// error while changing the actual error message
 		s, ok := status.FromError(err)
 		if ok {
-			err = status.Error(s.Code(), strings.Replace(s.Message(), find, replace, -1))
+			err = status.Error(s.Code(), strings.ReplaceAll(s.Message(), find, replace))
 			continue
 		}
 
-		err = errors.New(strings.Replace(err.Error(), find, replace, -1))
+		err = errors.New(strings.ReplaceAll(err.Error(), find, replace))
 	}
 	return err
 }

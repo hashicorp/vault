@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/transit: Add associated_data parameter for additional authenticated data in AEAD ciphers
+```

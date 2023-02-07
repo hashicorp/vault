@@ -1,33 +1,19 @@
-export default function() {
+import ENV from 'vault/config/environment';
+import handlers from './handlers';
+
+// remember to export handler name from mirage/handlers/index.js file
+
+export default function () {
   this.namespace = 'v1';
 
-  this.get('sys/internal/counters/activity', function(db) {
-    let data = {};
-    const firstRecord = db['metrics/activities'].first();
-    if (firstRecord) {
-      data = firstRecord;
-    }
-    return {
-      data,
-      request_id: '0001',
-    };
-  });
-
-  this.get('sys/internal/counters/config', function(db) {
-    return {
-      request_id: '00001',
-      data: db['metrics/configs'].first(),
-    };
-  });
-
-  this.get('/sys/internal/ui/feature-flags', db => {
-    const featuresResponse = db.features.first();
-    return {
-      data: {
-        feature_flags: featuresResponse ? featuresResponse.feature_flags : null,
-      },
-    };
-  });
-
+  // start ember in development running mirage -> yarn start:mirage handlerName
+  // if handler is not provided, general config will be used
+  // this is useful for feature development when a specific and limited config is required
+  const { handler } = ENV['ember-cli-mirage'];
+  const handlerName = handler in handlers ? handler : 'base';
+  handlers[handlerName](this);
+  this.logging = false; // disables passthrough logging which spams the console
+  console.log(`⚙ Using ${handlerName} Mirage request handlers ⚙`); // eslint-disable-line
+  // passthrough all unhandled requests
   this.passthrough();
 }

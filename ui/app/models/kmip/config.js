@@ -10,7 +10,7 @@ export default Model.extend({
     return `/v1/${path}/config?help=1`;
   },
 
-  fieldGroups: computed('newFields', function() {
+  fieldGroups: computed('newFields', function () {
     let groups = [{ default: ['listenAddrs', 'connectionTimeout'] }];
 
     groups = combineFieldGroups(groups, this.newFields, []);

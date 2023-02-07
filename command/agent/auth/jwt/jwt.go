@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"net/http"
 	"os"
 	"sync"
@@ -14,23 +14,27 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
 type jwtMethod struct {
-	logger          hclog.Logger
-	path            string
-	mountPath       string
-	role            string
-	credsFound      chan struct{}
-	watchCh         chan string
-	stopCh          chan struct{}
-	doneCh          chan struct{}
-	credSuccessGate chan struct{}
-	ticker          *time.Ticker
-	once            *sync.Once
-	latestToken     *atomic.Value
+	logger                hclog.Logger
+	path                  string
+	mountPath             string
+	role                  string
+	removeJWTAfterReading bool
+	credsFound            chan struct{}
+	watchCh               chan string
+	stopCh                chan struct{}
+	doneCh                chan struct{}
+	credSuccessGate       chan struct{}
+	ticker                *time.Ticker
+	once                  *sync.Once
+	latestToken           *atomic.Value
 }
 
+// NewJWTAuthMethod returns an implementation of Agent's auth.AuthMethod
+// interface for JWT auth.
 func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if conf == nil {
 		return nil, errors.New("empty config")
@@ -40,15 +44,16 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	}
 
 	j := &jwtMethod{
-		logger:          conf.Logger,
-		mountPath:       conf.MountPath,
-		credsFound:      make(chan struct{}),
-		watchCh:         make(chan string),
-		stopCh:          make(chan struct{}),
-		doneCh:          make(chan struct{}),
-		credSuccessGate: make(chan struct{}),
-		once:            new(sync.Once),
-		latestToken:     new(atomic.Value),
+		logger:                conf.Logger,
+		mountPath:             conf.MountPath,
+		removeJWTAfterReading: true,
+		credsFound:            make(chan struct{}),
+		watchCh:               make(chan string),
+		stopCh:                make(chan struct{}),
+		doneCh:                make(chan struct{}),
+		credSuccessGate:       make(chan struct{}),
+		once:                  new(sync.Once),
+		latestToken:           new(atomic.Value),
 	}
 	j.latestToken.Store("")
 
@@ -70,6 +75,14 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("could not convert 'role' config value to string")
 	}
 
+	if removeJWTAfterReadingRaw, ok := conf.Config["remove_jwt_after_reading"]; ok {
+		removeJWTAfterReading, err := parseutil.ParseBool(removeJWTAfterReadingRaw)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing 'remove_jwt_after_reading' value: %w", err)
+		}
+		j.removeJWTAfterReading = removeJWTAfterReading
+	}
+
 	switch {
 	case j.path == "":
 		return nil, errors.New("'path' value is empty")
@@ -77,7 +90,14 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("'role' value is empty")
 	}
 
-	j.ticker = time.NewTicker(500 * time.Millisecond)
+	// If we don't delete the JWT after reading, use a slower reload period,
+	// otherwise we would re-read the whole file every 500ms, instead of just
+	// doing a stat on the file every 500ms.
+	readPeriod := 1 * time.Minute
+	if j.removeJWTAfterReading {
+		readPeriod = 500 * time.Millisecond
+	}
+	j.ticker = time.NewTicker(readPeriod)
 
 	go j.runWatcher()
 
@@ -86,7 +106,7 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return j, nil
 }
 
-func (j *jwtMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
+func (j *jwtMethod) Authenticate(_ context.Context, _ *api.Client) (string, http.Header, map[string]interface{}, error) {
 	j.logger.Trace("beginning authentication")
 
 	j.ingressToken()
@@ -142,6 +162,7 @@ func (j *jwtMethod) runWatcher() {
 			j.ingressToken()
 			newToken := j.latestToken.Load().(string)
 			if newToken != latestToken {
+				j.logger.Debug("new jwt file found")
 				j.credsFound <- struct{}{}
 			}
 		}
@@ -158,14 +179,20 @@ func (j *jwtMethod) ingressToken() {
 		return
 	}
 
-	j.logger.Debug("new jwt file found")
-
-	if !fi.Mode().IsRegular() {
-		j.logger.Error("jwt file is not a regular file")
+	// Check that the path refers to a file.
+	// If it's a symlink, it could still be a symlink to a directory,
+	// but os.ReadFile below will return a descriptive error.
+	switch mode := fi.Mode(); {
+	case mode.IsRegular():
+		// regular file
+	case mode&fs.ModeSymlink != 0:
+		// symlink
+	default:
+		j.logger.Error("jwt file is not a regular file or symlink")
 		return
 	}
 
-	token, err := ioutil.ReadFile(j.path)
+	token, err := os.ReadFile(j.path)
 	if err != nil {
 		j.logger.Error("failed to read jwt file", "error", err)
 		return
@@ -179,7 +206,9 @@ func (j *jwtMethod) ingressToken() {
 		j.latestToken.Store(string(token))
 	}
 
-	if err := os.Remove(j.path); err != nil {
-		j.logger.Error("error removing jwt file", "error", err)
+	if j.removeJWTAfterReading {
+		if err := os.Remove(j.path); err != nil {
+			j.logger.Error("error removing jwt file", "error", err)
+		}
 	}
 }

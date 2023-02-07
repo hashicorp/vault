@@ -1,3 +1,26 @@
 @import 'ember-basic-dropdown';
 @import 'ember-power-select';
 @import './core';
+@import './engines';
+
+@mixin font-face($name) {
+  @font-face {
+    font-family: $name;
+    src: url('/ui/fonts/#{$name}.woff2') format('woff2'), url('/ui/fonts/#{$name}.woff') format('woff');
+  }
+}
+
+@include font-face('obscure');
+// Font comes from npm package: https://www.npmjs.com/package/text-security
+// We took the font we wanted and moved it into the ui/fonts folder
+@include font-face('text-security-square');
+
+.sr-only {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}

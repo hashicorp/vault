@@ -1,0 +1,252 @@
+---
+layout: docs
+page_title: Install the Vault EKM Provider
+description: Installation steps for the Vault EKM Provider for Microsoft SQL Server.
+---
+
+# Installing the Vault EKM Provider
+
+This guide assumes you are installing the Vault EKM Provider for the first time.
+For upgrade instructions, see [upgrading](/vault/docs/platform/mssql/upgrading).
+
+## Prerequisites
+
+* Vault Enterprise server 1.9+ with a license for the Advanced Data Protection Key Management module
+* Microsoft Windows Server operating system
+* Microsoft SQL Server for Windows (SQL Server for Linux [does not support EKM][linux-ekm])
+* An authenticated Vault client
+
+To check your Vault version and license, you can run:
+
+```bash
+vault status
+vault license get -format=json
+```
+
+The list of features should include "Key Management Transparent Data Encryption".
+
+[linux-ekm]: https://docs.microsoft.com/en-us/sql/linux/sql-server-linux-editions-and-components-2019?view=sql-server-ver15#Unsupported
+
+## Installing the Vault EKM provider
+
+## Configuring Vault
+
+The EKM provider requires AppRole auth and the Transit secret engine to be setup
+on the Vault server. The steps below can be used to configure Vault ready for the
+EKM provider to use it.
+
+-> **Note:** rsa-2048 is currently the only supported key type.
+
+1. Set up AppRole auth:
+
+    ```bash
+    vault auth enable approle
+    vault write auth/approle/role/ekm-encryption-key-role \
+        token_ttl=20m \
+        max_token_ttl=30m \
+        token_policies=tde-policy
+    ```
+
+1. Retrieve the AppRole ID and secret ID for use later when configuring SQL Server:
+
+    ```bash
+    vault read auth/approle/role/tde-role/role-id
+    vault write -f auth/approle/role/tde-role/secret-id
+    ```
+
+1. Enable the transit secret engine and create a key:
+
+    ```bash
+    vault secrets enable transit
+    vault write -f transit/keys/ekm-encryption-key type="rsa-2048"
+    ```
+
+1. Create a policy for the Vault EKM provider to use. The following policy has
+    the minimum required permissions:
+
+    ```bash
+    vault policy write tde-policy -<<EOF
+    path "transit/keys/ekm-encryption-key" {
+        capabilities = ["create", "read", "update", "delete"]
+    }
+
+    path "transit/keys" {
+        capabilities = ["list"]
+    }
+
+    path "transit/encrypt/ekm-encryption-key" {
+        capabilities = ["update"]
+    }
+
+    path "transit/decrypt/ekm-encryption-key" {
+        capabilities = ["update"]
+    }
+
+    path "sys/license/status" {
+        capabilities = ["read"]
+    }
+    EOF
+    ```
+
+## Configuring SQL Server
+
+The remaining steps are all run on the database server.
+
+### Install the EKM provider on the server
+
+1. Download and run the latest Vault EKM provider installer from
+  [releases.hashicorp.com](https://releases.hashicorp.com/vault-mssql-ekm-provider/)
+1. Enter your Vault server's address when prompted and complete the installer
+1. If you need to configure non-default namespace or mount paths for your AppRole and
+   Transit engines, see [configuration](/vault/docs/platform/mssql/configuration).
+
+### Configure the EKM provider using SQL
+
+Open Microsoft SQL Server Management Studio, and run the queries below to complete
+installation.
+
+1. Enable the EKM feature and create a cryptographic provider using the folder
+   you just installed the EKM provider into.
+
+    ```sql
+    -- Enable advanced options
+    USE master;
+    GO
+
+    EXEC sp_configure 'show advanced options', 1;
+    GO
+
+    RECONFIGURE;
+    GO
+
+    -- Enable EKM provider
+    EXEC sp_configure 'EKM provider enabled', 1;
+    GO
+
+    RECONFIGURE;
+    GO
+
+    CREATE CRYPTOGRAPHIC PROVIDER TransitVaultProvider
+    FROM FILE = 'C:\Program Files\HashiCorp\Transit Vault EKM Provider\TransitVaultEKM.dll'
+    GO
+    ```
+
+1. Next, create credentials for an admin to use EKM with your AppRole role and
+    secret ID from above:
+
+    ```sql
+    -- Replace <approle-role-id> and <approle-secret-id> with the values from
+    -- the earlier vault commands:
+    -- vault read auth/approle/role/tde-role/role-id
+    -- vault write -f auth/approle/role/tde-role/secret-id
+    CREATE CREDENTIAL TransitVaultCredentials
+        WITH IDENTITY = '<approle-role-id>',
+        SECRET = '<approle-secret-id>'
+    FOR CRYPTOGRAPHIC PROVIDER TransitVaultProvider;
+    GO
+
+    -- Replace <domain>\<login> with the SQL Server administrator's login
+    ALTER LOGIN "<domain>\<login>" ADD CREDENTIAL TransitVaultCredentials;
+    ```
+
+1. You can now create an asymmetric key using the transit key set up earlier:
+
+    ```sql
+    CREATE ASYMMETRIC KEY TransitVaultAsymmetric
+    FROM PROVIDER TransitVaultProvider
+    WITH
+    CREATION_DISPOSITION = OPEN_EXISTING,
+    PROVIDER_KEY_NAME = 'ekm-encryption-key';
+    ```
+
+    -> **Note:** This is the first step at which the EKM provider will communicate with Vault. If
+    Vault is misconfigured, this step is likely to fail. See
+    [troubleshooting](/vault/docs/platform/mssql/troubleshooting) for tips on specific error codes.
+
+1. Create another login from the new asymmetric key:
+
+    ```sql
+     -- Replace <approle-role-id> and <approle-secret-id> with the values from
+    -- the earlier vault commands again
+    CREATE CREDENTIAL TransitVaultTDECredentials
+        WITH IDENTITY = '<approle-role-id>',
+        SECRET = '<approle-secret-id>'
+    FOR CRYPTOGRAPHIC PROVIDER TransitVaultProvider;
+    GO
+
+    CREATE LOGIN TransitVaultTDELogin
+    FROM ASYMMETRIC KEY TransitVaultAsymmetric;
+    GO
+
+    ALTER LOGIN TransitVaultTDELogin
+    ADD CREDENTIAL TransitVaultTDECredentials;
+    GO
+    ```
+
+1. Finally, you can enable TDE and protect the database encryption key with
+   the asymmetric key managed by Vault's Transit secret engine:
+
+    ```sql
+    CREATE DATABASE TestTDE
+    GO
+
+    USE TestTDE;
+    GO
+
+    CREATE DATABASE ENCRYPTION KEY
+    WITH ALGORITHM = AES_256
+    ENCRYPTION BY SERVER ASYMMETRIC KEY TransitVaultAsymmetric;
+    GO
+
+    ALTER DATABASE TestTDE
+    SET ENCRYPTION ON;
+    GO
+    ```
+
+1. Check the status of database encryption using the following queries:
+    ```sql
+    SELECT * FROM sys.dm_database_encryption_keys;
+
+    SELECT (SELECT name FROM sys.databases WHERE database_id = k.database_id) as name,
+        encryption_state, key_algorithm, key_length,
+        encryptor_type, encryption_state_desc, encryption_scan_state_desc FROM sys.dm_database_encryption_keys k;
+
+    ```
+
+## Key Rotation
+
+Both the database encryption key and Vault Transit's asymmetric key can be rotated independently.
+
+To rotate the database encryption key, you can execute the
+[following SQL query](https://docs.microsoft.com/en-us/sql/t-sql/statements/alter-database-encryption-key-transact-sql?view=azuresqldb-current)
+in Microsoft SQL Server Management Studio:
+
+```sql
+USE TestTDE;
+GO
+
+ALTER DATABASE ENCRYPTION KEY
+REGENERATE WITH ALGORITHM = AES_256;
+GO
+
+SELECT * FROM sys.dm_database_encryption_keys;
+```
+
+To rotate the asymmetric key in Vault's Transit, you can use the standard
+[`/rotate`](/vault/api-docs/secret/transit#rotate-key) endpoint:
+
+```shell-session
+$ vault write -f transit/keys/ekm-encryption-key/rotate
+```
+
+After rotating the Vault asymmetric key, you can force SQL Server to re-encrypt the database encryption
+key with the newest version of the Vault key with:
+
+```sql
+USE TestTDE;
+GO
+
+ALTER DATABASE ENCRYPTION KEY
+ENCRYPTION BY SERVER ASYMMETRIC KEY TransitVaultAsymmetric;
+GO
+```

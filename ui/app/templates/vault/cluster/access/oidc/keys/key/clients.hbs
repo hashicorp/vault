@@ -1,0 +1,14 @@
+<Toolbar />
+
+{{#if (gt this.model.length 0)}}
+  <Oidc::ClientList @model={{this.model}} />
+{{else}}
+  <EmptyState
+    @title="No applications allowed"
+    @message="Access to this key has been limited, and no applications are allowed to use it. Edit the key to allow access."
+  >
+    <LinkTo @route="vault.cluster.access.oidc.keys.key.edit">
+      Edit key
+    </LinkTo>
+  </EmptyState>
+{{/if}}

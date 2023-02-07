@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	pwd "github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
-	pwd "github.com/hashicorp/vault/sdk/helper/password"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -19,8 +19,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		Username string `mapstructure:"username"`
 		Password string `mapstructure:"password"`
 		Mount    string `mapstructure:"mount"`
-		Method   string `mapstructure:"method"`
-		Passcode string `mapstructure:"passcode"`
 	}
 	if err := mapstructure.WeakDecode(m, &data); err != nil {
 		return nil, err
@@ -45,12 +43,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	options := map[string]interface{}{
 		"password": data.Password,
 	}
-	if data.Method != "" {
-		options["method"] = data.Method
-	}
-	if data.Passcode != "" {
-		options["passcode"] = data.Passcode
-	}
 
 	path := fmt.Sprintf("auth/%s/login/%s", data.Mount, data.Username)
 	secret, err := c.Logical().Write(path, options)
@@ -71,11 +63,6 @@ Usage: vault login -method=userpass [CONFIG K=V...]
   The userpass auth method allows users to authenticate using Vault's
   internal user database.
 
-  If MFA is enabled, a "method" and/or "passcode" may be required depending on
-  the MFA method. To check which MFA is in use, run:
-
-      $ vault read auth/<mount>/mfa_config
-
   Authenticate as "sally":
 
       $ vault login -method=userpass username=sally
@@ -86,12 +73,6 @@ Usage: vault login -method=userpass [CONFIG K=V...]
       $ vault login -method=userpass username=bob password=password
 
 Configuration:
-
-  method=<string>
-      MFA method.
-
-  passcode=<string>
-      MFA OTP/passcode.
 
   password=<string>
       Password to use for authentication. If not provided, the CLI will prompt

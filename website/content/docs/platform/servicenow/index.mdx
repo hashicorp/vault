@@ -1,0 +1,43 @@
+---
+layout: docs
+page_title: Vault ServiceNow Credential Resolver
+description: >-
+  The Vault Credential Resolver allows ServiceNow MID servers to use Vault as an enterprise-grade external secret store.
+---
+
+# Vault Credential Resolver
+
+ServiceNow® MID servers can use the Vault Credential Resolver to consume secrets
+directly from Vault for the purpose of performing discovery. See
+[installation](/vault/docs/platform/servicenow/installation) and
+[configuration](/vault/docs/platform/servicenow/configuration) for help getting started
+with the Vault Credential Resolver.
+
+## Overview
+
+ServiceNow uses MID servers deployed inside customer networks to perform
+agent-less discovery of their infrastructure. As infrastructure such as databases
+or servers are discovered, their attributes such as address and software versions
+are stored in a database. Naturally, this process requires a wide array of
+credentials. Customers can use ServiceNow's built-in credential storage, or install
+an external credential resolver to take advantage of their existing enterprise-grade
+secret storage solution.
+
+[![Architecture Overview](/img/servicenow-vault-credential-resolver-diagram.png)](/img/servicenow-vault-credential-resolver-diagram.png)
+
+The Vault Credential Resolver is one such resolver. The MID server will not
+store or cache any credentials marked as external, and will invoke the
+credential resolver each time it requires credentials.
+
+The Vault Credential Resolver is designed to communicate with a Vault Agent
+service installed on the same machine as the MID server. Authentication is
+handled between the Agent and Vault, and Vault Agent also handles caching and
+renewing leased secrets to ensure the load on Vault is minimized.
+
+### Features
+
+The following features are supported by the Vault Credential Resolver:
+
+- KV, Active Directory and AWS secret engines.
+- Communication with Vault via Vault Agent.
+- TLS communication with Vault Agent.

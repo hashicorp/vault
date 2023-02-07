@@ -3,16 +3,16 @@ import Service from '@ember/service';
 import { resolve } from 'rsvp';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, find } from '@ember/test-helpers';
+import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-let response = {
+const response = {
   progress: 1,
   required: 3,
   complete: false,
 };
 
-let adapter = {
+const adapter = {
   foo() {
     return resolve(response);
   },
@@ -24,10 +24,11 @@ const storeStub = Service.extend({
   },
 });
 
-module('Integration | Component | shamir flow', function(hooks) {
+module('Integration | Component | shamir flow', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
+    this.foo = function () {};
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeStub);
@@ -35,77 +36,68 @@ module('Integration | Component | shamir flow', function(hooks) {
     });
   });
 
-  test('it renders', async function(assert) {
-    await render(hbs`{{shamir-flow formText="like whoa"}}`);
+  test('it renders', async function (assert) {
+    await render(hbs`<ShamirFlow @formText="like whoa" />`);
 
     assert.dom('form [data-test-form-text]').hasText('like whoa', 'renders formText inline');
 
     await render(hbs`
-      {{#shamir-flow formText="like whoa"}}
+      <ShamirFlow @formText="like whoa">
         <p>whoa again</p>
-      {{/shamir-flow}}
+      </ShamirFlow>
     `);
 
     assert.dom('.shamir-progress').doesNotExist('renders no progress bar for no progress');
     assert.dom('form [data-test-form-text]').hasText('whoa again', 'renders the block, not formText');
 
     await render(hbs`
-      {{shamir-flow progress=1 threshold=5}}
+      <ShamirFlow @progress={{1}} @threshold={{5}} />
     `);
-
-    assert.ok(
-      find('.shamir-progress').textContent.includes('1/5 keys provided'),
-      'displays textual progress'
-    );
+    assert.dom('.shamir-progress').hasText('1/5 keys provided', 'displays textual progress');
 
     this.set('errors', ['first error', 'this is fine']);
     await render(hbs`
-      {{shamir-flow errors=errors}}
+    <ShamirFlow @errors={{this.errors}} />
     `);
     assert.dom('.message.is-danger').exists({ count: 2 }, 'renders errors');
   });
 
-  test('it sends data to the passed action', async function(assert) {
+  test('it sends data to the passed action', async function (assert) {
     this.set('key', 'foo');
     await render(hbs`
-      {{shamir-flow key=key action='foo' thresholdPath='required'}}
+      <ShamirFlow @key={{this.key}} @action="foo" @thresholdPath="required" />
     `);
     await click('[data-test-shamir-submit]');
-    assert.ok(
-      find('.shamir-progress').textContent.includes(
-        `${response.progress}/${response.required} keys provided`
-      ),
-      'displays the correct progress'
-    );
+    assert
+      .dom('.shamir-progress')
+      .hasText(`${response.progress}/${response.required} keys provided`, 'displays the correct progress');
   });
 
-  test('it checks onComplete to call onShamirSuccess', async function(assert) {
+  test('it checks onComplete to call onShamirSuccess', async function (assert) {
+    assert.expect(2);
     this.set('key', 'foo');
-    this.set('onSuccess', function() {
+    this.set('onSuccess', function () {
       assert.ok(true, 'onShamirSuccess called');
     });
 
-    this.set('checkComplete', function() {
+    this.set('checkComplete', function () {
       assert.ok(true, 'onComplete called');
       // return true so we trigger success call
       return true;
     });
 
     await render(hbs`
-      {{shamir-flow key=key action='foo' isComplete=(action checkComplete) onShamirSuccess=(action onSuccess)}}
+      <ShamirFlow @key={{this.key}} @action="foo" @isComplete={{action this.checkComplete}} @onShamirSuccess={{action this.onSuccess}} />
     `);
     await click('[data-test-shamir-submit]');
   });
 
-  test('it fetches progress on init when fetchOnInit is true', async function(assert) {
+  test('it fetches progress on init when fetchOnInit is true', async function (assert) {
     await render(hbs`
-      {{shamir-flow action='foo' fetchOnInit=true}}
+      <ShamirFlow @action="foo" @fetchOnInit={{true}} />
     `);
-    assert.ok(
-      find('.shamir-progress').textContent.includes(
-        `${response.progress}/${response.required} keys provided`
-      ),
-      'displays the correct progress'
-    );
+    assert
+      .dom('.shamir-progress')
+      .hasText(`${response.progress}/${response.required} keys provided`, 'displays the correct progress');
   });
 });

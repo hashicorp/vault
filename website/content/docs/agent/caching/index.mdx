@@ -36,49 +36,14 @@ specific scenarios.
    that are issued using the tokens managed by the agent, will be cached and
    its renewals are taken care of.
 
-## Using Auto-Auth Token
-
-Vault Agent allows for easy authentication to Vault in a wide variety of
-environments using [Auto-Auth](/docs/agent/autoauth). By setting the
-`use_auto_auth_token` (see below) configuration, clients will not be required
-to provide a Vault token to the requests made to the agent. When this
-configuration is set, if the request doesn't already bear a token, then the
-auto-auth token will be used to forward the request to the Vault server. This
-configuration will be overridden if the request already has a token attached,
-in which case, the token present in the request will be used to forward the
-request to the Vault server.
-
-## Forcing Auto-Auth Token
-
-Vault Agent can be configured to force the use of the auto-auth token by using
-the value `force` for the `use_auto_auth_token` option. This configuration
-overrides the default behavior described above in [Using Auth-Auth
-Token](/docs/agent/caching#using-auto-auth-token), and instead ignores any
-existing Vault token in the request and instead uses the auto-auth token.
-
 ## Persistent Cache
 
-Vault Agent can restore tokens and leases from a persistent cache file created by a previous 
-Vault Agent process. The persistent cache is a BoltDB file that includes tuples encrypted 
-by a generated encryption key. The encrypted tuples include the Vault token used to retrieve 
-secrets, leases for tokens/secrets, and secret values.
+Vault Agent can restore tokens and leases from a persistent cache file created
+by a previous Vault Agent process.
 
--> **Note:** Vault Agent Caching persistent cache will only restore _leased_ secrets. Secrets 
-that are not renewable, such as KV v2, will not be persisted.
-
-In order to use Vault Agent persistent cache, auto-auth must be used. During the restoration 
-of the cache, Vault Agent will pre-populate auto-auth with the persisted token. This token 
-is required to renew restored leases. If the token has expired, the cached leases will be evicted and 
-secrets will need to be retrieved from Vault.
-
-If Vault Agent templating is enabled alongside of the persistent cache, Vault Agent will automatically 
-route templating requests through the cache. This ensures template requests are cached and restored properly.
-
-At the time of this writing, Vault Agent persistent cache is only supported in a Kubernetes 
-environment. In the future the persistent cache will be expanded to include other environments.
-
-For more information about the Vault Agent persistent cache, see the sidebar for specific persistent 
-cache types.
+Refer to the [Vault Agent Persistent
+Caching](/vault/docs/agent/caching/persistent-caches) page for more information on
+this functionality.
 
 ## Cache Evictions
 
@@ -134,7 +99,7 @@ secrets are no longer performed by the Vault agent.
 
 Agent's listener address will be picked up by the CLI through the
 `VAULT_AGENT_ADDR` environment variable. This should be a complete URL such as
-"http://127.0.0.1:8200".
+`"http://127.0.0.1:8200"`.
 
 ## API
 
@@ -149,7 +114,8 @@ belonging to the cached response, the `request_path` that resulted in the
 cached response, the `lease` that is attached to the cached response, the
 `namespace` to which the cached response belongs to, and a few more. This API
 exposes some factors through which associated cache entries are fetched and
-evicted.
+evicted. For listeners without caching enabled, this API will still be available,
+but will do nothing (there is no cache to clear) and will return a `200` response.
 
 | Method | Path                    | Produces               |
 | :----- | :---------------------- | :--------------------- |
@@ -174,7 +140,7 @@ evicted.
 ```json
 {
   "type": "token",
-  "value": "s.rlNjegSKykWcplOkwsjd8bP9"
+  "value": "hvs.rlNjegSKykWcplOkwsjd8bP9"
 }
 ```
 
@@ -189,40 +155,57 @@ $ curl \
 
 ## Configuration (`cache`)
 
-The top level `cache` block has the following configuration entries:
-
-- `use_auto_auth_token (bool/string: false)` - If set, the requests made to agent
-  without a Vault token will be forwarded to the Vault server with the
-  auto-auth token attached. If the requests already bear a token, this
-  configuration will be overridden and the token in the request will be used to
-  forward the request to the Vault server. If set to `"force"` Agent will use the
-  auto-auth token, overwriting the attached Vault token if set.
+The presence of the top level `cache` block in any way (including an empty `cache` block)  will enable the cache.
+The top level `cache` block has the following configuration entry:
 
 - `persist` `(object: optional)` - Configuration for the persistent cache.
+
+The `cache` block also supports the `use_auto_auth_token`, `enforce_consistency`, and
+`when_inconsistent` configuration values of the `api_proxy` block
+[described in the API Proxy documentation](/vault/docs/agent/apiproxy#configuration-api_proxy) only to
+maintain backwards compatibility. This configuration **cannot** be specified alongside `api_proxy` equivalents,
+should not be preferred over configuring these values in the `api_proxy` block,
+and `api_proxy` should be the preferred place to configure these values.
+
+-> **Note:** When the `cache` block is defined, at least one
+[template][agent-template] or [listener][agent-listener] must also be defined
+in the config, otherwise there is no way to utilize the cache.
+
+[agent-template]: /vault/docs/agent/template
+[agent-listener]: /vault/docs/agent#listener-stanza
 
 ### Configuration (Persist)
 
 These are common configuration values that live within the `persist` block:
 
-- `type` `(string: required)` - The type of the persistent cahce to use, 
+- `type` `(string: required)` - The type of the persistent cache to use,
   e.g. `kubernetes`. _Note_: when using HCL this can be used as the key for
   the block, e.g. `persist "kubernetes" {...}`.
 
-- `path` `(string: required)` - The path on disk where the persistent cache file 
+- `path` `(string: required)` - The path on disk where the persistent cache file
   should be created or restored from.
 
-- `keep_after_import` `(bool: optional)` - When set to true, a restored cache file 
+- `keep_after_import` `(bool: optional)` - When set to true, a restored cache file
   is not deleted. Defaults to `false`.
 
-- `exit_on_err` `(bool: optional)` - When set to true, if any errors occur during 
-  a persitent cache restore, Vault Agent will exit with an error. Defaults to `true`.
+- `exit_on_err` `(bool: optional)` - When set to true, if any errors occur during
+  a persistent cache restore, Vault Agent will exit with an error. Defaults to `true`.
+
+- `service_account_token_file` `(string: optional)` - When `type` is set to `kubernetes`,
+this configures the path on disk where the Kubernetes service account token can be found.
+Defaults to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
 
 ## Configuration (`listener`)
 
 - `listener` `(array of objects: required)` - Configuration for the listeners.
 
-There can be one or more `listener` blocks at the top level.
-These configuration values are common to all `listener` blocks.
+There can be one or more `listener` blocks at the top level. Adding a listener enables
+the [API Proxy](/vault/docs/agent/apiproxy) and enables the API proxy to use the cache, if configured.
+These configuration values are common to both `tcp` and `unix` listener blocks. Blocks of type
+`tcp` support the standard `tcp` [listener](/vault/docs/configuration/listener/tcp)
+options. Additionally, the `role` string option is available as part of the top level
+of the `listener` block, which can be configured to `metrics_only` to serve only metrics,
+or the default role, `default`, which serves everything (including metrics).
 
 - `type` `(string: required)` - The type of the listener to use. Valid values
   are `tcp` and `unix`.
@@ -244,83 +227,37 @@ These configuration values are common to all `listener` blocks.
 
 ### Example Configuration
 
-An example configuration, with very contrived values, follows:
+Here is an example of a cache configuration with the optional `persist` block,
+alongside a regular listener, and a listener that only serves metrics.
 
-```javascript
-auto_auth {
-  method {
-    type = "aws"
-    wrap_ttl = 300
-    config = {
-      role = "foobar"
-    }
-  }
-
-  sink {
-    type = "file"
-    config = {
-      path = "/tmp/file-foo"
-    }
-  }
-}
+```hcl
+# Other Vault Agent configuration blocks
+# ...
 
 cache {
-  use_auto_auth_token = true
-}
-
-listener "unix" {
-  address = "/path/to/socket"
-  tls_disable = true
+	persist = {
+		type = "kubernetes"
+		path = "/vault/agent-cache/"
+		keep_after_import = true
+		exit_on_err = true
+		service_account_token_file = "/tmp/serviceaccount/token"
+	}
 }
 
 listener "tcp" {
-  address = "127.0.0.1:8200"
-  tls_disable = true
-}
-
-vault {
-  address = "http://127.0.0.1:8200"
-}
-```
-
-### Persistent Cache Example Configuration
-
-An example configuration, with very contrived values, follows:
-
-```javascript
-auto_auth {
-  method "kubernetes" {
-    config = {
-      role = "foobar"
-    }
-  }
-
-  sink "file" {
-    config = {
-      path = "/tmp/file-foo"
-    }
-  }
-}
-
-cache {
-  use_auto_auth_token = true
-  persist "kubernetes" {
-    path = "/vault/agent-cache"
-  }
+    address = "127.0.0.1:8100"
+    tls_disable = true
 }
 
 listener "tcp" {
-  address = "127.0.0.1:8200"
-  tls_disable = true
-}
-
-vault {
-  address = "http://127.0.0.1:8200"
+    address = "127.0.0.1:3000"
+    tls_disable = true
+    role = "metrics_only"
 }
 ```
 
-## Learn
+## Tutorial
 
 Refer to the [Vault Agent
-Caching](https://learn.hashicorp.com/vault/identity-access-management/agent-caching)
-guide for a step-by-step tutorial.
+Caching](/vault/tutorials/vault-agent/agent-caching)
+tutorial to learn how to use the Vault Agent to increase the availability of tokens and secrets to clients using its Caching function.

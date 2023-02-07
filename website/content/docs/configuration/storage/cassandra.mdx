@@ -69,8 +69,15 @@ CREATE TABLE "vault"."entries" (
 - `password` `(string: "")` – Password to use when authenticating with the
   Cassandra hosts.
 
-- `connection_timeout` `(int: 0)` - A timeout in seconds to wait until a
-  connection is established with the Cassandra hosts.
+- `initial_connection_timeout` `(int: 0)` - A timeout in seconds to wait until an initial connection is established
+  with the Cassandra hosts. If not set, default value from Cassandra driver(gocql) will be used - 600ms
+
+- `connection_timeout` `(int: 0)` - A timeout in seconds for each query.
+  If not set, default value from Cassandra driver(gocql) will be used - 600ms
+
+- `simple_retry_policy_retries` `(int: 0)` - Useful for Cassandra cluster with several nodes.
+  If current master node is down request will be retried on the next node `simple_retry_policy_retries`
+  times, and the client won't get an error.
 
 - `tls` `(int: 0)` – If `1`, indicates the connection with the Cassandra hosts
   should use TLS.

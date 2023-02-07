@@ -9,12 +9,11 @@ import (
 	"net/url"
 	"sync/atomic"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/vault/seal"
 
-	"github.com/hashicorp/errwrap"
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/shamir"
@@ -40,8 +39,9 @@ type InitResult struct {
 }
 
 var (
-	initPTFunc     = func(c *Core) func() { return nil }
-	initInProgress uint32
+	initPTFunc                = func(c *Core) func() { return nil }
+	initInProgress            uint32
+	ErrInitWithoutAutoloading = errors.New("cannot initialize storage without an autoloaded license")
 )
 
 func (c *Core) InitializeRecovery(ctx context.Context) error {
@@ -122,21 +122,21 @@ func (c *Core) InitializedLocally(ctx context.Context) (bool, error) {
 }
 
 func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
-	// Generate a master key
-	masterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
+	// Generate a root key
+	rootKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
-		return nil, nil, errwrap.Wrapf("key generation failed: {{err}}", err)
+		return nil, nil, fmt.Errorf("key generation failed: %w", err)
 	}
 
-	// Return the master key if only a single key part is used
+	// Return the root key if only a single key part is used
 	var unsealKeys [][]byte
 	if sc.SecretShares == 1 {
-		unsealKeys = append(unsealKeys, masterKey)
+		unsealKeys = append(unsealKeys, rootKey)
 	} else {
-		// Split the master key using the Shamir algorithm
-		shares, err := shamir.Split(masterKey, sc.SecretShares, sc.SecretThreshold)
+		// Split the root key using the Shamir algorithm
+		shares, err := shamir.Split(rootKey, sc.SecretShares, sc.SecretThreshold)
 		if err != nil {
-			return nil, nil, errwrap.Wrapf("failed to generate barrier shares: {{err}}", err)
+			return nil, nil, fmt.Errorf("failed to generate barrier shares: %w", err)
 		}
 		unsealKeys = shares
 	}
@@ -154,12 +154,16 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 		unsealKeys = encryptedShares
 	}
 
-	return masterKey, unsealKeys, nil
+	return rootKey, unsealKeys, nil
 }
 
 // Initialize is used to initialize the Vault with the given
 // configurations.
 func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitResult, error) {
+	if err := LicenseInitCheck(c); err != nil {
+		return nil, err
+	}
+
 	atomic.StoreUint32(&initInProgress, 1)
 	defer atomic.StoreUint32(&initInProgress, 0)
 	barrierConfig := initParams.BarrierConfig
@@ -168,7 +172,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// N.B. Although the core is capable of handling situations where some keys
 	// are stored and some aren't, in practice, replication + HSMs makes this
 	// extremely hard to reason about, to the point that it will probably never
-	// be supported. The reason is that each HSM needs to encode the master key
+	// be supported. The reason is that each HSM needs to encode the root key
 	// separately, which means the shares must be generated independently,
 	// which means both that the shares will be different *AND* there would
 	// need to be a way to actually allow fetching of the generated keys by
@@ -212,14 +216,14 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		// Check if the seal configuration is valid
 		if err := recoveryConfig.Validate(); err != nil {
 			c.logger.Error("invalid recovery configuration", "error", err)
-			return nil, errwrap.Wrapf("invalid recovery configuration: {{err}}", err)
+			return nil, fmt.Errorf("invalid recovery configuration: %w", err)
 		}
 	}
 
 	// Check if the seal configuration is valid
 	if err := barrierConfig.Validate(); err != nil {
 		c.logger.Error("invalid seal configuration", "error", err)
-		return nil, errwrap.Wrapf("invalid seal configuration: {{err}}", err)
+		return nil, fmt.Errorf("invalid seal configuration: %w", err)
 	}
 
 	// Avoid an initialization race
@@ -256,7 +260,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	err = c.seal.Init(ctx)
 	if err != nil {
 		c.logger.Error("failed to initialize seal", "error", err)
-		return nil, errwrap.Wrapf("error initializing seal: {{err}}", err)
+		return nil, fmt.Errorf("error initializing seal: %w", err)
 	}
 
 	initPTCleanup := initPTFunc(c)
@@ -272,7 +276,8 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 	var sealKey []byte
 	var sealKeyShares [][]byte
-	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == wrapping.Shamir {
+
+	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == wrapping.WrapperTypeShamir {
 		sealKey, sealKeyShares, err = c.generateShares(barrierConfig)
 		if err != nil {
 			c.logger.Error("error generating shares", "error", err)
@@ -283,7 +288,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// Initialize the barrier
 	if err := c.barrier.Initialize(ctx, barrierKey, sealKey, c.secureRandomReader); err != nil {
 		c.logger.Error("failed to initialize barrier", "error", err)
-		return nil, errwrap.Wrapf("failed to initialize barrier: {{err}}", err)
+		return nil, fmt.Errorf("failed to initialize barrier: %w", err)
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("security barrier initialized", "stored", barrierConfig.StoredShares, "shares", barrierConfig.SecretShares, "threshold", barrierConfig.SecretThreshold)
@@ -292,7 +297,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// Unseal the barrier
 	if err := c.barrier.Unseal(ctx, barrierKey); err != nil {
 		c.logger.Error("failed to unseal barrier", "error", err)
-		return nil, errwrap.Wrapf("failed to unseal barrier: {{err}}", err)
+		return nil, fmt.Errorf("failed to unseal barrier: %w", err)
 	}
 
 	// Ensure the barrier is re-sealed
@@ -308,7 +313,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	err = c.seal.SetBarrierConfig(ctx, barrierConfig)
 	if err != nil {
 		c.logger.Error("failed to save barrier configuration", "error", err)
-		return nil, errwrap.Wrapf("barrier configuration saving failed: {{err}}", err)
+		return nil, fmt.Errorf("barrier configuration saving failed: %w", err)
 	}
 
 	results := &InitResult{
@@ -318,22 +323,22 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// If we are storing shares, pop them out of the returned results and push
 	// them through the seal
 	switch c.seal.StoredKeysSupported() {
-	case seal.StoredKeysSupportedShamirMaster:
+	case seal.StoredKeysSupportedShamirRoot:
 		keysToStore := [][]byte{barrierKey}
-		if err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(sealKey); err != nil {
+		if err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(sealKey); err != nil {
 			c.logger.Error("failed to set seal key", "error", err)
-			return nil, errwrap.Wrapf("failed to set seal key: {{err}}", err)
+			return nil, fmt.Errorf("failed to set seal key: %w", err)
 		}
 		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
 			c.logger.Error("failed to store keys", "error", err)
-			return nil, errwrap.Wrapf("failed to store keys: {{err}}", err)
+			return nil, fmt.Errorf("failed to store keys: %w", err)
 		}
 		results.SecretShares = sealKeyShares
 	case seal.StoredKeysSupportedGeneric:
 		keysToStore := [][]byte{barrierKey}
 		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
 			c.logger.Error("failed to store keys", "error", err)
-			return nil, errwrap.Wrapf("failed to store keys: {{err}}", err)
+			return nil, fmt.Errorf("failed to store keys: %w", err)
 		}
 	default:
 		// We don't support initializing an old-style Shamir seal anymore, so
@@ -365,7 +370,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		err = c.seal.SetRecoveryConfig(ctx, recoveryConfig)
 		if err != nil {
 			c.logger.Error("failed to save recovery configuration", "error", err)
-			return nil, errwrap.Wrapf("recovery configuration saving failed: {{err}}", err)
+			return nil, fmt.Errorf("recovery configuration saving failed: %w", err)
 		}
 
 		if recoveryConfig.SecretShares > 0 {
@@ -390,7 +395,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		c.logger.Error("root token generation failed", "error", err)
 		return nil, err
 	}
-	results.RootToken = rootToken.ID
+	results.RootToken = rootToken.ExternalID
 	c.logger.Info("root token generated")
 
 	if initParams.RootTokenPGPKey != "" {
@@ -435,7 +440,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.unsealWithStoredKeysLock.Lock()
 	defer c.unsealWithStoredKeysLock.Unlock()
 
-	if c.seal.BarrierType() == wrapping.Shamir {
+	if c.seal.BarrierType() == wrapping.WrapperTypeShamir {
 		return nil
 	}
 
@@ -456,7 +461,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.Logger().Info("stored unseal keys supported, attempting fetch")
 	keys, err := c.seal.GetStoredKeys(ctx)
 	if err != nil {
-		return NewNonFatalError(errwrap.Wrapf("fetching stored unseal keys failed: {{err}}", err))
+		return NewNonFatalError(fmt.Errorf("fetching stored unseal keys failed: %w", err))
 	}
 
 	// This usually happens when auto-unseal is configured, but the servers have
@@ -470,7 +475,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 
 	err = c.unsealInternal(ctx, keys[0])
 	if err != nil {
-		return NewNonFatalError(errwrap.Wrapf("unseal with stored key failed: {{err}}", err))
+		return NewNonFatalError(fmt.Errorf("unseal with stored key failed: %w", err))
 	}
 
 	if c.Sealed() {

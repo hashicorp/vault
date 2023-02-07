@@ -6,8 +6,7 @@ description: Vault Enterprise has support for Control Group Authorization.
 
 # Vault Enterprise Control Groups
 
--> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
-with the Governance And Policy Module.
+-> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
 
 Vault Enterprise has support for Control Group Authorization. Control Groups
 add additional authorization factors to be required before satisfying a request.
@@ -24,6 +23,21 @@ Control Groups can verify the following factors:
 
 - `Identity Groups` - Require an authorizer to be in a specific set of identity
   groups.
+
+### Controlled capabilities
+
+Control group factors can be configured to trigger the control group workflow
+on specific capabilities. This is done with the `controlled_capabilities` field.
+Not specifying the `controlled_capabilities` field will necessitate the factor to be
+checked for all operations to the specified policy path. The `controlled_capabilities`
+field can differ per factor, so that different factors can be required for different
+operations.
+
+Finally, the capabilities in the `controlled_capabilities` stanza must be a subset of the
+`capabilities` specified in the policy itself. For example, a policy giving only `read` access to
+the path `secret/foo` cannot specify a control group factor with `list` as a controlled capability.
+
+Please see the following section for example ACL Policies.
 
 ## Control Groups In ACL Policies
 
@@ -76,10 +90,88 @@ group authorizes the request. If an authorizer is a member of both the
 "managers" and "superusers" group, one authorization for both factors will be
 satisfied.
 
+```
+path "secret/foo" {
+    capabilities = ["write","read"]
+    control_group = {
+        factor "admin" {
+            controlled_capabilities = ["write"]
+            identity {
+                group_names = ["admin"]
+                approvals = 1
+            }
+        }
+    }
+}
+```
+
+The above policy grants `read` access to `secret/foo` for anyone that has a vault token
+with this policy. It grants `write` access to `secret/foo` only after one member from the
+admin group authorizes the request.
+
+```
+path "kv/*" {
+    capabilities = ["create", "update","delete","list","sudo"]
+    control_group = {
+        factor "admin" {
+            controlled_capabilities = ["delete","list","sudo"]
+            identity {
+                group_names = ["admin"]
+                approvals = 1
+            }
+        }
+    }
+}
+path "kv/*" {
+    capabilities = ["create"]
+    control_group = {
+        factor "superuser" {
+            identity {
+                group_names = ["superuser"]
+                approvals = 2
+            }
+        }
+    }
+}
+
+```
+
+Because the second path stanza has a control group factor with no `controlled_capabilities` field,
+any token with this policy will be required to get 2 approvals from the `superuser` group before executing
+any operation against `kv/*`. In addition, by virtue of the `controlled_capabilities` field in the first
+path stanza, `delete`,`list`, and `sudo` operations will require an additional approval from the `admin` group.
+
+```
+path "kv/*" {
+    capabilities = ["read", "list", "create"]
+    control_group = {
+        controlled_capabilities = ["read"]
+        factor "admin" {
+            identity {
+                group_names = ["admin"]
+                approvals = 1
+            }
+        }
+        factor "superuser" {
+            controlled_capabilities = ["create"]
+            identity {
+                group_names = ["superuser"]
+                approvals = 1
+            }
+        }
+    }
+}
+```
+
+In this case, `read` will require one admin approval and `create` will require
+one superuser approval and one admin approval. `List` will require no extra approvals
+from any of the control group factors, and a token with this policy will not be required
+to go through the control group workflow in order to execute a read operation against `kv/*`.
+
 ## Control Groups in Sentinel
 
 Control Groups are also supported in Sentinel policies using the `controlgroup`
-import. See [Sentinel Documentation](/docs/enterprise/sentinel) for more
+import. See [Sentinel Documentation](/vault/docs/enterprise/sentinel) for more
 details on available properties.
 
 ### Sample Sentinel Policy
@@ -112,12 +204,12 @@ The above policy will reject the request unless two members of the `managers`
 group have authorized the request. Additionally it verifies the authorizations
 happened in the last hour.
 
-## Learn
+## Tutorial
 
-Refer to the [Control Groups](https://learn.hashicorp.com/vault/identity-access-management/iam-control-groups)
-guide for a step-by-step tutorial.
+Refer to the [Control Groups](/vault/tutorials/enterprise/control-groups)
+tutorial to learn how to implement dual controller authorization within your policies.
 
 ## API
 
 Control Groups can be managed over the HTTP API. Please see
-[Control Groups API](/api/system/control-group) for more details.
+[Control Groups API](/vault/api-docs/system/control-group) for more details.

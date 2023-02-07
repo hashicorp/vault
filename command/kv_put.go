@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -19,6 +20,7 @@ type KVPutCommand struct {
 	*BaseCommand
 
 	flagCAS   int
+	flagMount string
 	testStdin io.Reader // for tests
 }
 
@@ -33,22 +35,28 @@ Usage: vault kv put [options] KEY [DATA]
   Writes the data to the given path in the key-value store. The data can be of
   any type.
 
+      $ vault kv put -mount=secret foo bar=baz
+
+  The deprecated path-like syntax can also be used, but this should be avoided 
+  for KV v2, as the fact that it is not actually the full API path to 
+  the secret (secret/data/foo) can cause confusion: 
+  
       $ vault kv put secret/foo bar=baz
 
   The data can also be consumed from a file on disk by prefixing with the "@"
   symbol. For example:
 
-      $ vault kv put secret/foo @data.json
+      $ vault kv put -mount=secret foo @data.json
 
   Or it can be read from stdin using the "-" symbol:
 
-      $ echo "abcd1234" | vault kv put secret/foo bar=-
+      $ echo "abcd1234" | vault kv put -mount=secret foo bar=-
 
   To perform a Check-And-Set operation, specify the -cas flag with the
   appropriate version number corresponding to the key you want to perform
   the CAS operation on:
 
-      $ vault kv put -cas=1 secret/foo bar=baz
+      $ vault kv put -mount=secret -cas=1 foo bar=baz
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -73,11 +81,22 @@ func (c *KVPutCommand) Flags() *FlagSets {
 		parameter.`,
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /data/ automatically appended between KV 
+		v2 secrets.`,
+	})
+
 	return set
 }
 
 func (c *KVPutCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFolders()
 }
 
 func (c *KVPutCommand) AutocompleteFlags() complete.Flags {
@@ -109,7 +128,6 @@ func (c *KVPutCommand) Run(args []string) int {
 	}
 
 	var err error
-	path := sanitizePath(args[0])
 
 	client, err := c.Client()
 	if err != nil {
@@ -123,14 +141,44 @@ func (c *KVPutCommand) Run(args []string) int {
 		return 1
 	}
 
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	mountFlagSyntax := c.flagMount != ""
+
+	var (
+		mountPath   string
+		partialPath string
+		v2          bool
+	)
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
 	}
 
+	// Add /data to v2 paths only
+	var fullPath string
 	if v2 {
-		path = addPrefixToVKVPath(path, mountPath, "data")
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
 		data = map[string]interface{}{
 			"data":    data,
 			"options": map[string]interface{}{},
@@ -139,11 +187,18 @@ func (c *KVPutCommand) Run(args []string) int {
 		if c.flagCAS > -1 {
 			data["options"].(map[string]interface{})["cas"] = c.flagCAS
 		}
+	} else {
+		// v1
+		if mountFlagSyntax {
+			fullPath = path.Join(mountPath, partialPath)
+		} else {
+			fullPath = partialPath
+		}
 	}
 
-	secret, err := client.Logical().Write(path, data)
+	secret, err := client.Logical().Write(fullPath, data)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", fullPath, err))
 		if secret != nil {
 			OutputSecret(c.UI, secret)
 		}
@@ -152,13 +207,20 @@ func (c *KVPutCommand) Run(args []string) int {
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
-			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
+			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", fullPath))
 		}
 		return 0
 	}
 
 	if c.flagField != "" {
 		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	if Format(c.UI) == "table" {
+		outputPath(c.UI, fullPath, "Secret Path")
+		metadata := secret.Data
+		c.UI.Info(getHeaderForMap("Metadata", metadata))
+		return OutputData(c.UI, metadata)
 	}
 
 	return OutputSecret(c.UI, secret)

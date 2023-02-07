@@ -5,7 +5,7 @@ export default RESTSerializer.extend({
 
   normalizeSecrets(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      const roles = payload.data.keys.map(secret => {
+      const roles = payload.data.keys.map((secret) => {
         let type = 'dynamic';
         let path = 'roles';
         if (payload.data.staticRoles.includes(secret)) {
@@ -17,7 +17,7 @@ export default RESTSerializer.extend({
       return roles;
     }
     let path = 'roles';
-    if (payload.data.type === 'static') {
+    if (payload.type === 'static') {
       path = 'static-roles';
     }
     let database = [];
@@ -34,9 +34,10 @@ export default RESTSerializer.extend({
       revocation_statement = payload.data.revocation_statements[0];
     }
     return {
-      id: payload.secret,
-      name: payload.secret,
+      id: payload.id,
       backend: payload.backend,
+      name: payload.id,
+      type: payload.type,
       database,
       path,
       creation_statement,
@@ -69,7 +70,7 @@ export default RESTSerializer.extend({
   },
 
   serialize(snapshot, requestType) {
-    let data = this._super(snapshot, requestType);
+    const data = this._super(snapshot, requestType);
     if (data.database) {
       const db = data.database[0];
       data.db_name = db;

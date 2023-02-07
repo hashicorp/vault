@@ -1,0 +1,26 @@
+{{#if this.didCancel}}
+  <h3 class="title is-3" data-test-consent-title>
+    Consent Not Given
+  </h3>
+  <div class="box">
+    <p class="has-bottom-margin-l has-top-margin-l">Login attempt has been terminated.</p>
+  </div>
+{{else}}
+  <h3 class="title is-3" data-test-consent-title>
+    Consent
+  </h3>
+  <form class="box" {{on "submit" this.handleSubmit}} data-test-consent-form>
+    <p class="has-bottom-margin-s">
+      In order to complete the login process, you must consent to Vault sharing your profile, email, address, and phone with
+      the client.
+    </p>
+    <p class="has-bottom-margin-s">Do you want to continue?</p>
+    <FormSaveButtons
+      @saveButtonText="Yes"
+      @isSaving={{false}}
+      @cancelButtonText="No"
+      @onCancel={{this.handleCancel}}
+      @includeBox={{false}}
+    />
+  </form>
+{{/if}}

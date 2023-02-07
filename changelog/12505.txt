@@ -1,0 +1,3 @@
+```release-note:improvement
+agent/template: add support for new 'writeToFile' template function
+```

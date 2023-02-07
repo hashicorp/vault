@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Update consult-template to v0.29.0
+```

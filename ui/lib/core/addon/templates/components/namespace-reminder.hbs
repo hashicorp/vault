@@ -1,11 +1,16 @@
-{{#if showMessage}}
+{{#if this.showMessage}}
   {{#if (has-block)}}
     <p class="namespace-reminder">
-      {{yield (hash namespace=namespace)}}
+      {{yield (hash namespace=this.namespace)}}
     </p>
   {{else}}
     <p class="namespace-reminder">
-    This {{noun}} will be {{modeVerb}} in the <span class="tag">{{namespace.path}}/</span>namespace.
+      This
+      {{this.noun}}
+      will be
+      {{this.modeVerb}}
+      in the
+      <span class="tag">{{this.namespace.path}}/</span>namespace.
     </p>
   {{/if}}
 {{/if}}

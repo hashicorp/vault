@@ -38,7 +38,6 @@ func (b BackendType) String() string {
 // allows for a "procfs" like interaction, as internal state can be exposed by
 // acting like a logical backend and being mounted.
 type Backend interface {
-
 	// Initialize is used to initialize a plugin after it has been mounted.
 	Initialize(context.Context, *InitializationRequest) error
 
@@ -106,6 +105,9 @@ type BackendConfig struct {
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string
+
+	// EventsSender provides a mechanism to interact with Vault events.
+	EventsSender EventSender
 }
 
 // Factory is the factory function to create a logical backend.
@@ -113,23 +115,67 @@ type Factory func(context.Context, *BackendConfig) (Backend, error)
 
 // Paths is the structure of special paths that is used for SpecialPaths.
 type Paths struct {
-	// Root are the paths that require a root token to access
+	// Root are the API paths that require a root token to access
 	Root []string
 
-	// Unauthenticated are the paths that can be accessed without any auth.
+	// Unauthenticated are the API paths that can be accessed without any auth.
+	// These can't be regular expressions, it is either exact match, a prefix
+	// match and/or a wildcard match. For prefix match, append '*' as a suffix.
+	// For a wildcard match, use '+' in the segment to match any identifier
+	// (e.g. 'foo/+/bar'). Note that '+' can't be adjacent to a non-slash.
 	Unauthenticated []string
 
-	// LocalStorage are paths (prefixes) that are local to this instance; this
-	// indicates that these paths should not be replicated
+	// LocalStorage are storage paths (prefixes) that are local to this cluster;
+	// this indicates that these paths should not be replicated across performance clusters
+	// (DR replication is unaffected).
 	LocalStorage []string
 
 	// SealWrapStorage are storage paths that, when using a capable seal,
 	// should be seal wrapped with extra encryption. It is exact matching
 	// unless it ends with '/' in which case it will be treated as a prefix.
 	SealWrapStorage []string
+
+	// WriteForwardedStorage are storage paths that, when running on a PR
+	// Secondary cluster, cause a GRPC call up to the PR Primary cluster's
+	// active node to handle storage.Put(...) and storage.Delete(...) events.
+	// These paths MUST include a {{clusterId}} literal, which the write layer
+	// will resolve to this cluster's UUID ("replication set" identifier).
+	// storage.List(...) and storage.Get(...) operations occur from the
+	// locally replicated data set, but can use path template expansion to be
+	// identifier agnostic.
+	//
+	// These paths require careful considerations by developers to use. In
+	// particular, writes on secondary clusters will not appear (when a
+	// corresponding read is issued immediately after a write) until the
+	// replication from primary->secondary has occurred. This replication
+	// triggers an InvalidateKey(...) call on the secondary, which can be
+	// used to detect the write has finished syncing. However, this will
+	// likely occur after the request has finished, so it is important to
+	// not block on this occurring.
+	//
+	// On standby nodes, like all storage write operations, this will trigger
+	// an ErrReadOnly return.
+	WriteForwardedStorage []string
 }
 
 type Auditor interface {
 	AuditRequest(ctx context.Context, input *LogInput) error
 	AuditResponse(ctx context.Context, input *LogInput) error
 }
+
+// Externaler allows us to check if a backend is running externally (i.e., over GRPC)
+type Externaler interface {
+	IsExternal() bool
+}
+
+type PluginVersion struct {
+	Version string
+}
+
+// PluginVersioner is an optional interface to return version info.
+type PluginVersioner interface {
+	// PluginVersion returns the version for the backend
+	PluginVersion() PluginVersion
+}
+
+var EmptyPluginVersion = PluginVersion{""}

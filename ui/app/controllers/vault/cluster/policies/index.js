@@ -20,13 +20,13 @@ export default Controller.extend({
   // set via the route `loading` action
   isLoading: false,
 
-  filterMatchesKey: computed('filter', 'model', 'model.[]', function() {
+  filterMatchesKey: computed('filter', 'model', 'model.[]', function () {
     var filter = this.filter;
     var content = this.model;
     return !!(content && content.length && content.findBy('id', filter));
   }),
 
-  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
+  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function () {
     var filter = this.filter;
     var content = this.model;
     if (!content) {
@@ -36,22 +36,22 @@ export default Controller.extend({
     var re = new RegExp('^' + filter);
     return filterMatchesKey
       ? null
-      : content.find(function(key) {
+      : content.find(function (key) {
           return re.test(key.get('id'));
         });
   }),
 
   actions: {
-    setFilter: function(val) {
+    setFilter: function (val) {
       this.set('filter', val);
     },
-    setFilterFocus: function(bool) {
+    setFilterFocus: function (bool) {
       this.set('filterFocused', bool);
     },
     deletePolicy(model) {
-      let policyType = model.get('policyType');
-      let name = model.id;
-      let flash = this.flashMessages;
+      const policyType = model.get('policyType');
+      const name = model.id;
+      const flash = this.flashMessages;
       model
         .destroyRecord()
         .then(() => {
@@ -62,8 +62,8 @@ export default Controller.extend({
             this.wizard.transitionFeatureMachine('delete', 'CONTINUE', policyType);
           }
         })
-        .catch(e => {
-          let errors = e.errors ? e.errors.join('') : e.message;
+        .catch((e) => {
+          const errors = e.errors ? e.errors.join('') : e.message;
           flash.danger(
             `There was an error deleting the ${policyType.toUpperCase()} policy "${name}": ${errors}.`
           );

@@ -1,41 +1,33 @@
-<form {{action 'doSubmit' (hash input=input algorithm=algorithm key_version=key_version) on="submit"}}>
+<form onsubmit={{action @doSubmit (hash input=@input algorithm=@algorithm key_version=@key_version)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="HMAC creation" />
     <div class="content">
-      <p>Generate the digest of given data using the specified hash algorithm and <code>{{key.name}}</code> as the named key.</p>
+      <p>
+        Generate the digest of given data using the specified hash algorithm and
+        <code>{{@key.name}}</code>
+        as the named key.
+      </p>
     </div>
-    <KeyVersionSelect @key={{key}} @onVersionChange={{action (mut key_version)}} @key_version={{key_version}} />
+    <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
-      <label for="input" class="is-label">
-        Input
-      </label>
       <div id="input-control" class="control is-relative">
-        <IvyCodemirror @valueUpdated={{action (mut input)}} @options={{hash
-            lineNumbers=true
-            tabSize=2
-            mode='ruby'
-            theme='hashi'
-          }} @data-test-transit-input="input" />
+        <JsonEditor @title="Input" @valueUpdated={{action (mut @input)}} @mode="ruby" @data-test-transit-input="input" />
       </div>
     </div>
     <div class="field">
-      <Input @type="checkbox" @id="encodedBase64" @checked={{encodedBase64}} data-test-transit-input="encodedBase64" />
+      <Input @type="checkbox" id="encodedBase64" @checked={{@encodedBase64}} data-test-transit-input="encodedBase64" />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
     <div class="field">
       <label for="algorithm" class="is-label">Hash Algorithm</label>
       <div class="control is-expanded">
         <div class="select is-fullwidth">
-          <select
-            name="algorithm"
-            id="algorithm"
-            onchange={{action (mut algorithm) value="target.value"}}
-            >
-              {{#each (sha2-digest-sizes) as |algo|}}
-                <option selected={{if algorithm (eq algorithm algo)}} value={{algo}}>
-                  <code>{{algo}}</code>
-                </option>
-              {{/each}}
+          <select name="algorithm" id="algorithm" onchange={{action (mut @algorithm) value="target.value"}}>
+            {{#each (sha2-digest-sizes) as |algo|}}
+              <option selected={{if @algorithm (eq @algorithm algo)}} value={{algo}}>
+                <code>{{algo}}</code>
+              </option>
+            {{/each}}
           </select>
         </div>
       </div>
@@ -49,22 +41,32 @@
     </div>
   </div>
 </form>
-<Modal @title="Copy your unwrapped data" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
+<Modal @title="Copy your unwrapped data" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">HMAC</h2>
       <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="hmac">{{hmac}}</code>
-        <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
-          @clipboardText={{hmac}} @buttonType="button" @success={{action (set-flash-message 'HMAC copied!')}}>
-          <Icon @glyph="copy-action" aria-label="Copy" />
+        <code class="level-left" data-test-encrypted-value="hmac">{{@hmac}}</code>
+        <CopyButton
+          class="button is-compact is-transparent level-right"
+          data-test-button="modal-copy"
+          @clipboardText={{@hmac}}
+          @buttonType="button"
+          @success={{action (set-flash-message "HMAC copied!")}}
+        >
+          <Icon @name="clipboard-copy" aria-label="Copy" />
         </CopyButton>
       </div>
     </div>
   </section>
   <footer class="modal-card-foot">
-    <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{hmac}}
-      @buttonType="button" @success={{action "toggleModal" "HMAC copied!"}}>
+    <CopyButton
+      class="button is-primary copy-close"
+      data-test-button="modal-copy-close"
+      @clipboardText={{@hmac}}
+      @buttonType="button"
+      @success={{action @toggleModal "HMAC copied!"}}
+    >
       Copy &amp; Close
     </CopyButton>
   </footer>

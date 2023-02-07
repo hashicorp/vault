@@ -10,6 +10,14 @@ CONFIG ?= ci-config
 VERIFY ?= ci-verify
 
 CIRCLECI := circleci --skip-update-check
+ifeq ($(DEBUG_CIRCLECI_CLI),YES)
+CIRCLECI += --debug
+endif
+
+# For config processing, always refer to circleci.com not self-hosted circleci,
+# because self-hosted does not currently support the necessary API.
+CIRCLECI_CLI_HOST := https://circleci.com
+export CIRCLECI_CLI_HOST
 
 # Set up some documentation/help message variables.
 # We do not attempt to install the CircleCI CLI from this Makefile.
@@ -27,6 +35,8 @@ CONFIG_SOURCE  := Makefile $(SOURCE_YML) | $(SOURCE_DIR)
 OUT            := config.yml
 TMP            := .tmp/config-processed
 CONFIG_PACKED  := .tmp/config-packed
+GO_VERSION_FILE := ../.go-version
+GO_VERSION     := $(shell cat $(GO_VERSION_FILE))
 
 default: help
 
@@ -46,7 +56,7 @@ $(SOURCE_DIR):
 $(shell [ -d .tmp ] || mkdir .tmp)
 
 .PHONY: $(CONFIG)
-$(CONFIG): $(OUT)
+$(CONFIG): $(OUT) $(GO_VERSION_FILE)
 
 .PHONY: $(VERIFY)
 $(VERIFY): config-up-to-date
@@ -64,12 +74,15 @@ export GENERATED_FILE_HEADER
 # it them moves that file to $@. This makes is an atomic operation, so if it fails
 # make doesn't consider a half-baked file up to date.
 define GEN_CONFIG
+	@yq -i ".references.environment.GO_IMAGE = \"docker.mirror.hashicorp.services/cimg/go:$(GO_VERSION)\"" $(SOURCE_DIR)/executors/\@executors.yml
+
 	@$(CIRCLECI) config pack $(SOURCE_DIR) > $(CONFIG_PACKED)
 	@echo "$$GENERATED_FILE_HEADER" > $@.tmp || { rm -f $@; exit 1; }
 	@$(CIRCLECI) config process $(CONFIG_PACKED) >> $@.tmp || { rm -f $@.tmp; exit 1; }
 	@mv -f $@.tmp $@
 endef
 
+.PHONY: $(OUT)
 $(OUT): $(CONFIG_SOURCE) 
 	$(GEN_CONFIG)
 	@echo "$@ updated"

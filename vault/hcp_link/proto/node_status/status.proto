@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/node_status";
+
+package hashicorp.vault.hcp_link.node_status;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+message RaftStatus {
+  bool IsVoter = 1;
+}
+
+enum LogLevel {
+  NO_LEVEL = 0;
+  TRACE = 1;
+  DEBUG = 2;
+  INFO = 3;
+  WARN = 4;
+  ERROR = 5;
+}
+
+message LinkedClusterNodeStatusResponse {
+  string Type = 1;
+  bool Initialized = 2;
+  bool Sealed = 3;
+  int64 T = 4;
+  int64 N = 5;
+  int64 Progress = 6;
+  string Nonce = 7;
+  string Version = 8;
+  string BuildDate = 9;
+  bool Migration = 10;
+  string ClusterName = 11;
+  string ClusterID = 12;
+  bool RecoverySeal = 13;
+  string StorageType = 14;
+  repeated string ReplicationState = 15;
+  string Hostname = 16;
+  repeated string ListenerAddresses = 17;
+  string OperatingSystem = 18;
+  string OperatingSystemVersion = 19;
+  LogLevel LogLevel = 20;
+  google.protobuf.Timestamp ActiveTime = 21;
+  RaftStatus RaftStatus = 22;
+}

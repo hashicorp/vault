@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"regexp"
 	"testing"
 	"time"
 
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/mock"
@@ -172,176 +172,6 @@ func TestInitDatabase_legacyDB(t *testing.T) {
 				t.Fatalf("Actual resp: %#v\nExpected resp: %#v", resp, test.expectedResp)
 			}
 		})
-	}
-}
-
-type fakePasswordGenerator struct {
-	password string
-	err      error
-}
-
-func (pg fakePasswordGenerator) GeneratePasswordFromPolicy(ctx context.Context, policy string) (string, error) {
-	return pg.password, pg.err
-}
-
-func TestGeneratePassword_missingDB(t *testing.T) {
-	dbw := databaseVersionWrapper{}
-
-	gen := fakePasswordGenerator{
-		err: fmt.Errorf("this shouldn't be called"),
-	}
-	pass, err := dbw.GeneratePassword(context.Background(), gen, "policy")
-	if err == nil {
-		t.Fatalf("err expected, got nil")
-	}
-
-	if pass != "" {
-		t.Fatalf("Password should be empty but was: %s", pass)
-	}
-}
-
-func TestGeneratePassword_legacy(t *testing.T) {
-	type testCase struct {
-		legacyPassword string
-		legacyErr      error
-		legacyCalls    int
-
-		expectedPassword string
-		expectErr        bool
-	}
-
-	tests := map[string]testCase{
-		"legacy password generation": {
-			legacyPassword: "legacy_password",
-			legacyErr:      nil,
-			legacyCalls:    1,
-
-			expectedPassword: "legacy_password",
-			expectErr:        false,
-		},
-		"legacy password failure": {
-			legacyPassword: "",
-			legacyErr:      fmt.Errorf("failed :("),
-			legacyCalls:    1,
-
-			expectedPassword: "",
-			expectErr:        true,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			legacyDB := new(mockLegacyDatabase)
-			legacyDB.On("GenerateCredentials", mock.Anything).
-				Return(test.legacyPassword, test.legacyErr)
-			defer legacyDB.AssertNumberOfCalls(t, "GenerateCredentials", test.legacyCalls)
-
-			dbw := databaseVersionWrapper{
-				v4: legacyDB,
-			}
-
-			passGen := fakePasswordGenerator{
-				err: fmt.Errorf("this should not be called"),
-			}
-
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-			defer cancel()
-			password, err := dbw.GeneratePassword(ctx, passGen, "test_policy")
-			if test.expectErr && err == nil {
-				t.Fatalf("err expected, got nil")
-			}
-			if !test.expectErr && err != nil {
-				t.Fatalf("no error expected, got: %s", err)
-			}
-			if password != test.expectedPassword {
-				t.Fatalf("Actual password: %s Expected password: %s", password, test.expectedPassword)
-			}
-		})
-	}
-}
-
-func TestGeneratePassword_policies(t *testing.T) {
-	type testCase struct {
-		passwordPolicyPassword string
-		passwordPolicyErr      error
-
-		expectedPassword string
-		expectErr        bool
-	}
-
-	tests := map[string]testCase{
-		"password policy generation": {
-			passwordPolicyPassword: "new_password",
-
-			expectedPassword: "new_password",
-			expectErr:        false,
-		},
-		"password policy error": {
-			passwordPolicyPassword: "",
-			passwordPolicyErr:      fmt.Errorf("test error"),
-
-			expectedPassword: "",
-			expectErr:        true,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			newDB := new(mockNewDatabase)
-			defer newDB.AssertExpectations(t)
-
-			dbw := databaseVersionWrapper{
-				v5: newDB,
-			}
-
-			passGen := fakePasswordGenerator{
-				password: test.passwordPolicyPassword,
-				err:      test.passwordPolicyErr,
-			}
-
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-			defer cancel()
-			password, err := dbw.GeneratePassword(ctx, passGen, "test_policy")
-			if test.expectErr && err == nil {
-				t.Fatalf("err expected, got nil")
-			}
-			if !test.expectErr && err != nil {
-				t.Fatalf("no error expected, got: %s", err)
-			}
-			if password != test.expectedPassword {
-				t.Fatalf("Actual password: %s Expected password: %s", password, test.expectedPassword)
-			}
-		})
-	}
-}
-
-func TestGeneratePassword_no_policy(t *testing.T) {
-	newDB := new(mockNewDatabase)
-	defer newDB.AssertExpectations(t)
-
-	dbw := databaseVersionWrapper{
-		v5: newDB,
-	}
-
-	passGen := fakePasswordGenerator{
-		password: "",
-		err:      fmt.Errorf("should not be called"),
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-	password, err := dbw.GeneratePassword(ctx, passGen, "")
-	if err != nil {
-		t.Fatalf("no error expected, got: %s", err)
-	}
-	if password == "" {
-		t.Fatalf("missing password")
-	}
-
-	rawRegex := "^[a-zA-Z0-9-]{20}$"
-	re := regexp.MustCompile(rawRegex)
-	if !re.MatchString(password) {
-		t.Fatalf("password %q did not match regex: %q", password, rawRegex)
 	}
 }
 
@@ -672,7 +502,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			expectedConfig: nil,
 			expectErr:      true,
 		},
-		"change password - RotateRootCredentials": {
+		"change password - RotateRootCredentials (gRPC Unimplemented)": {
 			req: v5.UpdateUserRequest{
 				Username: "existing_user",
 				Password: &v5.ChangePassword{
@@ -682,6 +512,30 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			isRootUser: true,
 
 			setCredentialsErr:   status.Error(codes.Unimplemented, "SetCredentials is not implemented"),
+			setCredentialsCalls: 1,
+
+			rotateRootConfig: map[string]interface{}{
+				"foo": "bar",
+			},
+			rotateRootCalls: 1,
+
+			renewUserCalls: 0,
+
+			expectedConfig: map[string]interface{}{
+				"foo": "bar",
+			},
+			expectErr: false,
+		},
+		"change password - RotateRootCredentials (ErrPluginStaticUnsupported)": {
+			req: v5.UpdateUserRequest{
+				Username: "existing_user",
+				Password: &v5.ChangePassword{
+					NewPassword: "newpassowrd",
+				},
+			},
+			isRootUser: true,
+
+			setCredentialsErr:   v4.ErrPluginStaticUnsupported,
 			setCredentialsCalls: 1,
 
 			rotateRootConfig: map[string]interface{}{

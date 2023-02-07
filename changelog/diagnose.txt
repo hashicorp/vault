@@ -1,0 +1,3 @@
+```release-note:feature
+operator diagnose: a new vault operator command to detect common issues with vault server setups.
+```

@@ -146,7 +146,7 @@ func (c *OperatorUsageCommand) Run(args []string) int {
 // queries can be answered; if there's an error, just fall back to
 // reporting that the response is empty.
 func (c *OperatorUsageCommand) noReportAvailable(client *api.Client) bool {
-	if c.flagOutputCurlString {
+	if c.flagOutputCurlString || c.flagOutputPolicy {
 		// Don't mess up the original query string
 		return false
 	}
@@ -191,8 +191,11 @@ type UsageCommandNamespace struct {
 type UsageResponse struct {
 	namespacePath string
 	entityCount   int64
-	tokenCount    int64
-	clientCount   int64
+	// As per 1.9, the tokenCount field will contain the distinct non-entity
+	// token clients instead of each individual token.
+	tokenCount int64
+
+	clientCount int64
 }
 
 func jsonNumberOK(m map[string]interface{}, key string) (int64, bool) {

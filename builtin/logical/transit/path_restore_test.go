@@ -83,7 +83,7 @@ func TestTransit_Restore(t *testing.T) {
 		return &b
 	}
 
-	keyExitsError := fmt.Errorf("key \"%s\" already exists", keyName)
+	keyExitsError := fmt.Errorf("key %q already exists", keyName)
 
 	testCases := []struct {
 		Name string
@@ -231,7 +231,7 @@ func TestTransit_Restore(t *testing.T) {
 				Storage:   s,
 			}
 
-			resp, err = b.HandleRequest(context.Background(), readReq)
+			resp, _ = b.HandleRequest(context.Background(), readReq)
 			if resp != nil && resp.IsError() {
 				t.Fatalf("resp: %#v\nerr: %v", resp, err)
 			}

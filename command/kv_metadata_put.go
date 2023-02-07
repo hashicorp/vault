@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"io"
+	"path"
 	"strings"
 	"time"
 
@@ -19,8 +20,10 @@ type KVMetadataPutCommand struct {
 	*BaseCommand
 
 	flagMaxVersions        int
-	flagCASRequired        bool
+	flagCASRequired        BoolPtr
 	flagDeleteVersionAfter time.Duration
+	flagCustomMetadata     map[string]string
+	flagMount              string
 	testStdin              io.Reader // for tests
 }
 
@@ -30,26 +33,36 @@ func (c *KVMetadataPutCommand) Synopsis() string {
 
 func (c *KVMetadataPutCommand) Help() string {
 	helpText := `
-Usage: vault metadata kv put [options] KEY
+Usage: vault kv metadata put [options] KEY
 
   This command can be used to create a blank key in the key-value store or to
   update key configuration for a specified key.
 
   Create a key in the key-value store with no data:
 
+      $ vault kv metadata put -mount=secret foo
+
+  The deprecated path-like syntax can also be used, but this should be avoided 
+  for KV v2, as the fact that it is not actually the full API path to 
+  the secret (secret/metadata/foo) can cause confusion: 
+  
       $ vault kv metadata put secret/foo
 
   Set a max versions setting on the key:
 
-      $ vault kv metadata put -max-versions=5 secret/foo
+      $ vault kv metadata put -mount=secret -max-versions=5 foo
 
   Set delete-version-after on the key:
 
-      $ vault kv metadata put -delete-version-after=3h25m19s secret/foo
+      $ vault kv metadata put -mount=secret -delete-version-after=3h25m19s foo
 
   Require Check-and-Set for this key:
 
-      $ vault kv metadata put -cas-required secret/foo
+      $ vault kv metadata put -mount=secret -cas-required foo
+
+  Set custom metadata on the key:
+
+      $ vault kv metadata put -mount=secret -custom-metadata=foo=abc -custom-metadata=bar=123 foo
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -66,15 +79,14 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 	f.IntVar(&IntVar{
 		Name:    "max-versions",
 		Target:  &c.flagMaxVersions,
-		Default: 0,
+		Default: -1,
 		Usage:   `The number of versions to keep. If not set, the backend’s configured max version is used.`,
 	})
 
-	f.BoolVar(&BoolVar{
-		Name:    "cas-required",
-		Target:  &c.flagCASRequired,
-		Default: false,
-		Usage:   `If true the key will require the cas parameter to be set on all write requests. If false, the backend’s configuration will be used.`,
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   "cas-required",
+		Target: &c.flagCASRequired,
+		Usage:  `If true the key will require the cas parameter to be set on all write requests. If false, the backend’s configuration will be used.`,
 	})
 
 	f.DurationVar(&DurationVar{
@@ -88,6 +100,25 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 		greater than the backend's delete-version-after. The delete-version-after is
 		specified as a numeric string with a suffix like "30s" or
 		"3h25m19s".`,
+	})
+
+	f.StringMapVar(&StringMapVar{
+		Name:    "custom-metadata",
+		Target:  &c.flagCustomMetadata,
+		Default: map[string]string{},
+		Usage: "Specifies arbitrary version-agnostic key=value metadata meant to describe a secret." +
+			"This can be specified multiple times to add multiple pieces of metadata.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /metadata/ automatically appended between KV 
+		v2 secrets.`,
 	})
 
 	return set
@@ -126,30 +157,67 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := sanitizePath(args[0])
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	mountFlagSyntax := c.flagMount != ""
+
+	var (
+		mountPath   string
+		partialPath string
+		v2          bool
+	)
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
 	}
+
 	if !v2 {
 		c.UI.Error("Metadata not supported on KV Version 1")
 		return 1
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "metadata")
-	data := map[string]interface{}{
-		"max_versions": c.flagMaxVersions,
-		"cas_required": c.flagCASRequired,
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata")
+	data := map[string]interface{}{}
+
+	if c.flagMaxVersions >= 0 {
+		data["max_versions"] = c.flagMaxVersions
 	}
 
 	if c.flagDeleteVersionAfter >= 0 {
 		data["delete_version_after"] = c.flagDeleteVersionAfter.String()
 	}
 
-	secret, err := client.Logical().Write(path, data)
+	if c.flagCASRequired.IsSet() {
+		data["cas_required"] = c.flagCASRequired.Get()
+	}
+
+	if len(c.flagCustomMetadata) > 0 {
+		data["custom_metadata"] = c.flagCustomMetadata
+	}
+
+	secret, err := client.Logical().Write(fullPath, data)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", fullPath, err))
 		if secret != nil {
 			OutputSecret(c.UI, secret)
 		}
@@ -158,7 +226,7 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
-			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
+			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", fullPath))
 		}
 		return 0
 	}

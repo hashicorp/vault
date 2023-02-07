@@ -20,15 +20,22 @@ var (
 type AuthTuneCommand struct {
 	*BaseCommand
 
-	flagAuditNonHMACRequestKeys  []string
-	flagAuditNonHMACResponseKeys []string
-	flagDefaultLeaseTTL          time.Duration
-	flagDescription              string
-	flagListingVisibility        string
-	flagMaxLeaseTTL              time.Duration
-	flagOptions                  map[string]string
-	flagTokenType                string
-	flagVersion                  int
+	flagAuditNonHMACRequestKeys         []string
+	flagAuditNonHMACResponseKeys        []string
+	flagDefaultLeaseTTL                 time.Duration
+	flagDescription                     string
+	flagListingVisibility               string
+	flagMaxLeaseTTL                     time.Duration
+	flagPassthroughRequestHeaders       []string
+	flagAllowedResponseHeaders          []string
+	flagOptions                         map[string]string
+	flagTokenType                       string
+	flagVersion                         int
+	flagPluginVersion                   string
+	flagUserLockoutThreshold            uint
+	flagUserLockoutDuration             time.Duration
+	flagUserLockoutCounterResetDuration time.Duration
+	flagUserLockoutDisable              bool
 }
 
 func (c *AuthTuneCommand) Synopsis() string {
@@ -60,15 +67,15 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the request data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the request data " +
+			"object. To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
 		Target: &c.flagAuditNonHMACResponseKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the response data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the response data " +
+			"object. To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.DurationVar(&DurationVar{
@@ -107,6 +114,20 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 			"or a previously configured value for the auth method.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNamePassthroughRequestHeaders,
+		Target: &c.flagPassthroughRequestHeaders,
+		Usage: "Request header value that will be sent to the plugin. To specify " +
+			"multiple values, specify this flag multiple times.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedResponseHeaders,
+		Target: &c.flagAllowedResponseHeaders,
+		Usage: "Response header value that plugins will be allowed to set. To specify " +
+			"multiple values, specify this flag multiple times.",
+	})
+
 	f.StringMapVar(&StringMapVar{
 		Name:       "options",
 		Target:     &c.flagOptions,
@@ -126,6 +147,49 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Target:  &c.flagVersion,
 		Default: 0,
 		Usage:   "Select the version of the auth method to run. Not supported by all auth methods.",
+	})
+
+	f.UintVar(&UintVar{
+		Name:   flagNameUserLockoutThreshold,
+		Target: &c.flagUserLockoutThreshold,
+		Usage: "The threshold for user lockout for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout threshold, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       flagNameUserLockoutDuration,
+		Target:     &c.flagUserLockoutDuration,
+		Completion: complete.PredictAnything,
+		Usage: "The user lockout duration for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout duration, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       flagNameUserLockoutCounterResetDuration,
+		Target:     &c.flagUserLockoutCounterResetDuration,
+		Completion: complete.PredictAnything,
+		Usage: "The user lockout counter reset duration for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout counter reset duration, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    flagNameUserLockoutDisable,
+		Target:  &c.flagUserLockoutDisable,
+		Default: false,
+		Usage: "Disable user lockout for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout disable, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNamePluginVersion,
+		Target:  &c.flagPluginVersion,
+		Default: "",
+		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
+			"the plugin catalog, and will not start running until the plugin is reloaded.",
 	})
 
 	return set
@@ -194,8 +258,38 @@ func (c *AuthTuneCommand) Run(args []string) int {
 			mountConfigInput.ListingVisibility = c.flagListingVisibility
 		}
 
+		if fl.Name == flagNamePassthroughRequestHeaders {
+			mountConfigInput.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
+		}
+
+		if fl.Name == flagNameAllowedResponseHeaders {
+			mountConfigInput.AllowedResponseHeaders = c.flagAllowedResponseHeaders
+		}
+
 		if fl.Name == flagNameTokenType {
 			mountConfigInput.TokenType = c.flagTokenType
+		}
+		switch fl.Name {
+		case flagNameUserLockoutThreshold, flagNameUserLockoutDuration, flagNameUserLockoutCounterResetDuration, flagNameUserLockoutDisable:
+			if mountConfigInput.UserLockoutConfig == nil {
+				mountConfigInput.UserLockoutConfig = &api.UserLockoutConfigInput{}
+			}
+		}
+		if fl.Name == flagNameUserLockoutThreshold {
+			mountConfigInput.UserLockoutConfig.LockoutThreshold = strconv.FormatUint(uint64(c.flagUserLockoutThreshold), 10)
+		}
+		if fl.Name == flagNameUserLockoutDuration {
+			mountConfigInput.UserLockoutConfig.LockoutDuration = ttlToAPI(c.flagUserLockoutDuration)
+		}
+		if fl.Name == flagNameUserLockoutCounterResetDuration {
+			mountConfigInput.UserLockoutConfig.LockoutCounterResetDuration = ttlToAPI(c.flagUserLockoutCounterResetDuration)
+		}
+		if fl.Name == flagNameUserLockoutDisable {
+			mountConfigInput.UserLockoutConfig.DisableLockout = &c.flagUserLockoutDisable
+		}
+
+		if fl.Name == flagNamePluginVersion {
+			mountConfigInput.PluginVersion = c.flagPluginVersion
 		}
 	})
 

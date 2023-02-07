@@ -3,54 +3,33 @@
   "description": "HashiCorp Vault documentation website",
   "version": "1.0.0",
   "author": "HashiCorp",
-  "dependencies": {
-    "@hashicorp/mktg-global-styles": "2.1.0",
-    "@hashicorp/nextjs-scripts": "16.3.0",
-    "@hashicorp/react-alert-banner": "^5.0.0",
-    "@hashicorp/react-button": "4.0.0",
-    "@hashicorp/react-case-study-slider": "4.0.0",
-    "@hashicorp/react-code-block": "3.0.3",
-    "@hashicorp/react-docs-page": "12.0.0",
-    "@hashicorp/react-hashi-stack-menu": "1.2.1-canary.0",
-    "@hashicorp/react-head": "1.1.6",
-    "@hashicorp/react-hero": "4.1.0",
-    "@hashicorp/react-image": "3.0.3",
-    "@hashicorp/react-inline-svg": "5.0.0",
-    "@hashicorp/react-logo-grid": "3.0.1",
-    "@hashicorp/react-markdown-page": "0.1.0",
-    "@hashicorp/react-product-downloader": "7.0.4",
-    "@hashicorp/react-section-header": "3.0.1",
-    "@hashicorp/react-subnav": "7.1.0",
-    "@hashicorp/react-text-splits": "1.0.5",
-    "@hashicorp/react-use-cases": "2.0.1",
-    "@hashicorp/react-vertical-text-block-list": "4.0.1",
-    "next": "10.0.6",
-    "next-mdx-remote": "1.0.1",
-    "next-remote-watch": "0.3.0",
-    "react": "16.13.1",
-    "react-dom": "16.13.1"
-  },
   "devDependencies": {
-    "dart-linkcheck": "^2.0.15",
-    "husky": "^4.3.6",
-    "inquirer": "^7.3.3",
-    "prettier": "^2.2.1"
+    "@hashicorp/platform-cli": "^2.5.1",
+    "dart-linkcheck": "2.0.15",
+    "next": "^12.3.1",
+    "prettier": "2.2.1",
+    "simple-git-hooks": "^2.6.1"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "next-hashicorp precommit"
-    }
+  "engines": {
+    "npm": ">=7.0.0",
+    "node": ">=12.0.0 <= 16.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hashicorp/vault",
+    "directory": "website"
   },
   "scripts": {
-    "build": "next build",
-    "dynamic": "NODE_ENV=production next build && next start",
-    "export": "next export",
+    "build": "./scripts/website-build.sh",
     "format": "next-hashicorp format",
     "generate:component": "next-hashicorp generate component",
     "generate:readme": "next-hashicorp markdown-blocks README.md",
     "linkcheck": "linkcheck https://www.vaultproject.io",
     "lint": "next-hashicorp lint",
-    "start": "next-remote-watch ./content/**/*.mdx",
-    "static": "npm run build && npm run export && cp _redirects out/."
+    "postinstall": "simple-git-hooks",
+    "start": "./scripts/website-start.sh"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "cd website && ./node_modules/.bin/next-hashicorp precommit"
   }
 }

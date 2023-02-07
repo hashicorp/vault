@@ -7,13 +7,12 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
 )
 
 const (
@@ -31,6 +30,8 @@ type azureMethod struct {
 
 	role     string
 	resource string
+	objectID string
+	clientID string
 }
 
 func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
@@ -64,11 +65,29 @@ func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("could not convert 'resource' config value to string")
 	}
 
+	objectIDRaw, ok := conf.Config["object_id"]
+	if ok {
+		a.objectID, ok = objectIDRaw.(string)
+		if !ok {
+			return nil, errors.New("could not convert 'object_id' config value to string")
+		}
+	}
+
+	clientIDRaw, ok := conf.Config["client_id"]
+	if ok {
+		a.clientID, ok = clientIDRaw.(string)
+		if !ok {
+			return nil, errors.New("could not convert 'client_id' config value to string")
+		}
+	}
+
 	switch {
 	case a.role == "":
 		return nil, errors.New("'role' value is empty")
 	case a.resource == "":
 		return nil, errors.New("'resource' value is empty")
+	case a.objectID != "" && a.clientID != "":
+		return nil, errors.New("only one of 'object_id' or 'client_id' may be provided")
 	}
 
 	return a, nil
@@ -87,7 +106,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 		}
 	}
 
-	body, err := getMetadataInfo(ctx, instanceEndpoint, "")
+	body, err := getMetadataInfo(ctx, instanceEndpoint, "", "", "")
 	if err != nil {
 		retErr = err
 		return
@@ -95,7 +114,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 
 	err = jsonutil.DecodeJSON(body, &instance)
 	if err != nil {
-		retErr = errwrap.Wrapf("error parsing instance metadata response: {{err}}", err)
+		retErr = fmt.Errorf("error parsing instance metadata response: %w", err)
 		return
 	}
 
@@ -104,7 +123,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 		AccessToken string `json:"access_token"`
 	}
 
-	body, err = getMetadataInfo(ctx, identityEndpoint, a.resource)
+	body, err = getMetadataInfo(ctx, identityEndpoint, a.resource, a.objectID, a.clientID)
 	if err != nil {
 		retErr = err
 		return
@@ -112,7 +131,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 
 	err = jsonutil.DecodeJSON(body, &identity)
 	if err != nil {
-		retErr = errwrap.Wrapf("error parsing identity metadata response: {{err}}", err)
+		retErr = fmt.Errorf("error parsing identity metadata response: %w", err)
 		return
 	}
 
@@ -139,7 +158,7 @@ func (a *azureMethod) CredSuccess() {
 func (a *azureMethod) Shutdown() {
 }
 
-func getMetadataInfo(ctx context.Context, endpoint, resource string) ([]byte, error) {
+func getMetadataInfo(ctx context.Context, endpoint, resource, objectID, clientID string) ([]byte, error) {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -150,6 +169,12 @@ func getMetadataInfo(ctx context.Context, endpoint, resource string) ([]byte, er
 	if resource != "" {
 		q.Add("resource", resource)
 	}
+	if objectID != "" {
+		q.Add("object_id", objectID)
+	}
+	if clientID != "" {
+		q.Add("client_id", clientID)
+	}
 	req.URL.RawQuery = q.Encode()
 	req.Header.Set("Metadata", "true")
 	req.Header.Set("User-Agent", useragent.String())
@@ -158,7 +183,7 @@ func getMetadataInfo(ctx context.Context, endpoint, resource string) ([]byte, er
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("error fetching metadata from %s: {{err}}", endpoint), err)
+		return nil, fmt.Errorf("error fetching metadata from %s: %w", endpoint, err)
 	}
 
 	if resp == nil {
@@ -168,7 +193,7 @@ func getMetadataInfo(ctx context.Context, endpoint, resource string) ([]byte, er
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("error reading metadata from %s: {{err}}", endpoint), err)
+		return nil, fmt.Errorf("error reading metadata from %s: %w", endpoint, err)
 	}
 
 	if resp.StatusCode != http.StatusOK {

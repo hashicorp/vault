@@ -7,13 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-	influx "github.com/influxdata/influxdb/client/v2"
+	influx "github.com/influxdata/influxdb1-client/v2"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -62,7 +61,7 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req dbplugi
 	}
 	i.connectTimeout, err = parseutil.ParseDurationSecond(i.ConnectTimeoutRaw)
 	if err != nil {
-		return dbplugin.InitializeResponse{}, errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid connect_timeout: %w", err)
 	}
 
 	switch {
@@ -80,11 +79,11 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req dbplugi
 	case len(i.PemJSON) != 0:
 		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(i.PemJSON))
 		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: %w", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("Error marshaling PEM information: %w", err)
 		}
 		i.certificate = certBundle.Certificate
 		i.privateKey = certBundle.PrivateKey
@@ -94,11 +93,11 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req dbplugi
 	case len(i.PemBundle) != 0:
 		parsedCertBundle, err = certutil.ParsePEMBundle(i.PemBundle)
 		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("Error parsing the given PEM information: %w", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("Error marshaling PEM information: %w", err)
 		}
 		i.certificate = certBundle.Certificate
 		i.privateKey = certBundle.PrivateKey
@@ -112,7 +111,7 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req dbplugi
 
 	if req.VerifyConnection {
 		if _, err := i.Connection(ctx); err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("error verifying connection: %w", err)
 		}
 	}
 
@@ -185,12 +184,12 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to parse certificate bundle: {{err}}", err)
+				return nil, fmt.Errorf("failed to parse certificate bundle: %w", err)
 			}
 
 			tlsConfig, err = parsedCertBundle.GetTLSConfig(certutil.TLSClient)
 			if err != nil || tlsConfig == nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to get TLS configuration: tlsConfig:%#v err:{{err}}", tlsConfig), err)
+				return nil, fmt.Errorf("failed to get TLS configuration: tlsConfig:%#v err:%w", tlsConfig, err)
 			}
 		}
 
@@ -214,19 +213,19 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 
 	cli, err := influx.NewHTTPClient(clientConfig)
 	if err != nil {
-		return nil, errwrap.Wrapf("error creating client: {{err}}", err)
+		return nil, fmt.Errorf("error creating client: %w", err)
 	}
 
 	// Checking server status
 	_, _, err = cli.Ping(i.connectTimeout)
 	if err != nil {
-		return nil, errwrap.Wrapf("error checking cluster status: {{err}}", err)
+		return nil, fmt.Errorf("error checking cluster status: %w", err)
 	}
 
 	// verifying infos about the connection
 	isAdmin, err := isUserAdmin(cli, i.Username)
 	if err != nil {
-		return nil, errwrap.Wrapf("error getting if provided username is admin: {{err}}", err)
+		return nil, fmt.Errorf("error getting if provided username is admin: %w", err)
 	}
 	if !isAdmin {
 		return nil, fmt.Errorf("the provided user is not an admin of the influxDB server")
@@ -258,7 +257,7 @@ func isUserAdmin(cli influx.Client, user string) (bool, error) {
 	for _, res := range response.Results {
 		for _, serie := range res.Series {
 			for _, val := range serie.Values {
-				if val[0].(string) == user && val[1].(bool) == true {
+				if val[0].(string) == user && val[1].(bool) {
 					return true, nil
 				}
 			}

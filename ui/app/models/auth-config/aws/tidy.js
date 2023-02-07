@@ -13,7 +13,7 @@ export default AuthConfig.extend({
     defaultValue: false,
   }),
 
-  attrs: computed(function() {
+  attrs: computed(function () {
     return expandAttributeMeta(this, ['safetyBuffer', 'disablePeriodicTidy']);
   }),
 });

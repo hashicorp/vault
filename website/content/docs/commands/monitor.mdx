@@ -20,6 +20,9 @@ Note that this command is designed to run indefinitely. It is similar to
 it encounters an unexpected error. As a user, you must terminate this
 process yourself to shut it down.
 
+If Vault is emitting log messages faster than a receiver can process them, the
+some log lines will be dropped.
+
 ## Examples
 
 Monitor server logs at the `debug` log level:
@@ -31,10 +34,14 @@ $ vault monitor -log-level=debug
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
 ### Output Options
 
 - `-log-level` `(string: "info")` - Monitor the Vault server at this log level.
   Valid log levels are (in order of detail) "trace", "debug", "info",
   "warn", "error". If this option is not specified, "info" is used.
+
+- `-log-format` `(string: "standard")` - Format to emit logs.
+  Valid formats are "standard", and "json". 
+  If this option is not specified, "standard" is used.

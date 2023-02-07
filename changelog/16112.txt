@@ -1,0 +1,3 @@
+```release-note:bug
+core/auth: Return a 403 instead of a 500 for a malformed SSCT
+```

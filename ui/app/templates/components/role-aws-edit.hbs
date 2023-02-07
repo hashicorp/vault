@@ -1,49 +1,44 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{model}} @path="vault.cluster.secrets.backend.list" @mode={{mode}} @root={{root}} @showCurrent={{true}} />
+    <KeyValueHeader
+      @baseKey={{this.model}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{this.mode}}
+      @root={{this.root}}
+      @showCurrent={{true}}
+    />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq mode "create")}}
+      {{#if (eq this.mode "create")}}
         Create an AWS Role
-      {{else if (eq mode 'edit')}}
-        Edit AWS Role <code>{{model.id}}</code>
+      {{else if (eq this.mode "edit")}}
+        Edit AWS Role
+        <code>{{this.model.id}}</code>
       {{else}}
-        AWS Role <code>{{model.id}}</code>
+        AWS Role
+        <code>{{this.model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq mode "show")}}
+{{#if (eq this.mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if model.canGenerate}}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="credentials"
-          @data-test-backend-credentials="iam"
-        >
+      {{#if this.model.canDelete}}
+        <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{action "delete"}}>
+          Delete role
+        </ConfirmAction>
+        <div class="toolbar-separator"></div>
+      {{/if}}
+      {{#if this.model.canGenerate}}
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="credentials" data-test-backend-credentials="iam">
           Generate credentials
         </ToolbarSecretLink>
       {{/if}}
-      {{#if (and model.canGenerate (or model.canDelete model.canEdit))}}
-        <div class="toolbar-separator" />
-      {{/if}}
-      {{#if model.canDelete}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{action "delete"}}
-        >
-          Delete role
-        </ConfirmAction>
-      {{/if}}
-      {{#if model.canEdit}}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="edit"
-          @replace=true
-        >
+      {{#if this.model.canEdit}}
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" @replace={{true}}>
           Edit role
         </ToolbarSecretLink>
       {{/if}}
@@ -51,8 +46,60 @@
   </Toolbar>
 {{/if}}
 
-{{#if (or (eq mode 'edit') (eq mode 'create'))}}
-  {{partial 'partials/role-aws/form'}}
+{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
+  <form onsubmit={{action "createOrUpdate" "create"}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @model={{this.model}} />
+      <NamespaceReminder @mode={{this.mode}} @noun="AWS role" />
+      {{#if (gt this.model.credentialTypes.length 1)}}
+        <AlertBanner
+          @type="warning"
+          @message="This role has more than one credential_type, currently: {{join ', ' this.model.credentialTypes}}.
+            Multiple credential types is deprecated and you must choose one in order to save this role."
+        />
+      {{/if}}
+      {{#each (if (eq this.mode "edit") (drop 1 (or this.model.fields (array))) this.model.fields) as |attr|}}
+        <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+      {{/each}}
+    </div>
+    <div class="field is-grouped-split box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-role-aws-create={{true}}>
+          {{#if (eq this.mode "create")}}
+            Create role
+          {{else if (eq this.mode "edit")}}
+            Save
+          {{/if}}
+        </button>
+        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
+          Cancel
+        </SecretLink>
+      </div>
+    </div>
+  </form>
 {{else}}
-  {{partial 'partials/role-aws/show'}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#if (gt this.model.credentialTypes.length 1)}}
+      <AlertBanner
+        @type="warning"
+        @message="This role has more than one credential_type, currently: {{join ', ' this.model.credentialTypes}}.
+          When you next edit this role, you will have to choose a single credential type."
+      />
+    {{/if}}
+    {{#each this.model.fields as |attr|}}
+      {{#if (eq attr.name "policyDocument")}}
+        <InfoTableRow
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{this.model.policyDocument}}
+        >
+          <pre><code class="is-paddingless">{{stringify (jsonify this.model.policyDocument)}}</code></pre>
+        </InfoTableRow>
+      {{else}}
+        <InfoTableRow
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{get this.model attr.name}}
+        />
+      {{/if}}
+    {{/each}}
+  </div>
 {{/if}}

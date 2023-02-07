@@ -11,7 +11,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/mitchellh/cli"
@@ -751,10 +750,10 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 	}
 	secret, err := c.client.Logical().Write(mountPoint+"/lookup", data)
 	if err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf("error finding roles for IP %q: {{err}}", ip), err)
+		return "", fmt.Errorf("error finding roles for IP %q: %w", ip, err)
 	}
 	if secret == nil || secret.Data == nil {
-		return "", errwrap.Wrapf(fmt.Sprintf("error finding roles for IP %q: {{err}}", ip), err)
+		return "", fmt.Errorf("error finding roles for IP %q: %w", ip, err)
 	}
 
 	if secret.Data["roles"] == nil {

@@ -2,7 +2,12 @@ package vault
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"testing"
+	"time"
+
+	"github.com/hashicorp/vault/helper/constants"
 
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
@@ -11,38 +16,51 @@ import (
 // InjectActivityLogDataThisMonth populates the in-memory client store
 // with some entities and tokens, overriding what was already there
 // It is currently used for API integration tests
-func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) (map[string]struct{}, map[string]uint64) {
+func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity.EntityRecord {
 	t.Helper()
-
-	activeEntities := map[string]struct{}{
-		"entity0": {},
-		"entity1": {},
-		"entity2": {},
-	}
-	tokens := map[string]uint64{
-		"ns0": 5,
-		"ns1": 1,
-		"ns2": 10,
-	}
 
 	c.activityLog.l.Lock()
 	defer c.activityLog.l.Unlock()
 	c.activityLog.fragmentLock.Lock()
 	defer c.activityLog.fragmentLock.Unlock()
 
-	c.activityLog.activeEntities = activeEntities
-	c.activityLog.currentSegment.tokenCount.CountByNamespaceID = tokens
+	for i := 0; i < 3; i++ {
+		er := &activity.EntityRecord{
+			ClientID:      fmt.Sprintf("testclientid-%d", i),
+			NamespaceID:   "root",
+			MountAccessor: fmt.Sprintf("testmountaccessor-%d", i),
+			Timestamp:     time.Now().Unix(),
+			NonEntity:     i%2 == 0,
+		}
+		c.activityLog.partialMonthClientTracker[er.ClientID] = er
+	}
 
-	return activeEntities, tokens
+	if constants.IsEnterprise {
+		for j := 0; j < 2; j++ {
+			for i := 0; i < 2; i++ {
+				er := &activity.EntityRecord{
+					ClientID:      fmt.Sprintf("ns-%d-testclientid-%d", j, i),
+					NamespaceID:   fmt.Sprintf("ns-%d", j),
+					MountAccessor: fmt.Sprintf("ns-%d-testmountaccessor-%d", j, i),
+					Timestamp:     time.Now().Unix(),
+					NonEntity:     i%2 == 0,
+				}
+				c.activityLog.partialMonthClientTracker[er.ClientID] = er
+			}
+		}
+	}
+
+	return c.activityLog.partialMonthClientTracker
 }
 
-// Return the in-memory activeEntities from an activity log
-func (c *Core) GetActiveEntities() map[string]struct{} {
-	out := make(map[string]struct{})
+// GetActiveClients returns the in-memory partialMonthClientTracker from an
+// activity log.
+func (c *Core) GetActiveClients() map[string]*activity.EntityRecord {
+	out := make(map[string]*activity.EntityRecord)
 
 	c.stateLock.RLock()
 	c.activityLog.fragmentLock.RLock()
-	for k, v := range c.activityLog.activeEntities {
+	for k, v := range c.activityLog.partialMonthClientTracker {
 		out[k] = v
 	}
 	c.activityLog.fragmentLock.RUnlock()
@@ -55,7 +73,7 @@ func (c *Core) GetActiveEntities() map[string]struct{} {
 func (a *ActivityLog) GetCurrentEntities() *activity.EntityActivityLog {
 	a.l.RLock()
 	defer a.l.RUnlock()
-	return a.currentSegment.currentEntities
+	return a.currentSegment.currentClients
 }
 
 // WriteToStorage is used to put entity data in storage
@@ -88,6 +106,29 @@ func (a *ActivityLog) SetStandbyEnable(ctx context.Context, enabled bool) {
 	})
 }
 
+// NOTE: AddTokenToFragment is deprecated and can no longer be used, except for
+// testing backward compatibility. Please use AddClientToFragment instead.
+func (a *ActivityLog) AddTokenToFragment(namespaceID string) {
+	a.fragmentLock.Lock()
+	defer a.fragmentLock.Unlock()
+
+	if !a.enabled {
+		return
+	}
+
+	a.createCurrentFragment()
+
+	a.fragment.NonEntityTokens[namespaceID] += 1
+}
+
+func RandStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = byte(rand.Intn(26)) + 'a'
+	}
+	return string(b)
+}
+
 // ExpectCurrentSegmentRefreshed verifies that the current segment has been refreshed
 // non-nil empty components and updated with the `expectedStart` timestamp
 // Note: if `verifyTimeNotZero` is true, ignore `expectedStart` and just make sure the timestamp isn't 0
@@ -98,14 +139,11 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	defer a.l.RUnlock()
 	a.fragmentLock.RLock()
 	defer a.fragmentLock.RUnlock()
-	if a.currentSegment.currentEntities == nil {
-		t.Fatalf("expected non-nil currentSegment.currentEntities")
+	if a.currentSegment.currentClients == nil {
+		t.Fatalf("expected non-nil currentSegment.currentClients")
 	}
-	if a.currentSegment.currentEntities.Entities == nil {
-		t.Errorf("expected non-nil currentSegment.currentEntities.Entities")
-	}
-	if a.activeEntities == nil {
-		t.Errorf("expected non-nil activeEntities")
+	if a.currentSegment.currentClients.Clients == nil {
+		t.Errorf("expected non-nil currentSegment.currentClients.Entities")
 	}
 	if a.currentSegment.tokenCount == nil {
 		t.Fatalf("expected non-nil currentSegment.tokenCount")
@@ -113,15 +151,17 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	if a.currentSegment.tokenCount.CountByNamespaceID == nil {
 		t.Errorf("expected non-nil currentSegment.tokenCount.CountByNamespaceID")
 	}
-
-	if len(a.currentSegment.currentEntities.Entities) > 0 {
-		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentSegment.currentEntities)
+	if a.partialMonthClientTracker == nil {
+		t.Errorf("expected non-nil partialMonthClientTracker")
 	}
-	if len(a.activeEntities) > 0 {
-		t.Errorf("expected no active entity segment to be loaded. got: %v", a.activeEntities)
+	if len(a.currentSegment.currentClients.Clients) > 0 {
+		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentSegment.currentClients)
 	}
 	if len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 {
 		t.Errorf("expected no token counts to be loaded. got: %v", a.currentSegment.tokenCount.CountByNamespaceID)
+	}
+	if len(a.partialMonthClientTracker) > 0 {
+		t.Errorf("expected no active entity segment to be loaded. got: %v", a.partialMonthClientTracker)
 	}
 
 	if verifyTimeNotZero {
@@ -134,13 +174,13 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 }
 
 // ActiveEntitiesEqual checks that only the set of `test` exists in `active`
-func ActiveEntitiesEqual(active map[string]struct{}, test []*activity.EntityRecord) bool {
+func ActiveEntitiesEqual(active map[string]*activity.EntityRecord, test []*activity.EntityRecord) bool {
 	if len(active) != len(test) {
 		return false
 	}
 
 	for _, ent := range test {
-		if _, ok := active[ent.EntityID]; !ok {
+		if _, ok := active[ent.ClientID]; !ok {
 			return false
 		}
 	}
@@ -162,15 +202,8 @@ func (a *ActivityLog) SetStartTimestamp(timestamp int64) {
 	a.currentSegment.startTimestamp = timestamp
 }
 
-// SetTokenCount sets the tokenCount on an activity log
-func (a *ActivityLog) SetTokenCount(tokenCount *activity.TokenCount) {
-	a.l.Lock()
-	defer a.l.Unlock()
-	a.currentSegment.tokenCount = tokenCount
-}
-
-// GetCountByNamespaceID returns the count of tokens by namespace ID
-func (a *ActivityLog) GetCountByNamespaceID() map[string]uint64 {
+// GetStoredTokenCountByNamespaceID returns the count of tokens by namespace ID
+func (a *ActivityLog) GetStoredTokenCountByNamespaceID() map[string]uint64 {
 	a.l.RLock()
 	defer a.l.RUnlock()
 	return a.currentSegment.tokenCount.CountByNamespaceID
@@ -180,7 +213,7 @@ func (a *ActivityLog) GetCountByNamespaceID() map[string]uint64 {
 func (a *ActivityLog) GetEntitySequenceNumber() uint64 {
 	a.l.RLock()
 	defer a.l.RUnlock()
-	return a.currentSegment.entitySequenceNumber
+	return a.currentSegment.clientSequenceNumber
 }
 
 // SetEnable sets the enabled flag on the activity log

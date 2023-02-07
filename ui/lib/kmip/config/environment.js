@@ -1,8 +1,8 @@
 /* eslint-env node */
 'use strict';
 
-module.exports = function(environment) {
-  let ENV = {
+module.exports = function (environment) {
+  const ENV = {
     modulePrefix: 'kmip',
     environment,
   };

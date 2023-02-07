@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
@@ -98,7 +98,13 @@ func hashMap(fn func(string) string, data map[string]interface{}, nonHMACDataKey
 }
 
 // HashResponse returns a hashed copy of the logical.Request input.
-func HashResponse(salter *salt.Salt, in *logical.Response, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Response, error) {
+func HashResponse(
+	salter *salt.Salt,
+	in *logical.Response,
+	HMACAccessor bool,
+	nonHMACDataKeys []string,
+	elideListResponseData bool,
+) (*logical.Response, error) {
 	if in == nil {
 		return nil, nil
 	}
@@ -129,12 +135,20 @@ func HashResponse(salter *salt.Salt, in *logical.Response, HMACAccessor bool, no
 			mapCopy[logical.HTTPRawBody] = string(b)
 		}
 
+		// Processing list response data elision takes place at this point in the code for performance reasons:
+		// - take advantage of the deep copy of resp.Data that was going to be done anyway for hashing
+		// - but elide data before potentially spending time hashing it
+		if elideListResponseData {
+			doElideListResponseData(mapCopy)
+		}
+
 		err = hashMap(fn, mapCopy, nonHMACDataKeys)
 		if err != nil {
 			return nil, err
 		}
 		resp.Data = mapCopy
 	}
+
 	if resp.WrapInfo != nil {
 		var err error
 		resp.WrapInfo, err = HashWrapInfo(salter, resp.WrapInfo, HMACAccessor)

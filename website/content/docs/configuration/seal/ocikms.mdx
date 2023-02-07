@@ -8,6 +8,8 @@ description: |-
 
 # `ocikms` Seal
 
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documenation for more information.
+
 The OCI KMS seal configures Vault to use OCI KMS as the seal wrapping mechanism.
 The OCI KMS seal is activated by one of the following:
 
@@ -47,12 +49,16 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `auth_type_api_key` `(boolean: false)`: Specifies if using API key to authenticate to OCI KMS service.
   If it is `false`, Vault authenticates using the instance principal from the compute instance. See Authentication section for details. Default is `false`.
 
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+
 ## Authentication
 
 Authentication-related values must be provided, either as environment
 variables or as configuration parameters.
 
-If you want to use Instance Principal, add section configuration below and add further configuration settings as detailed in the [configuration docs](/docs/configuration/).
+If you want to use Instance Principal, add section configuration below and add further configuration settings as detailed in the [configuration docs](/vault/docs/configuration/).
 
 ```hcl
 seal "ocikms" {

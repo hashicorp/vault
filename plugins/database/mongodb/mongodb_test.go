@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -77,6 +80,23 @@ func TestNewUser_usernameTemplate(t *testing.T) {
 			},
 
 			expectedUsernameRegex: "^v-token-testrolenamewit-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"default username template with invalid chars": {
+			usernameTemplate: "",
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "a.bad.account",
+					RoleName:    "a.bad.role",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{mongoAdminRole},
+				},
+				Password:   "98yq3thgnakjsfhjkl",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: "^v-a-bad-account-a-bad-role-[a-zA-Z0-9]{20}-[0-9]{10}$",
 		},
 		"custom username template": {
 			usernameTemplate: "{{random 2 | uppercase}}_{{unix_time}}_{{.RoleName | uppercase}}_{{.DisplayName | uppercase}}",
@@ -346,9 +366,7 @@ func TestGetTLSAuth(t *testing.T) {
 			if !test.expectErr && err != nil {
 				t.Fatalf("no error expected, got: %s", err)
 			}
-			if !reflect.DeepEqual(actual, test.expectOpts) {
-				t.Fatalf("Actual:\n%#v\nExpected:\n%#v", actual, test.expectOpts)
-			}
+			assertDeepEqual(t, test.expectOpts, actual)
 		})
 	}
 }
@@ -361,6 +379,27 @@ func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.Cer
 		t.Fatalf("Unable to append cert to cert pool")
 	}
 	return pool
+}
+
+var cmpClientOptionsOpts = cmp.Options{
+	cmp.AllowUnexported(options.ClientOptions{}),
+
+	cmp.AllowUnexported(tls.Config{}),
+	cmpopts.IgnoreTypes(sync.Mutex{}, sync.RWMutex{}),
+
+	// 'lazyCerts' has a func field which can't be compared.
+	cmpopts.IgnoreFields(x509.CertPool{}, "lazyCerts"),
+	cmp.AllowUnexported(x509.CertPool{}),
+}
+
+// Need a special comparison for ClientOptions because reflect.DeepEquals won't work in Go 1.16.
+// See: https://github.com/golang/go/issues/45891
+func assertDeepEqual(t *testing.T, a, b *options.ClientOptions) {
+	t.Helper()
+
+	if diff := cmp.Diff(a, b, cmpClientOptionsOpts); diff != "" {
+		t.Fatalf("assertion failed: values are not equal\n--- expected\n+++ actual\n%v", diff)
+	}
 }
 
 func createDBUser(t testing.TB, connURL, db, username, password string) {

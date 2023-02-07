@@ -1,4 +1,3 @@
-import { get } from '@ember/object';
 import { expandProperties } from '@ember/object/computed';
 /*
  *
@@ -35,44 +34,46 @@ import { expandProperties } from '@ember/object/computed';
  *
  */
 
-export const expandAttributeMeta = function(modelClass, attributeNames, namePrefix, map) {
-  let fields = [];
+export const expandAttributeMeta = function (modelClass, attributeNames) {
+  const fields = [];
   // expand all attributes
-  attributeNames.forEach(field => expandProperties(field, x => fields.push(x)));
-  let attributeMap = map || new Map();
-  modelClass.eachAttribute((name, meta) => {
-    let fieldName = namePrefix ? namePrefix + name : name;
-    let maybeFragment = get(modelClass, fieldName);
-    if (meta.isFragment && maybeFragment) {
-      // pass the fragment and all fields that start with
-      // the fragment name down to get extracted from the Fragment
-      expandAttributeMeta(
-        maybeFragment,
-        fields.filter(f => f.startsWith(fieldName)),
-        fieldName + '.',
-        attributeMap
-      );
-      return;
-    }
-    attributeMap.set(fieldName, meta);
-  });
+  // see docs for examples of brace-expansion - https://api.emberjs.com/ember/4.4/functions/@ember%2Fobject%2Fcomputed/expandProperties
+  attributeNames.map((field) => expandProperties(field, (prop) => fields.push(prop)));
+  // cache results of eachAttribute so we don't call it on each iteration of fields loop
+  const modelAttrs = {};
 
-  // we have all of the attributes in the map now,
-  // so we'll replace each key in `fields` with the expanded meta
-  fields = fields.map(field => {
-    let meta = attributeMap.get(field);
-    if (meta) {
-      var { type, options } = meta;
+  const getAttributeMeta = (klass, attrKey) => {
+    // populate cache if empty
+    if (!modelAttrs[klass.modelName]) {
+      modelAttrs[klass.modelName] = [];
+      klass.eachAttribute((name, meta) => {
+        modelAttrs[klass.modelName].push(meta);
+      });
     }
+    // lookup attr and return meta
+    return modelAttrs[klass.modelName].findBy('name', attrKey);
+  };
+
+  return fields.map((field) => {
+    let meta = {};
+    // check for relationship by presence of dot nation in field name
+    if (field.includes('.')) {
+      const [relKey, prop] = field.split('.');
+      const rel = modelClass.belongsTo(relKey);
+      const relModelClass = modelClass.store.modelFor(rel.type);
+      meta = getAttributeMeta(relModelClass, prop);
+    } else {
+      meta = getAttributeMeta(modelClass, field);
+    }
+    const { type, options } = meta || {};
     return {
       // using field name here because it is the full path,
-      // name on the attribute meta will be relative to the fragment it's on
+      // name on the attribute meta will be relative to the relationship if applicable
       name: field,
-      type: type,
-      options: options,
+      type,
+      options,
     };
   });
-  return fields;
 };
 
 /*
@@ -95,8 +96,8 @@ export const expandAttributeMeta = function(modelClass, attributeNames, namePref
  *  The array will get mapped over producing a new array with each attribute replaced with that attribute's metadata from the attr declaration
  */
 
-export default function(modelClass, fieldGroups) {
-  return fieldGroups.map(group => {
+export default function (modelClass, fieldGroups) {
+  return fieldGroups.map((group) => {
     const groupKey = Object.keys(group)[0];
     const fields = expandAttributeMeta(modelClass, group[groupKey]);
     return { [groupKey]: fields };

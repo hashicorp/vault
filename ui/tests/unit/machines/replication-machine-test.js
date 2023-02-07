@@ -2,7 +2,7 @@ import { module, test } from 'qunit';
 import { Machine } from 'xstate';
 import ReplicationMachineConfig from 'vault/machines/replication-machine';
 
-module('Unit | Machine | replication-machine', function() {
+module('Unit | Machine | replication-machine', function () {
   const replicationMachine = Machine(ReplicationMachineConfig);
 
   const testCases = [
@@ -26,10 +26,10 @@ module('Unit | Machine | replication-machine', function() {
     },
   ];
 
-  testCases.forEach(testCase => {
-    test(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${testCase.params}`, function(assert) {
-      let result = replicationMachine.transition(testCase.currentState, testCase.event, testCase.params);
-      assert.equal(result.value, testCase.expectedResults.value);
+  testCases.forEach((testCase) => {
+    test(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${testCase.params}`, function (assert) {
+      const result = replicationMachine.transition(testCase.currentState, testCase.event, testCase.params);
+      assert.strictEqual(result.value, testCase.expectedResults.value);
       assert.deepEqual(result.actions, testCase.expectedResults.actions);
     });
   });

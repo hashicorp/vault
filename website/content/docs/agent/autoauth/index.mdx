@@ -31,7 +31,7 @@ configured Sinks, subject to their configuration.
 
 Sinks support some advanced features, including the ability for the written
 values to be encrypted or
-[response-wrapped](/docs/concepts/response-wrapping).
+[response-wrapped](/vault/docs/concepts/response-wrapping).
 
 Both mechanisms can be used concurrently; in this case, the value will be
 response-wrapped, then encrypted.
@@ -58,8 +58,8 @@ There are two ways that tokens can be response-wrapped by the agent:
 
 ### Encrypting Tokens
 
-~> This is experimental; if input/output formats change we will make every
-effort to provide backwards compatibility.
+~> Support for encrypted tokens is experimental; if input/output formats
+change, we will make every effort to provide backwards compatibility.
 
 Tokens can be encrypted, using a Diffie-Hellman exchange to generate an
 ephemeral key. In this mechanism, the client receiving the token writes a
@@ -69,10 +69,11 @@ key, which is then used to encrypt the token via AES-GCM. The nonce, encrypted
 payload, and the sink's public key are then written to the output file, where
 the client can compute the shared secret and decrypt the token value.
 
-~> NOTE: This is not a protection against MITM attacks! The purpose of this
-feature is for forward-secrecy and coverage against bare token values being
-persisted. A MITM that can write to the sink's output and/or client public-key
-input files could attack this exchange.
+~> NOTE: Token encryption is not a protection against MITM attacks! The purpose
+of this feature is for forward-secrecy and coverage against bare token values
+being persisted. A MITM that can write to the sink's output and/or client
+public-key input files could attack this exchange. Using TLS to protect the
+transit of tokens is highly recommended.
 
 To help mitigate MITM attacks, additional authenticated data (AAD) can be
 provided to the agent. This data is written as part of the AES-GCM tag and must
@@ -91,7 +92,7 @@ written.
 
 If writing a client that uses this feature, it will likely be helpful to look
 at the
-[dhutil](https://github.com/hashicorp/vault/blob/master/helper/dhutil/dhutil.go)
+[dhutil](https://github.com/hashicorp/vault/blob/main/helper/dhutil/dhutil.go)
 library. This shows the expected format of the public key input and envelope
 output formats.
 
@@ -105,6 +106,12 @@ The top level `auto_auth` block has two configuration entries:
 
 ### Configuration (Method)
 
+~> Auto-auth does not support using tokens with a limited number of uses. Vault
+Agent does not track the number of uses remaining, and may allow the token to
+expire before attempting to renew it. For example, if using AppRole auto-auth,
+you must use 0 (meaning unlimited) as the value for
+[`token_num_uses`](/vault/api-docs/auth/approle#token_num_uses).
+
 These are common configuration values that live within the `method` block:
 
 - `type` `(string: required)` - The type of the method to use, e.g. `aws`,
@@ -114,8 +121,13 @@ These are common configuration values that live within the `method` block:
 - `mount_path` `(string: optional)` - The mount path of the method. If not
   specified, defaults to a value of `auth/<method type>`.
 
-- `namespace` `(string: optional)` - The default namespace path for the mount.
-  If not specified, defaults to the root namespace.
+- `namespace` `(string: optional)` - Namespace in which the mount lives.
+  The order of precedence is: this setting lowest, followed by the
+  environment variable `VAULT_NAMESPACE`, and then the highest precedence
+  command-line option `-namespace`.
+  If none of these are specified, defaults to the root namespace.
+  Note that because sink response wrapping and templating are also based
+  on the client created by auto-auth, they use the same namespace.
 
 - `wrap_ttl` `(string or integer: optional)` - If specified, the written token
   will be response-wrapped by the agent. This is more secure than wrapping by
@@ -123,12 +135,27 @@ These are common configuration values that live within the `method` block:
   automatically reauthenticate when it expires. Rather than a simple string,
   the written value will be a JSON-encoded
   [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
-  structure. Values can be an integer number of seconds or a stringish value
-  like `5m`.
+  structure. Uses [duration format strings](/vault/docs/concepts/duration-format).
+
+- `min_backoff` `(string or integer: "1s")` - The minimum backoff time Agent
+  will delay before retrying after a failed auth attempt. The backoff will start
+  at the configured value and double (with some randomness) after successive
+  failures, capped by `max_backoff.` If Agent templating is being used, this
+  value is also used as the min backoff time for the templating server.
+  Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 - `max_backoff` `(string or integer: "5m")` - The maximum time Agent will delay
-  before retrying after a failed auth attempt. The backoff will start at 1 second
-  and double (with some randomness) after successive failures, capped by `max_backoff.`
+  before retrying after a failed auth attempt. The backoff will start at
+  `min_backoff` and double (with some randomness) after successive failures,
+  capped by `max_backoff.` If Agent templating is being used, this value is also
+  used as the max backoff time for the templating server. `max_backoff` is the
+  duration between retries, and **not** the duration that retries will be
+  performed before giving up. Uses [duration format strings](/vault/docs/concepts/duration-format).
+
+- `exit_on_err` `(bool: false)` - When set to true, Vault Agent will exit if any 
+  errors occur during authentication. This configurable only affects login attempts 
+  for new tokens (either intial or expired tokens) and will not exit for errors on 
+  valid token renewals.
 
 - `config` `(object: required)` - Configuration of the method itself. See the
   sidebar for information about each method.
@@ -146,8 +173,7 @@ These configuration values are common to all Sinks:
   reauthenticate when it expires. Rather than a simple string, the written
   value will be a JSON-encoded
   [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
-  structure. Values can be an integer number of seconds or a stringish value
-  like `5m`.
+  structure. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 - `dh_type` `(string: optional)` - If specified, the type of Diffie-Hellman exchange to
   perform, meaning, which ciphers and/or curves. Currently only `curve25519` is
@@ -171,3 +197,151 @@ These configuration values are common to all Sinks:
 
 - `config` `(object: required)` - Configuration of the sink itself. See the
   sidebar for information about each sink.
+
+### Auto Auth Examples
+
+Auto-Auth configuration objects take two separate forms when specified in HCL
+and JSON. The following examples are meant to clarify the differences between
+the two formats.
+
+#### Sinks (HCL Format)
+
+The HCL format may define any number of sink objects with an optional wrapping
+`sinks {...}` object.
+
+~> Note: The [corresponding JSON format](#sinks-json-format) _must_ specify a
+`"sinks" : [...]` array to encapsulate all `sink` JSON objects.
+
+```hcl
+// Other Vault Agent configuration blocks
+// ...
+
+auto_auth {
+  method {
+    type = "approle"
+
+    config = {
+      role_id_file_path = "/etc/vault/roleid"
+      secret_id_file_path = "/etc/vault/secretid"
+    }
+  }
+
+  sinks {
+    sink {
+      type = "file"
+
+      config = {
+        path = "/tmp/file-foo"
+      }
+    }
+  }
+}
+```
+
+The following valid HCL omits the wrapping `sinks` object while specifying
+multiple sinks.
+
+```hcl
+// Other Vault Agent configuration blocks
+// ...
+
+auto_auth {
+  method {
+    type = "approle"
+
+    config = {
+      role_id_file_path = "/etc/vault/roleid"
+      secret_id_file_path = "/etc/vault/secretid"
+    }
+  }
+
+  sink {
+    type = "file"
+
+    config = {
+      path = "/tmp/file-foo"
+    }
+  }
+
+  sink {
+    type = "file"
+
+    config = {
+      path = "/tmp/file-bar"
+    }
+  }
+}
+```
+
+#### Sinks (JSON format)
+
+The following JSON configuration illustrates the need for a `sinks: [...]` array
+wrapping any number of `sink` objects.
+
+```json
+{
+  "auto_auth" : {
+    "method" : [
+      {
+        type = "approle"
+
+        config = {
+          role_id_file_path = "/etc/vault/roleid"
+          secret_id_file_path = "/etc/vault/secretid"
+        }
+      }
+    ],
+    "sinks" : [
+      {
+        "sink" : {
+          type = "file"
+
+          config = {
+            path = "/tmp/file-foo"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+Multiple sinks are defined by appending more `sink` objects within the `sinks`
+array:
+
+```json
+{
+  "auto_auth" : {
+    "method" : [
+      {
+        type = "approle"
+
+        config = {
+          role_id_file_path = "/etc/vault/roleid"
+          secret_id_file_path = "/etc/vault/secretid"
+        }
+      }
+    ],
+    "sinks" : [
+      {
+        "sink" : {
+          type = "file"
+
+          config = {
+            path = "/tmp/file-foo"
+          }
+        }
+      },
+      {
+        "sink" : {
+          type = "file"
+
+          config = {
+            path = "/tmp/file-bar"
+          }
+        }
+      }
+    ]
+  }
+}
+```

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keybase/go-crypto/openpgp"
-	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 )
 
 func TestPubKeyFilesFlag_implements(t *testing.T) {
@@ -68,7 +68,7 @@ func TestPubKeyFilesFlagSetBinary(t *testing.T) {
 		t.Fatalf("err: should not have been able to set a second value")
 	}
 
-	expected := []string{strings.Replace(pubKey1, "\n", "", -1), strings.Replace(pubKey2, "\n", "", -1)}
+	expected := []string{strings.ReplaceAll(pubKey1, "\n", ""), strings.ReplaceAll(pubKey2, "\n", "")}
 	if !reflect.DeepEqual(pkf.String(), fmt.Sprint(expected)) {
 		t.Fatalf("Bad: %#v", pkf)
 	}
@@ -149,7 +149,7 @@ func TestPubKeyFilesFlagSetKeybase(t *testing.T) {
 	exp := []string{
 		"0f801f518ec853daff611e836528efcac6caa3db",
 		"cf3d4694c9f57b28cb4092c2eb832c67eb5e8957",
-		"91a6e7f85d05c65630bef18951852d87348ffc4c",
+		"c874011f0ab405110d02105534365d9472d7468f",
 	}
 
 	if !reflect.DeepEqual(fingerprints, exp) {

@@ -6,8 +6,10 @@ description: Tokens are a core auth method in Vault. Concepts and important feat
 
 # Tokens
 
+!> **Warning**: Since tokens are considered opaque values, their structure is undocumented and subject to change. For these reasons, we do not recommend using tokens within your scripts or for automation since it can cause breakage.
+
 Tokens are the core method for _authentication_ within Vault. Tokens
-can be used directly or [auth methods](/docs/concepts/auth)
+can be used directly or [auth methods](/vault/docs/concepts/auth)
 can be used to dynamically generate tokens based on external identities.
 
 If you've gone through the getting started guide, you probably noticed that
@@ -15,23 +17,21 @@ If you've gone through the getting started guide, you probably noticed that
 initial "root token." This is the first method of authentication for Vault.
 It is also the only auth method that cannot be disabled.
 
-As stated in the [authentication concepts](/docs/concepts/auth),
+As stated in the [authentication concepts](/vault/docs/concepts/auth),
 all external authentication mechanisms, such as GitHub, map down to dynamically
 created tokens. These tokens have all the same properties as a normal manually
 created token.
 
 Within Vault, tokens map to information. The most important information mapped
 to a token is a set of one or more attached
-[policies](/docs/concepts/policies). These policies control what the token
+[policies](/vault/docs/concepts/policies). These policies control what the token
 holder is allowed to do within Vault. Other mapped information includes
 metadata that can be viewed and is added to the audit log, such as creation
 time, last renewal time, and more.
 
-~> Note that external to Vault, tokens are to be considered opaque values
-by users and as such, their structure is both currently undocumented and
-subject to change.
-
-Read on for a deeper dive into token concepts.
+Read on for a deeper dive into token concepts.  See the
+[tokens tutorial](/vault/tutorials/tokens/tokens)
+for details on how these concepts play out in practice.
 
 ## Token Types
 
@@ -45,7 +45,7 @@ their applicability to batch tokens is discussed later.
 
 Often in documentation or in help channels, the "token store" is referenced.
 This is the same as the [`token` authentication
-backend](/docs/auth/token). This is a special
+backend](/vault/docs/auth/token). This is a special
 backend in that it is responsible for creating and storing tokens, and cannot
 be disabled. It is also the only auth method that has no login
 capability -- all actions require existing authenticated tokens.
@@ -60,9 +60,9 @@ there are only three ways to create root tokens:
 
 1. The initial root token generated at `vault operator init` time -- this token has no
    expiration
-2. By using another root token; a root token with an expiration cannot create a
+1. By using another root token; a root token with an expiration cannot create a
    root token that never expires
-3. By using `vault operator generate-root` ([example](/guides/operations/generate-root))
+1. By using `vault operator generate-root` ([example](/vault/tutorials/operations/generate-root))
    with the permission of a quorum of unseal key holders
 
 Root tokens are useful in development but should be extremely carefully guarded
@@ -71,7 +71,7 @@ used for just enough initial setup (usually, setting up auth methods
 and policies necessary to allow administrators to acquire more limited tokens)
 or in emergencies, and are revoked immediately after they are no longer needed.
 If a new root token is needed, the `operator generate-root` command and associated
-[API endpoint](/api/system/generate-root) can be used to generate one on-the-fly.
+[API endpoint](/vault/api-docs/system/generate-root) can be used to generate one on-the-fly.
 
 It is also good security practice for there to be multiple eyes on a terminal
 whenever a root token is live. This way multiple people can verify as to the
@@ -91,10 +91,10 @@ Often this behavior is not desired, so users with appropriate access can create
 token tree. These orphan tokens can be created:
 
 1. Via `write` access to the `auth/token/create-orphan` endpoint
-2. By having `sudo` or `root` access to the `auth/token/create`
+1. By having `sudo` or `root` access to the `auth/token/create`
    and setting the `no_parent` parameter to `true`
-3. Via token store roles
-4. By logging in with any other (non-`token`) auth method
+1. Via token store roles
+1. By logging in with any other (non-`token`) auth method
 
 Users with appropriate permissions can also use the `auth/token/revoke-orphan`
 endpoint, which revokes the given token but rather than revoke the rest of the
@@ -108,9 +108,9 @@ accessor is a value that acts as a reference to a token and can only be used to
 perform limited actions:
 
 1. Look up a token's properties (not including the actual token ID)
-2. Look up a token's capabilities on a path
-3. Renew the token
-4. Revoke the token
+1. Look up a token's capabilities on a path
+1. Renew the token
+1. Revoke the token
 
 The token _making the call_, _not_ the token associated with the accessor, must
 have appropriate permissions for these functions.
@@ -159,11 +159,11 @@ token's information is looked up. It is based on a combination of factors:
 
 1. The system max TTL, which is 32 days but can be changed in Vault's
    configuration file.
-2. The max TTL set on a mount using [mount
-   tuning](/api/system/mounts). This value
+1. The max TTL set on a mount using [mount
+   tuning](/vault/api-docs/system/mounts). This value
    is allowed to override the system max TTL -- it can be longer or shorter,
    and if set this value will be respected.
-3. A value suggested by the auth method that issued the token. This
+1. A value suggested by the auth method that issued the token. This
    might be configured on a per-role, per-group, or per-user basis. This value
    is allowed to be less than the mount max TTL (or, if not set, the system max
    TTL), but it is not allowed to be longer.
@@ -194,8 +194,8 @@ can be created in a few ways:
 
 1. By having `sudo` capability or a `root` token with the `auth/token/create`
    endpoint
-2. By using token store roles
-3. By using an auth method that supports issuing these, such as
+1. By using token store roles
+1. By using an auth method that supports issuing these, such as
    AppRole
 
 At issue time, the TTL of a periodic token will be equal to the configured
@@ -255,6 +255,7 @@ batch tokens.
 | Can Be Root Tokens                                  |                                                     Yes |                                              No |
 | Can Create Child Tokens                             |                                                     Yes |                                              No |
 | Can be Renewable                                    |                                                     Yes |                                              No |
+| Manually Revocable                                  |                                                     Yes |                                              No |
 | Can be Periodic                                     |                                                     Yes |                                              No |
 | Can have Explicit Max TTL                           |                                                     Yes |                    No (always uses a fixed TTL) |
 | Has Accessors                                       |                                                     Yes |                                              No |

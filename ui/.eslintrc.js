@@ -12,32 +12,44 @@ module.exports = {
       legacyDecorators: true,
     },
   },
-  plugins: ['ember', 'prettier'],
-  extends: ['eslint:recommended', 'plugin:ember/recommended', 'prettier'],
+  plugins: ['ember'],
+  extends: [
+    'eslint:recommended',
+    'plugin:ember/recommended',
+    'plugin:prettier/recommended',
+    'plugin:compat/recommended',
+  ],
   env: {
     browser: true,
-    es6: true,
   },
   rules: {
-    // TODO revisit once figure out how to replace, added during upgrade to 3.20
-    'ember/no-new-mixins': 'off',
-    'ember/no-mixins': 'off',
+    'no-console': 'error',
+    'prefer-const': ['error', { destructuring: 'all' }],
+    'ember/no-mixins': 'warn',
+    'ember/no-new-mixins': 'off', // should be warn but then every line of the mixin is green
+    // need to be fully glimmerized before these rules can be turned on
+    'ember/no-classic-classes': 'off',
+    'ember/no-classic-components': 'off',
+    'ember/no-actions-hash': 'off',
+    'ember/require-tagless-components': 'off',
+    'ember/no-component-lifecycle-hooks': 'off',
   },
   overrides: [
     // node files
     {
       files: [
-        '.template-lintrc.js',
-        'ember-cli-build.js',
-        'testem.js',
-        'blueprints/*/index.js',
-        'config/**/*.js',
-        'lib/*/index.js',
-        'scripts/start-vault.js',
+        './.eslintrc.js',
+        './.prettierrc.js',
+        './.template-lintrc.js',
+        './ember-cli-build.js',
+        './testem.js',
+        './blueprints/*/index.js',
+        './config/**/*.js',
+        './lib/*/index.js',
+        './server/**/*.js',
       ],
       parserOptions: {
         sourceType: 'script',
-        ecmaVersion: 2018,
       },
       env: {
         browser: false,
@@ -50,6 +62,15 @@ module.exports = {
         // https://github.com/mysticatea/eslint-plugin-node/issues/77
         'node/no-unpublished-require': 'off',
       },
+    },
+    {
+      // test files
+      files: ['tests/**/*-test.{js,ts}'],
+      extends: ['plugin:qunit/recommended'],
+    },
+    {
+      files: ['**/*.ts'],
+      extends: ['plugin:@typescript-eslint/recommended'],
     },
   ],
 };

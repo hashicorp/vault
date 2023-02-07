@@ -9,9 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
@@ -33,6 +32,10 @@ func pathUser(b *backend) *framework.Path {
 				Description: "Lifetime of the returned credentials in seconds",
 				Default:     3600,
 			},
+			"role_session_name": {
+				Type:        framework.TypeString,
+				Description: "Session name to use when assuming role. Max chars: 64",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -51,11 +54,11 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	// Read the policy
 	role, err := b.roleRead(ctx, req.Storage, roleName, true)
 	if err != nil {
-		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
+		return nil, fmt.Errorf("error retrieving role: %w", err)
 	}
 	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Role '%s' not found", roleName)), nil
+			"Role %q not found", roleName)), nil
 	}
 
 	var ttl int64
@@ -81,6 +84,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	roleArn := d.Get("role_arn").(string)
+	roleSessionName := d.Get("role_session_name").(string)
 
 	var credentialType string
 	switch {
@@ -126,7 +130,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		case !strutil.StrListContains(role.RoleArns, roleArn):
 			return logical.ErrorResponse(fmt.Sprintf("role_arn %q not in allowed role arns for Vault role %q", roleArn, roleName)), nil
 		}
-		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl)
+		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl, roleSessionName)
 	case federationTokenCred:
 		return b.getFederationToken(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl)
 	default:

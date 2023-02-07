@@ -1,0 +1,9 @@
+rules:
+  - id: self-equals
+    patterns:
+        - pattern-either:
+              - pattern: $X == $X
+              - pattern: $X != $X
+    message: "Comparing with self"
+    languages: [go]
+    severity: ERROR

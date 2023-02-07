@@ -24,34 +24,34 @@ const IS_REINDEXING = {
   state: 'running',
 };
 
-module('Integration | Component | replication-dashboard', function(hooks) {
+module('Integration | Component | replication-dashboard', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('replicationDetails', REPLICATION_DETAILS);
     this.set('clusterMode', 'secondary');
     this.set('isSecondary', true);
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
     />`);
 
     assert.dom('[data-test-replication-dashboard]').exists();
-    assert.dom('[data-test-table-rows').exists();
+    assert.dom('[data-test-table-rows]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert.dom('[data-test-replication-doc-link]').exists();
     assert.dom('[data-test-flash-message]').doesNotExist('no flash message is displayed on render');
   });
 
-  test('it updates the dashboard when the replication mode has changed', async function(assert) {
+  test('it updates the dashboard when the replication mode has changed', async function (assert) {
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
     />`);
 
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
@@ -64,26 +64,26 @@ module('Integration | Component | replication-dashboard', function(hooks) {
     assert.dom('[data-test-selectable-card-container="secondary"]').doesNotExist();
   });
 
-  test('it renders the primary selectable-card-container when the cluster is a primary', async function(assert) {
+  test('it renders the primary selectable-card-container when the cluster is a primary', async function (assert) {
     this.set('isSecondary', false);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
     />`);
 
     assert.dom('[data-test-selectable-card-container="primary"]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').doesNotExist();
   });
 
-  test('it renders an alert banner if the dashboard is syncing', async function(assert) {
+  test('it renders an alert banner if the dashboard is syncing', async function (assert) {
     this.set('replicationDetails', IS_SYNCING);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-secondary-card'
     />`);
 
@@ -93,13 +93,13 @@ module('Integration | Component | replication-dashboard', function(hooks) {
       .doesNotExist('does not show reindexing banner if cluster is cluster is not reindexing');
   });
 
-  test('it shows an alert banner if the cluster is reindexing', async function(assert) {
+  test('it shows an alert banner if the cluster is reindexing', async function (assert) {
     this.set('replicationDetails', IS_REINDEXING);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-secondary-card'
     />`);
 
@@ -120,7 +120,7 @@ module('Integration | Component | replication-dashboard', function(hooks) {
       .hasValue(reindexingInProgress.reindex_building_progress, 'updates the reindexing progress');
   });
 
-  test('it renders replication-summary-card when isSummaryDashboard', async function(assert) {
+  test('it renders replication-summary-card when isSummaryDashboard', async function (assert) {
     const replicationDetailsSummary = {
       dr: {
         state: 'running',
@@ -140,11 +140,11 @@ module('Integration | Component | replication-dashboard', function(hooks) {
     this.set('isSecondary', false);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @replicationDetailsSummary={{replicationDetailsSummary}}
-      @isSummaryDashboard={{isSummaryDashboard}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @replicationDetailsSummary={{this.replicationDetailsSummary}}
+      @isSummaryDashboard={{this.isSummaryDashboard}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-summary-card'
     />`);
 
@@ -159,7 +159,7 @@ module('Integration | Component | replication-dashboard', function(hooks) {
     assert.dom('[data-test-selectable-card-container-primary]').doesNotExist();
   });
 
-  test('it renders replication-summary-card with an error message when the state is not OK', async function(assert) {
+  test('it renders replication-summary-card with an error message when the state is not OK', async function (assert) {
     const replicationDetailsSummary = {
       dr: {
         state: 'shutdown',
@@ -179,11 +179,11 @@ module('Integration | Component | replication-dashboard', function(hooks) {
     this.set('isSecondary', false);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @replicationDetailsSummary={{replicationDetailsSummary}}
-      @isSummaryDashboard={{isSummaryDashboard}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @replicationDetailsSummary={{this.replicationDetailsSummary}}
+      @isSummaryDashboard={{this.isSummaryDashboard}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-summary-card'
     />`);
 

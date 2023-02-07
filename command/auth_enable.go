@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -37,6 +36,7 @@ type AuthEnableCommand struct {
 	flagExternalEntropyAccess     bool
 	flagTokenType                 string
 	flagVersion                   int
+	flagPluginVersion             string
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -117,15 +117,15 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the request data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the request data object. " +
+			"To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
 		Target: &c.flagAuditNonHMACResponseKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the response data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the response data object. " +
+			"To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringVar(&StringVar{
@@ -137,21 +137,21 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNamePassthroughRequestHeaders,
 		Target: &c.flagPassthroughRequestHeaders,
-		Usage: "Comma-separated string or list of request header values that " +
-			"will be sent to the plugin",
+		Usage: "Request header value that will be sent to the plugin. To specify multiple " +
+			"values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAllowedResponseHeaders,
 		Target: &c.flagAllowedResponseHeaders,
-		Usage: "Comma-separated string or list of response header values that " +
-			"plugins will be allowed to set",
+		Usage: "Response header value that plugins will be allowed to set. To specify multiple " +
+			"values, specify this flag multiple times.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
-		Completion: c.PredictVaultPlugins(consts.PluginTypeCredential),
+		Completion: c.PredictVaultPlugins(api.PluginTypeCredential),
 		Usage: "Name of the auth method plugin. This plugin name must already " +
 			"exist in the Vault server's plugin catalog.",
 	})
@@ -197,6 +197,13 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Target:  &c.flagVersion,
 		Default: 0,
 		Usage:   "Select the version of the auth method to run. Not supported by all auth methods.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNamePluginVersion,
+		Target:  &c.flagPluginVersion,
+		Default: "",
+		Usage:   "Select the semantic version of the plugin to enable.",
 	})
 
 	return set
@@ -298,6 +305,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		if fl.Name == flagNameTokenType {
 			authOpts.Config.TokenType = c.flagTokenType
 		}
+
+		if fl.Name == flagNamePluginVersion {
+			authOpts.Config.PluginVersion = c.flagPluginVersion
+		}
 	})
 
 	if err := client.Sys().EnableAuthWithOptions(authPath, authOpts); err != nil {
@@ -308,6 +319,9 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	authThing := authType + " auth method"
 	if authType == "plugin" {
 		authThing = c.flagPluginName + " plugin"
+	}
+	if c.flagPluginVersion != "" {
+		authThing += " version " + c.flagPluginVersion
 	}
 	c.UI.Output(fmt.Sprintf("Success! Enabled %s at: %s", authThing, authPath))
 	return 0

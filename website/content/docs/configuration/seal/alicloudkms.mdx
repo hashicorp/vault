@@ -10,6 +10,9 @@ description: >-
 
 # `alicloudkms` Seal
 
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documenation for more information.
+
+
 The AliCloud KMS seal configures Vault to use AliCloud KMS as the seal wrapping mechanism.
 The AliCloud KMS seal is activated by one of the following:
 
@@ -57,6 +60,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `kms_key_id` `(string: <required>)`: The AliCloud KMS key ID to use for encryption
   and decryption. May also be specified by the `VAULT_ALICLOUDKMS_SEAL_KEY_ID`
   environment variable.
+
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 
 ## Authentication
 

@@ -1,10 +1,11 @@
 <div class="level is-mobile">
   <div class="level-left">
     <label class="is-label" data-test-pgp-label>
-      {{#if label}}
-        {{label}}
+      {{#if this.label}}
+        {{this.label}}
       {{else}}
-        PGP KEY {{if (not-eq index '') (inc index)}}
+        PGP KEY
+        {{if (not-eq this.index "") (inc this.index)}}
       {{/if}}
     </label>
   </div>
@@ -12,31 +13,31 @@
     <div class="control is-flex">
       <input
         data-test-text-toggle
-        id={{concat "useText-" elementId}}
+        id={{concat "useText-" this.elementId}}
         type="checkbox"
-        name={{concat "useText-" elementId}}
+        name={{concat "useText-" this.elementId}}
         class="switch is-rounded is-success is-small"
-        checked={{key.enterAsText}}
-        onchange={{action (toggle "enterAsText" key)}}
+        checked={{this.key.enterAsText}}
+        onchange={{action (toggle "enterAsText" this.key)}}
       />
-      <label for={{concat "useText-" elementId}}>
+      <label for={{concat "useText-" this.elementId}}>
         Enter as text
       </label>
     </div>
   </div>
 </div>
 <div class="field">
-  {{#if key.enterAsText}}
+  {{#if this.key.enterAsText}}
     <div class="control">
       <textarea
         class="textarea"
         oninput={{action "updateData"}}
-        data-test-pgp-file-textarea=true
-      >{{key.value}}</textarea>
+        data-test-pgp-file-textarea={{true}}
+      >{{this.key.value}}</textarea>
     </div>
     <p class="help has-text-grey">
-      {{#if textareaHelpText}}
-        {{textareaHelpText}}
+      {{#if this.textareaHelpText}}
+        {{this.textareaHelpText}}
       {{else}}
         Enter a base64-encoded key
       {{/if}}
@@ -44,34 +45,37 @@
   {{else}}
     <div class="control is-expanded">
       <div class="file">
-        <label class="file-label is-fullwidth">
-          <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-pgp-file-input=true>
+        <div class="file-label is-fullwidth">
+          <input
+            id="file-input"
+            class="file-input"
+            type="file"
+            onchange={{action "pickedFile"}}
+            data-test-pgp-file-input={{true}}
+          />
           <span class="file-cta is-fullwidth">
             <span class="file-icon has-text-grey-dark">
-              <Icon @glyph="file-outline" />
+              <Icon @name="file" />
             </span>
-            <span class="file-label has-text-grey-dark" data-test-pgp-file-input-label=true>
-              {{#if key.fileName}}
-                {{key.fileName}}
+            <label for="file-input" class="file-label has-text-grey-dark" data-test-pgp-file-input-label={{true}}>
+              {{#if this.key.filename}}
+                {{this.key.filename}}
               {{else}}
                 Choose a file&hellip;
               {{/if}}
-            </span>
-            {{#if key.fileName}}
-              <button type="button" class="file-delete-button" {{action 'clearKey'}} data-test-pgp-clear=true>
-                <Icon
-                  @glyph="cancel-plain"
-                  @aria-label="Close"
-                />
+            </label>
+            {{#if this.key.filename}}
+              <button type="button" class="file-delete-button" {{action "clearKey"}} data-test-pgp-clear={{true}}>
+                <Icon @name="x" aria-label="Close" />
               </button>
             {{/if}}
           </span>
-        </label>
+        </div>
       </div>
     </div>
     <p class="help has-text-grey">
-      {{#if fileHelpText}}
-        {{fileHelpText}}
+      {{#if this.fileHelpText}}
+        {{this.fileHelpText}}
       {{else}}
         Select a PGP key from your computer
       {{/if}}

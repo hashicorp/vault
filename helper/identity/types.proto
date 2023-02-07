@@ -10,55 +10,74 @@ import "helper/identity/mfa/types.proto";
 // Group represents an identity group.
 message Group {
 	// ID is the unique identifier for this group
+	// @inject_tag: sentinel:"-"
 	string id = 1;
 
 	// Name is the unique name for this group
+	// @inject_tag: sentinel:"-"
 	string name = 2;
 
 	// Policies are the vault policies to be granted to members of this group
+	// @inject_tag: sentinel:"-"
 	repeated string policies = 3;
 
 	// ParentGroupIDs are the identifiers of those groups to which this group is a
 	// member of. These will serve as references to the parent group in the
 	// hierarchy.
+	// @inject_tag: sentinel:"-"
 	repeated string parent_group_ids = 4;
 
 	// MemberEntityIDs are the identifiers of entities which are members of this
 	// group
+	// @inject_tag: sentinel:"-"
 	repeated string member_entity_ids = 5;
 
 	// Metadata represents the custom data tied with this group
+	// @inject_tag: sentinel:"-"
 	map<string, string> metadata = 6;
 
 	// CreationTime is the time at which this group was created
+	// @inject_tag: sentinel:"-"
 	google.protobuf.Timestamp creation_time = 7;
 
 	// LastUpdateTime is the time at which this group was last modified
+	// @inject_tag: sentinel:"-"
 	google.protobuf.Timestamp last_update_time= 8;
 
 	// ModifyIndex tracks the number of updates to the group. It is useful to detect
 	// updates to the groups.
+	// @inject_tag: sentinel:"-"
 	uint64 modify_index = 9;
 
 	// BucketKey is the path of the storage packer key into which this group is
 	// stored.
+	// @inject_tag: sentinel:"-"
 	string bucket_key = 10;
 
 	// Alias is used to mark this group as an internal mapping of a group that
 	// is external to the identity store. Alias can only be set if the 'type'
 	// is set to 'external'.
+	// @inject_tag: sentinel:"-"
 	Alias alias = 11;
 
 	// Type indicates if this group is an internal group or an external group.
 	// Memberships of the internal groups can be managed over the API whereas
 	// the memberships on the external group --for which a corresponding alias
 	// will be set-- will be managed automatically.
+	// @inject_tag: sentinel:"-"
 	string type = 12;
 
 	// NamespaceID is the identifier of the namespace to which this group 
 	// belongs to. Do not return this value over the API when reading the
 	// group.
+	// @inject_tag: sentinel:"-"
 	string namespace_id = 13;
+}
+
+// LocalAliases holds the aliases belonging to an entity that are local to the
+// cluster.
+message LocalAliases {
+	repeated Alias aliases = 1;
 }
 
 // Entity represents an entity that gets persisted and indexed.
@@ -67,16 +86,19 @@ message Entity {
 	// Aliases are the identities that this entity is made of. This can be
 	// empty as well to favor being able to create the entity first and then
 	// incrementally adding aliases.
+	// @inject_tag: sentinel:"-"
 	repeated Alias aliases = 1;
 
 	// ID is the unique identifier of the entity which always be a UUID. This
 	// should never be allowed to be updated.
+	// @inject_tag: sentinel:"-"
 	string id = 2;
 
 	// Name is a unique identifier of the entity which is intended to be
 	// human-friendly. The default name might not be human friendly since it
 	// gets suffixed by a UUID, but it can optionally be updated, unlike the ID
 	// field.
+	// @inject_tag: sentinel:"-"
 	string name = 3;
 
 	// Metadata represents the explicit metadata which is set by the
@@ -85,14 +107,17 @@ message Entity {
 	// entities can have the same metadata set. Entities will be indexed based
 	// on this explicit metadata. This enables virtual groupings of entities
 	// based on its metadata.
+	// @inject_tag: sentinel:"-"
 	map<string, string> metadata = 4;
 
 	// CreationTime is the time at which this entity is first created.
+	// @inject_tag: sentinel:"-"
 	google.protobuf.Timestamp creation_time = 5;
 
 	// LastUpdateTime is the most recent time at which the properties of this
 	// entity got modified. This is helpful in filtering out entities based on
 	// its age and to take action on them, if desired.
+	// @inject_tag: sentinel:"-"
 	google.protobuf.Timestamp last_update_time= 6;
 
 	// MergedEntityIDs are the entities which got merged to this one. Entities
@@ -100,26 +125,32 @@ message Entity {
 	// helps to apply the actions on this entity on the tokens that are merged
 	// to the merged entities. Merged entities will be deleted entirely and
 	// this is the only trackable trail of its earlier presence.
+	// @inject_tag: sentinel:"-"
 	repeated string merged_entity_ids = 7;
 
 	// Policies the entity is entitled to
+	// @inject_tag: sentinel:"-"
 	repeated string policies = 8;
 
 	// BucketKey is the path of the storage packer key into which this entity is
 	// stored.
+	// @inject_tag: sentinel:"-"
 	string bucket_key = 9;
 
 	// MFASecrets holds the MFA secrets indexed by the identifier of the MFA
 	// method configuration.
+	// @inject_tag: sentinel:"-"
 	map<string, mfa.Secret> mfa_secrets = 10;
 
 	// Disabled indicates whether tokens associated with the account should not
 	// be able to be used
+	// @inject_tag: sentinel:"-"
 	bool disabled = 11;
 
 	// NamespaceID is the identifier of the namespace to which this entity
 	// belongs to. Do not return this value over the API when reading the
 	// entity.
+	// @inject_tag: sentinel:"-"
 	string namespace_id = 12;
 }
 
@@ -128,27 +159,33 @@ message Entity {
 // alias object.
 message Alias {
 	// ID is the unique identifier that represents this alias
+	// @inject_tag: sentinel:"-"
 	string id = 1;
 
 	// CanonicalID is the entity identifier to which this alias belongs to
+	// @inject_tag: sentinel:"-"
 	string canonical_id = 2;
 
 	// MountType is the backend mount's type to which this alias belongs to.
 	// This enables categorically querying aliases of specific backend types.
+	// @inject_tag: sentinel:"-"
 	string mount_type = 3;
 
 	// MountAccessor is the backend mount's accessor to which this alias 
 	// belongs to.
+	// @inject_tag: sentinel:"-"
 	string mount_accessor = 4;
 
 	// MountPath is the backend mount's path to which the Maccessor belongs to. This
 	// field is not used for any operational purposes. This is only returned when
 	// alias is read, only as a nicety.
+	// @inject_tag: sentinel:"-"
 	string mount_path = 5;
 
 	// Metadata is the explicit metadata that clients set against an entity
 	// which enables virtual grouping of aliases. Aliases will be indexed
 	// against their metadata.
+	// @inject_tag: sentinel:"-"
 	map<string, string> metadata = 6;
 
 	// Name is the identifier of this alias in its authentication source.
@@ -156,22 +193,43 @@ message Alias {
 	// with MountAccessor form to be the factors that represent an alias in a
 	// unique way. Aliases will be indexed based on this combined uniqueness
 	// factor.
+	// @inject_tag: sentinel:"-"
 	string name = 7;
 
 	// CreationTime is the time at which this alias was first created
+	// @inject_tag: sentinel:"-"
 	google.protobuf.Timestamp creation_time = 8;
 
 	// LastUpdateTime is the most recent time at which the properties of this
 	// alias got modified. This is helpful in filtering out aliases based
 	// on its age and to take action on them, if desired.
+	// @inject_tag: sentinel:"-"
 	google.protobuf.Timestamp last_update_time = 9;
 
 	// MergedFromCanonicalIDs is the FIFO history of merging activity
+	// @inject_tag: sentinel:"-"
 	repeated string merged_from_canonical_ids = 10;
 
 	// NamespaceID is the identifier of the namespace to which this alias
 	// belongs.
+	// @inject_tag: sentinel:"-"
 	string namespace_id = 11;
+
+	// Custom Metadata represents the custom data tied to this alias
+	// @inject_tag: sentinel:"-"
+	map<string, string> custom_metadata = 12;
+
+	// Local indicates if the alias only belongs to the cluster where it was
+	// created. If true, the alias will be stored in a location that is ignored by
+	// the performance replication subsystem.
+	// @inject_tag: sentinel:"-"
+	bool local = 13;
+
+	// LocalBucketKey is the identifying element of the location where this alias
+	// is stored in the storage packer. This helps in querying local aliases
+	// during invalidation of local aliases in performance standbys.
+	// @inject_tag: sentinel:"-"
+	string local_bucket_key = 14;
 }
 
 // Deprecated. Retained for backwards compatibility.

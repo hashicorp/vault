@@ -13,7 +13,7 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
 
   tab: '',
 
-  filterIsFolder: computed('filter', function() {
+  filterIsFolder: computed('filter', function () {
     return !!utils.keyIsFolder(this.filter);
   }),
 
@@ -29,7 +29,7 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
       this.set('loading-' + item.id, true);
       backend
         .saveZeroAddressConfig()
-        .catch(e => {
+        .catch((e) => {
           item.set('zeroAddress', false);
           this.flashMessages.danger(e.message);
         })
@@ -40,13 +40,19 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
 
     delete(item, type) {
       const name = item.id;
-      item.destroyRecord().then(() => {
-        this.flashMessages.success(`${name} was successfully deleted.`);
-        this.send('reload');
-        if (type === 'secret') {
-          this.navToNearestAncestor.perform(name);
-        }
-      });
+      item
+        .destroyRecord()
+        .then(() => {
+          this.flashMessages.success(`${name} was successfully deleted.`);
+          this.send('reload');
+          if (type === 'secret') {
+            this.navToNearestAncestor.perform(name);
+          }
+        })
+        .catch((e) => {
+          const error = e.errors ? e.errors.join('. ') : e.message;
+          this.flashMessages.danger(error);
+        });
     },
   },
 });

@@ -9,11 +9,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
 type approleMethod struct {
@@ -68,7 +67,7 @@ func NewApproleAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		if ok {
 			removeSecretIDFileAfterReading, err := parseutil.ParseBool(removeSecretIDFileAfterReadingRaw)
 			if err != nil {
-				return nil, errwrap.Wrapf("error parsing 'remove_secret_id_file_after_reading' value: {{err}}", err)
+				return nil, fmt.Errorf("error parsing 'remove_secret_id_file_after_reading' value: %w", err)
 			}
 			a.removeSecretIDFileAfterReading = removeSecretIDFileAfterReading
 		}
@@ -93,7 +92,7 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 		roleID, err := ioutil.ReadFile(a.roleIDFilePath)
 		if err != nil {
 			if a.cachedRoleID == "" {
-				return "", nil, nil, errwrap.Wrapf("error reading role ID file and no cached role ID known: {{err}}", err)
+				return "", nil, nil, fmt.Errorf("error reading role ID file and no cached role ID known: %w", err)
 			}
 			a.logger.Warn("error reading role ID file", "error", err)
 		}
@@ -121,7 +120,7 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 		secretID, err := ioutil.ReadFile(a.secretIDFilePath)
 		if err != nil {
 			if a.cachedSecretID == "" {
-				return "", nil, nil, errwrap.Wrapf("error reading secret ID file and no cached secret ID known: {{err}}", err)
+				return "", nil, nil, fmt.Errorf("error reading secret ID file and no cached secret ID known: %w", err)
 			}
 			a.logger.Warn("error reading secret ID file", "error", err)
 		}
@@ -135,13 +134,13 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 			if a.secretIDResponseWrappingPath != "" {
 				clonedClient, err := client.Clone()
 				if err != nil {
-					return "", nil, nil, errwrap.Wrapf("error cloning client to unwrap secret ID: {{err}}", err)
+					return "", nil, nil, fmt.Errorf("error cloning client to unwrap secret ID: %w", err)
 				}
 				clonedClient.SetToken(stringSecretID)
 				// Validate the creation path
-				resp, err := clonedClient.Logical().Read("sys/wrapping/lookup")
+				resp, err := clonedClient.Logical().ReadWithContext(ctx, "sys/wrapping/lookup")
 				if err != nil {
-					return "", nil, nil, errwrap.Wrapf("error looking up wrapped secret ID: {{err}}", err)
+					return "", nil, nil, fmt.Errorf("error looking up wrapped secret ID: %w", err)
 				}
 				if resp == nil {
 					return "", nil, nil, errors.New("response nil when looking up wrapped secret ID")
@@ -162,9 +161,9 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 					return "", nil, nil, errors.New("unable to validate wrapping token creation path")
 				}
 				// Now get the secret ID
-				resp, err = clonedClient.Logical().Unwrap("")
+				resp, err = clonedClient.Logical().UnwrapWithContext(ctx, "")
 				if err != nil {
-					return "", nil, nil, errwrap.Wrapf("error unwrapping secret ID: {{err}}", err)
+					return "", nil, nil, fmt.Errorf("error unwrapping secret ID: %w", err)
 				}
 				if resp == nil {
 					return "", nil, nil, errors.New("response nil when unwrapping secret ID")

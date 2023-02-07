@@ -9,18 +9,16 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/spanner"
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
-
-	"cloud.google.com/go/spanner"
-	"github.com/pkg/errors"
 )
 
 // Verify Backend satisfies the correct interfaces
@@ -147,7 +145,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		var err error
 		haEnabled, err = strconv.ParseBool(haEnabledStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse HA enabled: %w", err)
 		}
 	}
 	if haEnabled {
@@ -158,14 +156,14 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 			option.WithUserAgent(useragent.String()),
 		)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to create HA client: {{err}}", err)
+			return nil, fmt.Errorf("failed to create HA client: %w", err)
 		}
 	}
 
 	// Max parallel
 	maxParallel, err := extractInt(c["max_parallel"])
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to parse max_parallel: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse max_parallel: %w", err)
 	}
 
 	logger.Debug("configuration",
@@ -182,7 +180,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		option.WithUserAgent(useragent.String()),
 	)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create spanner client: {{err}}", err)
+		return nil, fmt.Errorf("failed to create spanner client: %w", err)
 	}
 
 	return &Backend{
@@ -213,7 +211,7 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 		"Value": entry.Value,
 	})
 	if _, err := b.client.Apply(ctx, []*spanner.Mutation{m}); err != nil {
-		return errwrap.Wrapf("failed to put data: {{err}}", err)
+		return fmt.Errorf("failed to put data: %w", err)
 	}
 	return nil
 }
@@ -232,12 +230,12 @@ func (b *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read value for %q: {{err}}", key), err)
+		return nil, fmt.Errorf("failed to read value for %q: %w", key, err)
 	}
 
 	var value []byte
 	if err := row.Column(0, &value); err != nil {
-		return nil, errwrap.Wrapf("failed to decode value into bytes: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode value into bytes: %w", err)
 	}
 
 	return &physical.Entry{
@@ -257,7 +255,7 @@ func (b *Backend) Delete(ctx context.Context, key string) error {
 	// Delete
 	m := spanner.Delete(b.table, spanner.Key{key})
 	if _, err := b.client.Apply(ctx, []*spanner.Mutation{m}); err != nil {
-		return errwrap.Wrapf("failed to delete key: {{err}}", err)
+		return fmt.Errorf("failed to delete key: %w", err)
 	}
 
 	return nil
@@ -291,12 +289,12 @@ func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 			break
 		}
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to read row: {{err}}", err)
+			return nil, fmt.Errorf("failed to read row: %w", err)
 		}
 
 		var key string
 		if err := row.Column(0, &key); err != nil {
-			return nil, errwrap.Wrapf("failed to decode key into string: {{err}}", err)
+			return nil, fmt.Errorf("failed to decode key into string: %w", err)
 		}
 
 		// The results will include the full prefix (folder) and any deeply-nested
@@ -351,7 +349,7 @@ func (b *Backend) Transaction(ctx context.Context, txns []*physical.TxnEntry) er
 
 	// Transactivate!
 	if _, err := b.client.Apply(ctx, ms); err != nil {
-		return errwrap.Wrapf("failed to commit transaction: {{err}}", err)
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil
@@ -372,5 +370,5 @@ func sanitizeTable(s string) string {
 	if end > -1 {
 		s = s[:end]
 	}
-	return strings.Replace(s, `"`, `""`, -1)
+	return strings.ReplaceAll(s, `"`, `""`)
 }

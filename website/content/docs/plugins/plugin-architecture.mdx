@@ -1,0 +1,190 @@
+---
+layout: docs
+page_title: External Plugin Architecture
+description: Learn about Vault's plugin architecture.
+---
+
+# External Plugin Architecture
+
+Vault's external plugins are completely separate, standalone applications that Vault
+executes and communicates with over RPC. This means the plugin process does not
+share the same memory space as Vault and therefore can only access the
+interfaces and arguments given to it. This also means a crash in a plugin cannot
+crash the entirety of Vault.
+
+It is possible to enable a custom plugin with a name that's identical to a
+built-in plugin. In such a situation, Vault will always choose the custom plugin
+when enabling it.
+
+-> **NOTE:** See the [Vault Integrations](/vault/integrations) page to find a
+curated collection of official, partner, and community Vault plugins.
+
+## External Plugin Lifecycle
+
+Vault external plugins are long-running processes that remain running once they are
+spawned by Vault, the parent process. Plugin processes can be started by Vault's
+active node and performance standby nodes. Additionally, there are cases where
+plugin processes may be terminated by Vault. These cases include, but are not
+limited to:
+
+- Vault active node step-down
+- Vault barrier seal
+- Vault graceful shutdown
+- Disabling a Secrets Engine or Auth method that uses external plugins
+- Database configured connection deletion
+- Database configured connection update
+- Database configured connection reset request
+- Database root credentials rotation
+- WAL Rollback from a previously failed root credentials rotation operation
+
+The lifecycle of plugin processes are managed automatically by Vault.
+Termination of these processes are typical in certain scenarios, such as the
+ones listed above. Vault will start plugin processes when they are enabled. A
+plugin process may be started or terminated through other internal processes
+within Vault as well. Since Vault manages and tracks the lifecycle of its
+plugins, these processes should not be terminated by anything other than Vault.
+If a plugin process is shutdown out-of-band, the plugin process will be lazily
+loaded when a request that requires the plugin is received by Vault.
+
+### External Plugin Scaling Characteristics
+
+External plugins can leverage [Performance Standbys](/vault/docs/enterprise/performance-standby)
+without any explicit action by a plugin author. The default behavior of Vault
+Enterprise is to attempt to handle all requests, including requests to plugins,
+on performance standbys. If the plugin request makes any attempt to modify
+storage, the request will receive a readonly error, and the request routing
+code will then forward the full original request transparently to the active
+node. In other words, plugins can scale horizontally on Vault Enterprise
+without any effort on the plugin author's part.
+
+## Plugin Communication
+
+Vault communicates with external plugins over RPC. To secure this
+communication, Vault creates a mutually authenticated TLS connection with the
+plugin's RPC server. Plugins make use of the AutoMTLS feature of
+[go-plugin](https://www.github.com/hashicorp/go-plugin) which will
+automatically negotiate mutual TLS for transport authentication.
+
+The [`api_addr`](/vault/docs/configuration#api_addr) must be set in order for the
+plugin process to establish communication with the Vault server during mount
+time. If the storage backend has HA enabled and supports automatic host address
+detection (e.g. Consul), Vault will automatically attempt to determine the
+`api_addr` as well.
+
+~> Note: Prior to Vault version 1.9.2, reading the original connection's TLS
+connection state is not supported in plugins.
+
+## Plugin Registration
+
+An important consideration of Vault's plugin system is to ensure the plugin
+invoked by Vault is authentic and maintains integrity. There are two components
+that a Vault operator needs to configure before external plugins can be run- the
+plugin directory and the plugin catalog entry.
+
+### Plugin Directory
+
+The plugin directory is a configuration option of Vault and can be specified in
+the [configuration file](/vault/docs/configuration).
+This setting specifies a directory in which all plugin binaries must live;
+_this value cannot be a symbolic link_. A plugin
+cannot be added to Vault unless it exists in the plugin directory. There is no
+default for this configuration option, and if it is not set, plugins cannot be
+added to Vault.
+
+@include 'plugin-file-permissions-check.mdx'
+
+### Plugin Catalog
+
+The plugin catalog is Vault's list of approved plugins. The catalog is stored in
+Vault's barrier and can only be updated by a Vault user with sudo permissions.
+Upon adding a new plugin, the plugin name, SHA256 sum of the executable, and the
+command that should be used to run the plugin must be provided. The catalog will
+ensure the executable referenced in the command exists in the plugin
+directory. When added to the catalog, the plugin is not automatically executed,
+but becomes visible to backends and can be executed by them. For more
+information on the plugin catalog please see the [Plugin Catalog API
+docs](/vault/api-docs/system/plugins-catalog).
+
+An example of plugin registration in current versions of Vault:
+
+```shell-session
+$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
+    secret \                  # type
+    myplugin-database-plugin
+
+Success! Registered plugin: myplugin-database-plugin
+```
+
+Vault versions prior to v0.10.4 lacked the `vault plugin` operator and the
+registration step for them is:
+
+```shell-session
+$ vault write sys/plugins/catalog/database/myplugin-database-plugin \
+     sha256=<SHA256 Hex value of the plugin binary> \
+     command="myplugin"
+
+Success! Data written to: sys/plugins/catalog/database/myplugin-database-plugin
+```
+
+### Plugin Execution
+
+When a backend wants to run a plugin, it first looks up the plugin, by name, in
+the catalog. It then checks the executable's SHA256 sum against the one
+configured in the plugin catalog. Finally Vault runs the command configured in
+the catalog, sending along the JWT formatted response wrapping token and mlock
+settings. Like Vault, plugins support [the use of mlock when available](/vault/docs/configuration#disable_mlock).
+
+~> Note: If Vault is configured with `mlock` enabled, then the Vault executable
+and each plugin executable in your [plugins directory](/vault/docs/plugins/plugin-architecture#plugin-directory)
+must be given the ability to use the `mlock` syscall.
+
+### Plugin Upgrades
+
+External plugins may be updated by registering and reloading them. More details
+on the upgrade procedure can be found in
+[Upgrading Vault Plugins](/vault/docs/upgrading/plugins).
+
+## Plugin Multiplexing
+
+To avoid spawning multiple plugin processes for mounts of the same type,
+plugins can implement plugin multiplexing. This allows a single
+plugin process to be used for multiple mounts of a given type. This single
+process will be multiplexed across all Vault namespaces for mounts of this
+type. Multiplexing a plugin does not affect the current behavior of existing
+plugins.
+
+To enable multiplexing, the plugin must be compiled with the `ServeMultiplex`
+function call from Vault's respective `plugin` or `dbplugin` SDK packages. At
+this time, there is no opt-out capability for plugins that implement
+multiplexing. To use a non-multiplexed plugin, run an older version of the
+plugin, i.e., the plugin calls the `Serve` function.
+
+More resources on implementing plugin multiplexing:
+* [Database secrets engines](/vault/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing)
+* [Secrets engines and auth methods](/vault/docs/plugins/plugin-development)
+
+## Troubleshooting
+
+### Unrecognized remote plugin message
+
+If the following error is encountered when enabling a plugin secret engine or
+auth method:
+
+<CodeBlockConfig hideClipboard>
+
+```sh
+Unrecognized remote plugin message:
+
+This usually means that the plugin is either invalid or simply
+needs to be recompiled to support the latest protocol.
+```
+
+</CodeBlockConfig>
+
+Verify whether the Vault process has `mlock` enabled, and if so, run the
+following command against the plugin binary:
+
+```shell-session
+$ sudo setcap cap_ipc_lock=+ep <plugin-binary>
+```
+

@@ -12,16 +12,19 @@ listener "tcp" {
 backend "consul" {
     foo = "bar"
     advertise_addr = "foo"
+    address = "127.0.0.1:8500"
 }
 
 ha_backend "consul" {
     bar = "baz"
-    advertise_addr = "snafu"
+    advertise_addr = "http://blah:8500"
     disable_clustering = "true"
+    address = "127.0.0.1:8500"
 }
 
 service_registration "consul" {
     foo = "bar"
+    address = "127.0.0.1:8500"
 }
 
 telemetry {

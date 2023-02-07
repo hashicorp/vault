@@ -1,11 +1,11 @@
-<label for="{{@attr.name}}" class="is-label" data-test-readonly-label>
-  {{labelString}}
+<label for={{@attr.name}} class="is-label" data-test-readonly-label>
+  {{this.labelString}}
   {{#if @attr.options.helpText}}
-    {{#info-tooltip}}
+    <InfoTooltip>
       <span data-test-help-text>
         {{@attr.options.helpText}}
       </span>
-    {{/info-tooltip}}
+    </InfoTooltip>
   {{/if}}
 </label>
 {{#if @attr.options.subText}}
@@ -15,7 +15,7 @@
 {{#if @attr.options.possibleValues}}
   <div class="control is-expanded field is-readOnly">
     <div class="select is-fullwidth">
-      <select name="{{@attr.name}}" id="{{@attr.name}}" disabled readonly data-test-input={{@attr.name}}>
+      <select name={{@attr.name}} id={{@attr.name}} disabled readonly data-test-input={{@attr.name}}>
         <option selected="true" value={{@value}}>
           {{@value}}
         </option>
@@ -29,6 +29,7 @@
     autocomplete="off"
     spellcheck="false"
     value={{@value}}
+    disabled={{true}}
     readonly
     class="field input is-readOnly"
     type={{@attr.type}}

@@ -11,12 +11,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-
+	"github.com/hashicorp/vault/helper/testhelpers"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
-	"github.com/lib/pq"
+	"github.com/stretchr/testify/require"
 )
 
 /*
@@ -42,6 +41,12 @@ var (
 	keyRedshiftURL      = "REDSHIFT_URL"
 	keyRedshiftUser     = "REDSHIFT_USER"
 	keyRedshiftPassword = "REDSHIFT_PASSWORD"
+
+	credNames = []string{
+		keyRedshiftURL,
+		keyRedshiftUser,
+		keyRedshiftPassword,
+	}
 
 	vaultACC = "VAULT_ACC"
 )
@@ -71,6 +76,9 @@ func TestRedshift_Initialize(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
+
+	// Ensure each cred is populated.
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, _, _, _, err := redshiftEnv()
 	if err != nil {
@@ -109,6 +117,9 @@ func TestRedshift_NewUser(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
+
+	// Ensure each cred is populated.
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
@@ -160,6 +171,9 @@ func TestRedshift_NewUser_NoCreationStatement_ShouldError(t *testing.T) {
 		t.SkipNow()
 	}
 
+	// Ensure each cred is populated.
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+
 	connURL, _, _, _, err := redshiftEnv()
 	if err != nil {
 		t.Fatal(err)
@@ -202,6 +216,9 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
+
+	// Ensure each cred is populated.
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
@@ -263,6 +280,9 @@ func TestRedshift_UpdateUser_Password(t *testing.T) {
 		t.SkipNow()
 	}
 
+	// Ensure each cred is populated.
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+
 	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
 		t.Fatal(err)
@@ -317,6 +337,9 @@ func TestRedshift_DeleteUser(t *testing.T) {
 		t.SkipNow()
 	}
 
+	// Ensure each cred is populated.
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+
 	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
 		t.Fatal(err)
@@ -369,12 +392,115 @@ func testCredsExist(t testing.TB, url, username, password string) error {
 	t.Helper()
 
 	connURL := interpolateConnectionURL(url, username, password)
-	db, err := sql.Open("postgres", connURL)
+	db, err := sql.Open("pgx", connURL)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 	return db.Ping()
+}
+
+func TestRedshift_DefaultUsernameTemplate(t *testing.T) {
+	if os.Getenv(vaultACC) != "1" {
+		t.SkipNow()
+	}
+
+	// Ensure each cred is populated.
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+
+	connURL, url, _, _, err := redshiftEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	db := newRedshift()
+	dbtesting.AssertInitialize(t, db, dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	})
+
+	usernameConfig := dbplugin.UsernameMetadata{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	const password = "SuperSecurePa55w0rd!"
+	for _, commands := range [][]string{{testRedshiftRole}, {testRedshiftReadOnlyRole}} {
+		resp := dbtesting.AssertNewUser(t, db, dbplugin.NewUserRequest{
+			UsernameConfig: usernameConfig,
+			Password:       password,
+			Statements: dbplugin.Statements{
+				Commands: commands,
+			},
+			Expiration: time.Now().Add(5 * time.Minute),
+		})
+		username := resp.Username
+
+		if resp.Username == "" {
+			t.Fatalf("Missing username")
+		}
+
+		testCredsExist(t, url, username, password)
+
+		require.Regexp(t, `^v-test-test-[a-z0-9]{20}-[0-9]{10}$`, resp.Username)
+	}
+	dbtesting.AssertClose(t, db)
+}
+
+func TestRedshift_CustomUsernameTemplate(t *testing.T) {
+	if os.Getenv(vaultACC) != "1" {
+		t.SkipNow()
+	}
+
+	// Ensure each cred is populated.
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+
+	connURL, url, _, _, err := redshiftEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":    connURL,
+		"username_template": "{{.DisplayName}}-{{random 10}}",
+	}
+
+	db := newRedshift()
+	dbtesting.AssertInitialize(t, db, dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	})
+
+	usernameConfig := dbplugin.UsernameMetadata{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	const password = "SuperSecurePa55w0rd!"
+	for _, commands := range [][]string{{testRedshiftRole}, {testRedshiftReadOnlyRole}} {
+		resp := dbtesting.AssertNewUser(t, db, dbplugin.NewUserRequest{
+			UsernameConfig: usernameConfig,
+			Password:       password,
+			Statements: dbplugin.Statements{
+				Commands: commands,
+			},
+			Expiration: time.Now().Add(5 * time.Minute),
+		})
+		username := resp.Username
+
+		if resp.Username == "" {
+			t.Fatalf("Missing username")
+		}
+
+		testCredsExist(t, url, username, password)
+
+		require.Regexp(t, `^test-[a-zA-Z0-9]{10}$`, resp.Username)
+	}
+	dbtesting.AssertClose(t, db)
 }
 
 const testRedshiftRole = `
@@ -416,12 +542,8 @@ ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 // helper file in the future.
 func createTestPGUser(t *testing.T, connURL string, username, password, query string) {
 	t.Helper()
-	conn, err := pq.ParseURL(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	db, err := sql.Open("postgres", conn)
+	db, err := sql.Open("pgx", connURL)
 	defer db.Close()
 	if err != nil {
 		t.Fatal(err)
@@ -441,7 +563,7 @@ func createTestPGUser(t *testing.T, connURL string, username, password, query st
 		"name":     username,
 		"password": password,
 	}
-	if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+	if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 		t.Fatal(err)
 	}
 	// Commit the transaction

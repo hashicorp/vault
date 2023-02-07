@@ -1,0 +1,3 @@
+```release-note:bug
+core/seal: Fix regression handling of the key_id parameter in seal configuration HCL.
+```

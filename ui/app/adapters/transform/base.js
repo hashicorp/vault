@@ -12,7 +12,7 @@ export default ApplicationAdapter.extend({
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
     const { id } = snapshot;
-    let url = this.url(snapshot.record.get('backend'), type.modelName, id);
+    const url = this.url(snapshot.record.get('backend'), type.modelName, id);
 
     return this.ajax(url, 'POST', { data });
   },
@@ -31,8 +31,8 @@ export default ApplicationAdapter.extend({
   },
 
   url(backend, modelType, id) {
-    let type = this.pathForType(modelType);
-    let url = `/${this.namespace}/${encodePath(backend)}/${encodePath(type)}`;
+    const type = this.pathForType(modelType);
+    const url = `/${this.namespace}/${encodePath(backend)}/${encodePath(type)}`;
     if (id) {
       return `${url}/${encodePath(id)}`;
     }
@@ -41,7 +41,7 @@ export default ApplicationAdapter.extend({
 
   fetchByQuery(query) {
     const { backend, modelName, id } = query;
-    return this.ajax(this.url(backend, modelName, id), 'GET').then(resp => {
+    return this.ajax(this.url(backend, modelName, id), 'GET').then((resp) => {
       return {
         ...resp,
         backend,
@@ -54,7 +54,7 @@ export default ApplicationAdapter.extend({
   },
 
   queryRecord(store, type, query) {
-    return this.ajax(this.url(query.backend, type.modelName, query.id), 'GET').then(result => {
+    return this.ajax(this.url(query.backend, type.modelName, query.id), 'GET').then((result) => {
       // CBS TODO: Add name to response and unmap name <> id on models
       return {
         id: query.id,

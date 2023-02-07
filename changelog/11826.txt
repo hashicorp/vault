@@ -1,0 +1,3 @@
+```release-note:bug
+activity: Omit wrapping tokens and control groups from client counts
+```

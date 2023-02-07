@@ -6,7 +6,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -56,7 +55,7 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 
 	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
-		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
+		return nil, fmt.Errorf("error retrieving role: %w", err)
 	}
 	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("Role %q not found", roleName)), nil
@@ -98,7 +97,7 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 
 	zeroAddressEntry, err := b.getZeroAddressRoles(ctx, req.Storage)
 	if err != nil {
-		return nil, errwrap.Wrapf("error retrieving zero-address roles: {{err}}", err)
+		return nil, fmt.Errorf("error retrieving zero-address roles: %w", err)
 	}
 	var zeroAddressRoles []string
 	if zeroAddressEntry != nil {
@@ -136,70 +135,12 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 			"otp": otp,
 		})
 	} else if role.KeyType == KeyTypeDynamic {
-		// Generate an RSA key pair. This also installs the newly generated
-		// public key in the remote host.
-		dynamicPublicKey, dynamicPrivateKey, err := b.GenerateDynamicCredential(ctx, req, role, username, ip)
-		if err != nil {
-			return nil, err
-		}
-
-		// Return the information relevant to user of dynamic type and save
-		// information required for later use in internal section of secret.
-		result = b.Secret(SecretDynamicKeyType).Response(map[string]interface{}{
-			"key":      dynamicPrivateKey,
-			"key_type": role.KeyType,
-			"username": username,
-			"ip":       ip,
-			"port":     role.Port,
-		}, map[string]interface{}{
-			"admin_user":         role.AdminUser,
-			"username":           username,
-			"ip":                 ip,
-			"host_key_name":      role.KeyName,
-			"dynamic_public_key": dynamicPublicKey,
-			"port":               role.Port,
-			"install_script":     role.InstallScript,
-		})
+		return nil, fmt.Errorf("dynamic key types have been removed")
 	} else {
 		return nil, fmt.Errorf("key type unknown")
 	}
 
 	return result, nil
-}
-
-// Generates a RSA key pair and installs it in the remote target
-func (b *backend) GenerateDynamicCredential(ctx context.Context, req *logical.Request, role *sshRole, username, ip string) (string, string, error) {
-	// Fetch the host key to be used for dynamic key installation
-	keyEntry, err := req.Storage.Get(ctx, fmt.Sprintf("keys/%s", role.KeyName))
-	if err != nil {
-		return "", "", errwrap.Wrapf(fmt.Sprintf("key %q not found: {{err}}", role.KeyName), err)
-	}
-
-	if keyEntry == nil {
-		return "", "", fmt.Errorf("key %q not found", role.KeyName)
-	}
-
-	var hostKey sshHostKey
-	if err := keyEntry.DecodeJSON(&hostKey); err != nil {
-		return "", "", errwrap.Wrapf("error reading the host key: {{err}}", err)
-	}
-
-	// Generate a new RSA key pair with the given key length.
-	dynamicPublicKey, dynamicPrivateKey, err := generateRSAKeys(role.KeyBits)
-	if err != nil {
-		return "", "", errwrap.Wrapf("error generating key: {{err}}", err)
-	}
-
-	if len(role.KeyOptionSpecs) != 0 {
-		dynamicPublicKey = fmt.Sprintf("%s %s", role.KeyOptionSpecs, dynamicPublicKey)
-	}
-
-	// Add the public key to authorized_keys file in target machine
-	err = b.installPublicKeyInTarget(ctx, role.AdminUser, username, ip, role.Port, hostKey.Key, dynamicPublicKey, role.InstallScript, true)
-	if err != nil {
-		return "", "", errwrap.Wrapf("failed to add public key to authorized_keys file in target: {{err}}", err)
-	}
-	return dynamicPublicKey, dynamicPrivateKey, nil
 }
 
 // Generates a UUID OTP and its salted value based on the salt of the backend.
@@ -320,12 +261,8 @@ Creates a credential for establishing SSH connection with the remote host.
 
 const pathCredsCreateHelpDesc = `
 This path will generate a new key for establishing SSH session with
-target host. The key can either be a long lived dynamic key or a One
-Time Password (OTP), using 'key_type' parameter being 'dynamic' or
-'otp' respectively. For dynamic keys, a named key should be supplied.
-Create named key using the 'keys/' endpoint, and this represents the
-shared SSH key of target host. If this backend is mounted at 'ssh',
-then "ssh/creds/web" would generate a key for 'web' role.
+target host. The key can be a One Time Password (OTP) using 'key_type'
+being 'otp'.
 
 Keys will have a lease associated with them. The access keys can be
 revoked by using the lease ID.

@@ -6,6 +6,8 @@ description: The cf auth method allows automated authentication of Cloud Foundry
 
 # Cloud Foundry (CF) Auth Method
 
+@include 'x509-sha1-deprecation.mdx'
+
 The `cf` auth method provides an automated mechanism to retrieve a Vault token
 for CF instances. It leverages CF's [App and Container Identity Assurance](https://content.pivotal.io/blog/new-in-pcf-2-1-app-container-identity-assurance-via-automatic-cert-rotation).
 At a high level, this works as follows:
@@ -196,9 +198,13 @@ Specifically, the `vault` user created here will need to be able to perform the 
 Next, PCF often uses a self-signed certificate for TLS, which can be rejected at first
 with an error like:
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 x509: certificate signed by unknown authority
 ```
+
+</CodeBlockConfig>
 
 If you encounter this error, you will need to first gain a copy of the certificate that CF
 is using for the API via:
@@ -250,6 +256,29 @@ $ vault login -method=cf role=test-role
 For CF, we do also offer an agent that, once configured, can be used to obtain a Vault token on
 your behalf.
 
+### Enabling mutual TLS with the CF API
+
+The CF API can be configured to require mutual TLS with clients. This plugin supports mutual TLS by setting the
+`cf_api_mutual_tls_certificate` and `cf_api_mutual_tls_key` configuration properties.
+
+<CodeBlockConfig highlight="7-8">
+
+```shell-session
+$ vault write auth/cf/config \
+      identity_ca_certificates=@ca.crt \
+      cf_api_addr=https://api.dev.cfdev.sh \
+      cf_username=vault \
+      cf_password=pa55w0rd \
+      cf_api_trusted_certificates=@cfapi.crt \
+      cf_api_mutual_tls_certificate=@cfmutualtls.crt \
+      cf_api_mutual_tls_key=@cfmutualtls.key
+```
+
+</CodeBlockConfig>
+
+The provided certificate must be signed by a certificate authority trusted by the CF API. Obtaining such a certificate
+depends on the specifics of your deployment of Cloud Foundry.
+
 ### Maintenance
 
 In testing we found that CF instance identity CA certificates were set to expire in 3 years. Some
@@ -260,7 +289,7 @@ valid.
 ```shell-session
 $ CURRENT=$(cat /path/to/current-ca.crt)
 $ FUTURE=$(cat /path/to/future-ca.crt)
-$ vault write auth/vault-plugin-auth-cf/config identity_ca_certificates="$CURRENT,$FUTURE"
+$ vault write auth/vault-plugin-auth-cf/config identity_ca_certificates="$CURRENT" identity_ca_certificates="$FUTURE"
 ```
 
 If Vault receives a `CF_INSTANCE_CERT` matching _any_ of the `identity_ca_certificates`,
@@ -295,5 +324,5 @@ match the certificates you're checking.
 
 ## API
 
-The CF auth method has a full HTTP API. Please see the [CF Auth API](/api/auth/cf)
+The CF auth method has a full HTTP API. Please see the [CF Auth API](/vault/api-docs/auth/cf)
 for more details.

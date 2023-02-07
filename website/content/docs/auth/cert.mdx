@@ -8,6 +8,8 @@ description: >-
 
 # TLS Certificates Auth Method
 
+@include 'x509-sha1-deprecation.mdx'
+
 The `cert` auth method allows authentication using SSL/TLS client certificates
 which are either signed by a CA or self-signed.
 
@@ -25,11 +27,9 @@ configuration. This is because the certificates are sent through TLS communicati
 
 Since Vault 0.4, the method supports revocation checking.
 
-An authorised user can submit PEM-formatted CRLs identified by a given name;
-these can be updated or deleted at will. (Note: Vault **does not** fetch CRLs;
-the CRLs themselves and any updates must be pushed into Vault when desired,
-such as via a `cron` job that fetches them from the source and pushes them into
-Vault.)
+An authorized user can submit PEM-formatted CRLs identified by a given name;
+these can be updated or deleted at will. They may also set the URL of a
+trusted CRL distribution point, and have Vault fetch the CRL as needed.
 
 When there are CRLs present, at the time of client authentication:
 
@@ -135,4 +135,4 @@ management tool.
 ## API
 
 The TLS Certificate auth method has a full HTTP API. Please see the
-[TLS Certificate API](/api/auth/cert) for more details.
+[TLS Certificate API](/vault/api-docs/auth/cert) for more details.

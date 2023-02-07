@@ -7,8 +7,9 @@ import (
 	"path"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/mitchellh/cli"
 )
 
 func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
@@ -50,6 +51,9 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	currentOutputCurlString := client.OutputCurlString()
 	client.SetOutputCurlString(false)
 	defer client.SetOutputCurlString(currentOutputCurlString)
+	currentOutputPolicy := client.OutputPolicy()
+	client.SetOutputPolicy(false)
+	defer client.SetOutputPolicy(currentOutputPolicy)
 
 	r := client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
 	resp, err := client.RawRequest(r)
@@ -59,8 +63,20 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	if err != nil {
 		// If we get a 404 we are using an older version of vault, default to
 		// version 1
-		if resp != nil && resp.StatusCode == 404 {
-			return "", 1, nil
+		if resp != nil {
+			if resp.StatusCode == 404 {
+				return "", 1, nil
+			}
+
+			// if the original request had the -output-curl-string or -output-policy flag,
+			if (currentOutputCurlString || currentOutputPolicy) && resp.StatusCode == 403 {
+				// we provide a more helpful error for the user,
+				// who may not understand why the flag isn't working.
+				err = fmt.Errorf(
+					`This output flag requires the success of a preflight request 
+to determine the version of a KV secrets engine. Please 
+re-run this command with a token with read access to %s`, path)
+			}
 		}
 
 		return "", 0, err
@@ -105,14 +121,29 @@ func isKVv2(path string, client *api.Client) (string, bool, error) {
 	return mountPath, version == 2, nil
 }
 
-func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
-	switch {
-	case p == mountPath, p == strings.TrimSuffix(mountPath, "/"):
+func addPrefixToKVPath(p, mountPath, apiPrefix string) string {
+	if p == mountPath || p == strings.TrimSuffix(mountPath, "/") {
 		return path.Join(mountPath, apiPrefix)
-	default:
-		p = strings.TrimPrefix(p, mountPath)
-		return path.Join(mountPath, apiPrefix, p)
 	}
+
+	tp := strings.TrimPrefix(p, mountPath)
+	for {
+		// If the entire mountPath is included in the path, we are done
+		if tp != p {
+			break
+		}
+		// Trim the parts of the mountPath that are not included in the
+		// path, for example, in cases where the mountPath contains
+		// namespaces which are not included in the path.
+		partialMountPath := strings.SplitN(mountPath, "/", 2)
+		if len(partialMountPath) <= 1 || partialMountPath[1] == "" {
+			break
+		}
+		mountPath = strings.TrimSuffix(partialMountPath[1], "/")
+		tp = strings.TrimPrefix(tp, mountPath)
+	}
+
+	return path.Join(mountPath, apiPrefix, tp)
 }
 
 func getHeaderForMap(header string, data map[string]interface{}) string {
@@ -126,6 +157,26 @@ func getHeaderForMap(header string, data map[string]interface{}) string {
 	// 4 for the column spaces and 5 for the len("value")
 	totalLen := maxKey + 4 + 5
 
+	return padEqualSigns(header, totalLen)
+}
+
+func kvParseVersionsFlags(versions []string) []string {
+	versionsOut := make([]string, 0, len(versions))
+	for _, v := range versions {
+		versionsOut = append(versionsOut, strutil.ParseStringSlice(v, ",")...)
+	}
+
+	return versionsOut
+}
+
+func outputPath(ui cli.Ui, path string, title string) {
+	ui.Info(padEqualSigns(title, len(path)))
+	ui.Info(path)
+	ui.Info("")
+}
+
+// Pad the table header with equal signs on each side
+func padEqualSigns(header string, totalLen int) string {
 	equalSigns := totalLen - (len(header) + 2)
 
 	// If we have zero or fewer equal signs bump it back up to two on either
@@ -140,13 +191,4 @@ func getHeaderForMap(header string, data map[string]interface{}) string {
 	}
 
 	return fmt.Sprintf("%s %s %s", strings.Repeat("=", equalSigns/2), header, strings.Repeat("=", equalSigns/2))
-}
-
-func kvParseVersionsFlags(versions []string) []string {
-	versionsOut := make([]string, 0, len(versions))
-	for _, v := range versions {
-		versionsOut = append(versionsOut, strutil.ParseStringSlice(v, ",")...)
-	}
-
-	return versionsOut
 }

@@ -7,9 +7,13 @@ import (
 	"testing"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -116,7 +120,7 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -138,6 +142,37 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 	// Verify matching mount tables
 	if !reflect.DeepEqual(c.auth, c2.auth) {
 		t.Fatalf("mismatch: %v %v", c.auth, c2.auth)
+	}
+}
+
+func TestCore_BuiltinRegistry(t *testing.T) {
+	conf := &CoreConfig{
+		// set PluginDirectory and ensure that vault doesn't expect approle to
+		// be there when we are mounting the builtin approle
+		PluginDirectory: "/Users/foo",
+
+		DisableMlock:    true,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
+
+	for _, me := range []*MountEntry{
+		{
+			Table: credentialTableType,
+			Path:  "approle/",
+			Type:  "approle",
+		},
+		{
+			Table:   credentialTableType,
+			Path:    "approle2/",
+			Type:    "approle",
+			Version: versions.GetBuiltinVersion(consts.PluginTypeCredential, "approle"),
+		},
+	} {
+		err := c.enableCredential(namespace.RootContext(nil), me)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 	}
 }
 
@@ -168,7 +203,66 @@ func TestCore_EnableCredential(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
+	}
+	c2, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	defer c2.Shutdown()
+	c2.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{
+			BackendType: logical.TypeCredential,
+		}, nil
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
+	}
+
+	// Verify matching auth tables
+	if !reflect.DeepEqual(c.auth, c2.auth) {
+		t.Fatalf("mismatch: %v %v", c.auth, c2.auth)
+	}
+}
+
+// TestCore_EnableCredential_aws_ec2 tests that we can successfully mount aws
+// auth using the alias "aws-ec2"
+func TestCore_EnableCredential_aws_ec2(t *testing.T) {
+	c, keys, _ := TestCoreUnsealed(t)
+	c.credentialBackends["aws"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{
+			BackendType: logical.TypeCredential,
+		}, nil
+	}
+
+	me := &MountEntry{
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "aws-ec2",
+	}
+	err := c.enableCredential(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount(namespace.RootContext(nil), "auth/foo/bar")
+	if match != "auth/foo/" {
+		t.Fatalf("missing mount, match: %q", match)
+	}
+
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf := &CoreConfig{
+		Physical:        c.physical,
+		DisableMlock:    true,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -370,7 +464,7 @@ func TestCore_DisableCredential(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -578,5 +672,168 @@ func TestCore_CredentialInitialize(t *testing.T) {
 		if !backend.isInitialized {
 			t.Fatal("backend is not initialized")
 		}
+	}
+}
+
+func remountCredentialFromRoot(c *Core, src, dst string, updateStorage bool) error {
+	srcPathDetails := c.splitNamespaceAndMountFromPath("", src)
+	dstPathDetails := c.splitNamespaceAndMountFromPath("", dst)
+	return c.remountCredential(namespace.RootContext(nil), srcPathDetails, dstPathDetails, updateStorage)
+}
+
+func TestCore_RemountCredential(t *testing.T) {
+	c, keys, _ := TestCoreUnsealed(t)
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{
+			BackendType: logical.TypeCredential,
+		}, nil
+	}
+
+	me := &MountEntry{
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
+	}
+	err := c.enableCredential(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount(namespace.RootContext(nil), "auth/foo/bar")
+	if match != "auth/foo/" {
+		t.Fatalf("missing mount, match: %q", match)
+	}
+
+	err = remountCredentialFromRoot(c, "auth/foo", "auth/bar", true)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match = c.router.MatchingMount(namespace.RootContext(nil), "auth/bar/baz")
+	if match != "auth/bar/" {
+		t.Fatalf("auth method not at new location, match: %q", match)
+	}
+
+	c.sealInternal()
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
+	}
+
+	match = c.router.MatchingMount(namespace.RootContext(nil), "auth/bar/baz")
+	if match != "auth/bar/" {
+		t.Fatalf("auth method not at new location after unseal, match: %q", match)
+	}
+}
+
+func TestCore_RemountCredential_Cleanup(t *testing.T) {
+	noop := &NoopBackend{
+		Login:       []string{"login"},
+		BackendType: logical.TypeCredential,
+	}
+	c, _, _ := TestCoreUnsealed(t)
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	me := &MountEntry{
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
+	}
+	err := c.enableCredential(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Store the view
+	view := c.router.MatchingStorageByAPIPath(namespace.RootContext(nil), "auth/foo/")
+
+	// Inject data
+	se := &logical.StorageEntry{
+		Key:   "plstodelete",
+		Value: []byte("test"),
+	}
+	if err := view.Put(context.Background(), se); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Generate a new token auth
+	noop.Response = &logical.Response{
+		Auth: &logical.Auth{
+			Policies: []string{"foo"},
+		},
+	}
+	r := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "auth/foo/login",
+	}
+	resp, err := c.HandleRequest(namespace.RootContext(nil), r)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Disable should cleanup
+	err = remountCredentialFromRoot(c, "auth/foo", "auth/bar", true)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Token should be revoked
+	te, err := c.tokenStore.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if te != nil {
+		t.Fatalf("bad: %#v", te)
+	}
+
+	// View should be empty
+	out, err := logical.CollectKeys(context.Background(), view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(out) != 1 && out[0] != "plstokeep" {
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
+func TestCore_RemountCredential_InvalidSource(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	err := remountCredentialFromRoot(c, "foo", "auth/bar", true)
+	if err.Error() != `cannot remount non-auth mount "foo/"` {
+		t.Fatalf("err: %v", err)
+	}
+}
+
+func TestCore_RemountCredential_InvalidDestination(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	err := remountCredentialFromRoot(c, "auth/foo", "bar", true)
+	if err.Error() != `cannot remount auth mount to non-auth mount "bar/"` {
+		t.Fatalf("err: %v", err)
+	}
+}
+
+func TestCore_RemountCredential_ProtectedSource(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	err := remountCredentialFromRoot(c, "auth/token", "auth/bar", true)
+	if err.Error() != `cannot remount "auth/token/"` {
+		t.Fatalf("err: %v", err)
+	}
+}
+
+func TestCore_RemountCredential_ProtectedDestination(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	err := remountCredentialFromRoot(c, "auth/foo", "auth/token", true)
+	if err.Error() != `cannot remount to "auth/token/"` {
+		t.Fatalf("err: %v", err)
 	}
 }

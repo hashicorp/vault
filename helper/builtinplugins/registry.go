@@ -1,6 +1,8 @@
 package builtinplugins
 
 import (
+	"context"
+
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
@@ -13,17 +15,19 @@ import (
 	dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
 	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
 	dbMongoAtlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	dbRedis "github.com/hashicorp/vault-plugin-database-redis"
+	dbRedisElastiCache "github.com/hashicorp/vault-plugin-database-redis-elasticache"
 	dbSnowflake "github.com/hashicorp/vault-plugin-database-snowflake"
 	logicalAd "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
 	logicalAlicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
 	logicalAzure "github.com/hashicorp/vault-plugin-secrets-azure"
 	logicalGcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
 	logicalGcpKms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
+	logicalKube "github.com/hashicorp/vault-plugin-secrets-kubernetes"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
-	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
+	logicalLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
-	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
@@ -33,14 +37,9 @@ import (
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
-	logicalCass "github.com/hashicorp/vault/builtin/logical/cassandra"
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
-	logicalMongo "github.com/hashicorp/vault/builtin/logical/mongodb"
-	logicalMssql "github.com/hashicorp/vault/builtin/logical/mssql"
-	logicalMysql "github.com/hashicorp/vault/builtin/logical/mysql"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
 	logicalPki "github.com/hashicorp/vault/builtin/logical/pki"
-	logicalPostgres "github.com/hashicorp/vault/builtin/logical/postgresql"
 	logicalRabbit "github.com/hashicorp/vault/builtin/logical/rabbitmq"
 	logicalSsh "github.com/hashicorp/vault/builtin/logical/ssh"
 	logicalTotp "github.com/hashicorp/vault/builtin/logical/totp"
@@ -53,6 +52,7 @@ import (
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -67,73 +67,126 @@ var addExternalPlugins = addExtPluginsImpl
 // the plugin's New() func.
 type BuiltinFactory func() (interface{}, error)
 
+// There are three forms of Backends which exist in the BuiltinRegistry.
+type credentialBackend struct {
+	logical.Factory
+	consts.DeprecationStatus
+}
+
+type databasePlugin struct {
+	Factory BuiltinFactory
+	consts.DeprecationStatus
+}
+
+type logicalBackend struct {
+	logical.Factory
+	consts.DeprecationStatus
+}
+
+type removedBackend struct {
+	*framework.Backend
+}
+
+func removedFactory(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+	removedBackend := &removedBackend{}
+	removedBackend.Backend = &framework.Backend{}
+	return removedBackend, nil
+}
+
 func newRegistry() *registry {
 	reg := &registry{
-		credentialBackends: map[string]logical.Factory{
-			"alicloud":   credAliCloud.Factory,
-			"app-id":     credAppId.Factory,
-			"approle":    credAppRole.Factory,
-			"aws":        credAws.Factory,
-			"azure":      credAzure.Factory,
-			"centrify":   credCentrify.Factory,
-			"cert":       credCert.Factory,
-			"cf":         credCF.Factory,
-			"gcp":        credGcp.Factory,
-			"github":     credGitHub.Factory,
-			"jwt":        credJWT.Factory,
-			"kerberos":   credKerb.Factory,
-			"kubernetes": credKube.Factory,
-			"ldap":       credLdap.Factory,
-			"oci":        credOCI.Factory,
-			"oidc":       credJWT.Factory,
-			"okta":       credOkta.Factory,
-			"pcf":        credCF.Factory, // Deprecated.
-			"radius":     credRadius.Factory,
-			"userpass":   credUserpass.Factory,
+		credentialBackends: map[string]credentialBackend{
+			"alicloud": {Factory: credAliCloud.Factory},
+			"app-id": {
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
+			},
+			"approle":    {Factory: credAppRole.Factory},
+			"aws":        {Factory: credAws.Factory},
+			"azure":      {Factory: credAzure.Factory},
+			"centrify":   {Factory: credCentrify.Factory},
+			"cert":       {Factory: credCert.Factory},
+			"cf":         {Factory: credCF.Factory},
+			"gcp":        {Factory: credGcp.Factory},
+			"github":     {Factory: credGitHub.Factory},
+			"jwt":        {Factory: credJWT.Factory},
+			"kerberos":   {Factory: credKerb.Factory},
+			"kubernetes": {Factory: credKube.Factory},
+			"ldap":       {Factory: credLdap.Factory},
+			"oci":        {Factory: credOCI.Factory},
+			"oidc":       {Factory: credJWT.Factory},
+			"okta":       {Factory: credOkta.Factory},
+			"pcf": {
+				Factory:           credCF.Factory,
+				DeprecationStatus: consts.Deprecated,
+			},
+			"radius":   {Factory: credRadius.Factory},
+			"userpass": {Factory: credUserpass.Factory},
 		},
-		databasePlugins: map[string]BuiltinFactory{
+		databasePlugins: map[string]databasePlugin{
 			// These four plugins all use the same mysql implementation but with
 			// different username settings passed by the constructor.
-			"mysql-database-plugin":        dbMysql.New(dbMysql.DefaultUserNameTemplate),
-			"mysql-aurora-database-plugin": dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
-			"mysql-rds-database-plugin":    dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
-			"mysql-legacy-database-plugin": dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
+			"mysql-database-plugin":        {Factory: dbMysql.New(dbMysql.DefaultUserNameTemplate)},
+			"mysql-aurora-database-plugin": {Factory: dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate)},
+			"mysql-rds-database-plugin":    {Factory: dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate)},
+			"mysql-legacy-database-plugin": {Factory: dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate)},
 
-			"cassandra-database-plugin":     dbCass.New,
-			"couchbase-database-plugin":     dbCouchbase.New,
-			"elasticsearch-database-plugin": dbElastic.New,
-			"hana-database-plugin":          dbHana.New,
-			"influxdb-database-plugin":      dbInflux.New,
-			"mongodb-database-plugin":       dbMongo.New,
-			"mongodbatlas-database-plugin":  dbMongoAtlas.New,
-			"mssql-database-plugin":         dbMssql.New,
-			"postgresql-database-plugin":    dbPostgres.New,
-			"redshift-database-plugin":      dbRedshift.New,
-			"snowflake-database-plugin":     dbSnowflake.New,
+			"cassandra-database-plugin":         {Factory: dbCass.New},
+			"couchbase-database-plugin":         {Factory: dbCouchbase.New},
+			"elasticsearch-database-plugin":     {Factory: dbElastic.New},
+			"hana-database-plugin":              {Factory: dbHana.New},
+			"influxdb-database-plugin":          {Factory: dbInflux.New},
+			"mongodb-database-plugin":           {Factory: dbMongo.New},
+			"mongodbatlas-database-plugin":      {Factory: dbMongoAtlas.New},
+			"mssql-database-plugin":             {Factory: dbMssql.New},
+			"postgresql-database-plugin":        {Factory: dbPostgres.New},
+			"redshift-database-plugin":          {Factory: dbRedshift.New},
+			"redis-database-plugin":             {Factory: dbRedis.New},
+			"redis-elasticache-database-plugin": {Factory: dbRedisElastiCache.New},
+			"snowflake-database-plugin":         {Factory: dbSnowflake.New},
 		},
-		logicalBackends: map[string]logical.Factory{
-			"ad":           logicalAd.Factory,
-			"alicloud":     logicalAlicloud.Factory,
-			"aws":          logicalAws.Factory,
-			"azure":        logicalAzure.Factory,
-			"cassandra":    logicalCass.Factory, // Deprecated
-			"consul":       logicalConsul.Factory,
-			"gcp":          logicalGcp.Factory,
-			"gcpkms":       logicalGcpKms.Factory,
-			"kv":           logicalKv.Factory,
-			"mongodb":      logicalMongo.Factory, // Deprecated
-			"mongodbatlas": logicalMongoAtlas.Factory,
-			"mssql":        logicalMssql.Factory, // Deprecated
-			"mysql":        logicalMysql.Factory, // Deprecated
-			"nomad":        logicalNomad.Factory,
-			"openldap":     logicalOpenLDAP.Factory,
-			"pki":          logicalPki.Factory,
-			"postgresql":   logicalPostgres.Factory, // Deprecated
-			"rabbitmq":     logicalRabbit.Factory,
-			"ssh":          logicalSsh.Factory,
-			"terraform":    logicalTerraform.Factory,
-			"totp":         logicalTotp.Factory,
-			"transit":      logicalTransit.Factory,
+		logicalBackends: map[string]logicalBackend{
+			"ad":       {Factory: logicalAd.Factory},
+			"alicloud": {Factory: logicalAlicloud.Factory},
+			"aws":      {Factory: logicalAws.Factory},
+			"azure":    {Factory: logicalAzure.Factory},
+			"cassandra": {
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
+			},
+			"consul":     {Factory: logicalConsul.Factory},
+			"gcp":        {Factory: logicalGcp.Factory},
+			"gcpkms":     {Factory: logicalGcpKms.Factory},
+			"kubernetes": {Factory: logicalKube.Factory},
+			"kv":         {Factory: logicalKv.Factory},
+			"mongodb": {
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
+			},
+			// The mongodbatlas secrets engine is not the same as the database plugin equivalent
+			// (`mongodbatlas-database-plugin`), and thus will not be deprecated at this time.
+			"mongodbatlas": {Factory: logicalMongoAtlas.Factory},
+			"mssql": {
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
+			},
+			"mysql": {
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
+			},
+			"nomad":    {Factory: logicalNomad.Factory},
+			"openldap": {Factory: logicalLDAP.Factory},
+			"ldap":     {Factory: logicalLDAP.Factory},
+			"pki":      {Factory: logicalPki.Factory},
+			"postgresql": {
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
+			},
+			"rabbitmq":  {Factory: logicalRabbit.Factory},
+			"ssh":       {Factory: logicalSsh.Factory},
+			"terraform": {Factory: logicalTerraform.Factory},
+			"totp":      {Factory: logicalTotp.Factory},
+			"transit":   {Factory: logicalTransit.Factory},
 		},
 	}
 
@@ -145,27 +198,32 @@ func newRegistry() *registry {
 func addExtPluginsImpl(r *registry) {}
 
 type registry struct {
-	credentialBackends map[string]logical.Factory
-	databasePlugins    map[string]BuiltinFactory
-	logicalBackends    map[string]logical.Factory
+	credentialBackends map[string]credentialBackend
+	databasePlugins    map[string]databasePlugin
+	logicalBackends    map[string]logicalBackend
 }
 
-// Get returns the BuiltinFactory func for a particular backend plugin
-// from the plugins map.
+// Get returns the Factory func for a particular backend plugin from the
+// plugins map.
 func (r *registry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
 	switch pluginType {
 	case consts.PluginTypeCredential:
-		f, ok := r.credentialBackends[name]
-		return toFunc(f), ok
+		if f, ok := r.credentialBackends[name]; ok {
+			return toFunc(f.Factory), ok
+		}
 	case consts.PluginTypeSecrets:
-		f, ok := r.logicalBackends[name]
-		return toFunc(f), ok
+		if f, ok := r.logicalBackends[name]; ok {
+			return toFunc(f.Factory), ok
+		}
 	case consts.PluginTypeDatabase:
-		f, ok := r.databasePlugins[name]
-		return f, ok
+		if f, ok := r.databasePlugins[name]; ok {
+			return f.Factory, ok
+		}
 	default:
 		return nil, false
 	}
+
+	return nil, false
 }
 
 // Keys returns the list of plugin names that are considered builtin plugins.
@@ -173,16 +231,16 @@ func (r *registry) Keys(pluginType consts.PluginType) []string {
 	var keys []string
 	switch pluginType {
 	case consts.PluginTypeDatabase:
-		for key := range r.databasePlugins {
-			keys = append(keys, key)
+		for key, backend := range r.databasePlugins {
+			keys = appendIfNotRemoved(keys, key, backend.DeprecationStatus)
 		}
 	case consts.PluginTypeCredential:
-		for key := range r.credentialBackends {
-			keys = append(keys, key)
+		for key, backend := range r.credentialBackends {
+			keys = appendIfNotRemoved(keys, key, backend.DeprecationStatus)
 		}
 	case consts.PluginTypeSecrets:
-		for key := range r.logicalBackends {
-			keys = append(keys, key)
+		for key, backend := range r.logicalBackends {
+			keys = appendIfNotRemoved(keys, key, backend.DeprecationStatus)
 		}
 	}
 	return keys
@@ -197,8 +255,37 @@ func (r *registry) Contains(name string, pluginType consts.PluginType) bool {
 	return false
 }
 
+// DeprecationStatus returns the Deprecation status for a builtin with type `pluginType`
+func (r *registry) DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool) {
+	switch pluginType {
+	case consts.PluginTypeCredential:
+		if f, ok := r.credentialBackends[name]; ok {
+			return f.DeprecationStatus, ok
+		}
+	case consts.PluginTypeSecrets:
+		if f, ok := r.logicalBackends[name]; ok {
+			return f.DeprecationStatus, ok
+		}
+	case consts.PluginTypeDatabase:
+		if f, ok := r.databasePlugins[name]; ok {
+			return f.DeprecationStatus, ok
+		}
+	default:
+		return consts.Unknown, false
+	}
+
+	return consts.Unknown, false
+}
+
 func toFunc(ifc interface{}) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		return ifc, nil
 	}
+}
+
+func appendIfNotRemoved(keys []string, name string, status consts.DeprecationStatus) []string {
+	if status != consts.Removed {
+		return append(keys, name)
+	}
+	return keys
 }

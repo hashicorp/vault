@@ -5,7 +5,6 @@ ui = true
 
 listener "tcp" {
     address = "127.0.0.1:443"
-	allow_stuff = true
 }
 
 backend "consul" {
@@ -32,6 +31,7 @@ telemetry {
     dogstatsd_addr = "127.0.0.1:7254"
     dogstatsd_tags = ["tag_1:val_1", "tag_2:val_2"]
     metrics_prefix = "myprefix"
+    bad_value = "shouldn't be here"
 }
 
 sentinel {
@@ -43,7 +43,9 @@ default_lease_ttl = "10h"
 cluster_name = "testcluster"
 pid_file = "./pidfile"
 raw_storage_endpoint = true
+introspection_endpoint = true
 disable_sealwrap = true
 disable_printable_check = true
 enable_response_header_hostname = true
 enable_response_header_raft_node_id = true
+license_path = "/path/to/license"

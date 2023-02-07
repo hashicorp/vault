@@ -12,13 +12,39 @@ These are general upgrade instructions for Vault for both non-HA and HA setups.
 _Please ensure that you also read any version-specific upgrade notes which can be
 found in the sidebar._
 
-!> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
+!> **Important:** Always back up your data before upgrading! Vault does not
 make backward-compatibility guarantees for its data store. Simply replacing the
 newly-installed Vault binary with the previous version will not cleanly
 downgrade Vault, as upgrades may perform changes to the underlying data
 structure that make the data incompatible with a downgrade. If you need to roll
 back to a previous version of Vault, you should roll back your data store as
 well.
+
+Vault upgrades are designed such that large jumps (ie 1.3.10 -> 1.7.x) are
+supported. The upgrade notes for each intervening version must be reviewed. The
+upgrade notes may describe additional steps or configuration to update before,
+during, or after the upgrade.
+
+## Integrated Storage Autopilot
+
+Vault 1.11 introduced [automated
+upgrades](/vault/docs/concepts/integrated-storage/autopilot#automated-upgrades) as
+part of the Integrated Storage Autopilot feature. If your Vault environment is
+configured to use Integrated Storage, consider leveraging this new feature to
+upgrade your Vault environment.
+
+-> **Tutorial:** Refer to the [Automate Upgrades with Vault
+ Enterprise](/vault/tutorials/raft/raft-upgrade-automation)
+ tutorial for more details.
+
+## Agent
+
+The Vault Agent is an API client of the Vault Server. Vault APIs are almost
+always backwards compatible. When they are not, this is called out in the
+upgrade guide for the new Vault version, and there is a lengthy deprecation
+period. The Vault Agent version can lag behind the Vault Server version, though
+we recommend keeping all Vault instances up to date with the most recent minor Vault version
+to the extent possible.
 
 ## Testing the Upgrade
 
@@ -32,7 +58,7 @@ along with the non-test cluster.
 
 ## OSS to Enterprise Installations
 
-Upgrading to Vault Enterprise installations follow the same steps as OSS upgrades except that the Vault Enterprise binary is to be used and the license file [applied](/api-docs/system/license#install-license), when applicable. The Enterprise binary and license file can be obtained through your HashiCorp sales team.
+Upgrading to Vault Enterprise installations follow the same steps as OSS upgrades except that the Vault Enterprise binary is to be used and the license file [applied](/vault/api-docs/system/license#install-license), when applicable. The Enterprise binary and license file can be obtained through your HashiCorp sales team.
 
 ## Non-HA Installations
 
@@ -47,11 +73,21 @@ upgrade notes.
 
 ## HA Installations
 
-This is our recommended upgrade procedure, and the procedure we use internally
-at HashiCorp. However, you should consider how to apply these steps to your
-particular setup since HA setups can differ on whether a load balancer is in
-use, what addresses clients are being given to connect to Vault (standby +
-leader, leader-only, or discovered via service discovery), etc.
+!> **Important:** Note that these instructions are not relevant if you're on a
+version of Vault greater than or equal to 1.11 and you have Autopilot enabled.
+If so, you should let Autopilot do the upgrade for you, as that's easier and
+less prone to human error. Please refer to our [automated
+upgrades](/vault/docs/concepts/integrated-storage/autopilot#automated-upgrades)
+documentation for information on this feature and our
+[Automate Upgrades with Vault
+Enterprise](/vault/tutorials/raft/raft-upgrade-automation)
+tutorial for more details.
+
+This is our recommended upgrade procedure if you're on a version of Vault before
+1.11, or you've chosen not to use Autopilot. However, you should consider how to
+apply these steps to your particular setup since HA setups can differ on whether
+a load balancer is in use, what addresses clients are being given to connect to
+Vault (standby + leader, leader-only, or discovered via service discovery), etc.
 
 Whatever method you use, you should ensure that you never fail over from a
 newer version of Vault to an older version. Our suggested procedure is designed
@@ -65,23 +101,30 @@ backend).
 Perform these steps on each standby:
 
 1. Properly shut down Vault on the standby node via `SIGINT` or `SIGTERM`
-2. Replace the Vault binary with the new version
+2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/vault/docs/configuration#disable_mlock)
 3. Start the standby node
 4. Unseal the standby node
+5. Verify `vault status` shows correct Version and HA Mode is `standby`
+6. Review the node's logs to ensure successful startup and unseal
 
 At this point all standby nodes will be upgraded and ready to take over. The
 upgrade will not be complete until one of the upgraded standby nodes takes over
 active duty. To do this:
 
-1. Properly shut down the remaining (active) node. Note: it is _**very
-   important**_ that you shut the node down properly. This causes the HA lock to
-   be released, allowing a standby node to take over with a very short delay.
+1. Properly shut down the remaining (active) node
+
+   ~> **Note:** It is important that you shut the node down properly.
+   This will perform a step-down and release the HA lock, allowing a standby
+   node to take over with a very short delay.
    If you kill Vault without letting it release the lock, a standby node will
    not be able to take over until the lock's timeout period has expired. This
    is backend-specific but could be ten seconds or more.
-2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration#disable_mlock)
+
+2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/vault/docs/configuration#disable_mlock)
 3. Start the node
-4. Unseal the node (it will now be a standby)
+4. Unseal the node
+5. Verify `vault status` shows correct Version and HA Mode is `standby`
+6. Review the node's logs to ensure successful startup and unseal
 
 Internal upgrade tasks will happen after one of the upgraded standby nodes
 takes over active duty.
@@ -94,7 +137,7 @@ upgrade notes.
 -> **Note:** Prior to any upgrade, be sure to also read and follow any instructions in the version-specific
 upgrade notes which are found in the navigation menu for this documentation.
 
-Upgrading installations of Vault which participate in [Enterprise Replication](/docs/enterprise/replication) requires the following basic order of operations:
+Upgrading installations of Vault which participate in [Enterprise Replication](/vault/docs/enterprise/replication) requires the following basic order of operations:
 
 - **Upgrade the replication secondary instances first** using appropriate
   guidance from the previous sections depending on whether each secondary
@@ -102,3 +145,23 @@ Upgrading installations of Vault which participate in [Enterprise Replication](/
 - Verify functionality of each secondary instance after upgrading
 - When satisfied with functionality of upgraded secondary instances, upgrade
   the primary instance
+
+~> **Note:** It is not safe to replicate from a newer version of Vault to an
+older version. When upgrading replicated clusters, ensure that upstream clusters
+are always on older versions of Vault than downstream clusters.
+
+Here is an example of upgrading four Vault replicated Vault clusters:
+
+![Upgrading multiple replicated clusters](/img/vault-replication-upgrade.png)
+
+In the above scenario, the ideal upgrade procedure would be as follows,
+verifying functionality after each cluster upgrade.
+
+1. Upgrade Clusters B and D, using the HA upgrade process above. These clusters
+   have no downstream clusters, so they should be upgraded first, but the
+   ordering of B vs D does not matter.
+2. Upgrade Cluster C, which now has an upgraded downstream cluster (Cluster D).
+   Because Cluster C is a cluster, it should also use the HA upgrade process.
+3. Finally, upgrade Cluster A. All clusters downstream of A will already be
+   upgraded. It should be upgraded last, as it is a Performance Primary and a DR
+   Primary.

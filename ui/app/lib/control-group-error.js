@@ -2,7 +2,7 @@ import AdapterError from '@ember-data/adapter/error';
 
 export default class ControlGroupError extends AdapterError {
   constructor(wrapInfo) {
-    let { accessor, creation_path, creation_time, token, ttl } = wrapInfo;
+    const { accessor, creation_path, creation_time, token, ttl } = wrapInfo;
     super();
     this.message = 'Control Group encountered';
 

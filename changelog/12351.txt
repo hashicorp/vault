@@ -1,0 +1,3 @@
+```release-note: bug
+sdk/database: Fix a DeleteUser error message on the gRPC client.
+```

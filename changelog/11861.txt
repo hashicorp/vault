@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database/cassandra: Fixed issue where the PEM parsing logic of `pem_bundle` and `pem_json` didn't work for CA-only configurations
+```

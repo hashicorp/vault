@@ -1,0 +1,52 @@
+---
+layout: docs
+page_title: license get - Command
+description: |-
+  The "license get" command reports on the license in use.
+---
+
+# license get
+
+The `license get` command reports on the license in use.  With the `-signed`
+flag, it will return the actual license string, but only if the license
+is stored, as opposed to [autoloaded](/vault/docs/enterprise/license/autoloading).
+
+## Examples
+
+Describe current license:
+
+```shell-session
+$ vault license get
+Key                          Value
+---                          -----
+expiration_time              2022-05-17T23:59:59Z
+features                     [HSM Performance Replication DR Replication MFA Sentinel Seal Wrapping Control Groups Performance Standby Namespaces KMIP Entropy Augmentation Transform Secrets Engine Lease Count Quotas Key Management Secrets Engine Automated Snapshots]
+license_id                   060d7820-fa59-f95c-832b-395db0aeb9ba
+performance_standby_count    9999
+start_time                   2021-05-17T00:00:00Z
+termination_time             2031-05-17T23:59:59Z
+```
+
+Get stored license string:
+
+```shell-session
+$ vault license get -signed
+02MV4UU43BK5H...
+```
+
+Try to get stored license string when using autoloading:
+
+```shell-session
+$ vault license get -signed
+License not found or using a temporary license.
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Command Options
+
+- `-signed` `(bool: false)` - Return the signed license string when using a
+stored license.

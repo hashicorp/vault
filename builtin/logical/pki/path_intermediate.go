@@ -5,36 +5,13 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathGenerateIntermediate(b *backend) *framework.Path {
-	ret := &framework.Path{
-		Pattern: "intermediate/generate/" + framework.GenericNameRegex("exported"),
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathGenerateIntermediate,
-		},
-
-		HelpSynopsis:    pathGenerateIntermediateHelpSyn,
-		HelpDescription: pathGenerateIntermediateHelpDesc,
-	}
-
-	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
-	ret.Fields = addCAKeyGenerationFields(ret.Fields)
-	ret.Fields["add_basic_constraints"] = &framework.FieldSchema{
-		Type: framework.TypeBool,
-		Description: `Whether to add a Basic Constraints
-extension with CA: true. Only needed as a
-workaround in some compatibility scenarios
-with Active Directory Certificate Services.`,
-	}
-
-	return ret
+	return buildPathGenerateIntermediate(b, "intermediate/generate/"+framework.GenericNameRegex("exported"))
 }
 
 func pathSetSignedIntermediate(b *backend) *framework.Path {
@@ -47,12 +24,17 @@ func pathSetSignedIntermediate(b *backend) *framework.Path {
 				Description: `PEM-format certificate. This must be a CA
 certificate with a public key matching the
 previously-generated key from the generation
-endpoint.`,
+endpoint. Additional parent CAs may be optionally
+appended to the bundle.`,
 			},
 		},
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathSetSignedIntermediate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathImportIssuers,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathSetSignedIntermediateHelpSyn,
@@ -63,20 +45,49 @@ endpoint.`,
 }
 
 func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
 	var err error
 
-	exported, format, role, errorResp := b.getGenerationParams(data)
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not create intermediate until migration has completed"), nil
+	}
+
+	// Nasty hack :-) For cross-signing, we want to use the existing key, but
+	// this isn't _actually_ part of the path. Put it into the request
+	// parameters as if it was.
+	if req.Path == "intermediate/cross-sign" {
+		data.Raw["exported"] = "existing"
+	}
+
+	// Remove this once https://github.com/golang/go/issues/45990 is fixed
+	data.Schema["use_pss"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+	}
+	data.Raw["use_pss"] = false
+
+	sc := b.makeStorageContext(ctx, req.Storage)
+	exported, format, role, errorResp := getGenerationParams(sc, data)
 	if errorResp != nil {
 		return errorResp, nil
 	}
 
+	keyName, err := getKeyName(sc, data)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 	var resp *logical.Response
 	input := &inputBundle{
 		role:    role,
 		req:     req,
 		apiData: data,
 	}
-	parsedBundle, err := generateIntermediateCSR(b, input)
+
+	parsedBundle, warnings, err := generateIntermediateCSR(sc, input, b.Backend.GetRandomReader())
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -88,11 +99,19 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 
 	csrb, err := parsedBundle.ToCSRBundle()
 	if err != nil {
-		return nil, errwrap.Wrapf("error converting raw CSR bundle to CSR bundle: {{err}}", err)
+		return nil, fmt.Errorf("error converting raw CSR bundle to CSR bundle: %w", err)
 	}
 
 	resp = &logical.Response{
 		Data: map[string]interface{}{},
+	}
+
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
+	if err == nil && len(entries.OCSPServers) == 0 && len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 {
+		// If the operator hasn't configured any of the URLs prior to
+		// generating this issuer, we should add a warning to the response,
+		// informing them they might want to do so and re-generate the issuer.
+		resp.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information. Since this certificate is an intermediate, it might be useful to regenerate this certificate after fixing this problem for the root mount.")
 	}
 
 	switch format {
@@ -117,6 +136,8 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			resp.Data["private_key_type"] = csrb.PrivateKeyType
 		}
+	default:
+		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
 
 	if data.Get("private_key_format").(string) == "pkcs8" {
@@ -126,115 +147,15 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		}
 	}
 
-	cb := &certutil.CertBundle{}
-	cb.PrivateKey = csrb.PrivateKey
-	cb.PrivateKeyType = csrb.PrivateKeyType
+	myKey, _, err := sc.importKey(csrb.PrivateKey, keyName, csrb.PrivateKeyType)
+	if err != nil {
+		return nil, err
+	}
+	resp.Data["key_id"] = myKey.ID
 
-	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
-	if err != nil {
-		return nil, err
-	}
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
+	resp = addWarnings(resp, warnings)
 
 	return resp, nil
-}
-
-func (b *backend) pathSetSignedIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	cert := data.Get("certificate").(string)
-
-	if cert == "" {
-		return logical.ErrorResponse("no certificate provided in the \"certificate\" parameter"), nil
-	}
-
-	inputBundle, err := certutil.ParsePEMBundle(cert)
-	if err != nil {
-		switch err.(type) {
-		case errutil.InternalError:
-			return nil, err
-		default:
-			return logical.ErrorResponse(err.Error()), nil
-		}
-	}
-
-	if inputBundle.Certificate == nil {
-		return logical.ErrorResponse("supplied certificate could not be successfully parsed"), nil
-	}
-
-	cb := &certutil.CertBundle{}
-	entry, err := req.Storage.Get(ctx, "config/ca_bundle")
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return logical.ErrorResponse("could not find any existing entry with a private key"), nil
-	}
-
-	err = entry.DecodeJSON(cb)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(cb.PrivateKey) == 0 || cb.PrivateKeyType == "" {
-		return logical.ErrorResponse("could not find an existing private key"), nil
-	}
-
-	parsedCB, err := cb.ToParsedCertBundle()
-	if err != nil {
-		return nil, err
-	}
-	if parsedCB.PrivateKey == nil {
-		return nil, fmt.Errorf("saved key could not be parsed successfully")
-	}
-
-	inputBundle.PrivateKey = parsedCB.PrivateKey
-	inputBundle.PrivateKeyType = parsedCB.PrivateKeyType
-	inputBundle.PrivateKeyBytes = parsedCB.PrivateKeyBytes
-
-	if !inputBundle.Certificate.IsCA {
-		return logical.ErrorResponse("the given certificate is not marked for CA use and cannot be used with this backend"), nil
-	}
-
-	if err := inputBundle.Verify(); err != nil {
-		return nil, errwrap.Wrapf("verification of parsed bundle failed: {{err}}", err)
-	}
-
-	cb, err = inputBundle.ToCertBundle()
-	if err != nil {
-		return nil, errwrap.Wrapf("error converting raw values into cert bundle: {{err}}", err)
-	}
-
-	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
-	if err != nil {
-		return nil, err
-	}
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
-
-	entry.Key = "certs/" + normalizeSerial(cb.SerialNumber)
-	entry.Value = inputBundle.CertificateBytes
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
-
-	// For ease of later use, also store just the certificate at a known
-	// location
-	entry.Key = "ca"
-	entry.Value = inputBundle.CertificateBytes
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build a fresh CRL
-	err = buildCRL(ctx, b, req, true)
-
-	return nil, err
 }
 
 const pathGenerateIntermediateHelpSyn = `

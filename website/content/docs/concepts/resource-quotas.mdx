@@ -20,31 +20,36 @@ developers.
 
 Vault provides a feature, resource quotas, that allows Vault operators to specify
 limits on resources used in Vault. Specifically, Vault allows operators to create
-and configure API rate limits.
+and configure API rate limits. Users of Vault Enterprise have a second option, alongside
+rate limits, [lease-count quotas](/vault/docs/enterprise/lease-count-quotas), which can
+limit the number of leases that can be in use at one time.
 
 ## Rate Limit Quotas
 
 Vault allows operators to create rate limit quotas which enforce API rate
 limiting using a [token bucket](https://en.wikipedia.org/wiki/Token_bucket) algorithm.
-A rate limit quota can be created at the root level or defined on a namespace or
-mount by specifying a `path` when creating the quota. The rate limiter is applied
-to each unique client IP address on a per-node basis (i.e. rate limit quotas
-are not replicated). A client may invoke `rate` requests at any given second,
+A rate limit quota can be created at the root level or defined on a namespace,
+mount, or full API path by specifying a `path` when creating the quota. The rate
+limiter is applied to each unique client IP address on a per-node basis (i.e. rate limit
+quotas are not replicated). A client may invoke `rate` requests at any given second,
 after which they may invoke additional requests at `rate` per-second.
 
 A rate limit quota defined at the root level (i.e. empty `path`) is inherited by
 all namespaces and mounts. It acts as a single rate limiter for the entire Vault
 API. A rate limit quota defined on a namespace takes precedence over the global
-rate limit quota, and a rate limit quota defined for a mount takes precedence over
-the global and namespace rate limit quotas. In other words, the most specific
-quota rule will be applied.
+rate limit quota, a rate limit quota defined for a mount takes precedence over
+the global and namespace rate limit quotas, and a rate limit quota defined for
+a specific path will take precedence over global, namespace, and mount quotas.
+Additionally, quotas defined with a `role` to limit login requests made using
+that role on the specified auth mount will take precedence over all other quotas.
+In other words, the most specific quota rule will be applied.
 
 A rate limit can be created with an optional `block_interval`, such that when set
 to a non-zero value, any client that hits a rate limit threshold will be blocked
 from all subsequent requests for a duration of `block_interval` seconds.
 
 Vault also allows the inspection of the state of rate limiting in a Vault node
-through various [metrics](/docs/internals/telemetry#Resource-Quota-Metrics) exposed
+through various [metrics](/vault/docs/internals/telemetry#Resource-Quota-Metrics) exposed
 and through enabling optional audit logging.
 
 ## Exempt Routes
@@ -53,21 +58,21 @@ By default, the following paths are exempt from rate limiting. However, Vault
 operators can override the set of paths that are exempt from all rate limit
 resource quotas by updating the `rate_limit_exempt_paths` configuration field.
 
-- `/v1/sys/generate-recovery-token/attempt`
-- `/v1/sys/generate-recovery-token/update`
-- `/v1/sys/generate-root/attempt`
-- `/v1/sys/generate-root/update`
-- `/v1/sys/health`
-- `/v1/sys/seal-status`
-- `/v1/sys/unseal`
+- `sys/generate-recovery-token/attempt`
+- `sys/generate-recovery-token/update`
+- `sys/generate-root/attempt`
+- `sys/generate-root/update`
+- `sys/health`
+- `sys/seal-status`
+- `sys/unseal`
 
-## Learn
+## Tutorial
 
 Refer to [Protecting Vault with Resource
-Quotas](https://learn.hashicorp.com/vault/security/resource-quotas) for a
+Quotas](/vault/tutorials/operations/resource-quotas) for a
 step-by-step tutorial.
 
 ## API
 
 Rate limit quotas can be managed over the HTTP API. Please see
-[Rate Limit Quotas API](/api/system/rate-limit-quotas) for more details.
+[Rate Limit Quotas API](/vault/api-docs/system/rate-limit-quotas) for more details.

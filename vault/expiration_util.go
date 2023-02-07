@@ -1,9 +1,10 @@
-// +build !enterprise
+//go:build !enterprise
 
 package vault
 
 import (
-	"github.com/hashicorp/errwrap"
+	"fmt"
+
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -21,7 +22,7 @@ func (m *ExpirationManager) collectLeases() (map[*namespace.Namespace][]string, 
 	existing := make(map[*namespace.Namespace][]string)
 	keys, err := logical.CollectKeys(m.quitContext, m.leaseView(namespace.RootNamespace))
 	if err != nil {
-		return nil, 0, errwrap.Wrapf("failed to scan for leases: {{err}}", err)
+		return nil, 0, fmt.Errorf("failed to scan for leases: %w", err)
 	}
 	existing[namespace.RootNamespace] = keys
 	leaseCount += len(keys)

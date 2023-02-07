@@ -27,12 +27,15 @@ both will be shown below.
 
 ### Using sc.exe
 
+~> **Important Note:** Ensure the executable path of the service is quoted, especially when it contains spaces, to avoid
+potential privilege escalation risks.
+
 If you use `sc.exe`, make sure you specify `sc.exe` explicitly, and not just `sc`. The command below shows the creation
 of Vault Agent as a service, using "Vault Agent" as the display name, and starting automatically when Windows starts.
 The `binPath` argument should include the fully qualified path to the Vault executable, as well as any arguments required.
 
 ```shell-session
-PS C:\Windows\system32> sc.exe create VaultAgent binPath= "C:\vault\vault.exe agent -config=C:\vault\agent-config.hcl" displayName= "Vault Agent" start= auto
+PS C:\Windows\system32> sc.exe create VaultAgent binPath="C:\vault\vault.exe agent -config=C:\vault\agent-config.hcl" displayName="Vault Agent" start=auto
 [SC] CreateService SUCCESS
 ```
 

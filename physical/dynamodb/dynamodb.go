@@ -22,10 +22,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
 
@@ -164,13 +163,16 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
 	}
-	region := os.Getenv("AWS_REGION")
+	region := os.Getenv("AWS_DYNAMODB_REGION")
 	if region == "" {
-		region = os.Getenv("AWS_DEFAULT_REGION")
+		region = os.Getenv("AWS_REGION")
 		if region == "" {
-			region = conf["region"]
+			region = os.Getenv("AWS_DEFAULT_REGION")
 			if region == "" {
-				region = DefaultDynamoDBRegion
+				region = conf["region"]
+				if region == "" {
+					region = DefaultDynamoDBRegion
+				}
 			}
 		}
 	}
@@ -213,7 +215,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 
 	awsSession, err := session.NewSession(awsConf)
 	if err != nil {
-		return nil, errwrap.Wrapf("Could not establish AWS session: {{err}}", err)
+		return nil, fmt.Errorf("Could not establish AWS session: %w", err)
 	}
 
 	client := dynamodb.New(awsSession)
@@ -233,7 +235,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -260,7 +262,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 	}
 	item, err := dynamodbattribute.MarshalMap(record)
 	if err != nil {
-		return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
+		return fmt.Errorf("could not convert prefix record to DynamoDB item: %w", err)
 	}
 	requests := []*dynamodb.WriteRequest{{
 		PutRequest: &dynamodb.PutRequest{
@@ -275,7 +277,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 		}
 		item, err := dynamodbattribute.MarshalMap(record)
 		if err != nil {
-			return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
+			return fmt.Errorf("could not convert prefix record to DynamoDB item: %w", err)
 		}
 		requests = append(requests, &dynamodb.WriteRequest{
 			PutRequest: &dynamodb.PutRequest{
@@ -801,44 +803,47 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 	_, err := client.DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
-	if awsError, ok := err.(awserr.Error); ok {
-		if awsError.Code() == "ResourceNotFoundException" {
-			_, err = client.CreateTable(&dynamodb.CreateTableInput{
-				TableName: aws.String(table),
-				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-					ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
-					WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
-				},
-				KeySchema: []*dynamodb.KeySchemaElement{{
-					AttributeName: aws.String("Path"),
-					KeyType:       aws.String("HASH"),
-				}, {
-					AttributeName: aws.String("Key"),
-					KeyType:       aws.String("RANGE"),
-				}},
-				AttributeDefinitions: []*dynamodb.AttributeDefinition{{
-					AttributeName: aws.String("Path"),
-					AttributeType: aws.String("S"),
-				}, {
-					AttributeName: aws.String("Key"),
-					AttributeType: aws.String("S"),
-				}},
-			})
-			if err != nil {
-				return err
-			}
+	if err != nil {
+		if awsError, ok := err.(awserr.Error); ok {
+			if awsError.Code() == "ResourceNotFoundException" {
+				_, err := client.CreateTable(&dynamodb.CreateTableInput{
+					TableName: aws.String(table),
+					ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+						ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
+						WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
+					},
+					KeySchema: []*dynamodb.KeySchemaElement{{
+						AttributeName: aws.String("Path"),
+						KeyType:       aws.String("HASH"),
+					}, {
+						AttributeName: aws.String("Key"),
+						KeyType:       aws.String("RANGE"),
+					}},
+					AttributeDefinitions: []*dynamodb.AttributeDefinition{{
+						AttributeName: aws.String("Path"),
+						AttributeType: aws.String("S"),
+					}, {
+						AttributeName: aws.String("Key"),
+						AttributeType: aws.String("S"),
+					}},
+				})
+				if err != nil {
+					return err
+				}
 
-			err = client.WaitUntilTableExists(&dynamodb.DescribeTableInput{
-				TableName: aws.String(table),
-			})
-			if err != nil {
-				return err
+				err = client.WaitUntilTableExists(&dynamodb.DescribeTableInput{
+					TableName: aws.String(table),
+				})
+				if err != nil {
+					return err
+				}
+				// table created successfully
+				return nil
 			}
 		}
-	}
-	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

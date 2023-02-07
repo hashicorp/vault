@@ -73,7 +73,7 @@ updated, it takes effect immediately to all associated users.
 
 | Method | Path                      |
 | :----- | :------------------------ |
-| `PUT`  | `/sys/policies/acl/:name` |
+| `POST`  | `/sys/policies/acl/:name` |
 
 ### Parameters
 
@@ -96,7 +96,7 @@ updated, it takes effect immediately to all associated users.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/policies/acl/my-policy
 ```
@@ -187,7 +187,7 @@ updated, it takes effect immediately to all associated users.
 
 | Method | Path                      |
 | :----- | :------------------------ |
-| `PUT`  | `/sys/policies/rgp/:name` |
+| `POST` | `/sys/policies/rgp/:name` |
 
 ### Parameters
 
@@ -215,7 +215,7 @@ updated, it takes effect immediately to all associated users.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/policies/rgp/webapp
 ```
@@ -313,7 +313,7 @@ updated, it takes effect immediately to all associated users.
 
 | Method | Path                      |
 | :----- | :------------------------ |
-| `PUT`  | `/sys/policies/egp/:name` |
+| `POST` | `/sys/policies/egp/:name` |
 
 ### Parameters
 
@@ -347,7 +347,7 @@ updated, it takes effect immediately to all associated users.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/policies/egp/breakglass
 ```

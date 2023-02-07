@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/ad: set config default length only if password_policy is missing
+```

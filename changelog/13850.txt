@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/consul: Add support for consul enterprise namespaces and admin partitions.
+```

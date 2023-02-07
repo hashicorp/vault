@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Support generating delta CRLs for up-to-date CRLs when auto-building is enabled.
+```

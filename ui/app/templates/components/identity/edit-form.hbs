@@ -1,48 +1,86 @@
-{{#if (and (eq mode "edit") model.canDelete)}}
+{{#if (and (eq this.mode "edit") this.model.canDelete)}}
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction
         @buttonClasses="toolbar-link"
-        @onConfirmAction={{action "deleteItem" model}}
+        @onConfirmAction={{action "deleteItem" this.model}}
         data-test-entity-item-delete="true"
       >
-        Delete {{model.identityType}}
+        Delete
+        {{this.model.identityType}}
       </ConfirmAction>
     </ToolbarActions>
   </Toolbar>
 {{/if}}
 
-<form {{action (perform save) on="submit"}}>
+<form {{action (perform this.save) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <NamespaceReminder @mode={{mode}} @noun={{lowercase (humanize model.identityType)}} />
-    <MessageError @model={{model}} />
-    {{#if (eq mode "merge")}}
+    <NamespaceReminder @mode={{this.mode}} @noun={{lowercase (humanize this.model.identityType)}} />
+    <MessageError @model={{this.model}} />
+    {{#if (eq this.mode "merge")}}
       <AlertBanner
         @type="warning"
         @message="Metadata on merged entities is not preserved, you will need to recreate it on the entity you merge to."
       />
     {{/if}}
-    {{#each model.fields as |attr|}}
-      {{form-field data-test-field attr=attr model=model}}
+    {{#each this.model.fields as |attr|}}
+      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}}>
+        <div class="form-section">
+          {{#if this.model.canCreatePolicies}}
+            <SearchSelectWithModal
+              @id="policies"
+              @label="Policies"
+              @labelClass="title is-4"
+              @models={{array "policy/acl" "policy/rgp"}}
+              @inputValue={{@model.policies}}
+              @onChange={{action (mut this.model.policies)}}
+              @fallbackComponent="string-list"
+              @modalFormTemplate="modal-form/policy-template"
+              @excludeOptions={{array "root"}}
+            />
+          {{else}}
+            <SearchSelect
+              @id="policies"
+              @label="Policies"
+              @labelClass="title is-4"
+              @models={{array "policy/acl" "policy/rgp"}}
+              @inputValue={{@model.policies}}
+              @onChange={{action (mut this.model.policies)}}
+              @fallbackComponent="string-list"
+              @disallowNewItems={{true}}
+            />
+          {{/if}}
+        </div>
+      </FormField>
     {{/each}}
   </div>
 
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">
       <div class="control">
-        <button type="submit" data-test-identity-submit=true class="button is-primary {{if save.isRunning 'loading'}}" disabled={{save.isRunning}}>
-          {{#if (eq mode "create")}}
+        <button
+          type="submit"
+          data-test-identity-submit={{true}}
+          class="button is-primary {{if this.save.isRunning 'loading'}}"
+          disabled={{this.save.isRunning}}
+        >
+          {{#if (eq this.mode "create")}}
             Create
           {{else}}
             Save
           {{/if}}
         </button>
-        {{#if (or (eq mode "merge") (eq mode "create" ))}}
-          <LinkTo @route={{cancelLink}} class="button" data-test-cancel-link={{true}}>
+        {{#if (or (eq this.mode "merge") (eq this.mode "create"))}}
+          <LinkTo @route={{this.cancelLink}} class="button" data-test-cancel-link={{true}}>
             Cancel
           </LinkTo>
         {{else}}
-          <LinkTo @route={{cancelLink}} @models={{array model.id "details"}} class="button" data-test-cancel-link={{true}}>
+          <LinkTo
+            @route={{this.cancelLink}}
+            @models={{array this.model.id "details"}}
+            class="button"
+            data-test-cancel-link={{true}}
+          >
             Cancel
           </LinkTo>
         {{/if}}

@@ -4,11 +4,12 @@ import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { setProperties, computed, set } from '@ember/object';
 import { addSeconds, parseISO } from 'date-fns';
+import { A } from '@ember/array';
 
 const DEFAULTS = {
   token: null,
   rewrap_token: null,
-  errors: [],
+  errors: A(),
   wrap_info: null,
   creation_time: null,
   creation_ttl: null,
@@ -62,7 +63,7 @@ export default Component.extend(DEFAULTS, {
 
   dataIsEmpty: match('data', new RegExp(DEFAULTS.data)),
 
-  expirationDate: computed('creation_time', 'creation_ttl', function() {
+  expirationDate: computed('creation_time', 'creation_ttl', function () {
     const { creation_time, creation_ttl } = this;
     if (!(creation_time && creation_ttl)) {
       return null;
@@ -77,9 +78,9 @@ export default Component.extend(DEFAULTS, {
 
   handleSuccess(resp, action) {
     let props = {};
-    let secret = (resp && resp.data) || resp.auth;
+    const secret = (resp && resp.data) || resp.auth;
     if (secret && action === 'unwrap') {
-      let details = {
+      const details = {
         'Request ID': resp.request_id,
         'Lease ID': resp.lease_id || 'None',
         Renewable: resp.renewable ? 'Yes' : 'No',
@@ -106,7 +107,6 @@ export default Component.extend(DEFAULTS, {
     if (action === 'random') {
       return { bytes: this.bytes, format: this.format };
     }
-
     if (action === 'hash') {
       return { input: this.input, format: this.format, algorithm: this.algorithm };
     }
@@ -128,21 +128,21 @@ export default Component.extend(DEFAULTS, {
       this.store
         .adapterFor('tools')
         .toolAction(action, data, { wrapTTL })
-        .then(resp => this.handleSuccess(resp, action), (...errArgs) => this.handleError(...errArgs));
+        .then(
+          (resp) => this.handleSuccess(resp, action),
+          (...errArgs) => this.handleError(...errArgs)
+        );
     },
 
     onClear() {
       this.reset();
     },
 
-    updateTtl(evt) {
-      const ttl = evt.enabled ? `${evt.seconds}s` : '30m';
+    updateTtl(ttl) {
       set(this, 'wrapTTL', ttl);
     },
 
-    codemirrorUpdated(val, codemirror) {
-      codemirror.performLint();
-      const hasErrors = codemirror.state.lint.marked.length > 0;
+    codemirrorUpdated(val, hasErrors) {
       setProperties(this, {
         buttonDisabled: hasErrors,
         data: val,

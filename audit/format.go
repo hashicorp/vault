@@ -10,7 +10,6 @@ import (
 
 	squarejwt "gopkg.in/square/go-jose.v2/jwt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -48,7 +47,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 
 	salt, err := f.Salt(ctx)
 	if err != nil {
-		return errwrap.Wrapf("error fetching salt: {{err}}", err)
+		return fmt.Errorf("error fetching salt: %w", err)
 	}
 
 	// Set these to the input values at first
@@ -111,10 +110,12 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 
 		Request: &AuditRequest{
 			ID:                  req.ID,
+			ClientID:            req.ClientID,
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
 			MountType:           req.MountType,
+			MountAccessor:       req.MountAccessor,
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -123,6 +124,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			Data:                          req.Data,
 			PolicyOverride:                req.PolicyOverride,
 			RemoteAddr:                    getRemoteAddr(req),
+			RemotePort:                    getRemotePort(req),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
@@ -131,6 +133,20 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 
 	if !auth.IssueTime.IsZero() {
 		reqEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
+	}
+
+	if auth.PolicyResults != nil {
+		reqEntry.Auth.PolicyResults = &AuditPolicyResults{
+			Allowed: auth.PolicyResults.Allowed,
+		}
+
+		for _, p := range auth.PolicyResults.GrantingPolicies {
+			reqEntry.Auth.PolicyResults.GrantingPolicies = append(reqEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
+				Name:        p.Name,
+				NamespaceId: p.NamespaceId,
+				Type:        p.Type,
+			})
+		}
 	}
 
 	if req.WrapInfo != nil {
@@ -159,7 +175,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 
 	salt, err := f.Salt(ctx)
 	if err != nil {
-		return errwrap.Wrapf("error fetching salt: {{err}}", err)
+		return fmt.Errorf("error fetching salt: %w", err)
 	}
 
 	// Set these to the input values at first
@@ -176,7 +192,24 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		connState = in.Request.Connection.ConnState
 	}
 
-	if !config.Raw {
+	elideListResponseData := config.ElideListResponses && req.Operation == logical.ListOperation
+
+	var respData map[string]interface{}
+	if config.Raw {
+		// In the non-raw case, elision of list response data occurs inside HashResponse, to avoid redundant deep
+		// copies and hashing of data only to elide it later. In the raw case, we need to do it here.
+		if elideListResponseData && resp.Data != nil {
+			// Copy the data map before making changes, but we only need to go one level deep in this case
+			respData = make(map[string]interface{}, len(resp.Data))
+			for k, v := range resp.Data {
+				respData[k] = v
+			}
+
+			doElideListResponseData(respData)
+		} else {
+			respData = resp.Data
+		}
+	} else {
 		auth, err = HashAuth(salt, auth, config.HMACAccessor)
 		if err != nil {
 			return err
@@ -187,10 +220,12 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			return err
 		}
 
-		resp, err = HashResponse(salt, resp, config.HMACAccessor, in.NonHMACRespDataKeys)
+		resp, err = HashResponse(salt, resp, config.HMACAccessor, in.NonHMACRespDataKeys, elideListResponseData)
 		if err != nil {
 			return err
 		}
+
+		respData = resp.Data
 	}
 
 	var errString string
@@ -267,6 +302,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			Metadata:                  auth.Metadata,
 			RemainingUses:             req.ClientTokenRemainingUses,
 			EntityID:                  auth.EntityID,
+			EntityCreated:             auth.EntityCreated,
 			TokenType:                 auth.TokenType.String(),
 			TokenTTL:                  int64(auth.TTL.Seconds()),
 		},
@@ -275,8 +311,10 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ID:                  req.ID,
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
+			ClientID:            req.ClientID,
 			Operation:           req.Operation,
 			MountType:           req.MountType,
+			MountAccessor:       req.MountAccessor,
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -285,21 +323,37 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			Data:                          req.Data,
 			PolicyOverride:                req.PolicyOverride,
 			RemoteAddr:                    getRemoteAddr(req),
+			RemotePort:                    getRemotePort(req),
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
 		},
 
 		Response: &AuditResponse{
-			MountType: req.MountType,
-			Auth:      respAuth,
-			Secret:    respSecret,
-			Data:      resp.Data,
-			Warnings:  resp.Warnings,
-			Redirect:  resp.Redirect,
-			WrapInfo:  respWrapInfo,
-			Headers:   resp.Headers,
+			MountType:     req.MountType,
+			MountAccessor: req.MountAccessor,
+			Auth:          respAuth,
+			Secret:        respSecret,
+			Data:          respData,
+			Warnings:      resp.Warnings,
+			Redirect:      resp.Redirect,
+			WrapInfo:      respWrapInfo,
+			Headers:       resp.Headers,
 		},
+	}
+
+	if auth.PolicyResults != nil {
+		respEntry.Auth.PolicyResults = &AuditPolicyResults{
+			Allowed: auth.PolicyResults.Allowed,
+		}
+
+		for _, p := range auth.PolicyResults.GrantingPolicies {
+			respEntry.Auth.PolicyResults.GrantingPolicies = append(respEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
+				Name:        p.Name,
+				NamespaceId: p.NamespaceId,
+				Type:        p.Type,
+			})
+		}
 	}
 
 	if !auth.IssueTime.IsZero() {
@@ -337,9 +391,11 @@ type AuditResponseEntry struct {
 
 type AuditRequest struct {
 	ID                            string                 `json:"id,omitempty"`
+	ClientID                      string                 `json:"client_id,omitempty"`
 	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
 	Operation                     logical.Operation      `json:"operation,omitempty"`
 	MountType                     string                 `json:"mount_type,omitempty"`
+	MountAccessor                 string                 `json:"mount_accessor,omitempty"`
 	ClientToken                   string                 `json:"client_token,omitempty"`
 	ClientTokenAccessor           string                 `json:"client_token_accessor,omitempty"`
 	Namespace                     *AuditNamespace        `json:"namespace,omitempty"`
@@ -347,20 +403,22 @@ type AuditRequest struct {
 	Data                          map[string]interface{} `json:"data,omitempty"`
 	PolicyOverride                bool                   `json:"policy_override,omitempty"`
 	RemoteAddr                    string                 `json:"remote_address,omitempty"`
+	RemotePort                    int                    `json:"remote_port,omitempty"`
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
 	Headers                       map[string][]string    `json:"headers,omitempty"`
 	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
 }
 
 type AuditResponse struct {
-	Auth      *AuditAuth             `json:"auth,omitempty"`
-	MountType string                 `json:"mount_type,omitempty"`
-	Secret    *AuditSecret           `json:"secret,omitempty"`
-	Data      map[string]interface{} `json:"data,omitempty"`
-	Warnings  []string               `json:"warnings,omitempty"`
-	Redirect  string                 `json:"redirect,omitempty"`
-	WrapInfo  *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers   map[string][]string    `json:"headers,omitempty"`
+	Auth          *AuditAuth             `json:"auth,omitempty"`
+	MountType     string                 `json:"mount_type,omitempty"`
+	MountAccessor string                 `json:"mount_accessor,omitempty"`
+	Secret        *AuditSecret           `json:"secret,omitempty"`
+	Data          map[string]interface{} `json:"data,omitempty"`
+	Warnings      []string               `json:"warnings,omitempty"`
+	Redirect      string                 `json:"redirect,omitempty"`
+	WrapInfo      *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers       map[string][]string    `json:"headers,omitempty"`
 }
 
 type AuditAuth struct {
@@ -372,13 +430,26 @@ type AuditAuth struct {
 	IdentityPolicies          []string            `json:"identity_policies,omitempty"`
 	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies,omitempty"`
 	NoDefaultPolicy           bool                `json:"no_default_policy,omitempty"`
+	PolicyResults             *AuditPolicyResults `json:"policy_results,omitempty"`
 	Metadata                  map[string]string   `json:"metadata,omitempty"`
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
 	EntityID                  string              `json:"entity_id,omitempty"`
+	EntityCreated             bool                `json:"entity_created,omitempty"`
 	TokenType                 string              `json:"token_type,omitempty"`
 	TokenTTL                  int64               `json:"token_ttl,omitempty"`
 	TokenIssueTime            string              `json:"token_issue_time,omitempty"`
+}
+
+type AuditPolicyResults struct {
+	Allowed          bool         `json:"allowed"`
+	GrantingPolicies []PolicyInfo `json:"granting_policies,omitempty"`
+}
+
+type PolicyInfo struct {
+	Name        string `json:"name,omitempty"`
+	NamespaceId string `json:"namespace_id,omitempty"`
+	Type        string `json:"type"`
 }
 
 type AuditSecret struct {
@@ -405,6 +476,14 @@ func getRemoteAddr(req *logical.Request) string {
 		return req.Connection.RemoteAddr
 	}
 	return ""
+}
+
+// getRemotePort safely gets the remote port avoiding a nil pointer
+func getRemotePort(req *logical.Request) int {
+	if req != nil && req.Connection != nil {
+		return req.Connection.RemotePort
+	}
+	return 0
 }
 
 func getClientCertificateSerialNumber(connState *tls.ConnectionState) string {
@@ -435,7 +514,7 @@ func parseVaultTokenFromJWT(token string) *string {
 	return &claims.ID
 }
 
-// Create a formatter not backed by a persistent salt.
+// NewTemporaryFormatter creates a formatter not backed by a persistent salt
 func NewTemporaryFormatter(format, prefix string) *AuditFormatter {
 	temporarySalt := func(ctx context.Context) (*salt.Salt, error) {
 		return salt.NewNonpersistentSalt(), nil
@@ -455,4 +534,23 @@ func NewTemporaryFormatter(format, prefix string) *AuditFormatter {
 		}
 	}
 	return ret
+}
+
+// doElideListResponseData performs the actual elision of list operation response data, once surrounding code has
+// determined it should apply to a particular request. The data map that is passed in must be a copy that is safe to
+// modify in place, but need not be a full recursive deep copy, as only top-level keys are changed.
+//
+// See the documentation of the controlling option in FormatterConfig for more information on the purpose.
+func doElideListResponseData(data map[string]interface{}) {
+	for k, v := range data {
+		if k == "keys" {
+			if vSlice, ok := v.([]string); ok {
+				data[k] = len(vSlice)
+			}
+		} else if k == "key_info" {
+			if vMap, ok := v.(map[string]interface{}); ok {
+				data[k] = len(vMap)
+			}
+		}
+	}
 }

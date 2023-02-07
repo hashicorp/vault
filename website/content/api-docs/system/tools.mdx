@@ -12,9 +12,9 @@ The `/sys/tools` endpoints are a general set of tools.
 
 This endpoint returns high-quality random bytes of the specified length.
 
-| Method | Path                         |
-| :----- | :--------------------------- |
-| `POST` | `/sys/tools/random(/:bytes)` |
+| Method | Path                                   |
+| :----- | :------------------------------------- |
+| `POST` | `/sys/tools/random(/:source)(/:bytes)` |
 
 ### Parameters
 
@@ -23,6 +23,11 @@ This endpoint returns high-quality random bytes of the specified length.
 
 - `format` `(string: "base64")` – Specifies the output encoding. Valid options
   are `hex` or `base64`.
+
+- `source` `(string: "platform")` - Specifies the source of the requested bytes.
+  `platform`, the default, sources bytes from the platform's entropy source. 
+  `seal` sources from entropy augmentation (enterprise only).
+  `all` mixes bytes from all available sources.
 
 ### Sample Payload
 
@@ -70,6 +75,14 @@ algorithm.
   - `sha2-256`
   - `sha2-384`
   - `sha2-512`
+  - `sha3-224`
+  - `sha3-256`
+  - `sha3-384`
+  - `sha3-512`
+
+  ~> **Note**: In FIPS 140-2 mode, the following algorithms are not certified
+     and thus should not be used: `sha3-224`, `sha3-256`, `sha3-384`, and
+     `sha3-512`.
 
 - `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
 

@@ -1,4 +1,5 @@
 import RESTSerializer from '@ember-data/serializer/rest';
+import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-helpers';
 
 export default RESTSerializer.extend({
   primaryKey: 'name',
@@ -15,17 +16,21 @@ export default RESTSerializer.extend({
 
   normalizeSecrets(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      const connections = payload.data.keys.map(secret => ({ name: secret, backend: payload.backend }));
+      const connections = payload.data.keys.map((secret) => ({ name: secret, backend: payload.backend }));
       return connections;
     }
     // Query single record response:
-    return {
+    const response = {
       id: payload.id,
       name: payload.id,
       backend: payload.backend,
       ...payload.data,
       ...payload.data.connection_details,
     };
+    if (payload.data.root_credentials_rotate_statements) {
+      response.root_rotation_statements = payload.data.root_credentials_rotate_statements;
+    }
+    return response;
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
@@ -40,5 +45,26 @@ export default RESTSerializer.extend({
       transformedPayload = { [modelName]: { id, ...connections } };
     }
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
+  },
+
+  serialize(snapshot, requestType) {
+    const data = this._super(snapshot, requestType);
+    if (!data.plugin_name) {
+      return data;
+    }
+    const pluginType = AVAILABLE_PLUGIN_TYPES.find((plugin) => plugin.value === data.plugin_name);
+    if (!pluginType) {
+      return data;
+    }
+    const pluginAttributes = pluginType.fields.map((fields) => fields.attr).concat('backend');
+
+    // filter data to only allow plugin specific attrs
+    const allowedAttributes = Object.keys(data).filter((dataAttrs) => pluginAttributes.includes(dataAttrs));
+    for (const key in data) {
+      if (!allowedAttributes.includes(key)) {
+        delete data[key];
+      }
+    }
+    return data;
   },
 });

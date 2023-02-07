@@ -2,12 +2,11 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
 // Response is a raw response that wraps an HTTP response.
@@ -19,7 +18,9 @@ type Response struct {
 // will consume the response body, but will not close it. Close must
 // still be called.
 func (r *Response) DecodeJSON(out interface{}) error {
-	return jsonutil.DecodeJSONFromReader(r.Body, out)
+	dec := json.NewDecoder(r.Body)
+	dec.UseNumber()
+	return dec.Decode(out)
 }
 
 // Error returns an error response if there is one. If there is an error,
@@ -41,19 +42,23 @@ func (r *Response) Error() error {
 
 	r.Body.Close()
 	r.Body = ioutil.NopCloser(bodyBuf)
+	ns := r.Header.Get(NamespaceHeaderName)
 
 	// Build up the error object
 	respErr := &ResponseError{
-		HTTPMethod: r.Request.Method,
-		URL:        r.Request.URL.String(),
-		StatusCode: r.StatusCode,
+		HTTPMethod:    r.Request.Method,
+		URL:           r.Request.URL.String(),
+		StatusCode:    r.StatusCode,
+		NamespacePath: ns,
 	}
 
 	// Decode the error response if we can. Note that we wrap the bodyBuf
 	// in a bytes.Reader here so that the JSON decoder doesn't move the
 	// read pointer for the original buffer.
 	var resp ErrorResponse
-	if err := jsonutil.DecodeJSON(bodyBuf.Bytes(), &resp); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(bodyBuf.Bytes()))
+	dec.UseNumber()
+	if err := dec.Decode(&resp); err != nil {
 		// Store the fact that we couldn't decode the errors
 		respErr.RawError = true
 		respErr.Errors = []string{bodyBuf.String()}
@@ -92,6 +97,10 @@ type ResponseError struct {
 
 	// Errors are the underlying errors returned by Vault.
 	Errors []string
+
+	// Namespace path to be reported to the client if it is set to anything other
+	// than root
+	NamespacePath string
 }
 
 // Error returns a human-readable error string for the response error.
@@ -101,9 +110,15 @@ func (r *ResponseError) Error() string {
 		errString = "Raw Message"
 	}
 
+	var ns string
+	if r.NamespacePath != "" && r.NamespacePath != "root/" {
+		ns = "Namespace: " + r.NamespacePath + "\n"
+	}
+
 	var errBody bytes.Buffer
 	errBody.WriteString(fmt.Sprintf(
 		"Error making API request.\n\n"+
+			ns+
 			"URL: %s %s\n"+
 			"Code: %d. %s:\n\n",
 		r.HTTPMethod, r.URL, r.StatusCode, errString))

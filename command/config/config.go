@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
@@ -57,7 +56,7 @@ func LoadConfig(path string) (*DefaultConfig, error) {
 	// NOTE: requires HOME env var to be set
 	path, err := homedir.Expand(path)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("error expanding config path %q: {{err}}", path), err)
+		return nil, fmt.Errorf("error expanding config path %q: %w", path, err)
 	}
 
 	contents, err := ioutil.ReadFile(path)
@@ -67,7 +66,7 @@ func LoadConfig(path string) (*DefaultConfig, error) {
 
 	conf, err := ParseConfig(string(contents))
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("error parsing config file at %q: {{err}}; ensure that the file is valid; Ansible Vault is known to conflict with it.", path), err)
+		return nil, fmt.Errorf("error parsing config file at %q: %w; ensure that the file is valid; Ansible Vault is known to conflict with it.", path, err)
 	}
 
 	return conf, nil

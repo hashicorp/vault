@@ -9,25 +9,22 @@
 
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink
-        @type="add"
-        @params={{array 'vault.cluster.access.namespaces.create'}}
-      >
+      <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add">
         Create namespace
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
 
-  <ListView @items={{model}} @itemNoun="namespace" as |list|>
+  <ListView @items={{this.model}} @itemNoun="namespace" @paginationRouteName="vault.cluster.access.namespaces" as |list|>
     {{#if list.empty}}
       <list.empty>
         <LinkTo @route="vault.cluster.access.namespaces.create">
           Create Namespace
         </LinkTo>
 
-        <LearnLink @path="/vault/security/namespaces">
+        <DocLink @path="/vault/tutorials/enterprise/namespaces">
           Learn more
-        </LearnLink>
+        </DocLink>
       </list.empty>
     {{else}}
       <ListItem as |Item|>
@@ -35,15 +32,15 @@
           {{list.item.id}}
         </Item.content>
         <Item.menu as |m|>
-          {{#with (concat currentNamespace (if currentNamespace "/") list.item.id) as |targetNamespace|}}
-            {{#if (contains targetNamespace accessibleNamespaces)}}
+          {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
+            {{#if (includes targetNamespace this.accessibleNamespaces)}}
               <li class="action">
                 <NamespaceLink @targetNamespace={{targetNamespace}} @class="is-block">
                   Switch to Namespace
                 </NamespaceLink>
               </li>
             {{/if}}
-          {{/with}}
+          {{/let}}
           <li class="action">
             <m.Message
               @id={{list.item.id}}
@@ -58,7 +55,8 @@
                   "There was an error deleting this namespace: "
                   (action "refreshNamespaceList")
                 )
-              }} />
+              }}
+            />
           </li>
         </Item.menu>
       </ListItem>

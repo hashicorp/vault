@@ -2,6 +2,7 @@ import { next } from '@ember/runloop';
 import { typeOf } from '@ember/utils';
 import Service, { inject as service } from '@ember/service';
 import { Machine } from 'xstate';
+import { capitalize } from '@ember/string';
 
 import getStorage from 'vault/lib/token-storage';
 import { STORAGE_KEYS, DEFAULTS, MACHINES } from 'vault/helpers/wizard-constants';
@@ -29,7 +30,7 @@ export default Service.extend(DEFAULTS, {
 
   initializeMachines() {
     if (!this.storageHasKey(TUTORIAL_STATE)) {
-      let state = TutorialMachine.initialState;
+      const state = TutorialMachine.initialState;
       this.saveState('currentState', state.value);
       this.saveExtState(TUTORIAL_STATE, state.value);
     }
@@ -37,8 +38,12 @@ export default Service.extend(DEFAULTS, {
     if (this.storageHasKey(COMPONENT_STATE)) {
       this.set('componentState', this.getExtState(COMPONENT_STATE));
     }
-    let stateNodes = TutorialMachine.getStateNodes(this.currentState);
-    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []), null, 'tutorial');
+    const stateNodes = TutorialMachine.getStateNodes(this.currentState);
+    this.executeActions(
+      stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []),
+      null,
+      'tutorial'
+    );
 
     if (this.storageHasKey(FEATURE_LIST)) {
       this.set('featureList', this.getExtState(FEATURE_LIST));
@@ -55,9 +60,9 @@ export default Service.extend(DEFAULTS, {
   },
 
   clearFeatureData() {
-    let storage = this.storage();
+    const storage = this.storage();
     // empty storage
-    [FEATURE_LIST, FEATURE_STATE, FEATURE_STATE_HISTORY, COMPLETED_FEATURES].forEach(key =>
+    [FEATURE_LIST, FEATURE_STATE, FEATURE_STATE_HISTORY, COMPLETED_FEATURES].forEach((key) =>
       storage.removeItem(key)
     );
 
@@ -69,9 +74,9 @@ export default Service.extend(DEFAULTS, {
 
   restartGuide() {
     this.clearFeatureData();
-    let storage = this.storage();
+    const storage = this.storage();
     // empty storage
-    [TUTORIAL_STATE, COMPONENT_STATE, RESUME_URL, RESUME_ROUTE].forEach(key => storage.removeItem(key));
+    [TUTORIAL_STATE, COMPONENT_STATE, RESUME_URL, RESUME_ROUTE].forEach((key) => storage.removeItem(key));
     // reset wizard state
     this.setProperties(DEFAULTS);
     // restart machines from blank state
@@ -86,17 +91,17 @@ export default Service.extend(DEFAULTS, {
       this.featureMachineHistory === null &&
       (state === 'idle' || state === 'wrap')
     ) {
-      let newHistory = [state];
+      const newHistory = [state];
       this.set('featureMachineHistory', newHistory);
     } else {
       if (this.featureMachineHistory) {
         if (!this.featureMachineHistory.includes(state)) {
-          let newHistory = this.featureMachineHistory.addObject(state);
+          const newHistory = this.featureMachineHistory.addObject(state);
           this.set('featureMachineHistory', newHistory);
         } else {
           //we're repeating steps
-          let stepIndex = this.featureMachineHistory.indexOf(state);
-          let newHistory = this.featureMachineHistory.splice(0, stepIndex + 1);
+          const stepIndex = this.featureMachineHistory.indexOf(state);
+          const newHistory = this.featureMachineHistory.splice(0, stepIndex + 1);
           this.set('featureMachineHistory', newHistory);
         }
       }
@@ -112,7 +117,7 @@ export default Service.extend(DEFAULTS, {
     }
     let stateKey = '';
     while (typeOf(state) === 'object') {
-      let newState = Object.keys(state);
+      const newState = Object.keys(state);
       stateKey += newState + '.';
       state = state[newState];
     }
@@ -129,7 +134,7 @@ export default Service.extend(DEFAULTS, {
       this.set('componentState', extendedState);
       this.saveExtState(COMPONENT_STATE, extendedState);
     }
-    let { actions, value } = TutorialMachine.transition(currentState, event);
+    const { actions, value } = TutorialMachine.transition(currentState, event);
     this.saveState('currentState', value);
     this.saveExtState(TUTORIAL_STATE, this.currentState);
     this.executeActions(actions, event, 'tutorial');
@@ -144,7 +149,7 @@ export default Service.extend(DEFAULTS, {
       this.saveExtState(COMPONENT_STATE, extendedState);
     }
 
-    let { actions, value } = FeatureMachine.transition(currentState, event, this.componentState);
+    const { actions, value } = FeatureMachine.transition(currentState, event, this.componentState);
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
     this.executeActions(actions, event, 'feature');
@@ -176,9 +181,9 @@ export default Service.extend(DEFAULTS, {
   executeActions(actions, event, machineType) {
     let transitionURL;
     let expectedRouteName;
-    let router = this.router;
+    const router = this.router;
 
-    for (let action of actions) {
+    for (const action of actions) {
       let type = action;
       if (action.type) {
         type = action.type;
@@ -242,7 +247,7 @@ export default Service.extend(DEFAULTS, {
   },
 
   handlePaused() {
-    let expected = this.expectedURL;
+    const expected = this.expectedURL;
     if (expected) {
       this.saveExtState(RESUME_URL, this.expectedURL);
       this.saveExtState(RESUME_ROUTE, this.expectedRouteName);
@@ -250,7 +255,7 @@ export default Service.extend(DEFAULTS, {
   },
 
   handleResume() {
-    let resumeURL = this.storage().getItem(RESUME_URL);
+    const resumeURL = this.storage().getItem(RESUME_URL);
     if (!resumeURL) {
       return;
     }
@@ -283,7 +288,7 @@ export default Service.extend(DEFAULTS, {
       return;
     }
     this.startFeature();
-    let nextFeature = this.featureList.length > 1 ? this.featureList.objectAt(1).capitalize() : 'Finish';
+    const nextFeature = this.featureList.length > 1 ? capitalize(this.featureList.objectAt(1)) : 'Finish';
     this.set('nextFeature', nextFeature);
     let next;
     if (this.currentMachine === 'secrets' && this.featureState === 'display') {
@@ -292,8 +297,12 @@ export default Service.extend(DEFAULTS, {
       next = FeatureMachine.transition(this.featureState, 'CONTINUE', this.componentState);
     }
     this.saveState('nextStep', next.value);
-    let stateNodes = FeatureMachine.getStateNodes(this.featureState);
-    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []), null, 'feature');
+    const stateNodes = FeatureMachine.getStateNodes(this.featureState);
+    this.executeActions(
+      stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []),
+      null,
+      'feature'
+    );
   },
 
   startFeature() {
@@ -316,19 +325,14 @@ export default Service.extend(DEFAULTS, {
   },
 
   completeFeature() {
-    let features = this.featureList;
-    let done = features.shift();
+    const features = this.featureList;
+    const done = features.shift();
     if (!this.getExtState(COMPLETED_FEATURES)) {
-      let completed = [];
+      const completed = [];
       completed.push(done);
       this.saveExtState(COMPLETED_FEATURES, completed);
     } else {
-      this.saveExtState(
-        COMPLETED_FEATURES,
-        this.getExtState(COMPLETED_FEATURES)
-          .toArray()
-          .addObject(done)
-      );
+      this.saveExtState(COMPLETED_FEATURES, this.getExtState(COMPLETED_FEATURES).toArray().addObject(done));
     }
 
     this.saveExtState(FEATURE_LIST, features.length ? features : null);

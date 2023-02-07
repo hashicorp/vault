@@ -1,35 +1,34 @@
-<HeaderScope/>
+<HeaderScope />
 <Toolbar>
   <ToolbarActions>
-  {{#if model}}
-    <ToolbarDownloadButton
-      @actionText="Download CA cert"
-      @extension="pem"
-      @filename={{concat model.ca.id "-ca"}}
-      @data={{model.ca.caPem}}
-    />
-  {{/if}}
-    <ToolbarLink
-      @params={{array "configure"}}
-      data-test-kmip-link-configure
-    >
-     Configure
+    {{#if this.model}}
+      <DownloadButton
+        class="toolbar-link"
+        @filename={{concat this.model.ca.id "-ca"}}
+        @data={{this.model.ca.caPem}}
+        @extension="pem"
+      >
+        Download CA cert
+        <Chevron @isButton={{true}} />
+      </DownloadButton>
+    {{/if}}
+    <ToolbarLink @route="configure" data-test-kmip-link-configure>
+      Configure
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
-{{#if model}}
-  <FieldGroupShow @model={{model}} />
-  <InfoTableRow
-    @label="CA PEM"
-    @value={{model.ca.caPem}}
-  />
+{{#if this.model}}
+  <FieldGroupShow @model={{this.model}} />
+  <InfoTableRow @label="CA PEM" @value={{this.model.ca.caPem}}>
+    <MaskedInput @value={{this.model.ca.caPem}} @displayOnly={{true}} @allowCopy={{true}} />
+  </InfoTableRow>
 {{else}}
   <EmptyState
     @title="No configuration for this secrets engine"
     @message="We'll need to configure a few things before getting started."
   >
-    {{#link-to "configure"}}
+    <LinkTo @route="configure">
       Configure
-    {{/link-to}}
+    </LinkTo>
   </EmptyState>
 {{/if}}

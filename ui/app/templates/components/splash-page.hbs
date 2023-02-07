@@ -1,30 +1,37 @@
-<NavHeader as |Nav|>
-  <Nav.home>
-    <HomeLink @class="navbar-item splash-page-logo has-text-white">
-      <LogoEdition />
-    </HomeLink>
-  </Nav.home>
-  <Nav.items>
-   <div class="navbar-item status-indicator-button" data-status="{{if activeCluster.unsealed "good" "bad"}}">
-     <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
-   </div>
-  </Nav.items>
-</NavHeader>
-<UiWizard>
-  <div class="splash-page-container section is-flex-v-centered-tablet is-flex-1 is-fullwidth">
-    <div class="columns is-centered is-gapless is-fullwidth">
-      <div class="column is-4-desktop is-6-tablet">
-        <div class="splash-page-header">
-          {{yield (hash header=(component 'splash-page/splash-header'))}}
+{{#if this.showTruncatedNavBar}}
+  <NavHeader as |Nav|>
+    <Nav.home>
+      <HomeLink @class="navbar-item splash-page-logo has-text-white">
+        <LogoEdition />
+      </HomeLink>
+    </Nav.home>
+    <Nav.items>
+      <div class="navbar-item status-indicator-button" data-status={{if this.activeCluster.unsealed "good" "bad"}}>
+        <StatusMenu @label="Status" @onLinkClick={{Nav.closeDrawer}} />
+      </div>
+    </Nav.items>
+  </NavHeader>
+{{/if}}
+{{! bypass UiWizard and container styling }}
+{{#if @hasAltContent}}
+  {{yield (hash altContent=(component "splash-page/splash-content"))}}
+{{else}}
+  <UiWizard>
+    <div class="splash-page-container section is-flex-v-centered-tablet is-flex-1 is-fullwidth">
+      <div class="columns is-centered is-gapless is-fullwidth">
+        <div class="column is-4-desktop is-6-tablet">
+          <div class="splash-page-header">
+            {{yield (hash header=(component "splash-page/splash-header"))}}
+          </div>
+          <div class="splash-page-sub-header">
+            {{yield (hash sub-header=(component "splash-page/splash-header"))}}
+          </div>
+          <div class="login-form box is-paddingless is-relative">
+            {{yield (hash content=(component "splash-page/splash-content"))}}
+          </div>
+          {{yield (hash footer=(component "splash-page/splash-content"))}}
         </div>
-        <div class="splash-page-sub-header">
-          {{yield (hash sub-header=(component 'splash-page/splash-header'))}}
-        </div>
-        <div class="login-form box is-paddingless is-relative">
-          {{yield (hash content=(component 'splash-page/splash-content'))}}
-        </div>
-        {{yield (hash footer=(component 'splash-page/splash-content')) }}
       </div>
     </div>
-  </div>
-</UiWizard>
+  </UiWizard>
+{{/if}}

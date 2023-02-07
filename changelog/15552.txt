@@ -1,0 +1,6 @@
+```release-note:bug
+openapi: Fixed issue where information about /auth/token endpoints was not present with explicit policy permissions
+```
+```release-note:bug
+api: Fixed issue with internal/ui/mounts and internal/ui/mounts/(?P<path>.+) endpoints where it was not properly handling /auth/
+```

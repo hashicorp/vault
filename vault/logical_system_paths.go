@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -55,6 +56,23 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Callback:    b.handleConfigStateSanitized,
 					Summary:     "Return a sanitized version of the Vault server configuration.",
 					Description: "The sanitized output strips configuration values in the storage, HA storage, and seals stanzas, which may contain sensitive values such as API tokens. It also removes any token or secret fields in other stanzas, such as the circonus_api_token from telemetry.",
+				},
+			},
+		},
+
+		{
+			Pattern: "config/reload/(?P<subsystem>.+)",
+			Fields: map[string]*framework.FieldSchema{
+				"subsystem": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["config/reload"][0]),
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:    b.handleConfigReload,
+					Summary:     "Reload the given subsystem",
+					Description: "",
 				},
 			},
 		},
@@ -139,7 +157,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master key share.",
+					Description: "Specifies a single unseal key share.",
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -148,8 +166,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Summary:     "Enter a single master key share to progress the root generation attempt.",
-					Description: "If the threshold number of master key shares is reached, Vault will complete the root generation and issue the new token. Otherwise, this API must be called multiple times until that threshold is met. The attempt nonce must be provided with each call.",
+					Summary:     "Enter a single unseal key share to progress the root generation attempt.",
+					Description: "If the threshold number of unseal key shares is reached, Vault will complete the root generation and issue the new token. Otherwise, this API must be called multiple times until that threshold is met. The attempt nonce must be provided with each call.",
 				},
 			},
 
@@ -222,11 +240,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				"secret_shares": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares to split the master key into.",
+					Description: "Specifies the number of shares to split the unseal key into.",
 				},
 				"secret_threshold": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares required to reconstruct the master key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as `secret_shares`.",
+					Description: "Specifies the number of shares required to reconstruct the unseal key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as `secret_shares`.",
 				},
 				"stored_shares": {
 					Type:        framework.TypeInt,
@@ -271,6 +289,58 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 			},
 		},
+		{
+			Pattern: "loggers$",
+			Fields: map[string]*framework.FieldSchema{
+				"level": {
+					Type: framework.TypeString,
+					Description: "Log verbosity level. Supported values (in order of detail) are " +
+						"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLoggersRead,
+					Summary:  "Read the log level for all existing loggers.",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleLoggersWrite,
+					Summary:  "Modify the log level for all existing loggers.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleLoggersDelete,
+					Summary:  "Revert the all loggers to use log level provided in config.",
+				},
+			},
+		},
+		{
+			Pattern: "loggers/" + framework.MatchAllRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "The name of the logger to be modified.",
+				},
+				"level": {
+					Type: framework.TypeString,
+					Description: "Log verbosity level. Supported values (in order of detail) are " +
+						"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameRead,
+					Summary:  "Read the log level for a single logger.",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameWrite,
+					Summary:  "Modify the log level of a single logger.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameDelete,
+					Summary:  "Revert a single logger to use log level provided in config.",
+				},
+			},
+		},
 	}
 }
 
@@ -282,11 +352,11 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"secret_shares": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares to split the master key into.",
+					Description: "Specifies the number of shares to split the unseal key into.",
 				},
 				"secret_threshold": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares required to reconstruct the master key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as secret_shares.",
+					Description: "Specifies the number of shares required to reconstruct the unseal key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as secret_shares.",
 				},
 				"pgp_keys": {
 					Type:        framework.TypeCommaStringSlice,
@@ -355,7 +425,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master key share.",
+					Description: "Specifies a single unseal key share.",
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -365,7 +435,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Summary: "Enter a single master key share to progress the rekey of the Vault.",
+					Summary: "Enter a single unseal key share to progress the rekey of the Vault.",
 				},
 			},
 		},
@@ -375,7 +445,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master share key from the new set of shares.",
+					Description: "Specifies a single unseal share key from the new set of shares.",
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -413,7 +483,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master key share. This is required unless reset is true.",
+					Description: "Specifies a single unseal key share. This is required unless reset is true.",
 				},
 				"reset": {
 					Type:        framework.TypeBool,
@@ -459,6 +529,31 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["seal-status"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["seal-status"][1]),
 		},
+		{
+			Pattern: "ha-status$",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleHAStatus,
+					Summary:  "Check the HA status of a Vault cluster",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["ha-status"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["ha-status"][1]),
+		},
+		{
+			Pattern: "version-history/$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleVersionHistoryList,
+					Summary:  "Returns map of historical version change entries",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["version-history"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["version-history"][1]),
+		},
 	}
 }
 
@@ -477,9 +572,21 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 					Type: framework.TypeString,
 				},
 			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleAuditHash,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleAuditHash,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"hash": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
@@ -493,6 +600,13 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditTable,
 					Summary:  "List the enabled audit devices.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							// this response has dynamic keys
+							Description: "OK",
+							Fields:      nil,
+						}},
+					},
 				},
 			},
 
@@ -531,10 +645,20 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAudit,
 					Summary:  "Enable a new audit device at the supplied path.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDisableAudit,
 					Summary:  "Disable the audit device at the given path.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 
@@ -558,14 +682,31 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderUpdate,
 					Summary:  "Enable auditing of a header.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderDelete,
 					Summary:  "Disable auditing of the given request header.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderRead,
 					Summary:  "List the information for the given request header.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// the response keys are dynamic
+							Fields: nil,
+						}},
+					},
 				},
 			},
 
@@ -580,6 +721,17 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeadersRead,
 					Summary:  "List the request headers that are configured to be audited.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"headers": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -610,7 +762,7 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 					Description: strings.TrimSpace(sysHelp["rotation-enabled"][0]),
 				},
 				"max_operations": {
-					Type:        framework.TypeInt, // 64?
+					Type:        framework.TypeInt64,
 					Description: strings.TrimSpace(sysHelp["rotation-max-operations"][0]),
 				},
 				"interval": {
@@ -679,6 +831,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 			"env": {
 				Type:        framework.TypeStringSlice,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_env"][0]),
+			},
+			"version": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 			},
 		},
 
@@ -813,7 +969,7 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "tools/random" + framework.OptionalParamRegex("urlbytes"),
+			Pattern: "tools/random(/" + framework.GenericNameRegex("source") + ")?" + framework.OptionalParamRegex("urlbytes"),
 			Fields: map[string]*framework.FieldSchema{
 				"urlbytes": {
 					Type:        framework.TypeString,
@@ -830,6 +986,12 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Default:     "base64",
 					Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "base64".`,
+				},
+
+				"source": {
+					Type:        framework.TypeString,
+					Default:     "platform",
+					Description: `Which system to source random data from, ether "platform", "seal", or "all".`,
 				},
 			},
 
@@ -852,20 +1014,18 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Context string appended to every operationId",
 				},
+				"generic_mount_paths": {
+					Type:        framework.TypeBool,
+					Description: "Use generic mount paths",
+					Query:       true,
+					Default:     false,
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation:   b.pathInternalOpenAPI,
 				logical.UpdateOperation: b.pathInternalOpenAPI,
 			},
-		},
-		{
-			Pattern: "internal/specs/openapi",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalOpenAPI,
-					Summary:  "Generate an OpenAPI 3 document of all mounted paths.",
-				},
-			},
+			HelpSynopsis: "Generate an OpenAPI 3 document of all mounted paths.",
 		},
 		{
 			Pattern: "internal/ui/feature-flags",
@@ -910,8 +1070,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/ui/namespaces",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    pathInternalUINamespacesRead(b),
-					Unpublished: true,
+					Callback: pathInternalUINamespacesRead(b),
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-namespaces"][0]),
@@ -921,8 +1081,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/ui/resultant-acl",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalUIResultantACL,
-					Unpublished: true,
+					Callback: b.pathInternalUIResultantACL,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
@@ -932,8 +1092,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/requests",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalCountersRequests,
-					Unpublished: true,
+					Callback: b.pathInternalCountersRequests,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
@@ -943,8 +1103,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/tokens",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalCountersTokens,
-					Unpublished: true,
+					Callback: b.pathInternalCountersTokens,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
@@ -954,12 +1114,34 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/entities",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalCountersEntities,
-					Unpublished: true,
+					Callback: b.pathInternalCountersEntities,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-entities"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) introspectionPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "internal/inspect/router/" + framework.GenericNameRegex("tag"),
+			Fields: map[string]*framework.FieldSchema{
+				"tag": {
+					Type:        framework.TypeString,
+					Description: "Name of subtree being observed",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalInspectRouter,
+					Summary:  "Expose the route entry and mount entry tables present in the router",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-inspect-router"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-inspect-router"][1]),
 		},
 	}
 }
@@ -1210,30 +1392,106 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["tidy_leases"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["tidy_leases"][1]),
 		},
+
+		{
+			Pattern: "leases/count$",
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Required:    true,
+					Description: "Type of leases to get counts for (currently only supporting irrevocable).",
+				},
+				"include_child_namespaces": {
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: "Set true if you want counts for this namespace and its children.",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				// currently only works for irrevocable leases with param: type=irrevocable
+				logical.ReadOperation: b.handleLeaseCount,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["count-leases"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["count-leases"][1]),
+		},
+
+		{
+			Pattern: "leases$",
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Required:    true,
+					Description: "Type of leases to retrieve (currently only supporting irrevocable).",
+				},
+				"include_child_namespaces": {
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: "Set true if you want leases for this namespace and its children.",
+				},
+				"limit": {
+					Type:        framework.TypeString,
+					Default:     "",
+					Description: "Set to a positive integer of the maximum number of entries to return. If you want all results, set to 'none'. If not set, you will get a maximum of 10,000 results returned.",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				// currently only works for irrevocable leases with param: type=irrevocable
+				logical.ReadOperation: b.handleLeaseList,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["list-leases"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["list-leases"][1]),
+		},
 	}
 }
 
-func (b *SystemBackend) remountPath() *framework.Path {
-	return &framework.Path{
-		Pattern: "remount",
+func (b *SystemBackend) remountPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "remount",
 
-		Fields: map[string]*framework.FieldSchema{
-			"from": {
-				Type:        framework.TypeString,
-				Description: "The previous mount point.",
+			Fields: map[string]*framework.FieldSchema{
+				"from": {
+					Type:        framework.TypeString,
+					Description: "The previous mount point.",
+				},
+				"to": {
+					Type:        framework.TypeString,
+					Description: "The new mount point.",
+				},
 			},
-			"to": {
-				Type:        framework.TypeString,
-				Description: "The new mount point.",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleRemount,
+					Summary:  "Initiate a mount migration",
+				},
 			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["remount"][1]),
 		},
+		{
+			Pattern: "remount/status/(?P<migration_id>.+?)$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.handleRemount,
+			Fields: map[string]*framework.FieldSchema{
+				"migration_id": {
+					Type:        framework.TypeString,
+					Description: "The ID of the migration operation",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleRemountStatusCheck,
+					Summary:  "Check status of a mount migration",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["remount-status"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["remount-status"][1]),
 		},
-
-		HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
-		HelpDescription: strings.TrimSpace(sysHelp["remount"][1]),
 	}
 }
 
@@ -1264,12 +1522,31 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 				Description: "Log level to view system logs at. Currently supported values are \"trace\", \"debug\", \"info\", \"warn\", \"error\".",
 				Query:       true,
 			},
+			"log_format": {
+				Type:        framework.TypeString,
+				Description: "Output format of logs. Supported values are \"standard\" and \"json\". The default is \"standard\".",
+				Query:       true,
+				Default:     "standard",
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.handleMonitor,
 		},
 		HelpSynopsis:    strings.TrimSpace(sysHelp["monitor"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["monitor"][1]),
+	}
+}
+
+func (b *SystemBackend) inFlightRequestPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "in-flight-req",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:    b.handleInFlightRequestData,
+				Summary:     strings.TrimSpace(sysHelp["in-flight-req"][0]),
+				Description: strings.TrimSpace(sysHelp["in-flight-req"][1]),
+			},
+		},
 	}
 }
 
@@ -1345,6 +1622,14 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["token_type"][0]),
 				},
+				"user_lockout_config": {
+					Type:        framework.TypeMap,
+					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
+				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -1403,8 +1688,16 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["auth_options"][0]),
 				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadAuth,
+					Summary:  "Read the configuration of the auth engine at the given path.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAuth,
 					Summary:  "Enables a new auth method.",
@@ -1520,6 +1813,17 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 		},
 
 		{
+			Pattern: "policies/password/?$",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordList,
+					Summary:  "List the existing password policies.",
+				},
+			},
+		},
+
+		{
 			Pattern: "policies/password/(?P<name>.+)/generate$",
 
 			Fields: map[string]*framework.FieldSchema{
@@ -1587,6 +1891,8 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["wrap"][1]),
+
+			TakesArbitraryInput: true,
 		},
 
 		{
@@ -1699,6 +2005,18 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["token_type"][0]),
 				},
+				"allowed_managed_keys": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
+				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
+				"user_lockout_config": {
+					Type:        framework.TypeMap,
+					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
+				},
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1753,9 +2071,17 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["mount_options"][0]),
 				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadMount,
+					Summary:  "Read the configuration of the secret engine at the given path.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleMount,
 					Summary:  "Enable a new secrets engine at the given path.",
@@ -1778,6 +2104,65 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["mounts"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) experimentPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "experiments$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadExperiments,
+					Summary:  "Returns the available and enabled experiments",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["experiments"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["experiments"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) lockedUserPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "locked-users/(?P<mount_accessor>.+?)/unlock/(?P<alias_identifier>.+)",
+			Fields: map[string]*framework.FieldSchema{
+				"mount_accessor": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
+				},
+				"alias_identifier": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["alias_identifier"][0]),
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleUnlockUser,
+					Summary:  "Unlocks the user with given mount_accessor and alias_identifier",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
+		},
+		{
+			Pattern: "locked-users",
+			Fields: map[string]*framework.FieldSchema{
+				"mount_accessor": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLockedUsersMetricQuery,
+					Summary:  "Report the locked user count metrics, for this namespace and all child namespaces.",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["locked_users"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["locked_users"][1]),
 		},
 	}
 }

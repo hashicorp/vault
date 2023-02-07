@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Upgrade hashicorp/consul-template version for sprig template functions and improved writeTo function
+```

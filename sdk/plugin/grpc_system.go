@@ -18,11 +18,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var errMissingSystemView = errors.New("missing system view implementation: this method should not be called during plugin Setup, but only during and after Initialize")
+
 func newGRPCSystemView(conn *grpc.ClientConn) *gRPCSystemViewClient {
 	return &gRPCSystemViewClient{
 		client: pb.NewSystemViewClient(conn),
 	}
 }
+
+var _ logical.SystemView = &gRPCSystemViewClient{}
 
 type gRPCSystemViewClient struct {
 	client pb.SystemViewClient
@@ -99,8 +103,20 @@ func (s *gRPCSystemViewClient) ResponseWrapData(ctx context.Context, data map[st
 	return info, nil
 }
 
+func (s *gRPCSystemViewClient) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error) {
+	return nil, fmt.Errorf("cannot call NewPluginClient from a plugin backend")
+}
+
 func (s *gRPCSystemViewClient) LookupPlugin(_ context.Context, _ string, _ consts.PluginType) (*pluginutil.PluginRunner, error) {
 	return nil, fmt.Errorf("cannot call LookupPlugin from a plugin backend")
+}
+
+func (s *gRPCSystemViewClient) LookupPluginVersion(_ context.Context, _ string, _ consts.PluginType, _ string) (*pluginutil.PluginRunner, error) {
+	return nil, fmt.Errorf("cannot call LookupPluginVersion from a plugin backend")
+}
+
+func (s *gRPCSystemViewClient) ListVersionedPlugins(_ context.Context, _ consts.PluginType) ([]pluginutil.VersionedPlugin, error) {
+	return nil, fmt.Errorf("cannot call ListVersionedPlugins from a plugin backend")
 }
 
 func (s *gRPCSystemViewClient) MlockEnabled() bool {
@@ -163,6 +179,15 @@ func (s *gRPCSystemViewClient) PluginEnv(ctx context.Context) (*logical.PluginEn
 	return reply.PluginEnvironment, nil
 }
 
+func (s *gRPCSystemViewClient) VaultVersion(ctx context.Context) (string, error) {
+	reply, err := s.client.PluginEnv(ctx, &pb.Empty{})
+	if err != nil {
+		return "", err
+	}
+
+	return reply.PluginEnvironment.VaultVersion, nil
+}
+
 func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
 	req := &pb.GeneratePasswordFromPolicyRequest{
 		PolicyName: policyName,
@@ -174,11 +199,25 @@ func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, p
 	return resp.Password, nil
 }
 
+func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
+	reply, err := s.client.ClusterInfo(ctx, &pb.Empty{})
+	if err != nil {
+		return "", err
+	}
+
+	return reply.ClusterID, nil
+}
+
 type gRPCSystemViewServer struct {
+	pb.UnimplementedSystemViewServer
+
 	impl logical.SystemView
 }
 
 func (s *gRPCSystemViewServer) DefaultLeaseTTL(ctx context.Context, _ *pb.Empty) (*pb.TTLReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	ttl := s.impl.DefaultLeaseTTL()
 	return &pb.TTLReply{
 		TTL: int64(ttl),
@@ -186,6 +225,9 @@ func (s *gRPCSystemViewServer) DefaultLeaseTTL(ctx context.Context, _ *pb.Empty)
 }
 
 func (s *gRPCSystemViewServer) MaxLeaseTTL(ctx context.Context, _ *pb.Empty) (*pb.TTLReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	ttl := s.impl.MaxLeaseTTL()
 	return &pb.TTLReply{
 		TTL: int64(ttl),
@@ -193,6 +235,9 @@ func (s *gRPCSystemViewServer) MaxLeaseTTL(ctx context.Context, _ *pb.Empty) (*p
 }
 
 func (s *gRPCSystemViewServer) Tainted(ctx context.Context, _ *pb.Empty) (*pb.TaintedReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	tainted := s.impl.Tainted()
 	return &pb.TaintedReply{
 		Tainted: tainted,
@@ -200,6 +245,9 @@ func (s *gRPCSystemViewServer) Tainted(ctx context.Context, _ *pb.Empty) (*pb.Ta
 }
 
 func (s *gRPCSystemViewServer) CachingDisabled(ctx context.Context, _ *pb.Empty) (*pb.CachingDisabledReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	cachingDisabled := s.impl.CachingDisabled()
 	return &pb.CachingDisabledReply{
 		Disabled: cachingDisabled,
@@ -207,6 +255,9 @@ func (s *gRPCSystemViewServer) CachingDisabled(ctx context.Context, _ *pb.Empty)
 }
 
 func (s *gRPCSystemViewServer) ReplicationState(ctx context.Context, _ *pb.Empty) (*pb.ReplicationStateReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	replicationState := s.impl.ReplicationState()
 	return &pb.ReplicationStateReply{
 		State: int32(replicationState),
@@ -214,6 +265,9 @@ func (s *gRPCSystemViewServer) ReplicationState(ctx context.Context, _ *pb.Empty
 }
 
 func (s *gRPCSystemViewServer) ResponseWrapData(ctx context.Context, args *pb.ResponseWrapDataArgs) (*pb.ResponseWrapDataReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	data := map[string]interface{}{}
 	err := json.Unmarshal([]byte(args.Data), &data)
 	if err != nil {
@@ -239,6 +293,9 @@ func (s *gRPCSystemViewServer) ResponseWrapData(ctx context.Context, args *pb.Re
 }
 
 func (s *gRPCSystemViewServer) MlockEnabled(ctx context.Context, _ *pb.Empty) (*pb.MlockEnabledReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	enabled := s.impl.MlockEnabled()
 	return &pb.MlockEnabledReply{
 		Enabled: enabled,
@@ -246,6 +303,9 @@ func (s *gRPCSystemViewServer) MlockEnabled(ctx context.Context, _ *pb.Empty) (*
 }
 
 func (s *gRPCSystemViewServer) LocalMount(ctx context.Context, _ *pb.Empty) (*pb.LocalMountReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	local := s.impl.LocalMount()
 	return &pb.LocalMountReply{
 		Local: local,
@@ -253,6 +313,9 @@ func (s *gRPCSystemViewServer) LocalMount(ctx context.Context, _ *pb.Empty) (*pb
 }
 
 func (s *gRPCSystemViewServer) EntityInfo(ctx context.Context, args *pb.EntityInfoArgs) (*pb.EntityInfoReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	entity, err := s.impl.EntityInfo(args.EntityID)
 	if err != nil {
 		return &pb.EntityInfoReply{
@@ -265,6 +328,9 @@ func (s *gRPCSystemViewServer) EntityInfo(ctx context.Context, args *pb.EntityIn
 }
 
 func (s *gRPCSystemViewServer) GroupsForEntity(ctx context.Context, args *pb.EntityInfoArgs) (*pb.GroupsForEntityReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	groups, err := s.impl.GroupsForEntity(args.EntityID)
 	if err != nil {
 		return &pb.GroupsForEntityReply{
@@ -277,6 +343,9 @@ func (s *gRPCSystemViewServer) GroupsForEntity(ctx context.Context, args *pb.Ent
 }
 
 func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.PluginEnvReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	pluginEnv, err := s.impl.PluginEnv(ctx)
 	if err != nil {
 		return &pb.PluginEnvReply{
@@ -289,6 +358,9 @@ func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.
 }
 
 func (s *gRPCSystemViewServer) GeneratePasswordFromPolicy(ctx context.Context, req *pb.GeneratePasswordFromPolicyRequest) (*pb.GeneratePasswordFromPolicyReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	policyName := req.PolicyName
 	if policyName == "" {
 		return &pb.GeneratePasswordFromPolicyReply{}, status.Errorf(codes.InvalidArgument, "no password policy specified")
@@ -303,4 +375,19 @@ func (s *gRPCSystemViewServer) GeneratePasswordFromPolicy(ctx context.Context, r
 		Password: password,
 	}
 	return resp, nil
+}
+
+func (s *gRPCSystemViewServer) ClusterInfo(ctx context.Context, _ *pb.Empty) (*pb.ClusterInfoReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	clusterId, err := s.impl.ClusterID(ctx)
+	if err != nil {
+		return &pb.ClusterInfoReply{}, status.Errorf(codes.Internal, "failed to fetch cluster id")
+	}
+
+	return &pb.ClusterInfoReply{
+		ClusterID: clusterId,
+	}, nil
 }

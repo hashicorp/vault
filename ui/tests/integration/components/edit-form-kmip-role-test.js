@@ -1,4 +1,4 @@
-import { later, run } from '@ember/runloop';
+import { later, run, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import EmberObject, { computed } from '@ember/object';
 import Service from '@ember/service';
@@ -7,19 +7,18 @@ import { setupRenderingTest } from 'ember-qunit';
 import { click, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
+import { setupEngine } from 'ember-engines/test-support';
 import { COMPUTEDS } from 'vault/models/kmip/role';
-const resolver = engineResolverFor('kmip');
 
 const flash = Service.extend({
   success: sinon.stub(),
 });
 const namespace = Service.extend({});
 
-const fieldToCheckbox = field => ({ name: field, type: 'boolean' });
+const fieldToCheckbox = (field) => ({ name: field, type: 'boolean' });
 
-const createModel = options => {
-  let model = EmberObject.extend(COMPUTEDS, {
+const createModel = (options) => {
+  const model = EmberObject.extend(COMPUTEDS, {
     /* eslint-disable ember/avoid-leaking-state-in-ember-objects */
     newFields: [
       'role',
@@ -39,7 +38,7 @@ const createModel = options => {
       'tlsClientKeyType',
       'tlsClientTtl',
     ],
-    fields: computed('operationFields', function() {
+    fields: computed('operationFields', function () {
       return this.operationFields.map(fieldToCheckbox);
     }),
     destroyRecord() {
@@ -55,50 +54,52 @@ const createModel = options => {
   });
 };
 
-module('Integration | Component | edit form kmip role', function(hooks) {
-  setupRenderingTest(hooks, { resolver });
+module('Integration | Component | edit form kmip role', function (hooks) {
+  setupRenderingTest(hooks);
+  setupEngine(hooks, 'kmip');
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
+    this.context = { owner: this.engine }; // this.engine set by setupEngine
     run(() => {
-      this.owner.unregister('service:flash-messages');
-      this.owner.register('service:flash-messages', flash);
-      this.owner.register('service:namespace', namespace);
+      this.engine.unregister('service:flash-messages');
+      this.engine.register('service:flash-messages', flash);
+      this.engine.register('service:namespace', namespace);
     });
   });
 
-  test('it renders: new model', async function(assert) {
-    let model = createModel({ isNew: true });
+  test('it renders: new model', async function (assert) {
+    const model = createModel({ isNew: true });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{model}} />`);
+    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
 
     assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
   });
 
-  test('it renders: operationAll', async function(assert) {
-    let model = createModel({ operationAll: true });
+  test('it renders: operationAll', async function (assert) {
+    const model = createModel({ operationAll: true });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{model}} />`);
+    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
     assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
   });
 
-  test('it renders: operationNone', async function(assert) {
-    let model = createModel({ operationNone: true });
+  test('it renders: operationNone', async function (assert) {
+    const model = createModel({ operationNone: true });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{model}} />`);
+    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
 
     assert.dom('[data-test-input="operationNone"]').isNotChecked('sets operationNone');
   });
 
-  test('it renders: choose operations', async function(assert) {
-    let model = createModel({ operationGet: true });
+  test('it renders: choose operations', async function (assert) {
+    const model = createModel({ operationGet: true });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{model}} />`);
+    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
 
     assert.dom('[data-test-input="operationNone"]').isChecked('sets operationNone');
     assert.dom('[data-test-input="operationAll"]').isNotChecked('sets operationAll');
   });
 
-  let savingTests = [
+  const savingTests = [
     [
       'setting operationAll',
       { operationNone: true, operationGet: true },
@@ -112,6 +113,7 @@ module('Integration | Component | edit form kmip role', function(hooks) {
         operationGet: null,
         operationNone: false,
       },
+      5,
     ],
     [
       'setting operationNone',
@@ -127,6 +129,7 @@ module('Integration | Component | edit form kmip role', function(hooks) {
         operationCreate: null,
         operationAll: false,
       },
+      6,
     ],
 
     [
@@ -144,29 +147,35 @@ module('Integration | Component | edit form kmip role', function(hooks) {
         operationDestroy: true,
         operationAll: false,
       },
+      7,
     ],
   ];
-  for (let testCase of savingTests) {
-    let [name, initialState, displayClicks, stateBeforeSave, stateAfterSave] = testCase;
-    test(name, async function(assert) {
-      let model = createModel(initialState);
+  for (const testCase of savingTests) {
+    const [name, initialState, displayClicks, stateBeforeSave, stateAfterSave, assertionCount] = testCase;
+    test(name, async function (assert) {
+      assert.expect(assertionCount);
+      const model = createModel(initialState);
       this.set('model', model);
-      let clickTargets = displayClicks.split(',');
-      await render(hbs`<EditFormKmipRole @model={{model}} />`);
+      const clickTargets = displayClicks.split(',');
+      await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
 
-      for (let clickTarget of clickTargets) {
+      for (const clickTarget of clickTargets) {
         await click(`label[for=${clickTarget}]`);
       }
-      for (let beforeStateKey of Object.keys(stateBeforeSave)) {
-        assert.equal(model.get(beforeStateKey), stateBeforeSave[beforeStateKey], `sets ${beforeStateKey}`);
+      for (const beforeStateKey of Object.keys(stateBeforeSave)) {
+        assert.strictEqual(
+          model.get(beforeStateKey),
+          stateBeforeSave[beforeStateKey],
+          `sets ${beforeStateKey}`
+        );
       }
 
       click('[data-test-edit-form-submit]');
 
-      later(() => run.cancelTimers(), 50);
+      later(() => cancelTimers(), 50);
       return settled().then(() => {
-        for (let afterStateKey of Object.keys(stateAfterSave)) {
-          assert.equal(
+        for (const afterStateKey of Object.keys(stateAfterSave)) {
+          assert.strictEqual(
             model.get(afterStateKey),
             stateAfterSave[afterStateKey],
             `sets ${afterStateKey} on save`

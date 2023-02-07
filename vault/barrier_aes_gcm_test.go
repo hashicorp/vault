@@ -474,7 +474,7 @@ func TestEncrypt_Unique(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if bytes.Equal(first, second) == true {
+	if bytes.Equal(first, second) {
 		t.Fatalf("improper random seeding detected")
 	}
 }
@@ -517,6 +517,39 @@ func TestEncrypt_BarrierEncryptor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Initialize and unseal
+	key, err := b.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("err generating key: %v", err)
+	}
+	ctx := context.Background()
+	b.Initialize(ctx, key, nil, rand.Reader)
+	b.Unseal(ctx, key)
+
+	cipher, err := b.Encrypt(ctx, "foo", []byte("quick brown fox"))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	plain, err := b.Decrypt(ctx, "foo", cipher)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if string(plain) != "quick brown fox" {
+		t.Fatalf("bad: %s", plain)
+	}
+}
+
+// Ensure Decrypt returns an error (rather than panic) when given a ciphertext
+// that is nil or too short
+func TestDecrypt_InvalidCipherLength(t *testing.T) {
+	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -525,23 +558,26 @@ func TestEncrypt_BarrierEncryptor(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Initialize and unseal
-	key, _ := b.GenerateKey(rand.Reader)
-	b.Initialize(context.Background(), key, nil, rand.Reader)
-	b.Unseal(context.Background(), key)
-
-	cipher, err := b.Encrypt(context.Background(), "foo", []byte("quick brown fox"))
+	key, err := b.GenerateKey(rand.Reader)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("err generating key: %v", err)
+	}
+	ctx := context.Background()
+	b.Initialize(ctx, key, nil, rand.Reader)
+	b.Unseal(ctx, key)
+
+	var nilCipher []byte
+	if _, err = b.Decrypt(ctx, "", nilCipher); err == nil {
+		t.Fatal("expected error when given nil cipher")
+	}
+	emptyCipher := []byte{}
+	if _, err = b.Decrypt(ctx, "", emptyCipher); err == nil {
+		t.Fatal("expected error when given empty cipher")
 	}
 
-	plain, err := b.Decrypt(context.Background(), "foo", cipher)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if string(plain) != "quick brown fox" {
-		t.Fatalf("bad: %s", plain)
+	badTermLengthCipher := make([]byte, 3, 3)
+	if _, err = b.Decrypt(ctx, "", badTermLengthCipher); err == nil {
+		t.Fatal("expected error when given cipher with too short term")
 	}
 }
 

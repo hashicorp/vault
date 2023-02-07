@@ -6,14 +6,14 @@ export default Route.extend(ListRoute, {
   store: service(),
   secretMountPath: service(),
   credParams() {
-    let { role_name: role, scope_name: scope } = this.paramsFor('credentials');
+    const { role_name: role, scope_name: scope } = this.paramsFor('credentials');
     return {
       role,
       scope,
     };
   },
   model(params) {
-    let { role, scope } = this.credParams();
+    const { role, scope } = this.credParams();
     return this.store
       .lazyPaginatedQuery('kmip/credential', {
         role,
@@ -23,7 +23,7 @@ export default Route.extend(ListRoute, {
         page: params.page,
         pageFilter: params.pageFilter,
       })
-      .catch(err => {
+      .catch((err) => {
         if (err.httpStatus === 404) {
           return [];
         } else {
@@ -33,7 +33,7 @@ export default Route.extend(ListRoute, {
   },
 
   setupController(controller) {
-    let { role, scope } = this.credParams();
+    const { role, scope } = this.credParams();
     this._super(...arguments);
     controller.setProperties({ role, scope });
   },

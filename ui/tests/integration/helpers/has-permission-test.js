@@ -12,14 +12,14 @@ const Permissions = Service.extend({
   },
 });
 
-module('Integration | Helper | has-permission', function(hooks) {
+module('Integration | Helper | has-permission', function (hooks) {
   setupRenderingTest(hooks);
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.owner.register('service:permissions', Permissions);
     this.permissions = this.owner.lookup('service:permissions');
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`{{#if (has-permission)}}Yes{{else}}No{{/if}}`);
 
     assert.dom(this.element).hasText('No');

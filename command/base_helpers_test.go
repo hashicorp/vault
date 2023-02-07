@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -150,7 +151,7 @@ func TestTruncateToSeconds(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 
-		t.Run(fmt.Sprintf("%s", tc.d), func(t *testing.T) {
+		t.Run(tc.d.String(), func(t *testing.T) {
 			t.Parallel()
 
 			act := truncateToSeconds(tc.d)
@@ -205,6 +206,75 @@ func TestParseFlagFile(t *testing.T) {
 
 			if content != tc.exp {
 				t.Fatalf("expected %s to be %s", content, tc.exp)
+			}
+		})
+	}
+}
+
+func TestArgWarnings(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		args     []string
+		expected string
+	}{
+		{
+			[]string{"a", "b", "c"},
+			"",
+		},
+		{
+			[]string{"a", "-b"},
+			"-b",
+		},
+		{
+			[]string{"a", "--b"},
+			"--b",
+		},
+		{
+			[]string{"a-b", "-c"},
+			"-c",
+		},
+		{
+			[]string{"a", "-b-c"},
+			"-b-c",
+		},
+		{
+			[]string{"-a", "b"},
+			"-a",
+		},
+		{
+			[]string{globalFlagDetailed},
+			"",
+		},
+		{
+			[]string{"-" + globalFlagOutputCurlString + "=true"},
+			"",
+		},
+		{
+			[]string{"--" + globalFlagFormat + "=false"},
+			"",
+		},
+		{
+			[]string{"-x" + globalFlagDetailed},
+			"-x" + globalFlagDetailed,
+		},
+		{
+			[]string{"--x=" + globalFlagDetailed},
+			"--x=" + globalFlagDetailed,
+		},
+		{
+			[]string{"policy", "write", "my-policy", "-"},
+			"",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.expected, func(t *testing.T) {
+			warnings := generateFlagWarnings(tc.args)
+			if !strings.Contains(warnings, tc.expected) {
+				t.Fatalf("expected %s to contain %s", warnings, tc.expected)
 			}
 		})
 	}

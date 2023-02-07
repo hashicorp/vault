@@ -1,0 +1,3 @@
+```release-note:change
+logging: Removed legacy environment variable for log format ('LOGXI_FORMAT'), should use 'VAULT_LOG_FORMAT' instead
+```

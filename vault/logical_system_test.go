@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -17,18 +16,24 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
-	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/go-hclog"
+	semver "github.com/hashicorp/go-version"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -57,6 +62,8 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"leases/revoke-force/*",
 		"leases/lookup/*",
 		"storage/raft/snapshot-auto/config/*",
+		"leases",
+		"internal/inspect/*",
 	}
 
 	b := testSystemBackend(t)
@@ -167,6 +174,9 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+			"running_sha256":         "",
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -180,9 +190,12 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Accept"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":                  false,
+			"seal_wrap":              true,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
+			"running_sha256":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -195,9 +208,12 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":    false,
 			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":                  true,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
+			"running_sha256":         "",
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -206,17 +222,32 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"accessor":                resp.Data["identity/"].(map[string]interface{})["accessor"],
 			"uuid":                    resp.Data["identity/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-				"force_no_cache":    false,
+				"default_lease_ttl":           resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
+			"running_sha256":         "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
 		t.Fatalf("bad, diff: %#v", diff)
+	}
+
+	for name, conf := range exp {
+		req := logical.TestRequest(t, logical.ReadOperation, "mounts/"+name)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if diff := deep.Equal(resp.Data, conf); len(diff) > 0 {
+			t.Fatalf("bad, diff: %#v", diff)
+		}
 	}
 }
 
@@ -268,6 +299,9 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+			"running_sha256":         "",
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -281,9 +315,12 @@ func TestSystemBackend_mount(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Accept"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":                  false,
+			"seal_wrap":              true,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
+			"running_sha256":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -296,9 +333,12 @@ func TestSystemBackend_mount(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":    false,
 			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":                  true,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
+			"running_sha256":         "",
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -307,13 +347,17 @@ func TestSystemBackend_mount(t *testing.T) {
 			"accessor":                resp.Data["identity/"].(map[string]interface{})["accessor"],
 			"uuid":                    resp.Data["identity/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-				"force_no_cache":    false,
+				"default_lease_ttl":           resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
+			"running_sha256":         "",
 		},
 		"prod/secret/": map[string]interface{}{
 			"description":             "",
@@ -331,6 +375,9 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+			"running_sha256":         "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -668,6 +715,175 @@ func TestSystemBackend_CapabilitiesAccessor_BC(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_remount_auth(t *testing.T) {
+	err := AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, b, _ := testCoreSystemBackend(t)
+
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass1/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/userpass1"
+	req.Data["to"] = "auth/userpass2"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
+		req = logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("remount/status/%s", resp.Data["migration_id"]))
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
+		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
+			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
+		}
+		return nil
+	})
+}
+
+func TestSystemBackend_remount_auth_invalid(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/unknown"
+	req.Data["to"] = "auth/foo"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "no matching mount at \"auth/unknown/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["to"] = "foo"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount auth mount to non-auth mount \"foo/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+}
+
+func TestSystemBackend_remount_auth_protected(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/token"
+	req.Data["to"] = "auth/foo"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount \"auth/token/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["from"] = "auth/foo"
+	req.Data["to"] = "auth/token"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount to destination \"auth/token/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+}
+
+func TestSystemBackend_remount_auth_destinationInUse(t *testing.T) {
+	err := AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, b, _ := testCoreSystemBackend(t)
+
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass1/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userpassMe2 := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass2/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/userpass1"
+	req.Data["to"] = "auth/userpass2"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"auth/userpass2/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["to"] = "auth/userpass2/mypass"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"auth/userpass2/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	userpassMe3 := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass3/mypass/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Data["to"] = "auth/userpass3/"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"auth/userpass3/mypass/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+}
+
 func TestSystemBackend_remount(t *testing.T) {
 	b := testSystemBackend(t)
 
@@ -676,11 +892,74 @@ func TestSystemBackend_remount(t *testing.T) {
 	req.Data["to"] = "foo"
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
+		req = logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("remount/status/%s", resp.Data["migration_id"]))
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
+		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
+			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
+		}
+		return nil
+	})
+}
+
+func TestSystemBackend_remount_destinationInUse(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo/",
+		Type:  "generic",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "secret"
+	req.Data["to"] = "foo"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"foo/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["to"] = "foo/foo2"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"foo/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	me2 := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo2/foo3/",
+		Type:  "generic",
+	}
+	err = c.mount(namespace.RootContext(nil), me2)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req.Data["to"] = "foo2/"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"foo2/foo3/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
 	}
 }
 
@@ -695,8 +974,8 @@ func TestSystemBackend_remount_invalid(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `no matching mount at "unknown/"` {
-		t.Fatalf("bad: %v", resp)
+	if !strings.Contains(resp.Data["error"].(string), "no matching mount at \"unknown/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
 	}
 }
 
@@ -710,8 +989,8 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `cannot remount "sys/"` {
-		t.Fatalf("bad: %v", resp)
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount \"sys/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
 	}
 }
 
@@ -726,7 +1005,7 @@ func TestSystemBackend_remount_clean(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'to' path 'foo//bar' does not match cleaned path 'foo/bar'` {
+	if resp.Data["error"] != `invalid destination mount: path 'foo//bar/' does not match cleaned path 'foo/bar/'` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -742,7 +1021,39 @@ func TestSystemBackend_remount_nonPrintable(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'to' path cannot contain non-printable characters` {
+	if resp.Data["error"] != `invalid destination mount: path cannot contain non-printable characters` {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_remount_spacesInFromPath(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = " foo / "
+	req.Data["to"] = "bar"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != `'from' path cannot contain whitespace` {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_remount_spacesInToPath(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "foo"
+	req.Data["to"] = " bar / "
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != `'to' path cannot contain whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -765,7 +1076,10 @@ func TestSystemBackend_leases(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -812,7 +1126,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -861,7 +1178,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Generate multiple leases
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -872,7 +1192,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -912,7 +1235,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/bar")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -960,7 +1286,10 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -997,7 +1326,10 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1126,7 +1458,10 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1158,7 +1493,10 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1181,7 +1519,10 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1271,7 +1612,10 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1320,7 +1664,10 @@ func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1392,7 +1739,7 @@ func TestSystemBackend_revokePrefixAuth_newUrl(t *testing.T) {
 			TTL: time.Hour,
 		},
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1456,7 +1803,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			TTL: time.Hour,
 		},
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1500,12 +1847,24 @@ func TestSystemBackend_authTable(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
+			"running_sha256":         "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
+		t.Fatal(diff)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "auth/token")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if diff := deep.Equal(resp.Data, exp["token/"]); diff != nil {
 		t.Fatal(diff)
 	}
 }
@@ -1555,9 +1914,12 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     true,
-			"seal_wrap": true,
-			"options":   map[string]string{},
+			"local":                  true,
+			"seal_wrap":              true,
+			"options":                map[string]string{},
+			"plugin_version":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
+			"running_sha256":         "",
 		},
 		"token/": map[string]interface{}{
 			"type":                    "token",
@@ -1571,9 +1933,12 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
+			"running_sha256":         "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
@@ -1645,9 +2010,35 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/tune")
 	req.Data["description"] = ""
+	req.Data["plugin_version"] = "v1.0.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), ErrPluginNotFound.Error()) {
+		t.Fatalf("expected tune request to fail, but got resp: %#v, err: %s", resp, err)
+	}
+
+	// Register the plugin in the catalog, and then try the same request again.
+	{
+		tempDir, err := filepath.EvalSymlinks(t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.pluginCatalog.directory = tempDir
+		file, err := os.Create(filepath.Join(tempDir, "foo"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := file.Close(); err != nil {
+			t.Fatal(err)
+		}
+		err = c.pluginCatalog.Set(context.Background(), "token", consts.PluginTypeCredential, "v1.0.0", "foo", []string{}, []string{}, []byte{})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatal(resp, err)
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "auth/token/tune")
@@ -1661,6 +2052,9 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 
 	if resp.Data["description"] != "" {
 		t.Fatalf("got: %#v expect: %#v", resp.Data["description"], "")
+	}
+	if resp.Data["plugin_version"] != "v1.0.0" {
+		t.Fatalf("got: %#v, expected: %v", resp.Data["version"], "v1.0.0")
 	}
 }
 
@@ -1779,11 +2173,7 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 
 func TestSystemBackend_enableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		return &NoopAudit{
-			Config: config,
-		}, nil
-	}
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -1799,22 +2189,8 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 
 func TestSystemBackend_auditHash(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		view := &logical.InmemStorage{}
-		view.Put(namespace.RootContext(nil), &logical.StorageEntry{
-			Key:   "salt",
-			Value: []byte("foo"),
-		})
-		config.SaltView = view
-		config.SaltConfig = &salt.Config{
-			HMAC:     sha256.New,
-			HMACType: "hmac-sha256",
-			Location: salt.DefaultLocation,
-		}
-		return &NoopAudit{
-			Config: config,
-		}, nil
-	}
+	paths := b.(*SystemBackend).auditPaths()
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -1826,6 +2202,12 @@ func TestSystemBackend_auditHash(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 2, req.Operation),
+		resp,
+		true,
+	)
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "audit-hash/foo")
 	req.Data["input"] = "bar"
@@ -1837,6 +2219,13 @@ func TestSystemBackend_auditHash(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatalf("response or its data was nil")
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, req.Operation),
+		resp,
+		true,
+	)
+
 	hash, ok := resp.Data["hash"]
 	if !ok {
 		t.Fatalf("did not get hash back in response, response was %#v", resp.Data)
@@ -1861,11 +2250,7 @@ func TestSystemBackend_enableAudit_invalid(t *testing.T) {
 
 func TestSystemBackend_auditTable(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		return &NoopAudit{
-			Config: config,
-		}, nil
-	}
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -1900,11 +2285,7 @@ func TestSystemBackend_auditTable(t *testing.T) {
 
 func TestSystemBackend_disableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		return &NoopAudit{
-			Config: config,
-		}, nil
-	}
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -1926,16 +2307,140 @@ func TestSystemBackend_disableAudit(t *testing.T) {
 }
 
 func TestSystemBackend_rawRead_Compressed(t *testing.T) {
-	b := testSystemBackendRaw(t)
+	t.Run("basic", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
 
-	req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !strings.HasPrefix(resp.Data["value"].(string), "{\"type\":\"mounts\"") {
-		t.Fatalf("bad: %v", resp)
-	}
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !strings.HasPrefix(resp.Data["value"].(string), `{"type":"mounts"`) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("base64", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"encoding": "base64",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].([]byte); !ok {
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), `{"type":"mounts"`) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("invalid_encoding", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"encoding": "invalid_encoding",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("err: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("compressed_false", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].(string); !ok {
+			t.Fatalf("value is a not a string, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].(string)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("compressed_false_base64", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].([]byte); !ok {
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("uncompressed_entry_with_prefix_byte", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/test_raw")
+		req.Data = map[string]interface{}{
+			"value": "414c1e7f-0a9a-49e0-9fc4-61af329d0724",
+		}
+
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp != nil {
+			t.Fatalf("bad: %v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/test_raw")
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("expected error if trying to read uncompressed entry with prefix byte")
+		}
+		if !resp.IsError() {
+			t.Fatalf("bad: %v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/test_raw")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp.IsError() {
+			t.Fatalf("bad: %v", resp)
+		}
+		if resp.Data["value"].(string) != "414c1e7f-0a9a-49e0-9fc4-61af329d0724" {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
 }
 
 func TestSystemBackend_rawRead_Protected(t *testing.T) {
@@ -1961,7 +2466,7 @@ func TestSystemBackend_rawWrite_Protected(t *testing.T) {
 func TestSystemBackend_rawReadWrite(t *testing.T) {
 	_, b, _ := testCoreSystemBackendRaw(t)
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
+	req := logical.TestRequest(t, logical.CreateOperation, "raw/sys/policy/test")
 	req.Data["value"] = `path "secret/" { policy = "read" }`
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
@@ -1983,6 +2488,328 @@ func TestSystemBackend_rawReadWrite(t *testing.T) {
 
 	// Note: since the upgrade code is gone that upgraded from 0.1, we can't
 	// simply parse this out directly via GetPolicy, so the test now ends here.
+}
+
+func TestSystemBackend_rawWrite_ExistanceCheck(t *testing.T) {
+	b := testSystemBackendRaw(t)
+	req := logical.TestRequest(t, logical.CreateOperation, "raw/core/mounts")
+	_, exist, err := b.HandleExistenceCheck(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: #{err}")
+	}
+	if !exist {
+		t.Fatalf("raw existence check failed for actual key")
+	}
+
+	req = logical.TestRequest(t, logical.CreateOperation, "raw/non_existent")
+	_, exist, err = b.HandleExistenceCheck(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: #{err}")
+	}
+	if exist {
+		t.Fatalf("raw existence check failed for non-existent key")
+	}
+}
+
+func TestSystemBackend_rawReadWrite_base64(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		_, b, _ := testCoreSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/sys/policy/test")
+		req.Data = map[string]interface{}{
+			"value":    base64.StdEncoding.EncodeToString([]byte(`path "secret/" { policy = "read"[ }`)),
+			"encoding": "base64",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp != nil {
+			t.Fatalf("bad: %v", resp)
+		}
+
+		// Read via raw API
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/sys/policy/test")
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !strings.HasPrefix(resp.Data["value"].(string), "path") {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("invalid_value", func(t *testing.T) {
+		_, b, _ := testCoreSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/sys/policy/test")
+		req.Data = map[string]interface{}{
+			"value":    "invalid base64",
+			"encoding": "base64",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("no error")
+		}
+
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+
+	t.Run("invalid_encoding", func(t *testing.T) {
+		_, b, _ := testCoreSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/sys/policy/test")
+		req.Data = map[string]interface{}{
+			"value":    "text",
+			"encoding": "invalid_encoding",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("no error")
+		}
+
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+}
+
+func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
+	t.Run("use_existing_compression", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"value":            mounts,
+			"compression_type": compressutil.CompressionTypeGzip,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read back and check gzip was applied by looking for prefix byte
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].([]byte); !ok {
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("compression_type_matches_existing_compression", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"value": mounts,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read back and check gzip was applied by looking for prefix byte
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].([]byte); !ok {
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("write_uncompressed_over_existing_compressed", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"value":            mounts,
+			"compression_type": "",
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read back and check gzip was not applied by looking for prefix byte
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].([]byte); !ok {
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), `{"type":"mounts"`) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("invalid_compression_type", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"value":            mounts,
+			"compression_type": "invalid_type",
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+
+	t.Run("update_non_existent_entry", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.UpdateOperation, "raw/non_existent")
+		req.Data = map[string]interface{}{
+			"value": "{}",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+
+	t.Run("invalid_compression_over_existing_uncompressed_data", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/test")
+		req.Data = map[string]interface{}{
+			"value": "{}",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if resp.IsError() {
+			t.Fatalf("response is an error: %v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/test")
+		req.Data = map[string]interface{}{
+			"value":            "{}",
+			"compression_type": compressutil.CompressionTypeGzip,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+
+	t.Run("wrong_compression_type_over_existing_compressed_data", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/test")
+		req.Data = map[string]interface{}{
+			"value":            "{}",
+			"compression_type": compressutil.CompressionTypeGzip,
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if resp.IsError() {
+			t.Fatalf("response is an error: %v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/test")
+		req.Data = map[string]interface{}{
+			"value":            "{}",
+			"compression_type": compressutil.CompressionTypeSnappy,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
 }
 
 func TestSystemBackend_rawDelete_Protected(t *testing.T) {
@@ -2066,7 +2893,7 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	}
 
 	req2 := logical.TestRequest(t, logical.UpdateOperation, "rotate/config")
-	req2.Data["max_operations"] = 2345678910
+	req2.Data["max_operations"] = int64(3221225472)
 	req2.Data["interval"] = "5432h0m0s"
 	req2.Data["enabled"] = false
 
@@ -2081,7 +2908,7 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"max_operations": int64(2345678910),
+		"max_operations": int64(3221225472),
 		"interval":       "5432h0m0s",
 		"enabled":        false,
 	}
@@ -2120,21 +2947,25 @@ func TestSystemBackend_rotate(t *testing.T) {
 }
 
 func testSystemBackend(t *testing.T) logical.Backend {
+	t.Helper()
 	c, _, _ := TestCoreUnsealed(t)
 	return c.systemBackend
 }
 
 func testSystemBackendRaw(t *testing.T) logical.Backend {
+	t.Helper()
 	c, _, _ := TestCoreUnsealedRaw(t)
 	return c.systemBackend
 }
 
 func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
+	t.Helper()
 	c, _, root := TestCoreUnsealed(t)
 	return c, c.systemBackend, root
 }
 
 func testCoreSystemBackendRaw(t *testing.T) (*Core, logical.Backend, string) {
+	t.Helper()
 	c, _, root := TestCoreUnsealedRaw(t)
 	return c, c.systemBackend, root
 }
@@ -2164,13 +2995,18 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Get deprecation status directly from the registry so we can compare it to the API response
+	deprecationStatus, _ := c.builtinRegistry.DeprecationStatus("mysql-database-plugin", consts.PluginTypeDatabase)
+
 	actualRespData := resp.Data
 	expectedRespData := map[string]interface{}{
-		"name":    "mysql-database-plugin",
-		"command": "",
-		"args":    []string(nil),
-		"sha256":  "",
-		"builtin": true,
+		"name":               "mysql-database-plugin",
+		"command":            "",
+		"args":               []string(nil),
+		"sha256":             "",
+		"builtin":            true,
+		"version":            versions.GetBuiltinVersion(consts.PluginTypeDatabase, "mysql-database-plugin"),
+		"deprecation_status": deprecationStatus.String(),
 	}
 	if !reflect.DeepEqual(actualRespData, expectedRespData) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actualRespData, expectedRespData)
@@ -2216,6 +3052,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		"args":    []string{"--test"},
 		"sha256":  "31",
 		"builtin": false,
+		"version": "",
 	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
@@ -2232,6 +3069,106 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if resp != nil || err != nil {
 		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
+	}
+
+	// Add a versioned plugin, and check we get the version back in the right form when we read.
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.1.0"
+	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = command
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.1.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	actual = resp.Data
+	expected = map[string]interface{}{
+		"name":    "test-plugin",
+		"command": filepath.Base(file.Name()),
+		"args":    []string{"--test"},
+		"sha256":  "31",
+		"builtin": false,
+		"version": "v0.1.0",
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
+	}
+
+	// Delete versioned plugin
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "0.1.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "0.1.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if resp != nil || err != nil {
+		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
+	}
+}
+
+func TestSystemBackend_PluginCatalog_ListPlugins_SucceedsWithAuditLogEnabled(t *testing.T) {
+	core, b, root := testCoreSystemBackend(t)
+
+	tempDir := t.TempDir()
+	f, err := os.CreateTemp(tempDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable audit logging.
+	req := logical.TestRequest(t, logical.UpdateOperation, "audit/file")
+	req.Data = map[string]any{
+		"type": "file",
+		"options": map[string]any{
+			"file_path": f.Name(),
+		},
+	}
+	ctx := namespace.RootContext(nil)
+	resp, err := b.HandleRequest(ctx, req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+
+	// List plugins
+	req = logical.TestRequest(t, logical.ReadOperation, "sys/plugins/catalog")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	if err != nil || resp == nil || resp.IsError() {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+}
+
+func TestSystemBackend_PluginCatalog_CannotRegisterBuiltinPlugins(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	// Bootstrap the pluginCatalog
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c.pluginCatalog.directory = sym
+
+	// Set a plugin
+	req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["sha256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = "foo"
+	req.Data["version"] = "v1.2.3+special.builtin"
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Error().Error(), "reserved metadata") {
+		t.Fatalf("err: %v", resp.Error())
 	}
 }
 
@@ -2269,7 +3206,7 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 			t.Fatal("no sum key found in returned data")
 		}
 		if sum.(string) != expected {
-			t.Fatal("mismatched hashes")
+			t.Fatalf("mismatched hashes: got: %s, expect: %s", sum.(string), expected)
 		}
 	}
 
@@ -2294,6 +3231,20 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 	// Test returning as base64
 	req.Data["format"] = "base64"
 	doRequest(req, false, "2dOA8puXrWodkumH2D+loCZTMB4QBt0rzVGvpZqRR+nK7a+JUhq8DwtoKtzUf7USuDQ8g0oy8yb+m+8AVCzohw==")
+
+	// Test SHA-3
+	req.Data["format"] = "hex"
+	req.Data["algorithm"] = "sha3-224"
+	doRequest(req, false, "ced91e69d89c837e87cff960bd64fd9b9f92325fb9add8988d33d007")
+
+	req.Data["algorithm"] = "sha3-256"
+	doRequest(req, false, "e4bd866ec3fa52df3b7842aa97b448bc859a7606cefcdad1715847f4b82a6c93")
+
+	req.Data["algorithm"] = "sha3-384"
+	doRequest(req, false, "715cd38cbf8d0bab426b6a084d649760be555dd64b34de6db148a3fbf2cd2aa5d8b03eb6eda73a3e9a8769c00b4c2113")
+
+	req.Data["algorithm"] = "sha3-512"
+	doRequest(req, false, "f7cac5ad830422a5408b36a60a60620687be180765a3e2895bc3bdbd857c9e08246c83064d4e3612f0cb927f3ead208413ab98624bf7b0617af0f03f62080976")
 
 	// Test bad input/format/algorithm
 	req.Data["format"] = "base92"
@@ -2436,6 +3387,9 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"options": map[string]string{
 					"version": "1",
 				},
+				"plugin_version":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"running_sha256":         "",
 			},
 			"sys/": map[string]interface{}{
 				"type":                    "system",
@@ -2449,9 +3403,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []string{"Accept"},
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   map[string]string(nil),
+				"local":                  false,
+				"seal_wrap":              true,
+				"options":                map[string]string(nil),
+				"plugin_version":         "",
+				"running_plugin_version": versions.DefaultBuiltinVersion,
+				"running_sha256":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description":             "per-token private secret storage",
@@ -2464,9 +3421,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 					"force_no_cache":    false,
 				},
-				"local":     true,
-				"seal_wrap": false,
-				"options":   map[string]string(nil),
+				"local":                  true,
+				"seal_wrap":              false,
+				"options":                map[string]string(nil),
+				"plugin_version":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
+				"running_sha256":         "",
 			},
 			"identity/": map[string]interface{}{
 				"description":             "identity store",
@@ -2475,13 +3435,17 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"accessor":                resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["accessor"],
 				"uuid":                    resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["uuid"],
 				"config": map[string]interface{}{
-					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-					"force_no_cache":    false,
+					"default_lease_ttl":           resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+					"max_lease_ttl":               resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []string{"Authorization"},
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   map[string]string(nil),
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                map[string]string(nil),
+				"plugin_version":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
+				"running_sha256":         "",
 			},
 		},
 		"auth": map[string]interface{}{
@@ -2500,6 +3464,9 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"uuid":                    resp.Data["auth"].(map[string]interface{})["token/"].(map[string]interface{})["uuid"],
 				"local":                   false,
 				"seal_wrap":               false,
+				"plugin_version":          "",
+				"running_plugin_version":  versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
+				"running_sha256":          "",
 			},
 		},
 	}
@@ -2624,100 +3591,128 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 
 func TestSystemBackend_OpenAPI(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
-	var oapi map[string]interface{}
 
 	// Ensure no paths are reported if there is no token
-	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	{
+		req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	body := resp.Data["http_raw_body"].([]byte)
-	err = jsonutil.DecodeJSON(body, &oapi)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	exp := map[string]interface{}{
-		"openapi": framework.OASVersion,
-		"info": map[string]interface{}{
-			"title":       "HashiCorp Vault API",
-			"description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
-			"version":     version.GetVersion().Version,
-			"license": map[string]interface{}{
-				"name": "Mozilla Public License 2.0",
-				"url":  "https://www.mozilla.org/en-US/MPL/2.0",
+		body := resp.Data["http_raw_body"].([]byte)
+		var oapi map[string]interface{}
+		err = jsonutil.DecodeJSON(body, &oapi)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		exp := map[string]interface{}{
+			"openapi": framework.OASVersion,
+			"info": map[string]interface{}{
+				"title":       "HashiCorp Vault API",
+				"description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+				"version":     version.GetVersion().Version,
+				"license": map[string]interface{}{
+					"name": "Mozilla Public License 2.0",
+					"url":  "https://www.mozilla.org/en-US/MPL/2.0",
+				},
 			},
-		},
-		"paths": map[string]interface{}{},
-	}
-
-	if diff := deep.Equal(oapi, exp); diff != nil {
-		t.Fatal(diff)
-	}
-
-	// Check that default paths are present with a root token
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	req.ClientToken = rootToken
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	body = resp.Data["http_raw_body"].([]byte)
-	err = jsonutil.DecodeJSON(body, &oapi)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	doc, err := framework.NewOASDocumentFromMap(oapi)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pathSamples := []struct {
-		path string
-		tag  string
-	}{
-		{"/auth/token/lookup", "auth"},
-		{"/cubbyhole/{path}", "secrets"},
-		{"/identity/group/id", "identity"},
-		{"/secret/.*", "secrets"}, // TODO update after kv repo update
-		{"/sys/policy", "system"},
-	}
-
-	for _, path := range pathSamples {
-		if doc.Paths[path.path] == nil {
-			t.Fatalf("didn't find expected path '%s'.", path)
+			"paths": map[string]interface{}{},
+			"components": map[string]interface{}{
+				"schemas": map[string]interface{}{},
+			},
 		}
-		tag := doc.Paths[path.path].Get.Tags[0]
-		if tag != path.tag {
-			t.Fatalf("path: %s; expected tag: %s, actual: %s", path.path, tag, path.tag)
+
+		if diff := deep.Equal(oapi, exp); diff != nil {
+			t.Fatal(diff)
 		}
 	}
 
-	// Simple sanity check of response size (which is much larger than most
-	// Vault responses), mainly to catch mass omission of expected path data.
-	minLen := 70000
-	if len(body) < minLen {
-		t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
+	// Check that default paths are present with a root token (with and without generic_mount_paths)
+	for _, genericMountPaths := range []bool{false, true} {
+		req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
+		if genericMountPaths {
+			req.Data["generic_mount_paths"] = true
+		}
+		req.ClientToken = rootToken
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		body := resp.Data["http_raw_body"].([]byte)
+		var oapi map[string]interface{}
+		err = jsonutil.DecodeJSON(body, &oapi)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		doc, err := framework.NewOASDocumentFromMap(oapi)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expectedSecretPrefix := "/secret/"
+		if genericMountPaths {
+			expectedSecretPrefix = "/{secret_mount_path}/"
+		}
+
+		pathSamples := []struct {
+			path        string
+			tag         string
+			unpublished bool
+		}{
+			{path: "/auth/token/lookup", tag: "auth"},
+			{path: "/cubbyhole/{path}", tag: "secrets"},
+			{path: "/identity/group/id", tag: "identity"},
+			{path: expectedSecretPrefix + "^.*$", unpublished: true},
+			{path: "/sys/policy", tag: "system"},
+		}
+
+		for _, path := range pathSamples {
+			if doc.Paths[path.path] == nil {
+				t.Fatalf("didn't find expected path %q.", path.path)
+			}
+			getOperation := doc.Paths[path.path].Get
+			if getOperation == nil && !path.unpublished {
+				t.Fatalf("path: %s; expected a get operation, but it was absent", path.path)
+			}
+			if getOperation != nil && path.unpublished {
+				t.Fatalf("path: %s; expected absent get operation, but it was present", path.path)
+			}
+			if !path.unpublished {
+				tag := getOperation.Tags[0]
+				if tag != path.tag {
+					t.Fatalf("path: %s; expected tag: %s, actual: %s", path.path, tag, path.tag)
+				}
+			}
+		}
+
+		// Simple check of response size (which is much larger than most
+		// Vault responses), mainly to catch mass omission of expected path data.
+		const minLen = 70000
+		if len(body) < minLen {
+			t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
+		}
 	}
 
 	// Test path-help response
-	req = logical.TestRequest(t, logical.HelpOperation, "rotate")
-	req.ClientToken = rootToken
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	{
+		req := logical.TestRequest(t, logical.HelpOperation, "rotate")
+		req.ClientToken = rootToken
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	doc = resp.Data["openapi"].(*framework.OASDocument)
-	if len(doc.Paths) != 1 {
-		t.Fatalf("expected 1 path, actual: %d", len(doc.Paths))
-	}
+		doc := resp.Data["openapi"].(*framework.OASDocument)
+		if len(doc.Paths) != 1 {
+			t.Fatalf("expected 1 path, actual: %d", len(doc.Paths))
+		}
 
-	if doc.Paths["/rotate"] == nil {
-		t.Fatalf("expected to find path '/rotate'")
+		if doc.Paths["/rotate"] == nil {
+			t.Fatalf("expected to find path '/rotate'")
+		}
 	}
 }
 
@@ -2775,7 +3770,7 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 		ClientToken: te.ID,
 		Accessor:    te.Accessor,
 		Orphan:      true,
-	}); err != nil {
+	}, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3169,6 +4164,107 @@ func TestHandlePoliciesPasswordDelete(t *testing.T) {
 	}
 }
 
+func TestHandlePoliciesPasswordList(t *testing.T) {
+	type testCase struct {
+		storage logical.Storage
+
+		expectErr    bool
+		expectedResp *logical.Response
+	}
+
+	tests := map[string]testCase{
+		"no policies": {
+			storage: new(logical.InmemStorage),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{},
+			},
+		},
+		"one policy": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("testpolicy"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{"testpolicy"},
+				},
+			},
+		},
+		"two policies": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("testpolicy"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("unrelated_policy"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 20\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"abcdefghij\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{
+						"testpolicy",
+						"unrelated_policy",
+					},
+				},
+			},
+		},
+		"storage failure": {
+			storage: new(logical.InmemStorage).FailList(true),
+
+			expectErr: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+			defer cancel()
+
+			req := &logical.Request{
+				Storage: test.storage,
+			}
+
+			b := &SystemBackend{}
+
+			actualResp, err := b.handlePoliciesPasswordList(ctx, req, nil)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actualResp, test.expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, test.expectedResp)
+			}
+		})
+	}
+}
+
 func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 	t.Run("errors", func(t *testing.T) {
 		type testCase struct {
@@ -3305,15 +4401,15 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			assert(t, actualResp != nil, "response is nil")
-			assert(t, actualResp.Data != nil, "expected data, got nil")
+			assertTrue(t, actualResp != nil, "response is nil")
+			assertTrue(t, actualResp.Data != nil, "expected data, got nil")
 			assertHasKey(t, actualResp.Data, "password", "password key not found in data")
 			assertIsString(t, actualResp.Data["password"], "password key should have a string value")
 			password := actualResp.Data["password"].(string)
 
 			// Delete the password so the rest of the response can be compared
 			delete(actualResp.Data, "password")
-			assert(t, reflect.DeepEqual(actualResp, expectedResp), "Actual response: %#v\nExpected response: %#v", actualResp, expectedResp)
+			assertTrue(t, reflect.DeepEqual(actualResp, expectedResp), "Actual response: %#v\nExpected response: %#v", actualResp, expectedResp)
 
 			// Check to make sure the password is correctly formatted
 			passwordLength := len([]rune(password))
@@ -3330,7 +4426,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 	})
 }
 
-func assert(t *testing.T, pass bool, f string, vals ...interface{}) {
+func assertTrue(t *testing.T, pass bool, f string, vals ...interface{}) {
 	t.Helper()
 	if !pass {
 		t.Fatalf(f, vals...)
@@ -3579,4 +4675,760 @@ func makeStorage(t *testing.T, entries ...*logical.StorageEntry) *logical.InmemS
 	}
 
 	return store
+}
+
+func leaseLimitFieldData(limit string) *framework.FieldData {
+	raw := make(map[string]interface{})
+	raw["limit"] = limit
+	return &framework.FieldData{
+		Raw: raw,
+		Schema: map[string]*framework.FieldSchema{
+			"limit": {
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "limit return results",
+			},
+		},
+	}
+}
+
+func TestProcessLimit(t *testing.T) {
+	testCases := []struct {
+		d               *framework.FieldData
+		expectReturnAll bool
+		expectLimit     int
+		expectErr       bool
+	}{
+		{
+			d:               leaseLimitFieldData("500"),
+			expectReturnAll: false,
+			expectLimit:     500,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData(""),
+			expectReturnAll: false,
+			expectLimit:     MaxIrrevocableLeasesToReturn,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("none"),
+			expectReturnAll: true,
+			expectLimit:     10000,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("NoNe"),
+			expectReturnAll: true,
+			expectLimit:     10000,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("hello_world"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+		{
+			d:               leaseLimitFieldData("0"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+		{
+			d:               leaseLimitFieldData("-1"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+	}
+
+	for i, tc := range testCases {
+		returnAll, limit, err := processLimit(tc.d)
+
+		if returnAll != tc.expectReturnAll {
+			t.Errorf("bad return all for test case %d. expected %t, got %t", i, tc.expectReturnAll, returnAll)
+		}
+		if limit != tc.expectLimit {
+			t.Errorf("bad limit for test case %d. expected %d, got %d", i, tc.expectLimit, limit)
+		}
+
+		haveErr := err != nil
+		if haveErr != tc.expectErr {
+			t.Errorf("bad error status for test case %d. expected error: %t, got error: %t", i, tc.expectErr, haveErr)
+			if err != nil {
+				t.Errorf("error was: %v", err)
+			}
+		}
+	}
+}
+
+func TestSystemBackend_Loggers(t *testing.T) {
+	testCases := []struct {
+		level         string
+		expectedLevel string
+		expectError   bool
+	}{
+		{
+			"trace",
+			"trace",
+			false,
+		},
+		{
+			"debug",
+			"debug",
+			false,
+		},
+		{
+			"notice",
+			"info",
+			false,
+		},
+		{
+			"info",
+			"info",
+			false,
+		},
+		{
+			"warn",
+			"warn",
+			false,
+		},
+		{
+			"warning",
+			"warn",
+			false,
+		},
+		{
+			"err",
+			"error",
+			false,
+		},
+		{
+			"error",
+			"error",
+			false,
+		},
+		{
+			"",
+			"info",
+			true,
+		},
+		{
+			"invalid",
+			"",
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(fmt.Sprintf("all-loggers-%s", tc.level), func(t *testing.T) {
+			t.Parallel()
+
+			core, b, _ := testCoreSystemBackend(t)
+
+			// Test core overrides logging level outside of config,
+			// an initial delete will ensure that we an initial read
+			// to get expected values is based off of config and not
+			// the test override that is hidden from this test
+			req := &logical.Request{
+				Path:      "loggers",
+				Operation: logical.DeleteOperation,
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			req = &logical.Request{
+				Path:      "loggers",
+				Operation: logical.ReadOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			initialLoggers := resp.Data
+
+			req = &logical.Request{
+				Path:      "loggers",
+				Operation: logical.UpdateOperation,
+				Data: map[string]interface{}{
+					"level": tc.level,
+				},
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError := resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectError {
+				req = &logical.Request{
+					Path:      "loggers",
+					Operation: logical.ReadOperation,
+				}
+
+				resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+				if err != nil || (resp != nil && resp.IsError()) {
+					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+				}
+
+				for _, logger := range core.allLoggers {
+					loggerName := logger.Name()
+					levelRaw, ok := resp.Data[loggerName]
+
+					if !ok {
+						t.Errorf("logger %q not found in response", loggerName)
+					}
+
+					if levelStr := levelRaw.(string); levelStr != tc.expectedLevel {
+						t.Errorf("unexpected level of logger %q, expected: %s, actual: %s", loggerName, tc.expectedLevel, levelStr)
+					}
+				}
+			}
+
+			req = &logical.Request{
+				Path:      "loggers",
+				Operation: logical.DeleteOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			req = &logical.Request{
+				Path:      "loggers",
+				Operation: logical.ReadOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			for _, logger := range core.allLoggers {
+				loggerName := logger.Name()
+				levelRaw, currentOk := resp.Data[loggerName]
+				initialLevelRaw, initialOk := initialLoggers[loggerName]
+
+				if !currentOk || !initialOk {
+					t.Errorf("logger %q not found", loggerName)
+				}
+
+				levelStr := levelRaw.(string)
+				initialLevelStr := initialLevelRaw.(string)
+				if levelStr != initialLevelStr {
+					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", loggerName, initialLevelStr, levelStr)
+				}
+			}
+		})
+	}
+}
+
+func TestSystemBackend_LoggersByName(t *testing.T) {
+	testCases := []struct {
+		logger            string
+		level             string
+		expectedLevel     string
+		expectWriteError  bool
+		expectDeleteError bool
+	}{
+		{
+			"core",
+			"trace",
+			"trace",
+			false,
+			false,
+		},
+		{
+			"token",
+			"debug",
+			"debug",
+			false,
+			false,
+		},
+		{
+			"audit",
+			"notice",
+			"info",
+			false,
+			false,
+		},
+		{
+			"expiration",
+			"info",
+			"info",
+			false,
+			false,
+		},
+		{
+			"policy",
+			"warn",
+			"warn",
+			false,
+			false,
+		},
+		{
+			"activity",
+			"warning",
+			"warn",
+			false,
+			false,
+		},
+		{
+			"identity",
+			"err",
+			"error",
+			false,
+			false,
+		},
+		{
+			"rollback",
+			"error",
+			"error",
+			false,
+			false,
+		},
+		{
+			"system",
+			"",
+			"does-not-matter",
+			true,
+			false,
+		},
+		{
+			"quotas",
+			"invalid",
+			"does-not-matter",
+			true,
+			false,
+		},
+		{
+			"",
+			"info",
+			"does-not-matter",
+			true,
+			true,
+		},
+		{
+			"does_not_exist",
+			"error",
+			"does-not-matter",
+			true,
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(fmt.Sprintf("loggers-by-name-%s", tc.logger), func(t *testing.T) {
+			t.Parallel()
+
+			core, b, _ := testCoreSystemBackend(t)
+
+			// Test core overrides logging level outside of config,
+			// an initial delete will ensure that we an initial read
+			// to get expected values is based off of config and not
+			// the test override that is hidden from this test
+			req := &logical.Request{
+				Path:      "loggers",
+				Operation: logical.DeleteOperation,
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			req = &logical.Request{
+				Path:      "loggers",
+				Operation: logical.ReadOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			initialLoggers := resp.Data
+
+			req = &logical.Request{
+				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Operation: logical.UpdateOperation,
+				Data: map[string]interface{}{
+					"level": tc.level,
+				},
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError := resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectWriteError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectWriteError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectWriteError {
+				req = &logical.Request{
+					Path:      "loggers",
+					Operation: logical.ReadOperation,
+				}
+
+				resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+				if err != nil || (resp != nil && resp.IsError()) {
+					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+				}
+
+				for _, logger := range core.allLoggers {
+					loggerName := logger.Name()
+					levelRaw, currentOk := resp.Data[loggerName]
+					initialLevelRaw, initialOk := initialLoggers[loggerName]
+
+					if !currentOk || !initialOk {
+						t.Errorf("logger %q not found", loggerName)
+					}
+
+					levelStr := levelRaw.(string)
+					initialLevelStr := initialLevelRaw.(string)
+
+					if loggerName == tc.logger && levelStr != tc.expectedLevel {
+						t.Fatalf("expected logger %q to be %q, actual: %s", loggerName, tc.expectedLevel, levelStr)
+					}
+
+					if loggerName != tc.logger && levelStr != initialLevelStr {
+						t.Errorf("expected level of logger %q to be unchanged, exepcted: %s, actual: %s", loggerName, initialLevelStr, levelStr)
+					}
+				}
+			}
+
+			req = &logical.Request{
+				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Operation: logical.DeleteOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError = resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectDeleteError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectDeleteError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectDeleteError {
+				req = &logical.Request{
+					Path:      fmt.Sprintf("loggers/%s", tc.logger),
+					Operation: logical.ReadOperation,
+				}
+
+				resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+				if err != nil || (resp != nil && resp.IsError()) {
+					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+				}
+
+				currentLevel, ok := resp.Data[tc.logger].(string)
+				if !ok {
+					t.Fatalf("expected resp to include %q, resp: %#v", tc.logger, resp)
+				}
+
+				initialLevel, ok := initialLoggers[tc.logger].(string)
+				if !ok {
+					t.Fatalf("expected initial loggers to include %q, resp: %#v", tc.logger, initialLoggers)
+				}
+
+				if currentLevel != initialLevel {
+					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", tc.logger, initialLevel, currentLevel)
+				}
+			}
+		})
+	}
+}
+
+func TestSortVersionedPlugins(t *testing.T) {
+	versionedPlugin := func(typ consts.PluginType, name string, version string, builtin bool) pluginutil.VersionedPlugin {
+		return pluginutil.VersionedPlugin{
+			Type:    typ.String(),
+			Name:    name,
+			Version: version,
+			SHA256:  "",
+			Builtin: builtin,
+			SemanticVersion: func() *semver.Version {
+				if version != "" {
+					return semver.Must(semver.NewVersion(version))
+				}
+
+				return semver.Must(semver.NewVersion("0.0.0"))
+			}(),
+		}
+	}
+
+	differingTypes := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeSecrets, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeDatabase, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+	}
+	differingNames := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "b", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "a", "1.0.0", false),
+	}
+	differingVersions := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "10.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.0.1", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.1.0", false),
+	}
+	versionedUnversionedAndBuiltin := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", true),
+	}
+
+	for name, tc := range map[string][]pluginutil.VersionedPlugin{
+		"ascending types":    differingTypes,
+		"ascending names":    differingNames,
+		"ascending versions": differingVersions,
+		// Include differing versions twice so we can test out equality too.
+		"differing types, names and versions": append(differingTypes,
+			append(differingNames,
+				append(differingVersions, differingVersions...)...)...),
+		"mix of unversioned, versioned, and builtin": versionedUnversionedAndBuiltin,
+	} {
+		t.Run(name, func(t *testing.T) {
+			sortVersionedPlugins(tc)
+			for i := 1; i < len(tc); i++ {
+				previous := tc[i-1]
+				current := tc[i]
+				if current.Type > previous.Type {
+					continue
+				}
+				if current.Name > previous.Name {
+					continue
+				}
+				if current.SemanticVersion.GreaterThan(previous.SemanticVersion) {
+					continue
+				}
+				if current.Type == previous.Type && current.Name == previous.Name && current.SemanticVersion.Equal(previous.SemanticVersion) {
+					continue
+				}
+
+				t.Fatalf("versioned plugins at index %d and %d were not properly sorted: %+v, %+v", i-1, i, previous, current)
+			}
+		})
+	}
+}
+
+func TestValidateVersion(t *testing.T) {
+	b := testSystemBackend(t).(*SystemBackend)
+	k8sAuthBuiltin := versions.GetBuiltinVersion(consts.PluginTypeCredential, "kubernetes")
+
+	for name, tc := range map[string]struct {
+		pluginName         string
+		pluginVersion      string
+		pluginType         consts.PluginType
+		expectLogicalError string
+		expectedVersion    string
+	}{
+		"default, nothing in nothing out":   {"kubernetes", "", consts.PluginTypeCredential, "", ""},
+		"builtin specified, empty out":      {"kubernetes", k8sAuthBuiltin, consts.PluginTypeCredential, "", ""},
+		"not canonical is ok":               {"kubernetes", "1.0.0", consts.PluginTypeCredential, "", "v1.0.0"},
+		"not a semantic version, error":     {"kubernetes", "not-a-version", consts.PluginTypeCredential, "not a valid semantic version", ""},
+		"can't select non-builtin token":    {"token", "v1.0.0", consts.PluginTypeCredential, "cannot select non-builtin version", ""},
+		"can't select non-builtin identity": {"identity", "v1.0.0", consts.PluginTypeSecrets, "cannot select non-builtin version", ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			version, resp, err := b.validateVersion(context.Background(), tc.pluginVersion, tc.pluginName, tc.pluginType)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.expectLogicalError != "" {
+				if resp == nil || !resp.IsError() || resp.Error() == nil {
+					t.Errorf("expected logical error but got none, resp: %#v", resp)
+				}
+				if !strings.Contains(resp.Error().Error(), tc.expectLogicalError) {
+					t.Errorf("expected logical error to contain %q, but got: %s", tc.expectLogicalError, resp.Error())
+				}
+			} else if version != tc.expectedVersion {
+				t.Errorf("expected version %q but got %q", tc.expectedVersion, version)
+			}
+		})
+	}
+}
+
+func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	tempDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	core.pluginCatalog.directory = tempDir
+	b := core.systemBackend
+
+	// Shadow a builtin and test getting a helpful error back.
+	file, err := ioutil.TempFile(tempDir, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	command := filepath.Base(file.Name())
+	err = core.pluginCatalog.Set(context.Background(), "kubernetes", consts.PluginTypeCredential, "", command, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// When we validate the version now, we should get a special error message
+	// about why the builtin isn't there.
+	k8sAuthBuiltin := versions.GetBuiltinVersion(consts.PluginTypeCredential, "kubernetes")
+	_, resp, err := b.validateVersion(context.Background(), k8sAuthBuiltin, "kubernetes", consts.PluginTypeCredential)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || !resp.IsError() || resp.Error() == nil {
+		t.Errorf("expected logical error but got none, resp: %#v", resp)
+	}
+	if !strings.Contains(resp.Error().Error(), "overridden by an unversioned plugin of the same name") {
+		t.Errorf("expected logical error to contain overridden message, but got: %s", resp.Error())
+	}
+}
+
+func TestCanUnseal_WithNonExistentBuiltinPluginVersion_InMountStorage(t *testing.T) {
+	core, keys, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	testCases := []struct {
+		pluginName string
+		pluginType consts.PluginType
+		mountTable string
+	}{
+		{"consul", consts.PluginTypeSecrets, "mounts"},
+		{"approle", consts.PluginTypeCredential, "auth"},
+	}
+	readMountConfig := func(pluginName, mountTable string) map[string]interface{} {
+		t.Helper()
+		req := logical.TestRequest(t, logical.ReadOperation, mountTable+"/"+pluginName)
+		resp, err := core.systemBackend.HandleRequest(ctx, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		return resp.Data
+	}
+
+	for _, tc := range testCases {
+		req := logical.TestRequest(t, logical.UpdateOperation, tc.mountTable+"/"+tc.pluginName)
+		req.Data["type"] = tc.pluginName
+		req.Data["config"] = map[string]interface{}{
+			"default_lease_ttl": "35m",
+			"max_lease_ttl":     "45m",
+			"plugin_version":    versions.GetBuiltinVersion(tc.pluginType, tc.pluginName),
+		}
+
+		resp, err := core.systemBackend.HandleRequest(ctx, req)
+		if err != nil {
+			t.Fatalf("err: %v, resp: %#v", err, resp)
+		}
+		if resp != nil {
+			t.Fatalf("bad: %v", resp)
+		}
+
+		config := readMountConfig(tc.pluginName, tc.mountTable)
+		pluginVersion, ok := config["plugin_version"]
+		if !ok || pluginVersion != "" {
+			t.Fatalf("expected empty plugin version in config: %#v", config)
+		}
+
+		// Directly store plugin version in mount entry, so we can then simulate
+		// an upgrade from 1.12.1 to 1.12.2 by sealing and unsealing.
+		const nonExistentBuiltinVersion = "v1.0.0+builtin"
+		var mountEntry *MountEntry
+		if tc.mountTable == "mounts" {
+			mountEntry, err = core.mounts.find(ctx, tc.pluginName+"/")
+		} else {
+			mountEntry, err = core.auth.find(ctx, tc.pluginName+"/")
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mountEntry == nil {
+			t.Fatal()
+		}
+		mountEntry.Version = nonExistentBuiltinVersion
+		err = core.persistMounts(ctx, core.mounts, &mountEntry.Local)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		config = readMountConfig(tc.pluginName, tc.mountTable)
+		pluginVersion, ok = config["plugin_version"]
+		if !ok || pluginVersion != nonExistentBuiltinVersion {
+			t.Fatalf("expected plugin version %s but was %s, config: %#v", nonExistentBuiltinVersion, pluginVersion, config)
+		}
+	}
+
+	err := TestCoreSeal(core)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+	}
+
+	for _, tc := range testCases {
+		// Storage should have been upgraded during the unseal, so plugin version
+		// should be empty again.
+		config := readMountConfig(tc.pluginName, tc.mountTable)
+		pluginVersion, ok := config["plugin_version"]
+		if !ok || pluginVersion != "" {
+			t.Errorf("expected empty plugin version in config: %#v", config)
+		}
+	}
+}
+
+func TestSystemBackend_ReadExperiments(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	for name, tc := range map[string][]string{
+		"no experiments enabled": {},
+		"one experiment enabled": {experiments.VaultExperimentEventsAlpha1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// Set the enabled experiments.
+			c.experiments = tc
+
+			req := logical.TestRequest(t, logical.ReadOperation, "experiments")
+			resp, err := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if resp == nil {
+				t.Fatal("Expected a response")
+			}
+			if !reflect.DeepEqual(experiments.ValidExperiments(), resp.Data["available"]) {
+				t.Fatalf("Expected %v but got %v", experiments.ValidExperiments(), resp.Data["available"])
+			}
+			if !reflect.DeepEqual(tc, resp.Data["enabled"]) {
+				t.Fatal("No experiments should be enabled by default")
+			}
+		})
+	}
 }

@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -74,7 +73,7 @@ func (b *backend) tidyDenyListRoleTag(ctx context.Context, req *logical.Request,
 			for _, tag := range tags {
 				tagEntry, err := s.Get(ctx, denyListRoletagStorage+tag)
 				if err != nil {
-					return errwrap.Wrapf(fmt.Sprintf("error fetching tag %q: {{err}}", tag), err)
+					return fmt.Errorf("error fetching tag %q: %w", tag, err)
 				}
 
 				if tagEntry == nil {
@@ -92,7 +91,7 @@ func (b *backend) tidyDenyListRoleTag(ctx context.Context, req *logical.Request,
 
 				if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
 					if err := s.Delete(ctx, denyListRoletagStorage+tag); err != nil {
-						return errwrap.Wrapf(fmt.Sprintf("error deleting tag %q from storage: {{err}}", tag), err)
+						return fmt.Errorf("error deleting tag %q from storage: %w", tag, err)
 					}
 				}
 			}

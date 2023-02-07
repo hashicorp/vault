@@ -8,7 +8,7 @@ export default Route.extend({
 
   beforeModel() {
     const { apiPath, type, authMethodPath, itemType } = this.getMethodAndModelInfo();
-    let modelType = `generated-${singularize(itemType)}-${type}`;
+    const modelType = `generated-${singularize(itemType)}-${type}`;
     return this.pathHelp.getNewModel(modelType, authMethodPath, apiPath, itemType);
   },
 
@@ -24,11 +24,11 @@ export default Route.extend({
     this._super(...arguments);
     const { apiPath, authMethodPath, itemType } = this.getMethodAndModelInfo();
     controller.set('itemType', itemType);
-    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then(paths => {
-      let navigationPaths = paths.paths.filter(path => path.navigation);
+    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then((paths) => {
+      const navigationPaths = paths.paths.filter((path) => path.navigation);
       controller.set(
         'paths',
-        navigationPaths.filter(path => path.itemType.includes(itemType)).map(path => path.path)
+        navigationPaths.filter((path) => path.itemType.includes(itemType)).map((path) => path.path)
       );
     });
   },

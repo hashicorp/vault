@@ -91,7 +91,7 @@ func TestSecretsMoveCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Moved secrets engine secret/ to: generic/"
+		expected := "Success! Finished moving secrets engine secret/ to generic/"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)

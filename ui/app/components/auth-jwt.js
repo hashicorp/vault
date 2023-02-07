@@ -1,14 +1,15 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
+// ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
 import Component from './outer-html';
 import { later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { computed } from '@ember/object';
+import { waitFor } from '@ember/test-waiters';
 
-/* eslint-disable ember/no-ember-testing-in-module-scope */
-const WAIT_TIME = Ember.testing ? 0 : 500;
+const WAIT_TIME = 500;
 const ERROR_WINDOW_CLOSED =
-  'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
+  'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click Sign In to try again.';
 const ERROR_MISSING_PARAMS =
   'The callback from the provider did not supply all of the required parameters.  Please click Sign In to try again. If the problem persists, you may want to contact your administrator.';
 const ERROR_JWT_LOGIN = 'OIDC login is not configured for this mount';
@@ -17,6 +18,7 @@ export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 export default Component.extend({
   store: service(),
   featureFlagService: service('featureFlag'),
+
   selectedAuthPath: null,
   selectedAuthType: null,
   roleName: null,
@@ -25,26 +27,23 @@ export default Component.extend({
   onRoleName() {},
   onLoading() {},
   onError() {},
-  onToken() {},
   onNamespace() {},
 
   didReceiveAttrs() {
-    let { oldSelectedAuthPath, selectedAuthPath } = this;
-    let shouldDebounce = !oldSelectedAuthPath && !selectedAuthPath;
-    if (oldSelectedAuthPath !== selectedAuthPath) {
-      this.set('role', null);
-      this.onRoleName(this.roleName);
-      this.fetchRole.perform(null, { debounce: false });
-    } else if (shouldDebounce) {
-      this.fetchRole.perform(this.roleName);
+    this._super();
+    const debounce = !this.oldSelectedAuthPath && !this.selectedAuthPath;
+
+    if (this.oldSelectedAuthPath !== this.selectedAuthPath || debounce) {
+      this.fetchRole.perform(this.roleName, { debounce });
     }
+
     this.set('errorMessage', null);
-    this.set('oldSelectedAuthPath', selectedAuthPath);
+    this.set('oldSelectedAuthPath', this.selectedAuthPath);
   },
 
   // Assumes authentication using OIDC until it's known that the mount is
   // configured for JWT authentication via static keys, JWKS, or OIDC discovery.
-  isOIDC: computed('errorMessage', function() {
+  isOIDC: computed('errorMessage', function () {
     return this.errorMessage !== ERROR_JWT_LOGIN;
   }),
 
@@ -52,29 +51,30 @@ export default Component.extend({
     return this.window || window;
   },
 
-  fetchRole: task(function*(roleName, options = { debounce: true }) {
-    if (options.debounce) {
-      this.onRoleName(roleName);
-      // debounce
-      yield timeout(WAIT_TIME);
-    }
-    let path = this.selectedAuthPath || this.selectedAuthType;
-    let id = JSON.stringify([path, roleName]);
-    let role = null;
-    try {
-      role = yield this.store.findRecord('role-jwt', id, { adapterOptions: { namespace: this.namespace } });
-    } catch (e) {
-      if (!e.httpStatus || e.httpStatus !== 400) {
-        throw e;
+  fetchRole: task(
+    waitFor(function* (roleName, options = { debounce: true }) {
+      if (options.debounce) {
+        this.onRoleName(roleName);
+        // debounce
+        yield timeout(Ember.testing ? 0 : WAIT_TIME);
       }
-      if (e.errors && e.errors.length > 0) {
-        this.set('errorMessage', e.errors[0]);
+      const path = this.selectedAuthPath || this.selectedAuthType;
+      const id = JSON.stringify([path, roleName]);
+      let role = null;
+      try {
+        role = yield this.store.findRecord('role-jwt', id, { adapterOptions: { namespace: this.namespace } });
+      } catch (e) {
+        // throwing here causes failures in tests
+        if ((!e.httpStatus || e.httpStatus !== 400) && !Ember.testing) {
+          throw e;
+        }
+        if (e.errors && e.errors.length > 0) {
+          this.set('errorMessage', e.errors[0]);
+        }
       }
-    }
-    this.set('role', role);
-  })
-    .restartable()
-    .withTestWaiter(),
+      this.set('role', role);
+    })
+  ).restartable(),
 
   handleOIDCError(err) {
     this.onLoading(false);
@@ -82,19 +82,29 @@ export default Component.extend({
     this.onError(err);
   },
 
-  prepareForOIDC: task(function*(oidcWindow) {
+  prepareForOIDC: task(function* (oidcWindow) {
+    const thisWindow = this.getWindow();
     // show the loading animation in the parent
     this.onLoading(true);
     // start watching the popup window and the current one
     this.watchPopup.perform(oidcWindow);
     this.watchCurrent.perform(oidcWindow);
-    // and then wait for storage event to be fired from the popup
-    // window setting a value in localStorage when the callback route is loaded
-    let storageEvent = yield waitForEvent(this.getWindow(), 'storage');
-    this.exchangeOIDC.perform(storageEvent, oidcWindow);
+    // wait for message posted from oidc callback
+    // see issue https://github.com/hashicorp/vault/issues/12436
+    // ensure that postMessage event is from expected source
+    while (true) {
+      const event = yield waitForEvent(thisWindow, 'message');
+      if (event.origin !== thisWindow.origin || !event.isTrusted) {
+        return this.handleOIDCError();
+      }
+      if (event.data.source === 'oidc-callback') {
+        return this.exchangeOIDC.perform(event.data, oidcWindow);
+      }
+      // continue to wait for the correct message
+    }
   }),
 
-  watchPopup: task(function*(oidcWindow) {
+  watchPopup: task(function* (oidcWindow) {
     while (true) {
       yield timeout(WAIT_TIME);
       if (!oidcWindow || oidcWindow.closed) {
@@ -103,7 +113,8 @@ export default Component.extend({
     }
   }),
 
-  watchCurrent: task(function*(oidcWindow) {
+  watchCurrent: task(function* (oidcWindow) {
+    // when user is about to change pages, close the popup window
     yield waitForEvent(this.getWindow(), 'beforeunload');
     oidcWindow.close();
   }),
@@ -114,26 +125,19 @@ export default Component.extend({
     oidcWindow.close();
   },
 
-  exchangeOIDC: task(function*(event, oidcWindow) {
-    // in non-incognito mode we need to use a timeout because it takes time before oidcState is written to local storage.
-    let oidcState = Ember.testing
-      ? event.storageArea.getItem('oidcState')
-      : yield timeout(1000).then(() => event.storageArea.getItem('oidcState'));
-
+  exchangeOIDC: task(function* (oidcState, oidcWindow) {
     if (oidcState === null || oidcState === undefined) {
       return;
     }
     this.onLoading(true);
-    // get the info from the event fired by the other window and
-    // then remove it from localStorage
-    let { namespace, path, state, code } = JSON.parse(oidcState);
-    this.getWindow().localStorage.removeItem('oidcState');
+
+    let { namespace, path, state, code } = oidcState;
 
     // The namespace can be either be passed as a query paramter, or be embedded
     // in the state param in the format `<state_id>,ns=<namespace>`. So if
     // `namespace` is empty, check for namespace in state as well.
     if (namespace === '' || this.featureFlagService.managedNamespaceRoot) {
-      let i = state.indexOf(',ns=');
+      const i = state.indexOf(',ns=');
       if (i >= 0) {
         // ",ns=" is 4 characters
         namespace = state.substring(i + 4);
@@ -148,7 +152,7 @@ export default Component.extend({
     if (!path || !state || !code) {
       return this.handleOIDCError(ERROR_MISSING_PARAMS);
     }
-    let adapter = this.store.adapterFor('auth-method');
+    const adapter = this.store.adapterFor('auth-method');
     this.onNamespace(namespace);
     let resp;
     // do the OIDC exchange, set the token on the parent component
@@ -158,10 +162,7 @@ export default Component.extend({
     } catch (e) {
       return this.handleOIDCError(e);
     }
-    let token = resp.auth.client_token;
-    this.onSelectedAuth('token');
-    this.onToken(token);
-    yield this.onSubmit();
+    yield this.onSubmit(null, null, resp.auth.client_token);
   }),
 
   actions: {
@@ -171,17 +172,31 @@ export default Component.extend({
         e.preventDefault();
       }
       if (!this.isOIDC || !this.role || !this.role.authUrl) {
+        let message = this.errorMessage;
+        if (!this.role) {
+          message = 'Invalid role. Please try again.';
+        } else if (!this.role.authUrl) {
+          message =
+            'Missing auth_url. Please check that allowed_redirect_uris for the role include this mount path.';
+        }
+        this.onError(message);
         return;
       }
-
-      await this.fetchRole.perform(this.roleName, { debounce: false });
-      let win = this.getWindow();
+      try {
+        await this.fetchRole.perform(this.roleName, { debounce: false });
+      } catch (error) {
+        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
+        if (error?.name !== 'TaskCancelation') {
+          throw error;
+        }
+      }
+      const win = this.getWindow();
 
       const POPUP_WIDTH = 500;
       const POPUP_HEIGHT = 600;
-      let left = win.screen.width / 2 - POPUP_WIDTH / 2;
-      let top = win.screen.height / 2 - POPUP_HEIGHT / 2;
-      let oidcWindow = win.open(
+      const left = win.screen.width / 2 - POPUP_WIDTH / 2;
+      const top = win.screen.height / 2 - POPUP_HEIGHT / 2;
+      const oidcWindow = win.open(
         this.role.authUrl,
         'vaultOIDCWindow',
         `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`

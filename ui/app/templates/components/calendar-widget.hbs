@@ -1,0 +1,123 @@
+<BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+  <D.Trigger
+    data-test-popup-menu-trigger="true"
+    class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+    @htmlTag="button"
+  >
+    {{date-format this.startDate "MMM yyyy"}}
+    -
+    {{date-format this.endDate "MMM yyyy"}}
+    <Chevron @direction="down" @isButton={{true}} />
+  </D.Trigger>
+  <D.Content @defaultClass={{concat "popup-menu-content calendar-content" (if this.showCalendar " calendar-open")}}>
+    <nav class="box menu">
+      <div class="calendar-title is-subtitle-gray">
+        DATE OPTIONS
+      </div>
+      <ul class="menu-list">
+        <li class="action">
+          <button
+            data-test-current-month
+            class="link link-plain has-text-weight-semibold is-ghost"
+            type="button"
+            name="currentMonth"
+            {{on "click" (fn this.handleDateShortcut D.actions)}}
+          >
+            Current month
+          </button>
+        </li>
+        <li class="action">
+          <button
+            data-test-current-billing-period
+            class="link link-plain has-text-weight-semibold is-ghost"
+            type="button"
+            name="reset"
+            {{on "click" (fn this.handleDateShortcut D.actions)}}
+          >
+            Current billing period
+          </button>
+        </li>
+        <li class="action">
+          <button
+            data-test-show-calendar
+            class={{concat "link link-plain has-text-weight-semibold is-ghost" (if this.showCalendar " is-active")}}
+            type="button"
+            {{on "click" this.toggleShowCalendar}}
+          >
+            <div class="level is-mobile">
+              <span class="level-left">
+                Custom end month
+              </span>
+              <Chevron class="has-text-grey-light level-right" />
+            </div>
+          </button>
+        </li>
+      </ul>
+    </nav>
+    {{#if this.showCalendar}}
+      <div class="calendar-widget-container" data-test-calendar-widget-container>
+        <div class="select-year">
+          <button
+            data-test-previous-year
+            id="previous-year"
+            type="button"
+            class="button is-transparent"
+            disabled={{this.disablePastYear}}
+            {{on "click" this.subYear}}
+          >
+            <Chevron
+              @direction="left"
+              @size="s"
+              class="has-text-grey"
+              {{on "mouseover" this.addTooltip}}
+              {{on "mouseleave" this.removeTooltip}}
+            />
+          </button>
+          <p data-test-display-year>
+            {{this.displayYear}}
+          </p>
+          <button
+            data-test-next-year
+            type="button"
+            class={{concat "button is-transparent " (if (or this.tooltipTarget) "negative-margin" "padding-right")}}
+            disabled={{this.disableFutureYear}}
+            {{on "click" this.addYear}}
+          >
+            <Chevron @direction="right" @size="s" class="has-text-grey" />
+          </button>
+          {{#if this.tooltipTarget}}
+            {{! Component must be in curly bracket notation }}
+            {{! template-lint-disable no-curly-component-invocation }}
+            {{#modal-dialog
+              tagName="div"
+              tetherTarget=this.tooltipTarget
+              targetAttachment="top right"
+              attachment="top middle"
+              offset="150px 0"
+            }}
+              <div class={{"calendar-tooltip"}}>
+                <p>
+                  {{this.tooltipText}}
+                </p>
+              </div>
+              <div class="chart-tooltip-arrow"></div>
+            {{/modal-dialog}}
+          {{/if}}
+        </div>
+        <div class="calendar-widget-grid calendar-widget">
+          {{#each this.widgetMonths as |month|}}
+            <button
+              data-test-calendar-month={{month.name}}
+              type="button"
+              class="is-month-list {{if month.readonly 'is-readOnly'}}"
+              id={{month.index}}
+              {{on "click" (fn this.selectMonth month D.actions)}}
+            >
+              {{month.name}}
+            </button>
+          {{/each}}
+        </div>
+      </div>
+    {{/if}}
+  </D.Content>
+</BasicDropdown>

@@ -9,7 +9,7 @@ export default ApplicationSerializer.extend({
   },
 
   serialize() {
-    let json = this._super(...arguments);
+    const json = this._super(...arguments);
     if (json.template && Array.isArray(json.template)) {
       // Transformations should only ever have one template
       json.template = json.template[0];
@@ -18,9 +18,8 @@ export default ApplicationSerializer.extend({
   },
 
   extractLazyPaginatedData(payload) {
-    let ret;
-    ret = payload.data.keys.map(key => {
-      let model = {
+    return payload.data.keys.map((key) => {
+      const model = {
         id: key,
       };
       if (payload.backend) {
@@ -28,6 +27,5 @@ export default ApplicationSerializer.extend({
       }
       return model;
     });
-    return ret;
   },
 });

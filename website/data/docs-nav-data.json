@@ -1,5 +1,39 @@
 [
   {
+    "title": "What is Vault?",
+    "path": "what-is-vault"
+  },
+  {
+    "title": "Use Cases",
+    "path": "use-cases"
+  },
+  {
+    "title": "Get Started",
+    "routes": [
+      {
+        "title": "CLI Quick Start",
+        "href": "https://learn.hashicorp.com/collections/vault/getting-started"
+      },
+      {
+        "title": "HCP Quick Start",
+        "href": "https://learn.hashicorp.com/collections/vault/cloud"
+      },
+      {
+        "title": "Developer Quick Start",
+        "path": "get-started/developer-qs"
+      }
+    ]
+  },
+
+  {
+    "divider": true
+  },
+  {
+    "title": "Browser Support",
+    "path": "browser-support"
+  },
+
+  {
     "title": "Installing Vault",
     "path": "install"
   },
@@ -43,10 +77,6 @@
         "path": "internals/replication"
       },
       {
-        "title": "Plugins",
-        "path": "internals/plugins"
-      },
-      {
         "title": "Limits and Maximums",
         "path": "internals/limits"
       }
@@ -68,6 +98,10 @@
         "path": "concepts/seal"
       },
       {
+        "title": "Namespace API Lock",
+        "path": "concepts/namespace-api-lock"
+      },
+      {
         "title": "Lease, Renew, and Revoke",
         "path": "concepts/lease"
       },
@@ -78,6 +112,14 @@
       {
         "title": "Tokens",
         "path": "concepts/tokens"
+      },
+      {
+        "title": "Identity",
+        "path": "concepts/identity"
+      },
+      {
+        "title": "OIDC Provider",
+        "path": "concepts/oidc-provider"
       },
       {
         "title": "Response Wrapping",
@@ -100,6 +142,10 @@
         "path": "concepts/ha"
       },
       {
+        "title": "Storage",
+        "path": "concepts/storage"
+      },
+      {
         "title": "Integrated Storage",
         "routes": [
           {
@@ -113,7 +159,7 @@
         ]
       },
       {
-        "title": "PGP, GPG, and Keybase",
+        "title": "PGP, GnuPG, and Keybase",
         "path": "concepts/pgp-gpg-keybase"
       },
       {
@@ -126,11 +172,32 @@
       },
       {
         "title": "Client Count",
-        "path": "concepts/client-count"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/client-count"
+          },
+          {
+            "title": "FAQ",
+            "path": "concepts/client-count/faq"
+          }
+        ]
       },
       {
         "title": "Transform",
         "path": "concepts/transform"
+      },
+      {
+        "title": "Mount Migration",
+        "path": "concepts/mount-migration"
+      },
+      {
+        "title": "Duration String Format",
+        "path": "concepts/duration-format"
+      },
+      {
+        "title": "User Lockout",
+        "path": "concepts/user-lockout"
       }
     ]
   },
@@ -151,6 +218,10 @@
           {
             "title": "TCP",
             "path": "configuration/listener/tcp"
+          },
+          {
+            "title": "Unix",
+            "path": "configuration/listener/unix"
           }
         ]
       },
@@ -186,7 +257,12 @@
             "path": "configuration/seal/ocikms"
           },
           {
-            "title": "HSM PKCS11 <sup>ENT</sup>",
+            "title": "HSM PKCS11",
+            "badge": {
+              "text": "ENT",
+              "type": "outlined",
+              "color": "neutral"
+            },
             "path": "configuration/seal/pkcs11"
           },
           {
@@ -226,6 +302,10 @@
           {
             "title": "Aerospike",
             "path": "configuration/storage/aerospike"
+          },
+          {
+            "title": "Alicloud OSS",
+            "path": "configuration/storage/alicloudoss"
           },
           {
             "title": "Azure",
@@ -322,8 +402,30 @@
         "path": "configuration/ui"
       },
       {
-        "title": "<code>Entropy Augmentation</code> <sup>ENT</sup>",
+        "title": "<code>user_lockout</code>",
+        "path": "configuration/user-lockout"
+      },
+      {
+        "title": "<code>Log Completed Requests</code>",
+        "path": "configuration/log-requests-level"
+      },
+      {
+        "title": "<code>Entropy Augmentation</code>",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/entropy-augmentation"
+      },
+      {
+        "title": "<code>kms_library</code>",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "configuration/kms-library"
       }
     ]
   },
@@ -381,6 +483,10 @@
           {
             "title": "<code>list</code>",
             "path": "commands/auth/list"
+          },
+          {
+            "title": "<code>move</code>",
+            "path": "commands/auth/move"
           },
           {
             "title": "<code>tune</code>",
@@ -446,11 +552,28 @@
         ]
       },
       {
+        "title": "<code>pki</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/pki"
+          },
+          {
+            "title": "<code>health-check</code>",
+            "path": "commands/pki/health-check"
+          }
+        ]
+      },
+      {
         "title": "<code>lease</code>",
         "routes": [
           {
             "title": "Overview",
             "path": "commands/lease"
+          },
+          {
+            "title": "<code>lookup</code>",
+            "path": "commands/lease/lookup"
           },
           {
             "title": "<code>renew</code>",
@@ -459,6 +582,23 @@
           {
             "title": "<code>revoke</code>",
             "path": "commands/lease/revoke"
+          }
+        ]
+      },
+      {
+        "title": "<code>license</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/license"
+          },
+          {
+            "title": "<code>get</code>",
+            "path": "commands/license/get"
+          },
+          {
+            "title": "<code>inspect</code>",
+            "path": "commands/license/inspect"
           }
         ]
       },
@@ -486,6 +626,10 @@
             "path": "commands/operator"
           },
           {
+            "title": "<code>diagnose</code>",
+            "path": "commands/operator/diagnose"
+          },
+          {
             "title": "<code>generate-root</code>",
             "path": "commands/operator/generate-root"
           },
@@ -496,6 +640,10 @@
           {
             "title": "<code>key-status</code>",
             "path": "commands/operator/key-status"
+          },
+          {
+            "title": "<code>members</code>",
+            "path": "commands/operator/members"
           },
           {
             "title": "<code>migrate</code>",
@@ -530,6 +678,10 @@
             "path": "commands/operator/usage"
           }
         ]
+      },
+      {
+        "title": "<code>patch</code>",
+        "path": "commands/patch"
       },
       {
         "title": "<code>path-help</code>",
@@ -676,6 +828,10 @@
         "path": "commands/version"
       },
       {
+        "title": "<code>version-history</code>",
+        "path": "commands/version-history"
+      },
+      {
         "title": "<code>write</code>",
         "path": "commands/write"
       },
@@ -745,6 +901,10 @@
               {
                 "title": "Kubernetes",
                 "path": "agent/autoauth/methods/kubernetes"
+              },
+              {
+                "title": "Token File",
+                "path": "agent/autoauth/methods/token_file"
               }
             ]
           },
@@ -762,6 +922,10 @@
             ]
           }
         ]
+      },
+      {
+        "title": "API Proxy",
+        "path": "agent/apiproxy"
       },
       {
         "title": "Caching",
@@ -853,6 +1017,10 @@
             "path": "secrets/databases/hanadb"
           },
           {
+            "title": "IBM Db2",
+            "path": "secrets/databases/db2"
+          },
+          {
             "title": "InfluxDB",
             "path": "secrets/databases/influxdb"
           },
@@ -881,6 +1049,14 @@
             "path": "secrets/databases/postgresql"
           },
           {
+            "title": "Redis",
+            "path": "secrets/databases/redis"
+          },
+          {
+            "title": "Redis ElastiCache",
+            "path": "secrets/databases/rediselasticache"
+          },
+          {
             "title": "Redshift",
             "path": "secrets/databases/redshift"
           },
@@ -903,7 +1079,29 @@
         "path": "secrets/gcpkms"
       },
       {
-        "title": "Key Management <sup>ENTERPRISE</sup>",
+        "title": "Identity",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/identity"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "secrets/identity/identity-token"
+          },
+          {
+            "title": "OIDC Identity Provider",
+            "path": "secrets/identity/oidc-provider"
+          }
+        ]
+      },
+      {
+        "title": "Key Management",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "routes": [
           {
             "title": "Overview",
@@ -916,12 +1114,12 @@
           {
             "title": "AWS KMS",
             "path": "secrets/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secrets/key-management/gcpkms"
           }
         ]
-      },
-      {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
-        "path": "secrets/kmip"
       },
       {
         "title": "Key/Value",
@@ -941,8 +1139,22 @@
         ]
       },
       {
-        "title": "Identity",
-        "path": "secrets/identity"
+        "title": "KMIP",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "secrets/kmip"
+      },
+      {
+        "title": "KMIP - Profile Support",
+        "path": "secrets/kmip-profiles",
+        "hidden": true
+      },
+      {
+        "title": "Kubernetes",
+        "path": "secrets/kubernetes"
       },
       {
         "title": "MongoDB Atlas",
@@ -953,12 +1165,37 @@
         "path": "secrets/nomad"
       },
       {
-        "title": "OpenLDAP",
-        "path": "secrets/openldap"
+        "title": "LDAP",
+        "path": "secrets/ldap"
       },
       {
         "title": "PKI (Certificates)",
-        "path": "secrets/pki"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/pki"
+          },
+          {
+            "title": "Setup and Usage",
+            "path": "secrets/pki/setup"
+          },
+          {
+            "title": "Quick Start - Root CA Setup",
+            "path": "secrets/pki/quick-start-root-ca"
+          },
+          {
+            "title": "Quick Start - Intermediate CA Setup",
+            "path": "secrets/pki/quick-start-intermediate-ca"
+          },
+          {
+            "title": "Considerations",
+            "path": "secrets/pki/considerations"
+          },
+          {
+            "title": "Rotation Primitives",
+            "path": "secrets/pki/rotation-primitives"
+          }
+        ]
       },
       {
         "title": "RabbitMQ",
@@ -978,10 +1215,6 @@
           {
             "title": "SSH OTP",
             "path": "secrets/ssh/one-time-ssh-passwords"
-          },
-          {
-            "title": "Dynamic Key",
-            "path": "secrets/ssh/dynamic-ssh-keys"
           }
         ]
       },
@@ -994,21 +1227,44 @@
         "path": "secrets/totp"
       },
       {
-        "title": "Transform <sup>ENTERPRISE</sup>",
+        "title": "Transform",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "routes": [
           {
             "title": "Overview",
             "path": "secrets/transform"
           },
           {
-            "title": "Tokenization Transform <sup>ENTERPRISE</sup>",
+            "title": "FF3-1 Tweak Usage",
+            "path": "secrets/transform/ff3-tweak-details"
+          },
+          {
+            "title": "Tokenization Transform",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            },
             "path": "secrets/transform/tokenization"
           }
         ]
       },
       {
         "title": "Transit",
-        "path": "secrets/transit"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/transit"
+          },
+          {
+            "title": "Import Key Wrapping Guide",
+            "path": "secrets/transit/key-wrapping-guide"
+          }
+        ]
       },
       {
         "title": "Venafi (Certificates)",
@@ -1060,7 +1316,48 @@
           },
           {
             "title": "OIDC Providers",
-            "path": "auth/jwt_oidc_providers"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "auth/jwt/oidc-providers"
+              },
+              {
+                "title": "Auth0",
+                "path": "auth/jwt/oidc-providers/auth0"
+              },
+              {
+                "title": "Azure AD",
+                "path": "auth/jwt/oidc-providers/azuread"
+              },
+              {
+                "title": "Forgerock",
+                "path": "auth/jwt/oidc-providers/forgerock"
+              },
+              {
+                "title": "Gitlab",
+                "path": "auth/jwt/oidc-providers/gitlab"
+              },
+              {
+                "title": "Google",
+                "path": "auth/jwt/oidc-providers/google"
+              },
+              {
+                "title": "Keycloak",
+                "path": "auth/jwt/oidc-providers/keycloak"
+              },
+              {
+                "title": "Kubernetes",
+                "path": "auth/jwt/oidc-providers/kubernetes"
+              },
+              {
+                "title": "Okta",
+                "path": "auth/jwt/oidc-providers/okta"
+              },
+              {
+                "title": "SecureAuth",
+                "path": "auth/jwt/oidc-providers/secureauth"
+              }
+            ]
           }
         ]
       },
@@ -1075,6 +1372,19 @@
       {
         "title": "LDAP",
         "path": "auth/ldap"
+      },
+      {
+        "title": "Login MFA",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/login-mfa"
+          },
+          {
+            "title": "FAQ",
+            "path": "auth/login-mfa/faq"
+          }
+        ]
       },
       {
         "title": "Oracle Cloud Infrastructure",
@@ -1104,12 +1414,13 @@
         "divider": true
       },
       {
-        "title": "App ID <sup>DEPRECATED</sup>",
+        "title": "App ID",
+        "badge": {
+          "text": "DEPRECATED",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "auth/app-id"
-      },
-      {
-        "title": "MFA <sup>LEGACY / UNSUPPORTED</sup>",
-        "path": "auth/mfa"
       }
     ]
   },
@@ -1135,27 +1446,41 @@
     ]
   },
   {
-    "title": "Plugin Backends",
-    "path": "plugin"
-  },
-  {
-    "title": "Plugin Portal",
-    "path": "plugin-portal"
-  },
-  {
-    "divider": true
-  },
-  {
-    "title": "What is Vault?",
-    "path": "what-is-vault"
-  },
-  {
-    "title": "Use Cases",
-    "path": "use-cases"
+    "title": "Plugins",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "plugins"
+      },
+      {
+        "title": "Plugin Architecture",
+        "path": "plugins/plugin-architecture"
+      },
+      {
+        "title": "Plugin Development",
+        "path": "plugins/plugin-development"
+      },
+      {
+        "title": "Plugin Management",
+        "path": "plugins/plugin-management"
+      },
+      {
+        "title": "Integrations Library",
+        "href": "/vault/integrations"
+      }
+    ]
   },
   {
     "title": "Vault Integration Program",
     "path": "partnerships"
+  },
+  {
+    "title": "Vault Interoperability Matrix",
+    "path": "interoperability-matrix"
+  },
+  {
+    "title": "Troubleshoot",
+    "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
   },
   {
     "divider": true
@@ -1168,12 +1493,43 @@
         "path": "platform"
       },
       {
+        "title": "AWS",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/aws"
+          },
+          {
+            "title": "Vault Lambda Extension",
+            "path": "platform/aws/lambda-extension"
+          },
+          {
+            "title": "Running Vault",
+            "path": "platform/aws/run"
+          }
+        ]
+      },
+      {
+        "title": "GitHub",
+        "routes": [
+          {
+            "title": "GitHub Actions",
+            "path": "platform/github-actions"
+          }
+        ]
+      },
+      {
         "title": "Kubernetes",
         "routes": [
           {
             "title": "Overview",
             "path": "platform/k8s"
           },
+          {
+            "title": "Agent Injector vs. Vault CSI Provider",
+            "path": "platform/k8s/injector-csi"
+          },
+
           {
             "title": "Helm Chart",
             "routes": [
@@ -1186,12 +1542,20 @@
                 "path": "platform/k8s/helm/run"
               },
               {
+                "title": "Enterprise Licensing",
+                "path": "platform/k8s/helm/enterprise"
+              },
+              {
                 "title": "Running Vault on OpenShift",
                 "path": "platform/k8s/helm/openshift"
               },
               {
                 "title": "Configuration",
                 "path": "platform/k8s/helm/configuration"
+              },
+              {
+                "title": "Terraform",
+                "path": "platform/k8s/helm/terraform"
               },
               {
                 "title": "Examples",
@@ -1247,6 +1611,10 @@
                   {
                     "title": "Vault Agent Injector TLS Configuration",
                     "path": "platform/k8s/helm/examples/injector-tls"
+                  },
+                  {
+                    "title": "Vault Agent Injector TLS with Cert-Manager",
+                    "path": "platform/k8s/helm/examples/injector-tls-cert-manager"
                   }
                 ]
               }
@@ -1281,31 +1649,68 @@
                 "path": "platform/k8s/csi"
               },
               {
+                "title": "Installation",
+                "path": "platform/k8s/csi/installation"
+              },
+              {
                 "title": "Configurations",
                 "path": "platform/k8s/csi/configurations"
               },
               {
                 "title": "Examples",
                 "path": "platform/k8s/csi/examples"
-              },
-              {
-                "title": "Installation",
-                "path": "platform/k8s/csi/installation"
               }
             ]
           }
         ]
       },
       {
-        "title": "AWS Marketplace",
+        "title": "Microsoft SQL Server EKM provider",
         "routes": [
           {
             "title": "Overview",
-            "path": "platform/aws-mp"
+            "path": "platform/mssql"
           },
           {
-            "title": "Running Vault",
-            "path": "platform/aws-mp/run"
+            "title": "Installation",
+            "path": "platform/mssql/installation"
+          },
+          {
+            "title": "Configuration",
+            "path": "platform/mssql/configuration"
+          },
+          {
+            "title": "Upgrading",
+            "path": "platform/mssql/upgrading"
+          },
+          {
+            "title": "Troubleshooting",
+            "path": "platform/mssql/troubleshooting"
+          },
+          {
+            "title": "Release Notes",
+            "path": "platform/mssql/changelog"
+          }
+        ]
+      },
+      {
+        "title": "ServiceNow",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/servicenow"
+          },
+          {
+            "title": "Installation",
+            "path": "platform/servicenow/installation"
+          },
+          {
+            "title": "Configuration",
+            "path": "platform/servicenow/configuration"
+          },
+          {
+            "title": "Troubleshooting",
+            "path": "platform/servicenow/troubleshooting"
           }
         ]
       }
@@ -1326,212 +1731,237 @@
         "path": "upgrading/plugins"
       },
       {
-        "title": "Upgrade to 0.5.0",
-        "path": "upgrading/upgrade-to-0.5.0"
+        "title": "Upgrade to 1.13.x",
+        "path": "upgrading/upgrade-to-1.13.x",
+        "hidden": true
       },
       {
-        "title": "Upgrade to 0.5.1",
-        "path": "upgrading/upgrade-to-0.5.1"
+        "title": "Upgrade to 1.12.x",
+        "path": "upgrading/upgrade-to-1.12.x"
       },
       {
-        "title": "Upgrade to 0.6.0",
-        "path": "upgrading/upgrade-to-0.6.0"
+        "title": "Upgrade to 1.11.x",
+        "path": "upgrading/upgrade-to-1.11.x"
       },
       {
-        "title": "Upgrade to 0.6.1",
-        "path": "upgrading/upgrade-to-0.6.1"
+        "title": "Upgrade to 1.10.x",
+        "path": "upgrading/upgrade-to-1.10.x"
       },
       {
-        "title": "Upgrade to 0.6.2",
-        "path": "upgrading/upgrade-to-0.6.2"
+        "title": "Upgrade to 1.9.x",
+        "path": "upgrading/upgrade-to-1.9.x"
       },
       {
-        "title": "Upgrade to 0.6.3",
-        "path": "upgrading/upgrade-to-0.6.3"
+        "title": "Upgrade to 1.8.x",
+        "path": "upgrading/upgrade-to-1.8.x"
       },
       {
-        "title": "Upgrade to 0.6.4",
-        "path": "upgrading/upgrade-to-0.6.4"
-      },
-      {
-        "title": "Upgrade to 0.7.0",
-        "path": "upgrading/upgrade-to-0.7.0"
-      },
-      {
-        "title": "Upgrade to 0.8.0",
-        "path": "upgrading/upgrade-to-0.8.0"
-      },
-      {
-        "title": "Upgrade to 0.9.0",
-        "path": "upgrading/upgrade-to-0.9.0"
-      },
-      {
-        "title": "Upgrade to 0.9.1",
-        "path": "upgrading/upgrade-to-0.9.1"
-      },
-      {
-        "title": "Upgrade to 0.9.2",
-        "path": "upgrading/upgrade-to-0.9.2"
-      },
-      {
-        "title": "Upgrade to 0.9.3",
-        "path": "upgrading/upgrade-to-0.9.3"
-      },
-      {
-        "title": "Upgrade to 0.9.6",
-        "path": "upgrading/upgrade-to-0.9.6"
-      },
-      {
-        "title": "Upgrade to 0.10.0",
-        "path": "upgrading/upgrade-to-0.10.0"
-      },
-      {
-        "title": "Upgrade to 0.10.2",
-        "path": "upgrading/upgrade-to-0.10.2"
-      },
-      {
-        "title": "Upgrade to 0.10.4",
-        "path": "upgrading/upgrade-to-0.10.4"
-      },
-      {
-        "title": "Upgrade to 0.11.0",
-        "path": "upgrading/upgrade-to-0.11.0"
-      },
-      {
-        "title": "Upgrade to 0.11.2",
-        "path": "upgrading/upgrade-to-0.11.2"
-      },
-      {
-        "title": "Upgrade to 0.11.6",
-        "path": "upgrading/upgrade-to-0.11.6"
-      },
-      {
-        "title": "Upgrade to 1.0.0",
-        "path": "upgrading/upgrade-to-1.0.0"
-      },
-      {
-        "title": "Upgrade to 1.1.0",
-        "path": "upgrading/upgrade-to-1.1.0"
-      },
-      {
-        "title": "Upgrade to 1.1.1",
-        "path": "upgrading/upgrade-to-1.1.1"
-      },
-      {
-        "title": "Upgrade to 1.1.2",
-        "path": "upgrading/upgrade-to-1.1.2"
-      },
-      {
-        "title": "Upgrade to 1.2.0",
-        "path": "upgrading/upgrade-to-1.2.0"
-      },
-      {
-        "title": "Upgrade to 1.2.1",
-        "path": "upgrading/upgrade-to-1.2.1"
-      },
-      {
-        "title": "Upgrade to 1.2.4",
-        "path": "upgrading/upgrade-to-1.2.4"
-      },
-      {
-        "title": "Upgrade to 1.2.5",
-        "path": "upgrading/upgrade-to-1.2.5"
-      },
-      {
-        "title": "Upgrade to 1.2.6",
-        "path": "upgrading/upgrade-to-1.2.6"
-      },
-      {
-        "title": "Upgrade to 1.2.7",
-        "path": "upgrading/upgrade-to-1.2.7"
-      },
-      {
-        "title": "Upgrade to 1.3.0",
-        "path": "upgrading/upgrade-to-1.3.0"
-      },
-      {
-        "title": "Upgrade to 1.3.2",
-        "path": "upgrading/upgrade-to-1.3.2"
-      },
-      {
-        "title": "Upgrade to 1.3.3",
-        "path": "upgrading/upgrade-to-1.3.3"
-      },
-      {
-        "title": "Upgrade to 1.3.4",
-        "path": "upgrading/upgrade-to-1.3.4"
-      },
-      {
-        "title": "Upgrade to 1.3.5",
-        "path": "upgrading/upgrade-to-1.3.5"
-      },
-      {
-        "title": "Upgrade to 1.3.8",
-        "path": "upgrading/upgrade-to-1.3.8"
-      },
-      {
-        "title": "Upgrade to 1.3.9",
-        "path": "upgrading/upgrade-to-1.3.9"
-      },
-      {
-        "title": "Upgrade to 1.3.10",
-        "path": "upgrading/upgrade-to-1.3.10"
-      },
-      {
-        "title": "Upgrade to 1.4.0",
-        "path": "upgrading/upgrade-to-1.4.0"
-      },
-      {
-        "title": "Upgrade to 1.4.1",
-        "path": "upgrading/upgrade-to-1.4.1"
-      },
-      {
-        "title": "Upgrade to 1.4.4",
-        "path": "upgrading/upgrade-to-1.4.4"
-      },
-      {
-        "title": "Upgrade to 1.4.5",
-        "path": "upgrading/upgrade-to-1.4.5"
-      },
-      {
-        "title": "Upgrade to 1.4.6",
-        "path": "upgrading/upgrade-to-1.4.6"
-      },
-      {
-        "title": "Upgrade to 1.5.0",
-        "path": "upgrading/upgrade-to-1.5.0"
-      },
-      {
-        "title": "Upgrade to 1.5.1",
-        "path": "upgrading/upgrade-to-1.5.1"
-      },
-      {
-        "title": "Upgrade to 1.5.2",
-        "path": "upgrading/upgrade-to-1.5.2"
-      },
-      {
-        "title": "Upgrade to 1.5.3",
-        "path": "upgrading/upgrade-to-1.5.3"
-      },
-      {
-        "title": "Upgrade to 1.6.0",
-        "path": "upgrading/upgrade-to-1.6.0"
-      },
-      {
-        "title": "Upgrade to 1.6.1",
-        "path": "upgrading/upgrade-to-1.6.1"
-      },
-      {
-        "title": "Upgrade to 1.6.2",
-        "path": "upgrading/upgrade-to-1.6.2"
+        "title": "Upgrade to 1.7.x",
+        "path": "upgrading/upgrade-to-1.7.x"
       },
       {
         "title": "Upgrade to 1.6.3",
         "path": "upgrading/upgrade-to-1.6.3"
       },
       {
-        "title": "Upgrade to 1.7.0",
-        "path": "upgrading/upgrade-to-1.7.0"
+        "title": "Upgrade to 1.6.2",
+        "path": "upgrading/upgrade-to-1.6.2"
+      },
+      {
+        "title": "Upgrade to 1.6.1",
+        "path": "upgrading/upgrade-to-1.6.1"
+      },
+      {
+        "title": "Upgrade to 1.6.0",
+        "path": "upgrading/upgrade-to-1.6.0"
+      },
+      {
+        "title": "Upgrade to 1.5.3",
+        "path": "upgrading/upgrade-to-1.5.3"
+      },
+      {
+        "title": "Upgrade to 1.5.2",
+        "path": "upgrading/upgrade-to-1.5.2"
+      },
+      {
+        "title": "Upgrade to 1.5.1",
+        "path": "upgrading/upgrade-to-1.5.1"
+      },
+      {
+        "title": "Upgrade to 1.5.0",
+        "path": "upgrading/upgrade-to-1.5.0"
+      },
+      {
+        "title": "Upgrade to 1.4.6",
+        "path": "upgrading/upgrade-to-1.4.6"
+      },
+      {
+        "title": "Upgrade to 1.4.5",
+        "path": "upgrading/upgrade-to-1.4.5"
+      },
+      {
+        "title": "Upgrade to 1.4.4",
+        "path": "upgrading/upgrade-to-1.4.4"
+      },
+      {
+        "title": "Upgrade to 1.4.1",
+        "path": "upgrading/upgrade-to-1.4.1"
+      },
+      {
+        "title": "Upgrade to 1.4.0",
+        "path": "upgrading/upgrade-to-1.4.0"
+      },
+      {
+        "title": "Upgrade to 1.3.10",
+        "path": "upgrading/upgrade-to-1.3.10"
+      },
+      {
+        "title": "Upgrade to 1.3.9",
+        "path": "upgrading/upgrade-to-1.3.9"
+      },
+      {
+        "title": "Upgrade to 1.3.8",
+        "path": "upgrading/upgrade-to-1.3.8"
+      },
+      {
+        "title": "Upgrade to 1.3.5",
+        "path": "upgrading/upgrade-to-1.3.5"
+      },
+      {
+        "title": "Upgrade to 1.3.4",
+        "path": "upgrading/upgrade-to-1.3.4"
+      },
+      {
+        "title": "Upgrade to 1.3.3",
+        "path": "upgrading/upgrade-to-1.3.3"
+      },
+      {
+        "title": "Upgrade to 1.3.2",
+        "path": "upgrading/upgrade-to-1.3.2"
+      },
+      {
+        "title": "Upgrade to 1.3.0",
+        "path": "upgrading/upgrade-to-1.3.0"
+      },
+      {
+        "title": "Upgrade to 1.2.7",
+        "path": "upgrading/upgrade-to-1.2.7"
+      },
+      {
+        "title": "Upgrade to 1.2.6",
+        "path": "upgrading/upgrade-to-1.2.6"
+      },
+      {
+        "title": "Upgrade to 1.2.5",
+        "path": "upgrading/upgrade-to-1.2.5"
+      },
+      {
+        "title": "Upgrade to 1.2.4",
+        "path": "upgrading/upgrade-to-1.2.4"
+      },
+      {
+        "title": "Upgrade to 1.2.1",
+        "path": "upgrading/upgrade-to-1.2.1"
+      },
+      {
+        "title": "Upgrade to 1.2.0",
+        "path": "upgrading/upgrade-to-1.2.0"
+      },
+      {
+        "title": "Upgrade to 1.1.2",
+        "path": "upgrading/upgrade-to-1.1.2"
+      },
+      {
+        "title": "Upgrade to 1.1.1",
+        "path": "upgrading/upgrade-to-1.1.1"
+      },
+      {
+        "title": "Upgrade to 1.1.0",
+        "path": "upgrading/upgrade-to-1.1.0"
+      },
+      {
+        "title": "Upgrade to 1.0.0",
+        "path": "upgrading/upgrade-to-1.0.0"
+      },
+      {
+        "title": "Upgrade to 0.11.6",
+        "path": "upgrading/upgrade-to-0.11.6"
+      },
+      {
+        "title": "Upgrade to 0.11.2",
+        "path": "upgrading/upgrade-to-0.11.2"
+      },
+      {
+        "title": "Upgrade to 0.11.0",
+        "path": "upgrading/upgrade-to-0.11.0"
+      },
+      {
+        "title": "Upgrade to 0.10.4",
+        "path": "upgrading/upgrade-to-0.10.4"
+      },
+      {
+        "title": "Upgrade to 0.10.2",
+        "path": "upgrading/upgrade-to-0.10.2"
+      },
+      {
+        "title": "Upgrade to 0.10.0",
+        "path": "upgrading/upgrade-to-0.10.0"
+      },
+      {
+        "title": "Upgrade to 0.9.6",
+        "path": "upgrading/upgrade-to-0.9.6"
+      },
+      {
+        "title": "Upgrade to 0.9.3",
+        "path": "upgrading/upgrade-to-0.9.3"
+      },
+      {
+        "title": "Upgrade to 0.9.2",
+        "path": "upgrading/upgrade-to-0.9.2"
+      },
+      {
+        "title": "Upgrade to 0.9.1",
+        "path": "upgrading/upgrade-to-0.9.1"
+      },
+      {
+        "title": "Upgrade to 0.9.0",
+        "path": "upgrading/upgrade-to-0.9.0"
+      },
+      {
+        "title": "Upgrade to 0.8.0",
+        "path": "upgrading/upgrade-to-0.8.0"
+      },
+      {
+        "title": "Upgrade to 0.7.0",
+        "path": "upgrading/upgrade-to-0.7.0"
+      },
+      {
+        "title": "Upgrade to 0.6.4",
+        "path": "upgrading/upgrade-to-0.6.4"
+      },
+      {
+        "title": "Upgrade to 0.6.3",
+        "path": "upgrading/upgrade-to-0.6.3"
+      },
+      {
+        "title": "Upgrade to 0.6.2",
+        "path": "upgrading/upgrade-to-0.6.2"
+      },
+      {
+        "title": "Upgrade to 0.6.1",
+        "path": "upgrading/upgrade-to-0.6.1"
+      },
+      {
+        "title": "Upgrade to 0.6.0",
+        "path": "upgrading/upgrade-to-0.6.0"
+      },
+      {
+        "title": "Upgrade to 0.5.1",
+        "path": "upgrading/upgrade-to-0.5.1"
+      },
+      {
+        "title": "Upgrade to 0.5.0",
+        "path": "upgrading/upgrade-to-0.5.0"
       }
     ]
   },
@@ -1546,18 +1976,93 @@
         "path": "release-notes"
       },
       {
-        "title": "1.5.0",
-        "path": "release-notes/1.5.0"
+        "title": "1.12.0",
+        "path": "release-notes/1.12.0"
+      },
+      {
+        "title": "1.11.0",
+        "path": "release-notes/1.11.0"
+      },
+      {
+        "title": "1.10.0",
+        "path": "release-notes/1.10.0"
+      },
+      {
+        "title": "1.9.0",
+        "path": "release-notes/1.9.0"
+      },
+      {
+        "title": "1.8.0",
+        "path": "release-notes/1.8.0"
+      },
+      {
+        "title": "1.7.0",
+        "path": "release-notes/1.7.0"
       },
       {
         "title": "1.6.0",
         "path": "release-notes/1.6.0"
       },
       {
-        "title": "1.7.0",
-        "path": "release-notes/1.7.0"
+        "title": "1.5.0",
+        "path": "release-notes/1.5.0"
       }
     ]
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "Deprecation Notices",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "deprecation"
+      },
+      {
+        "title": "FAQ",
+        "path": "deprecation/faq"
+      }
+    ]
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "FAQ",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "faq"
+      },
+      {
+        "title": "Feature Deprecation Notice and Plans",
+        "href": "https://www.vaultproject.io/docs/deprecation/faq"
+      },
+      {
+        "title": "License",
+        "href": "https://www.vaultproject.io/docs/enterprise/license/faq"
+      },
+      {
+        "title": "Client Count",
+        "href": "https://www.vaultproject.io/docs/concepts/client-count/faq"
+      },
+      {
+        "title": "Login MFA",
+        "href": "https://www.vaultproject.io/docs/auth/login-mfa/faq"
+      },
+      {
+        "title": "Server Side Consistent Token",
+        "path": "faq/ssct"
+      }
+    ]
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "Glossary",
+    "path": "glossary"
   },
   {
     "divider": true
@@ -1570,9 +2075,28 @@
         "path": "enterprise"
       },
       {
+        "title": "License",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/license"
+          },
+          {
+            "title": "Autoloading",
+            "path": "enterprise/license/autoloading"
+          },
+          {
+            "title": "FAQ",
+            "path": "enterprise/license/faq"
+          }
+        ]
+      },
+
+      {
         "title": "Replication",
         "path": "enterprise/replication"
       },
+
       {
         "title": "HSM Support",
         "routes": [
@@ -1591,8 +2115,33 @@
         ]
       },
       {
+        "title": "PKCS11 Provider",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/pkcs11-provider"
+          },
+          {
+            "title": "AWS KMS XKS",
+            "path": "enterprise/pkcs11-provider/aws-xks"
+          },
+          {
+            "title": "Oracle TDE",
+            "path": "enterprise/pkcs11-provider/oracle-tde"
+          }
+        ]
+      },
+      {
         "title": "Automated Integrated Storage Snapshots",
         "path": "enterprise/automated-integrated-storage-snapshots"
+      },
+      {
+        "title": "Automated Upgrades",
+        "path": "enterprise/automated-upgrades"
+      },
+      {
+        "title": "Redundancy Zones",
+        "path": "enterprise/redundancy-zones"
       },
       {
         "title": "Lease Count Quotas",
@@ -1603,7 +2152,24 @@
         "path": "enterprise/entropy-augmentation"
       },
       {
-        "title": "Seal Wrap / FIPS 140-2",
+        "title": "FIPS",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/fips"
+          },
+          {
+            "title": "FIPS 140-2 Inside Vault",
+            "path": "enterprise/fips/fips1402"
+          },
+          {
+            "title": "Seal Wrap for FIPS 140-2",
+            "path": "enterprise/fips/sealwrap"
+          }
+        ]
+      },
+      {
+        "title": "Seal Wrap",
         "path": "enterprise/sealwrap"
       },
       {
@@ -1621,6 +2187,10 @@
       {
         "title": "Control Groups",
         "path": "enterprise/control-groups"
+      },
+      {
+        "title": "Managed Keys",
+        "path": "enterprise/managed-keys"
       },
       {
         "title": "MFA",
@@ -1663,6 +2233,10 @@
             "path": "enterprise/sentinel/properties"
           }
         ]
+      },
+      {
+        "title": "HCP Vault",
+        "href": "https://cloud.hashicorp.com/docs/vault"
       }
     ]
   }

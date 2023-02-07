@@ -1,4 +1,4 @@
-// +build !memprofiler
+//go:build !memprofiler
 
 package command
 

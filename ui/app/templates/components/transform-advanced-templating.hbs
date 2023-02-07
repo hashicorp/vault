@@ -1,0 +1,58 @@
+<ToggleButton
+  @isOpen={{this.showForm}}
+  @openLabel="Advanced templating"
+  @closedLabel="Advanced templating"
+  @onClick={{fn (mut this.showForm)}}
+  data-test-toggle-advanced={{true}}
+/>
+
+{{#if this.showForm}}
+  <div class="box has-container is-fullwidth">
+    <h4 class="title is-5">Advanced templating</h4>
+    <p>
+      Using your template's regex as a starting point, you can specify which parts of your input to encode and decode. For
+      example, you may want to handle input formatting or only decode part of an input. For more information, see
+      <DocLink @path="/vault/tutorials/adp/transform#advanced-handling">
+        our documentation.
+      </DocLink>
+    </p>
+    <div class="has-top-margin-l">
+      <RegexValidator
+        @value={{@model.pattern}}
+        @testInputLabel="Sample input"
+        @testInputSubText="Enter a sample input to match against your regex and identify capture groups. Optional."
+        @showGroups={{true}}
+        @onValidate={{this.setInputOptions}}
+      />
+    </div>
+    <AutocompleteInput
+      @label="Encode format"
+      @subText="Use the groups above to define how the input will be encoded. Refer to each group with $N. This is optional; if not specified, pattern will be used."
+      @value={{@model.encodeFormat}}
+      @optionsTrigger="$"
+      @options={{this.inputOptions}}
+      @onChange={{fn (mut @model.encodeFormat)}}
+      class="has-top-margin-l"
+      data-test-encode-format
+    />
+    <KvObjectEditor
+      @value={{@model.decodeFormats}}
+      @onChange={{fn (mut @model.decodeFormats)}}
+      @label="Decode formats"
+      @subText="Using the groups above, define how this data will be decoded. Multiple decode_formats can be used. Optional. If not specified, pattern will be used."
+      @keyPlaceholder="name"
+      class="has-top-margin-l"
+      data-test-kv-object-editor
+      as |kvObject kvData|
+    >
+      <AutocompleteInput
+        @value={{kvObject.value}}
+        @placeholder="format"
+        @optionsTrigger="$"
+        @options={{this.inputOptions}}
+        @onChange={{fn this.decodeFormatValueChange kvObject kvData}}
+        data-test-decode-format
+      />
+    </KvObjectEditor>
+  </div>
+{{/if}}

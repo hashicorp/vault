@@ -10,6 +10,16 @@ import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 
 const POLL_INTERVAL_MS = 10000;
 
+export const getManagedNamespace = (nsParam, root) => {
+  if (!nsParam || nsParam.replaceAll('/', '') === root) return root;
+  // Check if param starts with root and /
+  if (nsParam.startsWith(`${root}/`)) {
+    return nsParam;
+  }
+  // Otherwise prepend the given param with the root
+  return `${root}/${nsParam}`;
+};
+
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   namespaceService: service('namespace'),
   version: service(),
@@ -18,7 +28,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   auth: service(),
   featureFlagService: service('featureFlag'),
   currentCluster: service(),
-  modelTypes: computed(function() {
+  modelTypes: computed(function () {
     return ['node', 'secret', 'secret-engine'];
   }),
 
@@ -38,23 +48,33 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
     const currentTokenName = this.auth.get('currentTokenName');
-    // if no namespace queryParam and user authenticated,
-    // use user's root namespace to redirect to properly param'd url
+    const managedRoot = this.featureFlagService.managedNamespaceRoot;
+    if (managedRoot && this.version.isOSS) {
+      // eslint-disable-next-line no-console
+      console.error('Cannot use Cloud Admin Namespace flag with OSS Vault');
+    }
     if (!namespace && currentTokenName && !Ember.testing) {
+      // if no namespace queryParam and user authenticated,
+      // use user's root namespace to redirect to properly param'd url
       const storage = getStorage().getItem(currentTokenName);
       namespace = storage?.userRootNamespace;
       // only redirect if something other than nothing
       if (namespace) {
         this.transitionTo({ queryParams: { namespace } });
       }
-    } else if (!namespace && !!this.featureFlagService.managedNamespaceRoot) {
-      this.transitionTo({ queryParams: { namespace: this.featureFlagService.managedNamespaceRoot } });
+    } else if (managedRoot !== null) {
+      const managed = getManagedNamespace(namespace, managedRoot);
+      if (managed !== namespace) {
+        this.transitionTo({ queryParams: { namespace: managed } });
+      }
     }
     this.namespaceService.setNamespace(namespace);
     const id = this.getClusterId(params);
     if (id) {
       this.auth.setCluster(id);
-      await this.permissions.getPaths.perform();
+      if (this.auth.currentToken) {
+        await this.permissions.getPaths.perform();
+      }
       return this.version.fetchFeatures();
     } else {
       return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
@@ -66,7 +86,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     return this.store.findRecord('cluster', id);
   },
 
-  poll: task(function*() {
+  poll: task(function* () {
     while (true) {
       // when testing, the polling loop causes promises to never settle so acceptance tests hang
       // to get around that, we just disable the poll in tests
@@ -75,6 +95,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       }
       yield timeout(POLL_INTERVAL_MS);
       try {
+        /* eslint-disable-next-line ember/no-controller-access-in-routes */
         yield this.controller.model.reload();
         yield this.transitionToTargetRoute();
       } catch (e) {
@@ -108,6 +129,19 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
         this.refresh();
       }
       return true;
+    },
+    loading(transition) {
+      const isSameRoute = transition.from?.name === transition.to?.name;
+      if (isSameRoute || Ember.testing) {
+        return;
+      }
+      // eslint-disable-next-line ember/no-controller-access-in-routes
+      const controller = this.controllerFor('vault.cluster');
+      controller.set('currentlyLoading', true);
+
+      transition.finally(function () {
+        controller.set('currentlyLoading', false);
+      });
     },
   },
 });

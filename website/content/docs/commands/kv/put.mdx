@@ -25,25 +25,25 @@ policy granting the "update" capability.
 Writes the data to the key "creds":
 
 ```shell-session
-$ vault kv put secret/creds passcode=my-long-passcode
+$ vault kv put -mount=secret creds passcode=my-long-passcode
 ```
 
 The data can also be consumed from a file on disk by prefixing with the "@"
 symbol. For example:
 
 ```shell-session
-$ vault kv put secret/foo @data.json
+$ vault kv put -mount=secret foo @data.json
 ```
 
 Or it can be read from stdin using the "-" symbol:
 
 ```shell-session
-$ echo "abcd1234" | vault kv put secret/foo bar=-
+$ echo "abcd1234" | vault kv put -mount=secret foo bar=-
 ```
 
 ## Usage
 
-There are no flags beyond the [standard set of flags](/docs/commands)
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
 included on all commands.
 
 ### Output Options
@@ -60,7 +60,15 @@ included on all commands.
 ### Command Options
 
 - `-cas` `(int: 0)` - Specifies to use a Check-And-Set operation. If not set the
-  write will be allowed. If set to 0 a write will only be allowed if the key
-  doesn’t exist. If the index is non-zero the write will only be allowed if the
-  key’s current version matches the version specified in the cas parameter. The
-  default is -1.
+  write will be allowed. In order for a write to be successful, `cas` must be set to 
+  the current version of the secret. If set to 0 a write will only be allowed if 
+  the key doesn’t exist as unset keys do not have any version information. Also 
+  remember that soft deletes do not remove any underlying version data from storage.
+  In order to write to a soft deleted key, the cas parameter must match the key's 
+  current version. The default is -1.
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
+  If specified, the next argument will be interpreted as the secret path. If 
+  this flag is not specified, the next argument will be interpreted as the 
+  combined mount path and secret path, with /data/ automatically inserted for 
+  KV v2 secrets.

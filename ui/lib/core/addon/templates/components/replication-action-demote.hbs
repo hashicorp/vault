@@ -4,14 +4,16 @@
       Demote cluster
     </h4>
     <p>
-      Demote this {{model.replicationModeForDisplay}} primary to a secondary.
+      Demote this
+      {{this.model.replicationModeForDisplay}}
+      primary to a secondary.
     </p>
   </div>
   <div class="action-block-action">
     <button
       type="button"
       class="button is-secondary"
-      onclick={{action (mut isModalActive) true}}
+      onclick={{action (mut this.isModalActive) true}}
       data-test-replication-action-trigger
     >
       Demote
@@ -21,30 +23,29 @@
 
 <ConfirmationModal
   @title="Demote to secondary?"
-  @onClose={{action (mut isModalActive) false}}
-  @isActive={{isModalActive}}
+  @onClose={{action (mut this.isModalActive) false}}
+  @isActive={{this.isModalActive}}
   @buttonClass="is-primary"
-  @confirmText={{model.replicationModeForDisplay}}
+  @confirmText={{this.model.replicationModeForDisplay}}
   @toConfirmMsg="demoting this cluster"
-  @onConfirm={{action "onSubmit" "demote" model.replicationAttrs.modeForUrl}}
-  @testSelector="demote"
+  @onConfirm={{action "onSubmit" "demote" this.model.replicationAttrs.modeForUrl}}
 >
   <p class="has-bottom-margin-m">
-    {{#if (and
-      (eq replicationMode 'dr')
-      (not model.performance.replicationDisabled)
-    )}}
+    {{#if (and (eq this.replicationMode "dr") (not this.model.performance.replicationDisabled))}}
       <p class="has-bottom-margin-m" data-test-demote-warning>
-        This cluster is currently operating as a performance secondary. Demoting it will leave your replication setup <strong>without a performance primary cluster</strong> until a new cluster is promoted.
+        This cluster is currently operating as a performance secondary. Demoting it will leave your replication setup
+        <strong>without a performance primary cluster</strong>
+        until a new cluster is promoted.
       </p>
     {{/if}}
-    Demoting this {{model.replicationModeForDisplay}} primary to a {{model.replicationModeForDisplay}} secondary means that the resulting secondary cluster:
+    Demoting this
+    {{this.model.replicationModeForDisplay}}
+    primary to a
+    {{this.model.replicationModeForDisplay}}
+    secondary means that the resulting secondary cluster:
   </p>
   <ul class="bullet has-bottom-margin-m">
-    {{#if (and
-      (eq replicationMode 'dr')
-      (not model.performance.replicationDisabled)
-    )}}
+    {{#if (and (eq this.replicationMode "dr") (not this.model.performance.replicationDisabled))}}
       <li>Will be read-only</li>
     {{/if}}
     <li>Will not attempt to connect to a primary</li>

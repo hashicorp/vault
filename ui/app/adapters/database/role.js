@@ -1,5 +1,6 @@
 import { assign } from '@ember/polyfills';
 import { assert } from '@ember/debug';
+import ControlGroupError from 'vault/lib/control-group-error';
 import ApplicationAdapter from '../application';
 import { allSettled } from 'rsvp';
 import { addToArray } from 'vault/helpers/add-to-array';
@@ -24,54 +25,78 @@ export default ApplicationAdapter.extend({
   },
 
   staticRoles(backend, id) {
-    return this.ajax(this.urlFor(backend, id, 'static'), 'GET', this.optionsForQuery(id));
+    return this.ajax(this.urlFor(backend, id, 'static'), 'GET', this.optionsForQuery(id)).then((resp) => {
+      if (id) {
+        return {
+          ...resp,
+          type: 'static',
+          backend,
+          id,
+        };
+      }
+      return resp;
+    });
   },
 
   dynamicRoles(backend, id) {
-    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id));
+    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then((resp) => {
+      if (id) {
+        return {
+          ...resp,
+          type: 'dynamic',
+          backend,
+          id,
+        };
+      }
+      return resp;
+    });
   },
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }
     return { data };
   },
 
-  fetchByQuery(store, query) {
-    const { backend, id } = query;
-    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
-      resp.id = id;
-      resp.backend = backend;
-      return resp;
-    });
-  },
-
   queryRecord(store, type, query) {
     const { backend, id } = query;
-    const staticReq = this.staticRoles(backend, id);
-    const dynamicReq = this.dynamicRoles(backend, id);
 
-    return allSettled([staticReq, dynamicReq]).then(([staticResp, dynamicResp]) => {
-      if (!staticResp.value && !dynamicResp.value) {
-        // Throw error, both reqs failed
-        throw dynamicResp.reason;
+    if (query.type === 'static') {
+      return this.staticRoles(backend, id);
+    } else if (query?.type === 'dynamic') {
+      return this.dynamicRoles(backend, id);
+    }
+    // if role type is not defined, try both
+    return allSettled([this.staticRoles(backend, id), this.dynamicRoles(backend, id)]).then(
+      ([staticResp, dynamicResp]) => {
+        if (staticResp.state === 'rejected' && dynamicResp.state === 'rejected') {
+          let reason = staticResp.reason;
+          if (dynamicResp.reason instanceof ControlGroupError) {
+            throw dynamicResp.reason;
+          }
+          if (reason?.httpStatus < dynamicResp.reason?.httpStatus) {
+            reason = dynamicResp.reason;
+          }
+          throw reason;
+        }
+        // Names are distinct across both types of role,
+        // so only one request should ever come back with value
+        const type = staticResp.value ? 'static' : 'dynamic';
+        const successful = staticResp.value || dynamicResp.value;
+        const resp = {
+          data: {},
+          backend,
+          id,
+          type,
+        };
+
+        resp.data = assign({}, successful.data);
+
+        return resp;
       }
-      // Names are distinct across both types of role,
-      // so only one request should ever come back with value
-      let type = staticResp.value ? 'static' : 'dynamic';
-      let successful = staticResp.value || dynamicResp.value;
-      let resp = {
-        data: {},
-        backend,
-        secret: id,
-      };
-
-      resp.data = assign({}, resp.data, successful.data, { backend, type, secret: id });
-
-      return resp;
-    });
+    );
   },
 
   query(store, type, query) {
@@ -80,7 +105,7 @@ export default ApplicationAdapter.extend({
     const dynamicReq = this.dynamicRoles(backend);
 
     return allSettled([staticReq, dynamicReq]).then(([staticResp, dynamicResp]) => {
-      let resp = {
+      const resp = {
         backend,
         data: { keys: [] },
       };
@@ -114,7 +139,7 @@ export default ApplicationAdapter.extend({
 
   async _updateAllowedRoles(store, { role, backend, db, type = 'add' }) {
     const connection = await store.queryRecord('database/connection', { backend, id: db });
-    let roles = [...connection.allowed_roles];
+    const roles = [...connection.allowed_roles];
     const allowedRoles = type === 'add' ? addToArray([roles, role]) : removeFromArray([roles, role]);
     connection.allowed_roles = allowedRoles;
     return connection.save();

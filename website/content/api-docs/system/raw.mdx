@@ -9,7 +9,7 @@ description: The `/sys/raw` endpoint is used to access the raw underlying store 
 The `/sys/raw` endpoint is used to access the raw underlying store in Vault.
 
 This endpoint is off by default. See the
-[Vault configuration documentation](/docs/configuration) to
+[Vault configuration documentation](/vault/docs/configuration) to
 enable.
 
 ## Read Raw
@@ -26,6 +26,11 @@ system.
 
 - `path` `(string: <required>)` – Specifies the raw path in the storage backend.
   This is specified as part of the URL.
+
+- `compressed` `(bool: true)` - Attempt to decompress the value.
+
+- `encoding` `(string: "")` - Specifies the encoding of the returned data. Defaults to no encoding.
+  "base64" returns the value encoded in base64.
 
 ### Sample Request
 
@@ -51,7 +56,7 @@ mount system.
 
 | Method | Path             |
 | :----- | :--------------- |
-| `PUT`  | `/sys/raw/:path` |
+| `POST`  | `/sys/raw/:path` |
 
 ### Parameters
 
@@ -59,6 +64,13 @@ mount system.
   This is specified as part of the URL.
 
 - `value` `(string: <required>)` – Specifies the value of the key.
+
+- `compression_type` `(string: "")` - Create/update using the compressed form of `value`. Supported `compression_type`
+  values are `gzip`, `lzw`, `lz4`, `snappy`, or `""`. `""` means no compression is used. If omitted and key already exists,
+  update uses the same compression (or no compression) as the existing value.
+
+- `encoding` `(string: "")` - Specifies the encoding of `value`. Defaults to no encoding.
+  Use "base64" if `value` is encoded in base64.
 
 ### Sample Payload
 
@@ -73,7 +85,7 @@ mount system.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/raw/secret/foo
 ```

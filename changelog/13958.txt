@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Allow other_sans in sign-intermediate and sign-verbatim
+```

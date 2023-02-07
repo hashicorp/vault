@@ -1,0 +1,21 @@
+rules:
+  - id: hmac-needs-new
+    patterns:
+        - pattern-either:
+                - pattern: | 
+                        $H := $HASH.New()
+                        ...
+                        $FUNC := func() hash.Hash { return $H }
+                        ...
+                        hmac.New($FUNC, ...)
+                - pattern: | 
+                        $H := $HASH.New()
+                        ...
+                        hmac.New(func() hash.Hash { return $H }, ...)
+
+                - pattern: |
+                        hmac.New(func() hash.Hash { return ( $H : hash.Hash) }, ...)
+
+    message: "calling hmac.New with unchanging hash.New"
+    languages: [go]
+    severity: ERROR

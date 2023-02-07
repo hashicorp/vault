@@ -27,8 +27,8 @@ import { isArray } from '@ember/array';
  *
  */
 export default function attachCapabilities(modelClass, capabilities) {
-  let capabilityKeys = Object.keys(capabilities);
-  let newRelationships = capabilityKeys.reduce((ret, key) => {
+  const capabilityKeys = Object.keys(capabilities);
+  const newRelationships = capabilityKeys.reduce((ret, key) => {
     ret[key] = belongsTo('capabilities');
     return ret;
   }, {});
@@ -46,19 +46,19 @@ export default function attachCapabilities(modelClass, capabilities) {
         data = jsonAPIDoc;
       }
       if (isArray(data)) {
-        let newData = data.map(this.relatedCapabilities);
+        const newData = data.map(this.relatedCapabilities);
         return {
           data: newData,
           included,
         };
       }
-      let context = {
+      const context = {
         id: data.id,
         ...data.attributes,
       };
-      for (let newCapability of capabilityKeys) {
-        let templateFn = capabilities[newCapability];
-        let type = typeOf(templateFn);
+      for (const newCapability of capabilityKeys) {
+        const templateFn = capabilities[newCapability];
+        const type = typeOf(templateFn);
         assert(`expected value of ${newCapability} to be a function but found ${type}.`, type === 'function');
         data.relationships[newCapability] = {
           data: {

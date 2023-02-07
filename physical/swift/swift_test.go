@@ -50,7 +50,7 @@ func TestSwiftBackend(t *testing.T) {
 
 	err = cleaner.ContainerCreate(container, nil)
 	if nil != err {
-		t.Fatalf("Unable to create test container '%s': %v", container, err)
+		t.Fatalf("Unable to create test container %q: %v", container, err)
 	}
 	defer func() {
 		newObjects, err := cleaner.ObjectNamesAll(container, nil)

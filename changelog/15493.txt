@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Forward autopilot state requests on perf standbys to active node.
+```

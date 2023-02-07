@@ -1,0 +1,123 @@
+---
+layout: docs
+page_title: Login MFA FAQ
+description: An FAQ page to answer the most commonly asked questions about login mfa.
+---
+
+# Login MFA FAQ
+
+This FAQ section contains frequently asked questions about the Login MFA feature.
+
+- [Q: What MFA features can I access if I upgrade to Vault version 1.10?](#q-what-mfa-features-can-i-access-if-i-upgrade-to-vault-version-1-10)
+- [Q: What are the various MFA workflows that are available to me as a Vault user as of Vault version 1.10, and how are they different?](#q-what-are-the-various-mfa-workflows-that-are-available-to-me-as-a-vault-user-as-of-vault-version-1-10-and-how-are-they-different)
+- [Q: What is the Legacy MFA feature?](#q-what-is-the-legacy-mfa-feature)
+- [Q: Will HCP Vault support MFA?](#q-will-hcp-vault-support-mfa)
+- [Q: What is Single-Phase MFA vs. Two-Phase MFA?](#q-what-is-single-phase-mfa-vs-two-phase-mfa)
+- [Q: Are there new MFA API endpoints introduced as part of the new Vault version 1.10 MFA for login functionality?](#q-are-there-new-mfa-api-endpoints-introduced-as-part-of-the-new-vault-version-1-10-mfa-for-login-functionality)
+- [Q: How do MFA configurations differ between the Login MFA and Step-up Enterprise MFA?](#q-how-do-mfa-configurations-differ-between-the-login-mfa-and-step-up-enterprise-mfa)
+- [Q: What are the ways to configure the various MFA workflows?](#q-what-are-the-ways-to-configure-the-various-mfa-workflows)
+- [Q: What MFA mechanism is used with the different MFA workflows in Vault version 1.10?](#q-which-mfa-mechanism-is-used-with-the-different-mfa-workflows-in-vault-version-1-10)
+- [Q: Are namespaces supported with the MFA workflows that Vault has as of Vault version 1.10?](#q-are-namespaces-supported-with-the-mfa-workflows-that-vault-has-as-of-vault-version-1-10)
+- [Q: I use the Vault Agent. Does MFA pose any challenges for me?](#q-i-use-the-vault-agent-does-mfa-pose-any-challenges-for-me)
+- [Q: I am a Step-up Enterprise MFA user using MFA for login. Should I migrate to the new Login MFA?](#q-i-am-a-step-up-enterprise-mfa-user-using-mfa-for-login-should-i-migrate-to-the-new-login-mfa)
+- [Q: I am a Step-up Enterprise MFA user using MFA for login. What are the steps to migrate to Login MFA?](#q-i-am-a-step-up-enterprise-mfa-user-using-mfa-for-login-what-are-the-steps-to-migrate-to-login-mfa)
+
+### Q: What MFA features can I access if I upgrade to Vault version 1.10?
+
+Vault supports Step-up Enterprise MFA as part of our Enterprise edition. The Step-up Enterprise MFA provides MFA on login, or for step-up access to sensitive resources in Vault using ACL and Sentinel policies, and is configurable through the CLI/API.
+
+Starting with Vault version 1.10, Vault OSS provides [MFA on login](/vault/docs/auth/login-mfa) only. This is also available with Vault Enterprise and configurable through the CLI/API.
+
+The Step-up Enterprise MFA will co-exist with the newly introduced Login MFA starting with Vault version 1.10.
+
+### Q: What are the various MFA workflows that are available to me as a Vault user as of Vault version 1.10, and how are they different?
+
+| MFA workflow                                   | What does it do?                                                                                                                                                                                                                                                                                    | Who manages the MFA?              | OSS vs. Enterprise Support    |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ----------------------------- |
+| [Login MFA](/vault/docs/auth/login-mfa)              | MFA in Vault OSS provides MFA on login. CLI, API, and UI-based login are supported.                                                                                                                                                                                                                 | MFA is managed by Vault           | Supported in Vault OSS        |
+| [Okta Auth MFA](/vault/docs/auth/okta#mfa)           | This is MFA as part of [Okta Auth method](/vault/docs/auth/okta) in Vault OSS, where MFA is enforced by Okta on login. MFA must be satisfied for authentication to be successful. This is different from the Okta MFA method used with Login MFA and Step-up Enterprise MFA. CLI/API login are supported. | MFA is managed externally by Okta | Supported in Vault OSS        |
+| [Step-up Enterprise MFA](/vault/docs/enterprise/mfa) | MFA in Vault Enterprise provides MFA for login and for step-up access to sensitive resources in Vault. Supports CLI/API based login, and ACL/Sentinel policies.                                                                                                                                     | MFA is managed by Vault           | Supported in Vault Enterprise |
+
+~> **Note**: [The Legacy MFA](/vault/docs/v1.10.x/auth/mfa) is a **deprecated** MFA workflow in Vault OSS. Refer [here](#q-what-is-the-legacy-mfa-feature) for more details.
+
+### Q: What is the Legacy MFA feature?
+
+[Legacy MFA](/vault/docs/v1.10.x/auth/mfa) is functionality that was available in Vault OSS, prior to introducing MFA in the Enterprise version. This is now a deprecated feature. Please see the [Vault Feature Deprecation Notice and Plans](/vault/docs/deprecation) for detailed product plans around deprecated features. We plan to remove Legacy MFA in 1.11.
+
+### Q: Will HCP Vault support MFA?
+
+Yes, HCP Vault will support MFA across all tiers and offering as part of the April 2022 release.
+
+### Q: What is Single-Phase MFA vs. Two-Phase MFA?
+
+- **Single-Phase MFA:** This is a single request mechanism where the required MFA information, such as MFA method ID, is provided via the X-Vault-MFA header in a single MFA request that is used to authenticate into Vault.
+
+~> **Note**: If the configured MFA methods need a passcode, it needs to be provided in the request, such as in the case of TOTP or Duo.
+If the configured MFA methods, such as PingID, Okta, or Duo, do not require a passcode and have out of band mechanisms for verifying the extra factor, Vault will send an inquiry to the other service's APIs to determine whether the MFA request has yet been verified.
+
+- **Two-Phase MFA:** This is a two-request MFA method that is more conventionally used.
+  - The MFA passcode required for the configured MFA method is not provided in a header of the login request that is MFA-restricted. Instead, the user first authenticates to the auth method, and on successful authentication to the auth method, an MFA requirement is returned to the user. The MFA requirement contains the MFA RequestID and constraints applicable to the MFA as configured by the operator.
+  - The user then must make a second request to the new endpoint `sys/mfa/validate`, providing the MFA RequestID in the request, and an MFA payload which includes the MFA methodIDs passcode (if applicable). If MFA validation passes, the new Vault token will be persisted and returned to the user in the response, just like a regular Vault token created using a non-MFA-restricted auth method.
+
+### Q: Are there new MFA API endpoints introduced as part of the new Vault version 1.10 MFA for login functionality?
+
+Yes, this feature adds the following new MFA configuration endpoints: `identity/mfa/method`, `identity/mfa/login-enforcement`, and `sys/mfa/validate`. Refer to the [documentation](/vault/api-docs/secret/identity/mfa/duo) for more details.
+
+### Q: How do MFA configurations differ between the Login MFA and Step-up Enterprise MFA?
+
+All MFA methods supported with the Step-up Enterprise MFA are supported with the Login MFA, but they use different API endpoints:
+
+- Step-up Enterprise MFA: `sys/mfa/method/:type/:/name`
+- Login MFA: `identity/mfa/method/:type`
+
+There are also two differences in how methods are defined in the two systems.
+The Step-up Enterprise MFA expects the method creator to specify a name for the method; Login MFA does not, and instead returns an ID when a method is created.
+The Step-up Enterprise MFA uses the combination of mount accessors plus a `username_format` template string, whereas in Login MFA, these are combined into a single field `username_format`, which uses the same identity [templating format](/vault/docs/concepts/policies#templated-policies) as used in policies.
+
+### Q: What are the ways to configure the various MFA workflows?
+
+| MFA workflow                                   | Configuration methods                                                                     | Details                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Login MFA](/vault/docs/auth/login-mfa)              | CLI/API. The UI does not support the configuration of Login MFA as of Vault version 1.10. | Configured using the `identity/mfa/method` endpoints, then passing those method IDs to the `identity/mfa/login-enforcement` endpoint. MFA methods supported: TOTP, Okta, Duo, PingID.                                                                                                       |
+| [Okta Auth MFA](/vault/docs/auth/okta)               | CLI/API                                                                                   | MFA methods supported: [TOTP](https://help.okta.com/en/prod/Content/Topics/Security/mfa-totp-seed.htm) , [Okta Verify Push](https://help.okta.com/en/prod/Content/Topics/Mobile/ov-admin-config.htm). Note that Vault does not support Okta Verify Push with Number Challenge at this time. |
+| [Step-up Enterprise MFA](/vault/docs/enterprise/mfa) | CLI/API                                                                                   | [Configured](/vault/api-docs/system/mfa) using the `sys/mfa/method` endpoints and by referencing those methods in policies. MFA Methods supported: TOTP, Okta, Duo, PingID                                                                                                                             |
+
+### Q: Which MFA mechanism is used with the different MFA workflows in Vault version 1.10?
+
+| MFA workflow                                   | UI        | CLI/API                                                                                                                                   | Single-Phase                | Two-Phase                   |
+| ---------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | --------------------------- |
+| [Login MFA](/vault/docs/auth/login-mfa)              | Supported | Supported. You can select single-phase MFA by supplying the X-Vault-MFA header. In the absence of this header, the Two- Phase MFA is used | N/A                         | Supported                   |
+| [Okta Auth MFA](/vault/docs/auth/okta)               | N/A       | N/A                                                                                                                                       | MFA is not managed by Vault | MFA is not managed by Vault |
+| [Step-up Enterprise MFA](/vault/docs/enterprise/mfa) | N/A       | Supported                                                                                                                                 | Supported                   | N/A                         |
+
+### Q: Are namespaces supported with the MFA workflows that Vault has as of Vault version 1.10?
+
+The Step-up Enterprise MFA configurations can only be configured in the root [namespace](/vault/docs/enterprise/mfa#namespaces), although they can be referenced in other namespaces via the policies.
+The Login MFA supports namespaces awareness. Users will need a Vault Enterprise license to user or configure Login MFA with namespaces. MFA method configurations can be defined per namespace with Login MFA, and used in enforcements defined in that namespace and its children. Everything operates in the root namespace in Vault OSS. MFA login enforcements can also be defined per namespace, and applied to that namespace and its children.
+
+### Q: I use the Vault Agent. Does MFA pose any challenges for me?
+
+The Vault Agent should not use MFA to authenticate to Vault; it should be able to relay requests with MFA-related headers to Vault successfully.
+
+### Q: I am a Step-up Enterprise MFA user using MFA for login. Should I migrate to the new Login MFA?
+
+If you are currently using Enterprise MFA, evaluate your MFA specific use cases to determine whether or not you should migrate to [Login MFA](/vault/docs/auth/login-mfa).
+
+Here are some considerations:
+
+- If you use the Step-up Enterprise MFA for login (with Sentinel EGP), you may find value in the simpler Login MFA workflow. We recommend that you to test this out to evaluate if this meets all your requirements.
+- If you use the Step-up Enterprise MFA for more than login, please be aware that the new MFA workflow only supports the login use case. You will still need to use the Step-up Enterprise MFA for non-login use cases.
+
+### Q: I am a Step-up Enterprise MFA user using MFA for login. What are the steps to migrate to Login MFA?
+
+Refer to the question [Q: I am a Step-up Enterprise MFA user using MFA for login. Should I migrate to the new Login MFA?](#q-i-am-a-step-up-enterprise-mfa-user-using-mfa-for-login-should-i-migrate-to-the-new-login-mfa) to evaluate whether or not you should migrate.
+
+If you wish to migrate to Login MFA, follow these steps and guidelines to migrate successfully.
+
+1. First, create new MFA methods using the `identity/mfa/method` endpoints. These should mostly use the same fields as the MFA methods you defined using the `sys/mfa` method while keeping the following in mind:
+
+   -the new endpoints yield an ID instead of allowing you to define a name
+
+   -the new non-TOTP endpoints have a username_format field instead of username_format+mount_accessor fields; see [Templated Policies](/vault/docs/concepts/policies#templated-policies) for the username_format format.
+
+1. Instead of writing sentinel EGP rules to require that logins use MFA, use the `identity/mfa/login_enforcement` endpoint to specify the MFA methods.

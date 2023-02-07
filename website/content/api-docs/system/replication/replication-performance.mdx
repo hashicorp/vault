@@ -15,7 +15,7 @@ description: >-
 This endpoint prints information about the status of replication (mode,
 sync progress, etc).
 
-This is an authenticated endpoint.
+This is an unauthenticated endpoint.
 
 | Method | Path                                  |
 | :----- | :------------------------------------ |
@@ -62,7 +62,7 @@ secondary, it will look something like:
 ```json
 {
   "data": {
-    "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
+    "cluster_id": "06dcf957-6630-44ae-bdd9-117d5f4d70d7",
     "known_primary_cluster_addrs": ["https://127.0.0.1:8201"],
     "last_remote_wal": 87,
     "merkle_root": "c31e40f6ff02f32c37b70e6a4d58732ac812abf0",
@@ -141,7 +141,7 @@ $ curl \
 
 ## Disable Performance Primary
 
-This endpoint disables performance replication entirely on the cluster. Any
+This endpoint disables Performance Replication entirely on the cluster. Any
 performance secondaries will no longer be able to connect. Caution: re-enabling
 this node as a primary or secondary will change its cluster ID; in the secondary
 case this means a wipe of the underlying storage when connected to a primary,
@@ -403,105 +403,6 @@ $ curl \
 }
 ```
 
-## Create Mounts Filter (DEPRECATED)
-
-~> This API is deprecated and will be removed in a future version of Vault.
-Please use Paths Filter instead.
-
-This endpoint is used to modify the mounts that are filtered to a secondary.
-Filtering can be specified in whitelist mode or blacklist mode. In whitelist
-mode the secret and auth mounts that are specified are included to the
-selected secondary. In blacklist mode, the mount paths are excluded.
-
-| Method | Path                                                    |
-| :----- | :------------------------------------------------------ |
-| `POST` | `/sys/replication/performance/primary/mount-filter/:id` |
-
-### Parameters
-
-- `id` `(string: <required>)` – Specifies an opaque identifier, e.g. 'us-east'
-
-- `mode` `(string: "whitelist")` – Specifies the filtering mode. Available values
-  are "whitelist" and blacklist".
-
-- `paths` `(array: [])` – The list of mount paths that are filtered.
-
-### Sample Payload
-
-```json
-{
-  "mode": "whitelist",
-  "paths": ["secret/"]
-}
-```
-
-### Sample Request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request POST \
-    --data @payload.json \
-    http://127.0.0.1:8200/v1/sys/replication/performance/primary/mount-filter/us-east-1
-```
-
-## Read Mounts Filter (DEPRECATED)
-
-~> This API is deprecated and will be removed in a future version of Vault.
-Please use Paths Filter instead.
-
-This endpoint is used to read the mode and the mount paths that are filtered
-for a secondary.
-
-| Method | Path                                                    |
-| :----- | :------------------------------------------------------ | ------------------ |
-| `GET`  | `/sys/replication/performance/primary/mount-filter/:id` | `200 (empty body)` |
-
-### Parameters
-
-- `id` `(string: <required>)` – Specifies an opaque identifier, e.g. 'us-east'
-
-### Sample Request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/replication/performance/primary/mount-filter/us-east-1
-```
-
-### Sample Response
-
-```json
-{
-  "mode": "whitelist",
-  "paths": ["secret/"]
-}
-```
-
-## Delete Mounts Filter (DEPRECATED)
-
-~> This API is deprecated and will be removed in a future version of Vault.
-Please use Paths Filter instead.
-
-This endpoint is used to delete the mount filters for a secondary.
-
-| Method   | Path                                                    |
-| :------- | :------------------------------------------------------ |
-| `DELETE` | `/sys/replication/performance/primary/mount-filter/:id` |
-
-### Parameters
-
-- `id` `(string: <required>)` – Specifies an opaque identifier, e.g. 'us-east'
-
-### Sample Request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request DELETE \
-    http://127.0.0.1:8200/v1/sys/replication/performance/primary/mount-filter/us-east-1
-```
-
 ## Fetch Performance Secondary Public Key
 
 (Vault 1.3+)
@@ -525,7 +426,7 @@ $ curl \
 
 ## Enable Performance Secondary
 
-This endpoint enables performance replication on a secondary using a secondary activation
+This endpoint enables Performance Replication on a secondary using a secondary activation
 token.
 
 !> This will immediately clear all data in the secondary cluster!
@@ -610,7 +511,7 @@ $ curl \
 
 ## Disable Performance Secondary
 
-This endpoint disables performance replication entirely on the cluster. The cluster will no
+This endpoint disables Performance Replication entirely on the cluster. The cluster will no
 longer be able to connect to the performance primary.
 
 !> Re-enabling this node as a performance primary or secondary will change its cluster ID;

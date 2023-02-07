@@ -1,3 +1,4 @@
+import Component from '@glimmer/component';
 /**
  * @module ToolbarLink
  * `ToolbarLink` components style links and buttons for the Toolbar
@@ -7,31 +8,39 @@
  * ```js
  * <Toolbar>
  *   <ToolbarActions>
- *     <ToolbarLink @params={{array 'vault.cluster.policies.create'}} @type="add">
+ *     <ToolbarLink @route="vault.cluster.policies.create" @type="add" @disabled={{true}} @disabledTooltip="This link is disabled">
  *       Create policy
  *     </ToolbarLink>
  *   </ToolbarActions>
  * </Toolbar>
  * ```
  *
- * @param params=''{Array} Array to pass to LinkTo
- * @param type=''{String} Use "add" to change icon
+ * @param {string} route - route to pass to LinkTo
+ * @param {Model} model - model to pass to LinkTo
+ * @param {Array} models - array of models to pass to LinkTo
+ * @param {Object} query - query params to pass to LinkTo
+ * @param {boolean} replace - replace arg to pass to LinkTo
+ * @param {string} type - Use "add" to change icon to plus sign, or pass in your own kind of icon.
+ * @param {boolean} disabled - pass true to disable link
+ * @param {string} disabledTooltip - tooltip to display on hover when disabled
  */
 
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import layout from '../templates/components/toolbar-link';
-
-export default Component.extend({
-  layout,
-  tagName: '',
-  supportsDataTestProperties: true,
-  type: null,
-  glyph: computed('type', function() {
-    if (this.type == 'add') {
-      return 'plus-plain';
-    } else {
-      return 'chevron-right';
+export default class ToolbarLinkComponent extends Component {
+  get glyph() {
+    // not ideal logic. Without refactoring, this allows us to add in our own icon type outside of chevron-right or plus.
+    // For a later refactor we should remove the substitution for add to plus and just return type.
+    const { type } = this.args;
+    if (!type) return 'chevron-right';
+    return type === 'add' ? 'plus' : type;
+  }
+  get models() {
+    const { model, models } = this.args;
+    if (model) {
+      return [model];
     }
-  }),
-});
+    return models || [];
+  }
+  get query() {
+    return this.args.query || {};
+  }
+}

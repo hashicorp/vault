@@ -10,16 +10,16 @@ import (
 
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
-type backendTracingMiddleware struct {
+type BackendTracingMiddleware struct {
 	logger log.Logger
 
 	next logical.Backend
 }
 
 // Validate the backendTracingMiddle object satisfies the backend interface
-var _ logical.Backend = &backendTracingMiddleware{}
+var _ logical.Backend = &BackendTracingMiddleware{}
 
-func (b *backendTracingMiddleware) Initialize(ctx context.Context, req *logical.InitializationRequest) (err error) {
+func (b *BackendTracingMiddleware) Initialize(ctx context.Context, req *logical.InitializationRequest) (err error) {
 	defer func(then time.Time) {
 		b.logger.Trace("initialize", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
@@ -28,7 +28,7 @@ func (b *backendTracingMiddleware) Initialize(ctx context.Context, req *logical.
 	return b.next.Initialize(ctx, req)
 }
 
-func (b *backendTracingMiddleware) HandleRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
+func (b *BackendTracingMiddleware) HandleRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 	defer func(then time.Time) {
 		b.logger.Trace("handle request", "path", req.Path, "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
@@ -37,7 +37,7 @@ func (b *backendTracingMiddleware) HandleRequest(ctx context.Context, req *logic
 	return b.next.HandleRequest(ctx, req)
 }
 
-func (b *backendTracingMiddleware) SpecialPaths() *logical.Paths {
+func (b *BackendTracingMiddleware) SpecialPaths() *logical.Paths {
 	defer func(then time.Time) {
 		b.logger.Trace("special paths", "status", "finished", "took", time.Since(then))
 	}(time.Now())
@@ -46,15 +46,15 @@ func (b *backendTracingMiddleware) SpecialPaths() *logical.Paths {
 	return b.next.SpecialPaths()
 }
 
-func (b *backendTracingMiddleware) System() logical.SystemView {
+func (b *BackendTracingMiddleware) System() logical.SystemView {
 	return b.next.System()
 }
 
-func (b *backendTracingMiddleware) Logger() log.Logger {
+func (b *BackendTracingMiddleware) Logger() log.Logger {
 	return b.next.Logger()
 }
 
-func (b *backendTracingMiddleware) HandleExistenceCheck(ctx context.Context, req *logical.Request) (found bool, exists bool, err error) {
+func (b *BackendTracingMiddleware) HandleExistenceCheck(ctx context.Context, req *logical.Request) (found bool, exists bool, err error) {
 	defer func(then time.Time) {
 		b.logger.Trace("handle existence check", "path", req.Path, "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
@@ -63,7 +63,7 @@ func (b *backendTracingMiddleware) HandleExistenceCheck(ctx context.Context, req
 	return b.next.HandleExistenceCheck(ctx, req)
 }
 
-func (b *backendTracingMiddleware) Cleanup(ctx context.Context) {
+func (b *BackendTracingMiddleware) Cleanup(ctx context.Context) {
 	defer func(then time.Time) {
 		b.logger.Trace("cleanup", "status", "finished", "took", time.Since(then))
 	}(time.Now())
@@ -72,7 +72,7 @@ func (b *backendTracingMiddleware) Cleanup(ctx context.Context) {
 	b.next.Cleanup(ctx)
 }
 
-func (b *backendTracingMiddleware) InvalidateKey(ctx context.Context, key string) {
+func (b *BackendTracingMiddleware) InvalidateKey(ctx context.Context, key string) {
 	defer func(then time.Time) {
 		b.logger.Trace("invalidate key", "key", key, "status", "finished", "took", time.Since(then))
 	}(time.Now())
@@ -81,7 +81,7 @@ func (b *backendTracingMiddleware) InvalidateKey(ctx context.Context, key string
 	b.next.InvalidateKey(ctx, key)
 }
 
-func (b *backendTracingMiddleware) Setup(ctx context.Context, config *logical.BackendConfig) (err error) {
+func (b *BackendTracingMiddleware) Setup(ctx context.Context, config *logical.BackendConfig) (err error) {
 	defer func(then time.Time) {
 		b.logger.Trace("setup", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
@@ -90,11 +90,23 @@ func (b *backendTracingMiddleware) Setup(ctx context.Context, config *logical.Ba
 	return b.next.Setup(ctx, config)
 }
 
-func (b *backendTracingMiddleware) Type() logical.BackendType {
+func (b *BackendTracingMiddleware) Type() logical.BackendType {
 	defer func(then time.Time) {
 		b.logger.Trace("type", "status", "finished", "took", time.Since(then))
 	}(time.Now())
 
 	b.logger.Trace("type", "status", "started")
 	return b.next.Type()
+}
+
+func (b *BackendTracingMiddleware) PluginVersion() logical.PluginVersion {
+	defer func(then time.Time) {
+		b.logger.Trace("version", "status", "finished", "took", time.Since(then))
+	}(time.Now())
+
+	b.logger.Trace("version", "status", "started")
+	if versioner, ok := b.next.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
 }

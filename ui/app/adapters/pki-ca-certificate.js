@@ -1,3 +1,4 @@
+import { parsePkiCert } from 'vault/utils/parse-pki-cert';
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -31,9 +32,14 @@ export default ApplicationAdapter.extend({
       data = { certificate: snapshot.attr('certificate') };
     } else {
       data = serializer.serialize(snapshot, requestType);
+
+      // The type parameter is serialized but is part of the URL. This means
+      // we'll get an unknown parameter warning back from the server if we
+      // send it. Remove it instead.
+      delete data.type;
     }
 
-    return this.ajax(this.url(snapshot, action), 'POST', { data }).then(response => {
+    return this.ajax(this.url(snapshot, action), 'POST', { data }).then((response) => {
       // uploading CA, setting signed intermediate cert, and attempting to generate
       // a new CA if one exists, all return a 204
       if (!response) {
@@ -41,7 +47,14 @@ export default ApplicationAdapter.extend({
       }
       response.id = snapshot.id;
       response.modelName = type.modelName;
-      store.pushPayload(type.modelName, response);
+      // only parse if certificate is attached to response
+      if (response.data && response.data.certificate) {
+        const caCertMetadata = parsePkiCert(response.data);
+        const transformedResponse = { ...response, ...caCertMetadata };
+        store.pushPayload(type.modelName, transformedResponse);
+      } else {
+        store.pushPayload(type.modelName, response);
+      }
     });
   },
 
@@ -51,10 +64,5 @@ export default ApplicationAdapter.extend({
 
   updateRecord() {
     return this.createRecordOrUpdate(...arguments);
-  },
-
-  deleteRecord(store, type, snapshot) {
-    const backend = snapshot.attr('backend');
-    return this.ajax(`/v1/${backend}/root`, 'DELETE');
   },
 });

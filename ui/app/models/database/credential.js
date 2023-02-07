@@ -8,4 +8,5 @@ export default Model.extend({
   lastVaultRotation: attr('string'),
   rotationPeriod: attr('number'),
   ttl: attr('number'),
+  roleType: attr('string'),
 });

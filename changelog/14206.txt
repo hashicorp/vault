@@ -1,0 +1,4 @@
+```release-note:change
+core: Changes the unit of `default_lease_ttl` and `max_lease_ttl` values returned by
+the `/sys/config/state/sanitized` endpoint from nanoseconds to seconds.
+```

@@ -7,4 +7,10 @@ package logical;
 message PluginEnvironment {
 	// VaultVersion is the version of the Vault server
 	string vault_version = 1;
+	
+	// VaultVersionPrerelease is the prerelease information of the Vault server
+	string vault_version_prerelease = 2;
+	
+	// VaultVersionMetadata is the version metadata of the Vault server
+	string vault_version_metadata = 3;
 }

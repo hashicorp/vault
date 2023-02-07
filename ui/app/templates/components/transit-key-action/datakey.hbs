@@ -1,20 +1,16 @@
-<form {{action 'doSubmit' (hash param=param context=context nonce=nonce bits=bits) on="submit"}}>
+<form onsubmit={{action @doSubmit (hash param=@param context=@context nonce=@nonce bits=@bits)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="datakey creation" />
     <div class="content">
-      <p>Generate a new high-entropy key and value using <code>{{key.name}}</code> as the encryption key.</p>
+      <p>Generate a new high-entropy key and value using <code>{{@key.name}}</code> as the encryption key.</p>
     </div>
     <div class="field">
       <label for="param" class="is-label">Output format</label>
       <div class="control is-expanded">
         <div class="select is-fullwidth">
-          <select
-            name="param"
-            id="param"
-            onchange={{action (mut param) value="target.value"}}
-          >
+          <select name="param" id="param" onchange={{action (mut @param) value="target.value"}}>
             {{#each (array "plaintext" "wrapped") as |paramOption|}}
-              <option selected={{eq param paramOption}} value={{paramOption}}>
+              <option selected={{eq @param paramOption}} value={{paramOption}}>
                 {{paramOption}}
               </option>
             {{/each}}
@@ -22,30 +18,30 @@
         </div>
       </div>
     </div>
-    {{#if key.derived}}
+    {{#if @key.derived}}
       <div class="field">
         <label for="context" class="is-label">
           Context
         </label>
         <div class="field has-addons">
           <div class="control">
-            <Input @type="text" @id="context" @value={{context}} class="input" data-test-transit-input="context" />
+            <Input @type="text" id="context" @value={{@context}} class="input" data-test-transit-input="context" />
           </div>
           <div class="control">
-            <B64Toggle @value={{context}} @data-test-transit-b64-toggle="context" />
+            <B64Toggle @value={{@context}} @data-test-transit-b64-toggle="context" />
           </div>
         </div>
       </div>
     {{/if}}
-    {{#if (eq key.convergentEncryptionVersion 1)}}
+    {{#if (eq @key.convergentEncryptionVersion 1)}}
       <div class="field">
         <label for="nonce" class="is-label">Nonce</label>
         <div class="field has-addons">
           <div class="control">
-            <Input @type="text" @id="nonce" @value={{nonce}} class="input" data-test-transit-input="nonce" />
+            <Input @type="text" id="nonce" @value={{@nonce}} class="input" data-test-transit-input="nonce" />
           </div>
           <div class="control">
-            <B64Toggle @value={{nonce}} @data-test-transit-b64-toggle="nonce" />
+            <B64Toggle @value={{@nonce}} @data-test-transit-b64-toggle="nonce" />
           </div>
         </div>
       </div>
@@ -54,17 +50,13 @@
       <label for="bits" class="is-label">Bits</label>
       <div class="control is-expanded">
         <div class="select is-fullwidth">
-        <select
-          name="bits"
-          id="bits"
-          onchange={{action (mut bits) value="target.value"}}
-        >
-          {{#each (array 128 256 512) as |bitOption|}}
-            <option selected={{eq bits bitOption}} value={{bitOption}}>
-              <code>{{bitOption}}</code>
-            </option>
-          {{/each}}
-        </select>
+          <select name="bits" id="bits" onchange={{action (mut @bits) value="target.value"}}>
+            {{#each (array 128 256 512) as |bitOption|}}
+              <option selected={{eq @bits bitOption}} value={{bitOption}}>
+                <code>{{bitOption}}</code>
+              </option>
+            {{/each}}
+          </select>
         </div>
       </div>
     </div>
@@ -77,47 +69,77 @@
     </div>
   </div>
 </form>
-<Modal @title="Copy your generated key" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
+<Modal @title="Copy your generated key" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
-      {{#if (eq param 'plaintext')}}
+      {{#if (eq @param "plaintext")}}
         <h2 class="title is-6">Plaintext</h2>
         <div class="copy-text level">
-          <code class="level-left">{{plaintext}}</code>
-          <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
-            @clipboardText={{plaintext}} @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
-            <Icon @glyph="copy-action" aria-label="Copy" />
+          <code class="level-left">{{@plaintext}}</code>
+          <CopyButton
+            class="button is-compact is-transparent level-right"
+            data-test-button="modal-copy"
+            @clipboardText={{@plaintext}}
+            @buttonType="button"
+            @success={{action (set-flash-message "Plaintext copied!")}}
+          >
+            <Icon @name="clipboard-copy" aria-label="Copy" />
           </CopyButton>
         </div>
         <p class="help has-bottom-margin-m">Plaintext is base64 encoded</p>
         <h2 class="title is-6">Ciphertext</h2>
         <div class="copy-text level">
-          <code class="level-left">{{ciphertext}}</code>
-          <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
-            @clipboardText={{ciphertext}} @buttonType="button" @success={{action (set-flash-message 'Ciphertext copied!')}}>
-            <Icon @glyph="copy-action" aria-label="Copy" />
+          <code class="level-left">{{@ciphertext}}</code>
+          <CopyButton
+            class="button is-compact is-transparent level-right"
+            data-test-button="modal-copy"
+            @clipboardText={{@ciphertext}}
+            @buttonType="button"
+            @success={{action (set-flash-message "Ciphertext copied!")}}
+          >
+            <Icon @name="clipboard-copy" aria-label="Copy" />
           </CopyButton>
         </div>
-        <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{plaintext}}
-          @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
+        <CopyButton
+          class="button is-primary"
+          data-test-button="modal-copy-close"
+          @clipboardText={{@plaintext}}
+          @buttonType="button"
+          @success={{action (set-flash-message "Plaintext copied!")}}
+        >
           Copy Plaintext
         </CopyButton>
-        <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{ciphertext}}
-          @buttonType="button" @success={{action (set-flash-message 'Ciphertext copied!')}}>
+        <CopyButton
+          class="button is-primary"
+          data-test-button="modal-copy-close"
+          @clipboardText={{@ciphertext}}
+          @buttonType="button"
+          @success={{action (set-flash-message "Ciphertext copied!")}}
+        >
           Copy Ciphertext
         </CopyButton>
-        <button type="submit" class="button is-secondary" onclick={{action (mut isModalActive) false}}>Close</button>
+        <button type="submit" class="button is-secondary" onclick={{action (mut @isModalActive) false}}>Close</button>
       {{else}}
         <h2 class="title is-6">Ciphertext</h2>
         <div class="copy-text level">
-          <code class="level-left">{{ciphertext}}</code>
-          <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
-            @clipboardText={{ciphertext}} @buttonType="button" @success={{action (set-flash-message 'Ciphertext copied!')}}>
-            <Icon @glyph="copy-action" aria-label="Copy" />
+          <code class="level-left">{{@ciphertext}}</code>
+          <CopyButton
+            class="button is-compact is-transparent level-right"
+            data-test-button="modal-copy"
+            @clipboardText={{@ciphertext}}
+            @buttonType="button"
+            @success={{action (set-flash-message "Ciphertext copied!")}}
+          >
+            <Icon @name="clipboard-copy" aria-label="Copy" />
           </CopyButton>
         </div>
-        <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{ciphertext}}
-          @buttonType="button" @success={{action "toggleModal" "Ciphertext copied!"}}>
+        <CopyButton
+          class="button is-primary copy-close"
+          data-test-button="modal-copy-close"
+          @clipboardText={{@ciphertext}}
+          @buttonType="button"
+          @success={{action @toggleModal "Ciphertext copied!"}}
+        >
           Copy &amp; Close
         </CopyButton>
       {{/if}}

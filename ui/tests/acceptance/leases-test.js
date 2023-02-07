@@ -13,22 +13,17 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 
-module('Acceptance | leases', function(hooks) {
+module('Acceptance | leases', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(async function() {
+  hooks.beforeEach(async function () {
     await authPage.login();
     this.enginePath = `kv-for-lease-${new Date().getTime()}`;
     // need a version 1 mount for leased secrets here
-    return mountSecrets
-      .visit()
-      .path(this.enginePath)
-      .type('kv')
-      .version(1)
-      .submit();
+    return mountSecrets.visit().path(this.enginePath).type('kv').version(1).submit();
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     return logout.visit();
   });
 
@@ -43,17 +38,17 @@ module('Acceptance | leases', function(hooks) {
     }
   };
 
-  const navToDetail = async context => {
+  const navToDetail = async (context) => {
     await visit('/vault/access/leases/');
     await click(`[data-test-lease-link="${context.enginePath}/"]`);
     await click(`[data-test-lease-link="${context.enginePath}/${context.name}/"]`);
     await click(`[data-test-lease-link]:eq(0)`);
   };
 
-  skip('it renders the show page', function(assert) {
+  skip('it renders the show page', function (assert) {
     createSecret(this);
     navToDetail(this);
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.leases.show',
       'a lease for the secret is in the list'
@@ -64,10 +59,10 @@ module('Acceptance | leases', function(hooks) {
   });
 
   // skip for now until we find an easy way to generate a renewable lease
-  skip('it renders the show page with a picker', function(assert) {
+  skip('it renders the show page with a picker', function (assert) {
     createSecret(this, true);
     navToDetail(this);
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.leases.show',
       'a lease for the secret is in the list'
@@ -77,12 +72,12 @@ module('Acceptance | leases', function(hooks) {
       .exists({ count: 1 }, 'renewable lease renders a renew picker');
   });
 
-  skip('it removes leases upon revocation', async function(assert) {
+  skip('it removes leases upon revocation', async function (assert) {
     createSecret(this);
     navToDetail(this);
     await click('[data-test-lease-revoke] button');
     await click('[data-test-confirm-button]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.leases.list-root',
       'it navigates back to the leases root on revocation'
@@ -94,12 +89,12 @@ module('Acceptance | leases', function(hooks) {
       .doesNotExist('link to the lease was removed with revocation');
   });
 
-  skip('it removes branches when a prefix is revoked', async function(assert) {
+  skip('it removes branches when a prefix is revoked', async function (assert) {
     createSecret(this);
     await visit(`/vault/access/leases/list/${this.enginePath}`);
     await click('[data-test-lease-revoke-prefix] button');
     await click('[data-test-confirm-button]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.leases.list-root',
       'it navigates back to the leases root on revocation'
@@ -109,7 +104,7 @@ module('Acceptance | leases', function(hooks) {
       .doesNotExist('link to the prefix was removed with revocation');
   });
 
-  skip('lease not found', async function(assert) {
+  skip('lease not found', async function (assert) {
     await visit('/vault/access/leases/show/not-found');
     assert
       .dom('[data-test-lease-error]')

@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit: Return an error if any required parameter is missing.
+```

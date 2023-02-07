@@ -142,7 +142,80 @@ Vault uses the merkle index as the source of truth, allowing the WAL streams to
 be completely distinct and unsynchronized. This simplifies administration of
 Vault Replication for operators.
 
+## Addressing
+
+### Cluster addresses on the primary
+
+When a cluster is enabled as replication primary, it persists a cluster
+definition to storage, under `core/cluster/replicated/info` or
+`core/cluster/replicated-dr/info`.  An optional field of the cluster definition
+is `primary_cluster_addr`, which may be provided in the enable request.
+
+Performance standbys regularly issue heartbeat RPC requests to the active node, and
+one of the arguments to the RPC is the local node's `cluster_addr`.  The
+primary active node retains these cluster addresses received from its peers in
+an in-memory cache named `clusterPeerClusterAddrsCache` with a 15s expiry time.
+
+### Cluster addresses on the secondary
+
+When a secondary is enabled, its replication activation token (obtained from
+the primary) includes a `primary_cluster_addr` field.  This is taken from the
+persisted cluster definition created when the primary was enabled, or if no
+`primary_cluster_addr` was provided at that time, the token contains the
+`cluster_addr` of the current active node in the primary at the time the
+activation token is created.
+
+The secondary persists its own version of the cluster definition to storage,
+again under `core/cluster/replicated/info` or
+`core/cluster/replicated-dr/info`.  Here the `primary_cluster_addr` field is
+the one obtained from the activation token.
+
+The secondary active node regularly issues heartbeat RPC requests to the
+primary active node.  In response to these, the primary returns a response
+which includes a `ClusterAddrs` field, comprising the contents of its
+`clusterPeerClusterAddrsCache` plus the current active node's `cluster_addr`.
+The secondary uses the response to both to update its in-memory record of
+`known_primary_cluster_addrs`, and in addition it persists them to storage
+under `core/primary-addrs/dr` or `core/primary-addrs/perf`.  When this happens
+it logs the line `"replication: successful heartbeat"`, which includes the
+`ClusterAddrs` value obtained in the response.
+
+### Secondary RPC address resolution
+
+gRPC is given a list of target addresses for it to use in performing RPC
+requests.  gRPC will discover that performance standbys can't service most RPCs, and
+will quickly weed out all but the active node cluster address.  If the primary
+active node changes, gRPC will learn that its address is no longer viable and
+will automatically fail over to the new active node, assuming it's one of the
+known target addresses.
+
+The secondary runs a background resolver goroutine that, every few seconds,
+builds the gRPC target list of addresses for the primary.  Its output is logged
+at Trace level as `"loaded addresses"`.
+
+To build the primary cluster address list, the resolver goroutine normally
+simply concatenates `known_primary_cluster_addrs` with the
+`primary_cluster_addr` in the cluster definition in storage.
+
+There are two exceptions to that normal behaviour: the first time the goroutine
+goes through its loop, and when gRPC asks for a forced ResolveNow, which
+happens when it's unable to perform RPCs on any of its target addresses.  In
+both these cases, the resolver goroutine issues a special RemoteResolve RPC to
+the primary.  This RPC is special because unlike all the other replication
+RPCs, it can be serviced by performance standbys as well as the active node.  In
+either case the node will return the `primary_cluster_addr` stored in the
+primary's cluster definition, if any, or failing that the current active node's
+cluster address.  The result of the RemoteResolve call gets included in the
+list of target addresses the resolver gives to gRPC for regular RPCs to the
+primary.
+
 # Caveats
+
+~> **Mismatched Cluster Versions**: It is not safe to replicate from a newer
+version of Vault to an older version. When upgrading replicated clusters,
+ensure that upstream clusters are always on older version of Vault than
+downstream clusters. See
+[Upgrading Vault](/vault/docs/upgrading#replication-installations) for an example.
 
 - **Read-After-Write Consistency**: All write requests are forwarded from
   secondaries to the primary cluster in order to avoid potential conflicts.
@@ -151,7 +224,8 @@ Vault Replication for operators.
   return an old value. Secondaries attempt to mask this from an individual
   client making subsequent requests by stalling write requests until the write
   is replicated or a timeout is reached (2 seconds). If the timeout is reached,
-  the client will receive a warning.
+  the client will receive a warning. Clients can also take steps to protect
+  against this, see [Consistency](/vault/docs/enterprise/consistency#mitigations).
 
 - **Stale Reads**: Secondary clusters service reads based on their
   locally-replicated data. During normal operation updates from a primary are

@@ -1,123 +1,163 @@
-import { typeOf } from '@ember/utils';
-import EmberError from '@ember/error';
-import Component from '@ember/component';
-import { set, computed } from '@ember/object';
-import Duration from 'Duration.js';
-import layout from '../templates/components/ttl-picker';
-
-const ERROR_MESSAGE = 'TTLs must be specified in whole number increments, please enter a whole number.';
-
 /**
  * @module TtlPicker
- * `TtlPicker` components are used to set the 'time to live'.
- * This version is being deprecated and replaced by `TtlPicker2` which is an automatic-width version that
- * automatically recalculates the time value when unit is updated unless time has been changed recently.
- * Once all instances of TtlPicker are replaced with TtlPicker2, this component will be removed and
- * TtlPicker2 will be renamed to TtlPicker.
+ * TtlPicker components are used to enable and select duration values such as TTL.
+ * This component renders a toggle by default, and passes all relevant attributes
+ * to TtlForm. Please see that component for additional arguments
+ * - allows TTL to be enabled or disabled
+ * - recalculates the time when the unit is changed by the user (eg 60s -> 1m)
  *
  * @example
  * ```js
-    <TtlPicker @labelText="Lease" @initialValue={{lease}} @onChange={{action (mut lease)}} />
+ * <TtlPicker @onChange={{this.handleChange}} @initialEnabled={{@model.myAttribute}} @initialValue={{@model.myAttribute}}/>
  * ```
- *
- * @param labelClass="" {String} - A CSS class to add to the label.
- * @param labelText="TTL" {String} - The text content of the label associated with the widget.
- * @param initialValue=null {Number} - The starting value of the TTL;
- * @param setDefaultValue=true {Boolean} - If true, the component will trigger onChange on the initial
- * render, causing a value to be set.
- * @param onChange=Function.prototype{Function} - The function to call when the value of the ttl changes.
- * @param outputSeconds=false{Boolean} - If true, the component will trigger onChange with a value
- * converted to seconds instead of a Golang duration string.
+ * @param onChange {Function} - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}, goSafeTimeString{string}.
+ * @param initialEnabled=false {Boolean} - Set this value if you want the toggle on when component is mounted
+ * @param label="Time to live (TTL)" {String} - Label is the main label that lives next to the toggle. Yielded values will replace the label
+ * @param helperTextEnabled="" {String} - This helper text is shown under the label when the toggle is switched on
+ * @param helperTextDisabled="" {String} - This helper text is shown under the label when the toggle is switched off
+ * @param initialValue=null {string} - InitialValue is the duration value which will be shown when the component is loaded. If it can't be parsed, will default to 0.
+ * @param changeOnInit=false {boolean} - if true, calls the onChange hook when component is initialized
+ * @param hideToggle=false {Boolean} - set this value if you'd like to hide the toggle and just leverage the input field
  */
-export default Component.extend({
-  layout,
-  'data-test-component': 'ttl-picker',
-  classNames: 'field',
 
-  onChange: () => {},
-  setDefaultValue: true,
-  labelText: 'TTL',
-  labelClass: '',
-  ouputSeconds: false,
+import Component from '@glimmer/component';
+import { typeOf } from '@ember/utils';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+import Duration from '@icholy/duration';
+import { guidFor } from '@ember/object/internals';
+import Ember from 'ember';
+import { restartableTask, timeout } from 'ember-concurrency';
+import {
+  convertFromSeconds,
+  convertToSeconds,
+  goSafeConvertFromSeconds,
+  largestUnitFromSeconds,
+} from 'core/utils/duration-utils';
+export default class TtlPickerComponent extends Component {
+  @tracked enableTTL = false;
+  @tracked recalculateSeconds = false;
+  @tracked time = ''; // if defaultValue is NOT set, then do not display a defaultValue.
+  @tracked unit = 's';
+  @tracked recalculateSeconds = false;
+  @tracked errorMessage = '';
 
-  time: 30,
-  unit: 'm',
-  initialValue: null,
-  errorMessage: null,
-  unitOptions: computed(function() {
+  /* Used internally */
+  recalculationTimeout = 5000;
+  elementId = 'ttl-' + guidFor(this);
+
+  get label() {
+    return this.args.label || 'Time to live (TTL)';
+  }
+  get helperText() {
+    return this.enableTTL || this.args.hideToggle
+      ? this.args.helperTextEnabled
+      : this.args.helperTextDisabled;
+  }
+
+  constructor() {
+    super(...arguments);
+    const enable = this.args.initialEnabled;
+
+    let setEnable = !!this.args.hideToggle;
+    if (!!enable || typeOf(enable) === 'boolean') {
+      // This allows non-boolean values passed in to be evaluated for truthiness
+      setEnable = !!enable;
+    }
+
+    this.enableTTL = setEnable;
+    this.initializeTtl();
+  }
+
+  initializeTtl() {
+    const initialValue = this.args.initialValue;
+    let seconds = 0;
+    if (typeof initialValue === 'number') {
+      // if the passed value is a number, assume unit is seconds
+      seconds = initialValue;
+    } else {
+      try {
+        seconds = Duration.parse(initialValue).seconds();
+      } catch (e) {
+        // if parsing fails leave it empty
+        return;
+      }
+    }
+    const unit = largestUnitFromSeconds(seconds);
+    this.time = convertFromSeconds(seconds, unit);
+    this.unit = unit;
+
+    if (this.args.changeOnInit) {
+      this.handleChange();
+    }
+  }
+
+  get seconds() {
+    return convertToSeconds(this.time, this.unit);
+  }
+  get unitOptions() {
     return [
       { label: 'seconds', value: 's' },
       { label: 'minutes', value: 'm' },
       { label: 'hours', value: 'h' },
       { label: 'days', value: 'd' },
     ];
-  }),
+  }
 
-  convertToSeconds(time, unit) {
-    const toSeconds = {
-      s: 1,
-      m: 60,
-      h: 3600,
-    };
-
-    return time * toSeconds[unit];
-  },
-
-  TTL: computed('outputSeconds', 'time', 'unit', function() {
-    let { time, unit, outputSeconds } = this;
-    //convert to hours
-    if (unit === 'd') {
-      time = time * 24;
-      unit = 'h';
+  keepSecondsRecalculate(newUnit) {
+    const newTime = convertFromSeconds(this.seconds, newUnit);
+    if (Number.isInteger(newTime)) {
+      // Only recalculate if time is whole number
+      this.time = newTime;
     }
-    const timeString = time + unit;
-    return outputSeconds ? this.convertToSeconds(time, unit) : timeString;
-  }),
+    this.unit = newUnit;
+  }
 
-  didInsertElement() {
-    this._super(...arguments);
-    if (this.setDefaultValue === false) {
+  handleChange() {
+    const { time, unit, seconds, enableTTL } = this;
+    const ttl = {
+      enabled: this.args.hideToggle || enableTTL,
+      seconds,
+      timeString: time + unit,
+      goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
+    };
+    this.args.onChange(ttl);
+  }
+
+  @action
+  toggleEnabled() {
+    this.enableTTL = !this.enableTTL;
+    this.handleChange();
+  }
+
+  @restartableTask
+  *updateTime(newTime) {
+    this.errorMessage = '';
+    const parsedTime = parseInt(newTime, 10);
+    if (!newTime) {
+      this.errorMessage = 'This field is required';
+      return;
+    } else if (Number.isNaN(parsedTime)) {
+      this.errorMessage = 'Value must be a number';
       return;
     }
-    this.onChange(this.TTL);
-  },
-
-  init() {
-    this._super(...arguments);
-    if (!this.onChange) {
-      throw new EmberError('`onChange` handler is a required attr in `' + this.toString() + '`.');
+    this.time = parsedTime;
+    this.handleChange();
+    if (Ember.testing) {
+      return;
     }
-    if (this.initialValue != undefined) {
-      this.parseAndSetTime();
+    this.recalculateSeconds = true;
+    yield timeout(this.recalculationTimeout);
+    this.recalculateSeconds = false;
+  }
+
+  @action
+  updateUnit(newUnit) {
+    if (this.recalculateSeconds) {
+      this.unit = newUnit;
+    } else {
+      this.keepSecondsRecalculate(newUnit);
     }
-  },
-
-  parseAndSetTime() {
-    let value = this.initialValue;
-    let seconds = typeOf(value) === 'number' ? value : 30;
-    try {
-      seconds = Duration.parse(value).seconds();
-    } catch (e) {
-      // if parsing fails leave as default 30
-    }
-
-    this.set('time', seconds);
-    this.set('unit', 's');
-  },
-
-  actions: {
-    changedValue(key, value) {
-      if (value && key === 'time') {
-        value = parseInt(value, 10);
-        if (Number.isNaN(value)) {
-          this.set('errorMessage', ERROR_MESSAGE);
-          return;
-        }
-      }
-      this.set('errorMessage', null);
-
-      set(this, key, value);
-      this.onChange(this.TTL);
-    },
-  },
-});
+    this.handleChange();
+  }
+}

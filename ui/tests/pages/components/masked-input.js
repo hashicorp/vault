@@ -1,17 +1,7 @@
-import { attribute, clickable, fillable, isPresent } from 'ember-cli-page-object';
-import { focus, blur } from '@ember/test-helpers';
+import { clickable, isPresent } from 'ember-cli-page-object';
 
 export default {
-  wrapperClass: attribute('class', '[data-test-masked-input]'),
-  enterText: fillable('[data-test-textarea]'),
   textareaIsPresent: isPresent('[data-test-textarea]'),
-  inputIsPresent: isPresent('[data-test-input]'),
   copyButtonIsPresent: isPresent('[data-test-copy-button]'),
-  toggleMasked: clickable('[data-test-button]'),
-  async focusField() {
-    return focus('[data-test-textarea]');
-  },
-  async blurField() {
-    return blur('[data-test-textarea]');
-  },
+  toggleMasked: clickable('[data-test-button="toggle-masked"]'),
 };

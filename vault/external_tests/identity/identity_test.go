@@ -4,18 +4,142 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+
 	"github.com/go-ldap/ldap/v3"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/api"
 	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
 	"github.com/hashicorp/vault/helper/namespace"
 	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/ldaputil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
+
+func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"ldap": ldapcred.Factory,
+		},
+	}
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	// Create a entity
+	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
+		"name": "testentityname",
+	})
+	require.NoError(t, err)
+	entityID := secret.Data["id"].(string)
+
+	cleanup, config1 := ldaphelper.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	cleanup2, config2 := ldaphelper.PrepareTestContainer(t, "latest")
+	defer cleanup2()
+
+	setupFunc := func(path string, cfg *ldaputil.ConfigEntry) string {
+		// Create an external group
+		resp, err := client.Logical().Write("identity/group", map[string]interface{}{
+			"type":     "external",
+			"name":     path + "ldap_admin_staff",
+			"policies": []string{"admin-policy"},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		groupID := resp.Data["id"].(string)
+
+		// Enable LDAP mount in Vault
+		err = client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
+			Type: "ldap",
+		})
+		require.NoError(t, err)
+
+		// Take out its accessor
+		auth, err := client.Sys().ListAuth()
+		require.NoError(t, err)
+		accessor := auth[path+"/"].Accessor
+		require.NotEmpty(t, accessor)
+
+		// Create an external group alias
+		resp, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
+			"name":           "admin_staff",
+			"canonical_id":   groupID,
+			"mount_accessor": accessor,
+		})
+		require.NoError(t, err)
+
+		// Create a user in Vault
+		_, err = client.Logical().Write("auth/"+path+"/users/hermes conrad", map[string]interface{}{
+			"password": "hermes",
+		})
+		require.NoError(t, err)
+
+		// Create an entity alias
+		client.Logical().Write("identity/entity-alias", map[string]interface{}{
+			"name":           "hermes conrad",
+			"canonical_id":   entityID,
+			"mount_accessor": accessor,
+		})
+
+		// Configure LDAP auth
+		secret, err = client.Logical().Write("auth/"+path+"/config", map[string]interface{}{
+			"url":       cfg.Url,
+			"userattr":  cfg.UserAttr,
+			"userdn":    cfg.UserDN,
+			"groupdn":   cfg.GroupDN,
+			"groupattr": cfg.GroupAttr,
+			"binddn":    cfg.BindDN,
+			"bindpass":  cfg.BindPassword,
+		})
+		require.NoError(t, err)
+
+		secret, err = client.Logical().Write("auth/"+path+"/login/hermes conrad", map[string]interface{}{
+			"password": "hermes",
+		})
+		require.NoError(t, err)
+
+		policies, err := secret.TokenPolicies()
+		require.NoError(t, err)
+		require.Contains(t, policies, "admin-policy")
+
+		secret, err = client.Logical().Read("identity/group/id/" + groupID)
+		require.NoError(t, err)
+		require.Contains(t, secret.Data["member_entity_ids"], entityID)
+
+		return groupID
+	}
+	groupID1 := setupFunc("ldap", config1)
+	groupID2 := setupFunc("ldap2", config2)
+
+	// Remove hermes conrad from admin_staff group
+	removeLdapGroupMember(t, config1, "admin_staff", "hermes conrad")
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+		"password": "hermes",
+	})
+	require.NoError(t, err)
+
+	secret, err = client.Logical().Read("identity/group/id/" + groupID1)
+	require.NoError(t, err)
+	require.NotContains(t, secret.Data["member_entity_ids"], entityID)
+
+	secret, err = client.Logical().Read("identity/group/id/" + groupID2)
+	require.NoError(t, err)
+	require.Contains(t, secret.Data["member_entity_ids"], entityID)
+}
 
 func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	t.Parallel()
@@ -504,8 +628,20 @@ func assertMember(t *testing.T, client *api.Client, entityID, groupName, groupID
 		t.Fatal(err)
 	}
 	groupMap := secret.Data
+
+	groupEntityMembers, ok := groupMap["member_entity_ids"].([]interface{})
+	if !ok && expectFound {
+		t.Fatalf("expected member_entity_ids not to be nil")
+	}
+
+	// if type assertion fails and expectFound is false, groupEntityMembers
+	// is nil, then let's just return, nothing to be done!
+	if !ok && !expectFound {
+		return
+	}
+
 	found := false
-	for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
+	for _, entityIDRaw := range groupEntityMembers {
 		if entityIDRaw.(string) == entityID {
 			found = true
 		}

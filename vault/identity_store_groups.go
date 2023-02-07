@@ -6,11 +6,10 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -182,7 +181,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 	// Update the policies if supplied
 	policiesRaw, ok := d.GetOk("policies")
 	if ok {
-		group.Policies = policiesRaw.([]string)
+		group.Policies = strutil.RemoveDuplicatesStable(policiesRaw.([]string), true)
 	}
 
 	if strutil.StrListContains(group.Policies, "root") {
@@ -256,6 +255,10 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 
 	err = i.sanitizeAndUpsertGroup(ctx, group, nil, memberGroupIDs)
 	if err != nil {
+		if errStr := err.Error(); strings.HasPrefix(errStr, errCycleDetectedPrefix) {
+			return logical.ErrorResponse(errStr), nil
+		}
+
 		return nil, err
 	}
 
@@ -347,7 +350,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 		aliasMap["creation_time"] = ptypes.TimestampString(group.Alias.CreationTime)
 		aliasMap["last_update_time"] = ptypes.TimestampString(group.Alias.LastUpdateTime)
 
-		if mountValidationResp := i.core.router.validateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
+		if mountValidationResp := i.router.ValidateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
 			aliasMap["mount_path"] = mountValidationResp.MountPath
 			aliasMap["mount_type"] = mountValidationResp.MountType
 		}
@@ -478,7 +481,7 @@ func (i *IdentityStore) handleGroupListCommon(ctx context.Context, byID bool) (*
 
 	iter, err := txn.Get(groupsTable, "namespace_id", ns.ID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to lookup groups using namespace ID: {{err}}", err)
+		return nil, fmt.Errorf("failed to lookup groups using namespace ID: %w", err)
 	}
 
 	var keys []string
@@ -517,7 +520,7 @@ func (i *IdentityStore) handleGroupListCommon(ctx context.Context, byID bool) (*
 				entry["mount_path"] = mi.MountPath
 			} else {
 				mi = mountInfo{}
-				if mountValidationResp := i.core.router.validateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
+				if mountValidationResp := i.router.ValidateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
 					mi.MountType = mountValidationResp.MountType
 					mi.MountPath = mountValidationResp.MountPath
 					entry["mount_type"] = mi.MountType

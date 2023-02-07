@@ -1,4 +1,4 @@
-import { collection, clickable, fillable, text, value } from 'ember-cli-page-object';
+import { collection, clickable, fillable, text, value, isPresent } from 'ember-cli-page-object';
 
 export default {
   tabs: collection('[data-test-auth-method]', {
@@ -11,5 +11,10 @@ export default {
   tokenValue: value('[data-test-token]'),
   password: fillable('[data-test-password]'),
   errorText: text('[data-test-auth-error]'),
+  errorMessagePresent: isPresent('[data-test-auth-error]'),
+  descriptionText: text('[data-test-description]'),
   login: clickable('[data-test-auth-submit]'),
+  oidcRole: fillable('[data-test-role]'),
+  oidcMoreOptions: clickable('[data-test-yield-content] button'),
+  oidcMountPath: fillable('#custom-path'),
 };

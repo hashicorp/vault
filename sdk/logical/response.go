@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
@@ -34,9 +35,17 @@ const (
 	// ignore errors.
 	HTTPRawBodyAlreadyJSONDecoded = "http_raw_body_already_json_decoded"
 
-	// If set, HTTPRawCacheControl will replace the default Cache-Control=no-store header
+	// If set, HTTPCacheControlHeader will replace the default Cache-Control=no-store header
 	// set by the generic wrapping handler. The value must be a string.
-	HTTPRawCacheControl = "http_raw_cache_control"
+	HTTPCacheControlHeader = "http_raw_cache_control"
+
+	// If set, HTTPPragmaHeader will set the Pragma response header.
+	// The value must be a string.
+	HTTPPragmaHeader = "http_raw_pragma"
+
+	// If set, HTTPWWWAuthenticateHeader will set the WWW-Authenticate response header.
+	// The value must be a string.
+	HTTPWWWAuthenticateHeader = "http_www_authenticate"
 )
 
 // Response is a struct that stores the response of a request.
@@ -83,7 +92,8 @@ func (r *Response) AddWarning(warning string) {
 
 // IsError returns true if this response seems to indicate an error.
 func (r *Response) IsError() bool {
-	return r != nil && r.Data != nil && len(r.Data) == 1 && r.Data["error"] != nil
+	// If the response data contains only an 'error' element, or an 'error' and a 'data' element only
+	return r != nil && r.Data != nil && r.Data["error"] != nil && (len(r.Data) == 1 || (r.Data["data"] != nil && len(r.Data) == 2))
 }
 
 func (r *Response) Error() error {
@@ -201,13 +211,112 @@ func NewHTTPResponseWriter(w http.ResponseWriter) *HTTPResponseWriter {
 }
 
 // Write will write the bytes to the underlying io.Writer.
-func (rw *HTTPResponseWriter) Write(bytes []byte) (int, error) {
-	atomic.StoreUint32(rw.written, 1)
-
-	return rw.ResponseWriter.Write(bytes)
+func (w *HTTPResponseWriter) Write(bytes []byte) (int, error) {
+	atomic.StoreUint32(w.written, 1)
+	return w.ResponseWriter.Write(bytes)
 }
 
 // Written tells us if the writer has been written to yet.
-func (rw *HTTPResponseWriter) Written() bool {
-	return atomic.LoadUint32(rw.written) == 1
+func (w *HTTPResponseWriter) Written() bool {
+	return atomic.LoadUint32(w.written) == 1
+}
+
+type WrappingResponseWriter interface {
+	http.ResponseWriter
+	Wrapped() http.ResponseWriter
+}
+
+type StatusHeaderResponseWriter struct {
+	wrapped     http.ResponseWriter
+	wroteHeader bool
+	StatusCode  int
+	headers     map[string][]*CustomHeader
+}
+
+func NewStatusHeaderResponseWriter(w http.ResponseWriter, h map[string][]*CustomHeader) *StatusHeaderResponseWriter {
+	return &StatusHeaderResponseWriter{
+		wrapped:     w,
+		wroteHeader: false,
+		StatusCode:  200,
+		headers:     h,
+	}
+}
+
+func (w *StatusHeaderResponseWriter) Wrapped() http.ResponseWriter {
+	return w.wrapped
+}
+
+func (w *StatusHeaderResponseWriter) Header() http.Header {
+	return w.wrapped.Header()
+}
+
+func (w *StatusHeaderResponseWriter) Write(buf []byte) (int, error) {
+	// It is allowed to only call ResponseWriter.Write and skip
+	// ResponseWriter.WriteHeader. An example of such a situation is
+	// "handleUIStub". The Write function will internally set the status code
+	// 200 for the response for which that call might invoke other
+	// implementations of the WriteHeader function. So, we still need to set
+	// the custom headers. In cases where both WriteHeader and Write of
+	// statusHeaderResponseWriter struct are called the internal call to the
+	// WriterHeader invoked from inside Write method won't change the headers.
+	if !w.wroteHeader {
+		w.setCustomResponseHeaders(w.StatusCode)
+	}
+
+	return w.wrapped.Write(buf)
+}
+
+func (w *StatusHeaderResponseWriter) WriteHeader(statusCode int) {
+	w.setCustomResponseHeaders(statusCode)
+	w.wrapped.WriteHeader(statusCode)
+	w.StatusCode = statusCode
+	// in cases where Write is called after WriteHeader, let's prevent setting
+	// ResponseWriter headers twice
+	w.wroteHeader = true
+}
+
+func (w *StatusHeaderResponseWriter) setCustomResponseHeaders(status int) {
+	sch := w.headers
+	if sch == nil {
+		return
+	}
+
+	// Checking the validity of the status code
+	if status >= 600 || status < 100 {
+		return
+	}
+
+	// setter function to set the headers
+	setter := func(hvl []*CustomHeader) {
+		for _, hv := range hvl {
+			w.Header().Set(hv.Name, hv.Value)
+		}
+	}
+
+	// Setting the default headers first
+	setter(sch["default"])
+
+	// setting the Xyy pattern first
+	d := fmt.Sprintf("%vxx", status/100)
+	if val, ok := sch[d]; ok {
+		setter(val)
+	}
+
+	// Setting the specific headers
+	if val, ok := sch[strconv.Itoa(status)]; ok {
+		setter(val)
+	}
+
+	return
+}
+
+var _ WrappingResponseWriter = &StatusHeaderResponseWriter{}
+
+// ResolveRoleResponse returns a standard response to be returned by functions handling a ResolveRoleOperation
+func ResolveRoleResponse(roleName string) (*Response, error) {
+	return &Response{
+		Data: map[string]interface{}{
+			"role": roleName,
+		},
+	}, nil
 }

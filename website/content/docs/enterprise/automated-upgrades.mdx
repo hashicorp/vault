@@ -1,0 +1,50 @@
+---
+layout: docs
+page_title: Vault Enterprise Automated Upgrades
+description: |-
+  Vault Enterprise can upgrade itself automatically.
+---
+
+# Automated Upgrades
+
+~> **Note**: Automated Upgrades requires [Vault Enterprise](https://www.hashicorp.com/products/vault/) to be
+configured to use Integrated Storage.
+
+Vault Enterprise Automated Upgrades allows operators to upgrade the Vault version currently running in a cluster automatically.
+ There are a few different ways to make this upgrade happen,
+and control which versions are being upgraded to. With no additional configuration,
+Vault will check the version of Vault that each node in the cluster is running. If a blue/green
+style deployment is desired, Vault uses the version of your choosing, regardless of
+which version of Vault is currently running.
+
+## Configuration
+A new key can be added to Vault's `storage` configuration stanza: `autopilot_upgrade_version`.
+The value for this key is a [SemVer](https://semver.org/) compatible version string of your choosing.
+When a version string is present, it will override the current version of Vault that is running to upgrade automatically.
+
+## Mechanics
+Whether you choose to use Vault's built-in version or a version of your own, the mechanics for performing
+automatic upgrades remain the same.
+
+When a Vault cluster is running and new nodes containing an updated Vault version join the cluster, the
+Autopilot subsystem within Vault will promote the new version nodes to voters when the number of nodes
+running the latest Vault version equals or exceeds the number of pre-existing nodes. Vault then demotes
+the previous version's nodes to non-voters. Finally, leadership transfers from the prior leader to a
+randomly selected node running the newest Vault version and waits for the user to remove the previous
+nodes from the cluster.
+
+Below is a flowchart depicting Autopilot's automated upgrade state machine.
+
+![Automated Upgrade State Machine](/img/autopilot-automated-upgrade.png)
+
+The status of the automated upgrade can be monitored by consulting the [Autopilot state API endpoint](/vault/api-docs/system/storage/raftautopilot#get-cluster-state).
+
+## Examples
+### Using Vault's built-in version
+This is the easiest method to perform an automated upgrade; no configuration is needed, and automated upgrades
+are enabled by default.
+
+### Using a blue/green style deploy
+Specify something like: `1.11.0-release.1` for the `autopilot_upgrade_version` configuration key in your
+existing cluster. When you're ready to deploy a new set of nodes, specify `1.11.0-release.2` for the new
+nodes. Any time you need to deploy an updated set of nodes to the cluster, increment the final number.

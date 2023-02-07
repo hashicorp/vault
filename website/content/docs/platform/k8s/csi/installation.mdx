@@ -6,31 +6,33 @@ description: The Vault CSI Provider can be installed using Vault Helm.
 
 # Installing the Vault CSI Provider
 
-~> The Vault CSI Provider requires the [CSI Secret Store Driver](https://github.com/kubernetes-sigs/secrets-store-csi-driver).
+## Prerequisites
 
-The [Vault Helm chart](/docs/platform/k8s/helm) is the recommended way to
+- Kubernetes 1.16+ for both the master and worker nodes (Linux-only)
+- [Secrets store CSI driver](https://secrets-store-csi-driver.sigs.k8s.io/getting-started/installation.html) installed
+- `TokenRequest` endpoint available, which requires setting the flags
+  `--service-account-signing-key-file` and `--service-account-issuer` for
+  `kube-apiserver`. Set by default from 1.20+ and earlier in most managed services.
+
+## Installation using helm
+
+The [Vault Helm chart](/vault/docs/platform/k8s/helm) is the recommended way to
 install and configure the Vault CSI Provider in Kubernetes.
 
 To install a new instance of Vault and the Vault CSI Provider, first add the
 HashiCorp helm repository and ensure you have access to the chart:
 
-~> Vault CSI Provider Helm installation requires Vault Helm 0.10.0+.
+~> **Note:** Vault CSI Provider Helm installation requires Vault Helm 0.10.0+.
 
-```shell-session
-$ helm repo add hashicorp https://helm.releases.hashicorp.com
-"hashicorp" has been added to your repositories
-
-$ helm search repo hashicorp/vault
-NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.10.0       	1.7.0      	Official HashiCorp Vault Chart
-```
+@include 'helm/repo.mdx'
 
 Then install the chart and enable the CSI feature by setting the
 `csi.enabled` value to `true`:
 
-```bash
-# Note: this will also install the Vault server and Agent Injector.
-helm install vault hashicorp/vault --set="csi.enabled=true"
+~> **Note:** this will also install the Vault server and Agent Injector.
+
+```shell-session
+$ helm install vault hashicorp/vault --set="csi.enabled=true"
 ```
 
 Upgrades may be performed with `helm upgrade` on an existing install. Please
@@ -38,6 +40,84 @@ always run Helm with `--dry-run` before any install or upgrade to verify
 changes.
 
 You can see all the available values settings by running `helm inspect values hashicorp/vault` or by reading the [Vault Helm Configuration
-Docs](/docs/platform/k8s/helm/configuration). Commonly used values in the Helm
+Docs](/vault/docs/platform/k8s/helm/configuration). Commonly used values in the Helm
 chart include limiting the namespaces the Vault CSI Provider runs in, TLS options and
 more.
+
+## Installation on OpenShift
+
+We recommend using the [Vault agent injector on Openshift](/vault/docs/platform/k8s/helm/openshift)
+instead of the Secrets Store CSI driver. OpenShift
+[does not recommend](https://docs.openshift.com/container-platform/4.9/storage/persistent_storage/persistent-storage-hostpath.html)
+using `hostPath` mounting in production or
+[certify Helm charts](https://github.com/redhat-certification/chart-verifier/blob/dbf89bff2d09142e4709d689a9f4037a739c2244/docs/helm-chart-checks.md#table-2-helm-chart-default-checks)
+using CSI objects because pods must run as privileged. Pods will have elevated access to
+other pods on the same node, which OpenShift does not recommend.
+
+You can run the Secrets Store CSI driver with additional
+security configurations on a OpenShift development
+or testing cluster.
+
+Deploy the Secrets Store CSI driver and Vault Helm chart
+to your OpenShift cluster.
+
+Then, patch the `DaemonSet` for the Vault CSI provider to
+run with a privileged security context.
+
+```shell-session
+$ kubectl patch daemonset vault-csi-provider \
+  --type='json' \
+  --patch='[{"op": "add", "path": "/spec/template/spec/containers/0/securityContext", "value": {"privileged": true} }]'
+```
+
+The Secrets Store CSI driver and Vault CSI provider need `hostPath` mount access.
+Add the service account for the Secrets Store CSI driver to the `privileged`
+[security context constraint](https://cloud.redhat.com/blog/managing-sccs-in-openshift).
+
+```shell-session
+$ oc adm policy add-scc-to-user privileged system:serviceaccount:${KUBERNETES_VAULT_NAMESPACE}:secrets-store-csi-driver
+```
+
+Add the service account for the Vault CSI provider to the `privileged`
+security context constraint.
+
+```shell-session
+$ oc adm policy add-scc-to-user privileged system:serviceaccount:${KUBERNETES_VAULT_NAMESPACE}:vault-csi-provider
+```
+
+You need to give additional access to the application retrieving secrets with the Vault CSI provider.
+Create a `SecurityContextConstraint` to `allowHostDirVolumePlugin`, `allowHostDirVolumePlugin`, and
+`allowHostPorts` for the application's service account.
+You can adjust the other attributes based on your application's runtime configuration.
+
+```shell-session
+$ cat > application-scc.yaml << EOF
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: vault-csi-provider
+allowPrivilegedContainer: false
+allowHostDirVolumePlugin: true
+allowHostNetwork: true
+allowHostPorts: true
+allowHostIPC: false
+allowHostPID: false
+readOnlyRootFilesystem: false
+defaultAddCapabilities:
+- SYS_ADMIN
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+fsGroup:
+  type: RunAsAny
+users:
+- system:serviceaccount:${KUBERNETES_APPLICATION_NAMESPACE}:${APPLICATION_SERVICE_ACCOUNT}
+EOF
+```
+
+Add the security context constraint for the applicaiton.
+
+```shell-session
+$ kubectl apply -f application-scc.yaml
+```

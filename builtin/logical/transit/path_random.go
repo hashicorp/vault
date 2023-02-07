@@ -2,21 +2,15 @@ package transit
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/hex"
-	"fmt"
-	"strconv"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const maxBytes = 128 * 1024
-
 func (b *backend) pathRandom() *framework.Path {
 	return &framework.Path{
-		Pattern: "random" + framework.OptionalParamRegex("urlbytes"),
+		Pattern: "random(/" + framework.GenericNameRegex("source") + ")?" + framework.OptionalParamRegex("urlbytes"),
 		Fields: map[string]*framework.FieldSchema{
 			"urlbytes": {
 				Type:        framework.TypeString,
@@ -34,6 +28,12 @@ func (b *backend) pathRandom() *framework.Path {
 				Default:     "base64",
 				Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "base64".`,
 			},
+
+			"source": {
+				Type:        framework.TypeString,
+				Default:     "platform",
+				Description: `Which system to source random data from, ether "platform", "seal", or "all".`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -45,55 +45,8 @@ func (b *backend) pathRandom() *framework.Path {
 	}
 }
 
-func (b *backend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	bytes := 0
-	var err error
-	strBytes := d.Get("urlbytes").(string)
-	if strBytes != "" {
-		bytes, err = strconv.Atoi(strBytes)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("error parsing url-set byte count: %s", err)), nil
-		}
-	} else {
-		bytes = d.Get("bytes").(int)
-	}
-	format := d.Get("format").(string)
-
-	if bytes < 1 {
-		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
-	}
-
-	if bytes > maxBytes {
-		return logical.ErrorResponse(`"bytes" should be less than %d`, maxBytes), nil
-	}
-
-	switch format {
-	case "hex":
-	case "base64":
-	default:
-		return logical.ErrorResponse("unsupported encoding format %q; must be \"hex\" or \"base64\"", format), nil
-	}
-
-	randBytes, err := uuid.GenerateRandomBytes(bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	var retStr string
-	switch format {
-	case "hex":
-		retStr = hex.EncodeToString(randBytes)
-	case "base64":
-		retStr = base64.StdEncoding.EncodeToString(randBytes)
-	}
-
-	// Generate the response
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"random_bytes": retStr,
-		},
-	}
-	return resp, nil
+func (b *backend) pathRandomWrite(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return random.HandleRandomAPI(d, b.GetRandomReader())
 }
 
 const pathRandomHelpSyn = `Generate random bytes`

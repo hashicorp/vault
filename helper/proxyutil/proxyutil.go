@@ -1,15 +1,15 @@
 package proxyutil
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"sync"
 	"time"
 
-	proxyproto "github.com/armon/go-proxyproto"
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	proxyproto "github.com/pires/go-proxyproto"
 )
 
 // ProxyProtoConfig contains configuration for the PROXY protocol
@@ -42,34 +42,34 @@ func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig) (net.List
 	switch config.Behavior {
 	case "use_always":
 		newLn = &proxyproto.Listener{
-			Listener:           listener,
-			ProxyHeaderTimeout: 10 * time.Second,
+			Listener:          listener,
+			ReadHeaderTimeout: 10 * time.Second,
 		}
 
 	case "allow_authorized", "deny_unauthorized":
 		newLn = &proxyproto.Listener{
-			Listener:           listener,
-			ProxyHeaderTimeout: 10 * time.Second,
-			SourceCheck: func(addr net.Addr) (bool, error) {
+			Listener:          listener,
+			ReadHeaderTimeout: 10 * time.Second,
+			Policy: func(addr net.Addr) (proxyproto.Policy, error) {
 				config.RLock()
 				defer config.RUnlock()
 
 				sa, err := sockaddr.NewSockAddr(addr.String())
 				if err != nil {
-					return false, errwrap.Wrapf("error parsing remote address: {{err}}", err)
+					return proxyproto.REJECT, fmt.Errorf("error parsing remote address: %w", err)
 				}
 
 				for _, authorizedAddr := range config.AuthorizedAddrs {
 					if authorizedAddr.Contains(sa) {
-						return true, nil
+						return proxyproto.USE, nil
 					}
 				}
 
 				if config.Behavior == "allow_authorized" {
-					return false, nil
+					return proxyproto.IGNORE, nil
 				}
 
-				return false, proxyproto.ErrInvalidUpstream
+				return proxyproto.REJECT, errors.New(`upstream connection not trusted proxy_protocol_behavior is "deny_unauthorized"`)
 			},
 		}
 	default:

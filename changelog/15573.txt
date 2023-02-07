@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixed unsupported revocation statements field for DB roles
+```

@@ -2,7 +2,7 @@ package vault
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"sort"
@@ -14,6 +14,24 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+)
+
+var (
+	testPolicyName        = "testpolicy"
+	rawTestPasswordPolicy = `
+length = 20
+rule "charset" {
+	charset = "abcdefghijklmnopqrstuvwxyz"
+	min_chars = 1
+}
+rule "charset" {
+	charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	min_chars = 1
+}
+rule "charset" {
+	charset = "0123456789"
+	min_chars = 1
+}`
 )
 
 func TestIdentity_BackendTemplating(t *testing.T) {
@@ -157,47 +175,45 @@ func TestIdentity_BackendTemplating(t *testing.T) {
 }
 
 func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
-	policyName := "testpolicy"
-	rawPolicy := map[string]interface{}{
-		"policy": `length = 20
-rule "charset" {
-	charset = "abcdefghijklmnopqrstuvwxyz"
-	min_chars = 1
-}
-rule "charset" {
-	charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	min_chars = 1
-}
-rule "charset" {
-	charset = "0123456789"
-	min_chars = 1
-}`,
+	var err error
+	coreConfig := &CoreConfig{
+		DisableMlock:       true,
+		DisableCache:       true,
+		Logger:             log.NewNullLogger(),
+		CredentialBackends: map[string]logical.Factory{},
 	}
-	marshalledPolicy, err := json.Marshal(rawPolicy)
+
+	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	TestWaitActive(t, core)
+
+	b64Policy := base64.StdEncoding.EncodeToString([]byte(rawTestPasswordPolicy))
+
+	path := fmt.Sprintf("sys/policies/password/%s", testPolicyName)
+	req := logical.TestRequest(t, logical.CreateOperation, path)
+	req.ClientToken = cluster.RootToken
+	req.Data["policy"] = b64Policy
+
+	_, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
-		t.Fatalf("Unable to set up test: unable to marshal raw policy to JSON: %s", err)
+		t.Fatalf("err: %v", err)
 	}
 
-	testStorage := fakeBarrier{
-		getEntry: &logical.StorageEntry{
-			Key:   getPasswordPolicyKey(policyName),
-			Value: marshalledPolicy,
-		},
-	}
-
-	dsv := dynamicSystemView{
-		core: &Core{
-			systemBarrierView: NewBarrierView(testStorage, "sys/"),
-		},
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
+
+	ctx = namespace.RootContext(ctx)
+	dsv := TestDynamicSystemView(cluster.Cores[0].Core, nil)
 
 	runeset := map[rune]bool{}
 	runesFound := []rune{}
 
 	for i := 0; i < 100; i++ {
-		actual, err := dsv.GeneratePasswordFromPolicy(ctx, policyName)
+		actual, err := dsv.GeneratePasswordFromPolicy(ctx, testPolicyName)
 		if err != nil {
 			t.Fatalf("no error expected, but got: %s", err)
 		}
@@ -219,12 +235,6 @@ rule "charset" {
 		t.Fatalf("Didn't find all characters from the charset\nActual  : [%s]\nExpected: [%s]", string(runesFound), string(expectedRunes))
 	}
 }
-
-type runes []rune
-
-func (r runes) Len() int           { return len(r) }
-func (r runes) Less(i, j int) bool { return r[i] < r[j] }
-func (r runes) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 
 func TestDynamicSystemView_GeneratePasswordFromPolicy_failed(t *testing.T) {
 	type testCase struct {
@@ -264,11 +274,11 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_failed(t *testing.T) {
 				getErr:   test.getErr,
 			}
 
-			dsv := dynamicSystemView{
-				core: &Core{
-					systemBarrierView: NewBarrierView(testStorage, "sys/"),
-				},
+			core := &Core{
+				systemBarrierView: NewBarrierView(testStorage, "sys/"),
 			}
+			dsv := TestDynamicSystemView(core, nil)
+
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 			actualPassword, err := dsv.GeneratePasswordFromPolicy(ctx, test.policyName)
@@ -281,6 +291,12 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_failed(t *testing.T) {
 		})
 	}
 }
+
+type runes []rune
+
+func (r runes) Len() int           { return len(r) }
+func (r runes) Less(i, j int) bool { return r[i] < r[j] }
+func (r runes) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 
 type fakeBarrier struct {
 	getEntry *logical.StorageEntry

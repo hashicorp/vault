@@ -1,0 +1,28 @@
+---
+layout: docs
+page_title: Configure the Vault EKM Provider
+description: Configuration options for the Vault EKM Provider for Microsoft SQL Server.
+---
+
+# Configuring the Vault EKM Provider
+
+Configuration is stored in a `config.json` file under ProgramData in a path that
+mirrors the installation folder. This defaults to
+`C:\ProgramData\HashiCorp\Transit Vault EKM Provider\config.json`.
+
+-> **Note:** If the Vault EKM Provider has already been installed, Microsoft
+    SQL Server needs to be restarted for configuration changes to take effect.
+
+The following options are supported:
+
+- `vaultApiBaseUrl` `(string: required)` - Address of Vault server, e.g.
+    `https://vault.example.com:8200`
+- `enableTrace` `(bool: false)` - Enable trace logging. Logs are viewable from
+    the event viewer. See [troubleshooting](/vault/docs/platform/mssql/troubleshooting)
+    for further details.
+- `namespace` `(string: "")` - Set the Vault namespace to use. Applies to both
+    AppRole and Transit.
+- `appRoleMountPath` `(string: "approle")` - Use this to specify the path to the
+    AppRole auth mount if it was set to a non-default path.
+- `transitMountPath` `(string: "transit")` - Use this to specify the path to the
+    Transit mount if it was set to a non-default path.

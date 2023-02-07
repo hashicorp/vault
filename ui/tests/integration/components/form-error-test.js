@@ -3,16 +3,16 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | form-error', function(hooks) {
+module('Integration | Component | form-error', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     // Set any properties with this.set('myProperty', 'value');
     // Handle any actions with this.set('myAction', function(val) { ... });
 
     await render(hbs`{{form-error}}`);
 
-    assert.equal(this.element.textContent.trim(), '');
+    assert.dom(this.element).hasText('');
 
     // Template block usage:
     await render(hbs`
@@ -21,6 +21,6 @@ module('Integration | Component | form-error', function(hooks) {
       {{/form-error}}
     `);
 
-    assert.equal(this.element.textContent.trim(), 'template block text');
+    assert.dom(this.element).hasText('template block text');
   });
 });

@@ -8,15 +8,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
@@ -56,13 +58,23 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	}
 
 	b.credRotationQueue = queue.New()
-	// Create a context with a cancel method for processing any WAL entries and
-	// populating the queue
-	initCtx := context.Background()
-	ictx, cancel := context.WithCancel(initCtx)
-	b.cancelQueue = cancel
 	// Load queue and kickoff new periodic ticker
-	go b.initQueue(ictx, conf, conf.System.ReplicationState())
+	go b.initQueue(b.queueCtx, conf, conf.System.ReplicationState())
+
+	// collect metrics on number of plugin instances
+	var err error
+	b.gaugeCollectionProcess, err = metricsutil.NewGaugeCollectionProcess(
+		[]string{"secrets", "database", "backend", "pluginInstances", "count"},
+		[]metricsutil.Label{},
+		b.collectPluginInstanceGaugeValues,
+		metrics.Default(),
+		configutil.UsageGaugeDefaultPeriod, // TODO: add config settings for these, or add plumbing to the main config settings
+		configutil.MaximumGaugeCardinalityDefault,
+		b.logger)
+	if err != nil {
+		return nil, err
+	}
+	go b.gaugeCollectionProcess.Run()
 	return b, nil
 }
 
@@ -104,38 +116,116 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 
 	b.logger = conf.Logger
 	b.connections = make(map[string]*dbPluginInstance)
-
+	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
-
 	return &b
 }
 
+func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	// copy the map so we can release the lock
+	connMapCopy := func() map[string]*dbPluginInstance {
+		b.connLock.RLock()
+		defer b.connLock.RUnlock()
+		mapCopy := map[string]*dbPluginInstance{}
+		for k, v := range b.connections {
+			mapCopy[k] = v
+		}
+		return mapCopy
+	}()
+	counts := map[string]int{}
+	for _, v := range connMapCopy {
+		dbType, err := v.database.Type()
+		if err != nil {
+			// there's a chance this will already be closed since we don't hold the lock
+			continue
+		}
+		if _, ok := counts[dbType]; !ok {
+			counts[dbType] = 0
+		}
+		counts[dbType] += 1
+	}
+	var gauges []metricsutil.GaugeLabelValues
+	for k, v := range counts {
+		gauges = append(gauges, metricsutil.GaugeLabelValues{Labels: []metricsutil.Label{{Name: "dbType", Value: k}}, Value: float32(v)})
+	}
+	return gauges, nil
+}
+
 type databaseBackend struct {
+	// connLock is used to synchronize access to the connections map
+	connLock sync.RWMutex
+	// connections holds configured database connections by config name
 	connections map[string]*dbPluginInstance
 	logger      log.Logger
 
 	*framework.Backend
-	sync.RWMutex
-	// CredRotationQueue is an in-memory priority queue used to track Static Roles
+	// credRotationQueue is an in-memory priority queue used to track Static Roles
 	// that require periodic rotation. Backends will have a PriorityQueue
 	// initialized on setup, but only backends that are mounted by a primary
 	// server or mounted as a local mount will perform the rotations.
-	//
-	// cancelQueue is used to remove the priority queue and terminate the
-	// background ticker.
 	credRotationQueue *queue.PriorityQueue
-	cancelQueue       context.CancelFunc
+	// queueCtx is the context for the priority queue
+	queueCtx context.Context
+	// cancelQueueCtx is used to terminate the background ticker
+	cancelQueueCtx context.CancelFunc
 
 	// roleLocks is used to lock modifications to roles in the queue, to ensure
 	// concurrent requests are not modifying the same role and possibly causing
 	// issues with the priority queue.
 	roleLocks []*locksutil.LockEntry
+
+	// the running gauge collection process
+	gaugeCollectionProcess     *metricsutil.GaugeCollectionProcess
+	gaugeCollectionProcessStop sync.Once
+}
+
+func (b *databaseBackend) connGet(name string) *dbPluginInstance {
+	b.connLock.RLock()
+	defer b.connLock.RUnlock()
+	return b.connections[name]
+}
+
+func (b *databaseBackend) connPop(name string) *dbPluginInstance {
+	b.connLock.Lock()
+	defer b.connLock.Unlock()
+	dbi, ok := b.connections[name]
+	if ok {
+		delete(b.connections, name)
+	}
+	return dbi
+}
+
+func (b *databaseBackend) connPopIfEqual(name, id string) *dbPluginInstance {
+	b.connLock.Lock()
+	defer b.connLock.Unlock()
+	dbi, ok := b.connections[name]
+	if ok && dbi.id == id {
+		delete(b.connections, name)
+		return dbi
+	}
+	return nil
+}
+
+func (b *databaseBackend) connPut(name string, newDbi *dbPluginInstance) *dbPluginInstance {
+	b.connLock.Lock()
+	defer b.connLock.Unlock()
+	dbi := b.connections[name]
+	b.connections[name] = newDbi
+	return dbi
+}
+
+func (b *databaseBackend) connClear() map[string]*dbPluginInstance {
+	b.connLock.Lock()
+	defer b.connLock.Unlock()
+	old := b.connections
+	b.connections = make(map[string]*dbPluginInstance)
+	return old
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {
 	entry, err := s.Get(ctx, fmt.Sprintf("config/%s", name))
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read connection configuration: {{err}}", err)
+		return nil, fmt.Errorf("failed to read connection configuration: %w", err)
 	}
 	if entry == nil {
 		return nil, fmt.Errorf("failed to find entry for connection with name: %q", name)
@@ -236,22 +326,8 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 }
 
 func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name string, config *DatabaseConfig) (*dbPluginInstance, error) {
-	b.RLock()
-	unlockFunc := b.RUnlock
-	defer func() { unlockFunc() }()
-
-	dbi, ok := b.connections[name]
-	if ok {
-		return dbi, nil
-	}
-
-	// Upgrade lock
-	b.RUnlock()
-	b.Lock()
-	unlockFunc = b.Unlock
-
-	dbi, ok = b.connections[name]
-	if ok {
+	dbi := b.connGet(name)
+	if dbi != nil {
 		return dbi, nil
 	}
 
@@ -260,7 +336,7 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		return nil, err
 	}
 
-	dbw, err := newDatabaseWrapper(ctx, config.PluginName, b.System(), b.logger)
+	dbw, err := newDatabaseWrapper(ctx, config.PluginName, config.PluginVersion, b.System(), b.logger)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create database instance: %w", err)
 	}
@@ -280,35 +356,34 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		id:       id,
 		name:     name,
 	}
-	b.connections[name] = dbi
-	return dbi, nil
-}
-
-// invalidateQueue cancels any background queue loading and destroys the queue.
-func (b *databaseBackend) invalidateQueue() {
-	b.Lock()
-	defer b.Unlock()
-
-	if b.cancelQueue != nil {
-		b.cancelQueue()
+	oldConn := b.connPut(name, dbi)
+	if oldConn != nil {
+		err := oldConn.Close()
+		if err != nil {
+			b.Logger().Warn("Error closing database connection", "error", err)
+		}
 	}
-	b.credRotationQueue = nil
+	return dbi, nil
 }
 
 // ClearConnection closes the database connection and
 // removes it from the b.connections map.
 func (b *databaseBackend) ClearConnection(name string) error {
-	b.Lock()
-	defer b.Unlock()
-	return b.clearConnection(name)
-}
-
-func (b *databaseBackend) clearConnection(name string) error {
-	db, ok := b.connections[name]
-	if ok {
+	db := b.connPop(name)
+	if db != nil {
 		// Ignore error here since the database client is always killed
 		db.Close()
-		delete(b.connections, name)
+	}
+	return nil
+}
+
+// ClearConnectionId closes the database connection with a specific id and
+// removes it from the b.connections map.
+func (b *databaseBackend) ClearConnectionId(name, id string) error {
+	db := b.connPopIfEqual(name, id)
+	if db != nil {
+		// Ignore error here since the database client is always killed
+		db.Close()
 	}
 	return nil
 }
@@ -316,38 +391,37 @@ func (b *databaseBackend) clearConnection(name string) error {
 func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 	// Plugin has shutdown, close it so next call can reconnect.
 	switch err {
-	case rpc.ErrShutdown, v4.ErrPluginShutdown:
+	case rpc.ErrShutdown, v4.ErrPluginShutdown, v5.ErrPluginShutdown:
 		// Put this in a goroutine so that requests can run with the read or write lock
 		// and simply defer the unlock.  Since we are attaching the instance and matching
 		// the id in the connection map, we can safely do this.
 		go func() {
-			b.Lock()
-			defer b.Unlock()
 			db.Close()
 
-			// Ensure we are deleting the correct connection
-			mapDB, ok := b.connections[db.name]
-			if ok && db.id == mapDB.id {
-				delete(b.connections, db.name)
-			}
+			// Delete the connection if it is still active.
+			b.connPopIfEqual(db.name, db.id)
 		}()
 	}
 }
 
 // clean closes all connections from all database types
 // and cancels any rotation queue loading operation.
-func (b *databaseBackend) clean(ctx context.Context) {
-	// invalidateQueue acquires it's own lock on the backend, removes queue, and
-	// terminates the background ticker
-	b.invalidateQueue()
-
-	b.Lock()
-	defer b.Unlock()
-
-	for _, db := range b.connections {
-		db.Close()
+func (b *databaseBackend) clean(_ context.Context) {
+	// kill the queue and terminate the background ticker
+	if b.cancelQueueCtx != nil {
+		b.cancelQueueCtx()
 	}
-	b.connections = make(map[string]*dbPluginInstance)
+
+	connections := b.connClear()
+	for _, db := range connections {
+		go db.Close()
+	}
+	b.gaugeCollectionProcessStop.Do(func() {
+		if b.gaugeCollectionProcess != nil {
+			b.gaugeCollectionProcess.Stop()
+		}
+		b.gaugeCollectionProcess = nil
+	})
 }
 
 const backendHelp = `

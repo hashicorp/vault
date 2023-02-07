@@ -1,0 +1,4 @@
+```release-note:feature
+**Server Side Consistent Tokens**: Service tokens have been updated to be longer (a minimum of 95 bytes) and token prefixes for all token types are updated from s., b., and r. to hvs., hvb., and hvr. for service, batch, and recovery tokens respectively. Vault clusters with integrated storage will now have read-after-write
+consistency by default. [[GH-14109](https://github.com/hashicorp/vault/pull/14109)]
+```

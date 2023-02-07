@@ -7,11 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -38,7 +36,7 @@ func (c *Core) ensureWrappingKey(ctx context.Context) error {
 	if entry == nil {
 		key, err := ecdsa.GenerateKey(elliptic.P521(), c.secureRandomReader)
 		if err != nil {
-			return errwrap.Wrapf("failed to generate wrapping key: {{err}}", err)
+			return fmt.Errorf("failed to generate wrapping key: %w", err)
 		}
 		keyParams.D = key.D
 		keyParams.X = key.X
@@ -46,20 +44,20 @@ func (c *Core) ensureWrappingKey(ctx context.Context) error {
 		keyParams.Type = corePrivateKeyTypeP521
 		val, err := jsonutil.EncodeJSON(keyParams)
 		if err != nil {
-			return errwrap.Wrapf("failed to encode wrapping key: {{err}}", err)
+			return fmt.Errorf("failed to encode wrapping key: %w", err)
 		}
 		entry = &logical.StorageEntry{
 			Key:   coreWrappingJWTKeyPath,
 			Value: val,
 		}
 		if err = c.barrier.Put(ctx, entry); err != nil {
-			return errwrap.Wrapf("failed to store wrapping key: {{err}}", err)
+			return fmt.Errorf("failed to store wrapping key: %w", err)
 		}
 	}
 
 	// Redundant if we just created it, but in this case serves as a check anyways
 	if err = jsonutil.DecodeJSON(entry.Value, &keyParams); err != nil {
-		return errwrap.Wrapf("failed to decode wrapping key parameters: {{err}}", err)
+		return fmt.Errorf("failed to decode wrapping key parameters: %w", err)
 	}
 
 	c.wrappingJWTKey = &ecdsa.PrivateKey{
@@ -143,7 +141,7 @@ DONELISTHANDLING:
 		NamespaceID:    ns.ID,
 	}
 
-	if err := c.tokenStore.create(ctx, &te); err != nil {
+	if err := c.CreateToken(ctx, &te); err != nil {
 		c.logger.Error("failed to create wrapping token", "error", err)
 		return nil, ErrInternalError
 	}
@@ -167,7 +165,7 @@ DONELISTHANDLING:
 		},
 	)
 
-	resp.WrapInfo.Token = te.ID
+	resp.WrapInfo.Token = te.ExternalID
 	resp.WrapInfo.Accessor = te.Accessor
 	resp.WrapInfo.CreationTime = creationTime
 	// If this is not a rewrap, store the request path as creation_path
@@ -183,6 +181,11 @@ DONELISTHANDLING:
 	// case put the accessor in the wrap info.
 	if resp.Auth != nil {
 		resp.WrapInfo.WrappedAccessor = resp.Auth.Accessor
+	}
+
+	// Store the accessor of the approle secret in WrappedAccessor
+	if secretIdAccessor, ok := resp.Data["secret_id_accessor"]; ok && resp.Auth == nil && req.MountType == "approle" {
+		resp.WrapInfo.WrappedAccessor = secretIdAccessor.(string)
 	}
 
 	switch resp.WrapInfo.Format {
@@ -322,7 +325,7 @@ DONELISTHANDLING:
 	}
 
 	// Register the wrapped token with the expiration manager
-	if err := c.expiration.RegisterAuth(ctx, &te, wAuth); err != nil {
+	if err := c.expiration.RegisterAuth(ctx, &te, wAuth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
 		// Revoke since it's not yet being tracked for expiration
 		c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to register cubbyhole wrapping token lease", "request_path", req.Path, "error", err)
@@ -335,7 +338,7 @@ DONELISTHANDLING:
 // validateWrappingToken checks whether a token is a wrapping token. The passed
 // in logical request will be updated if the wrapping token was provided within
 // a JWT token.
-func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) (valid bool, err error) {
+func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) (valid bool, err error) {
 	if req == nil {
 		return false, fmt.Errorf("invalid request")
 	}
@@ -343,9 +346,6 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 	if c.Sealed() {
 		return false, consts.ErrSealed
 	}
-
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 
 	if c.standby && !c.perfStandby {
 		return false, consts.ErrStandby
@@ -402,16 +402,16 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 	// token to be a JWT -- namespaced tokens have two dots too, but Vault
 	// token types (for now at least) begin with a letter representing a type
 	// and then a dot.
-	if strings.Count(token, ".") == 2 && token[1] != '.' {
+	if IsJWT(token) {
 		// Implement the jose library way
 		parsedJWT, err := squarejwt.ParseSigned(token)
 		if err != nil {
-			return false, errwrap.Wrapf("wrapping token could not be parsed: {{err}}", err)
+			return false, fmt.Errorf("wrapping token could not be parsed: %w", err)
 		}
 		var claims squarejwt.Claims
 		allClaims := make(map[string]interface{})
 		if err = parsedJWT.Claims(&c.wrappingJWTKey.PublicKey, &claims, &allClaims); err != nil {
-			return false, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)
+			return false, fmt.Errorf("wrapping token signature could not be validated: %w", err)
 		}
 		typeClaimRaw, ok := allClaims["type"]
 		if !ok {
@@ -445,11 +445,7 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 		return false, nil
 	}
 
-	if len(te.Policies) != 1 {
-		return false, nil
-	}
-
-	if te.Policies[0] != responseWrappingPolicyName && te.Policies[0] != controlGroupPolicyName {
+	if !IsWrappingToken(te) {
 		return false, nil
 	}
 
@@ -460,4 +456,16 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 	}
 
 	return true, nil
+}
+
+func IsWrappingToken(te *logical.TokenEntry) bool {
+	if len(te.Policies) != 1 {
+		return false
+	}
+
+	if te.Policies[0] != responseWrappingPolicyName && te.Policies[0] != controlGroupPolicyName {
+		return false
+	}
+
+	return true
 }

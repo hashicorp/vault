@@ -38,7 +38,10 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 		"disable_performance_standby":         false,
 		"disable_printable_check":             false,
 		"disable_sealwrap":                    false,
+		"experiments":                         nil,
 		"raw_storage_endpoint":                false,
+		"detect_deadlocks":                    "",
+		"introspection_endpoint":              false,
 		"disable_sentinel_trace":              false,
 		"enable_ui":                           false,
 		"log_format":                          "",
@@ -46,8 +49,11 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 		"max_lease_ttl":                       json.Number("0"),
 		"pid_file":                            "",
 		"plugin_directory":                    "",
+		"plugin_file_uid":                     json.Number("0"),
+		"plugin_file_permissions":             json.Number("0"),
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
+		"log_requests_level":                  "",
 	}
 
 	expected = map[string]interface{}{

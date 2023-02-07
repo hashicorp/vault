@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -70,7 +70,7 @@ func (b *backend) readConfigAccess(ctx context.Context, storage logical.Storage)
 
 	conf := &accessConfig{}
 	if err := entry.DecodeJSON(conf); err != nil {
-		return nil, nil, errwrap.Wrapf("error reading consul access configuration: {{err}}", err)
+		return nil, nil, fmt.Errorf("error reading consul access configuration: %w", err)
 	}
 
 	return conf, nil, nil
@@ -97,14 +97,31 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entry, err := logical.StorageEntryJSON("config/access", accessConfig{
+	config := accessConfig{
 		Address:    data.Get("address").(string),
 		Scheme:     data.Get("scheme").(string),
 		Token:      data.Get("token").(string),
 		CACert:     data.Get("ca_cert").(string),
 		ClientCert: data.Get("client_cert").(string),
 		ClientKey:  data.Get("client_key").(string),
-	})
+	}
+
+	// If a token has not been given by the user, we try to boostrap the ACL
+	// support
+	if config.Token == "" {
+		consulConf := config.NewConfig()
+		client, err := api.NewClient(consulConf)
+		if err != nil {
+			return nil, err
+		}
+		token, _, err := client.ACL().Bootstrap()
+		if err != nil {
+			return logical.ErrorResponse("Token not provided and failed to bootstrap ACLs"), err
+		}
+		config.Token = token.SecretID
+	}
+
+	entry, err := logical.StorageEntryJSON("config/access", config)
 	if err != nil {
 		return nil, err
 	}
@@ -123,4 +140,16 @@ type accessConfig struct {
 	CACert     string `json:"ca_cert"`
 	ClientCert string `json:"client_cert"`
 	ClientKey  string `json:"client_key"`
+}
+
+func (conf *accessConfig) NewConfig() *api.Config {
+	consulConf := api.DefaultNonPooledConfig()
+	consulConf.Address = conf.Address
+	consulConf.Scheme = conf.Scheme
+	consulConf.Token = conf.Token
+	consulConf.TLSConfig.CAPem = []byte(conf.CACert)
+	consulConf.TLSConfig.CertPEM = []byte(conf.ClientCert)
+	consulConf.TLSConfig.KeyPEM = []byte(conf.ClientKey)
+
+	return consulConf
 }

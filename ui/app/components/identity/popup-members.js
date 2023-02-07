@@ -5,11 +5,11 @@ import Base from './_popup-base';
 export default Base.extend({
   model: alias('params.firstObject'),
 
-  groupArray: computed('params', function() {
+  groupArray: computed('params', function () {
     return this.params.objectAt(1);
   }),
 
-  memberId: computed('params', function() {
+  memberId: computed('params', function () {
     return this.params.objectAt(2);
   }),
 
@@ -22,12 +22,12 @@ export default Base.extend({
   },
 
   errorMessage(e, model, groupArray, memberId) {
-    let error = e.errors ? e.errors.join(' ') : e.message;
+    const error = e.errors ? e.errors.join(' ') : e.message;
     return `There was a problem removing '${memberId}' from the group - ${error}`;
   },
 
   transaction(model, groupArray, memberId) {
-    let members = model.get(groupArray);
+    const members = model.get(groupArray);
     model.set(groupArray, members.without(memberId));
     return model.save();
   },

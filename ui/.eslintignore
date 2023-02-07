@@ -9,17 +9,22 @@
 # dependencies
 /bower_components/
 /node_modules/
-/.storybook/
 /.yarn/
-/stories/
-/storybook-static/
 
 # misc
 /coverage/
+!.*
+.*/
+.eslintcache
 
 # ember-try
 /.node_modules.ember-try/
 /bower.json.ember-try
+/npm-shrinkwrap.json.ember-try
 /package.json.ember-try
-
+/package-lock.json.ember-try
+/yarn.lock.ember-try
 /tests/helpers/vault-keys.js
+
+# typescript declaration files
+*.d.ts

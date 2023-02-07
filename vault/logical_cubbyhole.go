@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -16,7 +17,8 @@ import (
 func CubbyholeBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := &CubbyholeBackend{}
 	b.Backend = &framework.Backend{
-		Help: strings.TrimSpace(cubbyholeHelp),
+		Help:           strings.TrimSpace(cubbyholeHelp),
+		RunningVersion: versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 	}
 
 	b.Backend.Paths = append(b.Backend.Paths, b.paths()...)
@@ -98,7 +100,7 @@ func (b *CubbyholeBackend) revoke(ctx context.Context, view *BarrierView, salted
 func (b *CubbyholeBackend) handleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	out, err := req.Storage.Get(ctx, req.ClientToken+"/"+req.Path)
 	if err != nil {
-		return false, errwrap.Wrapf("existence check failed: {{err}}", err)
+		return false, fmt.Errorf("existence check failed: %w", err)
 	}
 
 	return out != nil, nil
@@ -118,7 +120,7 @@ func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request,
 	// Read the path
 	out, err := req.Storage.Get(ctx, req.ClientToken+"/"+path)
 	if err != nil {
-		return nil, errwrap.Wrapf("read failed: {{err}}", err)
+		return nil, fmt.Errorf("read failed: %w", err)
 	}
 
 	// Fast-path the no data case
@@ -129,7 +131,7 @@ func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request,
 	// Decode the data
 	var rawData map[string]interface{}
 	if err := jsonutil.DecodeJSON(out.Value, &rawData); err != nil {
-		return nil, errwrap.Wrapf("json decoding failed: {{err}}", err)
+		return nil, fmt.Errorf("json decoding failed: %w", err)
 	}
 
 	// Generate the response
@@ -158,7 +160,7 @@ func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request
 	// JSON encode the data
 	buf, err := json.Marshal(req.Data)
 	if err != nil {
-		return nil, errwrap.Wrapf("json encoding failed: {{err}}", err)
+		return nil, fmt.Errorf("json encoding failed: %w", err)
 	}
 
 	// Write out a new key
@@ -170,7 +172,7 @@ func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request
 		entry.SealWrap = true
 	}
 	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, errwrap.Wrapf("failed to write: {{err}}", err)
+		return nil, fmt.Errorf("failed to write: %w", err)
 	}
 
 	return nil, nil

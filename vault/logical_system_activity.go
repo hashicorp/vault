@@ -2,7 +2,9 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -25,6 +27,11 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 				Type:        framework.TypeTime,
 				Description: "End of query interval",
 			},
+			"limit_namespaces": {
+				Type:        framework.TypeInt,
+				Default:     0,
+				Description: "Limit query output by namespaces",
+			},
 		},
 		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-query"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["activity-query"][1]),
@@ -41,7 +48,7 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 // monthlyActivityCountPath is available in every namespace
 func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
 	return &framework.Path{
-		Pattern:         "internal/counters/activity/monthly",
+		Pattern:         "internal/counters/activity/monthly$",
 		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-monthly"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["activity-monthly"][1]),
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -50,6 +57,13 @@ func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
 				Summary:  "Report the number of clients for this month, for this namespace and all child namespaces.",
 			},
 		},
+	}
+}
+
+func (b *SystemBackend) activityPaths() []*framework.Path {
+	return []*framework.Path{
+		b.monthlyActivityCountPath(),
+		b.activityQueryPath(),
 	}
 }
 
@@ -90,15 +104,37 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 				},
 			},
 		},
+		{
+			Pattern: "internal/counters/activity/export$",
+			Fields: map[string]*framework.FieldSchema{
+				"start_time": {
+					Type:        framework.TypeTime,
+					Description: "Start of query interval",
+				},
+				"end_time": {
+					Type:        framework.TypeTime,
+					Description: "End of query interval",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Description: "Format of the file. Either a CSV or a JSON file with an object per line.",
+					Default:     "json",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["activity-export"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["activity-export"][1]),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleClientExport,
+					Summary:  "Report the client count metrics, for this namespace and all child namespaces.",
+				},
+			},
+		},
 	}
 }
 
-func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	a := b.Core.activityLog
-	if a == nil {
-		return logical.ErrorResponse("no activity log present"), nil
-	}
-
+func parseStartEndTimes(a *ActivityLog, d *framework.FieldData) (time.Time, time.Time, error) {
 	startTime := d.Get("start_time").(time.Time)
 	endTime := d.Get("end_time").(time.Time)
 
@@ -119,10 +155,61 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		startTime = startTime.UTC()
 	}
 	if startTime.After(endTime) {
-		return logical.ErrorResponse("start_time is later than end_time"), nil
+		return time.Time{}, time.Time{}, fmt.Errorf("start_time is later than end_time")
 	}
 
-	results, err := a.handleQuery(ctx, startTime, endTime)
+	return startTime, endTime, nil
+}
+
+// This endpoint is not used by the UI. The UI's "export" feature is entirely client-side.
+func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	a := b.Core.activityLog
+	if a == nil {
+		return logical.ErrorResponse("no activity log present"), nil
+	}
+
+	startTime, endTime, err := parseStartEndTimes(a, d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	// This is to avoid the default 90s context timeout.
+	timeout := 10 * time.Minute
+	if durationRaw := os.Getenv("VAULT_ACTIVITY_EXPORT_DURATION"); durationRaw != "" {
+		d, err := time.ParseDuration(durationRaw)
+		if err == nil {
+			timeout = d
+		}
+	}
+
+	runCtx, cancelFunc := context.WithTimeout(b.Core.activeContext, timeout)
+	defer cancelFunc()
+
+	err = a.writeExport(runCtx, req.ResponseWriter, d.Get("format").(string), startTime, endTime)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	a := b.Core.activityLog
+	if a == nil {
+		return logical.ErrorResponse("no activity log present"), nil
+	}
+
+	startTime, endTime, err := parseStartEndTimes(a, d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	var limitNamespaces int
+	if limitNamespacesRaw, ok := d.GetOk("limit_namespaces"); ok {
+		limitNamespaces = limitNamespacesRaw.(int)
+	}
+
+	results, err := a.handleQuery(ctx, startTime, endTime, limitNamespaces)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +229,10 @@ func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *log
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	results := a.partialMonthClientCount(ctx)
+	results, err := a.partialMonthClientCount(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if results == nil {
 		return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
 	}
@@ -214,6 +304,11 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 		if config.RetentionMonths < 0 {
 			return logical.ErrorResponse("retention_months must be greater than or equal to 0"), logical.ErrInvalidRequest
+		}
+
+		if config.RetentionMonths > 36 {
+			config.RetentionMonths = 36
+			warnings = append(warnings, "retention_months cannot be greater than 36; capped to 36.")
 		}
 	}
 

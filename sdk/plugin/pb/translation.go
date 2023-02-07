@@ -1,13 +1,15 @@
 package pb
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -23,6 +25,7 @@ const (
 	ErrTypeInvalidRequest
 	ErrTypePermissionDenied
 	ErrTypeMultiAuthzPending
+	ErrTypeUnrecoverable
 )
 
 func ProtoErrToErr(e *ProtoError) error {
@@ -52,6 +55,8 @@ func ProtoErrToErr(e *ProtoError) error {
 		err = logical.ErrPermissionDenied
 	case ErrTypeMultiAuthzPending:
 		err = logical.ErrMultiAuthzPending
+	case ErrTypeUnrecoverable:
+		err = logical.ErrUnrecoverable
 	}
 
 	return err
@@ -89,6 +94,8 @@ func ErrToProtoErr(e error) *ProtoError {
 		pbErr.ErrType = ErrTypePermissionDenied
 	case e == logical.ErrMultiAuthzPending:
 		pbErr.ErrType = ErrTypeMultiAuthzPending
+	case e == logical.ErrUnrecoverable:
+		pbErr.ErrType = ErrTypeUnrecoverable
 	}
 
 	return pbErr
@@ -279,6 +286,11 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		}
 	}
 
+	connection, err := ProtoConnectionToLogicalConnection(r.Connection)
+	if err != nil {
+		return nil, err
+	}
+
 	return &logical.Request{
 		ID:                       r.ID,
 		ReplicationCluster:       r.ReplicationCluster,
@@ -296,7 +308,7 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		MountAccessor:            r.MountAccessor,
 		WrapInfo:                 ProtoRequestWrapInfoToLogicalRequestWrapInfo(r.WrapInfo),
 		ClientTokenRemainingUses: int(r.ClientTokenRemainingUses),
-		Connection:               ProtoConnectionToLogicalConnection(r.Connection),
+		Connection:               connection,
 		EntityID:                 r.EntityID,
 		PolicyOverride:           r.PolicyOverride,
 		Unauthenticated:          r.Unauthenticated,
@@ -309,18 +321,25 @@ func LogicalConnectionToProtoConnection(c *logical.Connection) *Connection {
 	}
 
 	return &Connection{
-		RemoteAddr: c.RemoteAddr,
+		RemoteAddr:      c.RemoteAddr,
+		ConnectionState: TLSConnectionStateToProtoConnectionState(c.ConnState),
 	}
 }
 
-func ProtoConnectionToLogicalConnection(c *Connection) *logical.Connection {
+func ProtoConnectionToLogicalConnection(c *Connection) (*logical.Connection, error) {
 	if c == nil {
-		return nil
+		return nil, nil
+	}
+
+	cs, err := ProtoConnectionStateToTLSConnectionState(c.ConnectionState)
+	if err != nil {
+		return nil, err
 	}
 
 	return &logical.Connection{
 		RemoteAddr: c.RemoteAddr,
-	}
+		ConnState:  cs,
+	}, nil
 }
 
 func LogicalRequestWrapInfoToProtoRequestWrapInfo(i *logical.RequestWrapInfo) *RequestWrapInfo {
@@ -580,24 +599,28 @@ func LogicalTokenEntryToProtoTokenEntry(t *logical.TokenEntry) *TokenEntry {
 	}
 
 	return &TokenEntry{
-		ID:             t.ID,
-		Accessor:       t.Accessor,
-		Parent:         t.Parent,
-		Policies:       t.Policies,
-		Path:           t.Path,
-		Meta:           t.Meta,
-		DisplayName:    t.DisplayName,
-		NumUses:        int64(t.NumUses),
-		CreationTime:   t.CreationTime,
-		TTL:            int64(t.TTL),
-		ExplicitMaxTTL: int64(t.ExplicitMaxTTL),
-		Role:           t.Role,
-		Period:         int64(t.Period),
-		EntityID:       t.EntityID,
-		BoundCIDRs:     boundCIDRs,
-		NamespaceID:    t.NamespaceID,
-		CubbyholeID:    t.CubbyholeID,
-		Type:           uint32(t.Type),
+		ID:                 t.ID,
+		Accessor:           t.Accessor,
+		Parent:             t.Parent,
+		Policies:           t.Policies,
+		InlinePolicy:       t.InlinePolicy,
+		Path:               t.Path,
+		Meta:               t.Meta,
+		InternalMeta:       t.InternalMeta,
+		DisplayName:        t.DisplayName,
+		NumUses:            int64(t.NumUses),
+		CreationTime:       t.CreationTime,
+		TTL:                int64(t.TTL),
+		ExplicitMaxTTL:     int64(t.ExplicitMaxTTL),
+		Role:               t.Role,
+		Period:             int64(t.Period),
+		EntityID:           t.EntityID,
+		NoIdentityPolicies: t.NoIdentityPolicies,
+		BoundCIDRs:         boundCIDRs,
+		NamespaceID:        t.NamespaceID,
+		CubbyholeID:        t.CubbyholeID,
+		Type:               uint32(t.Type),
+		ExternalID:         t.ExternalID,
 	}
 }
 
@@ -617,23 +640,146 @@ func ProtoTokenEntryToLogicalTokenEntry(t *TokenEntry) (*logical.TokenEntry, err
 	}
 
 	return &logical.TokenEntry{
-		ID:             t.ID,
-		Accessor:       t.Accessor,
-		Parent:         t.Parent,
-		Policies:       t.Policies,
-		Path:           t.Path,
-		Meta:           t.Meta,
-		DisplayName:    t.DisplayName,
-		NumUses:        int(t.NumUses),
-		CreationTime:   t.CreationTime,
-		TTL:            time.Duration(t.TTL),
-		ExplicitMaxTTL: time.Duration(t.ExplicitMaxTTL),
-		Role:           t.Role,
-		Period:         time.Duration(t.Period),
-		EntityID:       t.EntityID,
-		BoundCIDRs:     boundCIDRs,
-		NamespaceID:    t.NamespaceID,
-		CubbyholeID:    t.CubbyholeID,
-		Type:           logical.TokenType(t.Type),
+		ID:                 t.ID,
+		Accessor:           t.Accessor,
+		Parent:             t.Parent,
+		Policies:           t.Policies,
+		InlinePolicy:       t.InlinePolicy,
+		Path:               t.Path,
+		Meta:               t.Meta,
+		InternalMeta:       t.InternalMeta,
+		DisplayName:        t.DisplayName,
+		NumUses:            int(t.NumUses),
+		CreationTime:       t.CreationTime,
+		TTL:                time.Duration(t.TTL),
+		ExplicitMaxTTL:     time.Duration(t.ExplicitMaxTTL),
+		Role:               t.Role,
+		Period:             time.Duration(t.Period),
+		EntityID:           t.EntityID,
+		NoIdentityPolicies: t.NoIdentityPolicies,
+		BoundCIDRs:         boundCIDRs,
+		NamespaceID:        t.NamespaceID,
+		CubbyholeID:        t.CubbyholeID,
+		Type:               logical.TokenType(t.Type),
+		ExternalID:         t.ExternalID,
 	}, nil
+}
+
+func TLSConnectionStateToProtoConnectionState(connState *tls.ConnectionState) *ConnectionState {
+	if connState == nil {
+		return nil
+	}
+
+	var verifiedChains []*CertificateChain
+
+	if lvc := len(connState.VerifiedChains); lvc > 0 {
+		verifiedChains = make([]*CertificateChain, lvc)
+		for i, vc := range connState.VerifiedChains {
+			verifiedChains[i] = CertificateChainToProtoCertificateChain(vc)
+		}
+	}
+
+	return &ConnectionState{
+		Version:                     uint32(connState.Version),
+		HandshakeComplete:           connState.HandshakeComplete,
+		DidResume:                   connState.DidResume,
+		CipherSuite:                 uint32(connState.CipherSuite),
+		NegotiatedProtocol:          connState.NegotiatedProtocol,
+		NegotiatedProtocolIsMutual:  connState.NegotiatedProtocolIsMutual,
+		ServerName:                  connState.ServerName,
+		PeerCertificates:            CertificateChainToProtoCertificateChain(connState.PeerCertificates),
+		VerifiedChains:              verifiedChains,
+		SignedCertificateTimestamps: connState.SignedCertificateTimestamps,
+		OcspResponse:                connState.OCSPResponse,
+		TlsUnique:                   connState.TLSUnique,
+	}
+}
+
+func ProtoConnectionStateToTLSConnectionState(cs *ConnectionState) (*tls.ConnectionState, error) {
+	if cs == nil {
+		return nil, nil
+	}
+
+	var (
+		err              error
+		peerCertificates []*x509.Certificate
+		verifiedChains   [][]*x509.Certificate
+	)
+
+	if peerCertificates, err = ProtoCertificateChainToCertificateChain(cs.PeerCertificates); err != nil {
+		return nil, err
+	}
+
+	if lvc := len(cs.VerifiedChains); lvc > 0 {
+		verifiedChains = make([][]*x509.Certificate, lvc)
+		for i, vc := range cs.VerifiedChains {
+			if verifiedChains[i], err = ProtoCertificateChainToCertificateChain(vc); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	connState := &tls.ConnectionState{
+		Version:                     uint16(cs.Version),
+		HandshakeComplete:           cs.HandshakeComplete,
+		DidResume:                   cs.DidResume,
+		CipherSuite:                 uint16(cs.CipherSuite),
+		NegotiatedProtocol:          cs.NegotiatedProtocol,
+		NegotiatedProtocolIsMutual:  cs.NegotiatedProtocolIsMutual,
+		ServerName:                  cs.ServerName,
+		PeerCertificates:            peerCertificates,
+		VerifiedChains:              verifiedChains,
+		SignedCertificateTimestamps: cs.SignedCertificateTimestamps,
+		OCSPResponse:                cs.OcspResponse,
+		TLSUnique:                   cs.TlsUnique,
+	}
+
+	return connState, nil
+}
+
+func CertificateChainToProtoCertificateChain(chain []*x509.Certificate) *CertificateChain {
+	if len(chain) == 0 {
+		return nil
+	}
+
+	cc := &CertificateChain{Certificates: make([]*Certificate, len(chain))}
+
+	for i, c := range chain {
+		cc.Certificates[i] = X509CertificateToProtoCertificate(c)
+	}
+
+	return cc
+}
+
+func ProtoCertificateChainToCertificateChain(cc *CertificateChain) ([]*x509.Certificate, error) {
+	if cc == nil || len(cc.Certificates) == 0 {
+		return nil, nil
+	}
+
+	certs := make([]*x509.Certificate, len(cc.Certificates))
+
+	for i, c := range cc.Certificates {
+		var err error
+		if certs[i], err = ProtoCertificateToX509Certificate(c); err != nil {
+			return nil, err
+		}
+	}
+
+	return certs, nil
+}
+
+func X509CertificateToProtoCertificate(cert *x509.Certificate) *Certificate {
+	if cert == nil {
+		return nil
+	}
+
+	return &Certificate{Asn1Data: cert.Raw}
+}
+
+func ProtoCertificateToX509Certificate(c *Certificate) (*x509.Certificate, error) {
+	if c == nil {
+		return nil, nil
+	}
+
+	return x509.ParseCertificate(c.Asn1Data)
 }

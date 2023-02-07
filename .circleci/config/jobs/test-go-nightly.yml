@@ -1,8 +1,8 @@
 executor: go-machine
 steps:
-  - check-branch-name
-  - setup-go
   - checkout
+  - setup-go
+  - restore_go_mod_cache
   - go_test:
       log_dir: "/tmp/testlogs"
       save_cache: true

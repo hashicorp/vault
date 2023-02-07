@@ -14,7 +14,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		// Currently set to "michelvocks" until https://github.com/rroemhild/docker-test-openldap/pull/14
 		// has been merged.
-		ImageRepo:     "michelvocks/docker-test-openldap",
+		ImageRepo:     "docker.mirror.hashicorp.services/michelvocks/docker-test-openldap",
 		ImageTag:      version,
 		ContainerName: "ldap",
 		Ports:         []string{"389/tcp"},
@@ -27,6 +27,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	cfg = new(ldaputil.ConfigEntry)
 	cfg.UserDN = "ou=people,dc=planetexpress,dc=com"
 	cfg.UserAttr = "cn"
+	cfg.UserFilter = "({{.UserAttr}}={{.Username}})"
 	cfg.BindDN = "cn=admin,dc=planetexpress,dc=com"
 	cfg.BindPassword = "GoodNewsEveryone"
 	cfg.GroupDN = "ou=people,dc=planetexpress,dc=com"

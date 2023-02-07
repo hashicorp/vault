@@ -7,10 +7,11 @@ import (
 
 // VersionInfo
 type VersionInfo struct {
-	Revision          string
-	Version           string
-	VersionPrerelease string
-	VersionMetadata   string
+	Revision          string `json:"revision,omitempty"`
+	Version           string `json:"version,omitempty"`
+	VersionPrerelease string `json:"version_prerelease,omitempty"`
+	VersionMetadata   string `json:"version_metadata,omitempty"`
+	BuildDate         string `json:"build_date,omitempty"`
 }
 
 func GetVersion() *VersionInfo {
@@ -29,6 +30,7 @@ func GetVersion() *VersionInfo {
 		Version:           ver,
 		VersionPrerelease: rel,
 		VersionMetadata:   md,
+		BuildDate:         BuildDate,
 	}
 }
 
@@ -37,7 +39,7 @@ func (c *VersionInfo) VersionNumber() string {
 		return "(version unknown)"
 	}
 
-	version := fmt.Sprintf("%s", c.Version)
+	version := c.Version
 
 	if c.VersionPrerelease != "" {
 		version = fmt.Sprintf("%s-%s", version, c.VersionPrerelease)
@@ -68,6 +70,10 @@ func (c *VersionInfo) FullVersionNumber(rev bool) string {
 
 	if rev && c.Revision != "" {
 		fmt.Fprintf(&versionString, " (%s)", c.Revision)
+	}
+
+	if c.BuildDate != "" {
+		fmt.Fprintf(&versionString, ", built %s", c.BuildDate)
 	}
 
 	return versionString.String()

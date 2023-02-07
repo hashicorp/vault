@@ -3,6 +3,8 @@ package database
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -13,11 +15,16 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/lib/pq"
-	mongodbatlasapi "github.com/mongodb/go-client-mongodb-atlas/mongodbatlas"
+	"github.com/hashicorp/vault/sdk/queue"
+	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/stretchr/testify/mock"
+	mongodbatlasapi "go.mongodb.org/atlas/mongodbatlas"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -25,8 +32,6 @@ import (
 const (
 	dbUser                = "vaultstatictest"
 	dbUserDefaultPassword = "password"
-
-	testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 )
 
 func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
@@ -414,12 +419,8 @@ func TestBackend_StaticRole_Revoke_user(t *testing.T) {
 func createTestPGUser(t *testing.T, connURL string, username, password, query string) {
 	t.Helper()
 	log.Printf("[TRACE] Creating test user")
-	conn, err := pq.ParseURL(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	db, err := sql.Open("postgres", conn)
+	db, err := sql.Open("pgx", connURL)
 	defer db.Close()
 	if err != nil {
 		t.Fatal(err)
@@ -439,7 +440,7 @@ func createTestPGUser(t *testing.T, connURL string, username, password, query st
 		"name":     username,
 		"password": password,
 	}
-	if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+	if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 		t.Fatal(err)
 	}
 	// Commit the transaction
@@ -451,7 +452,7 @@ func createTestPGUser(t *testing.T, connURL string, username, password, query st
 func verifyPgConn(t *testing.T, username, password, connURL string) {
 	t.Helper()
 	cURL := strings.Replace(connURL, "postgres:secret", username+":"+password, 1)
-	db, err := sql.Open("postgres", cURL)
+	db, err := sql.Open("pgx", cURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -505,8 +506,6 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 // Second scenario, WAL contains a role name that does exist, but the role's
 // LastVaultRotation is greater than the WAL has
 func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) {
-	t.Skip("temporarily disabled due to intermittent failures")
-
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -695,7 +694,7 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int, key string) {
 type userCreator func(t *testing.T, username, password string)
 
 func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 	uc := userCreator(func(t *testing.T, username, password string) {
 		createTestPGUser(t, connURL, username, password, testRoleStaticCreate)
@@ -707,7 +706,7 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
-	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "latest", "vaulttestdb")
+	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "5.0.10", "vaulttestdb")
 	defer cleanup()
 
 	uc := userCreator(func(t *testing.T, username, password string) {
@@ -747,7 +746,7 @@ func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
 	uc := userCreator(func(t *testing.T, username, password string) {
 		// Delete the user in case it's still there from an earlier run, ignore
 		// errors in case it's not.
-		_, _ = api.DatabaseUsers.Delete(context.Background(), projID, username)
+		_, _ = api.DatabaseUsers.Delete(context.Background(), "admin", projID, username)
 
 		req := &mongodbatlasapi.DatabaseUser{
 			Username:     username,
@@ -769,6 +768,17 @@ func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
 }
 
 func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
+	// We need to set this value for the plugin to run, but it doesn't matter what we set it to.
+	oldToken := os.Getenv(pluginutil.PluginUnwrapTokenEnv)
+	os.Setenv(pluginutil.PluginUnwrapTokenEnv, "...")
+	defer func() {
+		if oldToken != "" {
+			os.Setenv(pluginutil.PluginUnwrapTokenEnv, oldToken)
+		} else {
+			os.Unsetenv(pluginutil.PluginUnwrapTokenEnv)
+		}
+	}()
+
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -974,15 +984,25 @@ func TestBackend_StaticRole_LockRegression(t *testing.T) {
 	}
 
 	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
-	for i := 0; i < 25; i++ {
-		data := map[string]interface{}{
-			"name":                "plugin-role-test",
-			"db_name":             "plugin-test",
-			"rotation_statements": testRoleStaticUpdate,
-			"username":            dbUser,
-			"rotation_period":     "7s",
-		}
+	data = map[string]interface{}{
+		"name":                "plugin-role-test",
+		"db_name":             "plugin-test",
+		"rotation_statements": testRoleStaticUpdate,
+		"username":            dbUser,
+		"rotation_period":     "7s",
+	}
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
 
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+	for i := 0; i < 25; i++ {
 		req = &logical.Request{
 			Operation: logical.UpdateOperation,
 			Path:      "static-roles/plugin-role-test",
@@ -1091,6 +1111,301 @@ func TestBackend_StaticRole_Rotate_Invalid_Role(t *testing.T) {
 	// Check if key is in queue
 	if b.credRotationQueue.Len() != 1 {
 		t.Fatalf("expected queue length to be 1 but is %d", b.credRotationQueue.Len())
+	}
+}
+
+func TestRollsPasswordForwardsUsingWAL(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+	createRole(t, b, storage, mockDB, "hashicorp")
+
+	role, err := b.StaticRole(ctx, storage, "hashicorp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldPassword := role.StaticAccount.Password
+
+	generateWALFromFailedRotation(t, b, storage, mockDB, "hashicorp")
+
+	walIDs := requireWALs(t, storage, 1)
+	wal, err := b.findStaticWAL(ctx, storage, walIDs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	role, err = b.StaticRole(ctx, storage, "hashicorp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Role's password should still be the WAL's old password
+	if role.StaticAccount.Password != oldPassword {
+		t.Fatal(role.StaticAccount.Password, oldPassword)
+	}
+
+	rotateRole(t, b, storage, mockDB, "hashicorp")
+
+	role, err = b.StaticRole(ctx, storage, "hashicorp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if role.StaticAccount.Password != wal.NewPassword {
+		t.Fatal("role password", role.StaticAccount.Password, "WAL new password", wal.NewPassword)
+	}
+	// WAL should be cleared by the successful rotate
+	requireWALs(t, storage, 0)
+}
+
+func TestStoredWALsCorrectlyProcessed(t *testing.T) {
+	const walNewPassword = "new-password-from-wal"
+	for _, tc := range []struct {
+		name         string
+		shouldRotate bool
+		wal          *setCredentialsWAL
+	}{
+		{
+			"WAL is kept and used for roll forward",
+			true,
+			&setCredentialsWAL{
+				RoleName:          "hashicorp",
+				Username:          "hashicorp",
+				NewPassword:       walNewPassword,
+				LastVaultRotation: time.Now().Add(time.Hour),
+			},
+		},
+		{
+			"zero-time WAL is discarded on load",
+			false,
+			&setCredentialsWAL{
+				RoleName:          "hashicorp",
+				Username:          "hashicorp",
+				NewPassword:       walNewPassword,
+				LastVaultRotation: time.Time{},
+			},
+		},
+		{
+			"empty-password WAL is kept but a new password is generated",
+			true,
+			&setCredentialsWAL{
+				RoleName:          "hashicorp",
+				Username:          "hashicorp",
+				NewPassword:       "",
+				LastVaultRotation: time.Now().Add(time.Hour),
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			config := logical.TestBackendConfig()
+			storage := &logical.InmemStorage{}
+			config.StorageView = storage
+			b := Backend(config)
+			defer b.Cleanup(ctx)
+			mockDB := setupMockDB(b)
+			if err := b.Setup(ctx, config); err != nil {
+				t.Fatal(err)
+			}
+			b.credRotationQueue = queue.New()
+			configureDBMount(t, config.StorageView)
+			createRole(t, b, config.StorageView, mockDB, "hashicorp")
+			role, err := b.StaticRole(ctx, config.StorageView, "hashicorp")
+			if err != nil {
+				t.Fatal(err)
+			}
+			initialPassword := role.StaticAccount.Password
+
+			// Set up a WAL for our test case
+			framework.PutWAL(ctx, config.StorageView, staticWALKey, tc.wal)
+			requireWALs(t, config.StorageView, 1)
+			// Reset the rotation queue to simulate startup memory state
+			b.credRotationQueue = queue.New()
+
+			// Now finish the startup process by populating the queue, which should discard the WAL
+			b.initQueue(ctx, config, consts.ReplicationUnknown)
+
+			if tc.shouldRotate {
+				requireWALs(t, storage, 1)
+			} else {
+				requireWALs(t, storage, 0)
+			}
+
+			// Run one tick
+			mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+				Return(v5.UpdateUserResponse{}, nil).
+				Once()
+			b.rotateCredentials(ctx, storage)
+			requireWALs(t, storage, 0)
+
+			role, err = b.StaticRole(ctx, storage, "hashicorp")
+			if err != nil {
+				t.Fatal(err)
+			}
+			item, err := b.popFromRotationQueueByKey("hashicorp")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tc.shouldRotate {
+				if tc.wal.NewPassword != "" {
+					// Should use WAL's new_password field
+					if role.StaticAccount.Password != walNewPassword {
+						t.Fatal()
+					}
+				} else {
+					// Should rotate but ignore WAL's new_password field
+					if role.StaticAccount.Password == initialPassword {
+						t.Fatal()
+					}
+					if role.StaticAccount.Password == walNewPassword {
+						t.Fatal()
+					}
+				}
+			} else {
+				// Ensure the role was not promoted for early rotation
+				if item.Priority < time.Now().Add(time.Hour).Unix() {
+					t.Fatal("priority should be for about a week away, but was", item.Priority)
+				}
+				if role.StaticAccount.Password != initialPassword {
+					t.Fatal("password should not have been rotated yet")
+				}
+			}
+		})
+	}
+}
+
+func TestDeletesOlderWALsOnLoad(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+	createRole(t, b, storage, mockDB, "hashicorp")
+
+	// Create 4 WALs, with a clear winner for most recent.
+	wal := &setCredentialsWAL{
+		RoleName:          "hashicorp",
+		Username:          "hashicorp",
+		NewPassword:       "some-new-password",
+		LastVaultRotation: time.Now(),
+	}
+	for i := 0; i < 3; i++ {
+		_, err := framework.PutWAL(ctx, storage, staticWALKey, wal)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	time.Sleep(2 * time.Second)
+	// We expect this WAL to have the latest createdAt timestamp
+	walID, err := framework.PutWAL(ctx, storage, staticWALKey, wal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	requireWALs(t, storage, 4)
+
+	walMap, err := b.loadStaticWALs(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(walMap) != 1 || walMap["hashicorp"] == nil || walMap["hashicorp"].walID != walID {
+		t.Fatal()
+	}
+	requireWALs(t, storage, 1)
+}
+
+func generateWALFromFailedRotation(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
+	t.Helper()
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, errors.New("forced error")).
+		Once()
+	_, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "rotate-role/" + roleName,
+		Storage:   storage,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func rotateRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
+	t.Helper()
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "rotate-role/" + roleName,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(resp, err)
+	}
+}
+
+// returns a slice of the WAL IDs in storage
+func requireWALs(t *testing.T, storage logical.Storage, expectedCount int) []string {
+	t.Helper()
+	wals, err := storage.List(context.Background(), "wal/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(wals) != expectedCount {
+		t.Fatal("expected WALs", expectedCount, "got", len(wals))
+	}
+
+	return wals
+}
+
+func getBackend(t *testing.T) (*databaseBackend, logical.Storage, *mockNewDatabase) {
+	t.Helper()
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	// Create and init the backend ourselves instead of using a Factory because
+	// the factory function kicks off threads that cause racy tests.
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	b.credRotationQueue = queue.New()
+	b.populateQueue(context.Background(), config.StorageView)
+
+	mockDB := setupMockDB(b)
+
+	return b, config.StorageView, mockDB
+}
+
+func setupMockDB(b *databaseBackend) *mockNewDatabase {
+	mockDB := &mockNewDatabase{}
+	mockDB.On("Initialize", mock.Anything, mock.Anything).Return(v5.InitializeResponse{}, nil)
+	mockDB.On("Close").Return(nil)
+	mockDB.On("Type").Return("mock", nil)
+	dbw := databaseVersionWrapper{
+		v5: mockDB,
+	}
+
+	dbi := &dbPluginInstance{
+		database: dbw,
+		id:       "foo-id",
+		name:     "mockV5",
+	}
+	b.connections["mockv5"] = dbi
+
+	return mockDB
+}
+
+// configureDBMount puts config directly into storage to avoid the DB engine's
+// plugin init code paths, allowing us to use a manually populated mock DB object.
+func configureDBMount(t *testing.T, storage logical.Storage) {
+	t.Helper()
+	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/mockv5"), &DatabaseConfig{
+		AllowedRoles: []string{"*"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = storage.Put(context.Background(), entry)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

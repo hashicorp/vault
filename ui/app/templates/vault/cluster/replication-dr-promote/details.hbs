@@ -1,44 +1,40 @@
 <section class="section">
   <div class="container is-widescreen">
-    <ReplicationPage @model={{model}} as |Page|>
-      <Page.header
-        @showTabs={{true}}
-      />
+    <ReplicationPage @model={{this.model}} as |Page|>
+      <Page.header @showTabs={{true}} />
       {{#if Page.isDisabled}}
         <EmptyState
           @title="Disaster Recovery secondary not set up"
           @message={{Page.message}}
-          @icon="alert-circle-outline"
+          @icon="alert-circle"
           @bottomBorder={{true}}
         >
           <nav class="breadcrumb">
             <ul class="is-grouped-split">
               <li>
                 <LinkTo @route="vault.cluster.secrets.backends">
-                  <span class="sep"/>
+                  <span class="sep"></span>
                   Go back
                 </LinkTo>
               </li>
               <li>
-                <LearnLink @path="/vault/operations/ops-disaster-recovery" @class="has-text-grey">
+                <DocLink @path="/vault/tutorials/enterprise/disaster-recovery" @class="has-text-grey">
                   Need help?
-                </LearnLink>
+                </DocLink>
               </li>
             </ul>
           </nav>
         </EmptyState>
       {{else}}
-      <Page.dashboard
-      {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
-        @componentToRender='replication-secondary-card' as |Dashboard|>
-        <Dashboard.card
-          @title="Status"
-        />
-        <Dashboard.card
-          @title="Primary cluster"
-        />
-        <Dashboard.rows/>
-      </Page.dashboard>
+        <Page.dashboard
+          {{! passing in component to render so that the yielded components are flexible based on the dashboard }}
+          @componentToRender="replication-secondary-card"
+          as |Dashboard|
+        >
+          <Dashboard.card @title="Status" />
+          <Dashboard.card @title="Primary cluster" />
+          <Dashboard.rows />
+        </Page.dashboard>
       {{/if}}
     </ReplicationPage>
   </div>

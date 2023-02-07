@@ -1,0 +1,5 @@
+```release-note:bug
+storage/raft (enterprise): An already joined node can rejoin by wiping storage
+and re-issueing a join request, but in doing so could transiently become a
+non-voter.  In some scenarios this resulted in loss of quorum.
+```

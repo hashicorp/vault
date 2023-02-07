@@ -1,0 +1,4 @@
+```release-note:improvement
+ui: Replace tool partials with components.
+```
+

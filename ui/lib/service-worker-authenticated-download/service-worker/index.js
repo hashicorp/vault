@@ -4,11 +4,11 @@ var patterns = ['/v1/sys/storage/raft/snapshot'];
 var REGEXES = patterns.map(createUrlRegEx);
 
 function sendMessage(message) {
-  return self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(function(results) {
+  return self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(function (results) {
     var client = results[0];
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
       var messageChannel = new MessageChannel();
-      messageChannel.port2.onmessage = function(event) {
+      messageChannel.port2.onmessage = function (event) {
         if (event.data.error) {
           reject(event.data.error);
         } else {
@@ -23,10 +23,10 @@ function sendMessage(message) {
 
 function authenticateRequest(request) {
   // copy the reaquest headers so we can mutate them
-  let headers = new Headers(request.headers);
+  const headers = new Headers(request.headers);
 
   // get and set vault token so the request is authenticated
-  return sendMessage({ action: 'getToken' }).then(function(token) {
+  return sendMessage({ action: 'getToken' }).then(function (token) {
     headers.set('X-Vault-Token', token);
 
     // continue the fetch with the new request
@@ -40,7 +40,7 @@ function authenticateRequest(request) {
   });
 }
 
-self.addEventListener('fetch', function(fetchEvent) {
+self.addEventListener('fetch', function (fetchEvent) {
   const request = fetchEvent.request;
 
   if (urlMatchesAnyPattern(request.url, REGEXES) && request.method === 'GET') {

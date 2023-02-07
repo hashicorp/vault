@@ -3,14 +3,19 @@ layout: api
 page_title: /sys/storage/raft/autopilot - HTTP API
 description: |-
 
-  The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot with Vault's Raft storage backend.
+  The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot with Vault's Integrated Storage backend.
 
-  These endpoints are inactive on DR secondaries currently.
 ---
+
+# `/sys/storage/raft/autopilot`
+
+The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot
+with Vault's [Integrated Storage backend](/vault/docs/internals/integrated-storage).
+Refer to the [Integrated Storage Autopilot](/vault/tutorials/raft/raft-autopilot) tutorial to learn how to manage raft clusters using autopilot.
 
 ## Get Cluster State
 
-This endpoint is used to retrieve the raft cluster state. See the [docs page](/docs/commands/operator/raft#autopilot-state) for a description of the output.
+This endpoint is used to retrieve the raft cluster state. See the [docs page](/vault/docs/commands/operator/raft#autopilot-state) for a description of the output.
 
 | Method | Path                                |
 | :----- | :---------------------------------- |
@@ -28,58 +33,135 @@ $ curl \
 
 ```json
 {
-  "Healthy": true,
-  "FailureTolerance": 1,
-  "Servers": {
+  "healthy": true,
+  "failure_tolerance": 1,
+  "servers": {
     "raft1": {
-      "ID": "raft1",
-      "Name": "raft1",
-      "Address": "127.0.0.1:8201",
-      "NodeStatus": "alive",
-      "LastContact": "0s",
-      "LastTerm": 3,
-      "LastIndex": 459,
-      "Healthy": true,
-      "StableSince": "2021-03-19T20:14:11.831678-04:00",
-      "Status": "leader",
-      "Meta": null
+      "id": "raft1",
+      "name": "raft1",
+      "address": "127.0.0.1:8201",
+      "node_status": "alive",
+      "last_contact": "0s",
+      "last_term": 3,
+      "last_index": 459,
+      "healthy": true,
+      "stable_since": "2021-03-19T20:14:11.831678-04:00",
+      "status": "leader",
+      "meta": null
     },
     "raft2": {
-      "ID": "raft2",
-      "Name": "raft2",
-      "Address": "127.0.0.2:8201",
-      "NodeStatus": "alive",
-      "LastContact": "516.49595ms",
-      "LastTerm": 3,
-      "LastIndex": 459,
-      "Healthy": true,
-      "StableSince": "2021-03-19T20:14:19.831931-04:00",
-      "Status": "voter",
-      "Meta": null
+      "id": "raft2",
+      "name": "raft2",
+      "address": "127.0.0.2:8201",
+      "node_status": "alive",
+      "last_contact": "516.49595ms",
+      "last_term": 3,
+      "last_index": 459,
+      "healthy": true,
+      "stable_since": "2021-03-19T20:14:19.831931-04:00",
+      "status": "voter",
+      "meta": null
     },
     "raft3": {
-      "ID": "raft3",
-      "Name": "raft3",
-      "Address": "127.0.0.3:8201",
-      "NodeStatus": "alive",
-      "LastContact": "196.706591ms",
-      "LastTerm": 3,
-      "LastIndex": 459,
-      "Healthy": true,
-      "StableSince": "2021-03-19T20:14:25.83565-04:00",
-      "Status": "voter",
-      "Meta": null
+      "id": "raft3",
+      "name": "raft3",
+      "address": "127.0.0.3:8201",
+      "node_status": "alive",
+      "last_contact": "196.706591ms",
+      "last_term": 3,
+      "last_index": 459,
+      "healthy": true,
+      "stable_since": "2021-03-19T20:14:25.83565-04:00",
+      "status": "voter",
+      "meta": null
     }
   },
-  "Leader": "raft1",
-  "Voters": ["raft1", "raft2", "raft3"],
-  "NonVoters": null
+  "leader": "raft1",
+  "voters": ["raft1", "raft2", "raft3"],
+  "non_voters": null
+}
+```
+
+### Enterprise Only
+Vault Enterprise will include additional output in its API response to indicate the current state of redundancy zones,
+automated upgrade progress (if any), and optimistic failure tolerance.
+
+#### Sample Response (Enterprise)
+```json
+{
+  "failure_tolerance": 0,
+  "healthy": true,
+  "leader": "vault_1",
+  "optimistic_failure_tolerance": 3,
+  "redundancy_zones": {
+    "a": {
+      "servers": [
+        "vault_1",
+        "vault_2",
+        "vault_5"
+      ],
+      "voters": [
+        "vault_1"
+      ],
+      "failure_tolerance": 2
+    },
+    "b": {
+      "servers": [
+        "vault_3",
+        "vault_4"
+      ],
+      "voters": [
+        "vault_3"
+      ],
+      "failure_tolerance": 1
+    }
+  },
+  "upgrade_info": {
+    "other_version_non_voters": [
+      "vault_2",
+      "vault_4"
+    ],
+    "other_version_voters": [
+      "vault_1",
+      "vault_3"
+    ],
+    "redundancy_zones": {
+      "a": {
+        "target_version_non_voters": [
+          "vault_5"
+        ],
+        "other_version_voters": [
+          "vault_1"
+        ],
+        "other_version_non_voters": [
+          "vault_2"
+        ]
+      },
+      "b": {
+        "other_version_voters": [
+          "vault_3"
+        ],
+        "other_version_non_voters": [
+          "vault_4"
+        ]
+      }
+    },
+    "status": "await-new-voters",
+    "target_version": "1.12.0",
+    "target_version_non_voters": [
+      "vault_5"
+    ]
+  },
+  "voters": [
+    "vault_1",
+    "vault_3"
+  ]
 }
 ```
 
 ## Get Configuration
 
-This endpoint is used to get the configuration of the autopilot subsystem of integrated storage.
+This endpoint is used to get the configuration of the autopilot subsystem of Integrated Storage.
 
 | Method | Path                                        |
 | :----- | :------------------------------------------ |
@@ -102,13 +184,16 @@ $ curl \
   "last_contact_threshold": "10s",
   "max_trailing_logs": 1000,
   "min_quorum": 0,
-  "server_stabilization_time": "10s"
+  "server_stabilization_time": "10s",
+  "disable_upgrade_migration": true
 }
 ```
 
+Note that in the above sample response, `disable_upgrade_migration` is an Enterprise-only field.
+
 ## Set Configuration
 
-This endpoint is used to modify the configuration of the autopilot subsystem of integrated storage.
+This endpoint is used to modify the configuration of the autopilot subsystem of Integrated Storage.
 
 | Method | Path                                        |
 | :----- | :------------------------------------------ |
@@ -118,14 +203,14 @@ This endpoint is used to modify the configuration of the autopilot subsystem of 
 
 - `cleanup_dead_servers` `(bool: false)` - Controls whether to remove dead servers from
   the Raft peer list periodically or when a new server joins. This requires that
-  `min-quorum` is also set.
+  `min_quorum` is also set.
 
 - `last_contact_threshold` `(string: "10s")` - Limit on the amount of time a server can
   go without leader contact before being considered unhealthy.
 
 - `dead_server_last_contact_threshold` `(string: "24h")` - Limit on the amount of time
   a server can go without leader contact before being considered failed. This
-  takes effect only when `cleanup_dead_servers` is set.
+  takes effect only when `cleanup_dead_servers` is `true`.
 
 - `max_trailing_logs` `(int: 1000)` - Amount of entries in the Raft Log that a server
   can be behind before being considered unhealthy.
@@ -136,6 +221,9 @@ This endpoint is used to modify the configuration of the autopilot subsystem of 
 
 - `server_stabilization_time` `(string: "10s")` - Minimum amount of time a server must
   be in a stable, healthy state before it can be added to the cluster.
+
+- `disable_upgrade_migration` `(bool: false)` - Disables automatically upgrading Vault using
+  autopilot. (Enterprise-only)
 
 ### Sample Request
 
@@ -156,6 +244,9 @@ $ curl \
   "dead_server_last_contact_threshold": "24h",
   "max_trailing_logs": "1000",
   "min_quorum": "3",
-  "server_stabilization_time": "10s"
+  "server_stabilization_time": "10s",
+  "disable_upgrade_migration": true
 }
 ```
+
+Note that in the above sample payload, `disable_upgrade_migration` is an Enterprise-only field.

@@ -13,7 +13,7 @@ export default Route.extend({
       set(error, 'httpStatus', 404);
       throw error;
     }
-    let backend = this.modelFor('vault.cluster.access.method');
+    const backend = this.modelFor('vault.cluster.access.method');
     this.wizard.transitionFeatureMachine(this.wizard.featureState, 'DETAILS', backend.type);
     return backend;
   },
@@ -22,7 +22,10 @@ export default Route.extend({
     const { section_name: section } = this.paramsFor(this.routeName);
     this._super(...arguments);
     controller.set('section', section);
-    let method = this.modelFor('vault.cluster.access.method');
-    controller.set('paths', method.paths.paths.filter(path => path.navigation));
+    const method = this.modelFor('vault.cluster.access.method');
+    controller.set(
+      'paths',
+      method.paths.paths.filter((path) => path.navigation)
+    );
   },
 });

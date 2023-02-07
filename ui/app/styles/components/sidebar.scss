@@ -76,12 +76,21 @@
       padding-top: $size-4;
     }
 
+    li {
+      a {
+        &.active {
+          border-right: 4px solid $blue;
+          color: $blue;
+        }
+      }
+    }
+
     a {
       color: $grey-dark;
       padding-left: $size-5;
       transition: 250ms border-width;
 
-      &.is-active {
+      &.active {
         border-right: 4px solid $blue;
       }
     }

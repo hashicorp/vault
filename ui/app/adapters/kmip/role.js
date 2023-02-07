@@ -4,8 +4,8 @@ import { getProperties } from '@ember/object';
 
 export default BaseAdapter.extend({
   createRecord(store, type, snapshot) {
-    let name = snapshot.id || snapshot.attr('name');
-    let url = this._url(
+    const name = snapshot.id || snapshot.attr('name');
+    const url = this._url(
       type.modelName,
       {
         backend: snapshot.record.backend,
@@ -24,8 +24,8 @@ export default BaseAdapter.extend({
   },
 
   deleteRecord(store, type, snapshot) {
-    let name = snapshot.id || snapshot.attr('name');
-    let url = this._url(
+    const name = snapshot.id || snapshot.attr('name');
+    const url = this._url(
       type.modelName,
       {
         backend: snapshot.record.backend,
@@ -38,11 +38,11 @@ export default BaseAdapter.extend({
 
   serialize(snapshot) {
     // the endpoint here won't allow sending `operation_all` and `operation_none` at the same time or with
-    // other values, so we manually check for them and send an abbreviated object
-    let json = snapshot.serialize();
-    let keys = snapshot.record.nonOperationFields.map(decamelize);
-    let nonOperationFields = getProperties(json, keys);
-    for (let field in nonOperationFields) {
+    // other operation_ values, so we manually check for them and send an abbreviated object
+    const json = snapshot.serialize();
+    const keys = snapshot.record.nonOperationFields.map(decamelize);
+    const nonOperationFields = getProperties(json, keys);
+    for (const field in nonOperationFields) {
       if (nonOperationFields[field] == null) {
         delete nonOperationFields[field];
       }

@@ -1,0 +1,228 @@
+---
+layout: docs
+page_title: OIDC Provider Setup - Auth Methods - Kubernetes
+description: OIDC provider configuration for Kubernetes
+---
+
+## Kubernetes
+
+Kubernetes can function as an OIDC provider such that Vault can validate its
+service account tokens using JWT/OIDC auth.
+
+-> **Note:** The JWT auth engine does **not** use Kubernetes' `TokenReview` API
+during authentication, and instead uses public key cryptography to verify the
+contents of JWTs. This means tokens that have been revoked by Kubernetes will
+still be considered valid by Vault until their expiry time. To mitigate this
+risk, use short TTLs for service account tokens or use
+[Kubernetes auth](/vault/docs/auth/kubernetes) which _does_ use the `TokenReview` API.
+
+### Using service account issuer discovery
+
+When using service account issuer discovery, you only need to provide the JWT
+auth mount with an OIDC discovery URL, and sometimes a TLS certificate authority
+to trust. This makes it the most straightforward method to configure if your
+Kubernetes cluster meets the requirements.
+
+Kubernetes cluster requirements:
+
+* [`ServiceAccountIssuerDiscovery`][k8s-sa-issuer-discovery] feature enabled.
+  * Present from 1.18, defaults to enabled from 1.20.
+* kube-apiserver's `--service-account-issuer` flag is set to a URL that is
+  reachable from Vault. Public by default for most managed Kubernetes solutions.
+* Must use short-lived service account tokens when logging in.
+  * Tokens mounted into pods default to short-lived from 1.21.
+
+Configuration steps:
+
+1. Ensure OIDC discovery URLs do not require authentication, as detailed
+   [here][k8s-sa-issuer-discovery]:
+
+   ```bash
+   kubectl create clusterrolebinding oidc-reviewer  \
+      --clusterrole=system:service-account-issuer-discovery \
+      --group=system:unauthenticated
+   ```
+
+1. Find the issuer URL of the cluster.
+
+   ```bash
+   ISSUER="$(kubectl get --raw /.well-known/openid-configuration | jq -r '.issuer')"
+   ```
+
+1. Enable and configure JWT auth in Vault.
+
+  1. If Vault is running in Kubernetes:
+
+     ```bash
+     kubectl exec vault-0 -- vault auth enable jwt
+     kubectl exec vault-0 -- vault write auth/jwt/config \
+        oidc_discovery_url=https://kubernetes.default.svc.cluster.local \
+        oidc_discovery_ca_pem=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+     ```
+
+  1. Alternatively, if Vault is _not_ running in Kubernetes:
+
+     -> **Note:** When Vault is outside the cluster, the `$ISSUER` endpoint below may
+     or may not be reachable. If not, you can configure JWT auth using
+     [`jwt_validation_pubkeys`](#using-jwt-validation-public-keys) instead.
+
+     ```bash
+     vault auth enable jwt
+     vault write auth/jwt/config oidc_discovery_url="${ISSUER}"
+     ```
+
+1. Configure a role and log in as detailed [below](#creating-a-role-and-logging-in).
+
+[k8s-sa-issuer-discovery]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-issuer-discovery
+
+### Using JWT validation public keys
+
+This method can be useful if Kubernetes' API is not reachable from Vault or if
+you would like a single JWT auth mount to service multiple Kubernetes clusters
+by chaining their public signing keys.
+
+Kubernetes cluster requirements:
+
+* [`ServiceAccountIssuerDiscovery`][k8s-sa-issuer-discovery] feature enabled.
+  * Present from 1.18, defaults to enabled from 1.20.
+  * This requirement can be avoided if you can access the Kubernetes master
+    nodes to read the public signing key directly from disk at
+    `/etc/kubernetes/pki/sa.pub`. In this case, you can skip the steps to
+    retrieve and then convert the key as it will already be in PEM format.
+* Must use short-lived service account tokens when logging in.
+  * Tokens mounted into pods default to short-lived from 1.21.
+
+Configuration steps:
+
+1. Fetch the service account signing public key from your cluster's JWKS URI.
+
+   ```bash
+   # Query the jwks_uri specified in /.well-known/openid-configuration
+   kubectl get --raw "$(kubectl get --raw /.well-known/openid-configuration | jq -r '.jwks_uri' | sed -r 's/.*\.[^/]+(.*)/\1/')"
+   ```
+
+1. Convert the keys from JWK format to PEM. You can use a CLI tool or an online
+   converter such as [this one][jwk-to-pem].
+
+1. Configure the JWT auth mount with those public keys.
+
+   ```bash
+   vault write auth/jwt/config \
+      jwt_validation_pubkeys="-----BEGIN PUBLIC KEY-----
+   MIIBIjANBgkqhkiG9...
+   -----END PUBLIC KEY-----","-----BEGIN PUBLIC KEY-----
+   MIIBIjANBgkqhkiG9...
+   -----END PUBLIC KEY-----"
+   ```
+
+1. Configure a role and log in as detailed [below](#creating-a-role-and-logging-in).
+
+[jwk-to-pem]: https://8gwifi.org/jwkconvertfunctions.jsp
+
+### Creating a role and logging in
+
+Once your JWT auth mount is configured, you're ready to configure a role and
+log in. The following assumes you use the projected service account token
+available in all pods by default. See [Specifying TTL and audience](#specifying-ttl-and-audience)
+below if you'd like to control the audience or TTL.
+
+1. Choose any value from the array of default audiences. In these examples,
+   there is only one audience in the `aud` array,
+   `https://kubernetes.default.svc.cluster.local`.
+
+   To find the default audiences, either create a fresh token (requires
+   `kubectl` v1.24.0+):
+
+   ```shell-session
+   $ kubectl create token default | cut -f2 -d. | base64 --decode
+   {"aud":["https://kubernetes.default.svc.cluster.local"], ... "sub":"system:serviceaccount:default:default"}
+   ```
+
+   Or read a token from a running pod's filesystem:
+
+   ```shell-session
+   $ kubectl exec my-pod -- cat /var/run/secrets/kubernetes.io/serviceaccount/token | cut -f2 -d. | base64 --decode
+   {"aud":["https://kubernetes.default.svc.cluster.local"], ... "sub":"system:serviceaccount:default:default"}
+   ```
+
+1. Create a role for JWT auth that the `default` service account from the
+   `default` namespace can use.
+
+   ```bash
+   vault write auth/jwt/role/my-role \
+      role_type="jwt" \
+      bound_audiences="<AUDIENCE-FROM-PREVIOUS-STEP>" \
+      user_claim="sub" \
+      bound_subject="system:serviceaccount:default:default" \
+      policies="default" \
+      ttl="1h"
+   ```
+
+1. Pods or other clients with access to a service account JWT can then log in.
+
+   ```bash
+   vault write auth/jwt/login \
+      role=my-role \
+      jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token
+   # OR equivalent to:
+   curl \
+      --fail \
+      --request POST \
+      --header "X-Vault-Request: true" \
+      --data '{"jwt":"<JWT-TOKEN-HERE>","role":"my-role"}' \
+      "${VAULT_ADDR}/v1/auth/jwt/login"
+   ```
+
+### Specifying TTL and audience
+
+If you would like to specify a custom TTL or audience for service account tokens,
+the following pod spec illustrates a volume mount that overrides the default
+admission injected token. This is especially relevant if you are unable to
+disable the [--service-account-extend-token-expiration][k8s-extended-tokens]
+flag for `kube-apiserver` and want to use short TTLs.
+
+When using the resulting token, you will need to set `bound_audiences=vault`
+when creating roles in Vault's JWT auth mount.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  # automountServiceAccountToken is redundant in this example because the
+  # mountPath used overlaps with the default path. The overlap stops the default
+  # admission injected token from being created. You can use this option to
+  # ensure only a single token is mounted if you choose a different mount path.
+  automountServiceAccountToken: false
+  containers:
+    - name: nginx
+      image: nginx
+      volumeMounts:
+      - name: custom-token
+        mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+  volumes:
+  - name: custom-token
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          path: token
+          expirationSeconds: 600 # 10 minutes is the minimum TTL
+          audience: vault        # Must match your JWT role's `bound_audiences`
+      # The remaining sources are included to mimic the rest of the default
+      # admission injected volume.
+      - configMap:
+          name: kube-root-ca.crt
+          items:
+          - key: ca.crt
+            path: ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+```
+
+[k8s-extended-tokens]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options
