@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
 // ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component

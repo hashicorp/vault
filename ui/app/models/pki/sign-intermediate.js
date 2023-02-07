@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';

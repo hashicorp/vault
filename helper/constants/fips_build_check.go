@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build (!fips && (fips_140_2 || fips_140_3)) || (fips && !fips_140_2 && !fips_140_3) || (fips_140_2 && fips_140_3)
 
 package constants

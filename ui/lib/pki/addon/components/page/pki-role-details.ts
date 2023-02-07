@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { action } from '@ember/object';
 import RouterService from '@ember/routing/router-service';
 import Component from '@glimmer/component';

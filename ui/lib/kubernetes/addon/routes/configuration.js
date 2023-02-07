@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import FetchConfigRoute from './fetch-config';
 
 export default class KubernetesConfigureRoute extends FetchConfigRoute {

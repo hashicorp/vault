@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { SELECTORS as ROLEFORM } from './pki-role-form';
 import { SELECTORS as GENERATECERT } from './pki-role-generate';
 import { SELECTORS as KEYFORM } from './pki-key-form';

@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module LicenseBanners
  * LicenseBanners components are used to display Vault-specific license expiry messages
  *

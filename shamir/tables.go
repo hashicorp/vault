@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package shamir
 
 // Tables taken from http://www.samiam.org/galois.html

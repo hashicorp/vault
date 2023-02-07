@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import PkiIssuerIndexRoute from './index';
 
 export default class PkiIssuerDetailsRoute extends PkiIssuerIndexRoute {

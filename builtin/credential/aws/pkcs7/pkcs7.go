@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // Package pkcs7 implements parsing and generation of some PKCS#7 structures.
 package pkcs7
 

@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module SecretCreateOrUpdate
  * SecretCreateOrUpdate component displays either the form for creating a new secret or creating a new version of the secret
  *

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import * as asn1js from 'asn1js';
 import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';

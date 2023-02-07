@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint ember/no-computed-properties-in-native-classes: 'warn' */
 /**
  * @module SecretEdit
