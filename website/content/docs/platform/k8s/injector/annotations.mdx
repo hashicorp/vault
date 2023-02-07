@@ -217,6 +217,11 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-enable-quit` - enable the [`/agent/v1/quit` endpoint](/docs/agent#quit) on an injected agent. This option defaults to false, and if true will be set on the existing cache listener, or a new localhost listener with a basic cache stanza configured. The [agent-cache-listener-port annotation](/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-cache-listener-port) can be used to change the port.
 
+- `vault.hashicorp.com/agent-telemetry` - specifies the [telemetry](/vault/docs/configuration/telemetry) configuration for the
+  Vault Agent sidecar. The name of the config is any unique string after
+  `vault.hashicorp.com/agent-telemetry-`, such as `vault.hashicorp.com/agent-telemetry-prometheus_retention_time`.
+  This annotation can be reused multiple times to configure multiple settings for the agent telemetry.
+
 - `vault.hashicorp.com/go-max-procs` - set the `GOMAXPROCS` environment variable for injected agents
 
 - `vault.hashicorp.com/agent-json-patch` - change the injected agent sidecar container using a [JSON patch](https://jsonpatch.com/) before it is created.
