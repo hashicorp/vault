@@ -1187,8 +1187,8 @@ type TestClusterOptions struct {
 
 	Plugins *TestPluginConfig
 
-	// if populated, is called for every non-login request
-	RequestResponseCallback func(*logical.Request, *logical.Response)
+	// if populated, is called for every request
+	RequestResponseCallback func(*Router, *logical.Request, *logical.Response)
 }
 
 type TestPluginConfig struct {
