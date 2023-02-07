@@ -111,8 +111,50 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(SELECTORS.roleCreateButton);
   });
 
-  /* FUTURE TEST TODO:
-   * it should update role
-   * it should unload the record on cancel
-   */
+  test('it should unload model on cancel', async function (assert) {
+    assert.expect(3);
+    this.onCancel = () => assert.ok(true, 'onCancel callback fires');
+    await render(
+      hbs`
+      <PkiRoleForm
+        @model={{this.model}}
+        @onCancel={{this.onCancel}}
+        @onSave={{this.onSave}}
+      />
+      `,
+      { owner: this.engine }
+    );
+
+    await fillIn(SELECTORS.roleName, 'dont-save-me');
+    await click(SELECTORS.roleCancelButton);
+    assert.notEqual(this.model.roleName, 'dont-save-me');
+    assert.true(this.model.isDestroyed, 'new model is unloaded on cancel');
+  });
+
+  test('it should update attributes on the model on update', async function (assert) {
+    assert.expect(1);
+    this.store.pushPayload('pki/role', {
+      modelName: 'pki/role',
+      name: 'test-role',
+      backend: 'pki-test',
+      id: 'role-id',
+    });
+
+    this.model = this.store.peekRecord('pki/role', 'role-id');
+
+    await render(
+      hbs`
+      <PkiRoleForm
+        @model={{this.model}}
+        @onCancel={{this.onCancel}}
+        @onSave={{this.onSave}}
+      />
+      `,
+      { owner: this.engine }
+    );
+
+    await fillIn(SELECTORS.issuerRef, 'not-default');
+    await click(SELECTORS.roleCreateButton);
+    assert.strictEqual(this.model.issuerRef, 'not-default', 'Issuer Ref correctly saved on create');
+  });
 });
