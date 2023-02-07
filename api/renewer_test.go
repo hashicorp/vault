@@ -238,11 +238,6 @@ func TestLifetimeWatcher(t *testing.T) {
 	}
 }
 
-// randDuration calculates a random duration for use in property based testing.
-func randDuration(r *rand.Rand, max int64) time.Duration {
-	return time.Duration(r.Int63n(max))
-}
-
 // sleepLessThanRemainingLease tests that "calculateSleepDuration" will always return a value less than
 // the remaining lease duration given a random leaseDuration, priorDuration, remainingLeaseDuration, and increment.
 // Inputs are generated so that:
@@ -272,21 +267,22 @@ func TestCalcSleepPeriod(t *testing.T) {
 		MaxCount: 1000,
 		Values: func(values []reflect.Value, r *rand.Rand) {
 			// total lease duration
-			leaseDuration := randDuration(r, math.MaxInt64)
-			priorDuration := randDuration(r, int64(leaseDuration))
-			remainingLeaseDuration := randDuration(r, int64(priorDuration))
+			leaseDuration := r.Intn(math.MaxInt64)
+			priorDuration := r.Intn(leaseDuration)
+			remainingLeaseDuration := r.Intn(priorDuration)
+			increment := r.Intn(remainingLeaseDuration)
 
 			values[0] = reflect.ValueOf(r)
-			values[1] = reflect.ValueOf(leaseDuration)
+			values[1] = reflect.ValueOf(time.Duration(leaseDuration))
 
 			// prior lease duration
-			values[2] = reflect.ValueOf(priorDuration)
+			values[2] = reflect.ValueOf(time.Duration(priorDuration))
 			// remaining lease duration
-			values[3] = reflect.ValueOf(remainingLeaseDuration)
+			values[3] = reflect.ValueOf(time.Duration(remainingLeaseDuration))
 
 			// increment
 			// integer truncation... could be interesting.
-			values[4] = reflect.ValueOf(r.Intn(int(leaseDuration)))
+			values[4] = reflect.ValueOf(increment)
 		},
 	}
 
