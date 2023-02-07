@@ -1235,6 +1235,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			RequestTimeout:           cfg.RequestTimeout,
 			UsernameAsAlias:          false,
 			DerefAliases:             "never",
+			MaximumPageSize:          100,
 		},
 	}
 

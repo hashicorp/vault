@@ -171,7 +171,11 @@ var jsonConfigDefault = []byte(`
   "use_pre111_group_cn_behavior": null,
   "username_as_alias": false,
   "request_timeout": 90,
+<<<<<<< HEAD
   "dereference_aliases": "never",
+=======
+  "max_page_size": 100,
+>>>>>>> 2c72644bc3 (Add config flag for LDAP max page size)
   "CaseSensitiveNames": false,
   "ClientTLSCert": "",
   "ClientTLSKey": ""

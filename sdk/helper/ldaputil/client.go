@@ -415,7 +415,7 @@ func (c *Client) performLdapFilterGroupsSearchPaging(cfg *ConfigEntry, conn Pagi
 			cfg.GroupAttr,
 		},
 		SizeLimit: math.MaxInt32,
-	}, math.MaxInt32)
+	}, uint32(cfg.MaximumPageSize))
 	if err != nil {
 		return nil, fmt.Errorf("LDAP search failed: %w", err)
 	}

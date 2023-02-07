@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"text/template"
 
@@ -239,11 +240,18 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Default:     "90s",
 		},
 
+<<<<<<< HEAD
 		"dereference_aliases": {
 			Type:          framework.TypeString,
 			Description:   "When aliases should be dereferenced on search operations. Accepted values are 'never', 'finding', 'searching', 'always'. Defaults to 'never'.",
 			Default:       "never",
 			AllowedValues: []interface{}{"never", "finding", "searching", "always"},
+=======
+		"max_page_size": {
+			Type:        framework.TypeInt,
+			Description: "The maximum number of results to return for a single paged query. If not set, the server default will be used for paged searches. A requested max_page_size of 0 is interpreted as no limit by LDAP servers.",
+			Default:     math.MaxInt32,
+>>>>>>> 2c72644bc3 (Add config flag for LDAP max page size)
 		},
 	}
 }
@@ -411,8 +419,13 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.RequestTimeout = d.Get("request_timeout").(int)
 	}
 
+<<<<<<< HEAD
 	if _, ok := d.Raw["dereference_aliases"]; ok || !hadExisting {
 		cfg.DerefAliases = d.Get("dereference_aliases").(string)
+=======
+	if _, ok := d.Raw["max_page_size"]; ok || !hadExisting {
+		cfg.MaximumPageSize = d.Get("max_page_size").(int)
+>>>>>>> 2c72644bc3 (Add config flag for LDAP max page size)
 	}
 
 	return cfg, nil
@@ -441,7 +454,11 @@ type ConfigEntry struct {
 	UseTokenGroups           bool   `json:"use_token_groups"`
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 	RequestTimeout           int    `json:"request_timeout"`
+<<<<<<< HEAD
 	DerefAliases             string `json:"dereference_aliases"`
+=======
+	MaximumPageSize          int    `json:"max_page_size"`
+>>>>>>> 2c72644bc3 (Add config flag for LDAP max page size)
 
 	// These json tags deviate from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
@@ -480,7 +497,11 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"anonymous_group_search": c.AnonymousGroupSearch,
 		"request_timeout":        c.RequestTimeout,
 		"username_as_alias":      c.UsernameAsAlias,
+<<<<<<< HEAD
 		"dereference_aliases":    c.DerefAliases,
+=======
+		"max_page_size":          c.MaximumPageSize,
+>>>>>>> 2c72644bc3 (Add config flag for LDAP max page size)
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames
