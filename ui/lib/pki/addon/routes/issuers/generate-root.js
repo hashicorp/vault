@@ -8,7 +8,7 @@ export default class PkiIssuersGenerateRootRoute extends Route {
   @service store;
 
   model() {
-    return this.store.createRecord('pki/action');
+    return this.store.createRecord('pki/action', { actionType: 'generate-root' });
   }
 
   setupController(controller, resolvedModel) {
