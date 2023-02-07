@@ -238,24 +238,6 @@ func TestLifetimeWatcher(t *testing.T) {
 	}
 }
 
-// sleepLessThanRemainingLease tests that "calculateSleepDuration" will always return a value less than
-// the remaining lease duration given a random leaseDuration, priorDuration, remainingLeaseDuration, and increment.
-// Inputs are generated so that:
-// leaseDuration > priorDuration > remainingLeaseDuration
-// and leaseDuration > increment
-func sleepLessThanRemainingLease(r *rand.Rand, leaseDuration, priorDuration, remainingLeaseDuration time.Duration, increment int) bool {
-	lw := LifetimeWatcher{
-		grace:     0,
-		increment: increment,
-		random:    r,
-	}
-
-	lw.calculateGrace(leaseDuration, time.Duration(increment))
-
-	// ensure that we sleep for less than the remaining lease.
-	return lw.calculateSleepDuration(remainingLeaseDuration, priorDuration) < remainingLeaseDuration
-}
-
 // TestCalcSleepPeriod uses property based testing to evaluate the calculateSleepDuration
 // function of LifeTimeWatchers, but also incidentally tests "calculateGrace".
 // This is on account of "calculateSleepDuration" performing the "calculateGrace"
@@ -286,7 +268,23 @@ func TestCalcSleepPeriod(t *testing.T) {
 		},
 	}
 
-	if err := quick.Check(sleepLessThanRemainingLease, &c); err != nil {
+	// tests that "calculateSleepDuration" will always return a value less than
+	// the remaining lease duration given a random leaseDuration, priorDuration, remainingLeaseDuration, and increment.
+	// Inputs are generated so that:
+	// leaseDuration > priorDuration > remainingLeaseDuration
+	// and remainingLeaseDuration > increment
+	if err := quick.Check(func(r *rand.Rand, leaseDuration, priorDuration, remainingLeaseDuration time.Duration, increment int) bool {
+		lw := LifetimeWatcher{
+			grace:     0,
+			increment: increment,
+			random:    r,
+		}
+
+		lw.calculateGrace(leaseDuration, time.Duration(increment))
+
+		// ensure that we sleep for less than the remaining lease.
+		return lw.calculateSleepDuration(remainingLeaseDuration, priorDuration) < remainingLeaseDuration
+	}, &c); err != nil {
 		t.Error(err)
 	}
 }
