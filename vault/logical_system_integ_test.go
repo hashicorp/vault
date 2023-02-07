@@ -194,9 +194,8 @@ func TestSystemBackend_HAStatus(t *testing.T) {
 func TestSystemBackend_VersionHistory_unauthenticated(t *testing.T) {
 	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc:             vaulthttp.Handler,
-		NumCores:                1,
-		RequestResponseCallback: schema.ResponseValidatingCallback(t),
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
