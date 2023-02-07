@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -441,7 +440,7 @@ func TestOcsp_HigherLevel(t *testing.T) {
 	require.Equal(t, certToRevoke.SerialNumber, ocspResp.SerialNumber)
 
 	// Test OCSP Get request for ocsp
-	urlEncoded := url.QueryEscape(base64.StdEncoding.EncodeToString(ocspReq))
+	urlEncoded := base64.StdEncoding.EncodeToString(ocspReq)
 	ocspGetReq := client.NewRequest(http.MethodGet, "/v1/pki/ocsp/"+urlEncoded)
 	ocspGetReq.Headers.Set("Content-Type", "application/ocsp-request")
 	rawResp, err = client.RawRequest(ocspGetReq)
@@ -688,7 +687,7 @@ func SendOcspRequest(t *testing.T, b *backend, s logical.Storage, getOrPost stri
 }
 
 func sendOcspGetRequest(b *backend, s logical.Storage, ocspRequest []byte) (*logical.Response, error) {
-	urlEncoded := url.QueryEscape(base64.StdEncoding.EncodeToString(ocspRequest))
+	urlEncoded := base64.StdEncoding.EncodeToString(ocspRequest)
 	return CBRead(b, s, "ocsp/"+urlEncoded)
 }
 

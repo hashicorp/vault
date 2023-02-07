@@ -13,7 +13,6 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -249,12 +248,7 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 			return nil, errors.New("request is too large")
 		}
 
-		unescapedBase64, err := url.QueryUnescape(base64Req)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unescape base64 string: %w", err)
-		}
-
-		return base64.StdEncoding.DecodeString(unescapedBase64)
+		return base64.StdEncoding.DecodeString(base64Req)
 	case logical.UpdateOperation:
 		// POST bodies should contain the binary form of the DER request.
 		// NOTE: Writing an empty update request to Vault causes a nil request.HTTPRequest, and that object
