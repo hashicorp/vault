@@ -240,7 +240,7 @@ func TestLifetimeWatcher(t *testing.T) {
 
 // randDuration calculates a random duration for use in property based testing.
 func randDuration(r *rand.Rand, max int64) time.Duration {
-	return time.Duration(max)
+	return time.Duration(r.Int63n(max))
 }
 
 // sleepLessThanRemainingLease tests that "calculateSleepDuration" will always return a value less than
