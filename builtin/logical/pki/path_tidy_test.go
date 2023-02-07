@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -229,6 +231,7 @@ func TestTidyCancellation(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	resp, err := CBRead(b, s, "tidy-status")
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
@@ -255,6 +258,7 @@ func TestTidyCancellation(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	statusResp, err := CBRead(b, s, "tidy-status")
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("tidy-status"), logical.ReadOperation), resp, true)
 	require.NoError(t, err)
 	require.NotNil(t, statusResp)
 	require.NotNil(t, statusResp.Data)

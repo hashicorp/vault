@@ -253,6 +253,11 @@ func pathTidyStatus(b *backend) *framework.Path {
 								Description: `Tidy expired issuers`,
 								Required:    true,
 							},
+							"tidy_cross_cluster_revoked_certs": {
+								Type:        framework.TypeString,
+								Description: ``,
+								Required:    false,
+							},
 							"pause_duration": {
 								Type:        framework.TypeString,
 								Description: `Duration to pause between tidying certificates`,
@@ -298,9 +303,34 @@ func pathTidyStatus(b *backend) *framework.Path {
 								Description: `The number of revoked certificate entries deleted`,
 								Required:    true,
 							},
+							"cross_revoked_cert_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: ``,
+								Required:    true,
+							},
 							"current_revoked_cert_count": {
 								Type:        framework.TypeInt,
 								Description: `The number of revoked certificate entries deleted`,
+								Required:    true,
+							},
+							"revocation_queue_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: ``,
+								Required:    true,
+							},
+							"tidy_move_legacy_ca_bundle": {
+								Type:        framework.TypeInt,
+								Description: ``,
+								Required:    true,
+							},
+							"tidy_revocation_queue": {
+								Type:        framework.TypeBool,
+								Description: ``,
+								Required:    true,
+							},
+							"missing_issuer_cert_count": {
+								Type:        framework.TypeInt,
+								Description: ``,
 								Required:    true,
 							},
 						},
