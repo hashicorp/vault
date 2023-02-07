@@ -1167,8 +1167,8 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms v0.13.0 h1:R36pNaaN4tJyIrPJej7/
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.13.0/go.mod h1:n2VKlYDCuO8+OXN4S1Im8esIL53/ENRFa4gXrvhCVIM=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.0.0-20221215173052-6b1994edb14e h1:MMmCbKSx6hBSUQlGMzaNa6MvmMW0Dy4qFQT1VsuN+4Q=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.0.0-20221215173052-6b1994edb14e/go.mod h1:NJeYBRgLVqjvkrVyZEe42oaqP3+xvVNMYdJoMWVoByU=
-github.com/hashicorp/vault-plugin-secrets-kv v0.13.3 h1:TUKpQY6fmTiUhaZ71/WTamEuK2JH7ESB92T4VZsq4+g=
-github.com/hashicorp/vault-plugin-secrets-kv v0.13.3/go.mod h1:ikPuEWi2rHaGQCHZuPdn/6D3Bq/25ElX3G9pGeDr0Yg=
+github.com/hashicorp/vault-plugin-secrets-kv v0.14.0 h1:PbveQUraOp9Bj7SVvFfssnmNYvlNTSHC6d/eLS+Am0c=
+github.com/hashicorp/vault-plugin-secrets-kv v0.14.0/go.mod h1:YLsIcn9enkcyTqtuxmCXZ94nr2aeJCZhC+neHacX8SQ=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.0 h1:H3r1gPwzg/lAtXWYpLE2km2eh3tYEbXUxcvV6OyhCEo=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.0/go.mod h1:PLx2vxXukfsKsDRo/PlG4fxmJ1d+H2h82wT3vf4buuI=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.9.0 h1:/6FQzNB4zjep7O14pkVOapwRJvnQ4gINGAc1Ss1IYg8=
