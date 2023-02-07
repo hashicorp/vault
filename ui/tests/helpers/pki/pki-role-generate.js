@@ -8,4 +8,6 @@ export const SELECTORS = {
   revokeButton: '[data-test-pki-cert-revoke-button]',
   serialNumber: '[data-test-value-div="Serial number"]',
   certificate: '[data-test-value-div="Certificate"]',
+  inlineAlert: '[data-test-alert]',
+  commonNameInlineError: '[data-test-field="commonName"] [data-test-inline-alert]',
 };
