@@ -52,7 +52,7 @@ require (
 	github.com/go-errors/errors v1.4.1
 	github.com/go-ldap/ldap/v3 v3.4.1
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/go-test/deep v1.0.8
+	github.com/go-test/deep v1.1.0
 	github.com/gocql/gocql v1.0.0
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/golang/protobuf v1.5.2
@@ -127,7 +127,7 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.13.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.6.3-0.20221109203402-f955aedc51bf
+	github.com/hashicorp/vault-plugin-secrets-azure v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.0.0-20221215173052-6b1994edb14e

@@ -743,8 +743,9 @@ github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0/go.mod h1:fyg78
 github.com/go-test/deep v1.0.2/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
 github.com/go-test/deep v1.0.4/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
 github.com/go-test/deep v1.0.7/go.mod h1:QV8Hv/iy04NyLBxAdO9njL0iVPN1S4d/A3NVv1V36o8=
-github.com/go-test/deep v1.0.8 h1:TDsG77qcSprGbC6vTN8OuXp5g+J+b5Pcguhf7Zt61VM=
 github.com/go-test/deep v1.0.8/go.mod h1:5C2ZWiW0ErCdrYzpqxLbTX7MG14M9iiw8DgHncVwcsE=
+github.com/go-test/deep v1.1.0 h1:WOcxcdHcvdgThNXjw0t76K42FXTU7HpNQWHpA2HHNlg=
+github.com/go-test/deep v1.1.0/go.mod h1:5C2ZWiW0ErCdrYzpqxLbTX7MG14M9iiw8DgHncVwcsE=
 github.com/gobuffalo/attrs v0.0.0-20190224210810-a9411de4debd/go.mod h1:4duuawTqi2wkkpB4ePgWMaai6/Kc6WEz83bhFwpHzj0=
 github.com/gobuffalo/depgen v0.0.0-20190329151759-d478694a28d3/go.mod h1:3STtPUQYuzV0gBVOY3vy6CfMm/ljR4pABfrTeHNLHUY=
 github.com/gobuffalo/depgen v0.1.0/go.mod h1:+ifsuy7fhi15RWncXQQKjWS9JPkdah5sZvtHc2RXGlg=
@@ -1136,8 +1137,8 @@ github.com/hashicorp/vault-plugin-secrets-ad v0.15.0 h1:4y/CtX4977uJXPWh5d70Raw5
 github.com/hashicorp/vault-plugin-secrets-ad v0.15.0/go.mod h1:+HVm4DDDc66fzFvL9FrgM/6ByVWR8eK3OA1050EjmOw=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.13.0 h1:eWDAAvZsKHhnXF8uCiyF/wDqT57fflCs54PTIolONBo=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.13.0/go.mod h1:F4KWrlCQZbhP2dFXCkRvbHX2J6CTydlaY0cH+OrLHCE=
-github.com/hashicorp/vault-plugin-secrets-azure v0.6.3-0.20221109203402-f955aedc51bf h1:rT7FlTIQwohl9mLjoanAbFc0HbTrgM5au7dTsZQcP+o=
-github.com/hashicorp/vault-plugin-secrets-azure v0.6.3-0.20221109203402-f955aedc51bf/go.mod h1:e4xZZjNwmtiQZ/aneqVI1EDpiRFX2J5GBKuMjFQdhFs=
+github.com/hashicorp/vault-plugin-secrets-azure v0.15.0 h1:R/3KLTOwvPIZenMrmeSIBWymKq5nYgA/bucXzBPyb3Q=
+github.com/hashicorp/vault-plugin-secrets-azure v0.15.0/go.mod h1:frXRdkP8NFYLRIPLQsfIBKMaDrCmHJjv65N9QqAkN1w=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0 h1:SfYIFmgFg/8p4fgLCV8YxxkI+iQN0c4gSjMJhg9vFJw=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0/go.mod h1:/eOk7gJ5zvmOKgP5Ih7/5rZm5jOKDvGFpANIRqbr/Mc=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.14.0 h1:eUC5ltK+1bkc+SVMzAUq4tBeNrsDXyCuITH8jeajXcM=
