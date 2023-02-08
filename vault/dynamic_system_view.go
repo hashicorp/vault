@@ -415,3 +415,12 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 
 	return passPolicy.Generate(ctx, nil)
 }
+
+func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
+	clusterInfo, err := d.core.Cluster(ctx)
+	if err != nil || clusterInfo.ID == "" {
+		return "", fmt.Errorf("unable to retrieve cluster info or empty ID: %w", err)
+	}
+
+	return clusterInfo.ID, nil
+}

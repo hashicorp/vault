@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -37,7 +38,6 @@ type hcpLinkMetaHandler struct {
 
 func NewHCPLinkMetaService(scadaProvider scada.SCADAProvider, c *vault.Core, baseLogger hclog.Logger) *hcpLinkMetaHandler {
 	logger := baseLogger.Named(capabilities.MetaCapability)
-	logger.Info("Setting up HCP Link Meta Service")
 
 	grpcServer := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
@@ -78,7 +78,7 @@ func (h *hcpLinkMetaHandler) Start() error {
 		return fmt.Errorf("no listener found for meta capability")
 	}
 
-	h.logger.Info("starting HCP Link Meta Service")
+	h.logger.Info("starting HCP meta capability")
 	// Start the gRPC server
 	go func() {
 		err = h.grpcServer.Serve(metaListener)
@@ -101,7 +101,7 @@ func (h *hcpLinkMetaHandler) Stop() error {
 	// Give some time for existing RPCs to drain.
 	time.Sleep(cluster.ListenerAcceptDeadline)
 
-	h.logger.Info("Tearing down HCP Link Meta Service")
+	h.logger.Info("tearing down HCP meta capability")
 
 	if h.stopCh != nil {
 		close(h.stopCh)
@@ -115,7 +115,14 @@ func (h *hcpLinkMetaHandler) Stop() error {
 	return nil
 }
 
-func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *meta.ListNamespacesRequest) (*meta.ListNamespacesResponse, error) {
+func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *meta.ListNamespacesRequest) (retResp *meta.ListNamespacesResponse, retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Error("panic serving list namespaces request", "error", r, "stacktrace", string(debug.Stack()))
+			retErr = vault.ErrInternalError
+		}
+	}()
+
 	children := h.wrappedCore.ListNamespaces(true)
 
 	var namespaces []string
@@ -128,7 +135,14 @@ func (h *hcpLinkMetaHandler) ListNamespaces(ctx context.Context, req *meta.ListN
 	}, nil
 }
 
-func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMountsRequest) (*meta.ListMountsResponse, error) {
+func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMountsRequest) (retResp *meta.ListMountsResponse, retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Error("panic serving list mounts request", "error", r, "stacktrace", string(debug.Stack()))
+			retErr = vault.ErrInternalError
+		}
+	}()
+
 	mountEntries, err := h.wrappedCore.ListMounts()
 	if err != nil {
 		return nil, fmt.Errorf("unable to list secret mounts: %w", err)
@@ -160,7 +174,14 @@ func (h *hcpLinkMetaHandler) ListMounts(ctx context.Context, req *meta.ListMount
 	}, nil
 }
 
-func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsRequest) (*meta.ListAuthResponse, error) {
+func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsRequest) (retResp *meta.ListAuthResponse, retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Error("panic serving list auths request", "error", r, "stacktrace", string(debug.Stack()))
+			retErr = vault.ErrInternalError
+		}
+	}()
+
 	authEntries, err := h.wrappedCore.ListAuths()
 	if err != nil {
 		return nil, fmt.Errorf("unable to list auth mounts: %w", err)
@@ -192,7 +213,14 @@ func (h *hcpLinkMetaHandler) ListAuths(ctx context.Context, req *meta.ListAuthsR
 	}, nil
 }
 
-func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.GetClusterStatusRequest) (*meta.GetClusterStatusResponse, error) {
+func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.GetClusterStatusRequest) (retResp *meta.GetClusterStatusResponse, retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Error("panic serving cluster status request", "error", r, "stacktrace", string(debug.Stack()))
+			retErr = vault.ErrInternalError
+		}
+	}()
+
 	if h.wrappedCore.HAStateWithLock() != consts.Active {
 		return nil, fmt.Errorf("node not active")
 	}
@@ -292,8 +320,14 @@ func (h *hcpLinkMetaHandler) GetClusterStatus(ctx context.Context, req *meta.Get
 		raftStatus.AutopilotStatus = autopilotStatus
 	}
 
+	clusterInfo, err := h.wrappedCore.Cluster(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get cluster information: %w", err)
+	}
+
 	resp := &meta.GetClusterStatusResponse{
-		ClusterID:   h.wrappedCore.ClusterID(),
+		ClusterID:   clusterInfo.ID,
+		ClusterName: clusterInfo.Name,
 		HAStatus:    haStatus,
 		RaftStatus:  raftStatus,
 		StorageType: h.wrappedCore.StorageType(),

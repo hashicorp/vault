@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/posener/complete"
 )
 
@@ -155,7 +154,7 @@ func (b *BaseCommand) PredictVaultAuths() complete.Predictor {
 }
 
 // PredictVaultPlugins returns a predictor for installed plugins.
-func (b *BaseCommand) PredictVaultPlugins(pluginTypes ...consts.PluginType) complete.Predictor {
+func (b *BaseCommand) PredictVaultPlugins(pluginTypes ...api.PluginType) complete.Predictor {
 	return NewPredict().VaultPlugins(pluginTypes...)
 }
 
@@ -218,7 +217,7 @@ func (p *Predict) VaultAuths() complete.Predictor {
 // VaultPlugins returns a predictor for Vault's plugin catalog. This is a public
 // API for consumers, but you probably want BaseCommand.PredictVaultPlugins
 // instead.
-func (p *Predict) VaultPlugins(pluginTypes ...consts.PluginType) complete.Predictor {
+func (p *Predict) VaultPlugins(pluginTypes ...api.PluginType) complete.Predictor {
 	filterFunc := func() []string {
 		return p.plugins(pluginTypes...)
 	}
@@ -395,12 +394,12 @@ func (p *Predict) auths() []string {
 }
 
 // plugins returns a sorted list of the plugins in the catalog.
-func (p *Predict) plugins(pluginTypes ...consts.PluginType) []string {
+func (p *Predict) plugins(pluginTypes ...api.PluginType) []string {
 	// This method's signature doesn't enforce that a pluginType must be passed in.
 	// If it's not, it's likely the caller's intent is go get a list of all of them,
 	// so let's help them out.
 	if len(pluginTypes) == 0 {
-		pluginTypes = append(pluginTypes, consts.PluginTypeUnknown)
+		pluginTypes = append(pluginTypes, api.PluginTypeUnknown)
 	}
 
 	client := p.Client()
@@ -411,7 +410,7 @@ func (p *Predict) plugins(pluginTypes ...consts.PluginType) []string {
 	var plugins []string
 	pluginsAdded := make(map[string]bool)
 	for _, pluginType := range pluginTypes {
-		result, err := client.Sys().ListPlugins(&api.ListPluginsInput{Type: pluginType})
+		result, err := client.Sys().ListPlugins(&api.ListPluginsInput{Type: api.PluginType(pluginType)})
 		if err != nil {
 			return nil
 		}

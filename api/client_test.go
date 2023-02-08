@@ -19,7 +19,6 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 func init() {
@@ -442,7 +441,7 @@ func TestClientDeprecatedEnvSettings(t *testing.T) {
 func TestClientEnvNamespace(t *testing.T) {
 	var seenNamespace string
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		seenNamespace = req.Header.Get(consts.NamespaceHeaderName)
+		seenNamespace = req.Header.Get(NamespaceHeaderName)
 	}
 	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
 	defer ln.Close()
@@ -1267,7 +1266,7 @@ func TestClient_SetCloneToken(t *testing.T) {
 func TestClientWithNamespace(t *testing.T) {
 	var ns string
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		ns = req.Header.Get(consts.NamespaceHeaderName)
+		ns = req.Header.Get(NamespaceHeaderName)
 	}
 	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
 	defer ln.Close()

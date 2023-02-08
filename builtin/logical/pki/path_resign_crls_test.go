@@ -490,6 +490,8 @@ func requireExtensionOid(t *testing.T, identifier asn1.ObjectIdentifier, extensi
 }
 
 func extractSerialsFromCrl(t *testing.T, crl *x509.RevocationList) map[string]time.Time {
+	t.Helper()
+
 	serials := map[string]time.Time{}
 
 	for _, revokedCert := range crl.RevokedCertificates {

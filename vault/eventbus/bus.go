@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -27,12 +28,79 @@ type EventBus struct {
 	formatterNodeID eventlogger.NodeID
 }
 
-type asyncChanNode struct {
-	// TODO: add bounded deque buffer of *any
-	ch chan any
+type pluginEventBus struct {
+	bus        *EventBus
+	namespace  *namespace.Namespace
+	pluginInfo *logical.EventPluginInfo
 }
 
-var _ eventlogger.Node = &asyncChanNode{}
+type asyncChanNode struct {
+	// TODO: add bounded deque buffer of *EventReceived
+	ch        chan *logical.EventReceived
+	namespace *namespace.Namespace
+}
+
+var (
+	_ eventlogger.Node    = (*asyncChanNode)(nil)
+	_ logical.EventSender = (*pluginEventBus)(nil)
+)
+
+// Start starts the event bus, allowing events to be written.
+// It is not possible to stop or restart the event bus.
+// It is safe to call Start() multiple times.
+func (bus *EventBus) Start() {
+	wasStarted := bus.started.Swap(true)
+	if !wasStarted {
+		bus.logger.Info("Starting event system")
+	}
+}
+
+// SendInternal sends an event to the event bus and routes it to all relevant subscribers.
+// This function does *not* wait for all subscribers to acknowledge before returning.
+// This function is meant to be used by trusted internal code, so it can specify details like the namespace
+// and plugin info. Events from plugins should be routed through WithPlugin(), which will populate
+// the namespace and plugin info automatically.
+func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
+	if ns == nil {
+		return namespace.ErrNoNamespace
+	}
+	if !bus.started.Load() {
+		return ErrNotStarted
+	}
+	eventReceived := &logical.EventReceived{
+		Event:      data,
+		Namespace:  ns.Path,
+		EventType:  string(eventType),
+		PluginInfo: pluginInfo,
+	}
+	bus.logger.Info("Sending event", "event", eventReceived)
+	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), eventReceived)
+	if err != nil {
+		// if no listeners for this event type are registered, that's okay, the event
+		// will just not be sent anywhere
+		if strings.Contains(strings.ToLower(err.Error()), "no graph for eventtype") {
+			return nil
+		}
+	}
+	return err
+}
+
+func (bus *EventBus) WithPlugin(ns *namespace.Namespace, eventPluginInfo *logical.EventPluginInfo) (*pluginEventBus, error) {
+	if ns == nil {
+		return nil, namespace.ErrNoNamespace
+	}
+	return &pluginEventBus{
+		bus:        bus,
+		namespace:  ns,
+		pluginInfo: eventPluginInfo,
+	}, nil
+}
+
+// Send sends an event to the event bus and routes it to all relevant subscribers.
+// This function does *not* wait for all subscribers to acknowledge before returning.
+func (bus *pluginEventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
+	return bus.bus.SendInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
+}
 
 func init() {
 	// TODO: maybe this should relate to the Vault core somehow?
@@ -48,7 +116,7 @@ func init() {
 	}
 }
 
-func NewEventBus() (*EventBus, error) {
+func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	broker := eventlogger.NewBroker()
 
 	formatterID, err := uuid.GenerateUUID()
@@ -61,42 +129,18 @@ func NewEventBus() (*EventBus, error) {
 		return nil, err
 	}
 
+	if logger == nil {
+		logger = hclog.Default().Named("events")
+	}
+
 	return &EventBus{
-		logger:          hclog.Default().Named("eventbus"),
+		logger:          logger,
 		broker:          broker,
 		formatterNodeID: formatterNodeID,
 	}, nil
 }
 
-// Start starts the event bus, allowing events to be written.
-// It is not possible to stop or restart the event bus.
-// It is safe to call Start() multiple times.
-func (bus *EventBus) Start() {
-	bus.started.Store(true)
-}
-
-var _ logical.EventSender = (*EventBus)(nil)
-
-// Send sends an event to the event bus and routes it to all relevant subscribers.
-// This function does *not* wait for all subscribers to acknowledge before returning.
-// TODO: use schema once it is defined
-func (bus *EventBus) Send(ctx context.Context, eventType logical.EventType, s any) error {
-	if !bus.started.Load() {
-		return ErrNotStarted
-	}
-	bus.logger.Info("Sending event", "event", s)
-	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), s)
-	if err != nil {
-		// if no listeners for this event type are registered, that's okay, the event
-		// will just not be sent anywhere
-		if strings.Contains(strings.ToLower(err.Error()), "no graph for eventtype") {
-			return nil
-		}
-	}
-	return err
-}
-
-func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (chan any, error) {
+func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, eventType logical.EventType) (chan *logical.EventReceived, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -108,8 +152,8 @@ func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (
 		return nil, err
 	}
 
-	// TODO: should we have just one node, and handle all the routing ourselves?
-	asyncNode := newAsyncNode()
+	// TODO: should we have just one node per namespace, and handle all the routing ourselves?
+	asyncNode := newAsyncNode(ns)
 	err = bus.broker.RegisterNode(eventlogger.NodeID(nodeID), asyncNode)
 	if err != nil {
 		defer asyncNode.Close()
@@ -131,9 +175,10 @@ func (bus *EventBus) Subscribe(_ context.Context, eventType logical.EventType) (
 	return asyncNode.ch, nil
 }
 
-func newAsyncNode() *asyncChanNode {
+func newAsyncNode(namespace *namespace.Namespace) *asyncChanNode {
 	return &asyncChanNode{
-		ch: make(chan any),
+		ch:        make(chan *logical.EventReceived),
+		namespace: namespace,
 	}
 }
 
@@ -146,8 +191,14 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 	// TODO: add timeout on sending to node.ch
 	// sends to the channel async in another goroutine
 	go func() {
+		eventRecv := e.Payload.(*logical.EventReceived)
+		// drop if event is not in our namespace
+		// TODO: add wildcard processing here in some cases?
+		if eventRecv.Namespace != node.namespace.Path {
+			return
+		}
 		select {
-		case node.ch <- e.Payload:
+		case node.ch <- eventRecv:
 		case <-ctx.Done():
 		}
 	}()

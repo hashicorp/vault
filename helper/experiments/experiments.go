@@ -1,9 +1,9 @@
 package experiments
 
-const VaultExperimentEventsBeta1 = "events.beta1"
+const VaultExperimentEventsAlpha1 = "events.alpha1"
 
 var validExperiments = []string{
-	VaultExperimentEventsBeta1,
+	VaultExperimentEventsAlpha1,
 }
 
 // ValidExperiments exposes the list without exposing a mutable global variable.

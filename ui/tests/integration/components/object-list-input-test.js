@@ -15,11 +15,11 @@ module('Integration | Component | object-list-input', function (hooks) {
 
   hooks.beforeEach(function () {
     this.keys = [
-      { label: 'Input A', key: 'inputA', type: 'string', placeholder: 'Input something here' },
-      { label: 'Input B', key: 'inputB', type: 'string', placeholder: 'Input another thing' },
-      { label: 'Input C', key: 'inputC', type: 'string' },
-      { label: 'Input D', key: 'inputD', type: 'string' },
-      { label: 'Input E', key: 'inputE', type: 'string' },
+      { label: 'Input A', key: 'inputA', placeholder: 'Input something here' },
+      { label: 'Input B', key: 'inputB', placeholder: 'Input another thing' },
+      { label: 'Input C', key: 'inputC' },
+      { label: 'Input D', key: 'inputD' },
+      { label: 'Input E', key: 'inputE' },
     ];
     this.inputValue = [
       { inputA: 'foo', inputB: 'bar' },

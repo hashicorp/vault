@@ -35,7 +35,7 @@ jobs:
     name: Test ${{ matrix.build-artifact-name }}
     if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
     needs: product-metadata
-    uses: ./.github/workflows/enos-run.yml
+    uses: ./.github/workflows/test-run-enos-scenario-matrix.yml
     strategy:
       fail-fast: false
       matrix:

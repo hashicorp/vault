@@ -1,4 +1,4 @@
-import { parseCertificate } from 'vault/helpers/parse-pki-cert';
+import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import ApplicationSerializer from '../application';
 
 export default class PkiIssuerSerializer extends ApplicationSerializer {
@@ -16,6 +16,7 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
       'notValidAfter',
       'notValidBefore',
       'serialNumber',
+      'signatureBits',
     ];
     this.attrs = attrs.reduce((attrObj, attr) => {
       attrObj[attr] = { serialize: false };

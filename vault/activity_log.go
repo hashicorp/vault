@@ -1664,6 +1664,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			a.logger.Warn("no month data found, returning query with no namespace attribution for current month")
 		} else {
 			currentMonth.Namespaces = currentMonthNamespaceAttribution[0].Namespaces
+			currentMonth.NewClients.Namespaces = currentMonthNamespaceAttribution[0].NewClients.Namespaces
 		}
 		pq.Months = append(pq.Months, currentMonth)
 		distinctEntitiesResponse += pq.Months[len(pq.Months)-1].NewClients.Counts.EntityClients
@@ -2165,13 +2166,8 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 		for nsID, entry := range byNamespace {
 			mountRecord := make([]*activity.MountRecord, 0, len(entry.Mounts))
 			for mountAccessor, mountData := range entry.Mounts {
-				valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
-				if valResp == nil {
-					// Only persist valid mounts
-					continue
-				}
 				mountRecord = append(mountRecord, &activity.MountRecord{
-					MountPath: valResp.MountPath,
+					MountPath: a.mountAccessorToMountPath(mountAccessor),
 					Counts: &activity.CountsRecord{
 						EntityClients:    len(mountData.Counts.Entities),
 						NonEntityClients: int(mountData.Counts.Tokens) + len(mountData.Counts.NonEntities),
@@ -2338,20 +2334,8 @@ func (a *ActivityLog) transformMonthBreakdowns(byMonth map[int64]*processMonth) 
 			// Process mount specific data within a namespace within a given month
 			mountRecord := make([]*activity.MountRecord, 0, len(nsMap[nsID].Mounts))
 			for mountAccessor, mountData := range nsMap[nsID].Mounts {
-				var displayPath string
-				if mountAccessor == "" {
-					displayPath = "no mount accessor (pre-1.10 upgrade?)"
-				} else {
-					valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
-					if valResp == nil {
-						displayPath = fmt.Sprintf("deleted mount; accessor %q", mountAccessor)
-					} else {
-						displayPath = valResp.MountPath
-					}
-				}
-
 				mountRecord = append(mountRecord, &activity.MountRecord{
-					MountPath: displayPath,
+					MountPath: a.mountAccessorToMountPath(mountAccessor),
 					Counts: &activity.CountsRecord{
 						EntityClients:    len(mountData.Counts.Entities),
 						NonEntityClients: int(mountData.Counts.Tokens) + len(mountData.Counts.NonEntities),

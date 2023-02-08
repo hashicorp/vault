@@ -61,6 +61,10 @@ module "shutdown_node" {
   source = "./modules/shutdown_node"
 }
 
+module "shutdown_multiple_nodes" {
+  source = "./modules/shutdown_multiple_nodes"
+}
+
 module "vault_agent" {
   source = "./modules/vault_agent"
 
@@ -187,4 +191,15 @@ module "vault_verify_write_data" {
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
+}
+
+module "vault_raft_remove_peer" {
+  source            = "./modules/vault_raft_remove_peer"
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_test_ui" {
+  source = "./modules/vault_test_ui"
+
+  ui_run_tests = var.ui_run_tests
 }

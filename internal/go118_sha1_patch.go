@@ -7,7 +7,7 @@ import (
 	_ "unsafe" // for go:linkname
 
 	goversion "github.com/hashicorp/go-version"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 )
 
 const sha1PatchVersionsBefore = "1.12.0"
