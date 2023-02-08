@@ -128,13 +128,14 @@ func GetResponseSchema(t *testing.T, path *framework.Path, operation logical.Ope
 }
 
 func ResponseValidatingCallback(t *testing.T) func(logical.Backend, *logical.Request, *logical.Response) {
-	t.Helper()
 
 	type PathRouter interface {
 		Route(string) *framework.Path
 	}
 
 	return func(b logical.Backend, req *logical.Request, resp *logical.Response) {
+		t.Helper()
+
 		if b == nil {
 			t.Fatalf("non-nil backend required")
 		}
@@ -143,9 +144,14 @@ func ResponseValidatingCallback(t *testing.T) func(logical.Backend, *logical.Req
 			t.Fatalf("could not cast %T to have `Route(string) *framework.Path`", b)
 		}
 
+		route := backend.Route(req.Path)
+		if route == nil {
+			t.Fatalf("backend %T could not find a route for %s", b, req.Path)
+		}
+
 		ValidateResponse(
 			t,
-			GetResponseSchema(t, backend.Route(req.Path), req.Operation),
+			GetResponseSchema(t, route, req.Operation),
 			resp,
 			true,
 		)
