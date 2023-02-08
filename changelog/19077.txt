@@ -1,8 +1,11 @@
 ```release-note:feature
-auth/azure: Adds support for rotate root to Azure Auth
-auth/azure: Allow any Azure resource that supports managed identities to authenticate with Vault
-auth/azure: Adds support for Virtual Machine Scale Set Flex Authentication
+**Azure Auth Rotate Root**: Add support for rotate root in Azure Auth engine
 ```
-```release-note:improvement
-auth/azure: upgrades dependencies
+
+```release-note:feature
+**Azure Auth Managed Identities**: Allow any Azure resource that supports managed identities to authenticate with Vault
+```
+
+```release-note:feature
+**VMSS Flex Authentication**: Adds support for Virtual Machine Scale Set Flex Authentication
 ```
