@@ -39,6 +39,8 @@ The following Azure [role assignments](https://learn.microsoft.com/en-us/azure/r
 must be granted to the Azure AD application in order for the auth method to access Azure
 APIs during authentication.
 
+### Role Assignments
+
 ~> **Note:** The role assignments are only required when the
 [`vm_name`](/vault/api-docs/auth/azure#vm_name), [`vmss_name`](/vault/api-docs/auth/azure#vmss_name),
 or [`resource_id`](/vault/api-docs/auth/azure#resource_id) parameters are used on login.
@@ -54,9 +56,7 @@ or [`resource_id`](/vault/api-docs/auth/azure#resource_id) parameters are used o
 [vmss-flex]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-flexible-orchestration
 [managed-identities]: https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/managed-identities-status
 
-## Authentication
-
-### Root Credentials API Permissions
+### API Permissions
 
 The following [API permissions](https://learn.microsoft.com/en-us/azure/active-directory/develop/permissions-consent-overview#types-of-permissions)
 must be assigned to the service principal provided to Vault for managing the root rotation in Azure:
@@ -64,6 +64,8 @@ must be assigned to the service principal provided to Vault for managing the roo
 | Permission Name               | Type        |
 | ----------------------------- | ----------- |
 | Application.ReadWrite.All     | Application |
+
+## Authentication
 
 ### Via the CLI
 
