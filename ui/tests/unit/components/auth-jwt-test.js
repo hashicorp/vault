@@ -7,6 +7,7 @@ import { run } from '@ember/runloop';
 
 const mockWindow = EmberObject.extend(Evented, {
   origin: 'http://localhost:4200',
+  close: () => {},
 });
 
 module('Unit | Component | auth-jwt', function (hooks) {
@@ -18,21 +19,25 @@ module('Unit | Component | auth-jwt', function (hooks) {
     this.errorSpy = sinon.spy(this.component, 'handleOIDCError');
   });
 
-  test('it should handle error for cross origin messages while waiting for oidc callback', async function (assert) {
-    assert.expect(1);
+  test('it should ignore messages from cross origin windows while waiting for oidc callback', async function (assert) {
+    assert.expect(2);
     this.component.prepareForOIDC.perform(mockWindow.create());
     this.component.window.trigger('message', { origin: 'http://anotherdomain.com', isTrusted: true });
-    assert.ok(this.errorSpy.calledOnce, 'Error handled from cross origin window message event');
+
+    assert.ok(this.errorSpy.notCalled, 'Error handler not triggered while waiting for oidc callback message');
+    assert.strictEqual(this.component.exchangeOIDC.performCount, 0, 'exchangeOIDC method not fired');
     run.cancelTimers();
   });
 
-  test('it should handle error for untrusted messages while waiting for oidc callback', async function (assert) {
-    assert.expect(1);
+  test('it should ignore untrusted messages while waiting for oidc callback', async function (assert) {
+    assert.expect(2);
     this.component.prepareForOIDC.perform(mockWindow.create());
     this.component.window.trigger('message', { origin: 'http://localhost:4200', isTrusted: false });
-    assert.ok(this.errorSpy.calledOnce, 'Error handled from untrusted window message event');
+    assert.ok(this.errorSpy.notCalled, 'Error handler not triggered while waiting for oidc callback message');
+    assert.strictEqual(this.component.exchangeOIDC.performCount, 0, 'exchangeOIDC method not fired');
     run.cancelTimers();
   });
+
   // test case for https://github.com/hashicorp/vault/issues/12436
   test('it should ignore messages sent from outside the app while waiting for oidc callback', async function (assert) {
     assert.expect(2);
