@@ -18,8 +18,8 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 
 	metrics "github.com/armon/go-metrics"
+	"github.com/go-zookeeper/zk"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
-	"github.com/samuel/go-zookeeper/zk"
 )
 
 const (
