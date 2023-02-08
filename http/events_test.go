@@ -14,6 +14,8 @@ import (
 	"nhooyr.io/websocket"
 )
 
+// TestEventsSubscribe tests the websocket endpoint for subscribing to events
+// by generating some events.
 func TestEventsSubscribe(t *testing.T) {
 	core := vault.TestCore(t)
 	ln, addr := TestServer(t, core)

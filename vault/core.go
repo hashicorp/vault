@@ -3982,6 +3982,7 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	return raftBackend.GetAutopilotServerState(ctx)
 }
 
+// Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }

@@ -35,10 +35,11 @@ func TestBusBasics(t *testing.T) {
 		t.Errorf("Expected no error sending: %v", err)
 	}
 
-	ch, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
+	closer, ch, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer closer.Close()
 
 	event, err = logical.NewEvent()
 	if err != nil {
@@ -76,10 +77,11 @@ func TestNamespaceFiltering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ch, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
+	closer, ch, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer closer.Close()
 
 	event, err = logical.NewEvent()
 	if err != nil {
@@ -130,15 +132,17 @@ func TestBus2Subscriptions(t *testing.T) {
 	eventType2 := logical.EventType("someType2")
 	bus.Start()
 
-	ch1, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType1)
+	closer, ch1, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType1)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer closer.Close()
 
-	ch2, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType2)
+	closer2, ch2, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType2)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer closer2.Close()
 
 	event1, err := logical.NewEvent()
 	if err != nil {

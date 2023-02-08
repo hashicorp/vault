@@ -3,6 +3,7 @@ package eventbus
 import (
 	"context"
 	"errors"
+	"io"
 	"net/url"
 	"strings"
 	"sync/atomic"
@@ -144,16 +145,16 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	}, nil
 }
 
-func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, eventType logical.EventType) (chan *logical.EventReceived, error) {
+func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, eventType logical.EventType) (io.Closer, chan *logical.EventReceived, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	nodeID, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// TODO: should we have just one node per namespace, and handle all the routing ourselves?
@@ -161,7 +162,7 @@ func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, event
 	err = bus.broker.RegisterNode(eventlogger.NodeID(nodeID), asyncNode)
 	if err != nil {
 		defer asyncNode.Close()
-		return nil, err
+		return nil, nil, err
 	}
 
 	nodes := []eventlogger.NodeID{bus.formatterNodeID, eventlogger.NodeID(nodeID)}
@@ -174,9 +175,9 @@ func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, event
 	err = bus.broker.RegisterPipeline(pipeline)
 	if err != nil {
 		defer asyncNode.Close()
-		return nil, err
+		return nil, nil, err
 	}
-	return asyncNode.ch, nil
+	return asyncNode, asyncNode.ch, nil
 }
 
 func newAsyncNode(namespace *namespace.Namespace, logger hclog.Logger) *asyncChanNode {

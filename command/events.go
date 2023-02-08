@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
@@ -20,8 +19,6 @@ var (
 
 type EventsSubscribeCommands struct {
 	*BaseCommand
-
-	flagTimeout time.Duration
 }
 
 func (c *EventsSubscribeCommands) Synopsis() string {
@@ -35,29 +32,17 @@ Usage: vault events subscribe [-format=json] [-timeout=XYZs] eventType
   Subscribe to events of the given event type (topic). The events will be
   output to standard out.
 
-  If the format parameter is not specified or is not "json", then the
-  output format will be protobuf binary format. The schema can be found in
-  sdk/logical/event.proto in the Vault source code. 
-
-  If the format is specified as "json", then the output will be a JSON object
-  serialized using the default protobuf JSON serialization format, with one
-  line per event received.
+  The output will be a JSON object serialized using the default protobuf
+  JSON serialization format, with one line per event received.
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
 func (c *EventsSubscribeCommands) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP)
 
 	// Common Options
-	f := set.NewFlagSet("Common Options")
-
-	f.DurationVar(&DurationVar{
-		Name:    "timeout",
-		Target:  &c.flagTimeout,
-		Default: 0,
-		Usage:   `Terminate the websocket after this amount of time. 0 means forever.`,
-	})
+	set.NewFlagSet("Common Options")
 	return set
 }
 
@@ -109,19 +94,12 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 	} else {
 		u.Scheme = "wss"
 	}
-	if c.flagFormat == "json" {
-		q := u.Query()
-		q.Set("json", "true")
-		u.RawQuery = q.Encode()
-	}
+	q := u.Query()
+	q.Set("json", "true")
+	u.RawQuery = q.Encode()
 	client.AddHeader("X-Vault-Token", client.Token())
 	client.AddHeader("X-Vault-Namesapce", client.Namespace())
 	ctx := context.Background()
-	if c.flagTimeout != 0 {
-		var cancelFunc context.CancelFunc
-		ctx, cancelFunc = context.WithTimeout(ctx, c.flagTimeout)
-		defer cancelFunc()
-	}
 	conn, _, err := websocket.Dial(ctx, u.String(), &websocket.DialOptions{
 		HTTPClient: client.CloneConfig().HttpClient,
 		HTTPHeader: client.Headers(),

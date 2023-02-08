@@ -18,6 +18,7 @@ func testEventsSubscribeCommand(tb testing.TB) (*cli.MockUi, *EventsSubscribeCom
 	}
 }
 
+// TestEventsSubscribeCommand_Run tests that the command argument parsing is working as expected.
 func TestEventsSubscribeCommand_Run(t *testing.T) {
 	t.Parallel()
 
@@ -42,18 +43,6 @@ func TestEventsSubscribeCommand_Run(t *testing.T) {
 		{
 			"okay",
 			[]string{"abc"},
-			"",
-			0,
-		},
-		{
-			"json",
-			[]string{"-format=json", "abc"},
-			"",
-			0,
-		},
-		{
-			"timeout",
-			[]string{"-timeout=100ms", "abc"},
 			"",
 			0,
 		},
