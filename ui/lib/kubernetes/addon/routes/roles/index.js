@@ -18,7 +18,12 @@ export default class KubernetesRolesRoute extends Route {
           ? models.filter((model) => model.name.toLowerCase().includes(pageFilter.toLowerCase()))
           : models
       )
-      .catch(() => []);
+      .catch((error) => {
+        if (error.httpStatus === 404) {
+          return [];
+        }
+        throw error;
+      });
     return hash({
       backend: this.modelFor('application'),
       promptConfig: this.promptConfig,
