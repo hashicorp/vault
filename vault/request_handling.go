@@ -675,7 +675,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		resp, auth, err = c.handleRequest(ctx, req)
 	}
 
-	if err != nil && c.requestResponseCallback != nil {
+	if err == nil && c.requestResponseCallback != nil {
 		c.requestResponseCallback(c.router.MatchingBackend(ctx, req.Path), req, resp)
 	}
 
