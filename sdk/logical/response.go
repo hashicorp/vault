@@ -248,7 +248,7 @@ func (w *StatusHeaderResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, erro
 	if h, ok := w.wrapped.(http.Hijacker); ok {
 		return h.Hijack()
 	}
-	return nil, nil, fmt.Errorf("could not hijack because wrapped connection is %T and is does not implement http.Hijacker", w.wrapped)
+	return nil, nil, fmt.Errorf("could not hijack because wrapped connection is %T and it does not implement http.Hijacker", w.wrapped)
 }
 
 func (w *StatusHeaderResponseWriter) Wrapped() http.ResponseWriter {
