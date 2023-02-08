@@ -96,6 +96,7 @@ func (c *EventsSubscribeCommands) Run(args []string) int {
 	err = c.subscribeRequest(client, "sys/events/subscribe/"+args[0])
 	if err != nil {
 		c.UI.Error(err.Error())
+		return 1
 	}
 	return 0
 }
