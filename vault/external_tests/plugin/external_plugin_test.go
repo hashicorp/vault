@@ -7,12 +7,15 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/approle"
+	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
 )
 
+// TestExternalPlugin_AuthMethod tests that we can build, register and use an
+// external auth method
 func TestExternalPlugin_AuthMethod(t *testing.T) {
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
@@ -150,6 +153,8 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 	}
 }
 
+// TestExternalPlugin_SecretsEngine tests that we can build, register and use an
+// external secrets engine
 func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
@@ -195,8 +200,33 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	}
 
 	// Configure
+	cleanupConsul, consulConfig := consul.PrepareTestContainer(t, "", false, true)
+	defer cleanupConsul()
 
-	// Operations?
+	_, err := client.Logical().Write(plugin.Name+"/config/access", map[string]interface{}{
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write(plugin.Name+"/roles/test", map[string]interface{}{
+		"consul_policies": []string{"test"},
+		"ttl":             "6h",
+		"local":           false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Read(plugin.Name + "/creds/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("read creds response is nil")
+	}
 
 	// Reload plugin
 	if _, err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
@@ -205,7 +235,13 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Operations? - expect SUCCESS
+	resp, err = client.Logical().Read(plugin.Name + "/creds/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("read creds response is nil")
+	}
 
 	// Deregister
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
