@@ -101,7 +101,7 @@ func handleEventsSubscribe(core *vault.Core) http.Handler {
 		// start the pinger
 		go func() {
 			for {
-				time.Sleep(1 * time.Second)
+				time.Sleep(30 * time.Second) // not too aggressive, but keep the HTTP connection alive
 				err := conn.Ping(ctx)
 				if err != nil {
 					return
@@ -120,6 +120,7 @@ func handleEventsSubscribe(core *vault.Core) http.Handler {
 		}
 		// Close() will panic if the reason is greater than this length
 		if len(closeReason) > 123 {
+			core.Logger().Debug("Truncated close reason", "closeReason", closeReason)
 			closeReason = closeReason[:123]
 		}
 		err = conn.Close(closeStatus, closeReason)
