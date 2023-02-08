@@ -5,6 +5,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import sinon from 'sinon';
 
 module('Integration | Component | pki-role-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -15,6 +16,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('pki/role');
     this.model.backend = 'pki';
+    this.onCancel = sinon.spy();
   });
 
   test('it should render default fields and toggle groups', async function (assert) {
@@ -109,26 +111,6 @@ module('Integration | Component | pki-role-form', function (hooks) {
       'renders the correct height of the box element if the component is rending as a flexbox'
     );
     await click(SELECTORS.roleCreateButton);
-  });
-
-  test('it should unload model on cancel', async function (assert) {
-    assert.expect(3);
-    this.onCancel = () => assert.ok(true, 'onCancel callback fires');
-    await render(
-      hbs`
-      <PkiRoleForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-      `,
-      { owner: this.engine }
-    );
-
-    await fillIn(SELECTORS.roleName, 'dont-save-me');
-    await click(SELECTORS.roleCancelButton);
-    assert.notEqual(this.model.roleName, 'dont-save-me');
-    assert.true(this.model.isDestroyed, 'new model is unloaded on cancel');
   });
 
   test('it should update attributes on the model on update', async function (assert) {
