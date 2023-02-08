@@ -10,10 +10,13 @@ export default class PkiOverviewRoute extends Route {
   hasConfig() {
     // When the engine is configured, it creates a default issuer.
     // If the issuers list is empty, we know it hasn't been configured
-    return this.store
-      .query('pki/issuer', { backend: this.secretMountPath.currentPath })
-      .then(() => true)
-      .catch(() => false);
+    return (
+      this.store
+        .query('pki/issuer', { backend: this.secretMountPath.currentPath })
+        .then(() => true)
+        // this endpoint is unauthenticated, so we're not worried about permissions errors
+        .catch(() => false)
+    );
   }
 
   async fetchAllRoles() {
