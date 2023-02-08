@@ -13,7 +13,6 @@ import (
 	linkConfig "github.com/hashicorp/hcp-link/pkg/config"
 	scada "github.com/hashicorp/hcp-scada-provider"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	vaultVersion "github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities"
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities/api_capability"
@@ -21,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities/meta"
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities/node_status"
 	"github.com/hashicorp/vault/vault/hcp_link/internal"
+	vaultVersion "github.com/hashicorp/vault/version"
 )
 
 const (
