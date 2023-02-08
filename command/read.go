@@ -37,6 +37,14 @@ Usage: vault read [options] PATH
 
       $ vault read secret/my-secret
 
+  Read entity details of a given ID:
+
+      $ vault read identity/entity/id/2f09126d-d161-abb8-2241-555886491d97
+
+  Generate dynamic AWS credentials for a my-role:
+
+      $ vault read aws/creds/my-role
+
   For a full list of examples and paths, please see the documentation that
   corresponds to the secrets engine in use.
 

@@ -1,0 +1,4 @@
+
+```release-note:improvement
+core/cli: Example 'help' pages for vault read / write docs improved.
+```

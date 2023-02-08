@@ -48,13 +48,15 @@ Usage: vault write [options] PATH [DATA K=V...]
   it is loaded from a file. If the value is "-", Vault will read the value from
   stdin.
 
-  Persist data in the generic secrets engine:
+  Store an arbitrary secret in the token's cubbyhole.
 
-      $ vault write secret/my-secret foo=bar
+      $ vault write cubbyhole/git-credentials username="student01" password="p@$$w0rd"
 
   Create a new encryption key in the transit secrets engine:
 
-      $ vault write -f transit/keys/my-key
+      $ vault write -force transit/keys/my-key
+
+  The -force / -f flag allows a write operation without any input data.
 
   Upload an AWS IAM policy from a file on disk:
 
@@ -63,6 +65,10 @@ Usage: vault write [options] PATH [DATA K=V...]
   Configure access to Consul by providing an access token:
 
       $ echo $MY_TOKEN | vault write consul/config/access token=-
+
+  Create a token
+
+      $ vault write auth/token/create policies="admin" policies="secops" ttl=8h num_uses=3
 
   For a full list of examples and paths, please see the documentation that
   corresponds to the secret engines in use.
