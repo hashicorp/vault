@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -144,7 +145,15 @@ func ResponseValidatingCallback(t *testing.T) func(logical.Backend, *logical.Req
 			t.Fatalf("could not cast %T to have `Route(string) *framework.Path`", b)
 		}
 
-		route := backend.Route(req.Path)
+		// the full request path includes the backend
+		// but when passing to the backend, the first part of the url has to be removed
+		// e.g.: `sys/mounts/secret` -> `mounts/secret`
+		_, requestPath, found := strings.Cut(req.Path, "/")
+		if !found {
+			t.Fatalf("could not resolve backend path from '%s'", req.Path)
+		}
+
+		route := backend.Route(requestPath)
 		if route == nil {
 			t.Fatalf("backend %T could not find a route for %s", b, req.Path)
 		}
