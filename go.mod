@@ -108,7 +108,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.7.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.5.2
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.13.1
+	github.com/hashicorp/vault-plugin-secrets-ad v0.13.2
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.13.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.13.2
