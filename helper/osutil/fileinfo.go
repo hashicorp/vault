@@ -66,20 +66,16 @@ func OwnerPermissionsMatch(path string, uid int, permissions int) error {
 }
 
 // OwnerPermissionsMatchFile checks if vault user is the owner and permissions are secure for the input file
-// This function will error if the file is a symbolic link
-func OwnerPermissionsMatchFile(file *os.File, uid int, permissions int) error {
+func OwnerPermissionsMatchFile(file *os.File, path string, uid int, permissions int) error {
 	if file == nil {
 		return fmt.Errorf("could not verify permissions for file. No file provided")
 	}
 
 	info, err := file.Stat()
 	if err != nil {
-		return fmt.Errorf("error stating %q: %w", file.Name(), err)
+		return fmt.Errorf("error stating %q: %w", path, err)
 	}
-	if info.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("file %q is a symbolic link", file.Name())
-	}
-	err = checkPathInfo(info, file.Name(), uid, permissions)
+	err = checkPathInfo(info, path, uid, permissions)
 	if err != nil {
 		return err
 	}

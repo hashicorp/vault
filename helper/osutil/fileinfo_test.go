@@ -108,7 +108,7 @@ func TestOwnerPermissionsMatchFile(t *testing.T) {
 		t.Fatal("failed to stat test file", err)
 	}
 
-	if err := OwnerPermissionsMatchFile(f, int(uid), int(info.Mode())); err != nil {
+	if err := OwnerPermissionsMatchFile(f, path, int(uid), int(info.Mode())); err != nil {
 		t.Fatalf("expected no error but got %v", err)
 	}
 }
@@ -145,7 +145,7 @@ func TestOwnerPermissionsMatchFile_Symlink(t *testing.T) {
 	if err != nil {
 		t.Fatal("failed to stat test file", err)
 	}
-	if err := OwnerPermissionsMatchFile(symlinkedFile, int(uid), int(info.Mode())); err != nil {
+	if err := OwnerPermissionsMatchFile(symlinkedFile, symlink, int(uid), int(info.Mode())); err != nil {
 		t.Fatalf("expected no error but got %v", err)
 	}
 }
