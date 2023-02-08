@@ -97,7 +97,7 @@ func handleEventsSubscribe(core *vault.Core) http.Handler {
 		}
 
 		// we don't expect any incoming messages
-		conn.CloseRead(ctx)
+		ctx = conn.CloseRead(ctx)
 		// start the pinger
 		go func() {
 			for {
