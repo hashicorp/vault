@@ -1,0 +1,7 @@
+```release-note:bug
+plugins: Allow running external plugins which override deprecated builtins.
+```
+```release-note:improvement
+plugins: Let Vault unseal and mount deprecated builtin plugins in a
+deactivated state if this is not the first unseal after an upgrade.
+```

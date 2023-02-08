@@ -5052,6 +5052,16 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://example.com/ca", "https://backup.example.com/ca"})
 	require.Equal(t, leafCert.OCSPServer, []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"})
 	require.Equal(t, leafCert.CRLDistributionPoints, []string{"https://example.com/crl", "https://backup.example.com/crl"})
+
+	// Validate that we can set an issuer name and remove it.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuer_name": "my-issuer",
+	})
+	require.NoError(t, err)
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuer_name": "",
+	})
+	require.NoError(t, err)
 }
 
 func TestIssuersWithoutCRLBits(t *testing.T) {
@@ -5591,11 +5601,11 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	b.initializeStoredCertificateCounts(ctx)
 
 	// Test certificate count
-	if *(b.certCount) != 8 {
+	if atomic.LoadUint32(b.certCount) != 8 {
 		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", *(b.certCount))
 	}
 
-	if *(b.revokedCertCount) != 4 {
+	if atomic.LoadUint32(b.revokedCertCount) != 4 {
 		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", *(b.revokedCertCount))
 	}
 

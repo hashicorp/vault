@@ -9,7 +9,7 @@ import { waitFor } from '@ember/test-waiters';
 
 const WAIT_TIME = 500;
 const ERROR_WINDOW_CLOSED =
-  'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
+  'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click Sign In to try again.';
 const ERROR_MISSING_PARAMS =
   'The callback from the provider did not supply all of the required parameters.  Please click Sign In to try again. If the problem persists, you may want to contact your administrator.';
 const ERROR_JWT_LOGIN = 'OIDC login is not configured for this mount';

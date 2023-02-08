@@ -3,7 +3,6 @@ package command
 import (
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -17,10 +16,10 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"app-id": credAppId.Factory,
 		},
+		PendingRemovalMountsAllowed: true,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{

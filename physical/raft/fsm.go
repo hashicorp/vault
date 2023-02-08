@@ -104,6 +104,7 @@ type FSM struct {
 
 	localID         string
 	desiredSuffrage string
+	unknownOpTypes  sync.Map
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -136,6 +137,8 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 	})
 
 	dbPath := filepath.Join(path, databaseFilename)
+	f.l.Lock()
+	defer f.l.Unlock()
 	if err := f.openDBFile(dbPath); err != nil {
 		return nil, fmt.Errorf("failed to open bolt file: %w", err)
 	}
@@ -233,6 +236,13 @@ func (f *FSM) openDBFile(dbPath string) error {
 
 	f.db = boltDB
 	return nil
+}
+
+func (f *FSM) Stats() bolt.Stats {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.db.Stats()
 }
 
 func (f *FSM) Close() error {
@@ -591,19 +601,19 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	// Do the unmarshalling first so we don't hold locks
 	var latestConfiguration *ConfigurationValue
 	commands := make([]interface{}, 0, numLogs)
-	for _, log := range logs {
-		switch log.Type {
+	for _, l := range logs {
+		switch l.Type {
 		case raft.LogCommand:
 			command := &LogData{}
-			err := proto.Unmarshal(log.Data, command)
+			err := proto.Unmarshal(l.Data, command)
 			if err != nil {
 				f.logger.Error("error proto unmarshaling log data", "error", err)
 				panic("error proto unmarshaling log data")
 			}
 			commands = append(commands, command)
 		case raft.LogConfiguration:
-			configuration := raft.DecodeConfiguration(log.Data)
-			config := raftConfigurationToProtoConfiguration(log.Index, configuration)
+			configuration := raft.DecodeConfiguration(l.Data)
+			config := raftConfigurationToProtoConfiguration(l.Index, configuration)
 
 			commands = append(commands, config)
 
@@ -612,7 +622,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			latestConfiguration = config
 
 		default:
-			panic(fmt.Sprintf("got unexpected log type: %d", log.Type))
+			panic(fmt.Sprintf("got unexpected log type: %d", l.Type))
 		}
 	}
 
@@ -670,7 +680,10 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 							go f.restoreCb(context.Background())
 						}
 					default:
-						return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
+						if _, ok := f.unknownOpTypes.Load(op.OpType); !ok {
+							f.logger.Error("unsupported transaction operation", "op", op.OpType)
+							f.unknownOpTypes.Store(op.OpType, struct{}{})
+						}
 					}
 					if err != nil {
 						return err

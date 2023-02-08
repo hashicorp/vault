@@ -11,10 +11,22 @@ requests and response to Vault. Because every operation with Vault is an API
 request/response, when using a single audit device, the audit log contains _every authenticated_ interaction with
 Vault, including errors.
 
-Multiple audit devices can be enabled and Vault will attempt to send the audit logs to
-all of them. This allows you to not only have redundant copies, but also a way to check for data tampering in the logs themselves.
+## Enabling Multiple Devices
 
-~> Note: When using multiple audit devices, Vault considers a request to be successful if it can log to *at least* one configured audit device (see: [Blocked Audit Devices](/docs/audit#blocked-audit-devices) section below). Therefore in order to build a complete picture of all audited actions, use the aggregate/union of the logs from each audit device.
+When multiple audit devices are enabled, Vault will attempt to send the audit
+logs to all of them. This allows you to not only have redundant copies, but also
+a way to check for data tampering in the logs themselves.
+
+Vault considers a request to be successful if it can log to *at least* one
+configured audit device (see: [Blocked Audit
+Devices](/docs/audit#blocked-audit-devices) section below).  Therefore in order
+to build a complete picture of all audited actions, use the aggregate/union of
+the logs from each audit device.
+
+~> Note: It is **highly recommended** that you configure Vault to use multiple audit
+devices. Audit failures can prevent Vault from servicing requests, so it is
+important to provide at least one other device.
+
 
 ## Format
 

@@ -67,7 +67,10 @@ export default class MountBackendForm extends Component {
   willDestroy() {
     // if unsaved, we want to unload so it doesn't show up in the auth mount list
     super.willDestroy(...arguments);
-    this.mountModel.rollbackAttributes();
+    if (this.mountModel) {
+      const method = this.mountModel.isNew ? 'unloadRecord' : 'rollbackAttributes';
+      this.mountModel[method]();
+    }
   }
 
   checkPathChange(type) {

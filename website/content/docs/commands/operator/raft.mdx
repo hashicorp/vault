@@ -79,6 +79,8 @@ The following flags are available for the `operator raft join` command.
   server not participate in the Raft quorum, and have it only receive the data
   replication stream. This can be used to add read scalability to a cluster in
   cases where a high volume of reads to servers are needed. The default is false.
+  See [`retry_join_as_non_voter`](/docs/configuration/storage/raft#retry_join_as_non_voter)
+  for the equivalent config option when using `retry_join` stanzas instead.
 
 - `-retry` `(bool: false)` - Continuously retry joining the Raft cluster upon
   failures. The default is false.

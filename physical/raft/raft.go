@@ -555,7 +555,7 @@ func (b *RaftBackend) Close() error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	if err := b.fsm.db.Close(); err != nil {
+	if err := b.fsm.Close(); err != nil {
 		return err
 	}
 
@@ -612,10 +612,23 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	b.l.RLock()
 	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
-	fsmStats := b.fsm.db.Stats()
+	fsmStats := b.fsm.Stats()
+	stats := b.raft.Stats()
 	b.l.RUnlock()
 	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
 	b.collectMetricsWithStats(fsmStats, sink, "fsm")
+	labels := []metrics.Label{
+		{
+			Name:  "peer_id",
+			Value: b.localID,
+		},
+	}
+	for _, key := range []string{"term", "commit_index", "applied_index", "fsm_pending"} {
+		n, err := strconv.ParseUint(stats[key], 10, 64)
+		if err == nil {
+			sink.SetGaugeWithLabels([]string{"raft_storage", "stats", key}, float32(n), labels)
+		}
+	}
 }
 
 func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
