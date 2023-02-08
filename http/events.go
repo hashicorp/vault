@@ -58,7 +58,7 @@ func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *n
 
 func handleEventsSubscribe(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		core.Logger().Info("Got request to", "url", r.URL, "version", r.Proto)
+		core.Logger().Debug("Got request to", "url", r.URL, "version", r.Proto)
 		matches := eventTypeRegex.FindStringSubmatch(r.URL.Path)
 		if len(matches) < 2 {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("did not specify eventType to subscribe to"))
