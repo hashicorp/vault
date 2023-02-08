@@ -127,7 +127,6 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 		HTTPHeader: client.Headers(),
 	})
 	if err != nil {
-		c.UI.Error(err.Error())
 		return err
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
