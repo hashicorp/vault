@@ -689,7 +689,7 @@ type Core struct {
 	// we're on a secondary cluster.
 	writeForwardedPaths *pathmanager.PathManager
 
-	// if populated, the callback is called for every non-login request
+	// if populated, the callback is called for every request
 	// for testing purposes
 	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
 }
