@@ -56,6 +56,15 @@ or [`resource_id`](/vault/api-docs/auth/azure#resource_id) parameters are used o
 
 ## Authentication
 
+### Root Credentials API Permissions
+
+The following [API permissions](https://learn.microsoft.com/en-us/azure/active-directory/develop/permissions-consent-overview#types-of-permissions)
+must be assigned to the service principal provided to Vault for managing the root rotation in Azure:
+
+| Permission Name               | Type        |
+| ----------------------------- | ----------- |
+| Application.ReadWrite.All     | Application |
+
 ### Via the CLI
 
 The default path is `/auth/azure`. If this auth method was enabled at a different
