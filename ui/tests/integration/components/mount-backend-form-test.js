@@ -18,7 +18,9 @@ module('Integration | Component | mount backend form', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.lookup('service:flash-messages').registerTypes(['success', 'danger']);
+    this.flashMessages = this.owner.lookup('service:flash-messages');
+    this.flashMessages.registerTypes(['success', 'danger']);
+    this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
     this.store = this.owner.lookup('service:store');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.server.post('/sys/auth/foo', noopStub());
@@ -81,21 +83,27 @@ module('Integration | Component | mount backend form', function (hooks) {
     });
 
     test('it calls mount success', async function (assert) {
-      assert.expect(2);
+      assert.expect(3);
+
       this.server.post('/sys/auth/foo', () => {
         assert.ok(true, 'it calls enable on an auth method');
         return [204, { 'Content-Type': 'application/json' }];
       });
       const spy = sinon.spy();
       this.set('onMountSuccess', spy);
+
       await render(
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await component.mount('approle', 'foo');
-
       later(() => cancelTimers(), 50);
       await settled();
+
       assert.ok(spy.calledOnce, 'calls the passed success method');
+      assert.ok(
+        this.flashSuccessSpy.calledWith('Successfully mounted the approle auth method at foo.'),
+        'Renders correct flash message'
+      );
     });
   });
 
@@ -146,22 +154,28 @@ module('Integration | Component | mount backend form', function (hooks) {
     });
 
     test('it calls mount success', async function (assert) {
-      assert.expect(2);
+      assert.expect(3);
+
       this.server.post('/sys/mounts/foo', () => {
         assert.ok(true, 'it calls enable on an secrets engine');
         return [204, { 'Content-Type': 'application/json' }];
       });
       const spy = sinon.spy();
       this.set('onMountSuccess', spy);
+
       await render(
         hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
 
       await component.mount('ssh', 'foo');
-
       later(() => cancelTimers(), 50);
       await settled();
+
       assert.ok(spy.calledOnce, 'calls the passed success method');
+      assert.ok(
+        this.flashSuccessSpy.calledWith('Successfully mounted the ssh secrets engine at foo.'),
+        'Renders correct flash message'
+      );
     });
   });
 });
