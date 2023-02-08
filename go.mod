@@ -117,7 +117,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.15.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.9.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.14.1
-	github.com/hashicorp/vault-plugin-auth-oci v0.12.0
+	github.com/hashicorp/vault-plugin-auth-oci v0.13.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.9.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.8.0
@@ -165,7 +165,7 @@ require (
 	github.com/ncw/swift v1.0.47
 	github.com/oklog/run v1.1.0
 	github.com/okta/okta-sdk-golang/v2 v2.12.1
-	github.com/oracle/oci-go-sdk v13.1.0+incompatible
+	github.com/oracle/oci-go-sdk v24.3.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible

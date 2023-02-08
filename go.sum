@@ -1099,8 +1099,8 @@ github.com/hashicorp/vault-plugin-auth-kerberos v0.9.0 h1:gdbrEwpPICDt8xQ7C595M+
 github.com/hashicorp/vault-plugin-auth-kerberos v0.9.0/go.mod h1:dyGS9eHADGMJC42tTr+XliO2Ntssv4bUOK1Je9IEMMo=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.14.1 h1:P5PR9MXiZVdDz0YnE2XAbsXmytFAu1SzEk2JrFO0gE0=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.14.1/go.mod h1:rouq4XoBoCzXtECtxGCWHS++g6Nzw2HOms6p6N+Uzkw=
-github.com/hashicorp/vault-plugin-auth-oci v0.12.0 h1:7Tuj5q+rwyPm1aS1rsLg2TRo2QIrPTz1qNHGDkUvz18=
-github.com/hashicorp/vault-plugin-auth-oci v0.12.0/go.mod h1:oj2gh7qH2VzjelFeul8FzDmmYrJXnCuLUUeQAA6fMN8=
+github.com/hashicorp/vault-plugin-auth-oci v0.13.0 h1:vO0RMK3hQBxnb8QyPeLqLWUqzfv0ptgnQUUGysAfOVQ=
+github.com/hashicorp/vault-plugin-auth-oci v0.13.0/go.mod h1:O426Kf4nUXfwq+o0HqQuqpZygm6SiOY6eEXyjrZweYA=
 github.com/hashicorp/vault-plugin-database-couchbase v0.9.0 h1:hJOHJ9yZ9kt1/DuRaU5Sa339j3/QcPL4esT9JLQonYA=
 github.com/hashicorp/vault-plugin-database-couchbase v0.9.0/go.mod h1:skmG6MgIG6fjIOlOEgVKOcNlr1PcgHPUb9q1YQ5+Q9k=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.0 h1:NwcbzQB529WtB/m7tZKxKiB6pQc0IyD3L80tk3mtBl8=
@@ -1524,9 +1524,8 @@ github.com/openlyinc/pointy v1.1.2 h1:LywVV2BWC5Sp5v7FoP4bUD+2Yn5k0VNeRbU5vq9jUM
 github.com/openlyinc/pointy v1.1.2/go.mod h1:w2Sytx+0FVuMKn37xpXIAyBNhFNBIJGR/v2m7ik1WtM=
 github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b h1:FfH+VrHHk6Lxt9HdVS0PXzSXFyS2NbZKXv33FYPol0A=
 github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b/go.mod h1:AC62GU6hc0BrNm+9RK9VSiwa/EUe1bkIeFORAMcHvJU=
-github.com/oracle/oci-go-sdk v7.0.0+incompatible/go.mod h1:VQb79nF8Z2cwLkLS35ukwStZIg5F66tcBccjip/j888=
-github.com/oracle/oci-go-sdk v13.1.0+incompatible h1:inwbT0b/mMbnTfzYoW2xcU1cCMIlU6Fz973at5phRXM=
-github.com/oracle/oci-go-sdk v13.1.0+incompatible/go.mod h1:VQb79nF8Z2cwLkLS35ukwStZIg5F66tcBccjip/j888=
+github.com/oracle/oci-go-sdk v24.3.0+incompatible h1:x4mcfb4agelf1O4/1/auGlZ1lr97jXRSSN5MxTgG/zU=
+github.com/oracle/oci-go-sdk v24.3.0+incompatible/go.mod h1:VQb79nF8Z2cwLkLS35ukwStZIg5F66tcBccjip/j888=
 github.com/oracle/oci-go-sdk/v60 v60.0.0 h1:EJAWjEi4SY5Raha6iUzq4LTQ0uM5YFw/wat/L1ehIEM=
 github.com/oracle/oci-go-sdk/v60 v60.0.0/go.mod h1:krz+2gkSzlSL/L4PvP0Z9pZpag9HYLNtsMd1PmxlA2w=
 github.com/ory/dockertest v3.3.5+incompatible h1:iLLK6SQwIhcbrG783Dghaaa3WPzGc+4Emza6EbVUUGA=
