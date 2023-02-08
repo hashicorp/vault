@@ -1021,29 +1021,31 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 }
 
-/* This is an acceptance test.
-   Requires the following env vars:
-   TEST_AWS_EC2_PKCS7
-   TEST_AWS_EC2_IDENTITY_DOCUMENT
-   TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG
-   TEST_AWS_EC2_AMI_ID
-   TEST_AWS_EC2_ACCOUNT_ID
-   TEST_AWS_EC2_IAM_ROLE_ARN
+/*
+This is an acceptance test.
 
-   If this is being run on an EC2 instance, you can set the environment vars using this bash snippet:
+	Requires the following env vars:
+	TEST_AWS_EC2_PKCS7
+	TEST_AWS_EC2_IDENTITY_DOCUMENT
+	TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG
+	TEST_AWS_EC2_AMI_ID
+	TEST_AWS_EC2_ACCOUNT_ID
+	TEST_AWS_EC2_IAM_ROLE_ARN
 
-   export TEST_AWS_EC2_PKCS7=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7)
-   export TEST_AWS_EC2_IDENTITY_DOCUMENT=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | base64 -w 0)
-   export TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/signature | tr -d '\n')
-   export TEST_AWS_EC2_AMI_ID=$(curl -s http://169.254.169.254/latest/meta-data/ami-id)
-   export TEST_AWS_EC2_IAM_ROLE_ARN=$(aws iam get-role --role-name $(curl -q http://169.254.169.254/latest/meta-data/iam/security-credentials/ -S -s) --query Role.Arn --output text)
-   export TEST_AWS_EC2_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+	If this is being run on an EC2 instance, you can set the environment vars using this bash snippet:
 
-   If the test is not being run on an EC2 instance that has access to
-   credentials using EC2RoleProvider, on top of the above vars, following
-   needs to be set:
-   TEST_AWS_SECRET_KEY
-   TEST_AWS_ACCESS_KEY
+	export TEST_AWS_EC2_PKCS7=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7)
+	export TEST_AWS_EC2_IDENTITY_DOCUMENT=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | base64 -w 0)
+	export TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/signature | tr -d '\n')
+	export TEST_AWS_EC2_AMI_ID=$(curl -s http://169.254.169.254/latest/meta-data/ami-id)
+	export TEST_AWS_EC2_IAM_ROLE_ARN=$(aws iam get-role --role-name $(curl -q http://169.254.169.254/latest/meta-data/iam/security-credentials/ -S -s) --query Role.Arn --output text)
+	export TEST_AWS_EC2_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+	If the test is not being run on an EC2 instance that has access to
+	credentials using EC2RoleProvider, on top of the above vars, following
+	needs to be set:
+	TEST_AWS_SECRET_KEY
+	TEST_AWS_ACCESS_KEY
 */
 func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing.T) {
 	for _, path := range []string{"identity-whitelist/", "identity-accesslist/"} {

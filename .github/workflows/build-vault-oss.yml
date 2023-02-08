@@ -2,7 +2,7 @@
 name: build_vault
 
 # This workflow is intended to be called by the build workflow for each Vault
-# binary that needs to be built and packaged. The crt make targets that are
+# binary that needs to be built and packaged. The ci make targets that are
 # utilized automatically determine build metadata and handle building and
 # packing vault.
 
@@ -37,7 +37,7 @@ on:
 
 jobs:
   build:
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     name: Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}
     steps:
       - uses: actions/checkout@v3
@@ -51,7 +51,7 @@ jobs:
           cache: yarn
           cache-dependency-path: ui/yarn.lock
       - name: Build UI
-        run: make crt-build-ui
+        run: make ci-build-ui
       - name: Build Vault
         env:
           CGO_ENABLED: ${{ inputs.cgo-enabled }}
@@ -60,16 +60,16 @@ jobs:
           GO_TAGS: ${{ inputs.go-tags }}
           # We started stripping symbol tables in 1.13.x
           KEEP_SYMBOLS: true
-        run: make crt-build
+        run: make ci-build
       - name: Determine artifact basename
         env:
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
-        run: echo "ARTIFACT_BASENAME=$(make crt-get-artifact-basename)" >> $GITHUB_ENV
+        run: echo "ARTIFACT_BASENAME=$(make ci-get-artifact-basename)" >> $GITHUB_ENV
       - name: Bundle Vault
         env:
           BUNDLE_PATH: out/${{ env.ARTIFACT_BASENAME }}.zip
-        run: make crt-bundle
+        run: make ci-bundle
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT_BASENAME }}.zip

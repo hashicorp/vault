@@ -678,7 +678,8 @@ func cleanResponse(resp *logical.Response) *cleanedResponse {
 // /sys/tools/random/{urlbytes} -> postSysToolsRandomUrlbytes
 //
 // In the unlikely case of a duplicate ids, a numeric suffix is added:
-//   postSysToolsRandomUrlbytes_2
+//
+//	postSysToolsRandomUrlbytes_2
 //
 // An optional user-provided suffix ("context") may also be appended.
 func (d *OASDocument) CreateOperationIDs(context string) {

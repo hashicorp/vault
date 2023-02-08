@@ -300,7 +300,8 @@ func testAccStepLogin(t *testing.T, user string, pass string, policies []string)
 }
 
 func testUserCreateOperation(
-	t *testing.T, name string, password string, policies string) logicaltest.TestStep {
+	t *testing.T, name string, password string, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.CreateOperation,
 		Path:      "users/" + name,
@@ -312,7 +313,8 @@ func testUserCreateOperation(
 }
 
 func testAccStepUser(
-	t *testing.T, name string, password string, policies string) logicaltest.TestStep {
+	t *testing.T, name string, password string, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "users/" + name,

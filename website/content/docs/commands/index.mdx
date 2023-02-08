@@ -253,7 +253,9 @@ this file at any time to "logout" of Vault.
 
 The CLI reads the following environment variables to set behavioral defaults.
 This can alleviate the need to repetitively type a flag. Flags always take
-precedence over the environment variables.
+precedence over the environment variables. Each of the following environment 
+variables must be set on the Vault process.  In Vault 1.13+, all environment 
+variables available to the Vault process will be logged during startup.
 
 ### `VAULT_TOKEN`
 

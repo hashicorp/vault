@@ -304,8 +304,8 @@ func (c *CockroachDBBackend) transaction(tx *sql.Tx, txns []*physical.TxnEntry) 
 // https://www.cockroachlabs.com/docs/stable/keywords-and-identifiers.html#identifiers
 //
 //   - All values that accept an identifier must:
-//     - Begin with a Unicode letter or an underscore (_). Subsequent characters can be letters,
-//     - underscores, digits (0-9), or dollar signs ($).
+//   - Begin with a Unicode letter or an underscore (_). Subsequent characters can be letters,
+//   - underscores, digits (0-9), or dollar signs ($).
 //   - Not equal any SQL keyword unless the keyword is accepted by the element's syntax. For example,
 //     name accepts Unreserved or Column Name keywords.
 //
