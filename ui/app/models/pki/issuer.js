@@ -57,7 +57,7 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
 
   @attr({
     label: 'Usage',
-    subText: 'Allowed usages for this issuer. It can always be read',
+    subText: 'Allowed usages for this issuer. It can always be read.',
     editType: 'yield',
     valueOptions: [
       { label: 'Issuing certificates', value: 'issuing-certificates' },

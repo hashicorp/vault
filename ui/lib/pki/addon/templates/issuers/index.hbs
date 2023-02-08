@@ -10,11 +10,15 @@
 />
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @route="issuers.import">
+    <ToolbarLink @route="issuers.import" data-test-generate-issuer="import">
       Import
     </ToolbarLink>
     <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-      <D.Trigger class={{concat "toolbar-link" (if D.isOpen " is-active")}} @htmlTag="button">
+      <D.Trigger
+        class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+        @htmlTag="button"
+        data-test-issuer-generate-dropdown
+      >
         Generate
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
@@ -22,12 +26,16 @@
         <nav class="box menu" aria-label="generate options">
           <ul class="menu-list">
             <li class="action">
-              <LinkTo @route="issuers.generate-root" {{on "click" (fn this.onLinkClick D)}}>
+              <LinkTo @route="issuers.generate-root" {{on "click" (fn this.onLinkClick D)}} data-test-generate-issuer="root">
                 Root
               </LinkTo>
             </li>
             <li class="action">
-              <LinkTo @route="issuers.generate-intermediate" {{on "click" (fn this.onLinkClick D)}}>
+              <LinkTo
+                @route="issuers.generate-intermediate"
+                {{on "click" (fn this.onLinkClick D)}}
+                data-test-generate-issuer="intermediate"
+              >
                 Intermediate CSR
               </LinkTo>
             </li>

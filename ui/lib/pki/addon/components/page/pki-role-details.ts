@@ -5,14 +5,10 @@ import FlashMessageService from 'vault/services/flash-messages';
 import SecretMountPath from 'vault/services/secret-mount-path';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
+import PkiRoleModel from 'vault/models/pki/role';
 
-// TODO: pull this in from route model once it's TS
 interface Args {
-  role: {
-    id: string;
-    rollbackAttributes: () => void;
-    destroyRecord: () => void;
-  };
+  role: PkiRoleModel;
 }
 
 export default class DetailsPage extends Component<Args> {
