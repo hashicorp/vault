@@ -6,7 +6,6 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { getRules } from '../../../utils/generated-role-rules';
 import { htmlSafe } from '@ember/template';
-import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module CreateAndEditRolePage
@@ -22,6 +21,8 @@ export default class CreateAndEditRolePageComponent extends Component {
   @tracked roleRulesTemplates;
   @tracked selectedTemplateId;
   @tracked modelValidations;
+  @tracked invalidFormAlert;
+  @tracked errorBanner;
 
   constructor() {
     super(...arguments);
@@ -135,20 +136,21 @@ export default class CreateAndEditRolePageComponent extends Component {
         this.args.model.name
       );
     } catch (error) {
-      const message = errorMessage(error, 'Error saving role. Please try again or contact support');
-      this.flashMessages.danger(message);
+      const message = error.errors ? error.errors.join('. ') : error.message;
+      this.errorBanner = message;
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 
   @action
   async onSave(event) {
     event.preventDefault();
-    const { isValid, state } = await this.args.model.validate();
+    const { isValid, state, invalidFormMessage } = await this.args.model.validate();
     if (isValid) {
       this.modelValidations = null;
       this.save.perform();
     } else {
-      this.flashMessages.info('Save not performed. Check form for errors');
+      this.invalidFormAlert = invalidFormMessage;
       this.modelValidations = state;
     }
   }
