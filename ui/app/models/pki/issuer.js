@@ -13,6 +13,7 @@ const issuerUrls = ['issuingCertificates', 'crlDistributionPoints', 'ocspServers
         'caChain',
         'commonName',
         'issuerName',
+        'issuerId',
         'serialNumber',
         'keyId',
         'uriSans',
