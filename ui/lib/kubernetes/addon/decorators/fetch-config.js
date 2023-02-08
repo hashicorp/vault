@@ -31,7 +31,6 @@ export function withConfig() {
             .queryRecord('kubernetes/config', { backend })
             .then((record) => {
               this.configModel = record;
-              this.promptConfig = true;
             })
             .catch((error) => {
               // we need to ignore if the user does not have permission or other failures so as to not block the other operations

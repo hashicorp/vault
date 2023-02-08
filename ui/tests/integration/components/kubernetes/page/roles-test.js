@@ -20,35 +20,30 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
         type: 'kubernetes',
       },
     });
-    this.store.pushPayload('kubernetes/config', {
-      modelName: 'kubernetes/config',
-      backend: 'kubernetes-test',
-      ...this.server.create('kubernetes-config'),
-    });
     this.store.pushPayload('kubernetes/role', {
       modelName: 'kubernetes/role',
       backend: 'kubernetes-test',
       ...this.server.create('kubernetes-role'),
     });
     this.backend = this.store.peekRecord('secret-engine', 'kubernetes-test');
-    this.config = this.store.peekRecord('kubernetes/config', 'kubernetes-test');
     this.roles = this.store.peekAll('kubernetes/role');
     this.filterValue = '';
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: this.backend.id },
     ];
+    this.promptConfig = false;
 
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Roles @config={{this.config}} @backend={{this.backend}} @roles={{this.roles}} @filterValue={{this.filterValue}} @breadcrumbs={{this.breadcrumbs}} />`,
+        hbs`<Page::Roles @promptConfig={{this.promptConfig}} @backend={{this.backend}} @roles={{this.roles}} @filterValue={{this.filterValue}} @breadcrumbs={{this.breadcrumbs}} />`,
         { owner: this.engine }
       );
     };
   });
 
   test('it should render tab page header and config cta', async function (assert) {
-    this.config = null;
+    this.promptConfig = true;
     await this.renderComponent();
     assert.dom('.title svg').hasClass('flight-icon-kubernetes', 'Kubernetes icon renders in title');
     assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
