@@ -1,0 +1,6 @@
+```release-note:feature
+auth/azure: Adds support for rotate root to Azure Auth
+```
+```release-note:improvement
+auth/azure: upgrades dependencies
+```
