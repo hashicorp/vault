@@ -1,7 +1,14 @@
-<TabPageHeader @model={{@backend}} @filterRoles={{true}} @rolesFilterValue={{@filterValue}} @breadcrumbs={{@breadcrumbs}}>
-  <ToolbarLink @route="roles.create" @type="add" data-test-toolbar-roles-action>
-    Create role
-  </ToolbarLink>
+<TabPageHeader
+  @model={{@backend}}
+  @filterRoles={{if @config true false}}
+  @rolesFilterValue={{@filterValue}}
+  @breadcrumbs={{@breadcrumbs}}
+>
+  {{#if @config}}
+    <ToolbarLink @route="roles.create" @type="add" data-test-toolbar-roles-action>
+      Create role
+    </ToolbarLink>
+  {{/if}}
 </TabPageHeader>
 
 {{#if (not @config)}}

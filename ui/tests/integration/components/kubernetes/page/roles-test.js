@@ -52,17 +52,23 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
     await this.renderComponent();
     assert.dom('.title svg').hasClass('flight-icon-kubernetes', 'Kubernetes icon renders in title');
     assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
-    assert.dom('[data-test-toolbar-roles-action]').hasText('Create role', 'Toolbar action has correct text');
     assert
-      .dom('[data-test-toolbar-roles-action] svg')
-      .hasClass('flight-icon-plus', 'Toolbar action has correct icon');
-    assert.dom('[data-test-nav-input]').exists('Roles filter input renders');
+      .dom('[data-test-toolbar-roles-action]')
+      .doesNotExist('Create role', 'Toolbar action does not render when not configured');
+    assert
+      .dom('[data-test-nav-input]')
+      .doesNotExist('Roles filter input does not render when not configured');
     assert.dom('[data-test-config-cta]').exists('Config cta renders');
   });
 
   test('it should render create roles cta', async function (assert) {
     this.roles = null;
     await this.renderComponent();
+    assert.dom('[data-test-toolbar-roles-action]').hasText('Create role', 'Toolbar action has correct text');
+    assert
+      .dom('[data-test-toolbar-roles-action] svg')
+      .hasClass('flight-icon-plus', 'Toolbar action has correct icon');
+    assert.dom('[data-test-nav-input]').exists('Roles filter input renders');
     assert.dom('[data-test-empty-state-title]').hasText('No roles yet', 'Title renders');
     assert
       .dom('[data-test-empty-state-message]')
