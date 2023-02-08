@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-# The crt-builder is used to detemine build metadata and create Vault builds.
-# We use it in build-vault.yml for building release artifacts with CRT. It is
-# also used by Enos for artifact_source:local scenario variants.
+# The ci-helper is used to determine build metadata, build Vault binaries,
+# package those binaries into artifacts, and execute tests with those artifacts.
 
 set -euo pipefail
 
@@ -43,6 +42,21 @@ function version_base() {
   awk '$1 == "Version" && $2 == "=" { gsub(/"/, "", $3); print $3 }' < "$VERSION_FILE"
 }
 
+# Get the version major
+function version_major() {
+  version_base | cut -d '.' -f 1
+}
+
+# Get the version minor
+function version_minor() {
+  version_base | cut -d '.' -f 2
+}
+
+# Get the version patch
+function version_patch() {
+  version_base | cut -d '.' -f 3
+}
+
 # Get the version pre-release
 function version_pre() {
   : "${VAULT_PRERELEASE:=""}"
@@ -60,13 +74,18 @@ function version_pre() {
 function version_metadata() {
   : "${VAULT_METADATA:=""}"
 
-  if [ -n "$VAULT_METADATA" ]; then
+  if [[ (-n "$VAULT_METADATA") && ("$VAULT_METADATA" != "oss") ]]; then
     echo "$VAULT_METADATA"
     return
   fi
 
   : "${VERSION_FILE:=$(repo_root)/sdk/version/version_base.go}"
   awk '$1 == "VersionMetadata" && $2 == "=" { gsub(/"/, "", $3); print $3 }' < "$VERSION_FILE"
+}
+
+# Get the version formatted for Debian and RHEL packages
+function version_package() {
+  version | awk '{ gsub("-","~",$1); print $1 }'
 }
 
 # Get the build date from the latest commit since it can be used across all
@@ -152,7 +171,7 @@ function build() {
   fi
 
   if [ -n "$metadata" ]; then
-    msg="${msg}, metadata ${VAULT_METADATA}"
+    msg="${msg}, metadata ${metadata}"
     ldflags="${ldflags} -X github.com/hashicorp/vault/sdk/version.VersionMetadata=$metadata"
   fi
 
@@ -167,7 +186,7 @@ function build() {
   popd
 }
 
-# Bundle the dist directory
+# Bundle the dist directory into a zip
 function bundle() {
   : "${BUNDLE_PATH:=$(repo_root)/vault.zip}"
   echo "--> Bundling dist/* to $BUNDLE_PATH"
@@ -188,7 +207,50 @@ function prepare_legal() {
   popd
 }
 
-# Run the CRT Builder
+# Determine the matrix group number that we'll select for execution. If the
+# MATRIX_TEST_GROUP environment variable has set then it will always return
+# that value. If has not been set, we will randomly select a number between 1
+# and the value of MATRIX_MAX_TEST_GROUPS.
+function matrix_group_id() {
+  : "${MATRIX_TEST_GROUP:=""}"
+  if [ -n "$MATRIX_TEST_GROUP" ]; then
+    echo "$MATRIX_TEST_GROUP"
+    return
+  fi
+
+  : "${MATRIX_MAX_TEST_GROUPS:=1}"
+  awk -v min=1 -v max=$MATRIX_MAX_TEST_GROUPS 'BEGIN{srand(); print int(min+rand()*(max-min+1))}'
+}
+
+# Filter matrix file reads in the contents of MATRIX_FILE and filters out
+# scenarios that are not in the current test group and/or those that have not
+# met minimux or maximum version requirements.
+function matrix_filter_file() {
+  : "${MATRIX_FILE:=""}"
+  if [ -z "$MATRIX_FILE" ]; then
+    echo "You must specify the MATRIX_FILE variable for this command" >&2
+    exit 1
+  fi
+
+  : "${MATRIX_TEST_GROUP:=$(matrix_group_id)}"
+
+  local path
+  local matrix
+  path=$(readlink -f $MATRIX_FILE)
+  matrix=$(cat "$path" | jq ".include |
+    map(. |
+      select(
+        ((.min_minor_version == null) or (.min_minor_version <= $(version_minor))) and
+        ((.max_minor_version == null) or (.max_minor_version >= $(version_minor))) and
+        ((.test_group == null) or (.test_group == $MATRIX_TEST_GROUP))
+      )
+    )"
+  )
+
+  echo "{\"include\":$matrix}" | jq -c .
+}
+
+# Run the CI Helper
 function main() {
   case $1 in
   artifact-basename)
@@ -209,6 +271,12 @@ function main() {
   prepare-legal)
     prepare_legal
   ;;
+  matrix-filter-file)
+    matrix_filter_file
+  ;;
+  matrix-group-id)
+    matrix_group_id
+  ;;
   revision)
     build_revision
   ;;
@@ -221,8 +289,20 @@ function main() {
   version-pre)
     version_pre
   ;;
+  version-major)
+    version_major
+  ;;
   version-meta)
     version_metadata
+  ;;
+  version-minor)
+    version_minor
+  ;;
+  version-package)
+    version_package
+  ;;
+  version-patch)
+    version_patch
   ;;
   *)
     echo "unknown sub-command" >&2

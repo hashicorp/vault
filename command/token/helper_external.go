@@ -43,10 +43,10 @@ var _ TokenHelper = (*ExternalTokenHelper)(nil)
 // BinaryPath is executed within a shell with environment Env. The last argument
 // appended will be the operation, which is:
 //
-//   * "get" - Read the value of the token and write it to stdout.
-//   * "store" - Store the value of the token which is on stdin. Output
-//       nothing.
-//   * "erase" - Erase the contents stored. Output nothing.
+//   - "get" - Read the value of the token and write it to stdout.
+//   - "store" - Store the value of the token which is on stdin. Output
+//     nothing.
+//   - "erase" - Erase the contents stored. Output nothing.
 //
 // Any errors can be written on stdout. If the helper exits with a non-zero
 // exit code then the stderr will be made part of the error value.

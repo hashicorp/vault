@@ -1743,10 +1743,10 @@ func (m *ExpirationManager) uniquePoliciesGc() {
 // Acquiring a lock from a leaseEntry is a bad idea because it could change
 // between loading and acquiring the lock. So we only provide an ID-based map, and the
 // locking discipline should be:
-//    1. Lock lease
-//    2. Load, or attempt to load, leaseEntry
-//    3. Modify leaseEntry and pendingMap (atomic wrt operations on this lease)
-//    4. Unlock lease
+//  1. Lock lease
+//  2. Load, or attempt to load, leaseEntry
+//  3. Modify leaseEntry and pendingMap (atomic wrt operations on this lease)
+//  4. Unlock lease
 //
 // The lock must be removed from the map when the lease is deleted, or is
 // found to not exist in storage. loadEntry does this whenever it returns

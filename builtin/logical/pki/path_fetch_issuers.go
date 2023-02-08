@@ -366,7 +366,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	var newName string
 	if ok {
 		newName, err = getIssuerName(ctx, req.Storage, data)
-		if err != nil && err != errIssuerNameInUse {
+		if err != nil && err != errIssuerNameInUse && err != errIssuerNameIsEmpty {
 			// If the error is name already in use, and the new name is the
 			// old name for this issuer, we're not actually updating the
 			// issuer name (or causing a conflict) -- so don't err out. Other

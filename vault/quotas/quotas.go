@@ -115,13 +115,13 @@ var (
 )
 
 var defaultExemptPaths = []string{
-	"/v1/sys/generate-recovery-token/attempt",
-	"/v1/sys/generate-recovery-token/update",
-	"/v1/sys/generate-root/attempt",
-	"/v1/sys/generate-root/update",
-	"/v1/sys/health",
-	"/v1/sys/seal-status",
-	"/v1/sys/unseal",
+	"sys/generate-recovery-token/attempt",
+	"sys/generate-recovery-token/update",
+	"sys/generate-root/attempt",
+	"sys/generate-root/update",
+	"sys/health",
+	"sys/seal-status",
+	"sys/unseal",
 }
 
 // Access provides information to reach back to the quota checker.
@@ -663,15 +663,6 @@ func (m *Manager) RateLimitResponseHeadersEnabled() bool {
 	defer m.quotaConfigLock.RUnlock()
 
 	return m.config.EnableRateLimitResponseHeaders
-}
-
-// RateLimitExemptPaths returns the list of exempt paths from all rate limit
-// resource quotas from the Manager's configuration.
-func (m *Manager) RateLimitExemptPaths() []string {
-	m.quotaConfigLock.RLock()
-	defer m.quotaConfigLock.RUnlock()
-
-	return m.config.RateLimitExemptPaths
 }
 
 // RateLimitPathExempt returns a boolean dictating if a given path is exempt from

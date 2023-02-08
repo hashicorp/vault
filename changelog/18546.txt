@@ -1,0 +1,3 @@
+```release-note:bug
+database/mongodb: Fix writeConcern set to be applied to any query made on the database
+```
