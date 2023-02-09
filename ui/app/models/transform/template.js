@@ -6,13 +6,12 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const M = Model.extend({
   idPrefix: 'template/',
-  idForNav: computed('id', 'idPrefix', function () {
-    const modelId = this.id || '';
+  idForNav: computed('name', 'idPrefix', function () {
+    const modelId = this.name || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
   name: attr('string', {
-    fieldValue: 'id',
     readOnly: true,
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. This cannot be edited later.',
@@ -46,5 +45,5 @@ const M = Model.extend({
 });
 
 export default attachCapabilities(M, {
-  updatePath: apiPath`${'backend'}/template/${'id'}`,
+  updatePath: apiPath`${'backend'}/template/${'name'}`,
 });

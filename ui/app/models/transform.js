@@ -38,7 +38,6 @@ const ModelExport = Model.extend({
   name: attr('string', {
     // CBS TODO: make this required for making a transformation
     label: 'Name',
-    fieldValue: 'id',
     readOnly: true,
     subText: 'The name for your transformation. This cannot be edited later.',
   }),
@@ -97,5 +96,5 @@ const ModelExport = Model.extend({
 });
 
 export default attachCapabilities(ModelExport, {
-  updatePath: apiPath`${'backend'}/transformation/${'id'}`,
+  updatePath: apiPath`${'backend'}/transformation/${'name'}`,
 });

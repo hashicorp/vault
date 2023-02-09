@@ -8,15 +8,14 @@ const ModelExport = Model.extend({
   // used for getting appropriate options for backend
   idPrefix: 'role/',
   // the id prefixed with `role/` so we can use it as the *secret param for the secret show route
-  idForNav: computed('id', 'idPrefix', function () {
-    const modelId = this.id || '';
+  idForNav: computed('name', 'idPrefix', function () {
+    const modelId = this.name || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
   name: attr('string', {
     // TODO: make this required for making a transformation
     label: 'Name',
-    fieldValue: 'id',
     readOnly: true,
     subText: 'The name for your role. This cannot be edited later.',
   }),
@@ -39,5 +38,5 @@ const ModelExport = Model.extend({
 });
 
 export default attachCapabilities(ModelExport, {
-  updatePath: apiPath`${'backend'}/role/${'id'}`,
+  updatePath: apiPath`${'backend'}/role/${'name'}`,
 });

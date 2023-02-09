@@ -6,13 +6,13 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const M = Model.extend({
   idPrefix: 'alphabet/',
-  idForNav: computed('id', 'idPrefix', function () {
-    const modelId = this.id || '';
+  idForNav: computed('name', 'idPrefix', function () {
+    const modelId = this.name || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
   name: attr('string', {
-    fieldValue: 'id',
+    fieldValue: 'name',
     readOnly: true,
     subText: 'The alphabet name. Keep in mind that spaces are not allowed and this cannot be edited later.',
   }),
@@ -31,5 +31,5 @@ const M = Model.extend({
 });
 
 export default attachCapabilities(M, {
-  updatePath: apiPath`${'backend'}/alphabet/${'id'}`,
+  updatePath: apiPath`${'backend'}/alphabet/${'name'}`,
 });
