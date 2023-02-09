@@ -35,7 +35,7 @@ export const MESSAGE_TYPES = {
 };
 
 export function messageTypes([type]) {
-  if (!([type] in MESSAGE_TYPES)) {
+  if (!(type in MESSAGE_TYPES)) {
     assert('type is not a valid message type.');
   }
   return MESSAGE_TYPES[type];
