@@ -81,7 +81,11 @@
     </button>
   {{else}}
     <form {{on "submit" (perform this.submit)}} data-test-cross-sign-form>
-      <ObjectListInput @objectKeys={{this.inputFields}} @onChange={{fn (mut this.formData)}} />
+      <ObjectListInput
+        @objectKeys={{this.inputFields}}
+        @onChange={{fn (mut this.formData)}}
+        @validationErrors={{this.validationErrors}}
+      />
       <div class="control box is-fullwidth has-only-top-shadow">
         <button
           type="submit"

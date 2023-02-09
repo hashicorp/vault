@@ -2319,9 +2319,11 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 		}
 		c.logger.Warn("storage migration check error", "error", err.Error())
 
+		timer := time.NewTimer(2 * time.Second)
 		select {
-		case <-time.After(2 * time.Second):
+		case <-timer.C:
 		case <-c.ShutdownCh:
+			timer.Stop()
 			return true
 		}
 	}
@@ -2609,10 +2611,12 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 		}
 		c.logger.Warn("failed to unseal core", "error", err)
 
+		timer := time.NewTimer(5 * time.Second)
 		select {
 		case <-c.ShutdownCh:
+			timer.Stop()
 			return
-		case <-time.After(5 * time.Second):
+		case <-timer.C:
 		}
 	}
 }

@@ -1,0 +1,7 @@
+```release-note:improvement
+secrets/gcp: added support for impersonated accounts
+```
+
+```release-note:bug
+secrets/gcp: fix issue where IAM bindings were not preserved during policy update
+```

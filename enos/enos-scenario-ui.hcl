@@ -38,7 +38,7 @@ scenario "ui" {
       ubuntu = "/usr/bin"
     }
     vault_install_dir = var.vault_install_dir
-    ui_test_filter    = var.ui_test_filter != null ? var.ui_test_filter : (matrix.edition == "oss") ? "!enterprise" : null
+    ui_test_filter    = var.ui_test_filter != null && try(trimspace(var.ui_test_filter), "") != "" ? var.ui_test_filter : (matrix.edition == "oss") ? "!enterprise" : null
   }
 
   step "get_local_metadata" {
@@ -133,6 +133,9 @@ scenario "ui" {
       vault_install_dir         = local.vault_install_dir
       vault_license             = matrix.edition != "oss" ? step.read_license.license : null
       vpc_id                    = step.create_vpc.vpc_id
+      vault_environment = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
     }
   }
 

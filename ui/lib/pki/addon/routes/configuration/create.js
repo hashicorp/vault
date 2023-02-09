@@ -1,7 +1,9 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import { hash } from 'rsvp';
 
+@withConfirmLeave('model.config', ['model.urls'])
 export default class PkiConfigurationCreateRoute extends Route {
   @service secretMountPath;
   @service store;

@@ -1995,11 +1995,13 @@ func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *
 		case "allow":
 			return nil
 		}
+		timer := time.NewTimer(time.Second)
 
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return fmt.Errorf("duo push verification operation canceled")
-		case <-time.After(time.Second):
+		case <-timer.C:
 		}
 	}
 }
@@ -2124,11 +2126,13 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		default:
 			return fmt.Errorf("unknown status code")
 		}
+		timer := time.NewTimer(time.Second)
 
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return fmt.Errorf("push verification operation canceled")
-		case <-time.After(time.Second):
+		case <-timer.C:
 		}
 	}
 }

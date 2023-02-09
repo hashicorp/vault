@@ -47,7 +47,7 @@ type PKIHealthCheckCommand struct {
 }
 
 func (c *PKIHealthCheckCommand) Synopsis() string {
-	return "Check PKI Secrets Engine health and operational status"
+	return "Check a PKI Secrets Engine mount's health and operational status"
 }
 
 func (c *PKIHealthCheckCommand) Help() string {

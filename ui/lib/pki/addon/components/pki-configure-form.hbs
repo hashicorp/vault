@@ -38,14 +38,14 @@
     <PkiGenerateRoot
       @model={{@config}}
       @urls={{@urls}}
-      @onCancel={{this.cancel}}
+      @onCancel={{@onCancel}}
       @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canGenerateIssuerRoot}}
     />
   {{else if (eq @config.actionType "generate-csr")}}
     <PkiGenerateCsr
       @model={{@config}}
       @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}
-      @onCancel={{this.cancel}}
+      @onCancel={{@onCancel}}
     />
   {{else}}
     <EmptyState
@@ -58,7 +58,7 @@
         <button type="button" class="button is-primary" disabled={{true}} data-test-pki-config-save>
           Done
         </button>
-        <button type="button" class="button has-left-margin-s" {{on "click" this.cancel}} data-test-pki-config-cancel>
+        <button type="button" class="button has-left-margin-s" {{on "click" @onCancel}} data-test-pki-config-cancel>
           Cancel
         </button>
       </div>
