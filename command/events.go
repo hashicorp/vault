@@ -99,13 +99,13 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 	client.AddHeader("X-Vault-Token", client.Token())
 	client.AddHeader("X-Vault-Namesapce", client.Namespace())
 	ctx := context.Background()
-	conn, _, err := websocket.Dial(ctx, u.String(), &websocket.DialOptions{
+	conn, resp, err := websocket.Dial(ctx, u.String(), &websocket.DialOptions{
 		HTTPClient: client.CloneConfig().HttpClient,
 		HTTPHeader: client.Headers(),
 	})
 	if err != nil {
-		if strings.Contains(err.Error(), "expected handshake response status code 101 but got 404") {
-			return fmt.Errorf("endpoint not found; check `vault read sys/experiments` and ensure '%s' is enabled", experiments.VaultExperimentEventsAlpha1)
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return fmt.Errorf("events endpoint not found; check `vault read sys/experiments` to see if an events experiment is available but disabled")
 		}
 		return err
 	}
