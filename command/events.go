@@ -3,11 +3,11 @@ package command
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 	"nhooyr.io/websocket"
