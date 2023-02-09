@@ -7,12 +7,16 @@ export default ApplicationAdapter.extend({
   namespace: 'v1',
 
   createOrUpdate(store, type, snapshot, requestType) {
+    const { name, backend } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
-    const { id } = snapshot;
-    const url = this.urlForRole(snapshot.record.get('backend'), id);
+    const url = this.urlForRole(backend, name);
 
-    return this.ajax(url, 'POST', { data });
+    return this.ajax(url, 'POST', { data }).then((resp) => {
+      const response = resp || {};
+      response.id = name;
+      return response;
+    });
   },
 
   createRecord() {
