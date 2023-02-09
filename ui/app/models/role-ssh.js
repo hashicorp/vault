@@ -53,6 +53,7 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Role Name',
+    fieldValue: 'name',
     readOnly: true,
   }),
   keyType: attr('string', {

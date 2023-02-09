@@ -12,7 +12,6 @@ const M = Model.extend({
   }),
 
   name: attr('string', {
-    fieldValue: 'name',
     readOnly: true,
     subText: 'The alphabet name. Keep in mind that spaces are not allowed and this cannot be edited later.',
   }),

@@ -34,7 +34,6 @@ const TWEAK_SOURCE = [
 ];
 
 const ModelExport = Model.extend({
-  useOpenAPI: false,
   name: attr('string', {
     // CBS TODO: make this required for making a transformation
     label: 'Name',

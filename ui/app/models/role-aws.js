@@ -26,7 +26,6 @@ export default Model.extend({
     label: 'Role name',
     readOnly: true,
   }),
-  useOpenAPI: false,
   // credentialTypes are for backwards compatibility.
   // we use this to populate "credentialType" in
   // the serializer. if there is more than one, the
