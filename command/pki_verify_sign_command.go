@@ -24,7 +24,7 @@ type PKIVerifySignCommand struct {
 }
 
 func (c *PKIVerifySignCommand) Synopsis() string {
-	return "Check Whether One Certificate Validates Another Specified Certificate"
+	return "Check whether one certificate validates another specified certificate"
 }
 
 func (c *PKIVerifySignCommand) Help() string {
