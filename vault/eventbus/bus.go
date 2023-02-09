@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var ErrNotStarted = errors.New("event broker has not been started")
@@ -36,8 +38,10 @@ type pluginEventBus struct {
 
 type asyncChanNode struct {
 	// TODO: add bounded deque buffer of *EventReceived
+	ctx       context.Context
 	ch        chan *logical.EventReceived
 	namespace *namespace.Namespace
+	logger    hclog.Logger
 }
 
 var (
@@ -72,6 +76,7 @@ func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, 
 		Namespace:  ns.Path,
 		EventType:  string(eventType),
 		PluginInfo: pluginInfo,
+		Timestamp:  timestamppb.New(time.Now()),
 	}
 	bus.logger.Info("Sending event", "event", eventReceived)
 	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), eventReceived)
@@ -140,24 +145,25 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	}, nil
 }
 
-func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, eventType logical.EventType) (chan *logical.EventReceived, error) {
+func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, eventType logical.EventType) (<-chan *logical.EventReceived, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	nodeID, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// TODO: should we have just one node per namespace, and handle all the routing ourselves?
-	asyncNode := newAsyncNode(ns)
+	ctx, cancel := context.WithCancel(ctx)
+	asyncNode := newAsyncNode(ctx, ns, bus.logger)
 	err = bus.broker.RegisterNode(eventlogger.NodeID(nodeID), asyncNode)
 	if err != nil {
-		defer asyncNode.Close()
-		return nil, err
+		defer cancel()
+		return nil, nil, err
 	}
 
 	nodes := []eventlogger.NodeID{bus.formatterNodeID, eventlogger.NodeID(nodeID)}
@@ -169,22 +175,19 @@ func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, event
 	}
 	err = bus.broker.RegisterPipeline(pipeline)
 	if err != nil {
-		defer asyncNode.Close()
-		return nil, err
+		defer cancel()
+		return nil, nil, err
 	}
-	return asyncNode.ch, nil
+	return asyncNode.ch, cancel, nil
 }
 
-func newAsyncNode(namespace *namespace.Namespace) *asyncChanNode {
+func newAsyncNode(ctx context.Context, namespace *namespace.Namespace, logger hclog.Logger) *asyncChanNode {
 	return &asyncChanNode{
+		ctx:       ctx,
 		ch:        make(chan *logical.EventReceived),
 		namespace: namespace,
+		logger:    logger,
 	}
-}
-
-func (node *asyncChanNode) Close() error {
-	close(node.ch)
-	return nil
 }
 
 func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
@@ -200,6 +203,9 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 		select {
 		case node.ch <- eventRecv:
 		case <-ctx.Done():
+			return
+		case <-node.ctx.Done():
+			return
 		}
 	}()
 	return e, nil
