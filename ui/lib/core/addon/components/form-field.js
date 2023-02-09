@@ -60,9 +60,7 @@ export default class FormFieldComponent extends Component {
   constructor() {
     super(...arguments);
     const { attr, model } = this.args;
-    const fieldValue = attr.options?.fieldValue;
-    // Ember doesn't like when you set the ID directly
-    const valuePath = fieldValue && fieldValue.toLowerCase() !== 'id' ? fieldValue : attr.name;
+    const valuePath = attr.options?.fieldValue || attr.name;
     const modelValue = model[valuePath];
     this.showInput = !!modelValue;
   }
@@ -98,9 +96,7 @@ export default class FormFieldComponent extends Component {
   }
   // both the path to mutate on the model, and the path to read the value from
   get valuePath() {
-    const fieldValue = this.args.attr.options?.fieldValue;
-    // Ember doesn't like when you set the ID directly
-    return fieldValue && fieldValue.toLowerCase() !== 'id' ? fieldValue : this.args.attr.name;
+    return this.args.attr.options?.fieldValue || this.args.attr.name;
   }
   get isReadOnly() {
     const readonly = this.args.attr.options?.readOnly || false;
