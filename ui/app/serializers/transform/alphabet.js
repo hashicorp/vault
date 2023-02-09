@@ -10,6 +10,7 @@ export default ApplicationSerializer.extend({
     return payload.data.keys.map((key) => {
       const model = {
         id: key,
+        name: key,
       };
       if (payload.backend) {
         model.backend = payload.backend;

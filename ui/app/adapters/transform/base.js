@@ -11,10 +11,15 @@ export default ApplicationAdapter.extend({
   createOrUpdate(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
-    const { id } = snapshot;
+    const id = snapshot.record.get('name');
     const url = this.url(snapshot.record.get('backend'), type.modelName, id);
 
-    return this.ajax(url, 'POST', { data });
+    return this.ajax(url, 'POST', { data }).then(() => {
+      // ember data doesn't like 204s if it's not a DELETE
+      return {
+        data: { ...data, id, name: id }, // set ID manually on response
+      };
+    });
   },
 
   createRecord() {
@@ -45,6 +50,8 @@ export default ApplicationAdapter.extend({
       return {
         ...resp,
         backend,
+        id,
+        name: id,
       };
     });
   },
@@ -58,6 +65,7 @@ export default ApplicationAdapter.extend({
       // CBS TODO: Add name to response and unmap name <> id on models
       return {
         id: query.id,
+        name: query.id,
         ...result,
       };
     });
