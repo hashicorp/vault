@@ -2,7 +2,7 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { withConfig } from '../decorators/fetch-config';
 
-@withConfig(true)
+@withConfig()
 export default class KubernetesConfigureRoute extends Route {
   @service store;
   @service secretMountPath;
