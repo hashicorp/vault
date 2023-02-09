@@ -9,20 +9,33 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/eventbus"
 	"google.golang.org/protobuf/encoding/protojson"
 	"nhooyr.io/websocket"
 )
 
+type eventSubscribeArgs struct {
+	ctx       context.Context
+	logger    hclog.Logger
+	events    *eventbus.EventBus
+	ns        *namespace.Namespace
+	eventType logical.EventType
+	conn      *websocket.Conn
+	json      bool
+}
+
 // handleEventsSubscribeWebsocket runs forever, returning a websocket error code and reason
 // only if the connection closes or there was an error.
-func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *namespace.Namespace, eventType logical.EventType, conn *websocket.Conn, json bool) (websocket.StatusCode, string, error) {
-	events := core.Events()
-	ch, cancel, err := events.Subscribe(ctx, ns, eventType)
+func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCode, string, error) {
+	ctx := args.ctx
+	logger := args.logger
+	ch, cancel, err := args.events.Subscribe(ctx, args.ns, args.eventType)
 	if err != nil {
-		core.Logger().Info("Error subscribing", "error", err)
+		logger.Info("Error subscribing", "error", err)
 		return websocket.StatusUnsupportedData, "Error subscribing", nil
 	}
 	defer cancel()
@@ -30,22 +43,22 @@ func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *n
 	for {
 		select {
 		case <-ctx.Done():
-			core.Logger().Info("Websocket context is done, closing the connection")
+			logger.Info("Websocket context is done, closing the connection")
 			return websocket.StatusNormalClosure, "", nil
 		case message := <-ch:
-			core.Logger().Debug("Sending message to websocket", "message", message)
+			logger.Debug("Sending message to websocket", "message", message)
 			var messageBytes []byte
-			if json {
+			if args.json {
 				messageBytes, err = protojson.Marshal(message)
 			} else {
 				messageBytes, err = proto.Marshal(message)
 			}
 			if err != nil {
-				core.Logger().Warn("Could not serialize websocket event", "error", err)
+				logger.Warn("Could not serialize websocket event", "error", err)
 				return 0, "", err
 			}
 			messageString := string(messageBytes) + "\n"
-			err = conn.Write(ctx, websocket.MessageText, []byte(messageString))
+			err = args.conn.Write(ctx, websocket.MessageText, []byte(messageString))
 			if err != nil {
 				return 0, "", err
 			}
@@ -55,12 +68,14 @@ func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *n
 
 func handleEventsSubscribe(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		core.Logger().Debug("Got request to", "url", r.URL, "version", r.Proto)
+		logger := core.Logger().Named("events-subscribe")
+
+		logger.Debug("Got request to", "url", r.URL, "version", r.Proto)
 
 		ctx := r.Context()
 		ns, err := namespace.FromContext(ctx)
 		if err != nil {
-			core.Logger().Info("Could not find namespace", "error", err)
+			logger.Info("Could not find namespace", "error", err)
 			respondError(w, http.StatusInternalServerError, fmt.Errorf("could not find namespace"))
 			return
 		}
@@ -89,7 +104,7 @@ func handleEventsSubscribe(core *vault.Core) http.Handler {
 
 		conn, err := websocket.Accept(w, r, nil)
 		if err != nil {
-			core.Logger().Info("Could not accept as websocket", "error", err)
+			logger.Info("Could not accept as websocket", "error", err)
 			respondError(w, http.StatusInternalServerError, fmt.Errorf("could not accept as websocket"))
 			return
 		}
@@ -107,23 +122,23 @@ func handleEventsSubscribe(core *vault.Core) http.Handler {
 			}
 		}()
 
-		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(ctx, core, ns, eventType, conn, json)
+		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(eventSubscribeArgs{ctx, logger, core.Events(), ns, eventType, conn, json})
 		if err != nil {
 			closeStatus = websocket.CloseStatus(err)
 			if closeStatus == -1 {
 				closeStatus = websocket.StatusInternalError
 			}
 			closeReason = fmt.Sprintf("Internal error: %v", err)
-			core.Logger().Debug("Error from websocket handler", "error", err)
+			logger.Debug("Error from websocket handler", "error", err)
 		}
 		// Close() will panic if the reason is greater than this length
 		if len(closeReason) > 123 {
-			core.Logger().Debug("Truncated close reason", "closeReason", closeReason)
+			logger.Debug("Truncated close reason", "closeReason", closeReason)
 			closeReason = closeReason[:123]
 		}
 		err = conn.Close(closeStatus, closeReason)
 		if err != nil {
-			core.Logger().Debug("Error closing websocket", "error", err)
+			logger.Debug("Error closing websocket", "error", err)
 		}
 	})
 }
