@@ -21,7 +21,7 @@ var eventTypeRegex = regexp.MustCompile(`.*/events/subscribe/(.*)`)
 
 // handleEventsSubscribeWebsocket runs forever, returning a websocket error code and reason
 // only if the connection closes or there was an error.
-func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *namespace.Namespace, eventType logical.EventType, conn *websocket.Conn, json bool) (websocket.StatusCode, string, error) {
+func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *namespace.Namespace, eventType logical.EventType, conn *websocket.Conn, remoteAddr string, json bool) (websocket.StatusCode, string, error) {
 	events := core.Events()
 	closer, ch, err := events.Subscribe(ctx, ns, eventType)
 	if err != nil {
@@ -36,7 +36,7 @@ func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *n
 			core.Logger().Info("Websocket context is done, closing the connection")
 			return websocket.StatusNormalClosure, "", nil
 		case message := <-ch:
-			core.Logger().Info("Got websocket message", "message", message)
+			core.Logger().Debug("Sending message to websocket", "message", message, "remoteAddr", remoteAddr)
 			var messageBytes []byte
 			if json {
 				messageBytes, err = protojson.Marshal(message)
@@ -109,7 +109,7 @@ func handleEventsSubscribe(core *vault.Core) http.Handler {
 			}
 		}()
 
-		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(ctx, core, ns, eventType, conn, json)
+		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(ctx, core, ns, eventType, conn, r.RemoteAddr, json)
 		if err != nil {
 			closeStatus = websocket.CloseStatus(err)
 			if closeStatus == -1 {
