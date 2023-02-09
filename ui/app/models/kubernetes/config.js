@@ -11,8 +11,7 @@ export default class KubernetesConfigModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string', {
     label: 'Kubernetes host',
-    subText:
-      'Kubernetes API URL to connect to. Defaults to https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT if those environment variables are set.',
+    subText: 'Kubernetes API URL to connect to.',
   })
   kubernetesHost;
   @attr('string', {
