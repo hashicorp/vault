@@ -1,6 +1,11 @@
 import Model, { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
+const validations = {
+  kubernetesHost: [{ type: 'presence', message: 'Kubernetes host is required' }],
+};
+@withModelValidations(validations)
 @withFormFields(['kubernetesHost', 'serviceAccountJwt', 'kubernetesCaCert'])
 export default class KubernetesConfigModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
