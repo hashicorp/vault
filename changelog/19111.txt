@@ -1,0 +1,3 @@
+```release-note:bug
+Fix a bug that did not allow WAL rollback to handle partial failures when creating API keys
+```
