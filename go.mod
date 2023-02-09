@@ -81,7 +81,7 @@ require (
 	github.com/hashicorp/go-memdb v1.3.3
 	github.com/hashicorp/go-msgpack v1.1.5
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/go-plugin v1.4.5
+	github.com/hashicorp/go-plugin v1.4.8
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.7.1
 	github.com/hashicorp/go-rootcerts v1.0.2
