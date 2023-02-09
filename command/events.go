@@ -42,8 +42,6 @@ Usage: vault events subscribe [-format=json] [-timeout=XYZs] eventType
 func (c *EventsSubscribeCommands) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
 
-	// Common Options
-	set.NewFlagSet("Common Options")
 	return set
 }
 
