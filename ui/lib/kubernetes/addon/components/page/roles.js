@@ -9,7 +9,7 @@ import errorMessage from 'vault/utils/error-message';
  * RolesPage component is a child component to show list of roles
  *
  * @param {array} roles - array of roles
- * @param {object} config - config model that contains kubernetes configuration
+ * @param {boolean} promptConfig - whether or not to display config cta
  * @param {array} pageFilter - array of filtered roles
  * @param {array} breadcrumbs - breadcrumbs as an array of objects that contain label and route
  */

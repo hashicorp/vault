@@ -19,10 +19,11 @@ func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ch, err := c.events.Subscribe(ctx, namespace.RootNamespace, logical.EventType(eventType))
+	ch, cancel, err := c.events.Subscribe(ctx, namespace.RootNamespace, logical.EventType(eventType))
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cancel()
 
 	// generate the event in a plugin
 	event, err := logical.NewEvent()

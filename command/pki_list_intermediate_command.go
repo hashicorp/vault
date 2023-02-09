@@ -30,7 +30,7 @@ type PKIListIntermediateCommand struct {
 }
 
 func (c *PKIListIntermediateCommand) Synopsis() string {
-	return "Determine Which (of a List) of Certificates Were Issued by A Given Parent Certificate"
+	return "Determine which of a list of certificates, were issued by a given parent certificate"
 }
 
 func (c *PKIListIntermediateCommand) Help() string {

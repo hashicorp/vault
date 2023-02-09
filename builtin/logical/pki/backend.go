@@ -416,6 +416,12 @@ func (b *backend) updatePkiStorageVersion(ctx context.Context, grabIssuersLock b
 		return
 	}
 
+	// If this method is called outside the initialize function, like say an
+	// invalidate func on a performance replica cluster, we should be grabbing
+	// the issuers lock to offer a consistent view of the storage version while
+	// other events are processing things. Its unknown what might happen during
+	// a single event if one part thinks we are in legacy mode, and then later
+	// on we aren't.
 	if grabIssuersLock {
 		b.issuersLock.Lock()
 		defer b.issuersLock.Unlock()

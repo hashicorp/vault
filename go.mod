@@ -52,7 +52,7 @@ require (
 	github.com/go-errors/errors v1.4.1
 	github.com/go-ldap/ldap/v3 v3.4.1
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/go-test/deep v1.0.8
+	github.com/go-test/deep v1.1.0
 	github.com/gocql/gocql v1.0.0
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/golang/protobuf v1.5.2
@@ -70,18 +70,18 @@ require (
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
 	github.com/hashicorp/go-gcp-common v0.8.0
 	github.com/hashicorp/go-hclog v1.4.0
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.6
-	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.4
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.7
+	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.7-1
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1
-	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.1
-	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.1
-	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.1
-	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.0
-	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.1
+	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.7
+	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.7
+	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.7
+	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.7
+	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.7
 	github.com/hashicorp/go-memdb v1.3.3
 	github.com/hashicorp/go-msgpack v1.1.5
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/go-plugin v1.4.5
+	github.com/hashicorp/go-plugin v1.4.8
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.7.1
 	github.com/hashicorp/go-rootcerts v1.0.2
@@ -111,13 +111,13 @@ require (
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.14.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.13.0
-	github.com/hashicorp/vault-plugin-auth-centrify v0.13.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.13.0
+	github.com/hashicorp/vault-plugin-auth-centrify v0.14.0
+	github.com/hashicorp/vault-plugin-auth-cf v0.14.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.15.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.15.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.9.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.15.0
-	github.com/hashicorp/vault-plugin-auth-oci v0.12.0
+	github.com/hashicorp/vault-plugin-auth-oci v0.13.1
 	github.com/hashicorp/vault-plugin-database-couchbase v0.9.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.8.0
@@ -127,13 +127,13 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.13.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.6.3-0.20221109203402-f955aedc51bf
+	github.com/hashicorp/vault-plugin-secrets-azure v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.0.0-20221215173052-6b1994edb14e
 	github.com/hashicorp/vault-plugin-secrets-kv v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.9.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.7.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203193428-3a789cb2c68f
 	github.com/hashicorp/vault/api v1.8.4-0.20230203172428-594f24d11fa0
@@ -165,7 +165,7 @@ require (
 	github.com/ncw/swift v1.0.47
 	github.com/oklog/run v1.1.0
 	github.com/okta/okta-sdk-golang/v2 v2.12.1
-	github.com/oracle/oci-go-sdk v13.1.0+incompatible
+	github.com/oracle/oci-go-sdk v24.3.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -210,6 +210,7 @@ require (
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
 	mvdan.cc/gofumpt v0.3.1
+	nhooyr.io/websocket v1.8.7
 )
 
 require (
@@ -373,7 +374,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
-	github.com/klauspost/compress v1.13.6 // indirect
+	github.com/klauspost/compress v1.15.15 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lib/pq v1.10.6 // indirect

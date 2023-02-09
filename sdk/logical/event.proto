@@ -4,6 +4,8 @@ option go_package = "github.com/hashicorp/vault/sdk/logical";
 
 package logical;
 
+import "google/protobuf/timestamp.proto";
+
 // EventPluginInfo contains data related to the plugin that generated an event.
 message EventPluginInfo {
     // The type of plugin this event originated from, i.e., "auth" or "secrets.
@@ -46,4 +48,5 @@ message EventReceived {
     string namespace = 2;
     string event_type = 3;
     EventPluginInfo plugin_info = 4;
+    google.protobuf.Timestamp timestamp = 5;
 }

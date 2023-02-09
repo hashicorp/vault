@@ -305,4 +305,20 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     assert.ok(rollbackSpy.calledOnce, 'Attributes are rolled back for existing model on cancel');
     assert.ok(this.transitionCalledWith('roles'), 'Transitions to roles list on cancel');
   });
+
+  test('it should check for form errors', async function (assert) {
+    await render(
+      hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}}/>`,
+      { owner: this.engine }
+    );
+    await click('[data-test-radio-card="basic"]');
+    await click('[data-test-save]');
+    assert
+      .dom('[data-test-input="name"]')
+      .hasClass('has-error-border', 'shows border error on input with error');
+    assert.dom('[data-test-inline-error-message]').hasText('Name is required');
+    assert
+      .dom('[data-test-invalid-form-alert] [data-test-inline-error-message]')
+      .hasText('There is an error with this form.');
+  });
 });

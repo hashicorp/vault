@@ -1,4 +1,5 @@
 import { helper as buildHelper } from '@ember/component/helper';
+import { assert } from '@ember/debug';
 
 export const MESSAGE_TYPES = {
   info: {
@@ -34,6 +35,9 @@ export const MESSAGE_TYPES = {
 };
 
 export function messageTypes([type]) {
+  if (!(type in MESSAGE_TYPES)) {
+    assert('type is not a valid message type.');
+  }
   return MESSAGE_TYPES[type];
 }
 

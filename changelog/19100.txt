@@ -1,0 +1,4 @@
+```release-note:improvement
+Bump github.com/hashicorp/go-plugin version from 1.4.5 to 1.4.8
+```
+
