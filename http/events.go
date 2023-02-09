@@ -21,7 +21,7 @@ var eventTypeRegex = regexp.MustCompile(`.*/events/subscribe/(.*)`)
 
 // handleEventsSubscribeWebsocket runs forever, returning a websocket error code and reason
 // only if the connection closes or there was an error.
-func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *namespace.Namespace, eventType logical.EventType, conn *websocket.Conn, remoteAddr string, json bool) (websocket.StatusCode, string, error) {
+func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *namespace.Namespace, eventType logical.EventType, conn *websocket.Conn, json bool) (websocket.StatusCode, string, error) {
 	events := core.Events()
 	ch, cancel, err := events.Subscribe(ctx, ns, eventType)
 	if err != nil {
@@ -36,7 +36,7 @@ func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *n
 			core.Logger().Info("Websocket context is done, closing the connection")
 			return websocket.StatusNormalClosure, "", nil
 		case message := <-ch:
-			core.Logger().Debug("Sending message to websocket", "message", message, "remoteAddr", remoteAddr)
+			core.Logger().Debug("Sending message to websocket", "message", message)
 			var messageBytes []byte
 			if json {
 				messageBytes, err = protojson.Marshal(message)
@@ -59,16 +59,25 @@ func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *n
 func handleEventsSubscribe(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		core.Logger().Debug("Got request to", "url", r.URL, "version", r.Proto)
-		matches := eventTypeRegex.FindStringSubmatch(r.URL.Path)
-		if len(matches) < 2 {
+
+		ctx := r.Context()
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			core.Logger().Info("Could not find namespace", "error", err)
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("could not find namespace"))
+			return
+		}
+
+		prefix := "/v1/sys/events/subscribe/"
+		if ns.ID != "root" {
+			prefix = fmt.Sprintf("/v1/%s/sys/events/subscribe/", ns.Path)
+		}
+		eventTypeStr := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, prefix))
+		if eventTypeStr == "" {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("did not specify eventType to subscribe to"))
 			return
 		}
-		eventType := logical.EventType(strings.Join(matches[1:], "/"))
-		if eventType == "" {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("eventType cannot be blank"))
-			return
-		}
+		eventType := logical.EventType(eventTypeStr)
 
 		json := false
 		jsonRaw := r.URL.Query().Get("json")
@@ -79,14 +88,6 @@ func handleEventsSubscribe(core *vault.Core) http.Handler {
 				respondError(w, http.StatusBadRequest, fmt.Errorf("invalid parameter for JSON: %v", jsonRaw))
 				return
 			}
-		}
-
-		ctx := r.Context()
-		ns, err := namespace.FromContext(ctx)
-		if err != nil {
-			core.Logger().Info("Could not find namespace", "error", err)
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("could not find namespace"))
-			return
 		}
 
 		conn, err := websocket.Accept(w, r, nil)
@@ -109,7 +110,7 @@ func handleEventsSubscribe(core *vault.Core) http.Handler {
 			}
 		}()
 
-		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(ctx, core, ns, eventType, conn, r.RemoteAddr, json)
+		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(ctx, core, ns, eventType, conn, json)
 		if err != nil {
 			closeStatus = websocket.CloseStatus(err)
 			if closeStatus == -1 {

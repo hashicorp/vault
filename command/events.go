@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 	"nhooyr.io/websocket"
@@ -105,6 +106,9 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 		HTTPHeader: client.Headers(),
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "expected handshake response status code 101 but got 404") {
+			return fmt.Errorf("endpoint not found; check `vault read sys/experiments` and ensure '%s' is enabled", experiments.VaultExperimentEventsAlpha1)
+		}
 		return err
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
