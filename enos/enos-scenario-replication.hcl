@@ -159,6 +159,9 @@ scenario "replication" {
       vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       vault_license             = step.read_license.license
       vpc_id                    = step.create_vpc.vpc_id
+      vault_environment = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
     }
   }
 
@@ -211,6 +214,9 @@ scenario "replication" {
       vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       vault_license             = step.read_license.license
       vpc_id                    = step.create_vpc.vpc_id
+      vault_environment = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
     }
   }
 
@@ -456,6 +462,9 @@ scenario "replication" {
       vault_unseal_when_no_init = matrix.primary_seal == "shamir"
       vault_unseal_keys         = matrix.primary_seal == "shamir" ? step.create_vault_primary_cluster.vault_unseal_keys_hex : null
       vpc_id                    = step.create_vpc.vpc_id
+      vault_environment = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
     }
   }
 
