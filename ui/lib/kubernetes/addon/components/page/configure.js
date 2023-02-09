@@ -18,6 +18,7 @@ export default class ConfigurePageComponent extends Component {
 
   @tracked inferredState;
   @tracked modelValidations;
+  @tracked alert;
   @tracked error;
   @tracked showConfirm;
 
@@ -64,6 +65,14 @@ export default class ConfigurePageComponent extends Component {
       return;
     }
     this.showConfirm = false;
+
+    const { isValid, state, invalidFormMessage } = yield this.args.model.validate();
+    if (!isValid) {
+      this.modelValidations = state;
+      this.alert = invalidFormMessage;
+      return;
+    }
+
     try {
       yield this.args.model.save();
       this.leave('configuration');
