@@ -1,4 +1,5 @@
-{{#if this.licenseExpired}}
+{{!-- {{#if this.licenseExpired}} --}}
+{{#unless this.dismissLicenseExpired}}
   <div class="license-banner-wrapper" data-test-license-banner data-test-license-banner-expired>
     <AlertBanner
       @type="danger"
@@ -13,27 +14,31 @@
         <Icon @name="learn-link" />
         Read documentation
       </DocLink>
+      <button type="button" class="close-button" {{on "click" this.dismissLicenseExpiredBanner}}>
+        <Icon @name="x" aria-label="dismiss license expired warning" />
+      </button>
     </AlertBanner>
   </div>
-{{else if (lte this.licenseExpiringInDays 30)}}
-  <div class="license-banner-wrapper" data-test-license-banner data-test-license-banner-warning>
-    <AlertBanner
-      @type="warning"
-      @title="Vault license expiring"
-      @message="Your Vault license will expire in {{this.licenseExpiringInDays}} days at {{date-format
-        @expiry
-        'hh:mm:ss a'
-      }} on {{date-format @expiry 'MMM d, yyyy'}}. {{if
-        @autoloaded
-        'Add a new license to your configuration.'
-        'Keep in mind that your next license will need to be autoloaded'
-      }}"
-      class="message-marginless"
-    >
-      <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
-        <Icon @name="learn-link" />
-        Read documentation
-      </DocLink>
-    </AlertBanner>
-  </div>
-{{/if}}
+{{/unless}}
+{{!-- {{else if (lte this.licenseExpiringInDays 30)}} --}}
+<div class="license-banner-wrapper" data-test-license-banner data-test-license-banner-warning>
+  <AlertBanner
+    @type="warning"
+    @title="Vault license expiring"
+    @message="Your Vault license will expire in {{this.licenseExpiringInDays}} days at {{date-format
+      @expiry
+      'hh:mm:ss a'
+    }} on {{date-format @expiry 'MMM d, yyyy'}}. {{if
+      @autoloaded
+      'Add a new license to your configuration.'
+      'Keep in mind that your next license will need to be autoloaded'
+    }}"
+    class="message-marginless"
+  >
+    <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
+      <Icon @name="learn-link" />
+      Read documentation
+    </DocLink>
+  </AlertBanner>
+</div>
+{{!-- {{/if}} --}}
