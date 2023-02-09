@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -16,8 +15,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"nhooyr.io/websocket"
 )
-
-var eventTypeRegex = regexp.MustCompile(`.*/events/subscribe/(.*)`)
 
 // handleEventsSubscribeWebsocket runs forever, returning a websocket error code and reason
 // only if the connection closes or there was an error.
