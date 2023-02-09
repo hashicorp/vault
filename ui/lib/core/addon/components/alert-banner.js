@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { messageTypes } from 'core/helpers/message-types';
+import { assert } from '@ember/debug';
 
 /**
  * @module AlertBanner
@@ -19,6 +20,9 @@ import { messageTypes } from 'core/helpers/message-types';
 
 export default class AlertBanner extends Component {
   get alertType() {
+    if (!this.args.type) {
+      assert('alert-banner component expects attr type');
+    }
     return messageTypes([this.args.type]);
   }
 }
