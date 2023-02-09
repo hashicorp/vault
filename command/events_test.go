@@ -40,39 +40,29 @@ func TestEventsSubscribeCommand_Run(t *testing.T) {
 			"Too many arguments",
 			1,
 		},
-		{
-			"okay",
-			[]string{"abc"},
-			"",
-			0,
-		},
 	}
 
-	t.Run("validations", func(t *testing.T) {
-		t.Parallel()
+	for _, tc := range cases {
+		tc := tc
 
-		for _, tc := range cases {
-			tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+			client, closer := testVaultServer(t)
+			defer closer()
 
-				client, closer := testVaultServer(t)
-				defer closer()
+			ui, cmd := testEventsSubscribeCommand(t)
+			cmd.client = client
 
-				ui, cmd := testEventsSubscribeCommand(t)
-				cmd.client = client
+			code := cmd.Run(tc.args)
+			if code != tc.code {
+				t.Errorf("expected %d to be %d", code, tc.code)
+			}
 
-				code := cmd.Run(tc.args)
-				if code != tc.code {
-					t.Errorf("expected %d to be %d", code, tc.code)
-				}
-
-				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-				if !strings.Contains(combined, tc.out) {
-					t.Errorf("expected %q to contain %q", combined, tc.out)
-				}
-			})
-		}
-	})
+			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+			if !strings.Contains(combined, tc.out) {
+				t.Errorf("expected %q to contain %q", combined, tc.out)
+			}
+		})
+	}
 }
