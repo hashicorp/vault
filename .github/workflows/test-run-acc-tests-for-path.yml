@@ -13,6 +13,9 @@ on:
         type: string
     # We will need to add the capacity for receiving passed secrets once we get to the tests that require API credentials
 
+env:
+  VAULT_ACC: 1
+
 jobs:
   go-test:
     runs-on: ubuntu-latest
