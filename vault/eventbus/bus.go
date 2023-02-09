@@ -3,7 +3,6 @@ package eventbus
 import (
 	"context"
 	"errors"
-	"io"
 	"net/url"
 	"strings"
 	"sync/atomic"
@@ -39,6 +38,7 @@ type pluginEventBus struct {
 
 type asyncChanNode struct {
 	// TODO: add bounded deque buffer of *EventReceived
+	ctx       context.Context
 	ch        chan *logical.EventReceived
 	namespace *namespace.Namespace
 	logger    hclog.Logger
@@ -145,7 +145,7 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	}, nil
 }
 
-func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, eventType logical.EventType) (io.Closer, chan *logical.EventReceived, error) {
+func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, eventType logical.EventType) (<-chan *logical.EventReceived, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -158,10 +158,11 @@ func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, event
 	}
 
 	// TODO: should we have just one node per namespace, and handle all the routing ourselves?
-	asyncNode := newAsyncNode(ns, bus.logger)
+	ctx, cancel := context.WithCancel(ctx)
+	asyncNode := newAsyncNode(ctx, ns, bus.logger)
 	err = bus.broker.RegisterNode(eventlogger.NodeID(nodeID), asyncNode)
 	if err != nil {
-		defer asyncNode.Close()
+		defer cancel()
 		return nil, nil, err
 	}
 
@@ -174,35 +175,25 @@ func (bus *EventBus) Subscribe(_ context.Context, ns *namespace.Namespace, event
 	}
 	err = bus.broker.RegisterPipeline(pipeline)
 	if err != nil {
-		defer asyncNode.Close()
+		defer cancel()
 		return nil, nil, err
 	}
-	return asyncNode, asyncNode.ch, nil
+	return asyncNode.ch, cancel, nil
 }
 
-func newAsyncNode(namespace *namespace.Namespace, logger hclog.Logger) *asyncChanNode {
+func newAsyncNode(ctx context.Context, namespace *namespace.Namespace, logger hclog.Logger) *asyncChanNode {
 	return &asyncChanNode{
+		ctx:       ctx,
 		ch:        make(chan *logical.EventReceived),
 		namespace: namespace,
 		logger:    logger,
 	}
 }
 
-func (node *asyncChanNode) Close() error {
-	close(node.ch)
-	return nil
-}
-
 func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	// TODO: add timeout on sending to node.ch
 	// sends to the channel async in another goroutine
 	go func() {
-		// there is no great way to tell if the channel was closed before our write, so it will panic
-		defer func() {
-			if err := recover(); err != nil {
-				node.logger.Debug("Error writing to asyncChanNode", "error", err)
-			}
-		}()
 		eventRecv := e.Payload.(*logical.EventReceived)
 		// drop if event is not in our namespace
 		// TODO: add wildcard processing here in some cases?
@@ -212,6 +203,9 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 		select {
 		case node.ch <- eventRecv:
 		case <-ctx.Done():
+			return
+		case <-node.ctx.Done():
+			return
 		}
 	}()
 	return e, nil

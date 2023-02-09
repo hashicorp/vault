@@ -23,12 +23,12 @@ var eventTypeRegex = regexp.MustCompile(`.*/events/subscribe/(.*)`)
 // only if the connection closes or there was an error.
 func handleEventsSubscribeWebsocket(ctx context.Context, core *vault.Core, ns *namespace.Namespace, eventType logical.EventType, conn *websocket.Conn, remoteAddr string, json bool) (websocket.StatusCode, string, error) {
 	events := core.Events()
-	closer, ch, err := events.Subscribe(ctx, ns, eventType)
+	ch, cancel, err := events.Subscribe(ctx, ns, eventType)
 	if err != nil {
 		core.Logger().Info("Error subscribing", "error", err)
 		return websocket.StatusUnsupportedData, "Error subscribing", nil
 	}
-	defer closer.Close()
+	defer cancel()
 
 	for {
 		select {
