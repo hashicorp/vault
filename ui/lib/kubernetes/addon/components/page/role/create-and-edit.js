@@ -6,6 +6,7 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { getRules } from '../../../utils/generated-role-rules';
 import { htmlSafe } from '@ember/template';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module CreateAndEditRolePage
@@ -136,7 +137,7 @@ export default class CreateAndEditRolePageComponent extends Component {
         this.args.model.name
       );
     } catch (error) {
-      const message = error.errors ? error.errors.join('. ') : error.message;
+      const message = errorMessage(error, 'Error saving role. Please try again or contact support');
       this.errorBanner = message;
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
