@@ -155,11 +155,6 @@ path "sys/control-group/request" {
 path "identity/oidc/provider/+/authorize" {
     capabilities = ["read", "update"]
 }
-
-# Allow checking what experiments are enabled
-path "sys/experiments" {
-    capabilities = ["read"]
-}
 `
 )
 

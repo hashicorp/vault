@@ -297,7 +297,6 @@ func TestDefaultPolicy(t *testing.T) {
 		"renew self":             {logical.UpdateOperation, "auth/token/renew-self", true},
 		"revoke self":            {logical.UpdateOperation, "auth/token/revoke-self", true},
 		"check own capabilities": {logical.UpdateOperation, "sys/capabilities-self", true},
-		"experiments":            {logical.ReadOperation, "sys/experiments", true},
 
 		"read arbitrary path":     {logical.ReadOperation, "foo/bar", false},
 		"login at arbitrary path": {logical.UpdateOperation, "auth/foo", false},
