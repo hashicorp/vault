@@ -24,7 +24,6 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Role name',
-    fieldValue: 'id',
     readOnly: true,
   }),
   useOpenAPI: false,
@@ -51,6 +50,7 @@ export default Model.extend({
     editType: 'json',
     helpText:
       'A policy is an object in AWS that, when associated with an identity or resource, defines their permissions.',
+    defaultValue: '{\n}',
   }),
   fields: computed('credentialType', function () {
     const credentialType = this.credentialType;
