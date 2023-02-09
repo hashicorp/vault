@@ -9,16 +9,15 @@ export default ApplicationAdapter.extend({
   },
 
   createOrUpdate(store, type, snapshot) {
+    const { backend, name } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
-    const id = snapshot.record.get('name');
-    const url = this.url(snapshot.record.get('backend'), type.modelName, id);
+    const url = this.url(backend, name);
 
-    return this.ajax(url, 'POST', { data }).then(() => {
-      // ember data doesn't like 204s if it's not a DELETE
-      return {
-        data: { ...data, id, name: id }, // set ID manually on response
-      };
+    return this.ajax(url, 'POST', { data }).then((resp) => {
+      const response = resp || {};
+      response.id = name;
+      return response;
     });
   },
 

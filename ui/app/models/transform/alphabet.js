@@ -31,5 +31,5 @@ const M = Model.extend({
 });
 
 export default attachCapabilities(M, {
-  updatePath: apiPath`${'backend'}/alphabet/${'name'}`,
+  updatePath: apiPath`${'backend'}/alphabet/${'id'}`,
 });

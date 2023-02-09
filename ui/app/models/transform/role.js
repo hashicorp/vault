@@ -38,5 +38,5 @@ const ModelExport = Model.extend({
 });
 
 export default attachCapabilities(ModelExport, {
-  updatePath: apiPath`${'backend'}/role/${'name'}`,
+  updatePath: apiPath`${'backend'}/role/${'id'}`,
 });
