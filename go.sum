@@ -1148,8 +1148,8 @@ github.com/hashicorp/vault-plugin-secrets-kubernetes v0.0.0-20221215173052-6b199
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.0.0-20221215173052-6b1994edb14e/go.mod h1:NJeYBRgLVqjvkrVyZEe42oaqP3+xvVNMYdJoMWVoByU=
 github.com/hashicorp/vault-plugin-secrets-kv v0.14.0 h1:PbveQUraOp9Bj7SVvFfssnmNYvlNTSHC6d/eLS+Am0c=
 github.com/hashicorp/vault-plugin-secrets-kv v0.14.0/go.mod h1:YLsIcn9enkcyTqtuxmCXZ94nr2aeJCZhC+neHacX8SQ=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.0 h1:H3r1gPwzg/lAtXWYpLE2km2eh3tYEbXUxcvV6OyhCEo=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.0/go.mod h1:PLx2vxXukfsKsDRo/PlG4fxmJ1d+H2h82wT3vf4buuI=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.1 h1:WkW8fyHxEdz1wGSTxCnSCrzXvgLXqXr8Iqp7upa/s4E=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.1/go.mod h1:p96IECNtVwpvTq8RAw3dLlAYRWpG1n06XOoo0TkJnuk=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.10.0 h1:Q3nKBbHQ6E/kOa3amKvcbhYTbkz4U25BBTwH66LnF+0=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.10.0/go.mod h1:sYuxnuNY2O59fy+LACtvgrqUO/r0cnhAYTMqLajD9FE=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.7.0 h1:jgJpVKhV0Eh6EjpUEIf7VYH2D6D0xW2Lry9/3PI8hy0=
@@ -1423,7 +1423,6 @@ github.com/mitchellh/mapstructure v1.3.2/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RR
 github.com/mitchellh/mapstructure v1.3.3/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/mapstructure v1.4.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/mapstructure v1.4.1/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
-github.com/mitchellh/mapstructure v1.4.2/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/osext v0.0.0-20151018003038-5e2d6d41470f/go.mod h1:OkQIRizQZAeMln+1tSwduZz7+Af5oFlKirV/MSYes2A=
