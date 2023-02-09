@@ -120,7 +120,7 @@
       </div>
     {{/if}}
     {{#if this.invalidFormAlert}}
-      <div class="control">
+      <div class="control" data-test-invalid-form-alert>
         <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
       </div>
     {{/if}}
