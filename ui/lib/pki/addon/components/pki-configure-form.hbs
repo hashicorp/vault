@@ -44,8 +44,8 @@
   {{else if (eq @config.actionType "generate-csr")}}
     <PkiGenerateCsr
       @model={{@config}}
+      @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}
       @onCancel={{@onCancel}}
-      @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}
     />
   {{else}}
     <EmptyState
