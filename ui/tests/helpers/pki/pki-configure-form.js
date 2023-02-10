@@ -10,4 +10,6 @@ export const SELECTORS = {
   ...GENERATE_ROOT,
   // pki-ca-cert-import
   importForm: '[data-test-pki-ca-cert-import-form]',
+  // generate-intermediate
+  csrDetails: '[data-test-generate-csr-result]',
 };
