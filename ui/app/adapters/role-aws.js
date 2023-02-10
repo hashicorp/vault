@@ -10,13 +10,12 @@ export default ApplicationAdapter.extend({
     const data = serializer.serialize(snapshot, requestType);
     const url = this.urlForRole(backend, name);
 
-    return this.ajax(url, 'POST', { data }).then(() => {
-      return {
-        data: {
-          name,
-          backend,
-        },
-      };
+    return this.ajax(url, 'POST', { data }).then((resp) => {
+      // Ember data doesn't like 204 responses except for DELETE method
+      const response = resp || { data: {} };
+      response.data.name = name;
+      response.data.backend = name;
+      return response;
     });
   },
 
