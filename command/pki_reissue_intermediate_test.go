@@ -155,6 +155,7 @@ func createComplicatedIssuerSetUpWithReIssueIntermediate(t *testing.T, client *a
 		"pki-int/issuer/intX1",
 		"pki-int/",
 		"key_type=ec",
+		"key_bits=384", // TODO: Check if this should be necessary
 		"common_name=Int X2",
 	}
 	codeOut = RunCustom(intX2CallArgs, runOpts)
@@ -178,8 +179,8 @@ func createComplicatedIssuerSetUpWithReIssueIntermediate(t *testing.T, client *a
 
 	intX3AdaptedCallArgs := []string{
 		"pki", "reissue", "-format=json", "-issuer_name=intX3also", "-type=existing",
-		"pki-int/issuer/intX3",
 		"pki-int/issuer/intX2",
+		"pki-int/issuer/intX3",
 		"pki-int/",
 	}
 	codeOut = RunCustom(intX3AdaptedCallArgs, runOpts)
