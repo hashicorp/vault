@@ -402,6 +402,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				},
 			},
 
+			// TODO not sure what to do for this as there are no callbacks
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Summary: "Reads the configuration and progress of the current rekey attempt.",
@@ -424,11 +425,35 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRekeyRetrieveBarrier,
-					Summary:  "Return the backup copy of PGP-encrypted unseal keys.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"keys": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+								"keys_base64": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
+					Summary: "Return the backup copy of PGP-encrypted unseal keys.",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleRekeyDeleteBarrier,
-					Summary:  "Delete the backup copy of PGP-encrypted unseal keys.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+						}},
+					},
+					Summary: "Delete the backup copy of PGP-encrypted unseal keys.",
 				},
 			},
 
@@ -441,9 +466,37 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Fields: map[string]*framework.FieldSchema{},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.handleRekeyRetrieveRecovery,
-				logical.DeleteOperation: b.handleRekeyDeleteRecovery,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleRekeyRetrieveRecovery,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"keys": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+								"keys_base64": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleRekeyDeleteRecovery,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["rekey_backup"][0]),
@@ -465,6 +518,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
+					// TODO what to do with no callback
 					Summary: "Enter a single unseal key share to progress the rekey of the Vault.",
 				},
 			},
@@ -483,6 +537,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				},
 			},
 
+			// TODO no callbacks here as well
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Summary: "Read the configuration and progress of the current rekey verification attempt.",
@@ -1706,7 +1761,18 @@ func (b *SystemBackend) remountPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleRemount,
-					Summary:  "Initiate a mount migration",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"migration_id": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+					Summary: "Initiate a mount migration",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
@@ -1725,7 +1791,22 @@ func (b *SystemBackend) remountPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRemountStatusCheck,
-					Summary:  "Check status of a mount migration",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"migration_id": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"migration_info": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
+					Summary: "Check status of a mount migration",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["remount-status"][0]),
