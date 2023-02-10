@@ -3,7 +3,12 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
-  kubernetesHost: [{ type: 'presence', message: 'Kubernetes host is required' }],
+  kubernetesHost: [
+    {
+      validator: (model) => (model.disableLocalCaJwt && !model.kubernetesHost ? false : true),
+      message: 'Kubernetes host is required',
+    },
+  ],
 };
 @withModelValidations(validations)
 @withFormFields(['kubernetesHost', 'serviceAccountJwt', 'kubernetesCaCert'])
