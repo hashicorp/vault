@@ -19,17 +19,21 @@ import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
 import { create } from 'ember-cli-page-object';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import { clearRecordsFromStore } from 'vault/tests/helpers/test-cleanup';
 
 const consoleComponent = create(consoleClass);
 
 module('Acceptance | auth backend list', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
     return authPage.login();
   });
 
-  hooks.afterEach(function () {
+  hooks.afterEach(async function () {
+    await clearRecordsFromStore(this.store, 'auth-method');
+    await clearRecordsFromStore(this.store, 'generated-user-pass');
     return logout.visit();
   });
 
