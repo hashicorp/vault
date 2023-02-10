@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -359,7 +359,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 				nsPath = ""
 			}
 			if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
-				handler := handleEventsSubscribe(core)
+				handler := handleEventsSubscribe(core, req)
 				handler.ServeHTTP(w, r)
 				return
 			}
