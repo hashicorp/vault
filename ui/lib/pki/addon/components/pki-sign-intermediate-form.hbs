@@ -11,7 +11,7 @@
 
       {{#each this.showFields as |fieldName|}}
         {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
-          <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @model attr.name}}>
+          <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
             {{#if (and attr.options.masked (get @model attr.name))}}
               <MaskedInput @value={{get @model attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
             {{else if (eq attr.name "serialNumber")}}
