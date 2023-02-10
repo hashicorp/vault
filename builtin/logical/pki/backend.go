@@ -9,11 +9,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	atomic2 "go.uber.org/atomic"
+
 	"github.com/hashicorp/vault/helper/constants"
 
 	"github.com/hashicorp/go-multierror"
-
-	atomic2 "go.uber.org/atomic"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 
@@ -248,8 +248,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.publishCertCountMetrics = atomic2.NewBool(false)
 	b.certsCounted = atomic2.NewBool(false)
 	b.certCountError = "Initialize Not Yet Run, Cert Counts Unavailable"
-	b.certCount = new(uint32)
-	b.revokedCertCount = new(uint32)
+	b.certCount = &atomic.Uint32{}
+	b.revokedCertCount = &atomic.Uint32{}
 	b.possibleDoubleCountedSerials = make([]string, 0, 250)
 	b.possibleDoubleCountedRevokedSerials = make([]string, 0, 250)
 
@@ -275,8 +275,8 @@ type backend struct {
 
 	certCountEnabled                    *atomic2.Bool
 	publishCertCountMetrics             *atomic2.Bool
-	certCount                           *uint32
-	revokedCertCount                    *uint32
+	certCount                           *atomic.Uint32
+	revokedCertCount                    *atomic.Uint32
 	certsCounted                        *atomic2.Bool
 	certCountError                      string
 	possibleDoubleCountedSerials        []string
@@ -658,16 +658,16 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		b.possibleDoubleCountedRevokedSerials = nil
 		b.possibleDoubleCountedSerials = nil
 		b.certsCounted.Store(true)
-		atomic.StoreUint32(b.certCount, 0)
-		atomic.StoreUint32(b.revokedCertCount, 0)
+		b.certCount.Store(0)
+		b.revokedCertCount.Store(0)
 		b.certCountError = "Cert Count is Disabled: enable via Tidy Config maintain_stored_certificate_counts"
 		return nil
 	}
 
 	// Ideally these three things would be set in one transaction, since that isn't possible, set the counts to "0",
 	// first, so count will over-count (and miss putting things in deduplicate queue), rather than under-count.
-	atomic.StoreUint32(b.certCount, 0)
-	atomic.StoreUint32(b.revokedCertCount, 0)
+	b.certCount.Store(0)
+	b.revokedCertCount.Store(0)
 	b.possibleDoubleCountedRevokedSerials = nil
 	b.possibleDoubleCountedSerials = nil
 	// A cert issued or revoked here will be double-counted.  That's okay, this is "best effort" metrics.
@@ -677,13 +677,13 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	atomic.AddUint32(b.certCount, uint32(len(entries)))
+	b.certCount.Add(uint32(len(entries)))
 
 	revokedEntries, err := b.storage.List(ctx, "revoked/")
 	if err != nil {
 		return err
 	}
-	atomic.AddUint32(b.revokedCertCount, uint32(len(revokedEntries)))
+	b.revokedCertCount.Add(uint32(len(revokedEntries)))
 
 	b.certsCounted.Store(true)
 	// Now that the metrics are set, we can switch from appending newly-stored certificates to the possible double-count
@@ -773,9 +773,9 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 
 func (b *backend) emitCertStoreMetrics(config *tidyConfig) {
 	if config.PublishMetrics == true {
-		certCount := atomic.LoadUint32(b.certCount)
+		certCount := b.certCount.Load()
 		b.emitTotalCertCountMetric(certCount)
-		revokedCertCount := atomic.LoadUint32(b.revokedCertCount)
+		revokedCertCount := b.revokedCertCount.Load()
 		b.emitTotalRevokedCountMetric(revokedCertCount)
 	}
 }
@@ -784,7 +784,7 @@ func (b *backend) emitCertStoreMetrics(config *tidyConfig) {
 // eg. certsCounted := b.certsCounted.Load()
 func (b *backend) ifCountEnabledIncrementTotalCertificatesCount(certsCounted bool, newSerial string) {
 	if b.certCountEnabled.Load() {
-		certCount := atomic.AddUint32(b.certCount, 1)
+		certCount := b.certCount.Add(1)
 		switch {
 		case !certsCounted:
 			// This is unsafe, but a good best-attempt
@@ -816,7 +816,7 @@ func (b *backend) emitTotalCertCountMetric(certCount uint32) {
 // Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
 // Does not respect whether-we-are-counting backend information.
 func (b *backend) decrementTotalCertificatesCountNoReport() uint32 {
-	newCount := atomic.AddUint32(b.certCount, ^uint32(0))
+	newCount := b.certCount.Add(^uint32(0))
 	return newCount
 }
 
@@ -824,7 +824,7 @@ func (b *backend) decrementTotalCertificatesCountNoReport() uint32 {
 // eg. certsCounted := b.certsCounted.Load()
 func (b *backend) ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted bool, newSerial string) {
 	if b.certCountEnabled.Load() {
-		newRevokedCertCount := atomic.AddUint32(b.revokedCertCount, 1)
+		newRevokedCertCount := b.revokedCertCount.Add(1)
 		switch {
 		case !certsCounted:
 			// This is unsafe, but a good best-attempt
@@ -856,6 +856,6 @@ func (b *backend) emitTotalRevokedCountMetric(revokedCertCount uint32) {
 // Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
 // Does not respect whether-we-are-counting backend information.
 func (b *backend) decrementTotalRevokedCertificatesCountNoReport() uint32 {
-	newRevokedCertCount := atomic.AddUint32(b.revokedCertCount, ^uint32(0))
+	newRevokedCertCount := b.revokedCertCount.Add(^uint32(0))
 	return newRevokedCertCount
 }

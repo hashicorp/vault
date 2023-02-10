@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -1367,8 +1366,8 @@ func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
 			sc.Backend.certCountError = "Cert Count is Disabled: enable via Tidy Config maintain_stored_certificate_counts"
 			sc.Backend.possibleDoubleCountedSerials = nil        // This won't stop a list operation, but will stop an expensive clean-up during initialize
 			sc.Backend.possibleDoubleCountedRevokedSerials = nil // This won't stop a list operation, but will stop an expensive clean-up during initialize
-			atomic.StoreUint32(sc.Backend.certCount, 0)
-			atomic.StoreUint32(sc.Backend.revokedCertCount, 0)
+			sc.Backend.certCount.Store(0)
+			sc.Backend.revokedCertCount.Store(0)
 		}
 	} else { // To Potentially Enable Certificate Counting
 		if sc.Backend.certCountEnabled.Load() == false {

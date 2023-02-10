@@ -27,7 +27,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -5627,16 +5626,16 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 		}
 	}
 
-	if atomic.LoadUint32(b.certCount) != 6 {
-		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", atomic.LoadUint32(b.certCount))
+	if b.certCount.Load() != 6 {
+		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", b.certCount.Load())
 	}
-	if atomic.LoadUint32(b.revokedCertCount) != 2 {
-		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", atomic.LoadUint32(b.revokedCertCount))
+	if b.revokedCertCount.Load() != 2 {
+		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", b.revokedCertCount.Load())
 	}
 
 	// Simulates listing while initialize in progress, by "restarting it"
-	atomic.StoreUint32(b.certCount, 0)
-	atomic.StoreUint32(b.revokedCertCount, 0)
+	b.certCount.Store(0)
+	b.revokedCertCount.Store(0)
 	b.certsCounted.Store(false)
 
 	// Revoke certificates C, D
@@ -5665,12 +5664,12 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	b.initializeStoredCertificateCounts(ctx)
 
 	// Test certificate count
-	if atomic.LoadUint32(b.certCount) != 8 {
-		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", *(b.certCount))
+	if b.certCount.Load() != 8 {
+		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", b.certCount.Load())
 	}
 
-	if atomic.LoadUint32(b.revokedCertCount) != 4 {
-		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", *(b.revokedCertCount))
+	if b.revokedCertCount.Load() != 4 {
+		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", b.revokedCertCount.Load())
 	}
 
 	return
