@@ -12,7 +12,7 @@ import errorMessage from 'vault/utils/error-message';
 interface Args {
   model: PkiActionModel;
   useIssuer: boolean;
-  onSave: CallableFunction;
+  onComplete: CallableFunction;
   onCancel: CallableFunction;
 }
 
