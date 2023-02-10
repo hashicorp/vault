@@ -75,13 +75,15 @@
             Save
           {{/if}}
         </button>
-        <SecretLink
-          @mode={{if (eq this.mode "create") "list" "show"}}
-          class="button"
-          @secret={{concat "role/" this.model.id}}
-        >
-          Cancel
-        </SecretLink>
+        {{#if (eq this.mode "create")}}
+          <LinkTo @route={{"vault.cluster.secrets.backend.list-root"}} @query={{hash tab="role"}} class="button">
+            Cancel
+          </LinkTo>
+        {{else if (eq this.mode "edit")}}
+          <LinkTo @route="vault.cluster.secrets.backend.show" @model={{concat "role/" this.model.id}} class="button">
+            Cancel
+          </LinkTo>
+        {{/if}}
       </div>
     </div>
   </form>
