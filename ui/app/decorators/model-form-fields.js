@@ -22,17 +22,17 @@ export function withFormFields(propertyNames, groupPropertyNames) {
     return class ModelFormFields extends SuperClass {
       constructor() {
         super(...arguments);
-        if (!Array.isArray(propertyNames) && !Array.isArray(groupPropertyNames)) {
-          throw new Error(
-            'Array of property names and/or array of field groups are required when using withFormFields model decorator'
-          );
-        }
         if (propertyNames) {
           this.formFields = expandAttributeMeta(this, propertyNames);
         }
         if (groupPropertyNames) {
           this.formFieldGroups = fieldToAttrs(this, groupPropertyNames);
         }
+        const allFields = [];
+        this.eachAttribute(function (key) {
+          allFields.push(key);
+        });
+        this.allFields = expandAttributeMeta(this, allFields);
       }
     };
   };

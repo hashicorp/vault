@@ -10,7 +10,7 @@ description: |-
 
 This is the API documentation for the Vault Azure auth method
 plugin. To learn more about the usage and operation, see the
-[Vault Azure method documentation](/docs/auth/azure).
+[Vault Azure method documentation](/vault/docs/auth/azure).
 
 This documentation assumes the plugin method is mounted at the
 `/auth/azure` path in Vault. Since it is possible to enable auth methods
@@ -31,7 +31,7 @@ virtual machine.
 - `tenant_id` `(string: <required>)` - The tenant id for the Azure Active Directory organization.
   This value can also be provided with the `AZURE_TENANT_ID` environment variable.
 - `resource` `(string: <required>)` - The resource URL for the application registered in Azure Active Directory.
-  The value is expected to match the audience (`aud` claim) of the [JWT](/api-docs/auth/azure#jwt)
+  The value is expected to match the audience (`aud` claim) of the [JWT](/vault/api-docs/auth/azure#jwt)
   provided to the login API. See the [resource](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http)
   parameter for how the audience is set when requesting a JWT access token from the Azure Instance Metadata Service (IMDS) endpoint.
   This value can also be provided with the `AZURE_AD_RESOURCE` environment variable.
@@ -109,6 +109,28 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
     https://127.0.0.1:8200/v1/auth/azure/config
+```
+
+## Rotate Root
+
+This endpoint generates a new client secret for the root account defined in the config. The
+value generated will only be known by Vault.
+
+| Method | Path                 |
+| :----- | :------------------- |
+| `POST` | `/azure/rotate-root` |
+
+### Parameters
+
+There are no parameters to this operation.
+
+### Sample Request
+
+```shell-session
+$ curl \
+  --header "X-Vault-Token: ..." \
+  --request POST \
+  https://127.0.0.1:8200/v1/auth/azure/rotate-root
 ```
 
 ## Create Role
@@ -280,10 +302,14 @@ entity and then authorizes the entity for the given role.
   metadata.
 - `vm_name` `(string: "")` - The virtual machine name for the machine that
   generated the MSI token. This information can be obtained through instance
-  metadata. If vmss_name is provided, this value is ignored.
+  metadata. If `vmss_name` is provided, this value is ignored.
 - `vmss_name` `(string: "")` - The virtual machine scale set name for the machine
   that generated the MSI token. This information can be obtained through instance
   metadata.
+- `resource_id` `(string: "")` - The fully qualified ID of the Azure resource that
+  generated the MSI token, including the resource name and resource type. Use
+  the format /subscriptions/{guid}/resourceGroups/{resource-group-name}/{resource-provider-namespace}/{resource-type}/{resource-name}.
+  If `vm_name` or `vmss_name` is provided, this value is ignored.
 
 ### Sample Payload
 

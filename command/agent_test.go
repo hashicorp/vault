@@ -1,9 +1,11 @@
 package command
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -14,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
@@ -34,7 +36,10 @@ import (
 
 const (
 	BasicHclConfig = `
-log_file = "/foo/bar/juan.log"
+log_file = "TMPDIR/juan.log"
+log_level="warn"
+log_rotate_max_files=2
+log_rotate_bytes=1048576
 vault {
 	address = "http://127.0.0.1:8200"
 	retry {
@@ -44,7 +49,27 @@ vault {
 
 listener "tcp" {
 	address = "127.0.0.1:8100"
-	tls_disable = true
+	tls_disable = false
+	tls_cert_file = "TMPDIR/reload_cert.pem"
+  	tls_key_file  = "TMPDIR/reload_key.pem"
+}`
+	BasicHclConfig2 = `
+log_file = "TMPDIR/juan.log"
+log_level="debug"
+log_rotate_max_files=-1
+log_rotate_bytes=1048576
+vault {
+	address = "http://127.0.0.1:8200"
+	retry {
+		num_retries = 5
+	}
+}
+
+listener "tcp" {
+	address = "127.0.0.1:8100"
+	tls_disable = false
+	tls_cert_file = "TMPDIR/reload_cert.pem"
+  	tls_key_file  = "TMPDIR/reload_key.pem"
 }`
 )
 
@@ -57,194 +82,12 @@ func testAgentCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *AgentCo
 			UI: ui,
 		},
 		ShutdownCh: MakeShutdownCh(),
+		SighupCh:   MakeSighupCh(),
 		logger:     logger,
+		startedCh:  make(chan struct{}, 5),
+		reloadedCh: make(chan struct{}, 5),
 	}
 }
-
-/*
-func TestAgent_Cache_UnixListener(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
-	coreConfig := &vault.CoreConfig{
-		Logger: logger.Named("core"),
-		CredentialBackends: map[string]logical.Factory{
-			"jwt": vaultjwt.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
-	client := cluster.Cores[0].Client
-
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Setenv(api.EnvVaultAddress, client.Address())
-
-	defer os.Setenv(api.EnvVaultCACert, os.Getenv(api.EnvVaultCACert))
-	os.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
-
-	// Setup Vault
-	err := client.Sys().EnableAuthWithOptions("jwt", &api.EnableAuthOptions{
-		Type: "jwt",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = client.Logical().Write("auth/jwt/config", map[string]interface{}{
-		"bound_issuer":           "https://team-vault.auth0.com/",
-		"jwt_validation_pubkeys": agent.TestECDSAPubKey,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = client.Logical().Write("auth/jwt/role/test", map[string]interface{}{
-		"role_type":       "jwt",
-		"bound_subject":   "r3qXcK2bix9eFECzsU3Sbmh0K16fatW6@clients",
-		"bound_audiences": "https://vault.plugin.auth.jwt.test",
-		"user_claim":      "https://vault/user",
-		"groups_claim":    "https://vault/groups",
-		"policies":        "test",
-		"period":          "3s",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	inf, err := ioutil.TempFile("", "auth.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	in := inf.Name()
-	inf.Close()
-	os.Remove(in)
-	t.Logf("input: %s", in)
-
-	sink1f, err := ioutil.TempFile("", "sink1.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink1 := sink1f.Name()
-	sink1f.Close()
-	os.Remove(sink1)
-	t.Logf("sink1: %s", sink1)
-
-	sink2f, err := ioutil.TempFile("", "sink2.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink2 := sink2f.Name()
-	sink2f.Close()
-	os.Remove(sink2)
-	t.Logf("sink2: %s", sink2)
-
-	conff, err := ioutil.TempFile("", "conf.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	conf := conff.Name()
-	conff.Close()
-	os.Remove(conf)
-	t.Logf("config: %s", conf)
-
-	jwtToken, _ := agent.GetTestJWT(t)
-	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
-		t.Fatal(err)
-	} else {
-		logger.Trace("wrote test jwt", "path", in)
-	}
-
-	socketff, err := ioutil.TempFile("", "cache.socket.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	socketf := socketff.Name()
-	socketff.Close()
-	os.Remove(socketf)
-	t.Logf("socketf: %s", socketf)
-
-	config := `
-auto_auth {
-        method {
-                type = "jwt"
-                config = {
-                        role = "test"
-                        path = "%s"
-                }
-        }
-
-        sink {
-                type = "file"
-                config = {
-                        path = "%s"
-                }
-        }
-
-        sink "file" {
-                config = {
-                        path = "%s"
-                }
-        }
-}
-
-cache {
-	use_auto_auth_token = true
-
-	listener "unix" {
-		address = "%s"
-		tls_disable = true
-	}
-}
-`
-
-	config = fmt.Sprintf(config, in, sink1, sink2, socketf)
-	if err := ioutil.WriteFile(conf, []byte(config), 0600); err != nil {
-		t.Fatal(err)
-	} else {
-		logger.Trace("wrote test config", "path", conf)
-	}
-
-	_, cmd := testAgentCommand(t, logger)
-	cmd.client = client
-
-	// Kill the command 5 seconds after it starts
-	go func() {
-		select {
-		case <-cmd.ShutdownCh:
-		case <-time.After(5 * time.Second):
-			cmd.ShutdownCh <- struct{}{}
-		}
-	}()
-
-	originalVaultAgentAddress := os.Getenv(api.EnvVaultAgentAddr)
-
-	// Create a client that talks to the agent
-	os.Setenv(api.EnvVaultAgentAddr, socketf)
-	testClient, err := api.NewClient(api.DefaultConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
-	os.Setenv(api.EnvVaultAgentAddr, originalVaultAgentAddress)
-
-	// Start the agent
-	go cmd.Run([]string{"-config", conf})
-
-	// Give some time for the auto-auth to complete
-	time.Sleep(1 * time.Second)
-
-	// Invoke lookup self through the agent
-	secret, err := testClient.Auth().Token().LookupSelf()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if secret == nil || secret.Data == nil || secret.Data["id"].(string) == "" {
-		t.Fatalf("failed to perform lookup self through agent")
-	}
-}
-*/
 
 func TestAgent_ExitAfterAuth(t *testing.T) {
 	t.Run("via_config", func(t *testing.T) {
@@ -303,7 +146,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 		t.Fatal(err)
 	}
 
-	inf, err := ioutil.TempFile("", "auth.jwt.test.")
+	inf, err := os.CreateTemp("", "auth.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +155,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(in)
 	t.Logf("input: %s", in)
 
-	sink1f, err := ioutil.TempFile("", "sink1.jwt.test.")
+	sink1f, err := os.CreateTemp("", "sink1.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,7 +164,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(sink1)
 	t.Logf("sink1: %s", sink1)
 
-	sink2f, err := ioutil.TempFile("", "sink2.jwt.test.")
+	sink2f, err := os.CreateTemp("", "sink2.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,7 +173,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(sink2)
 	t.Logf("sink2: %s", sink2)
 
-	conff, err := ioutil.TempFile("", "conf.jwt.test.")
+	conff, err := os.CreateTemp("", "conf.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -340,7 +183,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	t.Logf("config: %s", conf)
 
 	jwtToken, _ := agent.GetTestJWT(t)
-	if err := ioutil.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
+	if err := os.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test jwt", "path", in)
@@ -379,7 +222,7 @@ auto_auth {
 `
 
 	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sink1, sink2)
-	if err := ioutil.WriteFile(conf, []byte(config), 0o600); err != nil {
+	if err := os.WriteFile(conf, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test config", "path", conf)
@@ -411,7 +254,7 @@ auto_auth {
 		t.Fatal("timeout reached while waiting for agent to exit")
 	}
 
-	sink1Bytes, err := ioutil.ReadFile(sink1)
+	sink1Bytes, err := os.ReadFile(sink1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -419,7 +262,7 @@ auto_auth {
 		t.Fatal("got no output from sink 1")
 	}
 
-	sink2Bytes, err := ioutil.ReadFile(sink2)
+	sink2Bytes, err := os.ReadFile(sink2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -769,7 +612,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
-	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	tmpDirRoot, err := os.MkdirTemp("", "agent-test-renders")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -799,7 +642,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 	for tcname, tc := range testCases {
 		t.Run(tcname, func(t *testing.T) {
 			// create temp dir for this test run
-			tmpDir, err := ioutil.TempDir(tmpDirRoot, tcname)
+			tmpDir, err := os.MkdirTemp(tmpDirRoot, tcname)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -808,7 +651,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 			var templatePaths []string
 			for i := 0; i < tc.templateCount; i++ {
 				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.tmpl", i))
-				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)), 0o600); err != nil {
+				if err := os.WriteFile(fileName, []byte(templateContents(i)), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				templatePaths = append(templatePaths, fileName)
@@ -922,7 +765,7 @@ auto_auth {
 					for i := range templatePaths {
 						fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.json", i))
 						var c []byte
-						c, err = ioutil.ReadFile(fileName)
+						c, err = os.ReadFile(fileName)
 						if err != nil {
 							continue
 						}
@@ -939,7 +782,7 @@ auto_auth {
 
 			for i := 0; i < tc.templateCount; i++ {
 				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.tmpl", i))
-				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)+"{}"), 0o600); err != nil {
+				if err := os.WriteFile(fileName, []byte(templateContents(i)+"{}"), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -952,7 +795,7 @@ auto_auth {
 func testListFiles(t *testing.T, dir, extension string) int {
 	t.Helper()
 
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1082,14 +925,14 @@ func TestAgent_Template_ExitCounter(t *testing.T) {
 
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
-	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	tmpDirRoot, err := os.MkdirTemp("", "agent-test-renders")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDirRoot)
 
 	// create temp dir for this test run
-	tmpDir, err := ioutil.TempDir(tmpDirRoot, "agent-test")
+	tmpDir, err := os.MkdirTemp(tmpDirRoot, "agent-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1171,7 +1014,7 @@ exit_after_auth = true
 	// Perform the tests
 	//----------------------------------------------------
 
-	files, err := ioutil.ReadDir(tmpDir)
+	files, err := os.ReadDir(tmpDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1234,7 +1077,7 @@ func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusC
 		t.Fatalf("expected status code %d, not %d", expectedStatusCode, resp.StatusCode)
 	}
 
-	bytes, err := ioutil.ReadAll(resp.Body)
+	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -1253,7 +1096,7 @@ func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusC
 // makeTempFile creates a temp file and populates it.
 func makeTempFile(t *testing.T, name, contents string) string {
 	t.Helper()
-	f, err := ioutil.TempFile("", name)
+	f, err := os.CreateTemp("", name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1368,7 +1211,7 @@ func TestAgent_Template_Retry(t *testing.T) {
 
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
-	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	tmpDirRoot, err := os.MkdirTemp("", "agent-test-renders")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1416,14 +1259,14 @@ func TestAgent_Template_Retry(t *testing.T) {
 			h.failCount = 6
 
 			// create temp dir for this test run
-			tmpDir, err := ioutil.TempDir(tmpDirRoot, tcname)
+			tmpDir, err := os.MkdirTemp(tmpDirRoot, tcname)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			// make some template files
 			templatePath := filepath.Join(tmpDir, "render_0.tmpl")
-			if err := ioutil.WriteFile(templatePath, []byte(templateContents(0)), 0o600); err != nil {
+			if err := os.WriteFile(templatePath, []byte(templateContents(0)), 0o600); err != nil {
 				t.Fatal(err)
 			}
 			templateConfig := fmt.Sprintf(templateConfigString, templatePath, tmpDir, "render_0.json")
@@ -1497,7 +1340,7 @@ template_config {
 
 					fileName := filepath.Join(tmpDir, "render_0.json")
 					var c []byte
-					c, err = ioutil.ReadFile(fileName)
+					c, err = os.ReadFile(fileName)
 					if err != nil {
 						continue
 					}
@@ -1595,7 +1438,112 @@ auto_auth {
 	return config, cleanup
 }
 
-func TestAgent_Cache_Retry(t *testing.T) {
+func TestAgent_Cache_DynamicSecret(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	cacheConfig := `
+cache {
+}
+`
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+`, serverClient.Address(), cacheConfig, listenConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	_, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	agentClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentClient.SetToken(serverClient.Token())
+	agentClient.SetMaxRetries(0)
+	err = agentClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	renewable := true
+	tokenCreateRequest := &api.TokenCreateRequest{
+		Policies:  []string{"default"},
+		TTL:       "30m",
+		Renewable: &renewable,
+	}
+
+	// This was the simplest test I could find to trigger the caching behaviour,
+	// i.e. the most concise I could make the test that I can tell
+	// creating an orphan token returns Auth, is renewable, and isn't a token
+	// that's managed elsewhere (since it's an orphan)
+	secret, err := agentClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil {
+		t.Fatalf("secret not as expected: %v", secret)
+	}
+
+	token := secret.Auth.ClientToken
+
+	secret, err = agentClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil {
+		t.Fatalf("secret not as expected: %v", secret)
+	}
+
+	token2 := secret.Auth.ClientToken
+
+	if token != token2 {
+		t.Fatalf("token create response not cached when it should have been, as tokens differ")
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
+func TestAgent_ApiProxy_Retry(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
@@ -1697,7 +1645,6 @@ vault {
 %s
 %s
 `, serverClient.Address(), retryConf, cacheConfig, listenConfig)
-
 			configPath := makeTempFile(t, "config.hcl", config)
 			defer os.Remove(configPath)
 
@@ -1804,7 +1751,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
-	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	tmpDirRoot, err := os.MkdirTemp("", "agent-test-renders")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1908,7 +1855,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 	for tcName, tc := range testCases {
 		t.Run(tcName, func(t *testing.T) {
 			// create temp dir for this test run
-			tmpDir, err := ioutil.TempDir(tmpDirRoot, tcName)
+			tmpDir, err := os.MkdirTemp(tmpDirRoot, tcName)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -2017,7 +1964,7 @@ vault {
 
 					fileName := filepath.Join(tmpDir, "render_0.json")
 					var c []byte
-					c, err = ioutil.ReadFile(fileName)
+					c, err = os.ReadFile(fileName)
 					if err != nil {
 						continue
 					}
@@ -2254,13 +2201,13 @@ cache {}
 func TestAgent_LogFile_CliOverridesConfig(t *testing.T) {
 	// Create basic config
 	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
-	cfg, err := agentConfig.LoadConfig(configFile.Name())
+	cfg, err := agentConfig.LoadConfigFile(configFile.Name())
 	if err != nil {
 		t.Fatal("Cannot load config to test update/merge", err)
 	}
 
 	// Sanity check that the config value is the current value
-	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile)
+	assert.Equal(t, "TMPDIR/juan.log", cfg.LogFile)
 
 	// Initialize the command and parse any flags
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
@@ -2272,9 +2219,9 @@ func TestAgent_LogFile_CliOverridesConfig(t *testing.T) {
 	}
 
 	// Update the config based on the inputs.
-	cmd.updateConfig(f, cfg)
+	cmd.applyConfigOverrides(f, cfg)
 
-	assert.NotEqual(t, "/foo/bar/juan.log", cfg.LogFile)
+	assert.NotEqual(t, "TMPDIR/juan.log", cfg.LogFile)
 	assert.NotEqual(t, "/squiggle/logs.txt", cfg.LogFile)
 	assert.Equal(t, "/foo/bar/test.log", cfg.LogFile)
 }
@@ -2282,13 +2229,15 @@ func TestAgent_LogFile_CliOverridesConfig(t *testing.T) {
 func TestAgent_LogFile_Config(t *testing.T) {
 	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
 
-	cfg, err := agentConfig.LoadConfig(configFile.Name())
+	cfg, err := agentConfig.LoadConfigFile(configFile.Name())
 	if err != nil {
 		t.Fatal("Cannot load config to test update/merge", err)
 	}
 
 	// Sanity check that the config value is the current value
-	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "sanity check on log config failed")
+	assert.Equal(t, "TMPDIR/juan.log", cfg.LogFile, "sanity check on log config failed")
+	assert.Equal(t, 2, cfg.LogRotateMaxFiles)
+	assert.Equal(t, 1048576, cfg.LogRotateBytes)
 
 	// Parse the cli flags (but we pass in an empty slice)
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
@@ -2298,9 +2247,185 @@ func TestAgent_LogFile_Config(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cmd.updateConfig(f, cfg)
+	// Should change nothing...
+	cmd.applyConfigOverrides(f, cfg)
 
-	assert.Equal(t, "/foo/bar/juan.log", cfg.LogFile, "actual config check")
+	assert.Equal(t, "TMPDIR/juan.log", cfg.LogFile, "actual config check")
+	assert.Equal(t, 2, cfg.LogRotateMaxFiles)
+	assert.Equal(t, 1048576, cfg.LogRotateBytes)
+}
+
+func TestAgent_Config_NewLogger_Default(t *testing.T) {
+	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+	cmd.config = agentConfig.NewConfig()
+	logger, err := cmd.newLogger()
+
+	assert.NoError(t, err)
+	assert.NotNil(t, logger)
+	assert.Equal(t, hclog.Info.String(), logger.GetLevel().String())
+}
+
+func TestAgent_Config_ReloadLogLevel(t *testing.T) {
+	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+	var err error
+	tempDir := t.TempDir()
+
+	// Load an initial config
+	hcl := strings.ReplaceAll(BasicHclConfig, "TMPDIR", tempDir)
+	configFile := populateTempFile(t, "agent-config.hcl", hcl)
+	cmd.config, err = agentConfig.LoadConfigFile(configFile.Name())
+	if err != nil {
+		t.Fatal("Cannot load config to test update/merge", err)
+	}
+
+	// Tweak the loaded config to make sure we can put log files into a temp dir
+	// and systemd log attempts work fine, this would usually happen during Run.
+	cmd.logWriter = os.Stdout
+	cmd.logger, err = cmd.newLogger()
+	if err != nil {
+		t.Fatal("logger required for systemd log messages", err)
+	}
+
+	// Sanity check
+	assert.Equal(t, "warn", cmd.config.LogLevel)
+
+	// Load a new config
+	hcl = strings.ReplaceAll(BasicHclConfig2, "TMPDIR", tempDir)
+	configFile = populateTempFile(t, "agent-config.hcl", hcl)
+	err = cmd.reloadConfig([]string{configFile.Name()})
+	assert.NoError(t, err)
+	assert.Equal(t, "debug", cmd.config.LogLevel)
+}
+
+func TestAgent_Config_ReloadTls(t *testing.T) {
+	var wg sync.WaitGroup
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal("unable to get current working directory")
+	}
+	workingDir := filepath.Join(wd, "/agent/test-fixtures/reload")
+	fooCert := "reload_foo.pem"
+	fooKey := "reload_foo.key"
+
+	barCert := "reload_bar.pem"
+	barKey := "reload_bar.key"
+
+	reloadCert := "reload_cert.pem"
+	reloadKey := "reload_key.pem"
+	caPem := "reload_ca.pem"
+
+	tempDir := t.TempDir()
+
+	// Set up initial 'foo' certs
+	inBytes, err := os.ReadFile(filepath.Join(workingDir, fooCert))
+	if err != nil {
+		t.Fatal("unable to read cert required for test", fooCert, err)
+	}
+	err = os.WriteFile(filepath.Join(tempDir, reloadCert), inBytes, 0o777)
+	if err != nil {
+		t.Fatal("unable to write temp cert required for test", reloadCert, err)
+	}
+
+	inBytes, err = os.ReadFile(filepath.Join(workingDir, fooKey))
+	if err != nil {
+		t.Fatal("unable to read cert key required for test", fooKey, err)
+	}
+	err = os.WriteFile(filepath.Join(tempDir, reloadKey), inBytes, 0o777)
+	if err != nil {
+		t.Fatal("unable to write temp cert key required for test", reloadKey, err)
+	}
+
+	inBytes, err = os.ReadFile(filepath.Join(workingDir, caPem))
+	if err != nil {
+		t.Fatal("unable to read CA pem required for test", caPem, err)
+	}
+	certPool := x509.NewCertPool()
+	ok := certPool.AppendCertsFromPEM(inBytes)
+	if !ok {
+		t.Fatal("not ok when appending CA cert")
+	}
+
+	replacedHcl := strings.ReplaceAll(BasicHclConfig, "TMPDIR", tempDir)
+	configFile := populateTempFile(t, "agent-config.hcl", replacedHcl)
+
+	// Set up Agent/cmd
+	logger := logging.NewVaultLogger(hclog.Trace)
+	ui, cmd := testAgentCommand(t, logger)
+
+	wg.Add(1)
+	args := []string{"-config", configFile.Name()}
+	go func() {
+		if code := cmd.Run(args); code != 0 {
+			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+			t.Errorf("got a non-zero exit status: %s", output)
+		}
+		wg.Done()
+	}()
+
+	testCertificateName := func(cn string) error {
+		conn, err := tls.Dial("tcp", "127.0.0.1:8100", &tls.Config{
+			RootCAs: certPool,
+		})
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+		if err = conn.Handshake(); err != nil {
+			return err
+		}
+		servName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
+		if servName != cn {
+			return fmt.Errorf("expected %s, got %s", cn, servName)
+		}
+		return nil
+	}
+
+	// Start
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout")
+	}
+
+	if err := testCertificateName("foo.example.com"); err != nil {
+		t.Fatalf("certificate name didn't check out: %s", err)
+	}
+
+	// Swap out certs
+	inBytes, err = os.ReadFile(filepath.Join(workingDir, barCert))
+	if err != nil {
+		t.Fatal("unable to read cert required for test", barCert, err)
+	}
+	err = os.WriteFile(filepath.Join(tempDir, reloadCert), inBytes, 0o777)
+	if err != nil {
+		t.Fatal("unable to write temp cert required for test", reloadCert, err)
+	}
+
+	inBytes, err = os.ReadFile(filepath.Join(workingDir, barKey))
+	if err != nil {
+		t.Fatal("unable to read cert key required for test", barKey, err)
+	}
+	err = os.WriteFile(filepath.Join(tempDir, reloadKey), inBytes, 0o777)
+	if err != nil {
+		t.Fatal("unable to write temp cert key required for test", reloadKey, err)
+	}
+
+	// Reload
+	cmd.SighupCh <- struct{}{}
+	select {
+	case <-cmd.reloadedCh:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout")
+	}
+
+	if err := testCertificateName("bar.example.com"); err != nil {
+		t.Fatalf("certificate name didn't check out: %s", err)
+	}
+
+	// Shut down
+	cmd.ShutdownCh <- struct{}{}
+
+	wg.Wait()
 }
 
 // Get a randomly assigned port and then free it again before returning it.

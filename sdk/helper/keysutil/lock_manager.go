@@ -59,6 +59,9 @@ type PolicyRequest struct {
 
 	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
 	AllowImportedKeyRotation bool
+
+	// The UUID of the managed key, if using one
+	ManagedKeyUUID string
 }
 
 type LockManager struct {
@@ -382,6 +385,12 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
 			}
 
+		case KeyType_MANAGED_KEY:
+			if req.Derived || req.Convergent {
+				cleanup()
+				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
+			}
+
 		default:
 			cleanup()
 			return nil, false, fmt.Errorf("unsupported key type %v", req.KeyType)
@@ -412,7 +421,11 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 		}
 
 		// Performs the actual persist and does setup
-		err = p.Rotate(ctx, req.Storage, rand)
+		if p.Type == KeyType_MANAGED_KEY {
+			err = p.RotateManagedKey(ctx, req.Storage, req.ManagedKeyUUID)
+		} else {
+			err = p.Rotate(ctx, req.Storage, rand)
+		}
 		if err != nil {
 			cleanup()
 			return nil, false, err

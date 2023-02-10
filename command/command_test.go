@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/cli"
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
@@ -70,7 +71,7 @@ func testVaultServer(tb testing.TB) (*api.Client, func()) {
 func testVaultServerWithKVVersion(tb testing.TB, kvVersion string) (*api.Client, func()) {
 	tb.Helper()
 
-	client, _, closer := testVaultServerUnsealWithKVVersion(tb, kvVersion)
+	client, _, closer := testVaultServerUnsealWithKVVersionWithSeal(tb, kvVersion, nil)
 	return client, closer
 }
 
@@ -89,13 +90,24 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 	return client, closer
 }
 
+// testVaultServerAutoUnseal creates a test vault cluster and sets it up with auto unseal
+// the function returns a client, the recovery keys, and a closer function
+func testVaultServerAutoUnseal(tb testing.TB) (*api.Client, []string, func()) {
+	testSeal := seal.NewTestSeal(nil)
+	autoSeal, err := vault.NewAutoSeal(testSeal)
+	if err != nil {
+		tb.Fatal("unable to create autoseal", err)
+	}
+	return testVaultServerUnsealWithKVVersionWithSeal(tb, "1", autoSeal)
+}
+
 // testVaultServerUnseal creates a test vault cluster and returns a configured
 // API client, list of unseal keys (as strings), and a closer function.
 func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
-	return testVaultServerUnsealWithKVVersion(tb, "1")
+	return testVaultServerUnsealWithKVVersionWithSeal(tb, "1", nil)
 }
 
-func testVaultServerUnsealWithKVVersion(tb testing.TB, kvVersion string) (*api.Client, []string, func()) {
+func testVaultServerUnsealWithKVVersionWithSeal(tb testing.TB, kvVersion string, seal vault.Seal) (*api.Client, []string, func()) {
 	tb.Helper()
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
 		Output:     log.DefaultOutput,
@@ -111,6 +123,7 @@ func testVaultServerUnsealWithKVVersion(tb testing.TB, kvVersion string) (*api.C
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
 		BuiltinRegistry:    builtinplugins.Registry,
+		Seal:               seal,
 	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1,
@@ -144,7 +157,8 @@ func testVaultServerCoreConfig(tb testing.TB, coreConfig *vault.CoreConfig) (*ap
 }
 
 // testVaultServerCoreConfig creates a new vault cluster with the given core
-// configuration. This is a lower-level test helper.
+// configuration. This is a lower-level test helper. If the seal config supports recovery keys, then
+// recovery keys are returned. Otherwise, unseal keys are returned
 func testVaultServerCoreConfigWithOpts(tb testing.TB, coreConfig *vault.CoreConfig, opts *vault.TestClusterOptions) (*api.Client, []string, func()) {
 	tb.Helper()
 
@@ -159,14 +173,24 @@ func testVaultServerCoreConfigWithOpts(tb testing.TB, coreConfig *vault.CoreConf
 	client := cluster.Cores[0].Client
 	client.SetToken(cluster.RootToken)
 
-	// Convert the unseal keys to base64 encoded, since these are how the user
-	// will get them.
-	unsealKeys := make([]string, len(cluster.BarrierKeys))
-	for i := range unsealKeys {
-		unsealKeys[i] = base64.StdEncoding.EncodeToString(cluster.BarrierKeys[i])
+	var keys [][]byte
+	if coreConfig.Seal != nil && coreConfig.Seal.RecoveryKeySupported() {
+		keys = cluster.RecoveryKeys
+	} else {
+		keys = cluster.BarrierKeys
 	}
 
-	return client, unsealKeys, func() { defer cluster.Cleanup() }
+	return client, encodeKeys(keys), cluster.Cleanup
+}
+
+// Convert the unseal keys to base64 encoded, since these are how the user
+// will get them.
+func encodeKeys(rawKeys [][]byte) []string {
+	keys := make([]string, len(rawKeys))
+	for i := range rawKeys {
+		keys[i] = base64.StdEncoding.EncodeToString(rawKeys[i])
+	}
+	return keys
 }
 
 // testVaultServerUninit creates an uninitialized server.

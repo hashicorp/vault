@@ -9,7 +9,6 @@ import (
 func TestUserAgent(t *testing.T) {
 	projectURL = "https://vault-test.com"
 	rt = "go5.0"
-	versionFunc = func() string { return "1.2.3" }
 
 	type args struct {
 		comments []string
@@ -22,21 +21,21 @@ func TestUserAgent(t *testing.T) {
 		{
 			name: "User agent",
 			args: args{},
-			want: "Vault/1.2.3 (+https://vault-test.com; go5.0)",
+			want: "Vault (+https://vault-test.com; go5.0)",
 		},
 		{
 			name: "User agent with additional comment",
 			args: args{
 				comments: []string{"pid-abcdefg"},
 			},
-			want: "Vault/1.2.3 (+https://vault-test.com; go5.0; pid-abcdefg)",
+			want: "Vault (+https://vault-test.com; go5.0; pid-abcdefg)",
 		},
 		{
 			name: "User agent with additional comments",
 			args: args{
 				comments: []string{"pid-abcdefg", "cloud-provider"},
 			},
-			want: "Vault/1.2.3 (+https://vault-test.com; go5.0; pid-abcdefg; cloud-provider)",
+			want: "Vault (+https://vault-test.com; go5.0; pid-abcdefg; cloud-provider)",
 		},
 	}
 	for _, tt := range tests {

@@ -87,6 +87,12 @@ const (
 	// EnvVaultLogLevel is used to specify the log level applied to logging
 	// Supported log levels: Trace, Debug, Error, Warn, Info
 	EnvVaultLogLevel = "VAULT_LOG_LEVEL"
+	// EnvVaultExperiments defines the experiments to enable for a server as a
+	// comma separated list. See experiments.ValidExperiments() for the list of
+	// valid experiments. Not mutable or persisted in storage, only read and
+	// logged at startup _per node_. This was initially introduced for the events
+	// system being developed over multiple release cycles.
+	EnvVaultExperiments = "VAULT_EXPERIMENTS"
 
 	// DisableSSCTokens is an env var used to disable index bearing
 	// token functionality
@@ -213,13 +219,10 @@ var (
 		"kubernetes": ksr.NewServiceRegistration,
 	}
 
-	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {}
+	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {}
 )
 
-// Commands is the mapping of all the available commands.
-var Commands map[string]cli.CommandFactory
-
-func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
+func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	loginHandlers := map[string]LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
@@ -252,13 +255,14 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		}
 	}
 
-	Commands = map[string]cli.CommandFactory{
+	commands := map[string]cli.CommandFactory{
 		"agent": func() (cli.Command, error) {
 			return &AgentCommand{
 				BaseCommand: &BaseCommand{
 					UI: serverCmdUi,
 				},
 				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
 			}, nil
 		},
 		"audit": func() (cli.Command, error) {
@@ -325,6 +329,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"delete": func() (cli.Command, error) {
 			return &DeleteCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"events subscribe": func() (cli.Command, error) {
+			return &EventsSubscribeCommands{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -526,6 +535,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"pki": func() (cli.Command, error) {
+			return &PKICommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"pki health-check": func() (cli.Command, error) {
 			return &PKIHealthCheckCommand{
 				BaseCommand: getBaseCommand(),
@@ -536,13 +550,13 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"pki reissue": func() (cli.Command, error) {
-			return &PKIReIssueCACommand{
+		"pki list-intermediates": func() (cli.Command, error) {
+			return &PKIListIntermediateCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"pki list-intermediates": func() (cli.Command, error) {
-			return &PKIListChildrenCommand{
+		"pki reissue": func() (cli.Command, error) {
+			return &PKIReIssueCACommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -690,6 +704,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"transit import": func() (cli.Command, error) {
+			return &TransitImportCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit import-version": func() (cli.Command, error) {
+			return &TransitImportVersionCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"token": func() (cli.Command, error) {
 			return &TokenCommand{
 				BaseCommand: getBaseCommand(),
@@ -824,7 +848,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 	}
 
-	initCommandsEnt(ui, serverCmdUi, runOpts)
+	initCommandsEnt(ui, serverCmdUi, runOpts, commands)
+	return commands
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

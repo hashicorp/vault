@@ -1,24 +1,23 @@
 {{#if this.licenseExpired}}
   <div class="license-banner-wrapper" data-test-license-banner data-test-license-banner-expired>
     <AlertBanner
-      @bannerType="license"
       @type="danger"
       @title="License expired"
       @message="Your Vault license expired on {{date-format
         @expiry
         'MMM d, yyyy'
       }}. Add a new license to your configuration and restart Vault."
-      @marginless={{true}}
+      class="message-marginless"
     >
-      <LearnLink @path="/tutorials/nomad/hashicorp-enterprise-license">
+      <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
+        <Icon @name="learn-link" />
         Read documentation
-      </LearnLink>
+      </DocLink>
     </AlertBanner>
   </div>
 {{else if (lte this.licenseExpiringInDays 30)}}
   <div class="license-banner-wrapper" data-test-license-banner data-test-license-banner-warning>
     <AlertBanner
-      @bannerType="license"
       @type="warning"
       @title="Vault license expiring"
       @message="Your Vault license will expire in {{this.licenseExpiringInDays}} days at {{date-format
@@ -29,11 +28,12 @@
         'Add a new license to your configuration.'
         'Keep in mind that your next license will need to be autoloaded'
       }}"
-      @marginless={{true}}
+      class="message-marginless"
     >
-      <LearnLink @path="/tutorials/nomad/hashicorp-enterprise-license">
+      <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
+        <Icon @name="learn-link" />
         Read documentation
-      </LearnLink>
+      </DocLink>
     </AlertBanner>
   </div>
 {{/if}}

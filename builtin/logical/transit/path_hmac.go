@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -83,6 +84,14 @@ Defaults to "sha2-256".`,
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
 			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be processed in a single batch. When this parameter
+is set, if the parameter 'input' is also set, it will be ignored.
+Any batch output will preserve the order of the batch input.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -135,7 +144,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		p.Unlock()
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	if key == nil {
+	if key == nil && p.Type != keysutil.KeyType_MANAGED_KEY {
 		p.Unlock()
 		return nil, fmt.Errorf("HMAC key value could not be computed")
 	}
@@ -191,9 +200,23 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 			continue
 		}
 
-		hf := hmac.New(hashAlg, key)
-		hf.Write(input)
-		retBytes := hf.Sum(nil)
+		var retBytes []byte
+
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				response[i].err = errors.New("unsupported system view")
+			}
+
+			retBytes, err = p.HMACWithManagedKey(ctx, ver, managedKeySystemView, b.backendUUID, algorithm, input)
+			if err != nil {
+				response[i].err = err
+			}
+		} else {
+			hf := hmac.New(hashAlg, key)
+			hf.Write(input)
+			retBytes = hf.Sum(nil)
+		}
 
 		retStr := base64.StdEncoding.EncodeToString(retBytes)
 		retStr = fmt.Sprintf("vault:v%s:%s", strconv.Itoa(ver), retStr)

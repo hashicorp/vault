@@ -1,56 +1,23 @@
 {{#if @model.serialNumber}}
-  <Toolbar>
-    <ToolbarActions>
-      <button type="button" class="toolbar-link" {{on "click" this.downloadCert}} data-test-pki-cert-download-button>
-        Download
-        <Chevron @direction="down" @isButton={{true}} />
-      </button>
-      {{#if @model.canRevoke}}
-        <button
-          type="button"
-          class="toolbar-link"
-          {{on "click" (perform this.revoke)}}
-          disabled={{this.revoke.isRunning}}
-          data-test-pki-cert-revoke-button
-        >
-          Revoke certificate
-          <Chevron @direction="right" @isButton={{true}} />
-        </button>
-      {{/if}}
-    </ToolbarActions>
-  </Toolbar>
-  {{#each @model.formFields as |attr|}}
-    {{#if (eq attr.name "certificate")}}
-      <InfoTableRow @label="Certificate" @value={{@model.certificate}}>
-        <MaskedInput @value={{@model.certificate}} @name="Certificate" @displayOnly={{true}} @allowCopy={{true}} />
-      </InfoTableRow>
-    {{else}}
-      <InfoTableRow
-        @label={{or attr.options.label (humanize (dasherize attr.name))}}
-        @value={{get @model attr.name}}
-        @formatDate={{if (eq attr.type "date") "MMM d yyyy HH:mm:ss a zzzz"}}
-      />
-    {{/if}}
-  {{/each}}
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <button
-        type="button"
-        class="button has-left-margin-s"
-        disabled={{this.save.isRunning}}
-        {{on "click" this.cancel}}
-        data-test-pki-generate-back
-      >
-        Back
-      </button>
-    </div>
-  </div>
+  <Page::PkiCertificateDetails @model={{@model}} @onRevoke={{this.cancel}} @onBack={{this.cancel}} />
 {{else}}
   <form {{on "submit" (perform this.save)}} data-test-pki-generate-cert-form>
     <div class="box is-bottomless is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorBanner}} />
-      <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
-      <FormFieldGroupsLoop @model={{@model}} @mode="create" @groupName="formFieldGroups" />
+      <NamespaceReminder @mode="create" @noun="certificate" />
+      {{#let (get @model.formFieldGroups "0") as |defaultGroup|}}
+        {{#each defaultGroup.default as |attr|}}
+          <FormField @model={{@model}} @attr={{attr}} @modelValidations={{this.modelValidations}}>
+            <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+          </FormField>
+        {{/each}}
+      {{/let}}
+      <FormFieldGroups
+        @model={{@model}}
+        @mode="create"
+        @renderGroup="Subject Alternative Name (SAN) Options"
+        @groupName="formFieldGroups"
+      />
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
@@ -60,7 +27,7 @@
           disabled={{this.save.isRunning}}
           data-test-pki-generate-button
         >
-          Generate
+          {{capitalize this.verb}}
         </button>
         <button
           type="button"
@@ -72,6 +39,11 @@
           Cancel
         </button>
       </div>
+      {{#if this.invalidFormAlert}}
+        <div class="control" data-test-alert>
+          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+        </div>
+      {{/if}}
     </div>
   </form>
 {{/if}}

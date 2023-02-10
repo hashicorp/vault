@@ -7,7 +7,8 @@
   }
 }
 
-.field:first-child .form-section {
+.field:first-child .form-section,
+.box > .field > .field.form-section.string-list {
   padding: 0;
   box-shadow: none;
 }
