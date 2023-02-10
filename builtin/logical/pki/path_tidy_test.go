@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/helper/testhelpers"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/testhelpers"
 
 	"github.com/armon/go-metrics"
 
