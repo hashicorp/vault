@@ -57,6 +57,13 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.flashMessages = this.owner.lookup('service:flash-messages').registerTypes(['info']);
+    this.flashMessages.stickyInfo = (message) => {
+      return this.flashMessages.info(message, {
+        sticky: true,
+        priority: 300,
+      });
+    };
     return authPage.login();
   });
 

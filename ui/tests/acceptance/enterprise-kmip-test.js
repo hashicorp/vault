@@ -1,4 +1,4 @@
-import { currentURL, currentRouteName, settled, typeIn, waitUntil, find } from '@ember/test-helpers';
+import { currentURL, currentRouteName, settled, waitUntil, find, fillIn } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -115,7 +115,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       'configuration navigates to the configure page'
     );
     const addr = `127.0.0.1:${getRandomPort()}`;
-    await typeIn('[data-test-string-list-input="0"]', addr);
+    await fillIn('[data-test-string-list-input="0"]', addr);
 
     await scopesPage.submit();
     await settled();
