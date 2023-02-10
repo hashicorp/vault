@@ -2,6 +2,9 @@ package pki
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"testing"
 	"time"
 
@@ -419,8 +422,7 @@ func TestCertStorageMetrics(t *testing.T) {
 
 	// We set up a metrics accumulator
 	inmemSink := metrics.NewInmemSink(
-		10000*time.Second, // A short time period would be ideal here to test metrics are emitted every periodic Func,
-		// but this has race-issues (if the metrics aren't emitted yet)
+		newPeriod, // A short time period is ideal here to test metrics are emitted every periodic func
 		2000000*time.Hour)
 
 	metricsConf := metrics.DefaultConfig("")
@@ -645,21 +647,24 @@ func TestCertStorageMetrics(t *testing.T) {
 		t.Fatalf("Expected certificate count error to disappear after initialization, but got error %v", certCountError)
 	}
 
-	mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
-	revokedCertCountGaugeValue, ok := mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
-	if !ok {
-		t.Fatalf("Turned on metrics, but revoked cert count was not emitted")
-	}
-	if revokedCertCountGaugeValue.Value != 1 {
-		t.Fatalf("Revoked one certificate, but metrics emitted a revoked cert store count of %v", revokedCertCountGaugeValue)
-	}
-	certStoreCountGaugeValue, ok := mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_certificates_stored"]
-	if !ok {
-		t.Fatalf("Turned on metrics, but total certificate count was not emitted")
-	}
-	if certStoreCountGaugeValue.Value != 2 {
-		t.Fatalf("Stored two certificiates, but total certificate count emitted was %v", certStoreCountGaugeValue.Value)
-	}
+	testhelpers.RetryUntil(t, newPeriod*5, func() error {
+		mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
+		revokedCertCountGaugeValue, ok := mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
+		if !ok {
+			return errors.New("turned on metrics, but revoked cert count was not emitted")
+		}
+		if revokedCertCountGaugeValue.Value != 1 {
+			return fmt.Errorf("revoked one certificate, but metrics emitted a revoked cert store count of %v", revokedCertCountGaugeValue)
+		}
+		certStoreCountGaugeValue, ok := mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_certificates_stored"]
+		if !ok {
+			return errors.New("turned on metrics, but total certificate count was not emitted")
+		}
+		if certStoreCountGaugeValue.Value != 2 {
+			return fmt.Errorf("stored two certificiates, but total certificate count emitted was %v", certStoreCountGaugeValue.Value)
+		}
+		return nil
+	})
 
 	// Wait for cert to expire and the safety buffer to elapse.
 	time.Sleep(time.Until(leafCert.NotAfter) + 3*time.Second)
@@ -723,19 +728,22 @@ func TestCertStorageMetrics(t *testing.T) {
 		t.Fatalf("Revoked certificate has been tidied, but got a revoked cert store count of %v", revokedCertCount)
 	}
 
-	mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
-	revokedCertCountGaugeValue, ok = mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
-	if !ok {
-		t.Fatalf("Turned on metrics, but revoked cert count was not emitted")
-	}
-	if revokedCertCountGaugeValue.Value != 0 {
-		t.Fatalf("Revoked certificate has been tidied, but metrics emitted a revoked cert store count of %v", revokedCertCountGaugeValue)
-	}
-	certStoreCountGaugeValue, ok = mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_certificates_stored"]
-	if !ok {
-		t.Fatalf("Turned on metrics, but total certificate count was not emitted")
-	}
-	if certStoreCountGaugeValue.Value != 1 {
-		t.Fatalf("Only one of two certificates left after tidy, but total certificate count emitted was %v", certStoreCountGaugeValue.Value)
-	}
+	testhelpers.RetryUntil(t, newPeriod*5, func() error {
+		mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
+		revokedCertCountGaugeValue, ok := mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
+		if !ok {
+			return errors.New("turned on metrics, but revoked cert count was not emitted")
+		}
+		if revokedCertCountGaugeValue.Value != 0 {
+			return fmt.Errorf("revoked certificate has been tidied, but metrics emitted a revoked cert store count of %v", revokedCertCountGaugeValue)
+		}
+		certStoreCountGaugeValue, ok := mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_certificates_stored"]
+		if !ok {
+			return errors.New("turned on metrics, but total certificate count was not emitted")
+		}
+		if certStoreCountGaugeValue.Value != 1 {
+			return fmt.Errorf("only one of two certificates left after tidy, but total certificate count emitted was %v", certStoreCountGaugeValue.Value)
+		}
+		return nil
+	})
 }
