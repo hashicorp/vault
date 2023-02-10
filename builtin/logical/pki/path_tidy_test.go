@@ -2,9 +2,10 @@ package pki
 
 import (
 	"encoding/json"
-	"github.com/armon/go-metrics"
 	"testing"
 	"time"
+
+	"github.com/armon/go-metrics"
 
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
