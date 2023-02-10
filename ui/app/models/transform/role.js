@@ -8,8 +8,8 @@ const ModelExport = Model.extend({
   // used for getting appropriate options for backend
   idPrefix: 'role/',
   // the id prefixed with `role/` so we can use it as the *secret param for the secret show route
-  idForNav: computed('name', 'idPrefix', function () {
-    const modelId = this.name || '';
+  idForNav: computed('id', 'idPrefix', function () {
+    const modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
 

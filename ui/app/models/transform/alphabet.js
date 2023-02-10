@@ -6,8 +6,8 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const M = Model.extend({
   idPrefix: 'alphabet/',
-  idForNav: computed('name', 'idPrefix', function () {
-    const modelId = this.name || '';
+  idForNav: computed('id', 'idPrefix', function () {
+    const modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
