@@ -8,7 +8,7 @@
   }}
   @isEngine={{true}}
 />
-{{#if (or this.model.hasConfig this.model.keyModels)}}
+{{#if this.model.hasConfig}}
   <Page::PkiKeyList
     @keyModels={{this.model.keyModels}}
     @mountPoint={{this.mountPoint}}
