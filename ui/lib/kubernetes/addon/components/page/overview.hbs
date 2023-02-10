@@ -1,0 +1,43 @@
+<TabPageHeader @model={{@backend}} @breadcrumbs={{@breadcrumbs}}>
+  <ToolbarLink @route="configure">Configure Kubernetes</ToolbarLink>
+</TabPageHeader>
+
+{{#if @promptConfig}}
+  <ConfigCta />
+{{else}}
+  <div class="selectable-card-container has-grid has-top-margin-l has-two-col-grid">
+    <OverviewCard
+      @cardTitle="Roles"
+      @subText="The number of Vault roles being used to generate Kubernetes credentials."
+      @actionText={{if @roles.length "View Roles" "Create Role"}}
+      @actionTo={{if @roles.length "roles" "roles.create"}}
+    >
+      <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-roles-card-overview-num>{{or
+          @roles.length
+          "None"
+        }}</h2>
+    </OverviewCard>
+    <OverviewCard @cardTitle="Generate credentials" @subText="Quickly generate credentials by typing the role name.">
+      <div class="has-top-margin-m is-flex">
+        <SearchSelect
+          class="is-flex-1"
+          @placeholder="Type to find a role..."
+          @disallowNewItems={{true}}
+          @options={{this.roleOptions}}
+          @selectLimit="1"
+          @fallbackComponent="input-search"
+          @onChange={{this.selectRole}}
+        />
+        <button
+          class="button has-left-margin-s"
+          type="button"
+          disabled={{not this.selectedRole}}
+          {{on "click" this.generateCredential}}
+          data-test-generate-credential-button
+        >
+          Generate
+        </button>
+      </div>
+    </OverviewCard>
+  </div>
+{{/if}}

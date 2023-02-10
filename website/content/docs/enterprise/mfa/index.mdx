@@ -41,7 +41,7 @@ MFA in Vault can be of the following types.
 ## Configuring MFA Methods
 
 MFA methods are globally managed within the `System Backend` using the HTTP API.
-Please see [MFA API](/api-docs/system/mfa) for details on how to configure an MFA
+Please see [MFA API](/vault/api-docs/system/mfa) for details on how to configure an MFA
 method.
 
 ## MFA Methods In Policies
@@ -68,7 +68,7 @@ referenced from ACL and Sentinel policies in any namespace via the method name
 and can be tied to a mount accessor in any namespace.
 
 When using [Sentinel
-EGPs](/docs/enterprise/sentinel#endpoint-governing-policies-egps),
+EGPs](/vault/docs/enterprise/sentinel#endpoint-governing-policies-egps),
 any MFA configuration specified must be satisfied by all requests affected by
 the policy, which can be difficult if the configured paths spread across
 namespaces. One way to address this is to use a policy similar to the
@@ -112,4 +112,4 @@ $ curl \
 
 ### API
 
-MFA can be managed entirely over the HTTP API. Please see [MFA API](/api-docs/system/mfa) for more details.
+MFA can be managed entirely over the HTTP API. Please see [MFA API](/vault/api-docs/system/mfa) for more details.

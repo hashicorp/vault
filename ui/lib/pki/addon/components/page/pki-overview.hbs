@@ -1,0 +1,72 @@
+<div
+  class="selectable-card-container has-grid has-top-margin-l has-two-col-grid
+    {{if (eq @roles 403) 'has-three-col-grid' 'has-two-col-grid'}}"
+>
+  <OverviewCard
+    @cardTitle="Issuers"
+    @subText="The total number of issuers in this PKI mount. Includes both root and intermediate certificates."
+    @actionText="View issuers"
+    @actionTo="issuers"
+  >
+    <h2 class="title-number">{{format-number (if (eq @issuers 404) 0 @issuers.length)}}</h2>
+  </OverviewCard>
+  {{#if (not (eq @roles 403))}}
+    <OverviewCard
+      @cardTitle="Roles"
+      @subText="The total number of roles in this PKI mount that have been created to generate certificates."
+      @actionText="View roles"
+      @actionTo="roles"
+    >
+      <h2 class="title-number">{{format-number (if (eq @roles 404) 0 @roles.length)}}</h2>
+    </OverviewCard>
+  {{/if}}
+  <OverviewCard @cardTitle="Issue certificate" @subText="Begin issuing a certificate by choosing a role.">
+    <div class="has-top-margin-m is-flex">
+      <SearchSelect
+        class="is-flex-1"
+        @selectLimit="1"
+        @models={{array "pki/role"}}
+        @backend={{@engine.id}}
+        @placeholder="Type to find a role..."
+        @disallowNewItems={{true}}
+        @onChange={{this.handleRolesInput}}
+        @fallbackComponent="input-search"
+        data-test-issue-certificate-input
+      />
+      <button
+        type="submit"
+        class="button is-secondary has-left-margin-s"
+        disabled={{unless this.rolesValue true}}
+        {{on "click" this.transitionToIssueCertificates}}
+        data-test-issue-certificate-button
+      >
+        Issue
+      </button>
+    </div>
+  </OverviewCard>
+
+  <OverviewCard @cardTitle="View certificate" @subText="Quickly view a certificate by typing its serial number.">
+    <div class="has-top-margin-m is-flex">
+      <SearchSelect
+        class="is-flex-1"
+        @selectLimit="1"
+        @models={{array "pki/certificate/base"}}
+        @backend={{@engine.id}}
+        @placeholder="33:a3:..."
+        @disallowNewItems={{true}}
+        @onChange={{this.handleCertificateInput}}
+        @fallbackComponent="input-search"
+        data-test-view-certificate-input
+      />
+      <button
+        type="button"
+        class="button is-secondary has-left-margin-s"
+        disabled={{unless this.certificateValue true}}
+        {{on "click" this.transitionToViewCertificates}}
+        data-test-view-certificate-button
+      >
+        View
+      </button>
+    </div>
+  </OverviewCard>
+</div>

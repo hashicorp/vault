@@ -43,6 +43,7 @@ default_lease_ttl = "10h"
 cluster_name = "testcluster"
 pid_file = "./pidfile"
 raw_storage_endpoint = true
+introspection_endpoint = true
 disable_sealwrap = true
 disable_printable_check = true
 enable_response_header_hostname = true

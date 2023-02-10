@@ -366,10 +366,12 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 			return nil
 		}
 
+		timer := time.NewTimer(sleepDuration)
 		select {
 		case <-r.stopCh:
+			timer.Stop()
 			return nil
-		case <-time.After(sleepDuration):
+		case <-timer.C:
 			continue
 		}
 	}

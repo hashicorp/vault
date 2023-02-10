@@ -12,13 +12,13 @@ export default Model.extend({
     label: 'Role name',
   }),
   database: attr('array', {
-    label: 'Database name',
+    label: 'Connection name',
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
     models: ['database/connection'],
     selectLimit: 1,
     onlyAllowExisting: true,
-    subText: 'The database for which credentials will be generated.',
+    subText: 'The database connection for which credentials will be generated.',
   }),
   type: attr('string', {
     label: 'Type of role',

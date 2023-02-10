@@ -3,6 +3,7 @@ package transit
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -19,6 +20,10 @@ type DecryptBatchResponseItem struct {
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" structs:"reference" mapstructure:"reference"`
 }
 
 func (b *backend) pathDecrypt() *framework.Path {
@@ -69,6 +74,15 @@ must be passed on subsequent decryption requests but can be transited in
 plaintext. On successful decryption, both the ciphertext and the associated
 data are attested not to have been tampered with.
                 `,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be decrypted in a single batch. When this
+parameter is set, if the parameters 'ciphertext', 'context' and 'nonce' are
+also set, they will be ignored. Any batch output will preserve the order
+of the batch input.`,
 			},
 		},
 
@@ -178,7 +192,23 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			factory = AssocDataFactory{item.AssociatedData}
 		}
 
-		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factory)
+		var managedKeyFactory ManagedKeyFactory
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
+			}
+
+			managedKeyFactory = ManagedKeyFactory{
+				managedKeyParams: keysutil.ManagedKeyParameters{
+					ManagedKeySystemView: managedKeySystemView,
+					BackendUUID:          b.backendUUID,
+					Context:              ctx,
+				},
+			}
+		}
+
+		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factory, managedKeyFactory)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:
@@ -195,6 +225,10 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			batchResponseItems[i].Reference = batchInputItems[i].Reference
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": batchResponseItems,
 		}

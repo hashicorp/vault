@@ -173,16 +173,18 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 	case strings.HasPrefix(prefix, "revoked/"):
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
-	case serial == legacyCRLPath || serial == deltaCRLPath:
+	case serial == legacyCRLPath || serial == deltaCRLPath || serial == unifiedCRLPath || serial == unifiedDeltaCRLPath:
 		if err = sc.Backend.crlBuilder.rebuildIfForced(sc); err != nil {
 			return nil, err
 		}
-		path, err = sc.resolveIssuerCRLPath(defaultRef)
+
+		unified := serial == unifiedCRLPath || serial == unifiedDeltaCRLPath
+		path, err = sc.resolveIssuerCRLPath(defaultRef, unified)
 		if err != nil {
 			return nil, err
 		}
 
-		if serial == deltaCRLPath {
+		if serial == deltaCRLPath || serial == unifiedDeltaCRLPath {
 			if sc.Backend.useLegacyBundleCaStorage() {
 				return nil, fmt.Errorf("refusing to serve delta CRL with legacy CA bundle")
 			}
@@ -638,6 +640,33 @@ func parseOtherSANs(others []string) (map[string][]string, error) {
 	}
 
 	return result, nil
+}
+
+// Returns bool stating whether the given UserId is Valid
+func validateUserId(data *inputBundle, userId string) bool {
+	allowedList := data.role.AllowedUserIDs
+
+	if len(allowedList) == 0 {
+		// Nothing is allowed.
+		return false
+	}
+
+	if strutil.StrListContainsCaseInsensitive(allowedList, userId) {
+		return true
+	}
+
+	for _, rolePattern := range allowedList {
+		if rolePattern == "" {
+			continue
+		}
+
+		if strings.Contains(rolePattern, "*") && glob.Glob(rolePattern, userId) {
+			return true
+		}
+	}
+
+	// No matches.
+	return false
 }
 
 func validateSerialNumber(data *inputBundle, serialNumber string) string {
@@ -1363,7 +1392,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 				fallthrough
 			default:
 				return nil, nil, errutil.UserError{Err: fmt.Sprintf(
-					"cannot satisfy request, as TTL would result in notAfter %s that is beyond the expiration of the CA certificate at %s", notAfter.Format(time.RFC3339Nano), caSign.Certificate.NotAfter.Format(time.RFC3339Nano))}
+					"cannot satisfy request, as TTL would result in notAfter of %s that is beyond the expiration of the CA certificate at %s", notAfter.UTC().Format(time.RFC3339Nano), caSign.Certificate.NotAfter.UTC().Format(time.RFC3339Nano))}
 			}
 		}
 	}
@@ -1385,6 +1414,41 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			skid, err = hex.DecodeString(skidValue)
 			if err != nil {
 				return nil, nil, errutil.UserError{Err: fmt.Sprintf("cannot parse requested SKID value as hex: %v", err)}
+			}
+		}
+	}
+
+	// Add UserIDs into the Subject, if the request type supports it.
+	if _, present := data.apiData.Schema["user_ids"]; present {
+		rawUserIDs := data.apiData.Get("user_ids").([]string)
+
+		// Only take UserIDs from CSR if one was not supplied via API.
+		if len(rawUserIDs) == 0 && csr != nil {
+			for _, attr := range csr.Subject.Names {
+				if attr.Type.Equal(certutil.SubjectPilotUserIDAttributeOID) {
+					switch aValue := attr.Value.(type) {
+					case string:
+						rawUserIDs = append(rawUserIDs, aValue)
+					case []byte:
+						rawUserIDs = append(rawUserIDs, string(aValue))
+					default:
+						return nil, nil, errutil.UserError{Err: "unknown type for user_id attribute in CSR's Subject"}
+					}
+				}
+			}
+		}
+
+		// Check for bad userIDs and add to the subject.
+		if len(rawUserIDs) > 0 {
+			for _, value := range rawUserIDs {
+				if !validateUserId(data, value) {
+					return nil, nil, errutil.UserError{Err: fmt.Sprintf("user_id %v is not allowed by this role", value)}
+				}
+
+				subject.ExtraNames = append(subject.ExtraNames, pkix.AttributeTypeAndValue{
+					Type:  certutil.SubjectPilotUserIDAttributeOID,
+					Value: value,
+				})
 			}
 		}
 	}

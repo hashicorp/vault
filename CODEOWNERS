@@ -25,12 +25,12 @@
 /plugins/                     @hashicorp/vault-ecosystem
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
-/website/content/ @tjperry07
-/website/content/docs/plugin-portal.mdx   @acahn @tjperry07
+/website/content/ @yhyakuna
+/website/content/docs/plugin-portal.mdx   @acahn @yhyakuna
 
 # Plugin docs
-/website/content/docs/plugins/              @fairclothjm @tjperry07
-/website/content/docs/upgrading/plugins.mdx @fairclothjm @tjperry07
+/website/content/docs/plugins/              @fairclothjm @yhyakuna
+/website/content/docs/upgrading/plugins.mdx @fairclothjm @yhyakuna
 
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
 # Changes to these files often require coordination with backend code,
@@ -39,5 +39,28 @@
 /ui/app/routes/vault/cluster/oidc-*.js @austingebauer
 
 # Release config; service account is required for automation tooling.
-/.release/                              @hashicorp/release-engineering @hashicorp/github-secure-vault-core
-/.github/workflows/build.yml            @hashicorp/release-engineering @hashicorp/github-secure-vault-core
+/.release/                    @hashicorp/release-engineering @hashicorp/github-secure-vault-core @hashicorp/quality-team
+/.github/workflows/build.yml  @hashicorp/release-engineering @hashicorp/github-secure-vault-core @hashicorp/quality-team
+
+# Quality engineering
+/.github/  @hashicorp/quality-team
+/enos/     @hashicorp/quality-team
+
+# Cryptosec
+/builtin/logical/pki/         @hashicorp/vault-crypto
+/builtin/credential/cert/     @hashicorp/vault-crypto
+/builtin/logical/ssh/         @hashicorp/vault-crypto
+/builtin/logical/transit/     @hashicorp/vault-crypto
+/helper/random/               @hashicorp/vault-crypto
+/sdk/helper/certutil/         @hashicorp/vault-crypto
+/sdk/helper/cryptoutil/       @hashicorp/vault-crypto
+/sdk/helper/kdf/              @hashicorp/vault-crypto
+/sdk/helper/keysutil/         @hashicorp/vault-crypto
+/sdk/helper/ocsp/             @hashicorp/vault-crypto
+/sdk/helper/salt/             @hashicorp/vault-crypto
+/sdk/helper/tlsutil/          @hashicorp/vault-crypto
+/shamir/                      @hashicorp/vault-crypto
+/vault/barrier*               @hashicorp/vault-crypto
+/vault/managed_key*           @hashicorp/vault-crypto
+/vault/seal*                  @hashicorp/vault-crypto
+/vault/seal/                  @hashicorp/vault-crypto

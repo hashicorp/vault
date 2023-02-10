@@ -1,0 +1,3 @@
+```release-note:feature
+**New PKI UI**: Add beta support for new and improved PKI UI
+```

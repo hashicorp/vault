@@ -24,12 +24,9 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
-
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -56,7 +53,19 @@ const (
 	HeaderIndex              = "X-Vault-Index"
 	HeaderForward            = "X-Vault-Forward"
 	HeaderInconsistent       = "X-Vault-Inconsistent"
-	TLSErrorString           = "This error usually means that the server is running with TLS disabled\n" +
+
+	// NamespaceHeaderName is the header set to specify which namespace the
+	// request is indented for.
+	NamespaceHeaderName = "X-Vault-Namespace"
+
+	// AuthHeaderName is the name of the header containing the token.
+	AuthHeaderName = "X-Vault-Token"
+
+	// RequestHeaderName is the name of the header used by the Agent for
+	// SSRF protection.
+	RequestHeaderName = "X-Vault-Request"
+
+	TLSErrorString = "This error usually means that the server is running with TLS disabled\n" +
 		"but the client is configured to use TLS. Please either enable TLS\n" +
 		"on the server or run the client with -address set to an address\n" +
 		"that uses the http protocol:\n\n" +
@@ -114,7 +123,11 @@ type Config struct {
 	// of three tries).
 	MaxRetries int
 
-	// Timeout is for setting custom timeout parameter in the HttpClient
+	// Timeout, given a non-negative value, will apply the request timeout
+	// to each request function unless an earlier deadline is passed to the
+	// request function through context.Context. Note that this timeout is
+	// not applicable to Logical().ReadRaw* (raw response) functions.
+	// Defaults to 60 seconds.
 	Timeout time.Duration
 
 	// If there is an error when creating the configuration, this will be the
@@ -617,7 +630,7 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	// Add the VaultRequest SSRF protection header
-	client.headers[consts.RequestHeaderName] = []string{"true"}
+	client.headers[RequestHeaderName] = []string{"true"}
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token
@@ -934,7 +947,7 @@ func (c *Client) setNamespace(namespace string) {
 		c.headers = make(http.Header)
 	}
 
-	c.headers.Set(consts.NamespaceHeaderName, namespace)
+	c.headers.Set(NamespaceHeaderName, namespace)
 }
 
 // ClearNamespace removes the namespace header if set.
@@ -942,7 +955,7 @@ func (c *Client) ClearNamespace() {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 	if c.headers != nil {
-		c.headers.Del(consts.NamespaceHeaderName)
+		c.headers.Del(NamespaceHeaderName)
 	}
 }
 
@@ -954,7 +967,7 @@ func (c *Client) Namespace() string {
 	if c.headers == nil {
 		return ""
 	}
-	return c.headers.Get(consts.NamespaceHeaderName)
+	return c.headers.Get(NamespaceHeaderName)
 }
 
 // WithNamespace makes a shallow copy of Client, modifies it to use
@@ -1288,7 +1301,7 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
-	ns := c.headers.Get(consts.NamespaceHeaderName)
+	ns := c.headers.Get(NamespaceHeaderName)
 	outputCurlString := c.config.OutputCurlString
 	outputPolicy := c.config.OutputPolicy
 	logger := c.config.Logger
@@ -1301,9 +1314,9 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	// e.g. calls using (*Client).WithNamespace
 	switch ns {
 	case "":
-		r.Headers.Del(consts.NamespaceHeaderName)
+		r.Headers.Del(NamespaceHeaderName)
 	default:
-		r.Headers.Set(consts.NamespaceHeaderName, ns)
+		r.Headers.Set(NamespaceHeaderName, ns)
 	}
 
 	for _, cb := range c.requestCallbacks {
@@ -1456,8 +1469,8 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 			}
 		}
 		// explicitly set the namespace header to current client
-		if ns := c.headers.Get(consts.NamespaceHeaderName); ns != "" {
-			r.Headers.Set(consts.NamespaceHeaderName, ns)
+		if ns := c.headers.Get(NamespaceHeaderName); ns != "" {
+			r.Headers.Set(NamespaceHeaderName, ns)
 		}
 	}
 
@@ -1478,7 +1491,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	req.Host = r.URL.Host
 
 	if len(r.ClientToken) != 0 {
-		req.Header.Set(consts.AuthHeaderName, r.ClientToken)
+		req.Header.Set(AuthHeaderName, r.ClientToken)
 	}
 
 	if len(r.WrapTTL) != 0 {
@@ -1668,7 +1681,13 @@ func MergeReplicationStates(old []string, new string) []string {
 	return strutil.RemoveDuplicates(ret, false)
 }
 
-func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error) {
+type WALState struct {
+	ClusterID       string
+	LocalIndex      uint64
+	ReplicatedIndex uint64
+}
+
+func ParseReplicationState(raw string, hmacKey []byte) (*WALState, error) {
 	cooked, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
 		return nil, err
@@ -1706,7 +1725,7 @@ func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error
 		return nil, fmt.Errorf("invalid replicated index in state header: %w", err)
 	}
 
-	return &logical.WALState{
+	return &WALState{
 		ClusterID:       pieces[1],
 		LocalIndex:      localIndex,
 		ReplicatedIndex: replicatedIndex,

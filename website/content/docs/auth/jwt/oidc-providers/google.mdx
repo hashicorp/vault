@@ -10,10 +10,11 @@ Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.googl
 
 1. Visit the [Google API Console](https://console.developers.google.com).
 1. Create or a select a project.
+1. Navigate to Menu > APIs & Services
 1. Create a new credential via Credentials > Create Credentials > OAuth Client ID.
 1. Configure the OAuth Consent Screen. Application Name is required. Save.
 1. Select application type: "Web Application".
-1. Configure Authorized [Redirect URIs](/docs/auth/jwt#redirect-uris).
+1. Configure Authorized [Redirect URIs](/vault/docs/auth/jwt#redirect-uris).
 1. Save client ID and secret.
 
 ### Optional Google-specific Configuration
@@ -22,7 +23,7 @@ Google-specific configuration is available when using Google as an identity prov
 Vault JWT/OIDC auth method. The configuration allows Vault to obtain Google Workspace group membership and
 user information during the JWT/OIDC authentication flow. The group membership obtained from Google Workspace
 may be used for Identity group alias association. The user information obtained from Google Workspace can be
-used to copy claims data into resulting auth token and alias metadata via [claim_mappings](/api-docs/auth/jwt#claim_mappings).
+used to copy claims data into resulting auth token and alias metadata via [claim_mappings](/vault/api-docs/auth/jwt#claim_mappings).
 
 #### Setup
 
@@ -32,7 +33,9 @@ To set up the Google-specific handling, you'll need:
   for granting domain-wide delegation API client access.
 - The ability to create a service account in [Google Cloud Platform](https://console.developers.google.com/iam-admin/serviceaccounts).
 - To enable the [Admin SDK API](https://console.developers.google.com/apis/api/admin.googleapis.com/overview).
-- An OAuth 2.0 application with an [external user type](https://support.google.com/cloud/answer/10311615#user-type).
+- An OAuth 2.0 application with an [internal user type](https://support.google.com/cloud/answer/10311615#user-type).
+  We **do not** recommend using an external user type since it would allow _any user_ with a
+  Google account to authenticate with Vault.
 
 The Google-specific handling that's used to fetch Google Workspace groups and user information in Vault uses
 Google Workspace Domain-Wide Delegation of Authority for authentication and authorization. You need to follow
@@ -62,7 +65,7 @@ that enable the feature.
 - `fetch_user_info` `(bool: false)` - If set to true, user info will be fetched from Google Workspace using the configured [user_custom_schemas](#user_custom_schemas).
 - `groups_recurse_max_depth` `(int: <optional>)` - Group membership recursion max depth. Defaults to 0, which means don't recurse.
 - `user_custom_schemas` `(string: <optional>)` - Comma-separated list of Google Workspace [custom schemas](https://developers.google.com/admin-sdk/directory/v1/guides/manage-schemas).
-  Values set for Google Workspace users using custom schema fields will be fetched and made available as claims that can be used with [claim_mappings](/api-docs/auth/jwt#claim_mappings). Required if [fetch_user_info](#fetch_user_info) is set to true.
+  Values set for Google Workspace users using custom schema fields will be fetched and made available as claims that can be used with [claim_mappings](/vault/api-docs/auth/jwt#claim_mappings). Required if [fetch_user_info](#fetch_user_info) is set to true.
 
 Example configuration:
 
@@ -88,7 +91,7 @@ EOF
 
 #### Role
 
-The [user_claim](/api-docs/auth/jwt#user_claim) value of the role must be set to
+The [user_claim](/vault/api-docs/auth/jwt#user_claim) value of the role must be set to
 one of either `sub` or `email` for the Google Workspace group and user information
 queries to succeed.
 

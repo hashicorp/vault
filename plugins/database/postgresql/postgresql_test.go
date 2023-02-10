@@ -588,6 +588,19 @@ func TestDeleteUser(t *testing.T) {
 			// Wait for a short time before checking because postgres takes a moment to finish deleting the user
 			credsAssertion: assertCredsExistAfter(100 * time.Millisecond),
 		},
+		"multiline": {
+			revokeStmts: []string{`
+				DO $$ BEGIN
+					REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM "{{username}}";
+					REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM "{{username}}";
+					REVOKE USAGE ON SCHEMA public FROM "{{username}}";
+					DROP ROLE IF EXISTS "{{username}}";
+				END $$;
+				`},
+			expectErr: false,
+			// Wait for a short time before checking because postgres takes a moment to finish deleting the user
+			credsAssertion: waitUntilCredsDoNotExist(2 * time.Second),
+		},
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests

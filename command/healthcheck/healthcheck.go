@@ -25,6 +25,7 @@
 package healthcheck
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -162,7 +163,11 @@ func (e *Executor) FetchIfNotFetched(op logical.Operation, rawPath string) (*Pat
 		return nil, fmt.Errorf("unknown operation: %v on %v", op, path)
 	}
 
-	response, err := e.Client.Logical().ReadRawWithData(path, data)
+	// client.ReadRaw* methods require a manual timeout override
+	ctx, cancel := context.WithTimeout(context.Background(), e.Client.ClientTimeout())
+	defer cancel()
+
+	response, err := e.Client.Logical().ReadRawWithDataWithContext(ctx, path, data)
 	ret.Response = response
 	if err != nil {
 		ret.FetchError = err

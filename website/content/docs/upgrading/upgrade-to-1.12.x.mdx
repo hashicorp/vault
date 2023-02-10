@@ -70,9 +70,9 @@ remediations if you have any affected mounts:
 
 * Upgrade Vault directly to 1.12.2 once released
 * Upgrade to an external version of the plugin before upgrading to 1.12.1;
-  * Using the [tune API](/api-docs/system/auth#tune-auth-method) for auth methods
-  * Using the [tune API](/api-docs/system/mounts#tune-mount-configuration) for secrets plugins
-  * Or using the [configure connection](/api-docs/secret/databases#configure-connection)
+  * Using the [tune API](/vault/api-docs/system/auth#tune-auth-method) for auth methods
+  * Using the [tune API](/vault/api-docs/system/mounts#tune-mount-configuration) for secrets plugins
+  * Or using the [configure connection](/vault/api-docs/secret/databases#configure-connection)
     API for database plugins
 * Unmount and remount the path without a version specified before upgrading to 1.12.1.
   **Note:** This will delete all data and leases associated with the mount.
@@ -111,13 +111,13 @@ app-id                               auth        v1.12.0+builtin.vault          
 ```
 
 The remediation for affected mounts is to set the
-[VAULT_ALLOW_PENDING_REMOVAL_MOUNTS](/docs/commands/server#vault_allow_pending_removal_mounts)
+[VAULT_ALLOW_PENDING_REMOVAL_MOUNTS](/vault/docs/commands/server#vault_allow_pending_removal_mounts)
 environment variable and replace any `Pending Removal` feature with the
 [preferred alternative
-feature](/docs/deprecation/faq#q-what-should-i-do-if-i-use-mount-filters-appid-or-any-of-the-standalone-db-engines).
+feature](/vault/docs/deprecation/faq#q-what-should-i-do-if-i-use-mount-filters-appid-or-any-of-the-standalone-db-engines).
 
 For more information on the phases of deprecation, see the [Deprecation Notices
-FAQ](/docs/deprecation/faq#q-what-are-the-phases-of-deprecation).
+FAQ](/vault/docs/deprecation/faq#q-what-are-the-phases-of-deprecation).
 
 #### Impacted Versions
 
@@ -127,7 +127,7 @@ are unaffected.
 ### `vault plugin list` fails when audit logging is enabled
 
 If audit logging is enabled, Vault will fail to audit the response from any
-calls to the [`GET /v1/sys/plugins/catalog`](/api-docs/system/plugins-catalog#list-plugins)
+calls to the [`GET /v1/sys/plugins/catalog`](/vault/api-docs/system/plugins-catalog#list-plugins)
 endpoint, which causes the whole request to fail and return a 500 internal
 server error. From the CLI, this looks like the following:
 
@@ -147,7 +147,7 @@ It will produce errors in Vault Server's logs such as:
   | 
 ```
 
-As a workaround, [listing plugins by type](/api-docs/system/plugins-catalog#list-plugins-1)
+As a workaround, [listing plugins by type](/vault/api-docs/system/plugins-catalog#list-plugins-1)
 will succeed:
 
 * `vault list sys/plugins/catalog/auth`
@@ -160,3 +160,15 @@ https://github.com/hashicorp/vault/commit/76165052e54f884ed0aa2caa496083dc84ad1c
 #### Impacted Versions
 
 Affects versions 1.12.0, 1.12.1, and 1.12.2. A fix will be released in 1.12.3.
+
+### PKI OCSP GET requests return malformed request responses
+
+If an OCSP GET request contains a '+' character, a malformed request response will be
+returned instead of properly processing the request due to a double decoding issue within the
+handler.
+
+As a workaround, OCSP POST requests can be used which are unaffected.
+
+#### Impacted Versions
+
+Affects version 1.12.3. A fix will be released in 1.12.4.

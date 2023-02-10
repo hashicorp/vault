@@ -10,11 +10,15 @@
 />
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @route="issuers.import">
+    <ToolbarLink @route="issuers.import" data-test-generate-issuer="import">
       Import
     </ToolbarLink>
     <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-      <D.Trigger class={{concat "toolbar-link" (if D.isOpen " is-active")}} @htmlTag="button">
+      <D.Trigger
+        class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+        @htmlTag="button"
+        data-test-issuer-generate-dropdown
+      >
         Generate
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
@@ -22,12 +26,16 @@
         <nav class="box menu" aria-label="generate options">
           <ul class="menu-list">
             <li class="action">
-              <LinkTo @route="issuers.generate-root" {{on "click" (fn this.onLinkClick D)}}>
+              <LinkTo @route="issuers.generate-root" {{on "click" (fn this.onLinkClick D)}} data-test-generate-issuer="root">
                 Root
               </LinkTo>
             </li>
             <li class="action">
-              <LinkTo @route="issuers.generate-intermediate" {{on "click" (fn this.onLinkClick D)}}>
+              <LinkTo
+                @route="issuers.generate-intermediate"
+                {{on "click" (fn this.onLinkClick D)}}
+                data-test-generate-issuer="intermediate"
+              >
                 Intermediate CSR
               </LinkTo>
             </li>
@@ -39,13 +47,17 @@
 </Toolbar>
 {{#if this.model.issuersModel.length}}
   {{#each this.model.issuersModel as |pkiIssuer|}}
-    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiIssuer.id}} @linkPrefix={{this.mountPoint}}>
+    <LinkedBlock
+      class="list-item-row"
+      @params={{array "issuers.issuer.details" pkiIssuer.id}}
+      @linkPrefix={{this.mountPoint}}
+    >
       <div class="level is-mobile">
         <div class="level-left">
           <div>
             <Icon @name="certificate" class="has-text-grey-light" />
             <span class="has-text-weight-semibold is-underline">
-              {{or pkiIssuer.issuerName pkiIssuer.id}}
+              {{pkiIssuer.issuerRef}}
             </span>
             <div class="is-flex-row has-left-margin-l has-top-margin-xs">
               {{#if pkiIssuer.isDefault}}
@@ -63,12 +75,12 @@
               <nav class="menu" aria-label="issuer config options">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo @route="roles.role.details" @model={{pkiIssuer.id}}>
+                    <LinkTo @route="issuers.issuer.details" @model={{pkiIssuer.id}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo @route="roles.role.edit" @model={{pkiIssuer.id}}>
+                    <LinkTo @route="issuers.issuer.edit" @model={{pkiIssuer.id}}>
                       Edit
                     </LinkTo>
                   </li>
@@ -81,7 +93,7 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
+  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
     <LinkTo @route="configuration.create">
       Configure PKI
     </LinkTo>

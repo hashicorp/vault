@@ -98,7 +98,7 @@ export default class PkiRoleModel extends Model {
     label: 'Not valid after',
     detailsLabel: 'Issued certificates expire after',
     subText:
-      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date. If no TTL is set, the system uses "default" or the value of max_ttl, whichever is shorter. Alternatively, you can set the not_after date below.',
+      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date.',
     editType: 'yield',
   })
   customTtl;
@@ -106,10 +106,11 @@ export default class PkiRoleModel extends Model {
   @attr({
     label: 'Backdate validity',
     detailsLabel: 'Issued certificate backdating',
+    helperTextDisabled: 'Vault will use the default value, 30s',
     helperTextEnabled:
       'Also called the not_before_duration property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
     editType: 'ttl',
-    defaultValue: '30s', // The API type is "duration" which accepts both an integer and string e.g. 30 || '30s'
+    defaultValue: '30s',
   })
   notBeforeDuration;
 
@@ -127,7 +128,7 @@ export default class PkiRoleModel extends Model {
     subText:
       'Specifies if certificates issued/signed against this role will have Vault leases attached to them.',
     editType: 'boolean',
-    docLink: '/api-docs/secret/pki#create-update-role',
+    docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   generateLease;
 
@@ -137,7 +138,7 @@ export default class PkiRoleModel extends Model {
     subText:
       'This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked.',
     editType: 'boolean',
-    docLink: '/api-docs/secret/pki#create-update-role',
+    docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   noStore;
 
@@ -155,7 +156,6 @@ export default class PkiRoleModel extends Model {
     label: 'Allowed domains',
     subText: 'Specifies the domains this role is allowed to issue certificates for. Add one item per row.',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   allowedDomains;
 
@@ -193,7 +193,6 @@ export default class PkiRoleModel extends Model {
     label: 'Policy identifiers',
     subText: 'A comma-separated string or list of policy object identifiers (OIDs). Add one per row. ',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   policyIdentifiers;
   /* End of overriding Policy identifier options */
@@ -211,8 +210,7 @@ export default class PkiRoleModel extends Model {
     label: 'URI Subject Alternative Names (URI SANs)',
     subText: 'Defines allowed URI Subject Alternative Names. Add one item per row',
     editType: 'stringArray',
-    docLink: '/docs/concepts/policies',
-    hideFormSection: true,
+    docLink: '/vault/docs/concepts/policies',
   })
   allowedUriSans;
 
@@ -220,7 +218,7 @@ export default class PkiRoleModel extends Model {
     label: 'Allow URI SANs template',
     subText: 'If true, the URI SANs above may contain templates, as with ACL Path Templating.',
     editType: 'boolean',
-    docLink: '/docs/concepts/policies',
+    docLink: '/vault/docs/concepts/policies',
   })
   allowUriSansTemplate;
 
@@ -228,7 +226,6 @@ export default class PkiRoleModel extends Model {
     label: 'Other SANs',
     subText: 'Defines allowed custom OID/UTF8-string SANs. Add one item per row.',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   allowedOtherSans;
   /* End of overriding SAN options */
@@ -239,7 +236,6 @@ export default class PkiRoleModel extends Model {
     subText:
       'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   allowedSerialNumbers;
 
@@ -270,7 +266,7 @@ export default class PkiRoleModel extends Model {
     label: 'Organization Units (OU)',
     subText:
       'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
-    hideFormSection: true,
+    editType: 'stringArray',
   })
   ou;
 
@@ -292,12 +288,12 @@ export default class PkiRoleModel extends Model {
   })
   extKeyUsageOids;
 
-  @attr({ hideFormSection: true }) organization;
-  @attr({ hideFormSection: true }) country;
-  @attr({ hideFormSection: true }) locality;
-  @attr({ hideFormSection: true }) province;
-  @attr({ hideFormSection: true }) streetAddress;
-  @attr({ hideFormSection: true }) postalCode;
+  @attr({ editType: 'stringArray' }) organization;
+  @attr({ editType: 'stringArray' }) country;
+  @attr({ editType: 'stringArray' }) locality;
+  @attr({ editType: 'stringArray' }) province;
+  @attr({ editType: 'stringArray' }) streetAddress;
+  @attr({ editType: 'stringArray' }) postalCode;
   /* End of overriding Additional subject field options */
 
   /* CAPABILITIES
@@ -334,7 +330,7 @@ export default class PkiRoleModel extends Model {
         footer: {
           text: 'These options can interact intricately with one another. For more information,',
           docText: 'learn more here.',
-          docLink: '/api-docs/secret/pki#allowed_domains',
+          docLink: '/vault/api-docs/secret/pki#allowed_domains',
         },
       },
       'Key parameters': {

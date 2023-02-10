@@ -29,7 +29,7 @@ import { action } from '@ember/object';
  * @param {onChangeCallback} [onChange] - Handler that will get set on the `FormField` component.
  * @param {onKeyUpCallback} [onKeyUp] - Handler that will set the value and trigger validation on input changes
  * @param {ModelValidations} [modelValidations] - Object containing validation message for each property
- *
+ * @param {string} [groupName='fieldGroups'] - attribute name where the field groups are
  */
 
 export default class FormFieldGroupsComponent extends Component {
@@ -38,5 +38,9 @@ export default class FormFieldGroupsComponent extends Component {
   @action
   toggleGroup(group, isOpen) {
     this.showGroup = isOpen ? group : null;
+  }
+
+  get fieldGroups() {
+    return this.args.groupName || 'fieldGroups';
   }
 }

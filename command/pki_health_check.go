@@ -47,7 +47,7 @@ type PKIHealthCheckCommand struct {
 }
 
 func (c *PKIHealthCheckCommand) Synopsis() string {
-	return "Check PKI Secrets Engine health and operational status"
+	return "Check a PKI Secrets Engine mount's health and operational status"
 }
 
 func (c *PKIHealthCheckCommand) Help() string {
@@ -78,6 +78,9 @@ Usage: vault pki health-check [options] MOUNT
 	      preventing one or more health checks from being run.
       6 - A permission denied message was returned from Vault Server for
 	      one or more health checks.
+
+For more detailed information, refer to the online documentation about the
+vault pki health-check command.
 
 ` + c.Flags().Help()
 
