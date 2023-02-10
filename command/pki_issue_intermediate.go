@@ -97,7 +97,6 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 }
 
 func pkiIssue(c *BaseCommand, parentMountIssuer string, intermediateMount string, flagNewIssuerName string, flagKeyStorageSource string, data map[string]interface{}) int {
-
 	// Check We Have a Client
 	client, err := c.Client()
 	if err != nil {
