@@ -12,11 +12,7 @@ export default ApplicationAdapter.extend({
     const data = serializer.serialize(snapshot, requestType);
     const url = this.urlForRole(backend, name);
 
-    return this.ajax(url, 'POST', { data }).then((resp) => {
-      const response = resp || {};
-      response.id = name;
-      return response;
-    });
+    return this.ajax(url, 'POST', { data });
   },
 
   createRecord() {
