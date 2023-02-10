@@ -81,8 +81,8 @@ func handleEventsSubscribe(core *vault.Core) http.Handler {
 		}
 
 		prefix := "/v1/sys/events/subscribe/"
-		if ns.ID != "root" {
-			prefix = fmt.Sprintf("/v1/%s/sys/events/subscribe/", ns.Path)
+		if ns.ID != namespace.RootNamespaceID {
+			prefix = fmt.Sprintf("/v1/%ssys/events/subscribe/", ns.Path)
 		}
 		eventTypeStr := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, prefix))
 		if eventTypeStr == "" {
