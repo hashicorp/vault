@@ -168,7 +168,9 @@ func createComplicatedIssuerSetUpWithReIssueIntermediate(t *testing.T, client *a
 		"pki", "issue", "-format=json", "-issuer_name=intX3",
 		"pki-int/issuer/intX1",
 		"pki-int/",
-		"key_type=rsa",
+		"key_type=ec",
+		"use_pss=true", // This is meaningful because rootX1 is an RSA key
+		"signature_bits=512",
 		"common_name=Int X3",
 		"ttl=3650d",
 	}
@@ -179,8 +181,8 @@ func createComplicatedIssuerSetUpWithReIssueIntermediate(t *testing.T, client *a
 
 	intX3AdaptedCallArgs := []string{
 		"pki", "reissue", "-format=json", "-issuer_name=intX3also", "-type=existing",
-		"pki-int/issuer/intX2",
-		"pki-int/issuer/intX3",
+		"pki-int/issuer/intX2", // This is a EC key
+		"pki-int/issuer/intX3", // This template includes use_pss = true which can't be accomodated
 		"pki-int/",
 	}
 	codeOut = RunCustom(intX3AdaptedCallArgs, runOpts)
