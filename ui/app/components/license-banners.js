@@ -18,6 +18,7 @@ import localStorage from 'vault/lib/local-storage';
  */
 
 export default class LicenseBanners extends Component {
+  // ARG TODO: we would never show both!
   @service version;
 
   @tracked currentVersion = this.version.version;
@@ -26,7 +27,7 @@ export default class LicenseBanners extends Component {
 
   constructor() {
     super(...arguments);
-    // if nothing is saved in localStorage, or the user has updated their Vault version show the license banners
+    // if nothing is saved in localStorage or the user has updated their Vault version, show the license banners
     if (
       !this.localStorageLicenseBannerObject ||
       this.localStorageLicenseBannerObject.version !== this.currentVersion
@@ -36,10 +37,8 @@ export default class LicenseBanners extends Component {
       return;
     }
 
-    // update tracked property to equal either dismissType from localStorage or 'none' if the local storage object does not exists.
-    this.dismissType = !this.localStorageLicenseBannerObject?.dismissType
-      ? 'none'
-      : this.localStorageLicenseBannerObject.dismissType;
+    // otherwise dismissType should equal the dismissType recorded in localStorage
+    this.dismissType = this.localStorageLicenseBannerObject.dismissType;
   }
 
   get licenseExpired() {
@@ -64,6 +63,9 @@ export default class LicenseBanners extends Component {
   @action
   dismissBanner(dismissAction) {
     // dismissAction is either 'dismiss-warning' or 'dismiss-expired'
+
+    // update localStorage dismissType. If it was none before replace it with the passed in dismissAction (to hide either the warning or expired banner).
+
     const updatedLocalStorageObject =
       this.dismissType === 'none'
         ? { dismissType: dismissAction, version: this.currentVersion }
