@@ -21,21 +21,29 @@ export default class LicenseBanners extends Component {
   @service version;
 
   @tracked currentVersion = this.version.version;
-  @tracked dismissLicenseExpired = false;
   @tracked localStorageLicenseBannerState = localStorage.getItem('licenseBannerState');
+  @tracked dismissType = 'none';
 
+  // dismissType options = [both, warning, expired, none]
   constructor() {
     super(...arguments);
-    if (!this.localStorageLicenseBannerState) {
-      localStorage.setItem('licenseBannerState', { dismiss: false, version: this.currentVersion });
-    } else {
-      if (
-        this.localStorageLicenseBannerState.version === this.currentVersion &&
-        this.localStorageLicenseBannerState.dismiss
-      ) {
-        this.dismissLicenseExpired = true;
-      }
+    if (
+      !this.localStorageLicenseBannerState ||
+      this.localStorageLicenseBannerState.version !== this.currentVersion
+    ) {
+      localStorage.setItem('licenseBannerState', { dismissType: 'none', version: this.currentVersion });
     }
+
+    this.dismissType = !this.localStorageLicenseBannerState?.dismissType
+      ? 'none'
+      : this.localStorageLicenseBannerState.dismissType;
+  }
+
+  get showWarning() {
+    return this.dismissType === 'both' || this.dismissType === 'dismiss-warning' ? false : true;
+  }
+  get showExpired() {
+    return this.dismissType === 'both' || this.dismissType === 'dismiss-expired' ? false : true;
   }
 
   get licenseExpired() {
@@ -50,9 +58,14 @@ export default class LicenseBanners extends Component {
   }
 
   @action
-  dismissLicenseExpiredBanner() {
-    const updatedObject = { dismiss: true, version: this.currentVersion };
-    localStorage.setItem('licenseBannerState', updatedObject);
-    this.dismissLicenseExpired = true;
+  dismissBanner(bannerType) {
+    const updatedLicenseBannerState =
+      this.dismissType === 'none'
+        ? { dismissType: bannerType, version: this.currentVersion }
+        : { dismissType: 'both', version: this.currentVersion };
+
+    localStorage.setItem('licenseBannerState', updatedLicenseBannerState);
+
+    this.dismissType = this.dismissType === 'none' ? bannerType : 'both';
   }
 }
