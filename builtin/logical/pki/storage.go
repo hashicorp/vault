@@ -1371,9 +1371,11 @@ func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
 			atomic.StoreUint32(sc.Backend.revokedCertCount, 0)
 		}
 	} else { // To Potentially Enable Certificate Counting
-		// We haven't written "re-enable certificate counts" outside the initialize function
-		// Any call derived call to do so is likely to time out on ~2 million certs
-		sc.Backend.certCountError = "Certificate Counting Has Not Been Initialized, re-initialize this mount"
+		if sc.Backend.certCountEnabled.Load() == false {
+			// We haven't written "re-enable certificate counts" outside the initialize function
+			// Any call derived call to do so is likely to time out on ~2 million certs
+			sc.Backend.certCountError = "Certificate Counting Has Not Been Initialized, re-initialize this mount"
+		}
 	}
 
 	return nil
