@@ -416,14 +416,12 @@ func TestTidyIssuerConfig(t *testing.T) {
 // number of revoked certificates in storage.  Moreover, this test ensures that the gauge is emitted periodically, so
 // that the metric does not disappear or go stale.
 func TestCertStorageMetrics(t *testing.T) {
-	t.Parallel()
-
 	// This tests uses the same setup as TestAutoTidy
 	newPeriod := 1 * time.Second
 
 	// We set up a metrics accumulator
 	inmemSink := metrics.NewInmemSink(
-		newPeriod, // A short time period is ideal here to test metrics are emitted every periodic func
+		2*newPeriod, // A short time period is ideal here to test metrics are emitted every periodic func
 		2000000*time.Hour)
 
 	metricsConf := metrics.DefaultConfig("")
