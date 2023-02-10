@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-zookeeper/zk"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	"github.com/go-zookeeper/zk"
 )
 
 func TestZooKeeperBackend(t *testing.T) {
