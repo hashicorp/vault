@@ -52,15 +52,7 @@
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
             @value={{val}}
             @alwaysRender={{true}}
-          >
-            {{#if (gt val.length 0)}}
-              {{#each val as |key|}}
-                <span>{{key}}, </span>
-              {{/each}}
-            {{else}}
-              None
-            {{/if}}
-          </InfoTableRow>
+          />
         {{else if (eq attr.name "noStore")}}
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
