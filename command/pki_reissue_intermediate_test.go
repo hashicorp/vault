@@ -7,6 +7,9 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+// TestPKIReIssueIntermediate tests that the pki reissue command line tool accurately copies information from the
+// template certificate to the newly issued certificate, by issuing and reissuing several certificates and seeing how
+// they related to each other.
 func TestPKIReIssueIntermediate(t *testing.T) {
 	t.Parallel()
 
