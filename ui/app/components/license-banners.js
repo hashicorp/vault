@@ -32,6 +32,8 @@ export default class LicenseBanners extends Component {
       this.localStorageLicenseBannerObject.version !== this.currentVersion
     ) {
       localStorage.setItem('licenseBanner', { dismissType: 'none', version: this.currentVersion });
+      this.dismissType = 'none';
+      return;
     }
 
     // update tracked property to equal either dismissType from localStorage or 'none' if the local storage object does not exists.
