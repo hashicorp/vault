@@ -13,11 +13,7 @@ export default ApplicationAdapter.extend({
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
     const url = this.url(backend, type.modelName, name);
-    return this.ajax(url, 'POST', { data }).then((resp) => {
-      const response = resp || {};
-      response.id = name;
-      return response;
-    });
+    return this.ajax(url, 'POST', { data });
   },
 
   createRecord() {
@@ -45,6 +41,7 @@ export default ApplicationAdapter.extend({
   fetchByQuery(query) {
     const { backend, modelName, id } = query;
     return this.ajax(this.url(backend, modelName, id), 'GET').then((resp) => {
+      // The API response doesn't explicitly include the name/id, so add it here
       return {
         ...resp,
         backend,
