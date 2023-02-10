@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -20,6 +21,15 @@ func TestEventsSubscribe(t *testing.T) {
 	core := vault.TestCore(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
+
+	// unseal the core
+	keys, token := vault.TestCoreInit(t, core)
+	for _, key := range keys {
+		_, err := core.Unseal(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	stop := atomic.Bool{}
 
@@ -53,7 +63,18 @@ func TestEventsSubscribe(t *testing.T) {
 	t.Cleanup(cancelFunc)
 
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
-	conn, _, err := websocket.Dial(ctx, wsAddr+"/v1/sys/events/subscribe/"+eventType+"?json=true", nil)
+
+	// check that the connection fails if we don't have a token
+	_, _, err := websocket.Dial(ctx, wsAddr+"/v1/sys/events/subscribe/"+eventType+"?json=true", nil)
+	if err == nil {
+		t.Error("Expected websocket error but got none")
+	} else if !strings.HasSuffix(err.Error(), "401") {
+		t.Errorf("Expected 401 websocket but got %v", err)
+	}
+
+	conn, _, err := websocket.Dial(ctx, wsAddr+"/v1/sys/events/subscribe/"+eventType+"?json=true", &websocket.DialOptions{
+		HTTPHeader: http.Header{"x-vault-token": []string{token}},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
