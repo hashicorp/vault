@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
+import { click, typeIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -42,8 +42,8 @@ module('Acceptance | aws secret backend', function (hooks) {
     assert.ok(findAll('[data-test-aws-link="root-creds"]').length, 'renders the root creds link');
     assert.ok(findAll('[data-test-aws-link="leases"]').length, 'renders the leases config link');
 
-    await fillIn('[data-test-aws-input="accessKey"]', 'foo');
-    await fillIn('[data-test-aws-input="secretKey"]', 'bar');
+    await typeIn('[data-test-aws-input="accessKey"]', 'foo');
+    await typeIn('[data-test-aws-input="secretKey"]', 'bar');
 
     await click('[data-test-aws-input="root-save"]');
 
@@ -72,7 +72,7 @@ module('Acceptance | aws secret backend', function (hooks) {
       `aws: renders the create page`
     );
 
-    await fillIn('[data-test-input="name"]', roleName);
+    await typeIn('[data-test-input="name"]', roleName);
 
     findAll('.CodeMirror')[0].CodeMirror.setValue(JSON.stringify(POLICY));
 

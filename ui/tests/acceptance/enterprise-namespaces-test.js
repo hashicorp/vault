@@ -1,4 +1,4 @@
-import { click, settled, visit, fillIn, currentURL } from '@ember/test-helpers';
+import { click, settled, visit, typeIn, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -80,7 +80,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       .dom('[data-test-managed-namespace-toolbar]')
       .doesNotExist('Managed namespace toolbar does not exist');
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Root)');
-    await fillIn('input#namespace', '/foo');
+    await typeIn('input#namespace', '/foo');
     const encodedNamespace = encodeURIComponent('/foo');
     assert.strictEqual(
       currentURL(),

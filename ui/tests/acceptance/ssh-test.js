@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
+import { click, typeIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -21,11 +21,11 @@ module('Acceptance | ssh secret backend', function (hooks) {
         await click('[data-test-input="allowUserCertificates"]');
       },
       async fillInGenerate() {
-        await fillIn('[data-test-input="publicKey"]', PUB_KEY);
+        await typeIn('[data-test-input="publicKey"]', PUB_KEY);
         await click('[data-test-toggle-button]');
 
         await click('[data-test-toggle-label="TTL"]');
-        await fillIn('[data-test-select="ttl-unit"]', 'm');
+        await typeIn('[data-test-select="ttl-unit"]', 'm');
 
         document.querySelector('[data-test-ttl-value="TTL"]').value = 30;
       },
@@ -53,13 +53,13 @@ module('Acceptance | ssh secret backend', function (hooks) {
       type: 'otp',
       name: 'otprole',
       async fillInCreate() {
-        await fillIn('[data-test-input="defaultUser"]', 'admin');
+        await typeIn('[data-test-input="defaultUser"]', 'admin');
         await click('[data-test-toggle-group="Options"]');
-        await fillIn('[data-test-input="cidrList"]', '1.2.3.4/32');
+        await typeIn('[data-test-input="cidrList"]', '1.2.3.4/32');
       },
       async fillInGenerate() {
-        await fillIn('[data-test-input="username"]', 'admin');
-        await fillIn('[data-test-input="ip"]', '1.2.3.4');
+        await typeIn('[data-test-input="username"]', 'admin');
+        await typeIn('[data-test-input="ip"]', '1.2.3.4');
       },
       assertAfterGenerate(assert, sshPath) {
         assert.strictEqual(
@@ -108,8 +108,8 @@ module('Acceptance | ssh secret backend', function (hooks) {
         `${role.type}: renders the create page`
       );
 
-      await fillIn('[data-test-input="name"]', role.name);
-      await fillIn('[data-test-input="keyType"]', role.type);
+      await typeIn('[data-test-input="name"]', role.name);
+      await typeIn('[data-test-input="keyType"]', role.type);
       await role.fillInCreate();
       await settled();
 

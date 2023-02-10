@@ -56,7 +56,7 @@ export default {
       })[0]
       .textarea(value);
   },
-  fillIn: async function (name, value) {
+  typeIn: async function (name, value) {
     return this.fields
       .filter((field) => {
         return field.for.includes(name);

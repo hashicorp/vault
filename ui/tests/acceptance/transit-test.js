@@ -1,4 +1,4 @@
-import { click, fillIn, find, currentURL, settled, visit, waitUntil, findAll } from '@ember/test-helpers';
+import { click, typeIn, find, currentURL, settled, visit, waitUntil, findAll } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { encodeString } from 'vault/utils/b64';
@@ -93,8 +93,8 @@ const generateTransitKey = async function (key, now) {
   const name = key.name(now);
   await click('[data-test-secret-create]');
 
-  await fillIn('[data-test-transit-key-name]', name);
-  await fillIn('[data-test-transit-key-type]', key.type);
+  await typeIn('[data-test-transit-key-name]', name);
+  await typeIn('[data-test-transit-key-type]', key.type);
   if (key.exportable) {
     await click('[data-test-transit-key-exportable]');
   }
@@ -240,7 +240,7 @@ const testConvergentEncryption = async function (assert, keyName) {
     await click('[data-test-transit-action-link="encrypt"]');
 
     find('#plaintext-control .CodeMirror').CodeMirror.setValue(testCase.plaintext);
-    await fillIn('[data-test-transit-input="context"]', testCase.context);
+    await typeIn('[data-test-transit-input="context"]', testCase.context);
 
     if (!testCase.encodePlaintext) {
       // If value is already encoded, check the box

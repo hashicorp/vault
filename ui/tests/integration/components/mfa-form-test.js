@@ -3,7 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { fillIn, click, waitUntil } from '@ember/test-helpers';
+import { typeIn, click, waitUntil } from '@ember/test-helpers';
 import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
 import { TOTP_VALIDATION_ERROR } from 'vault/components/mfa/mfa-form';
 
@@ -125,8 +125,8 @@ module('Integration | Component | mfa-form', function (hooks) {
         @onSuccess={{this.onSuccess}}
       />
     `);
-    await fillIn('[data-test-mfa-select="0"] select', oktaConstraint.id);
-    await fillIn('[data-test-mfa-passcode="1"]', 'test-code');
+    await typeIn('[data-test-mfa-select="0"] select', oktaConstraint.id);
+    await typeIn('[data-test-mfa-passcode="1"]', 'test-code');
     await click('[data-test-mfa-validate]');
   });
 
@@ -166,7 +166,7 @@ module('Integration | Component | mfa-form', function (hooks) {
         @onSuccess={{this.onSuccess}}
       />
     `);
-    await fillIn('[data-test-mfa-passcode]', 'test-code');
+    await typeIn('[data-test-mfa-passcode]', 'test-code');
     await click('[data-test-mfa-validate]');
   });
 
@@ -190,7 +190,7 @@ module('Integration | Component | mfa-form', function (hooks) {
         />
       `);
 
-      await fillIn('[data-test-mfa-passcode]', code);
+      await typeIn('[data-test-mfa-passcode]', code);
       later(() => cancelTimers(), 50);
       await click('[data-test-mfa-validate]');
       assert
@@ -218,7 +218,7 @@ module('Integration | Component | mfa-form', function (hooks) {
       />
     `);
 
-    await fillIn('[data-test-mfa-passcode]', 'test-code');
+    await typeIn('[data-test-mfa-passcode]', 'test-code');
     later(() => cancelTimers(), 50);
     await click('[data-test-mfa-validate]');
     assert

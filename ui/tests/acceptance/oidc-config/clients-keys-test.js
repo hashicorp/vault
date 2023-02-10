@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
+import { visit, click, typeIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -55,7 +55,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
 
     // create client with default key
     await visit(OIDC_BASE_URL + '/clients/create');
-    await fillIn('[data-test-input="name"]', 'client-with-default-key');
+    await typeIn('[data-test-input="name"]', 'client-with-default-key');
     await click(SELECTORS.clientSaveButton);
 
     // check reroutes from oidc index to clients index when client exists
@@ -112,7 +112,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
       'vault.cluster.access.oidc.keys.create',
       'navigates to key create form'
     );
-    await fillIn('[data-test-input="name"]', 'test-key');
+    await typeIn('[data-test-input="name"]', 'test-key');
     await click(SELECTORS.keySaveButton);
     assert.strictEqual(
       currentRouteName(),
@@ -123,7 +123,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     // create client with test-key
     await visit(OIDC_BASE_URL + '/clients');
     await click('[data-test-oidc-client-create]');
-    await fillIn('[data-test-input="name"]', 'client-with-test-key');
+    await typeIn('[data-test-input="name"]', 'client-with-test-key');
     await click('[data-test-toggle-group="More options"]');
     await click('[data-test-component="search-select"] [data-test-icon="trash"]');
     await clickTrigger('#key');
@@ -195,7 +195,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
 
     // create a new key
     await visit(OIDC_BASE_URL + '/keys/create');
-    await fillIn('[data-test-input="name"]', 'test-key');
+    await typeIn('[data-test-input="name"]', 'test-key');
     // toggle ttls to false, testing it sets correct default duration
     await click('[data-test-input="rotationPeriod"]');
     await click('[data-test-input="verificationTtl"]');

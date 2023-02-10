@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click, findAll } from '@ember/test-helpers';
+import { render, typeIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { SELECTORS, OIDC_BASE_URL, overrideCapabilities } from 'vault/tests/helpers/oidc-config';
@@ -55,8 +55,8 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       .dom('[data-test-input="template"] [data-test-component="code-mirror-modifier"]')
       .exists('Code mirror renders');
 
-    await fillIn('[data-test-input="name"]', 'test');
-    await fillIn('[data-test-input="description"]', 'this is a test');
+    await typeIn('[data-test-input="name"]', 'test');
+    await typeIn('[data-test-input="description"]', 'this is a test');
     await click(SELECTORS.scopeSaveButton);
   });
 
@@ -100,7 +100,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       .dom('[data-test-input="template"] [data-test-component="code-mirror-modifier"]')
       .exists('Code mirror renders');
 
-    await fillIn('[data-test-input="description"]', 'this is an edit test');
+    await typeIn('[data-test-input="description"]', 'this is an edit test');
     await click(SELECTORS.scopeSaveButton);
   });
 
@@ -139,7 +139,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     <div id="modal-wormhole"></div>
   `);
 
-    await fillIn('[data-test-input="description"]', 'changed description attribute');
+    await typeIn('[data-test-input="description"]', 'changed description attribute');
     await click(SELECTORS.scopeCancelButton);
     assert.strictEqual(
       this.model.description,
@@ -186,7 +186,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       />
       <div id="modal-wormhole"></div>
     `);
-    await fillIn('[data-test-input="name"]', 'test-scope');
+    await typeIn('[data-test-input="name"]', 'test-scope');
     await click(SELECTORS.scopeSaveButton);
     assert
       .dom(SELECTORS.inlineAlert)

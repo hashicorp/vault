@@ -1,7 +1,7 @@
 /* eslint qunit/no-conditional-assertions: "warn" */
 import {
   click,
-  fillIn,
+  typeIn,
   settled,
   visit,
   triggerEvent,
@@ -46,9 +46,9 @@ module('Acceptance | auth backend list', function (hooks) {
 
     await visit(`/vault/access/${path1}/item/user/create`);
     await waitUntil(() => find('[data-test-input="username"]') && find('[data-test-textarea]'));
-    await fillIn('[data-test-input="username"]', user1);
+    await typeIn('[data-test-input="username"]', user1);
     await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
-    await fillIn('[data-test-textarea]', user1);
+    await typeIn('[data-test-textarea]', user1);
     await triggerKeyEvent('[data-test-textarea]', 'keyup', 65);
     await click('[data-test-save-config="true"]');
 
@@ -59,7 +59,7 @@ module('Acceptance | auth backend list', function (hooks) {
 
     await click('[data-test-mount-next]');
 
-    await fillIn('[data-test-input="path"]', path2);
+    await typeIn('[data-test-input="path"]', path2);
 
     await click('[data-test-mount-submit="true"]');
 
@@ -69,9 +69,9 @@ module('Acceptance | auth backend list', function (hooks) {
 
     await click('[data-test-entity-create-link="user"]');
 
-    await fillIn('[data-test-input="username"]', user2);
+    await typeIn('[data-test-input="username"]', user2);
     await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
-    await fillIn('[data-test-textarea]', user2);
+    await typeIn('[data-test-textarea]', user2);
     await triggerKeyEvent('[data-test-textarea]', 'keyup', 65);
     // test for modified helpText on generated token policies
     await click('[data-test-toggle-group="Tokens"]');

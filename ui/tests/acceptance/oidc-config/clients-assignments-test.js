@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
+import { visit, currentURL, click, typeIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -89,7 +89,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'vault.cluster.access.oidc.clients.create',
       'navigates to create form'
     );
-    await fillIn('[data-test-input="name"]', 'test-app');
+    await typeIn('[data-test-input="name"]', 'test-app');
     await click('[data-test-toggle-group="More options"]');
     // toggle ttls to false, testing it sets correct default duration
     await click('[data-test-input="idTokenTtl"]');
@@ -132,12 +132,12 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'vault.cluster.access.oidc.clients.client.edit',
       'navigates to edit page from details'
     );
-    await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
+    await typeIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
 
     // limit access & create new assignment inline
     await click('[data-test-oidc-radio="limited"]');
     await clickTrigger();
-    await fillIn('.ember-power-select-search input', 'assignment-inline');
+    await typeIn('.ember-power-select-search input', 'assignment-inline');
     await searchSelect.options.objectAt(0).click();
     await click('[data-test-search-select="entities"] .ember-basic-dropdown-trigger');
     await searchSelect.options.objectAt(0).click();
@@ -176,7 +176,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
 
     // create another client
     await visit(OIDC_BASE_URL + '/clients/create');
-    await fillIn('[data-test-input="name"]', 'app-to-delete');
+    await typeIn('[data-test-input="name"]', 'app-to-delete');
     await click(SELECTORS.clientSaveButton);
 
     // immediately delete client, test transition
@@ -221,7 +221,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'navigates to create form'
     );
     assert.dom('[data-test-oidc-assignment-title]').hasText('Create assignment', 'Form title renders');
-    await fillIn('[data-test-input="name"]', 'test-assignment');
+    await typeIn('[data-test-input="name"]', 'test-assignment');
     await click('[data-test-component="search-select"]#entities .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
     await click(SELECTORS.assignmentSaveButton);

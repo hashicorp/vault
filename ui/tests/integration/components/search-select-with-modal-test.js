@@ -4,7 +4,7 @@ import { create } from 'ember-cli-page-object';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { clickTrigger, typeInSearch } from 'ember-power-select/test-support/helpers';
-import { render, fillIn, click, findAll } from '@ember/test-helpers';
+import { render, typeIn, click, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import ss from 'vault/tests/pages/components/search-select';
 import sinon from 'sinon';
@@ -181,13 +181,13 @@ module('Integration | Component | search select with modal', function (hooks) {
     );
     await component.selectOption();
     assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
-    await fillIn('[data-test-select="policyType"]', 'acl');
+    await typeIn('[data-test-select="policyType"]', 'acl');
     assert.dom('[data-test-policy-form]').exists('policy form renders after type is selected');
     await click('[data-test-tab-example-policy]');
     assert.dom('[data-test-tab-example-policy]').hasClass('is-active');
     await click('[data-test-tab-your-policy]');
     assert.dom('[data-test-tab-your-policy]').hasClass('is-active');
-    await fillIn(
+    await typeIn(
       '[data-test-component="code-mirror-modifier"] textarea',
       'path "secret/super-secret" { capabilities = ["deny"] }'
     );
@@ -265,7 +265,7 @@ module('Integration | Component | search select with modal', function (hooks) {
   `);
     assert.dom('[data-test-component="string-list"]').exists('renders fallback component');
     assert.false(component.hasTrigger, 'does not render power select trigger');
-    await fillIn('[data-test-string-list-input="0"]', 'string-list-policy');
+    await typeIn('[data-test-string-list-input="0"]', 'string-list-policy');
     await click('[data-test-string-list-button="add"]');
     assert
       .dom('[data-test-string-list-input="0"]')

@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
+import { click, typeIn, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | transform-advanced-templating', function (hooks) {
@@ -16,7 +16,7 @@ module('Integration | Component | transform-advanced-templating', function (hook
 
     assert.dom('.box').doesNotExist('Form is hidden when not toggled');
     await click('[data-test-toggle-advanced]');
-    await fillIn('[data-test-input="regex-test-val"]', '123-45-67890');
+    await typeIn('[data-test-input="regex-test-val"]', '123-45-67890');
     [
       ['$1', '123'],
       ['$2', '45'],
@@ -35,8 +35,8 @@ module('Integration | Component | transform-advanced-templating', function (hook
 
     assert.dom('[data-test-kv-object-editor]').exists('KvObjectEditor renders for decode formats');
     assert.dom('[data-test-decode-format]').exists('AutocompleteInput renders for decode format value');
-    await fillIn('[data-test-kv-key]', 'last');
-    await fillIn('[data-test-decode-format] input', '$last');
+    await typeIn('[data-test-kv-key]', 'last');
+    await typeIn('[data-test-decode-format] input', '$last');
     assert.deepEqual(this.model.decodeFormats, { last: '$last' }, 'Decode formats updates correctly');
   });
 });

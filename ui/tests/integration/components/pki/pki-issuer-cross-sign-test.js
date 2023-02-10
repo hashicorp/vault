@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, typeIn, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
@@ -185,7 +185,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     });
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await typeIn(SELECTORS.input(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.submitButton);
 
@@ -243,15 +243,15 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await typeIn(SELECTORS.input(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.addRow);
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key, 1), nonexistentIssuer[field.key]);
+      await typeIn(SELECTORS.input(field.key, 1), nonexistentIssuer[field.key]);
     }
     await click(SELECTORS.addRow);
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key, 2), unsupportedCert[field.key]);
+      await typeIn(SELECTORS.input(field.key, 2), unsupportedCert[field.key]);
     }
     await click(SELECTORS.submitButton);
 
@@ -291,7 +291,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await typeIn(SELECTORS.input(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.submitButton);
 
@@ -324,7 +324,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     });
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await typeIn(SELECTORS.input(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.submitButton);
     assert.dom(SELECTORS.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');

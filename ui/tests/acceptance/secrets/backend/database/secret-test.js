@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, settled, click, visit, fillIn, typeIn } from '@ember/test-helpers';
+import { currentURL, settled, click, visit, typeIn } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 
@@ -355,7 +355,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
         .dom(`[data-test-input="${name}"]`)
         .exists(`Field ${name} exists for ${connectionDetails.plugin}`);
       if (value) {
-        await fillIn(`[data-test-input="${name}"]`, value);
+        await typeIn(`[data-test-input="${name}"]`, value);
       }
     });
     // uncheck verify for the save step to work
@@ -386,7 +386,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('.modal.is-active .title')
       .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
-    await fillIn('[data-test-confirmation-modal-input="Delete connection?"]', connectionDetails.id);
+    await typeIn('[data-test-confirmation-modal-input="Delete connection?"]', connectionDetails.id);
     await click('[data-test-confirm-button]');
 
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');

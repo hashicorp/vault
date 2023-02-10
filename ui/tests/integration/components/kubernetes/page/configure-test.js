@@ -2,7 +2,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, waitUntil, find, fillIn } from '@ember/test-helpers';
+import { render, click, waitUntil, find, typeIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
@@ -113,9 +113,9 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     });
 
     await click('[data-test-radio-card="manual"]');
-    await fillIn('[data-test-input="kubernetesHost"]', this.existingConfig.kubernetes_host);
-    await fillIn('[data-test-input="serviceAccountJwt"]', this.existingConfig.service_account_jwt);
-    await fillIn('[data-test-input="kubernetesCaCert"]', this.existingConfig.kubernetes_ca_cert);
+    await typeIn('[data-test-input="kubernetesHost"]', this.existingConfig.kubernetes_host);
+    await typeIn('[data-test-input="serviceAccountJwt"]', this.existingConfig.service_account_jwt);
+    await typeIn('[data-test-input="kubernetesCaCert"]', this.existingConfig.kubernetes_ca_cert);
     await click('[data-test-config-save]');
     assert.ok(
       stub.calledWith('vault.cluster.secrets.backend.kubernetes.configuration'),
@@ -143,7 +143,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       .dom('[data-test-input="kubernetesCaCert"]')
       .hasValue(this.existingConfig.kubernetes_ca_cert, 'Cert field is populated');
 
-    await fillIn('[data-test-input="kubernetesHost"]', 'http://localhost:1212');
+    await typeIn('[data-test-input="kubernetesHost"]', 'http://localhost:1212');
     await click('[data-test-config-cancel]');
 
     assert.ok(

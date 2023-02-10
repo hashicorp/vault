@@ -1,7 +1,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
-import { render, fillIn, find, waitUntil } from '@ember/test-helpers';
+import { render, typeIn, find, waitUntil } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import jsonEditor from '../../pages/components/json-editor';
 import sinon from 'sinon';
@@ -55,7 +55,7 @@ module('Integration | Component | json-editor', function (hooks) {
       color: 'rgb(29, 219, 163)',
     });
 
-    await fillIn('textarea', this.bad_json_blob);
+    await typeIn('textarea', this.bad_json_blob);
     await waitUntil(() => find('.CodeMirror-lint-marker-error'));
     assert.dom('.CodeMirror-lint-marker-error').exists('throws linting error');
     assert.dom('.CodeMirror-linenumber').exists('shows line numbers');

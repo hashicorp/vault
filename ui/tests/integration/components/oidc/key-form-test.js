@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click, findAll } from '@ember/test-helpers';
+import { render, typeIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -51,7 +51,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     assert.strictEqual(findAll('[data-test-field]').length, 4, 'renders all input fields');
 
     // check validation errors
-    await fillIn('[data-test-input="name"]', ' ');
+    await typeIn('[data-test-input="name"]', ' ');
     await click(SELECTORS.keySaveButton);
 
     const validationErrors = findAll(SELECTORS.inlineAlert);
@@ -61,7 +61,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     assert.dom(validationErrors[1]).hasText('There are 2 errors with this form.', 'Renders form error count');
 
     assert.dom('[data-test-oidc-radio="limited"] input').isDisabled('limit radio button disabled on create');
-    await fillIn('[data-test-input="name"]', 'test-key');
+    await typeIn('[data-test-input="name"]', 'test-key');
     await click(SELECTORS.keySaveButton);
   });
 
@@ -194,7 +194,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
         @onSave={{this.onSave}}
       />
     `);
-    await fillIn('[data-test-input="name"]', 'test-app');
+    await typeIn('[data-test-input="name"]', 'test-app');
     await click(SELECTORS.keySaveButton);
     assert
       .dom(SELECTORS.inlineAlert)

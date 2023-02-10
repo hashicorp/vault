@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, typeIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 
@@ -64,7 +64,7 @@ module('Integration | Component | object-list-input', function (hooks) {
     await render(hbs`<ObjectListInput @objectKeys={{this.keys}} @onChange={{this.onChange}} />`);
 
     assert.dom(SELECTORS.addButton).isDisabled('add button is disabled with empty inputs');
-    await fillIn(SELECTORS.listInput(this.keys[0].key, 0), 'foo');
+    await typeIn(SELECTORS.listInput(this.keys[0].key, 0), 'foo');
     assert.propEqual(
       this.onChange.lastCall.args[0],
       [
@@ -82,7 +82,7 @@ module('Integration | Component | object-list-input', function (hooks) {
 
     // fill in each input
     for (let i = 0; i < this.keys.length; i++) {
-      await fillIn(SELECTORS.listInput(this.keys[i].key, 0), `foo-${i}`);
+      await typeIn(SELECTORS.listInput(this.keys[i].key, 0), `foo-${i}`);
     }
     assert.dom(SELECTORS.addButton).isEnabled('add button enabled when all inputs are filled');
     assert.propEqual(
@@ -106,7 +106,7 @@ module('Integration | Component | object-list-input', function (hooks) {
 
     // fill in another row of inputs
     for (let i = 0; i < this.keys.length; i++) {
-      await fillIn(SELECTORS.listInput(this.keys[i].key, 1), `bar-${i}`);
+      await typeIn(SELECTORS.listInput(this.keys[i].key, 1), `bar-${i}`);
     }
 
     assert.propEqual(

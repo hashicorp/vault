@@ -4,7 +4,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import { fillIn, visit, currentURL, click, currentRouteName } from '@ember/test-helpers';
+import { typeIn, visit, currentURL, click, currentRouteName } from '@ember/test-helpers';
 
 module('Acceptance | kubernetes | roles', function (hooks) {
   setupApplicationTest(hooks);
@@ -30,7 +30,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
   test('it should filter roles', async function (assert) {
     await this.visitRoles();
     assert.dom('[data-test-list-item-link]').exists({ count: 3 }, 'Roles list renders');
-    await fillIn('[data-test-comoponent="navigate-input"]', '1');
+    await typeIn('[data-test-comoponent="navigate-input"]', '1');
     assert.dom('[data-test-list-item-link]').exists({ count: 1 }, 'Filtered roles list renders');
     assert.ok(currentURL().includes('pageFilter=1'), 'pageFilter query param value is set');
   });
@@ -80,9 +80,9 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await this.visitRoles();
     await click('[data-test-toolbar-roles-action]');
     await click('[data-test-radio-card="basic"]');
-    await fillIn('[data-test-input="name"]', 'new-test-role');
-    await fillIn('[data-test-input="serviceAccountName"]', 'default');
-    await fillIn('[data-test-input="allowedKubernetesNamespaces"]', '*');
+    await typeIn('[data-test-input="name"]', 'new-test-role');
+    await typeIn('[data-test-input="serviceAccountName"]', 'default');
+    await typeIn('[data-test-input="allowedKubernetesNamespaces"]', '*');
     await click('[data-test-save]');
     this.validateRoute(assert, 'roles.role.details', 'Transitions to details route on save success');
     await click('[data-test-breadcrumbs] li:nth-child(2) a');
@@ -112,7 +112,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await this.visitRoles();
     await click('[data-test-list-item-link]');
     await click('[data-test-generate-credentials]');
-    await fillIn('[data-test-kubernetes-namespace]', 'test-namespace');
+    await typeIn('[data-test-kubernetes-namespace]', 'test-namespace');
     await click('[data-test-generate-credentials-button]');
     await click('[data-test-generate-credentials-done]');
     this.validateRoute(

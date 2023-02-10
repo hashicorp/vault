@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click, findAll } from '@ember/test-helpers';
+import { render, typeIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
@@ -89,7 +89,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert.dom('[data-test-selected-option]').hasText('default', 'Search select has default key selected');
 
     // check validation errors
-    await fillIn('[data-test-input="name"]', ' ');
+    await typeIn('[data-test-input="name"]', ' ');
     await click('[data-test-selected-list-button="delete"]');
     await click(SELECTORS.clientSaveButton);
 
@@ -102,7 +102,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
     // fill out form with valid inputs
     await clickTrigger();
-    await fillIn('.ember-power-select-search input', 'default');
+    await typeIn('.ember-power-select-search input', 'default');
     await searchSelect.options.objectAt(0).click();
 
     await click('[data-test-oidc-radio="limited"]');
@@ -112,7 +112,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
     await clickTrigger();
     assert.dom('li.ember-power-select-option').hasText('assignment-1', 'dropdown renders assignments');
-    await fillIn('[data-test-input="name"]', 'test-app');
+    await typeIn('[data-test-input="name"]', 'test-app');
     await click(SELECTORS.clientSaveButton);
   });
 
@@ -187,7 +187,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       />
     `);
 
-    await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
+    await typeIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
     await click('[data-test-string-list-button="add"]');
     await click(SELECTORS.clientCancelButton);
     assert.strictEqual(this.model.redirectUris, undefined, 'Model attributes rolled back on cancel');
@@ -207,7 +207,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     `);
     await click('[data-test-oidc-radio="limited"]');
     await clickTrigger();
-    await fillIn('.ember-power-select-search input', 'test-new');
+    await typeIn('.ember-power-select-search input', 'test-new');
     await searchSelect.options.objectAt(0).click();
     assert.dom('[data-test-modal-div]').hasClass('is-active', 'modal with form opens');
     assert.dom('[data-test-modal-title]').hasText('Create new assignment', 'Create assignment modal renders');
@@ -244,7 +244,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         @onSave={{this.onSave}}
       />
     `);
-    await fillIn('[data-test-input="name"]', 'test-app');
+    await typeIn('[data-test-input="name"]', 'test-app');
     await click(SELECTORS.clientSaveButton);
     assert
       .dom(SELECTORS.inlineAlert)

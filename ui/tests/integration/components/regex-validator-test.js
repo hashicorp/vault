@@ -2,7 +2,7 @@ import EmberObject from '@ember/object';
 import sinon from 'sinon';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, settled } from '@ember/test-helpers';
+import { render, click, typeIn, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | regex-validator', function (hooks) {
@@ -42,7 +42,7 @@ module('Integration | Component | regex-validator', function (hooks) {
       .dom('[data-test-regex-validation-message]')
       .doesNotExist('Validation message does not show if test string is empty');
 
-    await fillIn('[data-test-input="regex-test-val"]', '123a');
+    await typeIn('[data-test-input="regex-test-val"]', '123a');
     assert.dom('[data-test-regex-validation-message]').exists('Validation message shows after input filled');
     assert
       .dom('[data-test-inline-error-message]')
@@ -51,19 +51,19 @@ module('Integration | Component | regex-validator', function (hooks) {
         'Shows error when regex does not match string'
       );
 
-    await fillIn('[data-test-input="regex-test-val"]', '1234');
+    await typeIn('[data-test-input="regex-test-val"]', '1234');
     assert
       .dom('[data-test-inline-success-message]')
       .hasText('This test string matches the pattern regex.', 'Shows success when regex matches');
 
-    await fillIn('[data-test-input="regex-test-val"]', '12345');
+    await typeIn('[data-test-input="regex-test-val"]', '12345');
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
         'This test string does not match the pattern regex.',
         "Shows error if regex doesn't match complete string"
       );
-    await fillIn('[data-test-input="example"]', '(\\d{5})');
+    await typeIn('[data-test-input="example"]', '(\\d{5})');
     assert.ok(spy.calledOnce, 'Calls the passed onChange function when main input is changed');
   });
 
@@ -91,7 +91,7 @@ module('Integration | Component | regex-validator', function (hooks) {
       .dom('[data-test-regex-validator-test-string] .sub-text')
       .hasText(this.subText, 'Test input sub text renders');
 
-    await fillIn('[data-test-input="regex-test-val"]', 'test');
+    await typeIn('[data-test-input="regex-test-val"]', 'test');
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
@@ -122,11 +122,11 @@ module('Integration | Component | regex-validator', function (hooks) {
         @value={{this.value}}
         @showGroups={{true}}
       />`);
-    await fillIn('[data-test-input="regex-test-val"]', 'foobar');
+    await typeIn('[data-test-input="regex-test-val"]', 'foobar');
     assert
       .dom('[data-test-regex-validator-groups-placeholder]')
       .exists('Placeholder is shown when regex does not match test input value');
-    await fillIn('[data-test-input="regex-test-val"]', 'test8');
+    await typeIn('[data-test-input="regex-test-val"]', 'test8');
     assert.dom('[data-test-regex-group-position="$1"]').hasText('$1', 'First capture group position renders');
     assert.dom('[data-test-regex-group-value="$1"]').hasText('test', 'First capture group value renders');
     assert

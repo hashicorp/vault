@@ -1,4 +1,4 @@
-import { click, currentRouteName, currentURL, fillIn, settled, visit } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, typeIn, settled, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
@@ -35,7 +35,7 @@ module('Acceptance | unseal', function (hooks) {
 
     // unseal
     for (const key of unsealKeys) {
-      await fillIn('[data-test-shamir-input]', key);
+      await typeIn('[data-test-shamir-input]', key);
 
       await click('button[type="submit"]');
 

@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, triggerEvent, waitUntil } from '@ember/test-helpers';
+import { render, click, typeIn, triggerEvent, waitUntil } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 let file;
@@ -85,7 +85,7 @@ module('Integration | Component | pgp file', function (hooks) {
     await click('[data-test-text-toggle]');
     assert.dom('[data-test-pgp-file-textarea]').exists({ count: 1 }, 'renders the textarea on toggle');
 
-    fillIn('[data-test-pgp-file-textarea]', text);
+    typeIn('[data-test-pgp-file-textarea]', text);
     await waitUntil(() => {
       return !!this.lastOnChangeCall;
     });

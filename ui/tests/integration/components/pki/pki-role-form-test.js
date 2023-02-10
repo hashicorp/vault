@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, find } from '@ember/test-helpers';
+import { render, click, typeIn, find } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
@@ -89,16 +89,16 @@ module('Integration | Component | pki-role-form', function (hooks) {
       .dom('[data-test-inline-error-message]')
       .includesText('Name is required.', 'show correct error message');
 
-    await fillIn(SELECTORS.roleName, 'test-role');
+    await typeIn(SELECTORS.roleName, 'test-role');
     await click('[data-test-input="addBasicConstraints"]');
     await click(SELECTORS.domainHandling);
     await click('[data-test-input="allowedDomainsTemplate"]');
     await click(SELECTORS.policyIdentifiers);
-    await fillIn('[data-test-input="policyIdentifiers"] [data-test-string-list-input="0"]', 'some-oid');
+    await typeIn('[data-test-input="policyIdentifiers"] [data-test-string-list-input="0"]', 'some-oid');
     await click(SELECTORS.san);
     await click('[data-test-input="allowUriSansTemplate"]');
     await click(SELECTORS.additionalSubjectFields);
-    await fillIn(
+    await typeIn(
       '[data-test-input="allowedSerialNumbers"] [data-test-string-list-input="0"]',
       'some-serial-number'
     );
@@ -135,7 +135,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
       { owner: this.engine }
     );
 
-    await fillIn(SELECTORS.issuerRef, 'not-default');
+    await typeIn(SELECTORS.issuerRef, 'not-default');
     await click(SELECTORS.roleCreateButton);
     assert.strictEqual(this.model.issuerRef, 'not-default', 'Issuer Ref correctly saved on create');
   });

@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, typeIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
@@ -117,10 +117,10 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
       />
     `);
 
-    await fillIn('[data-test-mlef-input="name"]', 'bar');
+    await typeIn('[data-test-mlef-input="name"]', 'bar');
     await click('.ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
-    await fillIn('[data-test-mlef-select="accessor"] select', 'auth_userpass_1234');
+    await typeIn('[data-test-mlef-select="accessor"] select', 'auth_userpass_1234');
     await click('[data-test-mlef-add-target]');
     await click('[data-test-mlef-save]');
     assert.true(this.didSave, 'onSave callback triggered');
@@ -166,7 +166,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
       .includesText('At least one target is required', 'Target is removed');
     assert.notOk(this.model.auth_method_accessors.length, 'Target is removed from appropriate model prop');
 
-    await fillIn('[data-test-mlef-select="accessor"] select', 'auth_userpass_1234');
+    await typeIn('[data-test-mlef-select="accessor"] select', 'auth_userpass_1234');
     await click('[data-test-mlef-add-target]');
     await click('[data-test-selected-list-button="delete"]');
     await click('[data-test-mlef-save]');
@@ -234,14 +234,14 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     }
     // add targets
     for (const target of targets) {
-      await fillIn('[data-test-mlef-select="target-type"] select', target.type);
+      await typeIn('[data-test-mlef-select="target-type"] select', target.type);
       if (['Group', 'Entity'].includes(target.label)) {
         await click(`[data-test-mlef-search="${target.type}"] .ember-basic-dropdown-trigger`);
         await click('.ember-power-select-option');
       } else {
         const key = target.label === 'Authentication method' ? 'auth-method' : 'accessor';
         const value = target.label === 'Authentication method' ? 'userpass' : 'auth_userpass_1234';
-        await fillIn(`[data-test-mlef-select="${key}"] select`, value);
+        await typeIn(`[data-test-mlef-select="${key}"] select`, value);
       }
       await click('[data-test-mlef-add-target]');
       assert.ok(this.model[target.key].length, `${target.label} added to correct model prop`);

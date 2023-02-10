@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, typeIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Sinon from 'sinon';
 import { setupEngine } from 'ember-engines/test-support';
@@ -77,7 +77,7 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
     assert.dom(selectors.csrInput).hasClass('has-error-border');
     assert.dom(selectors.fieldError).hasText('CSR is required.');
 
-    await fillIn(selectors.csrInput, 'example-data');
+    await typeIn(selectors.csrInput, 'example-data');
     await click(selectors.saveButton);
     [
       { label: 'Serial number' },

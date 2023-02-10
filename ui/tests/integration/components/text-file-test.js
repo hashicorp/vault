@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
+import { click, typeIn, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { componentPemBundle } from 'vault/tests/helpers/pki/values';
@@ -65,7 +65,7 @@ module('Integration | Component | text-file', function (hooks) {
 
     await render(hbs`<TextFile @onChange={{this.onChange}} />`);
     await click(SELECTORS.toggle);
-    await fillIn(SELECTORS.textarea, PEM_BUNDLE);
+    await typeIn(SELECTORS.textarea, PEM_BUNDLE);
     assert.propEqual(
       this.onChange.lastCall.args[0],
       {

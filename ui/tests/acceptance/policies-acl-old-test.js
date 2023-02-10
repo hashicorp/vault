@@ -1,4 +1,4 @@
-import { click, fillIn, find, currentURL, waitUntil } from '@ember/test-helpers';
+import { click, typeIn, find, currentURL, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/policies/index';
@@ -21,7 +21,7 @@ module('Acceptance | policies (old)', function (hooks) {
     // new policy creation
     await click('[data-test-policy-create-link]');
 
-    await fillIn('[data-test-policy-input="name"]', policyName);
+    await typeIn('[data-test-policy-input="name"]', policyName);
     await click('[data-test-policy-save]');
     assert
       .dom('[data-test-error]')
@@ -72,7 +72,7 @@ module('Acceptance | policies (old)', function (hooks) {
     // new policy creation
     await click('[data-test-policy-create-link]');
 
-    await fillIn('[data-test-policy-input="name"]', policyName);
+    await typeIn('[data-test-policy-input="name"]', policyName);
     find('.CodeMirror').CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');
     assert.ok(

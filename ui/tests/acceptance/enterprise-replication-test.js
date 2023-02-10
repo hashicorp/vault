@@ -1,5 +1,5 @@
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import { click, fillIn, findAll, currentURL, find, visit, settled, waitUntil } from '@ember/test-helpers';
+import { click, typeIn, findAll, currentURL, find, visit, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -21,7 +21,7 @@ const disableReplication = async (type, assert) => {
     await click('[data-test-disable-replication] button');
 
     const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
-    await fillIn('[data-test-confirmation-modal-input="Disable Replication?"]', typeDisplay);
+    await typeIn('[data-test-confirmation-modal-input="Disable Replication?"]', typeDisplay);
     await click('[data-test-confirm-button]');
     await settled(); // eslint-disable-line
 
@@ -87,7 +87,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     // enable perf replication
     await click('[data-test-replication-type-select="performance"]');
 
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await typeIn('[data-test-replication-cluster-mode-select]', 'primary');
 
     await click('[data-test-replication-enable]');
 
@@ -101,7 +101,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await click('[data-test-secondary-add]');
 
-    await fillIn('[data-test-replication-secondary-id]', secondaryName);
+    await typeIn('[data-test-replication-secondary-id]', secondaryName);
 
     await click('#deny');
     await clickTrigger();
@@ -154,7 +154,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     // nav to DR
     await visit('/vault/replication/dr');
 
-    await fillIn('[data-test-replication-cluster-mode-select]', 'secondary');
+    await typeIn('[data-test-replication-cluster-mode-select]', 'secondary');
     assert
       .dom('[data-test-replication-enable]')
       .isDisabled('dr secondary enable is disabled when other replication modes are on');
@@ -167,7 +167,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     // enable dr replication
     await visit('vault/replication/dr');
 
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await typeIn('[data-test-replication-cluster-mode-select]', 'primary');
     await click('button[type="submit"]');
 
     await pollCluster(this.owner);
@@ -194,7 +194,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await click('[data-test-secondary-add]');
 
-    await fillIn('[data-test-replication-secondary-id]', secondaryName);
+    await typeIn('[data-test-replication-secondary-id]', secondaryName);
 
     await click('[data-test-secondary-add]');
 
@@ -210,7 +210,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await visit('vault/replication/performance');
 
     // enable perf replication
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await typeIn('[data-test-replication-cluster-mode-select]', 'primary');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);
@@ -218,7 +218,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     // enable dr replication
     await visit('/vault/replication/dr');
 
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await typeIn('[data-test-replication-cluster-mode-select]', 'primary');
 
     await click('[data-test-replication-enable]');
 
@@ -235,7 +235,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await visit('/vault/replication/dr');
 
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await typeIn('[data-test-replication-cluster-mode-select]', 'primary');
     await click('[data-test-replication-enable]');
     await settled(); // eslint-disable-line
     await pollCluster(this.owner);
@@ -258,7 +258,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     // enable perf replication
     await click('[data-test-replication-type-select="performance"]');
 
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await typeIn('[data-test-replication-cluster-mode-select]', 'primary');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);
@@ -269,7 +269,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await click('[data-test-secondary-add]');
 
-    await fillIn('[data-test-replication-secondary-id]', secondaryNameFirst);
+    await typeIn('[data-test-replication-secondary-id]', secondaryNameFirst);
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
@@ -284,10 +284,10 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     // add another secondary not using the default ttl
     await click('[data-test-secondary-add]');
 
-    await fillIn('[data-test-replication-secondary-id]', secondaryNameSecond);
+    await typeIn('[data-test-replication-secondary-id]', secondaryNameSecond);
     await click('[data-test-toggle-input]');
 
-    await fillIn('[data-test-ttl-value]', 3);
+    await typeIn('[data-test-ttl-value]', 3);
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
@@ -312,7 +312,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await visit('/vault/replication');
     await click('[data-test-replication-type-select="performance"]');
 
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await typeIn('[data-test-replication-cluster-mode-select]', 'primary');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);
@@ -356,7 +356,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await click('[data-test-replication-type-select="performance"]');
 
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await typeIn('[data-test-replication-cluster-mode-select]', 'primary');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);
@@ -369,7 +369,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
 
     // enter confirmation text
-    await fillIn('[data-test-confirmation-modal-input="Demote to secondary?"]', 'Performance');
+    await typeIn('[data-test-confirmation-modal-input="Demote to secondary?"]', 'Performance');
     // Click confirm button
     await click('[data-test-confirm-button="Demote to secondary?"]');
 

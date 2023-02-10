@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, triggerKeyEvent, triggerEvent } from '@ember/test-helpers';
+import { render, click, typeIn, triggerKeyEvent, triggerEvent } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 
@@ -82,7 +82,7 @@ module('Integration | Component | string list', function (hooks) {
     await render(hbs`<StringList @inputValue="" @onChange={{this.spy}}/>`);
     await click('[data-test-string-list-button="add"]');
     assertBlank(assert);
-    await fillIn('[data-test-string-list-input="0"]', 'foo');
+    await typeIn('[data-test-string-list-input="0"]', 'foo');
     await triggerKeyEvent('[data-test-string-list-input="0"]', 'keyup', 14);
     await click('[data-test-string-list-button="add"]');
     assertFoo(assert);
@@ -90,7 +90,7 @@ module('Integration | Component | string list', function (hooks) {
 
   test('it trims input values', async function (assert) {
     await render(hbs`<StringList @inputValue="" @onChange={{this.spy}}/>`);
-    await fillIn('[data-test-string-list-input="0"]', 'foo');
+    await typeIn('[data-test-string-list-input="0"]', 'foo');
     await triggerKeyEvent('[data-test-string-list-input="0"]', 'keyup', 14);
     assert.dom('[data-test-string-list-input="0"]').hasValue('foo');
   });
@@ -102,7 +102,7 @@ module('Integration | Component | string list', function (hooks) {
       assert.deepEqual(val, ['foo', 'bar'], 'calls onChange with expected value');
     });
     await render(hbs`<StringList @inputValue={{this.inputValue}} @onChange={{this.onChange}} />`);
-    await fillIn('[data-test-string-list-input="1"]', 'bar');
+    await typeIn('[data-test-string-list-input="1"]', 'bar');
     await triggerKeyEvent('[data-test-string-list-input="1"]', 'keyup', 14);
   });
 
@@ -115,7 +115,7 @@ module('Integration | Component | string list', function (hooks) {
     await render(
       hbs`<StringList @type="string" @inputValue={{this.inputValue}} @onChange={{this.onChange}}/>`
     );
-    await fillIn('[data-test-string-list-input="1"]', 'bar');
+    await typeIn('[data-test-string-list-input="1"]', 'bar');
     await triggerKeyEvent('[data-test-string-list-input="1"]', 'keyup', 14);
   });
 

@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
+import { click, typeIn, render, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import Pretender from 'pretender';
@@ -59,9 +59,9 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.nameInput).exists({ count: 1 }, 'Name input exists');
     assert.dom(SELECTORS.nameInput).hasNoText('Name field is not filled');
     assert.dom(SELECTORS.uploadFileToggle).exists({ count: 1 }, 'Upload file toggle exists');
-    await fillIn(SELECTORS.nameInput, 'Foo');
+    await typeIn(SELECTORS.nameInput, 'Foo');
     assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
-    await fillIn(`${SELECTORS.policyEditor} textarea`, policy);
+    await typeIn(`${SELECTORS.policyEditor} textarea`, policy);
     assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
     assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.saveButton).hasText('Create policy');
@@ -87,9 +87,9 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.nameInput).exists({ count: 1 }, 'Name input exists');
     assert.dom(SELECTORS.nameInput).hasNoText('Name field is not filled');
     assert.dom(SELECTORS.uploadFileToggle).exists({ count: 1 }, 'Upload file toggle exists');
-    await fillIn(SELECTORS.nameInput, 'Foo');
+    await typeIn(SELECTORS.nameInput, 'Foo');
     assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
-    await fillIn(`${SELECTORS.policyEditor} textarea`, policy);
+    await typeIn(`${SELECTORS.policyEditor} textarea`, policy);
     assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
     assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.saveButton).hasText('Create policy');
@@ -140,7 +140,7 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.nameInput).doesNotExist('Name input is not rendered');
     assert.dom(SELECTORS.uploadFileToggle).doesNotExist('Upload file toggle does not exist');
 
-    await fillIn(`${SELECTORS.policyEditor} textarea`, 'updated-');
+    await typeIn(`${SELECTORS.policyEditor} textarea`, 'updated-');
     assert.strictEqual(
       this.model.policy,
       'updated-some policy content',
@@ -169,7 +169,7 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.nameInput).doesNotExist('Name input is not rendered');
     assert.dom(SELECTORS.uploadFileToggle).doesNotExist('Upload file toggle does not exist');
 
-    await fillIn(`${SELECTORS.policyEditor} textarea`, 'updated-');
+    await typeIn(`${SELECTORS.policyEditor} textarea`, 'updated-');
     assert.strictEqual(
       this.model.policy,
       'updated-some policy content',

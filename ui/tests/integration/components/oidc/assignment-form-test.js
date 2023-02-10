@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click, findAll } from '@ember/test-helpers';
+import { render, typeIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -50,7 +50,7 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
       2,
       `there are two validations errors.`
     );
-    await fillIn('[data-test-input="name"]', 'test');
+    await typeIn('[data-test-input="name"]', 'test');
     await click('[data-test-component="search-select"]#entities .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
     await click('[data-test-oidc-assignment-save]');

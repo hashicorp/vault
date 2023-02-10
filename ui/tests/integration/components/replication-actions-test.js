@@ -3,7 +3,7 @@ import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, blur, render } from '@ember/test-helpers';
+import { click, typeIn, blur, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -37,7 +37,7 @@ module('Integration | Component | replication actions', function (hooks) {
       this.storeService = this.owner.lookup('service:store');
     });
   });
-  const confirmInput = (confirmText) => fillIn('[data-test-confirmation-modal-input]', confirmText);
+  const confirmInput = (confirmText) => typeIn('[data-test-confirmation-modal-input]', confirmText);
   const testCases = [
     [
       'dr',
@@ -103,7 +103,7 @@ module('Integration | Component | replication actions', function (hooks) {
       'promote',
       'Promote cluster',
       async function () {
-        await fillIn('[name="primary_cluster_addr"]', 'cluster addr');
+        await typeIn('[name="primary_cluster_addr"]', 'cluster addr');
         await blur('[name="primary_cluster_addr"]');
         await confirmInput('Performance');
       },
@@ -116,9 +116,9 @@ module('Integration | Component | replication actions', function (hooks) {
       'update-primary',
       'Update primary',
       async function () {
-        await fillIn('#secondary-token', 'token');
+        await typeIn('#secondary-token', 'token');
         await blur('#secondary-token');
-        await fillIn('#primary_api_addr', 'addr');
+        await typeIn('#primary_api_addr', 'addr');
         await blur('#primary_api_addr');
         await confirmInput('Performance');
       },

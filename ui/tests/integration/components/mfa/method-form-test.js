@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click } from '@ember/test-helpers';
+import { render, typeIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
@@ -51,9 +51,9 @@ module('Integration | Component | mfa-method-form', function (hooks) {
       <div id="modal-wormhole"></div>
     `);
 
-    await fillIn('[data-test-input="issuer"]', 'Vault');
+    await typeIn('[data-test-input="issuer"]', 'Vault');
     await click('[data-test-mfa-save]');
-    await fillIn('[data-test-confirmation-modal-input="Edit totp configuration?"]', 'totp');
+    await typeIn('[data-test-confirmation-modal-input="Edit totp configuration?"]', 'totp');
     await click('[data-test-confirm-button="Edit totp configuration?"]');
     assert.true(this.didSave, 'onSave callback triggered');
     assert.strictEqual(this.model.issuer, 'Vault', 'Issuer property set on model');

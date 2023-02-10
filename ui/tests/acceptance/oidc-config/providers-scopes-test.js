@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
+import { visit, currentURL, click, typeIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -180,9 +180,9 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.create',
       'navigates to create form'
     );
-    await fillIn('[data-test-input="name"]', 'test-scope');
-    await fillIn('[data-test-input="description"]', 'this is a test');
-    await fillIn('[data-test-component="code-mirror-modifier"] textarea', SCOPE_DATA_RESPONSE.template);
+    await typeIn('[data-test-input="name"]', 'test-scope');
+    await typeIn('[data-test-input="description"]', 'this is a test');
+    await typeIn('[data-test-component="code-mirror-modifier"] textarea', SCOPE_DATA_RESPONSE.template);
     await click(SELECTORS.scopeSaveButton);
     assert.strictEqual(
       flashMessage.latestMessage,
@@ -207,7 +207,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.scope.edit',
       'navigates to edit page from details'
     );
-    await fillIn('[data-test-input="description"]', 'this is an edit test');
+    await typeIn('[data-test-input="description"]', 'this is an edit test');
     await click(SELECTORS.scopeSaveButton);
     assert.strictEqual(
       flashMessage.latestMessage,
@@ -233,7 +233,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.providers.create',
       'navigates to provider create form'
     );
-    await fillIn('[data-test-input="name"]', 'test-provider');
+    await typeIn('[data-test-input="name"]', 'test-provider');
     await clickTrigger('#scopesSupported');
     await selectChoose('#scopesSupported', 'test-scope');
     await click(SELECTORS.providerSaveButton);
@@ -275,7 +275,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
     await click('[data-test-oidc-radio="limited"]');
     await click('[data-test-component="search-select"]#allowedClientIds .ember-basic-dropdown-trigger');
-    await fillIn('.ember-power-select-search input', 'test-app');
+    await typeIn('.ember-power-select-search input', 'test-app');
     await searchSelect.options.objectAt(0).click();
     await click(SELECTORS.providerSaveButton);
     assert.strictEqual(

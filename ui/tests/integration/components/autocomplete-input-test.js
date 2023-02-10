@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, triggerEvent, typeIn, render } from '@ember/test-helpers';
+import { click, typeIn, triggerEvent, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | autocomplete-input', function (hooks) {
@@ -42,7 +42,7 @@ module('Integration | Component | autocomplete-input', function (hooks) {
 
     assert.dom('input').hasAttribute('placeholder', this.placeholder, 'Input placeholder renders');
     assert.dom('input').hasValue(this.value, 'Initial input value renders');
-    await fillIn('input', changeValue);
+    await typeIn('input', changeValue);
   });
 
   test('it should trigger dropdown', async function (assert) {

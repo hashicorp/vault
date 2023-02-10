@@ -4,7 +4,7 @@ import { assign } from '@ember/polyfills';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, find, findAll, fillIn, blur, triggerEvent } from '@ember/test-helpers';
+import { render, click, find, findAll, typeIn, blur, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
 import waitForError from 'vault/tests/helpers/wait-for-error';
@@ -209,7 +209,7 @@ module('Integration | Component | transit key actions', function (hooks) {
       <div id="modal-wormhole"></div>
     `);
 
-    // await fillIn('#plaintext', 'plaintext');
+    // await typeIn('#plaintext', 'plaintext');
     find('#plaintext-control .CodeMirror').CodeMirror.setValue('plaintext');
     assert.dom('#key_version').doesNotExist('it does not render the selector when there is only one key');
   });
@@ -320,7 +320,7 @@ module('Integration | Component | transit key actions', function (hooks) {
       {{transit-key-actions key=this.key}}
       <div id="modal-wormhole"></div>
     `);
-    await fillIn('#algorithm', 'sha2-384');
+    await typeIn('#algorithm', 'sha2-384');
     await blur('#algorithm');
     await click('button[type="submit"]');
     assert.deepEqual(

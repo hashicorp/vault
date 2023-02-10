@@ -1,4 +1,4 @@
-import { click, settled, fillIn } from '@ember/test-helpers';
+import { click, settled, typeIn } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -46,8 +46,8 @@ module('Acceptance | kv2 diff view', function (hooks) {
 
     const secondKey = document.querySelectorAll('[data-test-secret-key]')[1];
     const secondValue = document.querySelectorAll('.masked-value')[1];
-    await fillIn(secondKey, 'version2');
-    await fillIn(secondValue, 'world!');
+    await typeIn(secondKey, 'version2');
+    await typeIn(secondValue, 'world!');
     await click('[data-test-secret-save]');
 
     await click('[data-test-popup-menu-trigger="version"]');

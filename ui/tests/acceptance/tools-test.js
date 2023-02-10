@@ -1,4 +1,4 @@
-import { click, fillIn, find, findAll, currentURL, visit, settled, waitUntil } from '@ember/test-helpers';
+import { click, typeIn, find, findAll, currentURL, visit, settled, waitUntil } from '@ember/test-helpers';
 import Pretender from 'pretender';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -61,7 +61,7 @@ module('Acceptance | tools', function (hooks) {
     //lookup
     await click('[data-test-tools-action-link="lookup"]');
 
-    await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
+    await typeIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
     await waitUntil(() => findAll('[data-test-tools="token-lookup-row"]').length >= 3);
     const rows = findAll('[data-test-tools="token-lookup-row"]');
@@ -72,7 +72,7 @@ module('Acceptance | tools', function (hooks) {
     //rewrap
     await click('[data-test-tools-action-link="rewrap"]');
 
-    await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
+    await typeIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
     const rewrappedToken = await waitUntil(() => find('[data-test-tools-input="rewrapped-token"]'));
     assert.ok(rewrappedToken.value, 'has a new re-wrapped token');
@@ -83,7 +83,7 @@ module('Acceptance | tools', function (hooks) {
     //unwrap
     await click('[data-test-tools-action-link="unwrap"]');
 
-    await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
+    await typeIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
     assert.deepEqual(
       JSON.parse(CodeMirror.getValue()),
@@ -106,7 +106,7 @@ module('Acceptance | tools', function (hooks) {
     //hash
     await click('[data-test-tools-action-link="hash"]');
 
-    await fillIn('[data-test-tools-input="hash-input"]', 'foo');
+    await typeIn('[data-test-tools-input="hash-input"]', 'foo');
     await click('[data-test-transit-b64-toggle="input"]');
 
     await click('[data-test-tools-submit]');
@@ -116,7 +116,7 @@ module('Acceptance | tools', function (hooks) {
       .hasValue('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
     await click('[data-test-tools-back]');
 
-    await fillIn('[data-test-tools-input="hash-input"]', 'e2RhdGE6ImZvbyJ9');
+    await typeIn('[data-test-tools-input="hash-input"]', 'e2RhdGE6ImZvbyJ9');
 
     await click('[data-test-tools-submit]');
     sumInput = await waitUntil(() => find('[data-test-tools-input="sum"]'));
@@ -155,7 +155,7 @@ module('Acceptance | tools', function (hooks) {
     //unwrap
     await click('[data-test-tools-action-link="unwrap"]');
 
-    await fillIn('[data-test-tools-input="wrapping-token"]', 'sometoken');
+    await typeIn('[data-test-tools-input="wrapping-token"]', 'sometoken');
     await click('[data-test-tools-submit]');
 
     assert.deepEqual(

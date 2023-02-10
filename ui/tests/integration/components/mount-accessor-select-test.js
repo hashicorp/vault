@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, typeIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
@@ -41,7 +41,7 @@ module('Integration | Component | mount-accessor-select', function (hooks) {
 
   test('it sends value to parent onChange', async function (assert) {
     await render(hbs`<MountAccessorSelect @onChange={{this.onChange}}/>`);
-    await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_1234');
+    await typeIn('[data-test-mount-accessor-select]', 'auth_userpass_1234');
     assert.ok(
       this.onChange.calledWith('auth_userpass_1234'),
       'Passes the auth method selected to the parent'

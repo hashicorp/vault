@@ -2,7 +2,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, typeIn } from '@ember/test-helpers';
 import { Response } from 'miragejs';
 import hbs from 'htmlbars-inline-precompile';
 
@@ -100,12 +100,12 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     });
 
     await this.renderComponent();
-    await fillIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
+    await typeIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
     assert.dom('[data-test-kubernetes-namespace]').hasValue('kubernetes-test', 'kubernetes-test');
 
     await click('[data-test-toggle-input]');
     await click('[data-test-toggle-input="Time-to-Live (TTL)"]');
-    await fillIn('[data-test-ttl-value="Time-to-Live (TTL)"]', 2);
+    await typeIn('[data-test-ttl-value="Time-to-Live (TTL)"]', 2);
     await click('[data-test-generate-credentials-button]');
 
     assert.dom('[data-test-credentials-header]').hasText('Credentials');

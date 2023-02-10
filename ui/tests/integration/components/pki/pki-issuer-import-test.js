@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, typeIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -36,7 +36,7 @@ module('Integration | Component | pki issuer import', function (hooks) {
     assert.dom('[data-test-pki-ca-cert-import-form]').exists('renders form');
     assert.dom('[data-test-component="text-file"]').exists('renders text file input');
     await click('[data-test-text-toggle]');
-    await fillIn('[data-test-text-file-textarea]', this.pemBundle);
+    await typeIn('[data-test-text-file-textarea]', this.pemBundle);
     assert.strictEqual(this.model.pemBundle, this.pemBundle);
   });
 
@@ -70,7 +70,7 @@ module('Integration | Component | pki issuer import', function (hooks) {
     );
 
     await click('[data-test-text-toggle]');
-    await fillIn('[data-test-text-file-textarea]', this.pemBundle);
+    await typeIn('[data-test-text-file-textarea]', this.pemBundle);
     assert.strictEqual(this.model.pemBundle, this.pemBundle);
     await click('[data-test-pki-ca-cert-import]');
   });

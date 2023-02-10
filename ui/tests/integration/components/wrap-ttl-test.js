@@ -1,7 +1,7 @@
 import { module, test } from 'qunit';
 import Sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, typeIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 
@@ -36,9 +36,9 @@ module('Integration | Component | wrap ttl', function (hooks) {
     this.set('onChange', changeSpy);
     await render(hbs`<WrapTtl @onChange={{this.onChange}} />`);
     // for testing purposes we need to input unit first because it keeps seconds value
-    await fillIn('[data-test-select="ttl-unit"]', 'h');
+    await typeIn('[data-test-select="ttl-unit"]', 'h');
     assert.ok(changeSpy.calledWithExactly('30h'), 'calls onChange correctly on time input');
-    await fillIn('[data-test-ttl-value]', '20');
+    await typeIn('[data-test-ttl-value]', '20');
     assert.ok(changeSpy.calledWithExactly('20h'), 'calls onChange correctly on unit change');
   });
 });

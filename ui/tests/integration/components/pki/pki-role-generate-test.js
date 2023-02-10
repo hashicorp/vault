@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click } from '@ember/test-helpers';
+import { render, typeIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
@@ -40,7 +40,7 @@ module('Integration | Component | pki-role-generate', function (hooks) {
     assert.dom(SELECTORS.form).exists('shows the cert generate form');
     assert.dom(SELECTORS.commonNameField).exists('shows the common name field');
     assert.dom(SELECTORS.optionsToggle).exists('toggle exists');
-    await fillIn(SELECTORS.commonNameField, 'example.com');
+    await typeIn(SELECTORS.commonNameField, 'example.com');
     assert.strictEqual(this.model.commonName, 'example.com', 'Filling in the form updates the model');
   });
 

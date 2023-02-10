@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, typeIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-not-valid-after-form';
@@ -65,7 +65,7 @@ module('Integration | Component | pki-not-valid-after-form', function (hooks) {
     const utcDate = '1994-11-05';
     const notAfterExpected = '1994-11-05T00:00:00.000Z';
     const ttlDate = 1;
-    await fillIn('[data-test-input="not_after"]', utcDate);
+    await typeIn('[data-test-input="not_after"]', utcDate);
     assert.strictEqual(
       this.model.notAfter,
       notAfterExpected,
@@ -77,7 +77,7 @@ module('Integration | Component | pki-not-valid-after-form', function (hooks) {
       '',
       'The notAfter is cleared on the model because the radio button was selected.'
     );
-    await fillIn('[data-test-ttl-value="TTL"]', ttlDate);
+    await typeIn('[data-test-ttl-value="TTL"]', ttlDate);
     assert.strictEqual(
       this.model.ttl,
       '1s',

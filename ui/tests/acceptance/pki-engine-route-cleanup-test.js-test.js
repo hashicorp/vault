@@ -3,7 +3,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
+import { click, currentURL, typeIn, visit } from '@ember/test-helpers';
 import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 import { SELECTORS } from '../helpers/pki/workflow';
 
@@ -75,8 +75,8 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.emptyStateLink);
       await click(SELECTORS.configuration.optionByKey('generate-root'));
-      await fillIn(SELECTORS.configuration.typeField, 'internal');
-      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-root-cert');
+      await typeIn(SELECTORS.configuration.typeField, 'internal');
+      await typeIn(SELECTORS.configuration.inputByName('commonName'), 'my-root-cert');
       await click(SELECTORS.configuration.generateRootSave);
       await logout.visit();
     });
@@ -125,7 +125,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       roles = this.store.peekAll('pki/role');
       assert.strictEqual(roles.length, 0, 'No roles exist yet');
       await click(SELECTORS.createRoleLink);
-      await fillIn(SELECTORS.roleForm.roleName, roleId);
+      await typeIn(SELECTORS.roleForm.roleName, roleId);
       await click(SELECTORS.roleForm.roleCreateButton);
       assert.dom('[data-test-value-div="Role name"]').hasText(roleId, 'Shows correct role after create');
       roles = this.store.peekAll('pki/role');
@@ -135,7 +135,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
       // Edit role
       await click(SELECTORS.editRoleLink);
-      await fillIn(SELECTORS.roleForm.issuerRef, 'foobar');
+      await typeIn(SELECTORS.roleForm.issuerRef, 'foobar');
       role = this.store.peekRecord('pki/role', roleId);
       assert.true(role.hasDirtyAttributes, 'Role has dirty attrs');
       // Exit page via cancel button
@@ -146,7 +146,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
       // Edit again
       await click(SELECTORS.editRoleLink);
-      await fillIn(SELECTORS.roleForm.issuerRef, 'foobar2');
+      await typeIn(SELECTORS.roleForm.issuerRef, 'foobar2');
       role = this.store.peekRecord('pki/role', roleId);
       assert.true(role.hasDirtyAttributes, 'Role has dirty attrs');
       // Exit page via breadcrumbs
@@ -285,8 +285,8 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.emptyStateLink);
       await click(SELECTORS.configuration.optionByKey('generate-root'));
-      await fillIn(SELECTORS.configuration.typeField, 'internal');
-      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-root-cert');
+      await typeIn(SELECTORS.configuration.typeField, 'internal');
+      await typeIn(SELECTORS.configuration.inputByName('commonName'), 'my-root-cert');
       await click(SELECTORS.configuration.generateRootSave);
       issuers = this.store.peekAll('pki/issuer');
       const issuerId = issuers.objectAt(0).id;
@@ -299,7 +299,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(SELECTORS.issuerDetails.configure);
       issuer = this.store.peekRecord('pki/issuer', issuerId);
       assert.false(issuer.hasDirtyAttributes, 'Model not dirty');
-      await fillIn('[data-test-input="issuerName"]', 'foobar');
+      await typeIn('[data-test-input="issuerName"]', 'foobar');
       assert.true(issuer.hasDirtyAttributes, 'Model is dirty');
       await click(SELECTORS.overviewBreadcrumb);
       issuers = this.store.peekAll('pki/issuer');
@@ -316,8 +316,8 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.emptyStateLink);
       await click(SELECTORS.configuration.optionByKey('generate-root'));
-      await fillIn(SELECTORS.configuration.typeField, 'internal');
-      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-root-cert');
+      await typeIn(SELECTORS.configuration.typeField, 'internal');
+      await typeIn(SELECTORS.configuration.inputByName('commonName'), 'my-root-cert');
       await click(SELECTORS.configuration.generateRootSave);
       await logout.visit();
     });
@@ -365,7 +365,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click('.list-item-row');
       // Edit
       await click(SELECTORS.keyPages.keyEditLink);
-      await fillIn(SELECTORS.keyForm.keyNameInput, 'foobar');
+      await typeIn(SELECTORS.keyForm.keyNameInput, 'foobar');
       keys = this.store.peekAll('pki/key');
       key = keys.objectAt(0);
       assert.true(key.hasDirtyAttributes, 'Key model is dirty');
@@ -382,7 +382,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
       // Edit again
       await click(SELECTORS.keyPages.keyEditLink);
-      await fillIn(SELECTORS.keyForm.keyNameInput, 'foobar');
+      await typeIn(SELECTORS.keyForm.keyNameInput, 'foobar');
       keys = this.store.peekAll('pki/key');
       key = keys.objectAt(0);
       assert.true(key.hasDirtyAttributes, 'Key model is dirty');

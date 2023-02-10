@@ -1,4 +1,4 @@
-import { find, fillIn, visit, waitUntil } from '@ember/test-helpers';
+import { find, typeIn, visit, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 
@@ -16,7 +16,7 @@ module('Acceptance | API Explorer', function (hooks) {
     await waitUntil(() => {
       return find('[data-test-filter-input]').disabled === false;
     });
-    await fillIn('[data-test-filter-input]', 'sys/health');
+    await typeIn('[data-test-filter-input]', 'sys/health');
     assert.dom('.opblock').exists({ count: 1 }, 'renders a single opblock for sys/health');
   });
 });

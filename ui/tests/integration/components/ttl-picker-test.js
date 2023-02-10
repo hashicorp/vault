@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, typeIn } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 import selectors from 'vault/tests/helpers/components/ttl-picker';
@@ -39,7 +39,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
         @initialValue="30m" />
       `);
       assert.dom(selectors.ttlUnit).hasValue('m', 'unit value shows m (minutes)');
-      await fillIn(selectors.ttlValue, '10');
+      await typeIn(selectors.ttlValue, '10');
       await assert.ok(changeSpy.calledOnce, 'it calls the passed onChange');
       assert.ok(
         changeSpy.calledWithExactly({
@@ -98,7 +98,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
 
       assert.dom(selectors.ttlUnit).hasValue('h', 'unit value initially shows as h (hours)');
       assert.dom(selectors.ttlValue).hasValue('1', 'time value initially shows as 1');
-      await fillIn(selectors.ttlUnit, 'm');
+      await typeIn(selectors.ttlUnit, 'm');
       assert.dom(selectors.ttlUnit).hasValue('m', 'unit value changed to m (minutes)');
       assert.dom(selectors.ttlValue).hasValue('60', 'time value recalculates to fit unit');
       assert.ok(
@@ -126,7 +126,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
 
       assert.dom(selectors.ttlUnit).hasValue('s', 'unit value starts as s (seconds)');
       assert.dom(selectors.ttlValue).hasValue('30', 'time value starts as 30');
-      await fillIn(selectors.ttlUnit, 'm');
+      await typeIn(selectors.ttlUnit, 'm');
       assert.dom(selectors.ttlUnit).hasValue('m', 'unit value changed to m (minutes)');
       assert.dom(selectors.ttlValue).hasValue('30', 'time value is still 30');
       assert.ok(

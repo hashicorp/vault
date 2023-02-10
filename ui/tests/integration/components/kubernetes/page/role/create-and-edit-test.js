@@ -2,7 +2,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, typeIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -93,7 +93,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     );
 
     await click('[data-test-radio-card="basic"]');
-    await fillIn('[data-test-input="serviceAccountName"]', 'test');
+    await typeIn('[data-test-input="serviceAccountName"]', 'test');
     await click('[data-test-radio-card="expanded"]');
     assert.strictEqual(
       this.newModel.serviceAccountName,
@@ -101,7 +101,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       'Service account name cleared when switching from basic to expanded'
     );
 
-    await fillIn('[data-test-input="kubernetesRoleName"]', 'test');
+    await typeIn('[data-test-input="kubernetesRoleName"]', 'test');
     await click('[data-test-radio-card="full"]');
     assert.strictEqual(
       this.newModel.kubernetesRoleName,
@@ -111,8 +111,8 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
 
     await click('[data-test-input="kubernetesRoleType"] input');
     await click('[data-test-toggle-input="show-nameTemplate"]');
-    await fillIn('[data-test-input="nameTemplate"]', 'bar');
-    await fillIn('[data-test-select-template]', '6');
+    await typeIn('[data-test-input="nameTemplate"]', 'bar');
+    await typeIn('[data-test-select-template]', '6');
     await click('[data-test-radio-card="expanded"]');
     assert.strictEqual(
       this.newModel.generatedRoleRules,
@@ -150,8 +150,8 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await click('[data-test-radio-card="basic"]');
     await click('[data-test-save]');
     assert.dom('[data-test-inline-error-message]').hasText('Name is required', 'Validation error renders');
-    await fillIn('[data-test-input="name"]', 'role-1');
-    await fillIn('[data-test-input="serviceAccountName"]', 'default');
+    await typeIn('[data-test-input="name"]', 'role-1');
+    await typeIn('[data-test-input="serviceAccountName"]', 'default');
     await click('[data-test-save]');
     assert.ok(
       this.transitionCalledWith('roles.role.details', this.newModel.name),
@@ -204,13 +204,13 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     assert.dom('[data-test-annotations]').doesNotExist('Annotations and labels are hidden');
 
     await click('[data-test-field="annotations"]');
-    await fillIn('[data-test-kv="annotations"] [data-test-kv-key]', 'foo');
-    await fillIn('[data-test-kv="annotations"] [data-test-kv-value]', 'bar');
+    await typeIn('[data-test-kv="annotations"] [data-test-kv-key]', 'foo');
+    await typeIn('[data-test-kv="annotations"] [data-test-kv-value]', 'bar');
     await click('[data-test-kv="annotations"] [data-test-kv-add-row]');
     assert.deepEqual(this.newModel.extraAnnotations, { foo: 'bar' }, 'Annotations set');
 
-    await fillIn('[data-test-kv="labels"] [data-test-kv-key]', 'bar');
-    await fillIn('[data-test-kv="labels"] [data-test-kv-value]', 'baz');
+    await typeIn('[data-test-kv="labels"] [data-test-kv-key]', 'bar');
+    await typeIn('[data-test-kv="labels"] [data-test-kv-value]', 'baz');
     await click('[data-test-kv="labels"] [data-test-kv-add-row]');
     assert.deepEqual(this.newModel.extraLabels, { bar: 'baz' }, 'Labels set');
   });
@@ -238,7 +238,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       owner: this.engine,
     });
     const addedText = 'this will be add to the start of the first line in the JsonEditor';
-    await fillIn('[data-test-component="code-mirror-modifier"] textarea', addedText);
+    await typeIn('[data-test-component="code-mirror-modifier"] textarea', addedText);
     await click('[data-test-restore-example]');
     assert.dom('.CodeMirror-code').doesNotContainText(addedText, 'Role rules example restored');
   });
@@ -261,8 +261,8 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { owner: this.engine }
     );
     await click('[data-test-radio-card="full"]');
-    await fillIn('[data-test-input="name"]', 'role-1');
-    await fillIn('[data-test-select-template]', '5');
+    await typeIn('[data-test-input="name"]', 'role-1');
+    await typeIn('[data-test-select-template]', '5');
     await click('[data-test-save]');
   });
 
@@ -279,10 +279,10 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { owner: this.engine }
     );
     await click('[data-test-radio-card="full"]');
-    await fillIn('[data-test-input="name"]', 'role-1');
-    await fillIn('[data-test-select-template]', '5');
+    await typeIn('[data-test-input="name"]', 'role-1');
+    await typeIn('[data-test-select-template]', '5');
     await click('[data-test-radio-card="basic"]');
-    await fillIn('[data-test-input="serviceAccountName"]', 'default');
+    await typeIn('[data-test-input="serviceAccountName"]', 'default');
     await click('[data-test-save]');
   });
 
@@ -344,7 +344,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       owner: this.engine,
     });
 
-    await fillIn('[data-test-input="serviceAccountName"]', 'demo');
+    await typeIn('[data-test-input="serviceAccountName"]', 'demo');
     await click('[data-test-save]');
   });
 });

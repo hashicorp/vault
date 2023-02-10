@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click, findAll } from '@ember/test-helpers';
+import { render, typeIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -74,7 +74,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert.dom('li.ember-power-select-option').hasText('test-scope', 'dropdown renders scopes');
 
     // check validation errors
-    await fillIn('[data-test-input="name"]', ' ');
+    await typeIn('[data-test-input="name"]', ' ');
     await click(SELECTORS.providerSaveButton);
 
     const validationErrors = findAll(SELECTORS.inlineAlert);
@@ -96,7 +96,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .doesNotExist('Allow all radio button hides search select');
 
-    await fillIn('[data-test-input="name"]', 'test-provider');
+    await typeIn('[data-test-input="name"]', 'test-provider');
     await click(SELECTORS.providerSaveButton);
   });
 
@@ -214,7 +214,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
         @onSave={{this.onSave}}
       />
     `);
-    await fillIn('[data-test-input="name"]', 'some-provider');
+    await typeIn('[data-test-input="name"]', 'some-provider');
     await click(SELECTORS.providerSaveButton);
     assert
       .dom(SELECTORS.inlineAlert)

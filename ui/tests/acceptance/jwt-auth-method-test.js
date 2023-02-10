@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, visit, fillIn } from '@ember/test-helpers';
+import { click, visit, typeIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
@@ -37,10 +37,10 @@ module('Acceptance | jwt auth method', function (hooks) {
       req.passthrough();
     });
     await visit('/vault/auth');
-    await fillIn('[data-test-select="auth-method"]', 'jwt');
+    await typeIn('[data-test-select="auth-method"]', 'jwt');
     assert.dom('[data-test-role]').exists({ count: 1 }, 'Role input exists');
     assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
-    await fillIn('[data-test-jwt]', 'my-test-jwt-token');
+    await typeIn('[data-test-jwt]', 'my-test-jwt-token');
     await click('[data-test-auth-submit]');
     assert.dom('[data-test-error]').exists('Failed login');
   });
@@ -55,11 +55,11 @@ module('Acceptance | jwt auth method', function (hooks) {
       req.passthrough();
     });
     await visit('/vault/auth');
-    await fillIn('[data-test-select="auth-method"]', 'jwt');
+    await typeIn('[data-test-select="auth-method"]', 'jwt');
     assert.dom('[data-test-role]').exists({ count: 1 }, 'Role input exists');
     assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
-    await fillIn('[data-test-role]', 'some-role');
-    await fillIn('[data-test-jwt]', 'my-test-jwt-token');
+    await typeIn('[data-test-role]', 'some-role');
+    await typeIn('[data-test-jwt]', 'my-test-jwt-token');
     assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
     await click('[data-test-auth-submit]');
     assert.dom('[data-test-error]').exists('Failed login');
@@ -85,8 +85,8 @@ module('Acceptance | jwt auth method', function (hooks) {
     await click('[data-test-auth-method-link="jwt"]');
     assert.dom('[data-test-role]').exists({ count: 1 }, 'Role input exists');
     assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
-    await fillIn('[data-test-role]', 'some-role');
-    await fillIn('[data-test-jwt]', 'my-test-jwt-token');
+    await typeIn('[data-test-role]', 'some-role');
+    await typeIn('[data-test-jwt]', 'my-test-jwt-token');
     await click('[data-test-auth-submit]');
     assert.dom('[data-test-error]').exists('Failed login');
   });

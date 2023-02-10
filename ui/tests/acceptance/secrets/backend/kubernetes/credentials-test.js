@@ -4,7 +4,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import { fillIn, visit, click, currentRouteName } from '@ember/test-helpers';
+import { typeIn, visit, click, currentRouteName } from '@ember/test-helpers';
 
 module('Acceptance | kubernetes | credentials', function (hooks) {
   setupApplicationTest(hooks);
@@ -65,10 +65,10 @@ module('Acceptance | kubernetes | credentials', function (hooks) {
         },
       };
     });
-    await fillIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
+    await typeIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
     await click('[data-test-toggle-input]');
     await click('[data-test-toggle-input="Time-to-Live (TTL)"]');
-    await fillIn('[data-test-ttl-value="Time-to-Live (TTL)"]', 2);
+    await typeIn('[data-test-ttl-value="Time-to-Live (TTL)"]', 2);
     await click('[data-test-generate-credentials-button]');
     await click('[data-test-generate-credentials-done]');
 

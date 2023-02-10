@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn } from '@ember/test-helpers';
+import { render, typeIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -74,7 +74,7 @@ module('Integration | Component | Select', function (hooks) {
   test('it calls onChange when an item is selected', async function (assert) {
     this.set('onChange', sinon.spy());
     await render(hbs`<Select @options={{this.options}} @name={{this.name}} @onChange={{this.onChange}}/>`);
-    await fillIn('[data-test-select="foo"]', 'bar');
+    await typeIn('[data-test-select="foo"]', 'bar');
 
     assert.ok(this.onChange.calledOnce);
   });

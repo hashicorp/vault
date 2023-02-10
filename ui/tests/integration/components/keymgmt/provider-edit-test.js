@@ -3,7 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, triggerEvent, settled, fillIn } from '@ember/test-helpers';
+import { click, triggerEvent, settled, typeIn } from '@ember/test-helpers';
 
 const ts = 'data-test-kms-provider';
 const root = {
@@ -155,22 +155,22 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     await click(`[${ts}-submit]`);
     assert.dom('[data-test-inline-error-message]').exists('Validation error messages shown');
 
-    await fillIn('[data-test-input="provider"]', 'azurekeyvault');
+    await typeIn('[data-test-input="provider"]', 'azurekeyvault');
     ['client_id', 'client_secret', 'tenant_id'].forEach((prop) => {
       assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`Azure - ${prop} field renders`);
     });
 
-    await fillIn('[data-test-input="provider"]', 'awskms');
+    await typeIn('[data-test-input="provider"]', 'awskms');
     ['access_key', 'secret_key'].forEach((prop) => {
       assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`AWS - ${prop} field renders`);
     });
 
-    await fillIn('[data-test-input="provider"]', 'gcpckms');
+    await typeIn('[data-test-input="provider"]', 'gcpckms');
     assert.dom(`[data-test-input="credentials.service_account_file"]`).exists(`GCP - cred field renders`);
 
-    await fillIn('[data-test-input="name"]', 'foo');
-    await fillIn('[data-test-input="keyCollection"]', 'keyvault-1');
-    await fillIn('[data-test-input="credentials.service_account_file"]', 'test');
+    await typeIn('[data-test-input="name"]', 'foo');
+    await typeIn('[data-test-input="keyCollection"]', 'keyvault-1');
+    await typeIn('[data-test-input="credentials.service_account_file"]', 'test');
     await click(`[${ts}-submit]`);
   });
 
@@ -215,7 +215,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     assert.dom(`[${ts}-creds-title]`).exists('New credentials header shown in edit mode');
 
     for (const prop of ['client_id', 'client_secret', 'tenant_id']) {
-      await fillIn(`[data-test-input="credentials.${prop}"]`, `${prop} test`);
+      await typeIn(`[data-test-input="credentials.${prop}"]`, `${prop} test`);
     }
     await click(`[${ts}-submit]`);
   });

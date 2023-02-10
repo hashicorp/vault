@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, typeIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -51,8 +51,8 @@ module('Integration | Component | pki generate csr', function (hooks) {
 
     assert.dom('[data-test-toggle-group]').exists({ count: 3 }, 'Toggle groups render');
 
-    await fillIn('[data-test-input="type"]', 'exported');
-    await fillIn('[data-test-input="commonName"]', 'foo');
+    await typeIn('[data-test-input="type"]', 'exported');
+    await typeIn('[data-test-input="commonName"]', 'foo');
     await click('[data-test-save]');
 
     const savedRecord = this.store.peekAll('pki/action').firstObject;

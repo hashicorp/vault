@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, typeIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-key-form';
@@ -80,10 +80,10 @@ module('Integration | Component | pki key form', function (hooks) {
       { owner: this.engine }
     );
 
-    await fillIn(SELECTORS.keyNameInput, 'test-key');
-    await fillIn(SELECTORS.typeInput, 'exported');
+    await typeIn(SELECTORS.keyNameInput, 'test-key');
+    await typeIn(SELECTORS.typeInput, 'exported');
     assert.dom(SELECTORS.keyBitsInput).isDisabled('key bits disabled when no key type selected');
-    await fillIn(SELECTORS.keyTypeInput, 'rsa');
+    await typeIn(SELECTORS.keyTypeInput, 'rsa');
     await click(SELECTORS.keyCreateButton);
   });
 
@@ -116,10 +116,10 @@ module('Integration | Component | pki key form', function (hooks) {
       { owner: this.engine }
     );
 
-    await fillIn(SELECTORS.keyNameInput, 'test-key');
-    await fillIn(SELECTORS.typeInput, 'internal');
+    await typeIn(SELECTORS.keyNameInput, 'test-key');
+    await typeIn(SELECTORS.typeInput, 'internal');
     assert.dom(SELECTORS.keyBitsInput).isDisabled('key bits disabled when no key type selected');
-    await fillIn(SELECTORS.keyTypeInput, 'rsa');
+    await typeIn(SELECTORS.keyTypeInput, 'rsa');
     await click(SELECTORS.keyCreateButton);
   });
 });

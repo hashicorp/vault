@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { currentURL, visit, fillIn } from '@ember/test-helpers';
+import { currentURL, visit, typeIn } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import logout from 'vault/tests/pages/logout';
@@ -42,7 +42,7 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
     assert.dom('[data-test-managed-namespace-toolbar]').exists('Managed namespace toolbar exists');
     assert.dom('[data-test-managed-namespace-root]').hasText('/admin', 'Shows /admin namespace prefix');
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Default)');
-    await fillIn('input#namespace', '/foo');
+    await typeIn('input#namespace', '/foo');
     const encodedNamespace = encodeURIComponent('admin/foo');
     assert.strictEqual(
       currentURL(),

@@ -4,9 +4,8 @@ import {
   settled,
   currentURL,
   currentRouteName,
-  fillIn,
-  triggerKeyEvent,
   typeIn,
+  triggerKeyEvent,
 } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
@@ -135,8 +134,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     );
     // add metadata
     await click('[data-test-add-custom-metadata]');
-    await fillIn('[data-test-kv-key]', 'key');
-    await fillIn('[data-test-kv-value]', 'value');
+    await typeIn('[data-test-kv-key]', 'key');
+    await typeIn('[data-test-kv-value]', 'value');
     await click('[data-test-save-metadata]');
     const key = document.querySelector('[data-test-row-label="key"]').innerText;
     const value = document.querySelector('[data-test-row-value="key"]').innerText;
@@ -160,7 +159,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       .dom('[data-test-inline-error-message]')
       .hasText('Custom values cannot contain a backward slash.', 'will not allow backward slash in value.');
     //remove validation error and cause another error that is captured by the API
-    await fillIn('[data-test-kv-value]', 'removed');
+    await typeIn('[data-test-kv-value]', 'removed');
     await typeIn('[data-test-kv-value]', '!');
     await click('[data-test-secret-save]');
     assert
@@ -179,12 +178,12 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
     await click('[data-test-mount-next]');
 
-    await fillIn('[data-test-input="path"]', enginePath);
-    await fillIn('[data-test-input="maxVersions"]', maxVersion);
+    await typeIn('[data-test-input="path"]', enginePath);
+    await typeIn('[data-test-input="maxVersions"]', maxVersion);
     await click('[data-test-input="casRequired"]');
     await click('[data-test-toggle-label="Automate secret deletion"]');
-    await fillIn('[data-test-select="ttl-unit"]', 's');
-    await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
+    await typeIn('[data-test-select="ttl-unit"]', 's');
+    await typeIn('[data-test-ttl-value="Automate secret deletion"]', '1');
     await click('[data-test-mount-submit="true"]');
 
     await click('[data-test-configuration-tab]');
@@ -221,7 +220,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await editPage.path(secretPath);
     await editPage.toggleMetadata();
     await settled();
-    await fillIn('[data-test-input="maxVersions"]', maxVersions);
+    await typeIn('[data-test-input="maxVersions"]', maxVersions);
 
     await editPage.save();
     await settled();
@@ -257,7 +256,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       .dom('[data-test-input="maxVersions"]')
       .hasClass('has-error-border', 'shows border error on input with error');
     assert.dom('[data-test-secret-save]').isDisabled('Save button is disabled');
-    await fillIn('[data-test-input="maxVersions"]', 20); // fillIn replaces the text, whereas typeIn only adds to it.
+    await typeIn('[data-test-input="maxVersions"]', 20); // typeIn replaces the text, whereas typeIn only adds to it.
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
     await editPage.path(secretPath);
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
