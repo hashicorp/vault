@@ -168,7 +168,7 @@ func parseTemplateCertificate(certificate x509.Certificate, useExistingKey bool,
 		"province":              certificate.Subject.Province,
 		"street_address":        certificate.Subject.StreetAddress,
 		"postal_code":           certificate.Subject.PostalCode,
-		"serial_number":         certificate.Subject.SerialNumber, // TODO: Do we want to replicate this?
+		"serial_number":         certificate.Subject.SerialNumber,
 		"ttl":                   (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
 		"max_path_length":       certificate.MaxPathLen,
 		"permitted_dns_domains": strings.Join(certificate.PermittedDNSDomains, ","),
@@ -226,14 +226,14 @@ func determineExcludeCnFromSans(certificate x509.Certificate) bool {
 
 	emails := certificate.EmailAddresses
 	for _, email := range emails {
-		if strings.Contains(email, cn) { // TODO: Should this be equality?
+		if email == cn {
 			return false
 		}
 	}
 
 	dnses := certificate.DNSNames
 	for _, dns := range dnses {
-		if strings.Contains(dns, cn) { // TODO: Should this be equality?
+		if dns == cn {
 			return false
 		}
 	}
