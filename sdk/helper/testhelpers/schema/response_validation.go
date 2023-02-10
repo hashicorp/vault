@@ -146,12 +146,10 @@ func ResponseValidatingCallback(t *testing.T) func(logical.Backend, *logical.Req
 		}
 
 		// the full request path includes the backend
-		// but when passing to the backend, the first part of the url has to be removed
-		// e.g.: `sys/mounts/secret` -> `mounts/secret`
-		_, requestPath, found := strings.Cut(req.Path, "/")
-		if !found {
-			t.Fatalf("could not resolve backend path from '%s'", req.Path)
-		}
+		// but when passing to the backend, we have to trim the mount point
+		// `sys/mounts/secret` -> `mounts/secret`
+		// `auth/token/create` -> `create`
+		requestPath := strings.TrimPrefix(req.Path, req.MountPoint)
 
 		route := backend.Route(requestPath)
 		if route == nil {
