@@ -63,6 +63,15 @@ func TestEventsSubscribe(t *testing.T) {
 	t.Cleanup(cancelFunc)
 
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
+
+	// check that the connection fails if we don't have a token
+	_, _, err := websocket.Dial(ctx, wsAddr+"/v1/sys/events/subscribe/"+eventType+"?json=true", nil)
+	if err == nil {
+		t.Error("Expected websocket error but got none")
+	} else if !strings.HasSuffix(err.Error(), "401") {
+		t.Errorf("Expected 401 websocket but got %v", err)
+	}
+
 	conn, _, err := websocket.Dial(ctx, wsAddr+"/v1/sys/events/subscribe/"+eventType+"?json=true", &websocket.DialOptions{
 		HTTPHeader: http.Header{"x-vault-token": []string{token}},
 	})
