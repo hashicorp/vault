@@ -97,7 +97,7 @@ export default TransformBase.extend({
       event.preventDefault();
 
       this.applyChanges('save', () => {
-        const transformationId = this.model.id;
+        const transformationId = this.model.id || this.model.name;
         const newModelRoles = this.model.allowed_roles || [];
         const initialRoles = this.initialRoles || [];
 

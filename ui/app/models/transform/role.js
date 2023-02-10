@@ -16,7 +16,6 @@ const ModelExport = Model.extend({
   name: attr('string', {
     // TODO: make this required for making a transformation
     label: 'Name',
-    fieldValue: 'id',
     readOnly: true,
     subText: 'The name for your role. This cannot be edited later.',
   }),
