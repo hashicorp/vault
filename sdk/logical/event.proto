@@ -4,6 +4,7 @@ option go_package = "github.com/hashicorp/vault/sdk/logical";
 
 package logical;
 
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 // EventPluginInfo contains data related to the plugin that generated an event.
@@ -33,7 +34,7 @@ message EventData {
     // as a hash of other fields with sufficient uniqueness.
     string id = 1;
     // Arbitrary non-secret data. Optional.
-    bytes metadata = 2;
+    google.protobuf.Struct metadata = 2;
     // Any IDs that the event relates to, i.e., UUIDs, paths.
     repeated string entity_ids = 3;
     // Human-readable note.
