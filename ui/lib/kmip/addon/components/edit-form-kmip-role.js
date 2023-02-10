@@ -40,6 +40,10 @@ export default EditForm.extend({
       if (model.operationAll || model.operationNone) {
         model.operationFieldsWithoutSpecial.forEach((field) => model.set(field, null));
       }
+      // set operationNone if user unchecks 'operationAll' instead of toggling the 'operationNone' input
+      // doing here instead of on the 'operationNone' input because a user might deselect all, then reselect some options
+      // and immediately setting operationNone will hide all of the checkboxes in the UI
+      this.model.operationNone = model.operationFieldsWithoutSpecial.every((attr) => !model[attr]);
     },
   },
 });
