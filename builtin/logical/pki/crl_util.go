@@ -582,7 +582,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		if err != nil {
 			return nil, fmt.Errorf("error saving revoked certificate to new location")
 		}
-		b.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
+		b.ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 	}
 
 	// Fetch the config and see if we need to rebuild the CRL. If we have
@@ -592,6 +592,13 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	if err != nil {
 		return nil, fmt.Errorf("error building CRL: while updating config: %v", err)
 	}
+
+	certsCounted := sc.Backend.certsCounted.Load()
+	err = sc.Storage.Put(sc.Context, revEntry)
+	if err != nil {
+		return nil, fmt.Errorf("error saving revoked certificate to new location")
+	}
+	sc.Backend.ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 
 	if !config.AutoRebuild {
 		// Note that writing the Delta WAL here isn't necessary; we've
