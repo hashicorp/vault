@@ -58,11 +58,7 @@
       <MessageError @model={{this.model}} />
       <NamespaceReminder @mode={{this.mode}} @noun="Transform role" />
       {{#each this.model.attrs as |attr|}}
-        {{#if (and (eq this.mode "edit") attr.options.readOnly)}}
-          <ReadonlyFormField @attr={{attr}} @value={{get this.model attr.name}} />
-        {{else}}
-          <FormField data-test-field @attr={{attr}} @model={{this.model}} />
-        {{/if}}
+        <FormField data-test-field @attr={{attr}} @model={{this.model}} />
       {{/each}}
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
