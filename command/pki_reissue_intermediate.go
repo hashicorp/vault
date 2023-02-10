@@ -116,7 +116,7 @@ func (c *PKIReIssueCACommand) Run(args []string) int {
 	templateData, err := parseTemplateCertificate(*certificate)
 	data := updateTemplateWithData(templateData, userData)
 
-	return pkiIssue(*c.BaseCommand, parentIssuer, intermediateMount, c.flagNewIssuerName, c.flagKeyStorageSource, data)
+	return pkiIssue(c.BaseCommand, parentIssuer, intermediateMount, c.flagNewIssuerName, c.flagKeyStorageSource, data)
 }
 
 func updateTemplateWithData(template map[string]interface{}, changes map[string]interface{}) map[string]interface{} {
