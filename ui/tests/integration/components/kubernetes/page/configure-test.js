@@ -202,4 +202,18 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       );
     await click('[data-test-config-confirm]');
   });
+
+  test('it should validate form and show errors', async function (assert) {
+    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
+
+    await click('[data-test-radio-card="manual"]');
+    await click('[data-test-config-save]');
+
+    assert
+      .dom('[data-test-inline-error-message]')
+      .hasText('Kubernetes host is required', 'Error renders for required field');
+    assert.dom('[data-test-alert] p').hasText('There is an error with this form.', 'Alert renders');
+  });
 });

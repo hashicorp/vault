@@ -8,6 +8,7 @@ module('Integration | Component | alert-inline', function (hooks) {
 
   hooks.beforeEach(function () {
     this.set('message', 'some very important alert');
+    this.set('type', 'warning');
   });
 
   test('it renders alert message with correct class args', async function (assert) {
@@ -17,6 +18,7 @@ module('Integration | Component | alert-inline', function (hooks) {
       @isMarginless={{true}}
       @sizeSmall={{true}}
       @message={{this.message}}
+      @type={{this.type}}
     />
     `);
     assert.dom('[data-test-inline-error-message]').hasText('some very important alert');
@@ -27,7 +29,7 @@ module('Integration | Component | alert-inline', function (hooks) {
 
   test('it yields to block text', async function (assert) {
     await render(hbs`
-    <AlertInline @message={{this.message}}> 
+    <AlertInline @message={{this.message}} @type={{this.type}}> 
       A much more important alert
     </AlertInline>
     `);
@@ -49,7 +51,6 @@ module('Integration | Component | alert-inline', function (hooks) {
   });
 
   test('it renders correctly for type=warning', async function (assert) {
-    this.set('type', 'warning');
     await render(hbs`
     <AlertInline 
       @type={{this.type}}
@@ -65,6 +66,7 @@ module('Integration | Component | alert-inline', function (hooks) {
     <AlertInline 
       @message={{this.message}}
       @mimicRefresh={{true}} 
+      @type={{this.type}}
     />
     `);
     assert

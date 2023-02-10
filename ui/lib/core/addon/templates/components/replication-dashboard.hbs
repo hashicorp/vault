@@ -53,7 +53,7 @@
       <AlertBanner
         @title="Syncing in progress"
         @type="info"
-        @secondIconType="loading"
+        @showLoading={{true}}
         @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
         data-test-isSyncing
       />

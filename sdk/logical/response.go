@@ -1,9 +1,11 @@
 package logical
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"sync/atomic"
@@ -240,6 +242,13 @@ func NewStatusHeaderResponseWriter(w http.ResponseWriter, h map[string][]*Custom
 		StatusCode:  200,
 		headers:     h,
 	}
+}
+
+func (w *StatusHeaderResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := w.wrapped.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, fmt.Errorf("could not hijack because wrapped connection is %T and it does not implement http.Hijacker", w.wrapped)
 }
 
 func (w *StatusHeaderResponseWriter) Wrapped() http.ResponseWriter {
