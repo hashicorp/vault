@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -20,6 +21,15 @@ func TestEventsSubscribe(t *testing.T) {
 	core := vault.TestCore(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
+
+	// unseal the core
+	keys, token := vault.TestCoreInit(t, core)
+	for _, key := range keys {
+		_, err := core.Unseal(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	stop := atomic.Bool{}
 
@@ -53,7 +63,9 @@ func TestEventsSubscribe(t *testing.T) {
 	t.Cleanup(cancelFunc)
 
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
-	conn, _, err := websocket.Dial(ctx, wsAddr+"/v1/sys/events/subscribe/"+eventType+"?json=true", nil)
+	conn, _, err := websocket.Dial(ctx, wsAddr+"/v1/sys/events/subscribe/"+eventType+"?json=true", &websocket.DialOptions{
+		HTTPHeader: http.Header{"x-vault-token": []string{token}},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
