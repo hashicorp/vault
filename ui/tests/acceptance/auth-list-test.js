@@ -8,6 +8,7 @@ import {
   triggerKeyEvent,
   find,
   waitUntil,
+  fillIn,
 } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -58,8 +59,7 @@ module('Acceptance | auth backend list', function (hooks) {
     await click('[data-test-mount-type="userpass"]');
 
     await click('[data-test-mount-next]');
-
-    await typeIn('[data-test-input="path"]', path2);
+    await fillIn('[data-test-input="path"]', path2);
 
     await click('[data-test-mount-submit="true"]');
 
