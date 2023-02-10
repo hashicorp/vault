@@ -1,4 +1,3 @@
-import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
@@ -11,11 +10,7 @@ export default ApplicationAdapter.extend({
     const data = serializer.serialize(snapshot, requestType);
     const url = this.urlForRole(backend, name);
 
-    return this.ajax(url, 'POST', { data }).then((resp) => {
-      const response = resp || {};
-      response.id = name;
-      return response;
-    });
+    return this.ajax(url, 'POST', { data });
   },
 
   createRecord() {
@@ -60,7 +55,7 @@ export default ApplicationAdapter.extend({
         backend,
       };
 
-      return assign({}, resp, data);
+      return { ...resp, ...data };
     });
   },
 
