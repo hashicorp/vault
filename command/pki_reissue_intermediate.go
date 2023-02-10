@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -113,7 +114,13 @@ func (c *PKIReIssueCACommand) Run(args []string) int {
 		return 1
 	}
 
-	templateData, err := parseTemplateCertificate(*certificate)
+	useExistingKey := c.flagKeyStorageSource == "existing"
+	keyRef := ""
+	if useExistingKey { // TODO: Better Error information
+		keyRef = templateCertificateResp.Data["key_id"].(string)
+	}
+
+	templateData, err := parseTemplateCertificate(*certificate, useExistingKey, keyRef)
 	data := updateTemplateWithData(templateData, userData)
 
 	return pkiIssue(c.BaseCommand, parentIssuer, intermediateMount, c.flagNewIssuerName, c.flagKeyStorageSource, data)
@@ -126,6 +133,11 @@ func updateTemplateWithData(template map[string]interface{}, changes map[string]
 		data[key] = value
 	}
 
+	// ttl and not_after set the same thing.  Delete template ttl if using not_after:
+	if _, ok := changes["not_after"]; ok {
+		delete(data, "ttl")
+	}
+
 	for key, value := range changes {
 		data[key] = value
 	}
@@ -133,7 +145,7 @@ func updateTemplateWithData(template map[string]interface{}, changes map[string]
 	return data
 }
 
-func parseTemplateCertificate(certificate x509.Certificate) (templateData map[string]interface{}, err error) {
+func parseTemplateCertificate(certificate x509.Certificate, useExistingKey bool, keyRef string) (templateData map[string]interface{}, err error) {
 	// Generate Certificate Signing Parameters
 	templateData = map[string]interface{}{
 		"common_name": certificate.Subject.CommonName,
@@ -142,21 +154,43 @@ func parseTemplateCertificate(certificate x509.Certificate) (templateData map[st
 		"uri_sans":    makeUriCommaSeparatedString(certificate.URIs),
 		// other_sans (string: "") - Specifies custom OID/UTF8-string SANs. These must match values specified on the role in allowed_other_sans (see role creation for allowed_other_sans globbing rules). The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8. This can be a comma-delimited list or a JSON string slice.
 		// Punting on Other_SANs, shouldn't really be on CAs
-		"key_type":             getKeyType(certificate.PublicKeyAlgorithm.String()),
-		"key_bits":             findBitLength(certificate.PublicKey),
-		"signature_bits":       findSignatureBits(certificate.SignatureAlgorithm),
-		"exclude_cn_from_sans": determineExcludeCnFromSans(certificate),
-		"ou":                   strings.Join(certificate.Subject.OrganizationalUnit, ","), // TODO: Check whether joining is necessary
-		"organization":         strings.Join(certificate.Subject.Organization, ","),
-		"country":              strings.Join(certificate.Subject.Country, ","),
-		"locality":             strings.Join(certificate.Subject.Locality, ","),
-		"province":             strings.Join(certificate.Subject.Province, ","),
-		"street_address":       strings.Join(certificate.Subject.StreetAddress, ","),
-		"postal_code":          strings.Join(certificate.Subject.PostalCode, ","),
-		"serial_number":        certificate.Subject.SerialNumber, // TODO: Do we want to replicate this?
-		"ttl":                  (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
+		"signature_bits":        findSignatureBits(certificate.SignatureAlgorithm),
+		"exclude_cn_from_sans":  determineExcludeCnFromSans(certificate),
+		"ou":                    strings.Join(certificate.Subject.OrganizationalUnit, ","), // TODO: Check whether joining is necessary
+		"organization":          strings.Join(certificate.Subject.Organization, ","),
+		"country":               strings.Join(certificate.Subject.Country, ","),
+		"locality":              strings.Join(certificate.Subject.Locality, ","),
+		"province":              strings.Join(certificate.Subject.Province, ","),
+		"street_address":        strings.Join(certificate.Subject.StreetAddress, ","),
+		"postal_code":           strings.Join(certificate.Subject.PostalCode, ","),
+		"serial_number":         certificate.Subject.SerialNumber, // TODO: Do we want to replicate this?
+		"ttl":                   (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
+		"max_path_length":       certificate.MaxPathLen,
+		"permitted_dns_domains": strings.Join(certificate.PermittedDNSDomains, ","),
+		"use_pss":               isPSS(certificate.SignatureAlgorithm),
 	}
+
+	if useExistingKey {
+		templateData["skid"] = hex.EncodeToString(certificate.SubjectKeyId) // TODO: Double Check this with someone
+		if keyRef == "" {
+			return nil, fmt.Errorf("unable to create certificate template for existing key without a key_id")
+		}
+		templateData["key_ref"] = keyRef
+	} else {
+		templateData["key_type"] = getKeyType(certificate.PublicKeyAlgorithm.String())
+		templateData["key_bits"] = findBitLength(certificate.PublicKey)
+	}
+
 	return templateData, nil
+}
+
+func isPSS(algorithm x509.SignatureAlgorithm) bool {
+	switch algorithm {
+	case x509.SHA384WithRSAPSS, x509.SHA512WithRSAPSS, x509.SHA256WithRSAPSS:
+		return true
+	default:
+		return false
+	}
 }
 
 func makeAltNamesCommaSeparatedString(names []string, emails []string) string {
