@@ -138,6 +138,11 @@ func updateTemplateWithData(template map[string]interface{}, changes map[string]
 		delete(data, "ttl")
 	}
 
+	// If we are updating the key_type, do not set key_bits
+	if _, ok := changes["key_type"]; ok && changes["key_type"] != template["key_type"] {
+		delete(data, "key_bits")
+	}
+
 	for key, value := range changes {
 		data[key] = value
 	}
@@ -156,13 +161,13 @@ func parseTemplateCertificate(certificate x509.Certificate, useExistingKey bool,
 		// Punting on Other_SANs, shouldn't really be on CAs
 		"signature_bits":        findSignatureBits(certificate.SignatureAlgorithm),
 		"exclude_cn_from_sans":  determineExcludeCnFromSans(certificate),
-		"ou":                    strings.Join(certificate.Subject.OrganizationalUnit, ","), // TODO: Check whether joining is necessary
-		"organization":          strings.Join(certificate.Subject.Organization, ","),
-		"country":               strings.Join(certificate.Subject.Country, ","),
-		"locality":              strings.Join(certificate.Subject.Locality, ","),
-		"province":              strings.Join(certificate.Subject.Province, ","),
-		"street_address":        strings.Join(certificate.Subject.StreetAddress, ","),
-		"postal_code":           strings.Join(certificate.Subject.PostalCode, ","),
+		"ou":                    certificate.Subject.OrganizationalUnit,
+		"organization":          certificate.Subject.Organization,
+		"country":               certificate.Subject.Country,
+		"locality":              certificate.Subject.Locality,
+		"province":              certificate.Subject.Province,
+		"street_address":        certificate.Subject.StreetAddress,
+		"postal_code":           certificate.Subject.PostalCode,
 		"serial_number":         certificate.Subject.SerialNumber, // TODO: Do we want to replicate this?
 		"ttl":                   (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
 		"max_path_length":       certificate.MaxPathLen,

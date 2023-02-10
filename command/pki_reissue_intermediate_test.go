@@ -141,6 +141,7 @@ func createComplicatedIssuerSetUpWithReIssueIntermediate(t *testing.T, client *a
 		"pki-int/",
 		"key_type=rsa",
 		"common_name=Int X1",
+		"ou=thing",
 		"ttl=3650d",
 	}
 	codeOut := RunCustom(intX1CallArgs, runOpts)
@@ -155,7 +156,6 @@ func createComplicatedIssuerSetUpWithReIssueIntermediate(t *testing.T, client *a
 		"pki-int/issuer/intX1",
 		"pki-int/",
 		"key_type=ec",
-		"key_bits=384", // TODO: Check if this should be necessary
 		"common_name=Int X2",
 	}
 	codeOut = RunCustom(intX2CallArgs, runOpts)
