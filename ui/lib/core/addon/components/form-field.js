@@ -64,7 +64,7 @@ export default class FormFieldComponent extends Component {
     const valuePath = attr.options?.fieldValue || attr.name;
     assert(
       'Form is attempting to modify an ID. Ember-data does not allow this.',
-      valuePath.toLowerCase() === 'id'
+      valuePath.toLowerCase() !== 'id'
     );
     const modelValue = model[valuePath];
     this.showInput = !!modelValue;

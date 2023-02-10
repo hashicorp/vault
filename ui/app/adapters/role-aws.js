@@ -10,7 +10,14 @@ export default ApplicationAdapter.extend({
     const data = serializer.serialize(snapshot, requestType);
     const url = this.urlForRole(backend, name);
 
-    return this.ajax(url, 'POST', { data });
+    return this.ajax(url, 'POST', { data }).then(() => {
+      return {
+        data: {
+          name,
+          backend,
+        },
+      };
+    });
   },
 
   createRecord() {
