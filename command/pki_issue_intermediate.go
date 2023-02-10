@@ -89,6 +89,14 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 		return 1
 	}
 
+	parentMountIssuer := sanitizePath(args[0]) // /pki/issuer/default
+
+	intermediateMount := sanitizePath(args[1])
+
+	return pkiIssue(c.BaseCommand, parentMountIssuer, intermediateMount, c.flagNewIssuerName, c.flagKeyStorageSource, data)
+}
+
+func pkiIssue(c *BaseCommand, parentMountIssuer string, intermediateMount string, flagNewIssuerName string, flagKeyStorageSource string, data map[string]interface{}) int {
 	// Check We Have a Client
 	client, err := c.Client()
 	if err != nil {
@@ -97,8 +105,6 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 	}
 
 	// Sanity Check the Parent Issuer
-	parentMountIssuer := sanitizePath(args[0]) // /pki/issuer/default
-	_, parentIssuerName := paths.Split(parentMountIssuer)
 	if !strings.Contains(parentMountIssuer, "/issuer/") {
 		c.UI.Error(fmt.Sprintf("Parent Issuer %v is Not a PKI Issuer Path of the format /mount/issuer/issuer-ref", parentMountIssuer))
 	}
@@ -108,16 +114,15 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 	}
 
 	// Set-up Failure State (Immediately Before First Write Call)
-	intermediateMount := sanitizePath(args[1])
 	failureState := inCaseOfFailure{
 		intermediateMount: intermediateMount,
 		parentMount:       strings.Split(parentMountIssuer, "/issuer/")[0],
 		parentIssuer:      parentMountIssuer,
-		newName:           c.flagNewIssuerName,
+		newName:           flagNewIssuerName,
 	}
 
 	// Generate Certificate Signing Request
-	csrResp, err := client.Logical().Write(intermediateMount+"/intermediate/generate/"+c.flagKeyStorageSource, data)
+	csrResp, err := client.Logical().Write(intermediateMount+"/intermediate/generate/"+flagKeyStorageSource, data)
 	if err != nil {
 		if strings.Contains(err.Error(), "no handler for route") { // Mount Given Does Not Exist
 			c.UI.Error(fmt.Sprintf("Given Intermediate Mount %v Does Not Exist: %v", intermediateMount, err))
@@ -129,21 +134,21 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 		return 1
 	}
 	// Parse CSR Response, Also Verifies that this is a PKI Mount
-	// (eg. calling the above call on cubbyhole/ won't return an error response)
+	// (e.g. calling the above call on cubbyhole/ won't return an error response)
 	csrPemRaw, present := csrResp.Data["csr"]
 	if !present {
 		c.UI.Error(fmt.Sprintf("Failed to Generate Intermediate CSR on %v, got response: %v", intermediateMount, csrResp))
 		return 1
 	}
 	keyIdRaw, present := csrResp.Data["key_id"]
-	if !present && c.flagKeyStorageSource == "internal" {
+	if !present && flagKeyStorageSource == "internal" {
 		c.UI.Error(fmt.Sprintf("Failed to Generate Key on %v, got response: %v", intermediateMount, csrResp))
 		return 1
 	}
 
 	// If that all Parses, then we've successfully generated a CSR!  Save It (and the Key-ID)
 	failureState.csrGenerated = true
-	if c.flagKeyStorageSource == "internal" {
+	if flagKeyStorageSource == "internal" {
 		failureState.createdKeyId = keyIdRaw.(string)
 	}
 	csr := csrPemRaw.(string)
@@ -171,7 +176,7 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 
 	// Next Import Certificate
 	certificate := rootResp.Data["certificate"].(string)
-	issuerId, err := importIssuerWithName(client, intermediateMount, certificate, c.flagNewIssuerName)
+	issuerId, err := importIssuerWithName(client, intermediateMount, certificate, flagNewIssuerName)
 	failureState.certIssuerId = issuerId
 	if err != nil {
 		if strings.Contains(err.Error(), "error naming issuer") {
@@ -189,6 +194,7 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 
 	// Then Import Issuing Certificate
 	issuingCa := rootResp.Data["issuing_ca"].(string)
+	_, parentIssuerName := paths.Split(parentMountIssuer)
 	_, err = importIssuerWithName(client, intermediateMount, issuingCa, parentIssuerName)
 	if err != nil {
 		if strings.Contains(err.Error(), "error naming issuer") {
@@ -215,12 +221,12 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 	failureState.caChainImported = true
 
 	// Finally we read our newly issued certificate in order to tell our caller about it
-	c.readAndOutputNewCertificate(client, intermediateMount, issuerId)
+	readAndOutputNewCertificate(client, intermediateMount, issuerId, c)
 
 	return 0
 }
 
-func (c *PKIIssueCACommand) readAndOutputNewCertificate(client *api.Client, intermediateMount string, issuerId string) {
+func readAndOutputNewCertificate(client *api.Client, intermediateMount string, issuerId string, c *BaseCommand) {
 	resp, err := client.Logical().Read(sanitizePath(intermediateMount + "/issuer/" + issuerId))
 	if err != nil || resp == nil {
 		c.UI.Error(fmt.Sprintf("Error Reading Fully Imported Certificate from %v : %v",
