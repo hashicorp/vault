@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -66,13 +67,25 @@ func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCo
 	}
 }
 
-func handleEventsSubscribe(core *vault.Core) http.Handler {
+func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := core.Logger().Named("events-subscribe")
-
 		logger.Debug("Got request to", "url", r.URL, "version", r.Proto)
 
 		ctx := r.Context()
+
+		// ACL check
+		_, _, err := core.CheckToken(ctx, req, false)
+		if err != nil {
+			if errors.Is(err, logical.ErrPermissionDenied) {
+				respondError(w, http.StatusUnauthorized, logical.ErrPermissionDenied)
+				return
+			}
+			logger.Debug("Error validating token", "error", err)
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("error validating token"))
+			return
+		}
+
 		ns, err := namespace.FromContext(ctx)
 		if err != nil {
 			logger.Info("Could not find namespace", "error", err)
@@ -81,8 +94,8 @@ func handleEventsSubscribe(core *vault.Core) http.Handler {
 		}
 
 		prefix := "/v1/sys/events/subscribe/"
-		if ns.ID != "root" {
-			prefix = fmt.Sprintf("/v1/%s/sys/events/subscribe/", ns.Path)
+		if ns.ID != namespace.RootNamespaceID {
+			prefix = fmt.Sprintf("/v1/%ssys/events/subscribe/", ns.Path)
 		}
 		eventTypeStr := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, prefix))
 		if eventTypeStr == "" {

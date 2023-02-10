@@ -555,6 +555,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"pki reissue": func() (cli.Command, error) {
+			return &PKIReIssueCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"pki verify-sign": func() (cli.Command, error) {
 			return &PKIVerifySignCommand{
 				BaseCommand: getBaseCommand(),
