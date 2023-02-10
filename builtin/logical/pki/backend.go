@@ -608,6 +608,13 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 	crlErr := doCRL()
 	tidyErr := doAutoTidy()
 
+	// Periodically re-emit gauges so that they don't disappear/go stale
+	tidyConfig, err := sc.getAutoTidyConfig()
+	if err != nil {
+		return err
+	}
+	b.emitCertStoreMetrics(tidyConfig)
+
 	var errors error
 	if crlErr != nil {
 		errors = multierror.Append(errors, fmt.Errorf("Error building CRLs:\n - %w\n", crlErr))
@@ -757,16 +764,20 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 	b.possibleDoubleCountedRevokedSerials = nil
 	b.possibleDoubleCountedSerials = nil
 
-	if config.PublishMetrics == true {
-		certCount := atomic.LoadUint32(b.certCount)
-		metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(certCount))
-		revokedCertCount := atomic.LoadUint32(b.revokedCertCount)
-		metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(revokedCertCount))
-	}
+	b.emitCertStoreMetrics(config)
 
 	b.certCountError = ""
 
 	return nil
+}
+
+func (b *backend) emitCertStoreMetrics(config *tidyConfig) {
+	if config.PublishMetrics == true {
+		certCount := atomic.LoadUint32(b.certCount)
+		b.emitTotalCertCountMetric(certCount)
+		revokedCertCount := atomic.LoadUint32(b.revokedCertCount)
+		b.emitTotalRevokedCountMetric(revokedCertCount)
+	}
 }
 
 // The "certsCounted" boolean here should be loaded from the backend certsCounted before the corresponding storage call:
@@ -783,7 +794,7 @@ func (b *backend) ifCountEnabledIncrementTotalCertificatesCount(certsCounted boo
 			b.possibleDoubleCountedSerials = append(b.possibleDoubleCountedSerials, newSerial)
 		default:
 			if b.publishCertCountMetrics.Load() {
-				metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(certCount))
+				b.emitTotalCertCountMetric(certCount)
 			}
 		}
 	}
@@ -793,9 +804,13 @@ func (b *backend) ifCountEnabledDecrementTotalCertificatesCountReport() {
 	if b.certCountEnabled.Load() {
 		certCount := b.decrementTotalCertificatesCountNoReport()
 		if b.publishCertCountMetrics.Load() {
-			metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(certCount))
+			b.emitTotalCertCountMetric(certCount)
 		}
 	}
+}
+
+func (b *backend) emitTotalCertCountMetric(certCount uint32) {
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(certCount))
 }
 
 // Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
@@ -819,7 +834,7 @@ func (b *backend) ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCoun
 			b.possibleDoubleCountedRevokedSerials = append(b.possibleDoubleCountedRevokedSerials, newSerial)
 		default:
 			if b.publishCertCountMetrics.Load() {
-				metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(newRevokedCertCount))
+				b.emitTotalRevokedCountMetric(newRevokedCertCount)
 			}
 		}
 	}
@@ -829,9 +844,13 @@ func (b *backend) ifCountEnabledDecrementTotalRevokedCertificatesCountReport() {
 	if b.certCountEnabled.Load() {
 		revokedCertCount := b.decrementTotalRevokedCertificatesCountNoReport()
 		if b.publishCertCountMetrics.Load() {
-			metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(revokedCertCount))
+			b.emitTotalRevokedCountMetric(revokedCertCount)
 		}
 	}
+}
+
+func (b *backend) emitTotalRevokedCountMetric(revokedCertCount uint32) {
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(revokedCertCount))
 }
 
 // Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
