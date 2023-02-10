@@ -419,7 +419,8 @@ func TestCertStorageMetrics(t *testing.T) {
 
 	// We set up a metrics accumulator
 	inmemSink := metrics.NewInmemSink(
-		newPeriod, // We use a short period here to test metrics are emitted every periodicFunc
+		10000*time.Second, // A short time period would be ideal here to test metrics are emitted every periodic Func,
+		// but this has race-issues (if the metrics aren't emitted yet)
 		2000000*time.Hour)
 
 	metricsConf := metrics.DefaultConfig("")
@@ -503,7 +504,7 @@ func TestCertStorageMetrics(t *testing.T) {
 		t.Fatalf("Certificate counting should be off by default, but revoked cert count %v appeared in tidy status in unconfigured mount", revokedCountData)
 	}
 
-	// Since certificate counts are off by default, those metrics should not exist
+	// Since certificate counts are off by default, those metrics should not exist yet
 	mostRecentInterval := inmemSink.Data()[len(inmemSink.Data())-1]
 	_, ok = mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
 	if ok {
@@ -531,7 +532,13 @@ func TestCertStorageMetrics(t *testing.T) {
 		"plugin": "pki",
 	})
 
-	// Since publish_stored_certificate_count_metrics is false, those metrics should not exist
+	// By reading the auto-tidy endpoint, we ensure that initialize has completed (which has a write lock on auto-tidy)
+	_, err = client.Logical().Read("/pki/config/auto-tidy")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Since publish_stored_certificate_count_metrics is still false, these metrics should still not exist yet
 	mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
 	_, ok = mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
 	if ok {
@@ -606,6 +613,12 @@ func TestCertStorageMetrics(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	// We read the auto-tidy endpoint again, to ensure any metrics logic has completed (lock on config)
+	_, err = client.Logical().Read("/pki/config/auto-tidy")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Check Metrics After Cert Has Be Created and Revoked
 	tidyStatus, err = client.Logical().Read("pki/tidy-status")
 	if err != nil {
@@ -632,7 +645,6 @@ func TestCertStorageMetrics(t *testing.T) {
 		t.Fatalf("Expected certificate count error to disappear after initialization, but got error %v", certCountError)
 	}
 
-	// Since publish_stored_certificate_count_metrics is false, those metrics should not exist
 	mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
 	revokedCertCountGaugeValue, ok := mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
 	if !ok {
@@ -711,7 +723,6 @@ func TestCertStorageMetrics(t *testing.T) {
 		t.Fatalf("Revoked certificate has been tidied, but got a revoked cert store count of %v", revokedCertCount)
 	}
 
-	// Since publish_stored_certificate_count_metrics is false, those metrics should not exist
 	mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
 	revokedCertCountGaugeValue, ok = mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
 	if !ok {
