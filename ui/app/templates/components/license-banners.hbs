@@ -13,12 +13,7 @@
         <Icon @name="learn-link" />
         Read documentation
       </DocLink>
-      <button
-        type="button"
-        class="close-button"
-        {{on "click" (fn this.dismissBanner "dismiss-expired")}}
-        data-test-dismiss-expired
-      >
+      <button type="button" class="close-button" {{on "click" (fn this.dismissBanner "expired")}} data-test-dismiss-expired>
         <Icon @name="x" aria-label="dismiss license expired warning" />
       </button>
     </AlertBanner>
@@ -42,12 +37,7 @@
         <Icon @name="learn-link" />
         Read documentation
       </DocLink>
-      <button
-        type="button"
-        class="close-button"
-        {{on "click" (fn this.dismissBanner "dismiss-warning")}}
-        data-test-dismiss-warning
-      >
+      <button type="button" class="close-button" {{on "click" (fn this.dismissBanner "warning")}} data-test-dismiss-warning>
         <Icon @name="x" aria-label="dismiss license expire soon warning" />
       </button>
     </AlertBanner>

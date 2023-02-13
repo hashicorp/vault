@@ -56,7 +56,7 @@ module('Integration | Component | license-banners', function (hooks) {
 
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     const localStorageResult = JSON.parse(localStorage.getItem(`dismiss-license-banner-1.13.1+ent`));
-    assert.strictEqual(localStorageResult, 'dismiss-expired');
+    assert.strictEqual(localStorageResult, 'expired');
     assert
       .dom('[data-test-license-banner-expired]')
       .doesNotExist('The expired banner still does not render after a re-render.');
@@ -72,7 +72,7 @@ module('Integration | Component | license-banners', function (hooks) {
 
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     const localStorageResult = JSON.parse(localStorage.getItem(`dismiss-license-banner-1.13.1+ent`));
-    assert.strictEqual(localStorageResult, 'dismiss-warning');
+    assert.strictEqual(localStorageResult, 'warning');
     assert
       .dom('[data-test-license-banner-warning]')
       .doesNotExist('The warning banner still does not render after a re-render.');
