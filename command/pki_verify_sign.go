@@ -94,7 +94,13 @@ func (c *PKIVerifySignCommand) Run(args []string) int {
 		return 1
 	}
 
-	results, err := verifySignBetween(client, issuer, issued)
+	issuerResp, err := readIssuer(client, issuer)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to read issuer: %s: %s", issuer, err.Error()))
+		return 1
+	}
+
+	results, err := verifySignBetween(client, issuerResp, issued)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to run verification: %v", err))
 		return pkiRetUsage
@@ -105,21 +111,16 @@ func (c *PKIVerifySignCommand) Run(args []string) int {
 	return 0
 }
 
-func verifySignBetween(client *api.Client, issuerPath string, issuedPath string) (map[string]bool, error) {
+func verifySignBetween(client *api.Client, issuerResp *issuerResponse, issuedPath string) (map[string]bool, error) {
 	// Note that this eats warnings
 
-	// Fetch and Parse the Potential Issuer:
-	issuerCertBundle, err := readIssuer(client, issuerPath)
-	if err != nil {
-		return nil, err
-	}
-	issuerCert := issuerCertBundle.certificate
+	issuerCert := issuerResp.certificate
 	issuerKeyId := issuerCert.SubjectKeyId
 
 	// Fetch and Parse the Potential Issued Cert
 	issuedCertBundle, err := readIssuer(client, issuedPath)
 	if err != nil {
-		return nil, fmt.Errorf("error: unable to fetch issuer %v: %w", issuerPath, err)
+		return nil, fmt.Errorf("error: unable to fetch issuer %v: %w", issuedPath, err)
 	}
 	parentKeyId := issuedCertBundle.certificate.AuthorityKeyId
 
