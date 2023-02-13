@@ -6003,6 +6003,10 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	require.NoError(t, err)
 	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/cluster"), logical.UpdateOperation), resp, true)
 
+	resp, err = CBRead(b, s, "config/cluster")
+	require.NoError(t, err)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/cluster"), logical.ReadOperation), resp, true)
+
 	aiaData := map[string]interface{}{
 		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
 		"issuing_certificates":    "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
