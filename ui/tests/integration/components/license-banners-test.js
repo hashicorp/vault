@@ -13,7 +13,8 @@ module('Integration | Component | license-banners', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    localStorage.removeItem('licenseBanner');
+    this.version = this.owner.lookup('service:version');
+    this.version.version = '1.13.1+ent';
   });
 
   test('it does not render if no expiry', async function (assert) {
@@ -54,11 +55,12 @@ module('Integration | Component | license-banners', function (hooks) {
     assert.dom('[data-test-license-banner-expired]').doesNotExist('Expired license banner does not render');
 
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
-    const localStorageObject = JSON.parse(localStorage.getItem('licenseBanner'));
-    assert.strictEqual(localStorageObject.dismissType, 'dismiss-expired');
+    const localStorageResult = JSON.parse(localStorage.getItem(`dismiss-license-banner-1.13.1+ent`));
+    assert.strictEqual(localStorageResult, 'dismiss-expired');
     assert
       .dom('[data-test-license-banner-expired]')
       .doesNotExist('The expired banner still does not render after a re-render.');
+    localStorage.removeItem(`dismiss-license-banner-1.13.1+ent`);
   });
 
   test('it does not render the warning banner if it has been dismissed', async function (assert) {
@@ -69,31 +71,28 @@ module('Integration | Component | license-banners', function (hooks) {
     assert.dom('[data-test-license-banner-warning]').doesNotExist('Warning license banner does not render');
 
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
-    const localStorageObject = JSON.parse(localStorage.getItem('licenseBanner'));
-    assert.strictEqual(localStorageObject.dismissType, 'dismiss-warning');
+    const localStorageResult = JSON.parse(localStorage.getItem(`dismiss-license-banner-1.13.1+ent`));
+    assert.strictEqual(localStorageResult, 'dismiss-warning');
     assert
       .dom('[data-test-license-banner-warning]')
       .doesNotExist('The warning banner still does not render after a re-render.');
+    localStorage.removeItem(`dismiss-license-banner-1.13.1+ent`);
   });
 
   test('it renders a banner if the vault license has changed', async function (assert) {
-    assert.expect(2);
-    this.version = this.owner.lookup('service:version');
+    assert.expect(1);
     this.version.version = '1.12.1+ent';
 
     this.set('expiry', formatRFC3339(NEXT_MONTH));
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     await click('[data-test-dismiss-warning]');
-
-    const localStorageObjectEarlierVersion = JSON.parse(localStorage.getItem('licenseBanner'));
     this.version.version = '1.13.1+ent';
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
-
-    const localStorageObjectLaterVersion = JSON.parse(localStorage.getItem('licenseBanner'));
     assert
       .dom('[data-test-license-banner-warning]')
       .exists('The warning banner shows even though we have dismissed it earlier.');
 
-    assert.notEqual(localStorageObjectEarlierVersion.version, localStorageObjectLaterVersion.version);
+    localStorage.removeItem(`dismiss-license-banner-1.12.1+ent`);
+    localStorage.removeItem(`dismiss-license-banner-1.13.1+ent`);
   });
 });
