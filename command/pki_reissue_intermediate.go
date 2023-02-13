@@ -95,17 +95,17 @@ func (c *PKIReIssueCACommand) Run(args []string) int {
 	templateIssuer := sanitizePath(args[1])
 	intermediateMount := sanitizePath(args[2])
 
-	issuerBundle, err := readIssuer(client, templateIssuer)
+	templateIssuerBundle, err := readIssuer(client, templateIssuer)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error fetching template certificate %v : %v", templateIssuer, err))
 		return 1
 	}
-	certificate := issuerBundle.certificate
+	certificate := templateIssuerBundle.certificate
 
 	useExistingKey := c.flagKeyStorageSource == "existing"
 	keyRef := ""
 	if useExistingKey {
-		keyRef = issuerBundle.keyId
+		keyRef = templateIssuerBundle.keyId
 
 		if keyRef == "" {
 			c.UI.Error(fmt.Sprintf("Template issuer %s did not have a key id field set in response which is required", templateIssuer))
