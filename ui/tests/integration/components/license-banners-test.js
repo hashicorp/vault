@@ -79,7 +79,7 @@ module('Integration | Component | license-banners', function (hooks) {
     localStorage.removeItem(`dismiss-license-banner-1.13.1+ent`);
   });
 
-  test('it renders a banner if the vault license has changed meep', async function (assert) {
+  test('it renders a banner if the vault license has changed', async function (assert) {
     assert.expect(3);
     this.version.version = '1.12.1+ent';
     this.set('expiry', formatRFC3339(NEXT_MONTH));
