@@ -26,7 +26,7 @@ export default class LicenseBanners extends Component {
 
   constructor() {
     super(...arguments);
-    // If nothing is saved in localStorage or the user has updated their Vault version, show the license banners.
+    // If nothing is saved in localStorage or the user has updated their Vault version, do not dismiss any of the banners.
     const localStorageLicenseBannerObject = localStorage.getItem('licenseBanner');
     if (!localStorageLicenseBannerObject || localStorageLicenseBannerObject.version !== this.currentVersion) {
       localStorage.setItem('licenseBanner', { dismissType: '', version: this.currentVersion });
