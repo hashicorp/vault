@@ -20,6 +20,7 @@ import localStorage from 'vault/lib/local-storage';
 export default class LicenseBanners extends Component {
   @service version;
 
+  @tracked currentVersion = this.version.version;
   @tracked warningDismissed;
   @tracked expiredDismissed;
 
@@ -27,10 +28,8 @@ export default class LicenseBanners extends Component {
     super(...arguments);
     // If nothing is saved in localStorage or the user has updated their Vault version, show the license banners.
     const localStorageLicenseBannerObject = localStorage.getItem('licenseBanner');
-    const currentVersion = this.version.version;
-
-    if (!localStorageLicenseBannerObject || localStorageLicenseBannerObject.version !== currentVersion) {
-      localStorage.setItem('licenseBanner', { dismissType: '', version: currentVersion });
+    if (!localStorageLicenseBannerObject || localStorageLicenseBannerObject.version !== this.currentVersion) {
+      localStorage.setItem('licenseBanner', { dismissType: '', version: this.currentVersion });
       return;
     }
     this.setDismissType(localStorageLicenseBannerObject.dismissType);
@@ -52,7 +51,6 @@ export default class LicenseBanners extends Component {
     // dismissAction is either 'dismiss-warning' or 'dismiss-expired'
     const updatedLocalStorageObject = { dismissType: dismissAction, version: this.currentVersion };
     localStorage.setItem('licenseBanner', updatedLocalStorageObject);
-
     this.setDismissType(dismissAction);
   }
 
