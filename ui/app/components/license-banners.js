@@ -47,6 +47,8 @@ export default class LicenseBanners extends Component {
 
   @action
   dismissBanner(dismissAction) {
+    // if a client's version changed their old localStorage key will still exists.
+    localStorage.cleanUpStorage('dismiss-license-banner', `dismiss-license-banner-${this.currentVersion}`);
     // updates localStorage and then updates the template by calling updateDismissType
     localStorage.setItem(`dismiss-license-banner-${this.currentVersion}`, dismissAction);
     this.updateDismissType(dismissAction);
