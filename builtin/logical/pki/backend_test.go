@@ -2008,6 +2008,14 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	})
 	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/urls"), logical.UpdateOperation), resp, true)
 
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "config/urls",
+		Storage:    storage,
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/urls"), logical.ReadOperation), resp, true)
+
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to config urls, %#v", resp)
 	}
