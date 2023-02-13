@@ -32,6 +32,7 @@ export default class LicenseBanners extends Component {
       localStorage.setItem('licenseBanner', { dismissType: '', version: this.currentVersion });
       return;
     }
+    // if dismissType has previously been saved in localStorage, update tracked properties.
     this.setDismissType(localStorageLicenseBannerObject.dismissType);
   }
 
