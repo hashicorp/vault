@@ -20,20 +20,18 @@ import localStorage from 'vault/lib/local-storage';
 export default class LicenseBanners extends Component {
   @service version;
 
-  @tracked currentVersion = this.version.version;
   @tracked warningDismissed;
   @tracked expiredDismissed;
 
   constructor() {
     super(...arguments);
-    // If nothing is saved in localStorage or the user has updated their Vault version, do not dismiss any of the banners.
-    const localStorageLicenseBannerObject = localStorage.getItem('licenseBanner');
-    if (!localStorageLicenseBannerObject || localStorageLicenseBannerObject.version !== this.currentVersion) {
-      localStorage.setItem('licenseBanner', { dismissType: '', version: this.currentVersion });
-      return;
-    }
-    // if dismissType has previously been saved in localStorage, update tracked properties.
-    this.setDismissType(localStorageLicenseBannerObject.dismissType);
+    // do not dismiss any banners if the user has updated their version
+    const dismissedBanner = localStorage.getItem(`dismiss-license-banner-${this.currentVersion}`); // returns either dismiss-warning or dismiss-expired
+    this.setDismissType(dismissedBanner);
+  }
+
+  get currentVersion() {
+    return this.version.version;
   }
 
   get licenseExpired() {
@@ -50,21 +48,15 @@ export default class LicenseBanners extends Component {
   @action
   dismissBanner(dismissAction) {
     // dismissAction is either 'dismiss-warning' or 'dismiss-expired'
-    const updatedLocalStorageObject = { dismissType: dismissAction, version: this.currentVersion };
-    localStorage.setItem('licenseBanner', updatedLocalStorageObject);
+    localStorage.setItem(`dismiss-license-banner-${this.currentVersion}`, dismissAction);
     this.setDismissType(dismissAction);
   }
 
   setDismissType(dismissType) {
-    // reset tracked properties to false
-    this.warningDismissed = this.expiredDismissed = false;
     if (dismissType === 'dismiss-warning') {
       this.warningDismissed = true;
     } else if (dismissType === 'dismiss-expired') {
       this.expiredDismissed = true;
-    } else {
-      // if dismissType is empty do nothing.
-      return;
     }
   }
 }
