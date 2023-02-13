@@ -98,7 +98,7 @@ module('Integration | Component | license-banners', function (hooks) {
     const localStorageResultOldVersion = JSON.parse(
       localStorage.getItem(`dismiss-license-banner-1.12.1+ent`)
     );
-    // Check that localStorage was cleaned and no longer contains the old license storage key.
+    // Check that localStorage was cleaned and no longer contains the old version storage key.
     assert.strictEqual(localStorageResultOldVersion, null);
     assert.strictEqual(localStorageResultNewVersion, 'warning');
     // If debugging this test remember to clear localStorage if the test was not run to completion.
