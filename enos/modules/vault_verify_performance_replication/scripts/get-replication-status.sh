@@ -5,7 +5,6 @@ set -e
 binpath=${VAULT_INSTALL_DIR}/vault
 
 fail() {
-  echo "$1" 2>&1
   return 1
 }
 
@@ -28,7 +27,7 @@ retry() {
   return 0
 }
 
-test -x "$binpath" || fail "unable to locate vault binary at $binpath"
+test -x "$binpath" || fail
 
 check_pr_status() {
   cluster_state=$($binpath read -format=json sys/replication/performance/status | jq -r '.data.state')
@@ -40,11 +39,11 @@ check_pr_status() {
   fi
 
   if [[ "$connection_status" == 'disconnected' ]]; then
-    fail "expected connection status to be connected"
+    fail
   fi
 
   if [[ "$cluster_state" == 'idle' ]]; then
-    fail "expected cluster state to be not idle"
+    fail
   fi
 }
 
