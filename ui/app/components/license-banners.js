@@ -18,27 +18,22 @@ import localStorage from 'vault/lib/local-storage';
  */
 
 export default class LicenseBanners extends Component {
-  // ARG TODO: we would never show both!
   @service version;
 
-  @tracked currentVersion = this.version.version;
-  @tracked localStorageLicenseBannerObject = localStorage.getItem('licenseBanner');
-  @tracked dismissType = 'none'; // dismissType options: both, dismiss-warning, dismiss-expired, none
+  @tracked warningDismissed;
+  @tracked expiredDismissed;
 
   constructor() {
     super(...arguments);
-    // if nothing is saved in localStorage or the user has updated their Vault version, show the license banners
-    if (
-      !this.localStorageLicenseBannerObject ||
-      this.localStorageLicenseBannerObject.version !== this.currentVersion
-    ) {
-      localStorage.setItem('licenseBanner', { dismissType: 'none', version: this.currentVersion });
-      this.dismissType = 'none';
+    // If nothing is saved in localStorage or the user has updated their Vault version, show the license banners.
+    const localStorageLicenseBannerObject = localStorage.getItem('licenseBanner');
+    const currentVersion = this.version.version;
+
+    if (!localStorageLicenseBannerObject || localStorageLicenseBannerObject.version !== currentVersion) {
+      localStorage.setItem('licenseBanner', { dismissType: '', version: currentVersion });
       return;
     }
-
-    // otherwise dismissType should equal the dismissType recorded in localStorage
-    this.dismissType = this.localStorageLicenseBannerObject.dismissType;
+    this.setDismissType(localStorageLicenseBannerObject.dismissType);
   }
 
   get licenseExpired() {
@@ -52,27 +47,25 @@ export default class LicenseBanners extends Component {
     return differenceInDays(new Date(this.args.expiry), new Date());
   }
 
-  get showWarning() {
-    return this.dismissType === 'dismiss-expired' || this.dismissType === 'none' ? true : false;
-  }
-
-  get showExpired() {
-    return this.dismissType === 'dismiss-warning' || this.dismissType === 'none' ? true : false;
-  }
-
   @action
   dismissBanner(dismissAction) {
     // dismissAction is either 'dismiss-warning' or 'dismiss-expired'
-
-    // update localStorage dismissType. If it was none before replace it with the passed in dismissAction (to hide either the warning or expired banner).
-
-    const updatedLocalStorageObject =
-      this.dismissType === 'none'
-        ? { dismissType: dismissAction, version: this.currentVersion }
-        : { dismissType: 'both', version: this.currentVersion };
-
+    const updatedLocalStorageObject = { dismissType: dismissAction, version: this.currentVersion };
     localStorage.setItem('licenseBanner', updatedLocalStorageObject);
-    // update tracked property so showWarning and showExpired are updated.
-    this.dismissType = this.dismissType === 'none' ? dismissAction : 'both';
+
+    this.setDismissType(dismissAction);
+  }
+
+  setDismissType(dismissType) {
+    // reset tracked properties to false
+    this.warningDismissed = this.expiredDismissed = false;
+    if (dismissType === 'dismiss-warning') {
+      this.warningDismissed = true;
+    } else if (dismissType === 'dismiss-expired') {
+      this.expiredDismissed = true;
+    } else {
+      // if dismissType is empty do nothing.
+      return;
+    }
   }
 }
