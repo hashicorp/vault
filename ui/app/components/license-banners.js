@@ -27,7 +27,7 @@ export default class LicenseBanners extends Component {
     super(...arguments);
     // do not dismiss any banners if the user has updated their version
     const dismissedBanner = localStorage.getItem(`dismiss-license-banner-${this.currentVersion}`); // returns either dismiss-warning or dismiss-expired
-    this.setDismissType(dismissedBanner);
+    this.updateDismissType(dismissedBanner);
   }
 
   get currentVersion() {
@@ -47,12 +47,13 @@ export default class LicenseBanners extends Component {
 
   @action
   dismissBanner(dismissAction) {
-    // dismissAction is either 'dismiss-warning' or 'dismiss-expired'
+    // updates localStorage and then updates the template by calling updateDismissType
     localStorage.setItem(`dismiss-license-banner-${this.currentVersion}`, dismissAction);
     this.setDismissType(dismissAction);
   }
 
-  setDismissType(dismissType) {
+  updateDismissType(dismissType) {
+    // updates tracked properties to update template
     if (dismissType === 'dismiss-warning') {
       this.warningDismissed = true;
     } else if (dismissType === 'dismiss-expired') {
