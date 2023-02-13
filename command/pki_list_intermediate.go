@@ -189,7 +189,7 @@ func (c *PKIListIntermediateCommand) Run(args []string) int {
 	for _, child := range issued {
 		path := sanitizePath(child)
 		if path != "" {
-			err, verifyResults := verifySignBetween(client, issuer, path)
+			verifyResults, err := verifySignBetween(client, issuer, path)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Failed to run verification on path %v: %v", path, err))
 				return 1

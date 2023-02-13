@@ -6,7 +6,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
-	"encoding/pem"
 	"fmt"
 	"io"
 	"net"
@@ -93,31 +92,25 @@ func (c *PKIReIssueCACommand) Run(args []string) int {
 	}
 
 	parentIssuer := sanitizePath(args[0]) // /pki/issuer/default
+	templateIssuer := sanitizePath(args[1])
 	intermediateMount := sanitizePath(args[2])
 
-	templateCertificateResp, err := client.Logical().Read(sanitizePath(args[1]))
+	issuerBundle, err := readIssuer(client, templateIssuer)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error fetching template certificate %v : %v", sanitizePath(args[1]), err))
+		c.UI.Error(fmt.Sprintf("Error fetching template certificate %v : %v", templateIssuer, err))
 		return 1
 	}
-	templateCertificateRaw, ok := templateCertificateResp.Data["certificate"]
-	if !ok {
-		c.UI.Error(fmt.Sprintf("No Certificate Field Found at %v instead found : %v", sanitizePath(args[1]), templateCertificateResp))
-		return 1
-	}
-	certificatePemString := templateCertificateRaw.(string)
-	certificatePem := []byte(certificatePemString)
-	certificateBlock, _ := pem.Decode(certificatePem)
-	certificate, err := x509.ParseCertificate(certificateBlock.Bytes)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error parsing template certificate at %v : %v", sanitizePath(args[1]), err))
-		return 1
-	}
+	certificate := issuerBundle.certificate
 
 	useExistingKey := c.flagKeyStorageSource == "existing"
 	keyRef := ""
-	if useExistingKey { // TODO: Better Error information
-		keyRef = templateCertificateResp.Data["key_id"].(string)
+	if useExistingKey {
+		keyRef = issuerBundle.keyId
+
+		if keyRef == "" {
+			c.UI.Error(fmt.Sprintf("Template issuer %s did not have a key id field set in response which is required", templateIssuer))
+			return 1
+		}
 	}
 
 	templateData, err := parseTemplateCertificate(*certificate, useExistingKey, keyRef)
