@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/vault/command/healthcheck"
+
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/ryanuber/columnize"
 )
 
@@ -93,7 +94,13 @@ func (c *PKIVerifySignCommand) Run(args []string) int {
 		return 1
 	}
 
-	err, results := verifySignBetween(client, issuer, issued)
+	issuerResp, err := readIssuer(client, issuer)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to read issuer: %s: %s", issuer, err.Error()))
+		return 1
+	}
+
+	results, err := verifySignBetween(client, issuerResp, issued)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to run verification: %v", err))
 		return pkiRetUsage
@@ -104,60 +111,34 @@ func (c *PKIVerifySignCommand) Run(args []string) int {
 	return 0
 }
 
-func verifySignBetween(client *api.Client, issuerPath string, issuedPath string) (error, map[string]bool) {
+func verifySignBetween(client *api.Client, issuerResp *issuerResponse, issuedPath string) (map[string]bool, error) {
 	// Note that this eats warnings
 
-	// Fetch and Parse the Potential Issuer:
-	issuerResp, err := client.Logical().Read(issuerPath)
-	if err != nil {
-		return fmt.Errorf("error: unable to fetch issuer %v: %w", issuerPath, err), nil
-	}
-	issuerCertPem := issuerResp.Data["certificate"].(string)
-	issuerCertBundle, err := certutil.ParsePEMBundle(issuerCertPem)
-	if err != nil {
-		return err, nil
-	}
-	issuerKeyId := issuerCertBundle.Certificate.SubjectKeyId
+	issuerCert := issuerResp.certificate
+	issuerKeyId := issuerCert.SubjectKeyId
 
 	// Fetch and Parse the Potential Issued Cert
-	issuedCertResp, err := client.Logical().Read(issuedPath)
+	issuedCertBundle, err := readIssuer(client, issuedPath)
 	if err != nil {
-		return fmt.Errorf("error: unable to fetch issuer %v: %w", issuerPath, err), nil
+		return nil, fmt.Errorf("error: unable to fetch issuer %v: %w", issuedPath, err)
 	}
-	if len(issuedPath) <= 2 {
-		return fmt.Errorf("%v", issuedPath), nil
-	}
-	caChainRaw := issuedCertResp.Data["ca_chain"]
-	if caChainRaw == nil {
-		return fmt.Errorf("no ca_chain information on %v", issuedPath), nil
-	}
-	caChainCast := caChainRaw.([]interface{})
-	caChain := make([]string, len(caChainCast))
-	for i, cert := range caChainCast {
-		caChain[i] = cert.(string)
-	}
-	issuedCertPem := issuedCertResp.Data["certificate"].(string)
-	issuedCertBundle, err := certutil.ParsePEMBundle(issuedCertPem)
-	if err != nil {
-		return err, nil
-	}
-	parentKeyId := issuedCertBundle.Certificate.AuthorityKeyId
+	parentKeyId := issuedCertBundle.certificate.AuthorityKeyId
 
 	// Check the Chain-Match
 	rootCertPool := x509.NewCertPool()
-	rootCertPool.AddCert(issuerCertBundle.Certificate)
+	rootCertPool.AddCert(issuerCert)
 	checkTrustPathOptions := x509.VerifyOptions{
 		Roots: rootCertPool,
 	}
 	trust := false
-	trusts, err := issuedCertBundle.Certificate.Verify(checkTrustPathOptions)
+	trusts, err := issuedCertBundle.certificate.Verify(checkTrustPathOptions)
 	if err != nil && !strings.Contains(err.Error(), "certificate signed by unknown authority") {
-		return err, nil
+		return nil, err
 	} else if err == nil {
 		for _, chain := range trusts {
 			// Output of this Should Only Have One Trust with Chain of Length Two (Child followed by Parent)
 			for _, cert := range chain {
-				if issuedCertBundle.Certificate.Equal(cert) {
+				if issuedCertBundle.certificate.Equal(cert) {
 					trust = true
 					break
 				}
@@ -166,29 +147,113 @@ func verifySignBetween(client *api.Client, issuerPath string, issuedPath string)
 	}
 
 	pathMatch := false
-	for _, cert := range caChain {
-		if strings.TrimSpace(cert) == strings.TrimSpace(issuerCertPem) { // TODO: Decode into ASN1 to Check
+	for _, cert := range issuedCertBundle.caChain {
+		if bytes.Equal(cert.Raw, issuerCert.Raw) {
 			pathMatch = true
 			break
 		}
 	}
 
 	signatureMatch := false
-	err = issuedCertBundle.Certificate.CheckSignatureFrom(issuerCertBundle.Certificate)
+	err = issuedCertBundle.certificate.CheckSignatureFrom(issuerCert)
 	if err == nil {
 		signatureMatch = true
 	}
 
 	result := map[string]bool{
 		// This comparison isn't strictly correct, despite a standard ordering these are sets
-		"subject_match":   bytes.Equal(issuerCertBundle.Certificate.RawSubject, issuedCertBundle.Certificate.RawIssuer),
+		"subject_match":   bytes.Equal(issuerCert.RawSubject, issuedCertBundle.certificate.RawIssuer),
 		"path_match":      pathMatch,
 		"trust_match":     trust, // TODO: Refactor into a reasonable function
 		"key_id_match":    bytes.Equal(parentKeyId, issuerKeyId),
 		"signature_match": signatureMatch,
 	}
 
-	return nil, result
+	return result, nil
+}
+
+type issuerResponse struct {
+	keyId       string
+	certificate *x509.Certificate
+	caChain     []*x509.Certificate
+}
+
+func readIssuer(client *api.Client, issuerPath string) (*issuerResponse, error) {
+	issuerResp, err := client.Logical().Read(issuerPath)
+	if err != nil {
+		return nil, err
+	}
+	issuerCertPem, err := requireStrRespField(issuerResp, "certificate")
+	if err != nil {
+		return nil, err
+	}
+	issuerCert, err := healthcheck.ParsePEMCert(issuerCertPem)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse issuer %v's certificate: %w", issuerPath, err)
+	}
+
+	caChainPem, err := requireStrListRespField(issuerResp, "ca_chain")
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse issuer %v's CA chain: %w", issuerPath, err)
+	}
+
+	var caChain []*x509.Certificate
+	for _, pem := range caChainPem {
+		trimmedPem := strings.TrimSpace(pem)
+		if trimmedPem == "" {
+			continue
+		}
+		cert, err := healthcheck.ParsePEMCert(trimmedPem)
+		if err != nil {
+			return nil, err
+		}
+		caChain = append(caChain, cert)
+	}
+
+	keyId := optStrRespField(issuerResp, "key_id")
+
+	return &issuerResponse{
+		keyId:       keyId,
+		certificate: issuerCert,
+		caChain:     caChain,
+	}, nil
+}
+
+func optStrRespField(resp *api.Secret, reqField string) string {
+	if resp == nil || resp.Data == nil {
+		return ""
+	}
+	if val, present := resp.Data[reqField]; !present {
+		return ""
+	} else if strVal, castOk := val.(string); !castOk || strVal == "" {
+		return ""
+	} else {
+		return strVal
+	}
+}
+
+func requireStrRespField(resp *api.Secret, reqField string) (string, error) {
+	if resp == nil || resp.Data == nil {
+		return "", fmt.Errorf("nil response received, %s field unavailable", reqField)
+	}
+	if val, present := resp.Data[reqField]; !present {
+		return "", fmt.Errorf("response did not contain field: %s", reqField)
+	} else if strVal, castOk := val.(string); !castOk || strVal == "" {
+		return "", fmt.Errorf("field %s value was blank or not a string: %v", reqField, val)
+	} else {
+		return strVal, nil
+	}
+}
+
+func requireStrListRespField(resp *api.Secret, reqField string) ([]string, error) {
+	if resp == nil || resp.Data == nil {
+		return nil, fmt.Errorf("nil response received, %s field unavailable", reqField)
+	}
+	if val, present := resp.Data[reqField]; !present {
+		return nil, fmt.Errorf("response did not contain field: %s", reqField)
+	} else {
+		return healthcheck.StringList(val)
+	}
 }
 
 func (c *PKIVerifySignCommand) outputResults(results map[string]bool, potentialParent, potentialChild string) error {

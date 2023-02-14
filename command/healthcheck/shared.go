@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func stringList(source interface{}) ([]string, error) {
+func StringList(source interface{}) ([]string, error) {
 	if source == nil {
 		return nil, nil
 	}
