@@ -17,8 +17,9 @@ export default {
   },
 
   cleanUpStorage(string, keyToKeep) {
+    if (!string) return;
     const relevantKeys = this.keys().filter((str) => str.startsWith(string));
-    relevantKeys.forEach((key) => {
+    relevantKeys?.forEach((key) => {
       if (key !== keyToKeep) {
         localStorage.removeItem(key);
       }
