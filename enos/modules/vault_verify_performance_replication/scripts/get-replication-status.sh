@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# This script waits for the replication status to be established
+# But the replication validations are done by Terraform so this
+# script should always exit success
+
 set -e
 
 binpath=${VAULT_INSTALL_DIR}/vault
@@ -17,7 +21,7 @@ retry() {
       sleep "$wait"
     else
       echo $pr_status
-      return "$exit"
+      return 0
     fi
   done
 
