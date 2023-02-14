@@ -107,10 +107,12 @@ func pkiIssue(c *BaseCommand, parentMountIssuer string, intermediateMount string
 	// Sanity Check the Parent Issuer
 	if !strings.Contains(parentMountIssuer, "/issuer/") {
 		c.UI.Error(fmt.Sprintf("Parent Issuer %v is Not a PKI Issuer Path of the format /mount/issuer/issuer-ref", parentMountIssuer))
+		return 1
 	}
-	_, err = client.Logical().Read(parentMountIssuer + "/json")
+	_, err = readIssuer(client, parentMountIssuer)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Unable to access parent issuer %v: %v", parentMountIssuer, err))
+		return 1
 	}
 
 	// Set-up Failure State (Immediately Before First Write Call)
@@ -231,6 +233,7 @@ func readAndOutputNewCertificate(client *api.Client, intermediateMount string, i
 	if err != nil || resp == nil {
 		c.UI.Error(fmt.Sprintf("Error Reading Fully Imported Certificate from %v : %v",
 			intermediateMount+"/issuer/"+issuerId, err))
+		return
 	}
 
 	OutputSecret(c.UI, resp)
