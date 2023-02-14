@@ -2,6 +2,7 @@ package eventbus
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -179,4 +180,176 @@ func TestBus2Subscriptions(t *testing.T) {
 	case <-timeout:
 		t.Error("Timeout waiting for event2")
 	}
+}
+
+func TestBusSubscriptionsCancel(t *testing.T) {
+	subscriptions.Store(0)
+	bus, err := NewEventBus(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	bus.Start()
+
+	// create and cancel a bunch of subscriptions
+	create := 100
+	cancel := 50
+
+	eventType := logical.EventType("someType")
+
+	var channels []<-chan *logical.EventReceived
+	var cancels []context.CancelFunc
+	stopped := atomic.Int32{}
+	canceled := atomic.Int32{}
+	stopped.Store(-1)
+
+	received := atomic.Int32{}
+
+	for i := 0; i < create; i++ {
+		ch, cancelFunc, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(cancelFunc)
+		channels = append(channels, ch)
+		cancels = append(cancels, cancelFunc)
+
+		go func(i int32) {
+			<-ch
+			received.Add(1)
+			for i < int32(cancel) {
+				<-ch
+				received.Add(1)
+			}
+			canceled.Add(1)
+			cancelFunc() // cancel explicitly to unsubscribe
+		}(int32(i))
+	}
+
+	// check that all channels receive a message
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+	waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create) })
+
+	if canceled.Load() != int32(cancel) {
+		t.Errorf("Expected %d canceled goroutines, but got %d", cancel, canceled.Load())
+	}
+
+	// send another message, but half should stop receiving
+	event, err = logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+	waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create*2-cancel) })
+	// the sends should time out and the subscriptions should drop when the cancelFunc was called
+	waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() == int64(cancel) })
+}
+
+func TestBusSubscriptionsBreak(t *testing.T) {
+	subscriptions.Store(0)
+	bus, err := NewEventBus(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	// set the timeout very short to make the test faster
+	bus.SetSendTimeout(100 * time.Millisecond)
+	bus.Start()
+
+	// create and cancel a bunch of subscriptions
+	create := 100
+	cancel := 50
+
+	eventType := logical.EventType("someType")
+
+	var channels []<-chan *logical.EventReceived
+	var cancels []context.CancelFunc
+	stopped := atomic.Int32{}
+	canceled := atomic.Int32{}
+	stopped.Store(-1)
+
+	received := atomic.Int32{}
+
+	for i := 0; i < create; i++ {
+		ch, cancelFunc, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(cancelFunc)
+		channels = append(channels, ch)
+		cancels = append(cancels, cancelFunc)
+
+		go func(i int32) {
+			<-ch
+			received.Add(1)
+			for i < int32(cancel) {
+				<-ch
+				received.Add(1)
+			}
+			canceled.Add(1)
+		}(int32(i))
+	}
+
+	// check that all channels receive a message
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+	waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create) })
+
+	if canceled.Load() != int32(cancel) {
+		t.Errorf("Expected %d canceled goroutines, but got %d", cancel, canceled.Load())
+	}
+
+	// send another message, but half should stop receiving
+	event, err = logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+	waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create*2-cancel) })
+	// the sends should time out and the subscriptions should drop when the send context cancels
+	waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() == int64(cancel) })
+}
+
+// waitFor waits for a condition to be true, up to the maximum timeout.
+// It waits with a capped exponential backoff starting at 1ms.
+// It is guaranteed to try f() at least once.
+func waitFor(t *testing.T, maxWait time.Duration, f func() bool) {
+	t.Helper()
+	start := time.Now()
+
+	if f() {
+		return
+	}
+	sleepAmount := 1 * time.Millisecond
+	for time.Now().Sub(start) <= maxWait {
+		left := time.Now().Sub(start)
+		sleepAmount = sleepAmount * 2
+		if sleepAmount > left {
+			sleepAmount = left
+		}
+		time.Sleep(sleepAmount)
+		if f() {
+			return
+		}
+	}
+	t.Error("Timeout waiting for condition")
 }
