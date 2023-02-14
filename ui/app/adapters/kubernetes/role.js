@@ -32,7 +32,7 @@ export default class KubernetesRoleAdapter extends NamedPathAdapter {
   }
   generateCredentials(backend, data) {
     const generateCredentialsUrl = `${this.buildURL()}/${encodePath(backend)}/creds/${data.role}`;
-
+    delete data.role;
     return this.ajax(generateCredentialsUrl, 'POST', { data }).then((response) => {
       const { lease_id, lease_duration, data } = response;
 
