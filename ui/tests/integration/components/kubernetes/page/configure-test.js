@@ -32,6 +32,12 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       { label: 'kubernetes', route: 'overview' },
       { label: 'configure' },
     ];
+    this.expectedInferred = {
+      disable_local_ca_jwt: false,
+      kubernetes_ca_cert: null,
+      kubernetes_host: null,
+      service_account_jwt: null,
+    };
   });
 
   test('it should display proper options when toggling radio cards', async function (assert) {
@@ -223,7 +229,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     this.server.get('/:path/check', () => new Response(204, {}));
     this.server.post('/:path/config', (schema, req) => {
       const json = JSON.parse(req.requestBody);
-      assert.deepEqual(json, { disable_local_ca_jwt: false }, 'Values are passed to create endpoint');
+      assert.deepEqual(json, this.expectedInferred, 'Values are passed to create endpoint');
       return new Response(204, {});
     });
 
@@ -248,13 +254,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     this.server.get('/:path/check', () => new Response(204, {}));
     this.server.post('/:path/config', (schema, req) => {
       const json = JSON.parse(req.requestBody);
-      const expected = {
-        disable_local_ca_jwt: false,
-        kubernetes_ca_cert: null,
-        kubernetes_host: null,
-        service_account_jwt: null,
-      };
-      assert.deepEqual(json, expected, 'Manual config values are unset in server payload');
+      assert.deepEqual(json, this.expectedInferred, 'Manual config values are unset in server payload');
       return new Response(204, {});
     });
 
