@@ -128,6 +128,8 @@ func GetResponseSchema(t *testing.T, path *framework.Path, operation logical.Ope
 	return &schemaResponses[0]
 }
 
+// ResponseValidatingCallback can be used in setting up a [vault.TestCluster] that validates every response against the
+// openapi specifications
 func ResponseValidatingCallback(t *testing.T) func(logical.Backend, *logical.Request, *logical.Response) {
 
 	type PathRouter interface {
