@@ -978,7 +978,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 	if err != nil {
 		return nil, fmt.Errorf("error saving revoked certificate to new location")
 	}
-	sc.Backend.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
+	sc.Backend.ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 
 	// If this flag is enabled after the fact, existing local entries will be published to
 	// the unified storage space through a periodic function.
@@ -2074,4 +2074,10 @@ WRITE:
 	}
 
 	return &nextUpdate, nil
+}
+
+// shouldLocalPathsUseUnified assuming a legacy path for a CRL/OCSP request, does our
+// configuration say we should be returning the unified response or not
+func shouldLocalPathsUseUnified(cfg *crlConfig) bool {
+	return cfg.UnifiedCRL && cfg.UnifiedCRLOnExistingPaths
 }

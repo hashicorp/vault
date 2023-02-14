@@ -144,7 +144,6 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"unseal",
 				"leader",
 				"health",
-				"experiments",
 				"generate-root/attempt",
 				"generate-root/update",
 				"rekey/init",
@@ -4609,7 +4608,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 							Type:    "string",
 							Default: strings.TrimRight(mount, "/"),
 						},
-						Required: false,
+						Required: true,
 					})
 				}
 

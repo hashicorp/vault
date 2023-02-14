@@ -1,7 +1,13 @@
-import FetchConfigRoute from '../fetch-config';
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { withConfig } from 'kubernetes/decorators/fetch-config';
 import { hash } from 'rsvp';
 
-export default class KubernetesRolesRoute extends FetchConfigRoute {
+@withConfig()
+export default class KubernetesRolesRoute extends Route {
+  @service store;
+  @service secretMountPath;
+
   model(params, transition) {
     // filter roles based on pageFilter value
     const { pageFilter } = transition.to.queryParams;
@@ -12,10 +18,15 @@ export default class KubernetesRolesRoute extends FetchConfigRoute {
           ? models.filter((model) => model.name.toLowerCase().includes(pageFilter.toLowerCase()))
           : models
       )
-      .catch(() => []);
+      .catch((error) => {
+        if (error.httpStatus === 404) {
+          return [];
+        }
+        throw error;
+      });
     return hash({
       backend: this.modelFor('application'),
-      config: this.configModel,
+      promptConfig: this.promptConfig,
       roles,
     });
   }

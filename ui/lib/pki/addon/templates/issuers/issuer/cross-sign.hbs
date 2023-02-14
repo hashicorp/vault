@@ -21,7 +21,7 @@
       <ol class="has-left-margin-m has-bottom-margin-s">
         <li>You identify which intermediates need to be cross-signed.</li>
         <li>The new CSR for your intermediate(s) will be generated.</li>
-        <li>The CSR is signed with the root <strong>{{this.model.issuerName}}</strong>.</li>
+        <li>The CSR is signed with the root <strong>{{this.model.issuerRef}}</strong>.</li>
         <li>Your new intermediate(s) are imported into any existing mount(s).</li>
       </ol>
       Then, you can begin re-issuing leaf certs and phase out the old root.

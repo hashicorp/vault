@@ -13,9 +13,11 @@ const issuerUrls = ['issuingCertificates', 'crlDistributionPoints', 'ocspServers
         'caChain',
         'commonName',
         'issuerName',
+        'issuerId',
         'serialNumber',
         'keyId',
         'uriSans',
+        'ipSans',
         'notValidBefore',
         'notValidAfter',
       ],
@@ -30,6 +32,10 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
     return false;
   }
 
+  get issuerRef() {
+    return this.issuerName || this.issuerId;
+  }
+
   @attr isDefault; // readonly
   @attr('string') issuerId;
 
@@ -37,11 +43,6 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
     label: 'Default key ID',
   })
   keyId;
-
-  @attr({
-    label: 'Subject Alternative Names',
-  })
-  uriSans;
 
   @attr('string') issuerName;
 
@@ -57,7 +58,7 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
 
   @attr({
     label: 'Usage',
-    subText: 'Allowed usages for this issuer. It can always be read',
+    subText: 'Allowed usages for this issuer. It can always be read.',
     editType: 'yield',
     valueOptions: [
       { label: 'Issuing certificates', value: 'issuing-certificates' },
@@ -85,12 +86,14 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   @attr('string', {
     label: 'CRL distribution points',
     subText: 'Specifies the URL values for the CRL Distribution Points field.',
+    editType: 'stringArray',
   })
   crlDistributionPoints;
 
   @attr('string', {
     label: 'OCSP servers',
     subText: 'Specifies the URL values for the OCSP Servers field.',
+    editType: 'stringArray',
   })
   ocspServers;
 

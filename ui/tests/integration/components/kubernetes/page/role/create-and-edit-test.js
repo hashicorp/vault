@@ -305,4 +305,46 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     assert.ok(rollbackSpy.calledOnce, 'Attributes are rolled back for existing model on cancel');
     assert.ok(this.transitionCalledWith('roles'), 'Transitions to roles list on cancel');
   });
+
+  test('it should check for form errors', async function (assert) {
+    await render(
+      hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}}/>`,
+      { owner: this.engine }
+    );
+    await click('[data-test-radio-card="basic"]');
+    await click('[data-test-save]');
+    assert
+      .dom('[data-test-input="name"]')
+      .hasClass('has-error-border', 'shows border error on input with error');
+    assert.dom('[data-test-inline-error-message]').hasText('Name is required');
+    assert
+      .dom('[data-test-invalid-form-alert] [data-test-inline-error-message]')
+      .hasText('There is an error with this form.');
+  });
+
+  test('it should save edited role with correct properties', async function (assert) {
+    assert.expect(1);
+
+    this.role = this.getRole();
+
+    this.server.post('/kubernetes-test/roles/:name', (schema, req) => {
+      const data = JSON.parse(req.requestBody);
+      const expected = {
+        name: 'role-0',
+        service_account_name: 'demo',
+        kubernetes_role_type: 'Role',
+        allowed_kubernetes_namespaces: '*',
+        token_max_ttl: 86400,
+        token_default_ttl: 600,
+      };
+      assert.deepEqual(expected, data, 'POST request made to save role with correct properties');
+    });
+
+    await render(hbs`<Page::Role::CreateAndEdit @model={{this.role}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
+
+    await fillIn('[data-test-input="serviceAccountName"]', 'demo');
+    await click('[data-test-save]');
+  });
 });

@@ -5,6 +5,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-key-form';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import sinon from 'sinon';
 
 module('Integration | Component | pki key form', function (hooks) {
   setupRenderingTest(hooks);
@@ -17,6 +18,7 @@ module('Integration | Component | pki key form', function (hooks) {
     this.backend = 'pki-test';
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = this.backend;
+    this.onCancel = sinon.spy();
   });
 
   test('it should render fields and show validation messages', async function (assert) {
@@ -119,51 +121,5 @@ module('Integration | Component | pki key form', function (hooks) {
     assert.dom(SELECTORS.keyBitsInput).isDisabled('key bits disabled when no key type selected');
     await fillIn(SELECTORS.keyTypeInput, 'rsa');
     await click(SELECTORS.keyCreateButton);
-  });
-
-  test('it should rollback attributes or unload record on cancel', async function (assert) {
-    assert.expect(5);
-    this.onCancel = () => assert.ok(true, 'onCancel callback fires');
-    await render(
-      hbs`
-        <PkiKeyForm
-          @model={{this.model}}
-          @onCancel={{this.onCancel}}
-          @onSave={{this.onSave}}
-        />
-      `,
-      { owner: this.engine }
-    );
-
-    await click(SELECTORS.keyCancelButton);
-    assert.true(this.model.isDestroyed, 'new model is unloaded on cancel');
-
-    this.store.pushPayload('pki/key', {
-      modelName: 'pki/key',
-      key_name: 'test-key',
-      type: 'exported',
-      key_id: 'some-key-id',
-      key_type: 'rsa',
-      key_bits: '2048',
-    });
-    this.model = this.store.peekRecord('pki/key', 'some-key-id');
-
-    await render(
-      hbs`
-          <PkiKeyForm
-            @model={{this.model}}
-            @onCancel={{this.onCancel}}
-            @onSave={{this.onSave}}
-          />
-        `,
-      { owner: this.engine }
-    );
-
-    await fillIn(SELECTORS.keyNameInput, 'new-name');
-    await click(SELECTORS.keyCancelButton);
-    assert.strictEqual(this.model.keyName, 'test-key', 'Model name rolled back on cancel');
-    await fillIn(SELECTORS.keyNameInput, 'new-name');
-    await click(SELECTORS.keyCreateButton);
-    assert.strictEqual(this.model.keyName, 'new-name', 'Model name correctly save on create');
   });
 });

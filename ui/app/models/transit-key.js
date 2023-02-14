@@ -53,7 +53,6 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Name',
-    fieldValue: 'id',
     readOnly: true,
   }),
   autoRotatePeriod: attr({

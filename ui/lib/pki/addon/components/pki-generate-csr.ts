@@ -12,11 +12,11 @@ import errorMessage from 'vault/utils/error-message';
 interface Args {
   model: PkiActionModel;
   useIssuer: boolean;
-  onSave: CallableFunction;
+  onComplete: CallableFunction;
   onCancel: CallableFunction;
 }
 
-export default class PkiGenerateIntermediateComponent extends Component<Args> {
+export default class PkiGenerateCsrComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked modelValidations = null;
@@ -24,6 +24,8 @@ export default class PkiGenerateIntermediateComponent extends Component<Args> {
   @tracked alert: string | null = null;
 
   formFields;
+  // fields rendered after CSR generation
+  showFields = ['csr', 'keyId', 'privateKey', 'privateKeyType'];
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -32,6 +34,7 @@ export default class PkiGenerateIntermediateComponent extends Component<Args> {
       'commonName',
       'excludeCnFromSans',
       'format',
+      'privateKeyFormat',
       'serialNumber',
       'addBasicConstraints',
     ]);
@@ -57,13 +60,12 @@ export default class PkiGenerateIntermediateComponent extends Component<Args> {
   *save(event: Event): Generator<Promise<boolean | PkiActionModel>> {
     event.preventDefault();
     try {
-      const { model, onSave } = this.args;
+      const { model } = this.args;
       const { isValid, state, invalidFormMessage } = model.validate();
       if (isValid) {
         const useIssuer = yield this.getCapability();
         yield model.save({ adapterOptions: { actionType: 'generate-csr', useIssuer } });
         this.flashMessages.success('Successfully generated CSR.');
-        onSave();
       } else {
         this.modelValidations = state;
         this.alert = invalidFormMessage;

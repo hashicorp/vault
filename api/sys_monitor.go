@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-
-	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 // Monitor returns a channel that outputs strings containing the log messages
@@ -20,7 +18,7 @@ func (c *Sys) Monitor(ctx context.Context, logLevel string, logFormat string) (c
 		r.Params.Add("log_level", logLevel)
 	}
 
-	if logFormat == "" || logFormat == logging.UnspecifiedFormat.String() {
+	if logFormat == "" {
 		r.Params.Add("log_format", "standard")
 	} else {
 		r.Params.Add("log_format", logFormat)

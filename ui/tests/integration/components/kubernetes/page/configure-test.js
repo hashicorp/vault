@@ -202,4 +202,43 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       );
     await click('[data-test-config-confirm]');
   });
+
+  test('it should validate form and show errors', async function (assert) {
+    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
+
+    await click('[data-test-radio-card="manual"]');
+    await click('[data-test-config-save]');
+
+    assert
+      .dom('[data-test-inline-error-message]')
+      .hasText('Kubernetes host is required', 'Error renders for required field');
+    assert.dom('[data-test-alert] p').hasText('There is an error with this form.', 'Alert renders');
+  });
+
+  test('it should save inferred config', async function (assert) {
+    assert.expect(2);
+
+    this.server.get('/:path/check', () => new Response(204, {}));
+    this.server.post('/:path/config', (schema, req) => {
+      const json = JSON.parse(req.requestBody);
+      assert.deepEqual(json, { disable_local_ca_jwt: false }, 'Values are passed to create endpoint');
+      return new Response(204, {});
+    });
+
+    const stub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+
+    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
+
+    await click('[data-test-config] button');
+    await click('[data-test-config-save]');
+
+    assert.ok(
+      stub.calledWith('vault.cluster.secrets.backend.kubernetes.configuration'),
+      'Transitions to configuration route on save success'
+    );
+  });
 });

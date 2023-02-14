@@ -357,3 +357,17 @@ func waitForUpdatedCrlUntil(t *testing.T, client *api.Client, crlPath string, la
 		time.Sleep(100 * time.Millisecond)
 	}
 }
+
+// A quick CRL to string to provide better test error messages
+func summarizeCrl(t *testing.T, crl pkix.TBSCertificateList) string {
+	version := getCRLNumber(t, crl)
+	serials := []string{}
+	for _, cert := range crl.RevokedCertificates {
+		serials = append(serials, normalizeSerialFromBigInt(cert.SerialNumber))
+	}
+	return fmt.Sprintf("CRL Version: %d\n"+
+		"This Update: %s\n"+
+		"Next Update: %s\n"+
+		"Revoked Serial Count: %d\n"+
+		"Revoked Serials: %v", version, crl.ThisUpdate, crl.NextUpdate, len(serials), serials)
+}

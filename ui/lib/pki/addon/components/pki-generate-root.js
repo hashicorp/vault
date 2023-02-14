@@ -39,6 +39,7 @@ export default class PkiGenerateRootComponent extends Component {
       'customTtl',
       'notBeforeDuration',
       'format',
+      'privateKeyFormat',
       'permittedDnsDomains',
       'maxPathLength',
     ];
