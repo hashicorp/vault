@@ -133,7 +133,6 @@ func GetResponseSchema(t *testing.T, path *framework.Path, operation logical.Ope
 //
 // [vault.TestCluster]: https://pkg.go.dev/github.com/hashicorp/vault/vault#TestCluster
 func ResponseValidatingCallback(t *testing.T) func(logical.Backend, *logical.Request, *logical.Response) {
-
 	type PathRouter interface {
 		Route(string) *framework.Path
 	}
