@@ -275,8 +275,6 @@ func TestExternalPlugin_Database(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// TODO: revoke lease
-
 	// loop to mount 5 database connections that will each share a single
 	// plugin process
 	for i := 0; i < 5; i++ {
@@ -349,6 +347,26 @@ func TestExternalPlugin_Database(t *testing.T) {
 			t.Fatal("read creds response is nil")
 		}
 
+		revokeLease := resp.LeaseID
+		// Lookup - expect SUCCESS
+		resp, err = client.Sys().Lookup(revokeLease)
+		if err != nil {
+			t.Fatalf("lease lookup response is nil")
+		}
+
+		// Revoke
+		if err = client.Sys().Revoke(revokeLease); err != nil {
+			t.Fatal(err)
+		}
+
+		// Reset root token
+		client.SetToken(cluster.RootToken)
+
+		// Lookup - expect FAILURE
+		resp, err = client.Sys().Lookup(revokeLease)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
 	}
 
 	// Deregister
