@@ -273,7 +273,7 @@ func TestCalcSleepPeriod(t *testing.T) {
 			random:    r,
 		}
 
-		lw.calculateGrace(leaseDuration, time.Duration(increment))
+		lw.calculateGrace(remainingLeaseDuration, time.Duration(increment))
 
 		// ensure that we sleep for less than the remaining lease.
 		return lw.calculateSleepDuration(remainingLeaseDuration, priorDuration) < remainingLeaseDuration
