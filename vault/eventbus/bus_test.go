@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// TestBusBasics tests that basic event sending and subscribing function.
 func TestBusBasics(t *testing.T) {
 	bus, err := NewEventBus(nil)
 	if err != nil {
@@ -63,6 +64,7 @@ func TestBusBasics(t *testing.T) {
 	}
 }
 
+// TestNamespaceFiltering verifies that events for other namespaces are filtered out by the bus.
 func TestNamespaceFiltering(t *testing.T) {
 	bus, err := NewEventBus(nil)
 	if err != nil {
@@ -122,6 +124,7 @@ func TestNamespaceFiltering(t *testing.T) {
 	}
 }
 
+// TestBus2Subscriptions verifies that events of different types are successfully routed to the correct subscribers.
 func TestBus2Subscriptions(t *testing.T) {
 	bus, err := NewEventBus(nil)
 	if err != nil {
@@ -182,6 +185,7 @@ func TestBus2Subscriptions(t *testing.T) {
 	}
 }
 
+// TestBusSubscriptionsCancel verifies that canceled subscriptions are cleaned up.
 func TestBusSubscriptionsCancel(t *testing.T) {
 	subscriptions.Store(0)
 	bus, err := NewEventBus(nil)
@@ -255,6 +259,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 	waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() == int64(cancel) })
 }
 
+// TestBusSubscriptionsBreak verifies that timed out subscriptions are cleaned up.
 func TestBusSubscriptionsBreak(t *testing.T) {
 	subscriptions.Store(0)
 	bus, err := NewEventBus(nil)
