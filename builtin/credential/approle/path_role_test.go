@@ -2696,3 +2696,62 @@ func TestAppRole_SecretID_WithTTL(t *testing.T) {
 		})
 	}
 }
+
+func TestAppRole_RoleSecretIDAccessorCrossDelete(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	// Create First Role
+	createRole(t, b, storage, "role1", "a,b")
+	_ = b.requestNoErr(t, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role1/secret-id",
+	})
+
+	// Create Second Role
+	createRole(t, b, storage, "role2", "a,b")
+	_ = b.requestNoErr(t, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role2/secret-id",
+	})
+
+	// Get role2 secretID Accessor
+	resp = b.requestNoErr(t, &logical.Request{
+		Operation: logical.ListOperation,
+		Storage:   storage,
+		Path:      "role/role2/secret-id",
+	})
+
+	// Read back role2 secretID Accessor information
+	hmacSecretID := resp.Data["keys"].([]string)[0]
+	_ = b.requestNoErr(t, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role2/secret-id-accessor/lookup",
+		Data: map[string]interface{}{
+			"secret_id_accessor": hmacSecretID,
+		},
+	})
+
+	// Attempt to destroy role2 secretID accessor using role1 path
+	_ = b.requestNoErr(t, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role1/secret-id-accessor/destroy",
+		Data: map[string]interface{}{
+			"secret_id_accessor": hmacSecretID,
+		},
+	})
+
+	// Check to see if role2 secretID accessor was deleted
+	accessorHashes, err := storage.List(context.Background(), "accessor/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(accessorHashes) != 2 {
+		t.Fatalf("unexpected accessor deletion; expected 2 accessors, got %d", len(accessorHashes))
+	}
+}
