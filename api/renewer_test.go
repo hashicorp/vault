@@ -248,23 +248,16 @@ func TestCalcSleepPeriod(t *testing.T) {
 	c := quick.Config{
 		MaxCount: 1000,
 		Values: func(values []reflect.Value, r *rand.Rand) {
-			// total lease duration
 			leaseDuration := r.Intn(math.MaxInt64)
-			priorDuration := r.Intn(leaseDuration)
-			remainingLeaseDuration := r.Intn(priorDuration)
-			increment := r.Intn(remainingLeaseDuration)
+			remainingLeaseDuration := r.Intn(leaseDuration)
+			priorDuration := remainingLeaseDuration
+			increment := r.Intn(leaseDuration + 1)
 
 			values[0] = reflect.ValueOf(r)
 			values[1] = reflect.ValueOf(time.Duration(leaseDuration))
-
-			// prior lease duration
 			values[2] = reflect.ValueOf(time.Duration(priorDuration))
-			// remaining lease duration
 			values[3] = reflect.ValueOf(time.Duration(remainingLeaseDuration))
-
-			// increment
-			// integer truncation... could be interesting.
-			values[4] = reflect.ValueOf(increment)
+			values[4] = reflect.ValueOf(increment) // integer truncation... could be interesting.
 		},
 	}
 
@@ -280,7 +273,7 @@ func TestCalcSleepPeriod(t *testing.T) {
 			random:    r,
 		}
 
-		lw.calculateGrace(leaseDuration, time.Duration(increment))
+		lw.calculateGrace(remainingLeaseDuration, time.Duration(increment))
 
 		// ensure that we sleep for less than the remaining lease.
 		return lw.calculateSleepDuration(remainingLeaseDuration, priorDuration) < remainingLeaseDuration
