@@ -22,29 +22,11 @@ import (
 // TestExternalPlugin_AuthMethod tests that we can build, register and use an
 // external auth method
 func TestExternalPlugin_AuthMethod(t *testing.T) {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
-	coreConfig := &vault.CoreConfig{
-		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
-		PluginDirectory: pluginDir,
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		Plugins: &vault.TestPluginConfig{
-			Typ:      consts.PluginTypeCredential,
-			Versions: []string{""},
-		},
-		HandlerFunc: vaulthttp.Handler,
-	})
-	plugin := cluster.Plugins[0]
-
-	cluster.Start()
+	cluster := getCluster(t, consts.PluginTypeCredential)
 	defer cluster.Cleanup()
 
+	plugin := cluster.Plugins[0]
 	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
 	client := cores[0].Client
 	client.SetToken(cluster.RootToken)
 
@@ -161,29 +143,11 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 // TestExternalPlugin_SecretsEngine tests that we can build, register and use an
 // external secrets engine
 func TestExternalPlugin_SecretsEngine(t *testing.T) {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
-	coreConfig := &vault.CoreConfig{
-		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
-		PluginDirectory: pluginDir,
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		Plugins: &vault.TestPluginConfig{
-			Typ:      consts.PluginTypeSecrets,
-			Versions: []string{""},
-		},
-		HandlerFunc: vaulthttp.Handler,
-	})
-	plugin := cluster.Plugins[0]
-
-	cluster.Start()
+	cluster := getCluster(t, consts.PluginTypeSecrets)
 	defer cluster.Cleanup()
 
+	plugin := cluster.Plugins[0]
 	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
 	client := cores[0].Client
 	client.SetToken(cluster.RootToken)
 
@@ -258,9 +222,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	}
 }
 
-// TestExternalPlugin_Database tests that we can build, register and use an
-// external database secrets engine
-func TestExternalPlugin_Database(t *testing.T) {
+func getCluster(t *testing.T, typ consts.PluginType) *vault.TestCluster {
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 	coreConfig := &vault.CoreConfig{
@@ -272,20 +234,26 @@ func TestExternalPlugin_Database(t *testing.T) {
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		Plugins: &vault.TestPluginConfig{
-			Typ:      consts.PluginTypeDatabase,
+			Typ:      typ,
 			Versions: []string{""},
 		},
 		HandlerFunc: vaulthttp.Handler,
 	})
-	plugin := cluster.Plugins[0]
 
 	cluster.Start()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	return cluster
+}
+
+// TestExternalPlugin_Database tests that we can build, register and use an
+// external database secrets engine
+func TestExternalPlugin_Database(t *testing.T) {
+	cluster := getCluster(t, consts.PluginTypeDatabase)
 	defer cluster.Cleanup()
 
+	plugin := cluster.Plugins[0]
 	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
 	client := cores[0].Client
 	client.SetToken(cluster.RootToken)
 
