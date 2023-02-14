@@ -32,6 +32,12 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       { label: 'kubernetes', route: 'overview' },
       { label: 'configure' },
     ];
+    this.expectedInferred = {
+      disable_local_ca_jwt: false,
+      kubernetes_ca_cert: null,
+      kubernetes_host: null,
+      service_account_jwt: null,
+    };
   });
 
   test('it should display proper options when toggling radio cards', async function (assert) {
@@ -223,7 +229,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     this.server.get('/:path/check', () => new Response(204, {}));
     this.server.post('/:path/config', (schema, req) => {
       const json = JSON.parse(req.requestBody);
-      assert.deepEqual(json, { disable_local_ca_jwt: false }, 'Values are passed to create endpoint');
+      assert.deepEqual(json, this.expectedInferred, 'Values are passed to create endpoint');
       return new Response(204, {});
     });
 
@@ -240,5 +246,29 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       stub.calledWith('vault.cluster.secrets.backend.kubernetes.configuration'),
       'Transitions to configuration route on save success'
     );
+  });
+
+  test('it should unset manual config values when saving local cluster option', async function (assert) {
+    assert.expect(1);
+
+    this.server.get('/:path/check', () => new Response(204, {}));
+    this.server.post('/:path/config', (schema, req) => {
+      const json = JSON.parse(req.requestBody);
+      assert.deepEqual(json, this.expectedInferred, 'Manual config values are unset in server payload');
+      return new Response(204, {});
+    });
+
+    await render(hbs`<Page::Configure @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
+
+    await click('[data-test-radio-card="manual"]');
+    await fillIn('[data-test-input="kubernetesHost"]', this.existingConfig.kubernetes_host);
+    await fillIn('[data-test-input="serviceAccountJwt"]', this.existingConfig.service_account_jwt);
+    await fillIn('[data-test-input="kubernetesCaCert"]', this.existingConfig.kubernetes_ca_cert);
+
+    await click('[data-test-radio-card="local"]');
+    await click('[data-test-config] button');
+    await click('[data-test-config-save]');
   });
 });
