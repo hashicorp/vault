@@ -71,13 +71,17 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 
 	dir := ""
 	var err error
+	pluginRootDir := "builtin"
+	if typ == consts.PluginTypeDatabase {
+		pluginRootDir = "plugins"
+	}
 	for {
 		dir, err = os.Getwd()
 		if err != nil {
 			t.Fatal(err)
 		}
 		// detect if we are in a subdirectory or the root directory and compensate
-		if _, err := os.Stat("builtin"); os.IsNotExist(err) {
+		if _, err := os.Stat(pluginRootDir); os.IsNotExist(err) {
 			err := os.Chdir("..")
 			if err != nil {
 				t.Fatal(err)
