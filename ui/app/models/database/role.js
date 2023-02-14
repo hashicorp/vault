@@ -1,6 +1,6 @@
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { alias, or } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { getRoleFields } from 'vault/utils/database-helpers';
@@ -129,7 +129,7 @@ export default Model.extend({
   canCreateStatic: alias('staticPath.canCreate'),
   credentialPath: lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id'),
   staticCredentialPath: lazyCapabilities(apiPath`${'backend'}/static-creds/${'id'}`, 'backend', 'id'),
-  canGenerateCredentials: alias('credentialPath.canRead'),
+  canGenerateCredentials: or('credentialPath.canRead', 'staticCredentialPath.canRead'),
   canGetCredentials: alias('staticCredentialPath.canRead'),
   databasePath: lazyCapabilities(apiPath`${'backend'}/config/${'database[0]'}`, 'backend', 'database'),
   canUpdateDb: alias('databasePath.canUpdate'),
