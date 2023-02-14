@@ -58,7 +58,7 @@ kubectl exec -ti vault-primary-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-primary-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-primary-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----
@@ -109,7 +109,7 @@ kubectl exec -ti vault-secondary-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-secondary-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-secondary-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----
