@@ -105,7 +105,6 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	if resp.Auth.BoundCIDRs[0].String() != "10.0.0.0/24" {
 		t.Fatalf("bad: %s", resp.Auth.BoundCIDRs[0].String())
 	}
-
 }
 
 func TestAppRole_RoleLogin(t *testing.T) {
