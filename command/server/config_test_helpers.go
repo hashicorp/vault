@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -655,13 +654,7 @@ func testLoadConfigFile_json(t *testing.T) {
 }
 
 func testLoadConfigDir(t *testing.T) {
-	path := "./test-fixtures/config-dir"
-	f, err := os.Open("./test-fixtures/config-dir")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	defer f.Close()
-	config, err := LoadConfigDir(f, path)
+	config, err := LoadConfigDir("./test-fixtures/config-dir")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

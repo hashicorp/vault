@@ -476,7 +476,7 @@ func LoadConfig(path string) (*Config, error) {
 				return nil, err
 			}
 		}
-		return CheckConfig(LoadConfigDir(f, path))
+		return CheckConfig(LoadConfigDir(path))
 	}
 	return CheckConfig(LoadConfigFile(path))
 }
@@ -805,7 +805,13 @@ func mergeExperiments(left, right []string) []string {
 
 // LoadConfigDir loads all the configurations in the given directory
 // in alphabetical order.
-func LoadConfigDir(f *os.File, dir string) (*Config, error) {
+func LoadConfigDir(dir string) (*Config, error) {
+	f, err := os.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	defer f.Close()
 	fi, err := f.Stat()
 	if err != nil {
 		return nil, err
