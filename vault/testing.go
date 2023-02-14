@@ -1187,7 +1187,7 @@ type TestClusterOptions struct {
 
 	Plugins *TestPluginConfig
 
-	// if populated, is called for every request
+	// if populated, the callback is called for every request
 	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
 }
 
