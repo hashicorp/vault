@@ -19,6 +19,30 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
+func getCluster(t *testing.T, typ consts.PluginType) *vault.TestCluster {
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+	coreConfig := &vault.CoreConfig{
+		PluginDirectory: pluginDir,
+		LogicalBackends: map[string]logical.Factory{
+			"database": database.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		Plugins: &vault.TestPluginConfig{
+			Typ:      typ,
+			Versions: []string{""},
+		},
+		HandlerFunc: vaulthttp.Handler,
+	})
+
+	cluster.Start()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	return cluster
+}
+
 // TestExternalPlugin_AuthMethod tests that we can build, register and use an
 // external auth method
 func TestExternalPlugin_AuthMethod(t *testing.T) {
@@ -222,30 +246,6 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	}
 }
 
-func getCluster(t *testing.T, typ consts.PluginType) *vault.TestCluster {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
-	coreConfig := &vault.CoreConfig{
-		PluginDirectory: pluginDir,
-		LogicalBackends: map[string]logical.Factory{
-			"database": database.Factory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		Plugins: &vault.TestPluginConfig{
-			Typ:      typ,
-			Versions: []string{""},
-		},
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
-
-	return cluster
-}
-
 // TestExternalPlugin_Database tests that we can build, register and use an
 // external database secrets engine
 func TestExternalPlugin_Database(t *testing.T) {
@@ -275,49 +275,80 @@ func TestExternalPlugin_Database(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Configure
-	cleanupContainer, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
-	defer cleanupContainer()
+	// TODO: revoke lease
 
-	_, err := client.Logical().Write("database/config/test-postgres", map[string]interface{}{
-		"connection_url": connURL,
-		"plugin_name":    plugin.Name,
-		"allowed_roles":  []string{"test-role"},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	// loop to mount 5 database connections that will each share a single
+	// plugin process
+	for i := 0; i < 5; i++ {
+		dbName := fmt.Sprintf("%s-%d", plugin.Name, i)
+		roleName := "test-role-" + dbName
 
-	_, err = client.Logical().Write("database/roles/test-role", map[string]interface{}{
-		"db_name":             "test-postgres",
-		"creation_statements": testRole,
-		"max_ttl":             "10m",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+		cleanupContainer, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background(), "13.4-buster")
+		defer cleanupContainer()
 
-	resp, err := client.Logical().Read("database/creds/test-role")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("read creds response is nil")
-	}
+		_, err := client.Logical().Write("database/config/"+dbName, map[string]interface{}{
+			"connection_url": connURL,
+			"plugin_name":    plugin.Name,
+			"allowed_roles":  []string{roleName},
+			"username":       "vaultadmin",
+			"password":       "vaultpass",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// Reload plugin
-	if _, err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
-		Plugin: plugin.Name,
-	}); err != nil {
-		t.Fatal(err)
-	}
+		_, err = client.Logical().Write("database/rotate-root/"+dbName, map[string]interface{}{})
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	resp, err = client.Logical().Read("database/creds/test-role")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("read creds response is nil")
+		_, err = client.Logical().Write("database/roles/"+roleName, map[string]interface{}{
+			"db_name":             dbName,
+			"creation_statements": testRole,
+			"max_ttl":             "10m",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Generate credentials
+		resp, err := client.Logical().Read("database/creds/" + roleName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("read creds response is nil")
+		}
+
+		_, err = client.Logical().Write("database/reset/"+dbName, map[string]interface{}{})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Generate credentials
+		resp, err = client.Logical().Read("database/creds/" + roleName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("read creds response is nil")
+		}
+
+		// Reload plugin
+		if _, err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
+			Plugin: plugin.Name,
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		resp, err = client.Logical().Read("database/creds/" + roleName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("read creds response is nil")
+		}
+
 	}
 
 	// Deregister
