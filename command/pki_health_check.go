@@ -135,7 +135,7 @@ default unless enabled by the configuration file explicitly.`,
 		Default: false,
 		EnvVar:  "",
 		Usage: `When specified, no health checks are run, but all known health
-checks are printed. Still requires a positional mount argument.`,
+checks are printed.`,
 	})
 
 	return set
@@ -198,7 +198,7 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 
 	// When listing is enabled, we lack an argument here, but do not contact
 	// the server at all, so we're safe to use a hard-coded default here.
-	pkiPath := "pki"
+	pkiPath := "<mount>"
 	if len(args) == 1 {
 		pkiPath = args[0]
 	}
