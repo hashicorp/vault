@@ -7,7 +7,7 @@ import authForm from 'vault/tests/pages/components/auth-form';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { visit, settled, currentURL } from '@ember/test-helpers';
-import { clearRecord } from 'vault/tests/helpers/oidc-config';
+import { clearRecord } from 'vault/tests/helpers/test-cleanup';
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
 

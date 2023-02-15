@@ -9,10 +9,10 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
+import { clearRecord } from 'vault/tests/helpers/test-cleanup';
 import {
   OIDC_BASE_URL, // -> '/vault/access/oidc'
   SELECTORS,
-  clearRecord,
   overrideCapabilities,
   overrideMirageResponse,
   ASSIGNMENT_LIST_RESPONSE,

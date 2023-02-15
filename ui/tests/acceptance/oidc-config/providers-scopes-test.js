@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, typeIn, findAll, currentRouteName } from '@ember/test-helpers';
+import { visit, currentURL, click, typeIn, findAll, currentRouteName, fillIn } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -9,6 +9,7 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
+import { clearRecord } from 'vault/tests/helpers/test-cleanup';
 import {
   OIDC_BASE_URL,
   SELECTORS,
@@ -17,7 +18,6 @@ import {
   SCOPE_DATA_RESPONSE,
   PROVIDER_LIST_RESPONSE,
   PROVIDER_DATA_RESPONSE,
-  clearRecord,
   overrideCapabilities,
   overrideMirageResponse,
 } from 'vault/tests/helpers/oidc-config';
@@ -207,7 +207,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.scope.edit',
       'navigates to edit page from details'
     );
-    await typeIn('[data-test-input="description"]', 'this is an edit test');
+    await fillIn('[data-test-input="description"]', 'this is an edit test');
     await click(SELECTORS.scopeSaveButton);
     assert.strictEqual(
       flashMessage.latestMessage,
