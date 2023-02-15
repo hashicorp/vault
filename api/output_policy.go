@@ -93,7 +93,6 @@ func fmtOutput(path string, capabilities []string) string {
 	capStr := strings.Join(capabilities, `", "`)
 	return fmt.Sprintf(
 		`path "%s" {
-  			capabilities = ["%s"]
-		}`,
-		path, capStr)
+  capabilities = ["%s"]
+}`, path, capStr)
 }
