@@ -243,22 +243,17 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 		if eventRecv.Namespace != node.namespace.Path {
 			return
 		}
+		var timeout bool
 		select {
 		case node.ch <- eventRecv:
 		case <-ctx.Done():
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				node.logger.Info("Node took too long to respond, closing")
-				node.Close()
-				return
-			}
-			return
+			timeout = errors.Is(ctx.Err(), context.DeadlineExceeded)
 		case <-node.ctx.Done():
-			if errors.Is(node.ctx.Err(), context.DeadlineExceeded) {
-				node.logger.Info("Node took too long to respond, closing")
-				node.Close()
-				return
-			}
-			return
+			timeout = errors.Is(node.ctx.Err(), context.DeadlineExceeded)
+		}
+		if timeout {
+			node.logger.Info("Subscriber took too long to process event, closing", "ID", eventRecv.Event.ID())
+			node.Close()
 		}
 	}()
 	return e, nil
