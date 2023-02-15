@@ -531,7 +531,7 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 								Required:    false,
 							},
 							"revocation_time_rfc3339": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeTime,
 								Description: `RFC formatted time of revocation`,
 								Required:    false,
 							},
