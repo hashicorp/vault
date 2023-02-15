@@ -45,6 +45,9 @@ func TestBusBasics(t *testing.T) {
 	}
 	defer cancel()
 
+	// clear the first message out the channel
+	<-ch
+
 	event, err = logical.NewEvent()
 	if err != nil {
 		t.Fatal(err)
@@ -272,6 +275,49 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() == int64(create-stop) })
 		})
 	}
+}
+
+// TestBusEventReplay verifies that recent events are replayed to new subscribers.
+func TestBusEventReplay(t *testing.T) {
+	bus, err := NewEventBus(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bus.Start()
+	ctx := context.Background()
+
+	eventType := logical.EventType("someType")
+
+	const numEvents = 5
+
+	for i := 0; i < numEvents; i++ {
+		event, err := logical.NewEvent()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+		if err != nil {
+			t.Errorf("Expected no error sending: %v", err)
+		}
+	}
+
+	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+	// we should get the replayed events
+
+	received := atomic.Int32{}
+
+	go func() {
+		for {
+			<-ch
+			received.Add(1)
+		}
+	}()
+	waitFor(t, 1*time.Second, func() bool { return received.Load() == numEvents })
 }
 
 // waitFor waits for a condition to be true, up to the maximum timeout.

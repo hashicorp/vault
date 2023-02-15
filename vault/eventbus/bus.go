@@ -3,6 +3,7 @@ package eventbus
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/gammazero/deque"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
 	"github.com/hashicorp/go-hclog"
@@ -24,8 +26,9 @@ const (
 	// eventTypeAll is purely internal to the event bus. We use it to send all
 	// events down one big firehose, and pipelines define their own filtering
 	// based on what each subscriber is interested in.
-	eventTypeAll   = "*"
-	defaultTimeout = 60 * time.Second
+	eventTypeAll     = "*"
+	defaultTimeout   = 60 * time.Second
+	recentEventsSize = 32 // TODO: benchmark
 )
 
 var (
@@ -37,11 +40,13 @@ var (
 // EventBus contains the main logic of running an event broker for Vault.
 // Start() must be called before the EventBus will accept events for sending.
 type EventBus struct {
-	logger          hclog.Logger
-	broker          *eventlogger.Broker
-	started         atomic.Bool
-	formatterNodeID eventlogger.NodeID
-	timeout         time.Duration
+	logger           hclog.Logger
+	broker           *eventlogger.Broker
+	started          atomic.Bool
+	formatterNodeID  eventlogger.NodeID
+	timeout          time.Duration
+	recentEventsLock sync.RWMutex
+	recentEvents     *deque.Deque[*logical.EventReceived] // TODO: keep a separate LRU deque per eventType, but garbage collect them ourselves
 }
 
 type pluginEventBus struct {
@@ -107,9 +112,11 @@ func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, 
 		// if no listeners for this event type are registered, that's okay, the event
 		// will just not be sent anywhere
 		if strings.Contains(strings.ToLower(err.Error()), "no graph for eventtype") {
+			bus.addEventToReplayBuffer(eventReceived)
 			return nil
 		}
 	}
+	bus.addEventToReplayBuffer(eventReceived)
 	return err
 }
 
@@ -166,6 +173,7 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 		broker:          broker,
 		formatterNodeID: formatterNodeID,
 		timeout:         defaultTimeout,
+		recentEvents:    deque.New[*logical.EventReceived](recentEventsSize, recentEventsSize),
 	}, nil
 }
 
@@ -217,7 +225,39 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pat
 	// add info needed to cancel the subscription
 	asyncNode.pipelineID = eventlogger.PipelineID(pipelineID)
 	asyncNode.cancelFunc = cancel
+	go bus.replayEvents(asyncNode)
 	return asyncNode.ch, asyncNode.Close, nil
+}
+
+func (bus *EventBus) copyRecentEvents() []*logical.EventReceived {
+	bus.recentEventsLock.RLock()
+	defer bus.recentEventsLock.RUnlock()
+
+	events := make([]*logical.EventReceived, bus.recentEvents.Len(), bus.recentEvents.Len())
+	for i := 0; i < bus.recentEvents.Len(); i++ {
+		events[i] = bus.recentEvents.At(i)
+	}
+	return events
+}
+
+func (bus *EventBus) replayEvents(node *asyncChanNode) {
+	//  we don't want to hold the lock while we send to the channel, so copy the event pointers first
+	events := bus.copyRecentEvents()
+	bus.logger.Info(fmt.Sprintf("Replaying %d events for %v subscriber", len(events), node.pipelineID))
+	for _, event := range events {
+		node.ch <- event
+	}
+}
+
+func (bus *EventBus) addEventToReplayBuffer(event *logical.EventReceived) {
+	bus.recentEventsLock.Lock()
+	defer bus.recentEventsLock.Unlock()
+	bus.logger.Info("Adding event", "len", bus.recentEvents.Len(), "cap", bus.recentEvents.Cap())
+	// pop the oldest if we are at capacity
+	if bus.recentEvents.Len() >= bus.recentEvents.Cap() {
+		bus.recentEvents.PopBack()
+	}
+	bus.recentEvents.PushFront(event)
 }
 
 // SetSendTimeout sets the timeout of sending events. If the events are not accepted by the
@@ -282,7 +322,7 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 			timeout = errors.Is(node.ctx.Err(), context.DeadlineExceeded)
 		}
 		if timeout {
-			node.logger.Info("Subscriber took too long to process event, closing", "ID", eventRecv.Event.ID())
+			node.logger.Info("Subscriber took too long to process event, closing", "event", eventRecv.Event.ID(), "node", node.pipelineID)
 			node.Close()
 		}
 	}()
