@@ -221,7 +221,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 		go func(i int32) {
 			<-ch
 			received.Add(1)
-			for i < int32(cancel) {
+			if i < int32(cancel) {
 				<-ch
 				received.Add(1)
 			}
