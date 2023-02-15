@@ -768,6 +768,8 @@ func TestIssuerRevocation(t *testing.T) {
 
 	// Revoke it.
 	resp, err = CBWrite(b, s, "issuer/root2/revoke", map[string]interface{}{})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/root2/revoke"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotZero(t, resp.Data["revocation_time"])
@@ -798,7 +800,7 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a leaf cert and ensure it fails (because the issuer is revoked).
-	_, err = CBWrite(b, s, "issuer/root2/issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/root2/issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 	})
 	require.Error(t, err)
@@ -841,6 +843,8 @@ func TestIssuerRevocation(t *testing.T) {
 	resp, err = CBWrite(b, s, "issuer/int1/issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/int1/issue/local-testing"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["certificate"])
