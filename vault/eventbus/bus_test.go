@@ -225,8 +225,8 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 				<-ch
 				received.Add(1)
 			}
-			canceled.Add(1)
 			cancelFunc() // cancel explicitly to unsubscribe
+			canceled.Add(1)
 		}(int32(i))
 	}
 
