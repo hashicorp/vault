@@ -10,8 +10,6 @@ import (
 
 const (
 	ErrOutputPolicyRequest = "output a policy, please"
-
-	listKey = "list"
 )
 
 var LastOutputPolicyError *OutputPolicyError
@@ -51,8 +49,8 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 	operation := d.method
 	// List is often defined as a URL param instead of as an http.Method
 	// this will check for the header and properly switch off of the intended functionality
-	if d.params.Has(listKey) {
-		isList, err := strconv.ParseBool(d.params.Get(listKey))
+	if d.params.Has("list") {
+		isList, err := strconv.ParseBool(d.params.Get("list"))
 		if err != nil {
 			return "", fmt.Errorf("the value of the list url param is not a bool: %v", err)
 		}

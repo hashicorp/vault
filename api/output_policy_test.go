@@ -35,7 +35,7 @@ func TestBuildSamplePolicy(t *testing.T) {
 				method: http.MethodGet,
 				path:   "/something",
 				params: url.Values{
-					listKey: []string{"true"},
+					"list": []string{"true"},
 				},
 			},
 			fmtOutput("/something", []string{"list"}),
