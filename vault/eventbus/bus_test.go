@@ -2,6 +2,7 @@ package eventbus
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -187,151 +188,89 @@ func TestBus2Subscriptions(t *testing.T) {
 
 // TestBusSubscriptionsCancel verifies that canceled subscriptions are cleaned up.
 func TestBusSubscriptionsCancel(t *testing.T) {
-	subscriptions.Store(0)
-	bus, err := NewEventBus(nil)
-	if err != nil {
-		t.Fatal(err)
+	testCases := []struct {
+		cancel bool
+	}{
+		{cancel: true},
+		{cancel: false},
 	}
-	ctx := context.Background()
-	bus.Start()
 
-	// create and cancel a bunch of subscriptions
-	const create = 100
-	const cancel = 50
-
-	eventType := logical.EventType("someType")
-
-	var channels []<-chan *logical.EventReceived
-	var cancels []context.CancelFunc
-	stopped := atomic.Int32{}
-	canceled := atomic.Int32{}
-	stopped.Store(-1)
-
-	received := atomic.Int32{}
-
-	for i := 0; i < create; i++ {
-		ch, cancelFunc, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(cancelFunc)
-		channels = append(channels, ch)
-		cancels = append(cancels, cancelFunc)
-
-		go func(i int32) {
-			<-ch
-			received.Add(1)
-			if i < int32(cancel) {
-				<-ch
-				received.Add(1)
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("cancel=%v", tc.cancel), func(t *testing.T) {
+			subscriptions.Store(0)
+			bus, err := NewEventBus(nil)
+			if err != nil {
+				t.Fatal(err)
 			}
-			cancelFunc() // cancel explicitly to unsubscribe
-			canceled.Add(1)
-		}(int32(i))
-	}
-
-	// check that all channels receive a message
-	event, err := logical.NewEvent()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
-	if err != nil {
-		t.Error(err)
-	}
-	waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create) })
-
-	if canceled.Load() != int32(cancel) {
-		t.Errorf("Expected %d canceled goroutines, but got %d", cancel, canceled.Load())
-	}
-
-	// send another message, but half should stop receiving
-	event, err = logical.NewEvent()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
-	if err != nil {
-		t.Error(err)
-	}
-	waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create*2-cancel) })
-	// the sends should time out and the subscriptions should drop when the cancelFunc was called
-	waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() == int64(create-cancel) })
-}
-
-// TestBusSubscriptionsBreak verifies that timed out subscriptions are cleaned up.
-func TestBusSubscriptionsBreak(t *testing.T) {
-	subscriptions.Store(0)
-	bus, err := NewEventBus(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := context.Background()
-	// set the timeout very short to make the test faster
-	bus.SetSendTimeout(100 * time.Millisecond)
-	bus.Start()
-
-	// create and cancel a bunch of subscriptions
-	create := 100
-	cancel := 50
-
-	eventType := logical.EventType("someType")
-
-	var channels []<-chan *logical.EventReceived
-	var cancels []context.CancelFunc
-	stopped := atomic.Int32{}
-	canceled := atomic.Int32{}
-	stopped.Store(-1)
-
-	received := atomic.Int32{}
-
-	for i := 0; i < create; i++ {
-		ch, cancelFunc, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(cancelFunc)
-		channels = append(channels, ch)
-		cancels = append(cancels, cancelFunc)
-
-		go func(i int32) {
-			<-ch
-			received.Add(1)
-			for i < int32(cancel) {
-				<-ch
-				received.Add(1)
+			ctx := context.Background()
+			if !tc.cancel {
+				// set the timeout very short to make the test faster if we aren't canceling explicitly
+				bus.SetSendTimeout(100 * time.Millisecond)
 			}
-			canceled.Add(1)
-		}(int32(i))
-	}
+			bus.Start()
 
-	// check that all channels receive a message
-	event, err := logical.NewEvent()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
-	if err != nil {
-		t.Error(err)
-	}
-	waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create) })
+			// create and stop a bunch of subscriptions
+			const create = 100
+			const stop = 50
 
-	if canceled.Load() != int32(cancel) {
-		t.Errorf("Expected %d canceled goroutines, but got %d", cancel, canceled.Load())
-	}
+			eventType := logical.EventType("someType")
 
-	// send another message, but half should stop receiving
-	event, err = logical.NewEvent()
-	if err != nil {
-		t.Fatal(err)
+			var channels []<-chan *logical.EventReceived
+			var cancels []context.CancelFunc
+			stopped := atomic.Int32{}
+
+			received := atomic.Int32{}
+
+			for i := 0; i < create; i++ {
+				ch, cancelFunc, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(cancelFunc)
+				channels = append(channels, ch)
+				cancels = append(cancels, cancelFunc)
+
+				go func(i int32) {
+					<-ch // always receive one message
+					received.Add(1)
+					// continue receiving messages as long as are not stopped
+					for i < int32(stop) {
+						<-ch
+						received.Add(1)
+					}
+					if tc.cancel {
+						cancelFunc() // stop explicitly to unsubscribe
+					}
+					stopped.Add(1)
+				}(int32(i))
+			}
+
+			// check that all channels receive a message
+			event, err := logical.NewEvent()
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+			if err != nil {
+				t.Error(err)
+			}
+			waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create) })
+			waitFor(t, 1*time.Second, func() bool { return stopped.Load() == int32(stop) })
+
+			// send another message, but half should stop receiving
+			event, err = logical.NewEvent()
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+			if err != nil {
+				t.Error(err)
+			}
+			waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create*2-stop) })
+			// the sends should time out and the subscriptions should drop when cancelFunc is called or the context cancels
+			waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() == int64(create-stop) })
+		})
 	}
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
-	if err != nil {
-		t.Error(err)
-	}
-	waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create*2-cancel) })
-	// the sends should time out and the subscriptions should drop when the send context cancels
-	waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() == int64(cancel) })
 }
 
 // waitFor waits for a condition to be true, up to the maximum timeout.
