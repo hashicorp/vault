@@ -74,6 +74,11 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
 		}
 
+		rootPassword, ok := config.ConnectionDetails["password"].(string)
+		if !ok || rootPassword == "" {
+			return nil, fmt.Errorf("unable to rotate root credentials: no password in configuration")
+		}
+
 		dbi, err := b.GetConnection(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
