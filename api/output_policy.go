@@ -48,22 +48,22 @@ func (d *OutputPolicyError) HCLString() (string, error) {
 
 // Builds a sample policy document from the request
 func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
-	MethodStr := d.method
+	methodStr := d.method
 	// List is often defined as a URL param instead of as an http.Method
 	// this will check for the header and properly switch off of the intended functionality
 	if d.params.Has(listKey) {
 		isList, err := strconv.ParseBool(d.params.Get(listKey))
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("the value of the list url param is not a bool: ", err)
 		}
 
 		if isList {
-			MethodStr = "LIST"
+			methodStr = "LIST"
 		}
 	}
 
 	var capabilities []string
-	switch MethodStr {
+	switch methodStr {
 	case http.MethodGet, "":
 		capabilities = append(capabilities, "read")
 	case http.MethodPost, http.MethodPut:

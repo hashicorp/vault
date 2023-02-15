@@ -76,7 +76,8 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 					`This output flag requires the success of a preflight request 
 to determine the version of a KV secrets engine. Please 
 re-run this command with a token with read access to %s. 
-Note if this is a V2 path make sure that you have included data/ to your path.`, path)
+Note that if the path you are trying to reach is a KV v2 path, your token's policy must 
+allow read access to that path in the format 'mount-path/data/foo', not just 'mount-path/foo'.`, path)
 			}
 		}
 
