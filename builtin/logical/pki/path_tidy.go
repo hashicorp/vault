@@ -450,6 +450,14 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 								Type:     framework.TypeDurationSecond,
 								Required: true,
 							},
+							"publish_stored_certificate_count_metrics": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"maintain_stored_certificate_counts": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
 						},
 					}},
 				},
