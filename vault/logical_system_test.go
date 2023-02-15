@@ -248,6 +248,14 @@ func TestSystemBackend_mounts(t *testing.T) {
 		if diff := deep.Equal(resp.Data, conf); len(diff) > 0 {
 			t.Fatalf("bad, diff: %#v", diff)
 		}
+
+		// validate the response structure for mount named read
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
 	}
 }
 
@@ -270,9 +278,14 @@ func TestSystemBackend_mount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
-	}
+
+	// validate the response structure for mount named update
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "mounts")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -433,9 +446,14 @@ func TestSystemBackend_unmount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
-	}
+
+	// validate the response structure for mount named delete
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 }
 
 var capabilitiesPolicy = `
@@ -1095,6 +1113,15 @@ func TestSystemBackend_leases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// validate the response structure for Update
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	if resp.Data["renewable"] == nil || resp.Data["renewable"].(bool) {
 		t.Fatal("kv leases are not renewable")
 	}
@@ -1144,9 +1171,14 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp == nil || resp.Data == nil {
-		t.Fatalf("bad: %#v", resp)
-	}
+
+	// validate the response body for list
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	var keys []string
 	if err := mapstructure.WeakDecode(resp.Data["keys"], &keys); err != nil {
 		t.Fatalf("err: %v", err)
@@ -1304,6 +1336,14 @@ func TestSystemBackend_renew(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
+
+	// Validate lease renewal response structure
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
+		resp,
+		true,
+	)
 
 	// Should get error about non-renewability
 	if resp2.Data["error"] != "lease is not renewable" {
@@ -1563,6 +1603,15 @@ func TestSystemBackend_revoke_invalidID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// validate the response structure for lease revoke
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
@@ -1630,9 +1679,14 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp2)
 	}
-	if resp2 != nil {
-		t.Fatalf("bad: %#v", resp)
-	}
+
+	// validate the response structure for lease revoke-prefix
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
+		resp,
+		true,
+	)
 
 	// Attempt renew
 	req3 := logical.TestRequest(t, logical.UpdateOperation, "leases/renew/"+resp.Secret.LeaseID)
@@ -2066,6 +2120,14 @@ func TestSystemBackend_policyList(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// validate the response structure for policy read
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	exp := map[string]interface{}{
 		"keys":     []string{"default", "root"},
 		"policies": []string{"default", "root"},
@@ -2090,12 +2152,28 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
+	// validate the response structure for policy named Update
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	// Read the policy
 	req = logical.TestRequest(t, logical.ReadOperation, "policy/foo")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// validate the response structure for policy named read
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"name":  "foo",
@@ -2145,6 +2223,14 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
+	// validate the response structure for policy named delete
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	// Read the policy (deleted)
 	req = logical.TestRequest(t, logical.ReadOperation, "policy/foo")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -2189,7 +2275,6 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 
 func TestSystemBackend_auditHash(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	paths := b.(*SystemBackend).auditPaths()
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
@@ -2202,9 +2287,10 @@ func TestSystemBackend_auditHash(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
+
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 2, req.Operation),
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -2219,9 +2305,10 @@ func TestSystemBackend_auditHash(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatalf("response or its data was nil")
 	}
+
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 0, req.Operation),
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -2985,6 +3072,13 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	if len(resp.Data["keys"].([]string)) != len(c.builtinRegistry.Keys(consts.PluginTypeDatabase)) {
 		t.Fatalf("Wrong number of plugins, got %d, expected %d", len(resp.Data["keys"].([]string)), len(builtinplugins.Registry.Keys(consts.PluginTypeDatabase)))
 	}
@@ -2994,6 +3088,13 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	// Get deprecation status directly from the registry so we can compare it to the API response
 	deprecationStatus, _ := c.builtinRegistry.DeprecationStatus("mysql-database-plugin", consts.PluginTypeDatabase)
@@ -3033,6 +3134,13 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("err: %v", resp.Error())
 	}
 
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	delete(req.Data, "args")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || resp.Error() != nil {
@@ -3064,6 +3172,13 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -3489,6 +3604,14 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if resp.IsError() || err != nil {
 		t.Fatalf("resp.Error: %v, err:%v", resp.Error(), err)
 	}
+
+	// validate the response structure for mount update
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -4828,7 +4951,6 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			t.Parallel()
 
 			core, b, _ := testCoreSystemBackend(t)
-
 			// Test core overrides logging level outside of config,
 			// an initial delete will ensure that we an initial read
 			// to get expected values is based off of config and not
@@ -4843,6 +4965,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 			}
 
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
+
 			req = &logical.Request{
 				Path:      "loggers",
 				Operation: logical.ReadOperation,
@@ -4852,6 +4981,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 			}
+
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
 
 			initialLoggers := resp.Data
 
@@ -4865,6 +5001,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 
 			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 			respIsError := resp != nil && resp.IsError()
+
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
 
 			if err != nil || (!tc.expectError && respIsError) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
@@ -4884,6 +5027,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 				if err != nil || (resp != nil && resp.IsError()) {
 					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 				}
+
+				schema.ValidateResponse(
+					t,
+					schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+					resp,
+					true,
+				)
 
 				for _, logger := range core.allLoggers {
 					loggerName := logger.Name()
@@ -4909,6 +5059,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 			}
 
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
+
 			req = &logical.Request{
 				Path:      "loggers",
 				Operation: logical.ReadOperation,
@@ -4918,6 +5075,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 			}
+
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
 
 			for _, logger := range core.allLoggers {
 				loggerName := logger.Name()
