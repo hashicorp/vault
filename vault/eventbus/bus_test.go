@@ -196,8 +196,8 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 	bus.Start()
 
 	// create and cancel a bunch of subscriptions
-	create := 100
-	cancel := 50
+	const create = 100
+	const cancel = 50
 
 	eventType := logical.EventType("someType")
 
