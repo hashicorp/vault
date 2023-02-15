@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -90,8 +92,11 @@ func TestBackend_CRLConfig(t *testing.T) {
 				"auto_rebuild_grace_period": tc.autoRebuildGracePeriod,
 			})
 			requireSuccessNonNilResponse(t, resp, err)
+			schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/crl"), logical.UpdateOperation), resp, true)
 
 			resp, err = CBRead(b, s, "config/crl")
+			schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/crl"), logical.ReadOperation), resp, true)
+
 			requireSuccessNonNilResponse(t, resp, err)
 			requireFieldsSetInResp(t, resp, "disable", "expiry", "ocsp_disable", "auto_rebuild", "auto_rebuild_grace_period")
 

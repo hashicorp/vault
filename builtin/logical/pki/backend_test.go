@@ -30,6 +30,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/armon/go-metrics"
@@ -550,7 +552,6 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				if err != nil {
 					return err
 				}
-
 				if !reflect.DeepEqual(entries, expected) {
 					return fmt.Errorf("expected urls\n%#v\ndoes not match provided\n%#v\n", expected, entries)
 				}
@@ -1983,6 +1984,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		Data:       rootData,
 		MountPoint: "pki/",
 	})
+
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to generate root, %#v", resp)
 	}
@@ -2003,6 +2005,16 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		Data:       urlsData,
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/urls"), logical.UpdateOperation), resp, true)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "config/urls",
+		Storage:    storage,
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/urls"), logical.ReadOperation), resp, true)
+
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to config urls, %#v", resp)
 	}
@@ -2410,6 +2422,8 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
 		"pem_bundle": pemBundleRootCA,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/ca"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected ca info")
 	firstImportedKeys := resp.Data["imported_keys"].([]string)
@@ -6013,11 +6027,16 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	b, s := CreateBackendWithStorage(t)
 
 	// Setting templated AIAs should succeed.
-	_, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
+	resp, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
 		"path":     "http://localhost:8200/v1/pki",
 		"aia_path": "http://localhost:8200/cdn/pki",
 	})
 	require.NoError(t, err)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/cluster"), logical.UpdateOperation), resp, true)
+
+	resp, err = CBRead(b, s, "config/cluster")
+	require.NoError(t, err)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/cluster"), logical.ReadOperation), resp, true)
 
 	aiaData := map[string]interface{}{
 		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
@@ -6046,7 +6065,7 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 		"enable_templating":       false,
 	})
 	require.NoError(t, err)
-	resp, err := CBWrite(b, s, "root/generate/internal", rootData)
+	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
 	requireSuccessNonNilResponse(t, resp, err)
 	issuerId := string(resp.Data["issuer_id"].(issuerID))
 

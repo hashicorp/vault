@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
@@ -371,6 +373,7 @@ func TestIntegration_AutoIssuer(t *testing.T) {
 		"issuer_name": "root-1",
 		"key_type":    "ec",
 	})
+
 	requireSuccessNonNilResponse(t, resp, err)
 	issuerIdOne := resp.Data["issuer_id"]
 	require.NotEmpty(t, issuerIdOne)
@@ -381,12 +384,15 @@ func TestIntegration_AutoIssuer(t *testing.T) {
 	requireSuccessNonNilResponse(t, resp, err)
 	require.Equal(t, issuerIdOne, resp.Data["default"])
 
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/issuers"), logical.ReadOperation), resp, true)
+
 	// Enable the new config option.
-	_, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
+	resp, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
 		"default":                       issuerIdOne,
 		"default_follows_latest_issuer": true,
 	})
 	require.NoError(t, err)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/issuers"), logical.UpdateOperation), resp, true)
 
 	// Now generate the second root; it should become default.
 	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
