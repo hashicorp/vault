@@ -77,18 +77,12 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 		capabilities = append(capabilities, "list")
 	}
 
-	// trims the leading / from the front of the path
-	path, err := url.PathUnescape(d.path)
-	if err != nil {
-		return "", fmt.Errorf("failed to unescape request URL characters: %v", err)
-	}
-
 	// determine whether to add sudo capability
-	if IsSudoPath(path) {
+	if IsSudoPath(d.path) {
 		capabilities = append(capabilities, "sudo")
 	}
 
-	return fmtOutput(path, capabilities), nil
+	return fmtOutput(d.path, capabilities), nil
 }
 
 func fmtOutput(path string, capabilities []string) string {
