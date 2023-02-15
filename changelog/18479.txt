@@ -1,3 +1,0 @@
-```release-note:improvement
-openapi: Add openapi response definitions to PKI issuer and key paths
-```
