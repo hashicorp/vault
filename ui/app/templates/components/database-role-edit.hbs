@@ -46,7 +46,7 @@
           type="button"
           class="toolbar-link"
           {{on "click" (fn this.generateCreds @model.id @model.type)}}
-          data-test-database-role-generate-creds
+          data-test-database-role-creds={{@model.type}}
         >
           {{if (eq @model.type "static") "Get credentials" "Generate credentials"}}
         </button>
