@@ -130,9 +130,10 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to true and with common name supplied.
 	// It should succeed.
-	_, err = CBWrite(b, s, "issue/example", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
 		"common_name": "foobar.com",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issue/example"), logical.UpdateOperation), resp, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2194,6 +2195,8 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		Data:       signVerbatimData,
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("sign-verbatim"), logical.UpdateOperation), resp, true)
+
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to sign-verbatim basic CSR: %#v", *resp)
 	}
@@ -2510,6 +2513,8 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	resp, err := CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "myint.com",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b_root.Route("intermediate/generate/internal"), logical.UpdateOperation), resp, true)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -4789,6 +4794,7 @@ func TestRootWithExistingKey(t *testing.T) {
 		"key_type":    "rsa",
 		"issuer_name": "my-issuer1",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuers/generate/root/internal"), logical.UpdateOperation), resp, true)
 	require.NoError(t, err)
 	require.NotNil(t, resp.Data["certificate"])
 	myIssuerId1 := resp.Data["issuer_id"]
@@ -4904,6 +4910,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuers/generate/intermediate/internal"), logical.UpdateOperation), resp, true)
 	require.NoError(t, err)
 	// csr1 := resp.Data["csr"]
 	myKeyId1 := resp.Data["key_id"]
@@ -5192,6 +5199,7 @@ TgM7RZnmEjNdeaa4M52o7VY=
 	resp, err := CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
 		"pem_bundle": customBundleWithoutCRLBits,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuers/import/bundle"), logical.UpdateOperation), resp, true)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data)
@@ -6377,6 +6385,7 @@ func TestUserIDsInLeafCerts(t *testing.T) {
 	resp, err = CBWrite(b, s, "sign/testing", map[string]interface{}{
 		"csr": csrPem,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("sign/testing"), logical.UpdateOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
 	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
 
