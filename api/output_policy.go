@@ -80,10 +80,10 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 		capabilities = append(capabilities, "sudo")
 	}
 
-	return fmtOutput(d.path, capabilities), nil
+	return formatOutputPolicy(d.path, capabilities), nil
 }
 
-func fmtOutput(path string, capabilities []string) string {
+func formatOutputPolicy(path string, capabilities []string) string {
 	// the OpenAPI response has a / in front of each path,
 	// but policies need the path without that leading slash
 	path = strings.TrimLeft(path, "/")
