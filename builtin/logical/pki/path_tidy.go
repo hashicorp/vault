@@ -230,6 +230,10 @@ func pathTidyCancel(b *backend) *framework.Path {
 								Type:     framework.TypeInt,
 								Required: true,
 							},
+							"internal_backend_uuid": {
+								Type:     framework.TypeString,
+								Required: true,
+							},
 						},
 					}},
 				},
@@ -355,6 +359,10 @@ func pathTidyStatus(b *backend) *framework.Path {
 							},
 							"missing_issuer_cert_count": {
 								Type:     framework.TypeInt,
+								Required: true,
+							},
+							"internal_backend_uuid": {
+								Type:     framework.TypeString,
 								Required: true,
 							},
 						},
