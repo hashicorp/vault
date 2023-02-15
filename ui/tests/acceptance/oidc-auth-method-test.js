@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, typeIn, find, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { fakeWindow, buildMessage } from '../helpers/oidc-window-stub';
@@ -37,7 +37,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     authPage.logout();
     // select from dropdown or click auth path tab
     await waitUntil(() => find('[data-test-select="auth-method"]'));
-    await typeIn('[data-test-select="auth-method"]', 'oidc');
+    await fillIn('[data-test-select="auth-method"]', 'oidc');
     later(() => {
       window.postMessage(buildMessage().data, window.origin);
       cancelTimers();
@@ -85,7 +85,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     authPage.logout();
     // select from dropdown or click auth path tab
     await waitUntil(() => find('[data-test-select="auth-method"]'));
-    await typeIn('[data-test-select="auth-method"]', 'oidc');
+    await fillIn('[data-test-select="auth-method"]', 'oidc');
     later(() => {
       window.postMessage(buildMessage().data, window.origin);
       cancelTimers();

@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { typeIn, click, waitUntil } from '@ember/test-helpers';
@@ -125,8 +125,8 @@ module('Integration | Component | mfa-form', function (hooks) {
         @onSuccess={{this.onSuccess}}
       />
     `);
-    await typeIn('[data-test-mfa-select="0"] select', oktaConstraint.id);
-    await typeIn('[data-test-mfa-passcode="1"]', 'test-code');
+    await fillIn('[data-test-mfa-select="0"] select', oktaConstraint.id);
+    await fillIn('[data-test-mfa-passcode="1"]', 'test-code');
     await click('[data-test-mfa-validate]');
   });
 

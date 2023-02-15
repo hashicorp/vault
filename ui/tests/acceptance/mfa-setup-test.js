@@ -1,7 +1,7 @@
 import { module, test } from 'qunit';
 import { create } from 'ember-cli-page-object';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, typeIn } from '@ember/test-helpers';
+import { click, fillIn } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import logout from 'vault/tests/pages/logout';
@@ -71,7 +71,7 @@ module('Acceptance | mfa-setup', function (hooks) {
       // returns nothing
       return {};
     });
-    await typeIn('[data-test-input="uuid"]', 123);
+    await fillIn('[data-test-input="uuid"]', 123);
     await click('[data-test-verify]');
     assert.dom('[data-test-qrcode]').exists('the qrCode is shown.');
     assert.dom('[data-test-mfa-enabled-warning]').doesNotExist('warning does not show.');
@@ -89,7 +89,7 @@ module('Acceptance | mfa-setup', function (hooks) {
       };
     });
 
-    await typeIn('[data-test-input="uuid"]', 123);
+    await fillIn('[data-test-input="uuid"]', 123);
     await click('[data-test-verify]');
     assert.dom('[data-test-qrcode]').doesNotExist('the qrCode is not shown.');
     assert.dom('[data-test-mfa-enabled-warning]').exists('the mfa-enabled warning shows.');

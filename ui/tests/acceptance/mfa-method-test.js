@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentRouteName, currentURL, typeIn, visit } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, fillIn, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -188,7 +188,7 @@ module('Acceptance | mfa-method', function (hooks) {
           const textareas = this.element.querySelectorAll('[data-test-textarea]');
           textareas[i].setAttribute('data-test-textarea', field);
         }
-        await typeIn(`[data-test-${inputType}="${field}"]`, 'foo');
+        await fillIn(`[data-test-${inputType}="${field}"]`, 'foo');
       }
       await click('[data-test-mfa-create-save]');
       assert.strictEqual(
@@ -207,9 +207,9 @@ module('Acceptance | mfa-method', function (hooks) {
     await visit('/vault/access/mfa/methods/create');
     await click('[data-test-radio-card="totp"]');
     await click('[data-test-mfa-create-next]');
-    await typeIn('[data-test-input="issuer"]', 'foo');
-    await typeIn('[data-test-mlef-input="name"]', 'bar');
-    await typeIn('[data-test-mount-accessor-select]', 'auth_userpass_bb95c2b1');
+    await fillIn('[data-test-input="issuer"]', 'foo');
+    await fillIn('[data-test-mlef-input="name"]', 'bar');
+    await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_bb95c2b1');
     await click('[data-test-mlef-add-target]');
     await click('[data-test-mfa-create-save]');
     assert.strictEqual(
@@ -233,7 +233,7 @@ module('Acceptance | mfa-method', function (hooks) {
     await visit('/vault/access/mfa/methods/create');
     await click('[data-test-radio-card="totp"]');
     await click('[data-test-mfa-create-next]');
-    await typeIn('[data-test-input="issuer"]', 'foo');
+    await fillIn('[data-test-input="issuer"]', 'foo');
     await click('[data-test-mleh-radio="existing"]');
     await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
     const enforcement = this.element.querySelector('.ember-power-select-option');
@@ -275,12 +275,12 @@ module('Acceptance | mfa-method', function (hooks) {
       }
     });
 
-    await typeIn('[data-test-input="issuer"]', 'foo');
+    await fillIn('[data-test-input="issuer"]', 'foo');
     const SHA1radioBtn = this.element.querySelectorAll('input[name=algorithm]')[0];
     await click(SHA1radioBtn);
-    await typeIn('[data-test-input="max_validation_attempts"]', 10);
+    await fillIn('[data-test-input="max_validation_attempts"]', 10);
     await click('[data-test-mfa-method-save]');
-    await typeIn('[data-test-confirmation-modal-input]', model.type);
+    await fillIn('[data-test-confirmation-modal-input]', model.type);
     await click('[data-test-confirm-button]');
 
     assert.dom('[data-test-row-value="Issuer"]').hasText('foo', 'Issuer field is updated');

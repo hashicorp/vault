@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentRouteName, typeIn, visit } from '@ember/test-helpers';
+import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -46,10 +46,10 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     );
     await click('[data-test-enforcement-create]');
 
-    await typeIn('[data-test-mlef-input="name"]', 'foo');
+    await fillIn('[data-test-mlef-input="name"]', 'foo');
     await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
-    await typeIn('[data-test-mount-accessor-select]', 'auth_userpass_bb95c2b1');
+    await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_bb95c2b1');
     await click('[data-test-mlef-add-target]');
     await click('[data-test-mlef-save]');
     assert.strictEqual(
@@ -164,7 +164,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       );
     await click('[data-test-enforcement-delete]');
     assert.dom('[data-test-confirm-button]').isDisabled('Delete button disabled with no confirmation');
-    await typeIn('[data-test-confirmation-modal-input]', enforcement.name);
+    await fillIn('[data-test-confirmation-modal-input]', enforcement.name);
     await click('[data-test-confirm-button]');
     assert.strictEqual(
       currentRouteName(),

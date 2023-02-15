@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentRouteName, typeIn, visit, waitUntil, find } from '@ember/test-helpers';
+import { click, currentRouteName, fillIn, visit, waitUntil, find } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import { validationHandler } from '../../mirage/handlers/mfa-login';
@@ -16,7 +16,7 @@ module('Acceptance | mfa-login', function (hooks) {
     this.select = async (select = 0, option = 1) => {
       const selector = `[data-test-mfa-select="${select}"]`;
       const value = this.element.querySelector(`${selector} option:nth-child(${option + 1})`).value;
-      await typeIn(`${selector} select`, value);
+      await fillIn(`${selector} select`, value);
     };
   });
   hooks.after(function () {
@@ -25,18 +25,18 @@ module('Acceptance | mfa-login', function (hooks) {
 
   const login = async (user) => {
     await visit('/vault/auth');
-    await typeIn('[data-test-select="auth-method"]', 'userpass');
-    await typeIn('[data-test-username]', user);
-    await typeIn('[data-test-password]', 'test');
+    await fillIn('[data-test-select="auth-method"]', 'userpass');
+    await fillIn('[data-test-username]', user);
+    await fillIn('[data-test-password]', 'test');
     await click('[data-test-auth-submit]');
   };
   const didLogin = (assert) => {
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'Route transitions after login');
   };
   const validate = async (multi) => {
-    await typeIn('[data-test-mfa-passcode="0"]', 'test');
+    await fillIn('[data-test-mfa-passcode="0"]', 'test');
     if (multi) {
-      await typeIn('[data-test-mfa-passcode="1"]', 'test');
+      await fillIn('[data-test-mfa-passcode="1"]', 'test');
     }
     await click('[data-test-mfa-validate]');
   };
@@ -161,7 +161,7 @@ module('Acceptance | mfa-login', function (hooks) {
         'Mfa form displays with correct description'
       );
     await this.select();
-    await typeIn('[data-test-mfa-passcode="1"]', 'test');
+    await fillIn('[data-test-mfa-passcode="1"]', 'test');
     await click('[data-test-mfa-validate]');
     didLogin(assert);
   });
