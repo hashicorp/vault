@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, typeIn, render } from '@ember/test-helpers';
+import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -89,7 +89,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       .exists({ count: 0 }, '0 form fields under keyParams toggle');
 
     this.set('type', 'exported');
-    await typeIn(SELECTORS.typeField, this.type);
+    await fillIn(SELECTORS.typeField, this.type);
     assert
       .dom(SELECTORS.toggleGroupDescription)
       .hasText(
@@ -105,7 +105,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     assert.dom(SELECTORS.fieldByName('keyBits')).exists(`Key bits field shown when type=${this.type}`);
 
     this.set('type', 'internal');
-    await typeIn(SELECTORS.typeField, this.type);
+    await fillIn(SELECTORS.typeField, this.type);
     assert
       .dom(SELECTORS.toggleGroupDescription)
       .hasText(
@@ -121,7 +121,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     assert.dom(SELECTORS.fieldByName('keyBits')).exists(`Key bits field shown when type=${this.type}`);
 
     this.set('type', 'existing');
-    await typeIn(SELECTORS.typeField, this.type);
+    await fillIn(SELECTORS.typeField, this.type);
     assert
       .dom(SELECTORS.toggleGroupDescription)
       .hasText(
@@ -135,7 +135,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     assert.dom(SELECTORS.fieldByName('keyRef')).exists(`Key reference field shown when type=${this.type}`);
 
     this.set('type', 'kms');
-    await typeIn(SELECTORS.typeField, this.type);
+    await fillIn(SELECTORS.typeField, this.type);
     assert
       .dom(SELECTORS.toggleGroupDescription)
       .hasText(

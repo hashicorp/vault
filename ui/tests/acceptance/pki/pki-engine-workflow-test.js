@@ -3,7 +3,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import { click, currentURL, typeIn, find, isSettled, visit } from '@ember/test-helpers';
+import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
 import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
@@ -93,7 +93,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(SELECTORS.configuration.optionByKey('import'));
       assert.dom(SELECTORS.configuration.emptyState).doesNotExist();
       await click('[data-test-text-toggle]');
-      await typeIn('[data-test-text-file-textarea]', this.pemBundle);
+      await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click('[data-test-pki-ca-cert-import]');
       assert.strictEqual(
         currentURL(),
@@ -116,9 +116,9 @@ module('Acceptance | pki workflow', function (hooks) {
       // the backend adds fields. We should update the count accordingly.
       assert.dom(SELECTORS.configuration.urlField).exists({ count: 4 });
       // Fill in form
-      await typeIn(SELECTORS.configuration.typeField, 'exported');
-      await typeIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
-      await typeIn(SELECTORS.configuration.inputByName('issuerName'), 'my-first-issuer');
+      await fillIn(SELECTORS.configuration.typeField, 'exported');
+      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
+      await fillIn(SELECTORS.configuration.inputByName('issuerName'), 'my-first-issuer');
       await click(SELECTORS.configuration.generateRootSave);
 
       assert
@@ -133,8 +133,8 @@ module('Acceptance | pki workflow', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.emptyStateLink);
       await click(SELECTORS.configuration.optionByKey('generate-csr'));
-      await typeIn(SELECTORS.configuration.typeField, 'exported');
-      await typeIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
+      await fillIn(SELECTORS.configuration.typeField, 'exported');
+      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
       await click('[data-test-save]');
       await assert.dom(SELECTORS.configuration.csrDetails).exists('renders CSR details after save');
       await click('[data-test-done]');
@@ -275,7 +275,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
       assert.dom(SELECTORS.pageTitle).hasText('Create a PKI role');
 
-      await typeIn(SELECTORS.roleForm.roleName, roleName);
+      await fillIn(SELECTORS.roleForm.roleName, roleName);
       await click(SELECTORS.roleForm.roleCreateButton);
 
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/${roleName}/details`);
@@ -329,22 +329,21 @@ module('Acceptance | pki workflow', function (hooks) {
         'navigates back to details on cancel'
       );
       await visit(`/vault/secrets/${this.mountPath}/pki/keys/${keyId}/edit`);
-      await typeIn(SELECTORS.keyForm.keyNameInput, 'test-key');
+      await fillIn(SELECTORS.keyForm.keyNameInput, 'test-key');
       await click(SELECTORS.keyForm.keyCreateButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`,
         'navigates to details after save'
       );
-      await this.pauseTest;
       assert.dom(SELECTORS.keyPages.keyNameValue).hasText('test-key', 'updates key name');
 
       // key generate and delete navigation
       await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
       await click(SELECTORS.keyPages.generateKey);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/create`);
-      await typeIn(SELECTORS.keyForm.typeInput, 'exported');
-      await typeIn(SELECTORS.keyForm.keyTypeInput, 'rsa');
+      await fillIn(SELECTORS.keyForm.typeInput, 'exported');
+      await fillIn(SELECTORS.keyForm.keyTypeInput, 'rsa');
       await click(SELECTORS.keyForm.keyCreateButton);
       keyId = find(SELECTORS.keyPages.keyIdValue).innerText;
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);

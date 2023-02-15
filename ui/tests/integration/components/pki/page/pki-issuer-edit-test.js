@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, typeIn, render } from '@ember/test-helpers';
+import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -58,7 +58,7 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
     this.owner.lookup('service:secretMountPath').update('pki');
 
     this.update = async () => {
-      await typeIn(selectors.name, 'bar-baz');
+      await fillIn(selectors.name, 'bar-baz');
       await click(selectors.usageCrl);
       await click(selectors.certUrlRemove);
     };
