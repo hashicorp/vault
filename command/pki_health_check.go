@@ -135,7 +135,7 @@ default unless enabled by the configuration file explicitly.`,
 		Default: false,
 		EnvVar:  "",
 		Usage: `When specified, no health checks are run, but all known health
-checks are printed. Still requires a positional mount argument.`,
+checks are printed.`,
 	})
 
 	return set
@@ -170,10 +170,10 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	if len(args) < 1 {
+	if !c.flagList && len(args) < 1 {
 		c.UI.Error("Not enough arguments (expected mount path, got nothing)")
 		return pkiRetUsage
-	} else if len(args) > 1 {
+	} else if !c.flagList && len(args) > 1 {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected only mount path, got %d arguments)", len(args)))
 		for _, arg := range args {
 			if strings.HasPrefix(arg, "-") {
@@ -196,7 +196,14 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 		return pkiRetUsage
 	}
 
-	mount := sanitizePath(args[0])
+	// When listing is enabled, we lack an argument here, but do not contact
+	// the server at all, so we're safe to use a hard-coded default here.
+	pkiPath := "<mount>"
+	if len(args) == 1 {
+		pkiPath = args[0]
+	}
+
+	mount := sanitizePath(pkiPath)
 	executor := healthcheck.NewExecutor(client, mount)
 	executor.AddCheck(healthcheck.NewCAValidityPeriodCheck())
 	executor.AddCheck(healthcheck.NewCRLValidityPeriodCheck())

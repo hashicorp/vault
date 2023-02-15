@@ -1,4 +1,4 @@
-{{#if this.licenseExpired}}
+{{#if (and this.licenseExpired (not this.expiredDismissed))}}
   <div class="license-banner-wrapper" data-test-license-banner data-test-license-banner-expired>
     <AlertBanner
       @type="danger"
@@ -13,9 +13,12 @@
         <Icon @name="learn-link" />
         Read documentation
       </DocLink>
+      <button type="button" class="close-button" {{on "click" (fn this.dismissBanner "expired")}} data-test-dismiss-expired>
+        <Icon @name="x" aria-label="dismiss license expired warning" />
+      </button>
     </AlertBanner>
   </div>
-{{else if (lte this.licenseExpiringInDays 30)}}
+{{else if (and (lte this.licenseExpiringInDays 30) (not this.warningDismissed))}}
   <div class="license-banner-wrapper" data-test-license-banner data-test-license-banner-warning>
     <AlertBanner
       @type="warning"
@@ -34,6 +37,9 @@
         <Icon @name="learn-link" />
         Read documentation
       </DocLink>
+      <button type="button" class="close-button" {{on "click" (fn this.dismissBanner "warning")}} data-test-dismiss-warning>
+        <Icon @name="x" aria-label="dismiss license expire soon warning" />
+      </button>
     </AlertBanner>
   </div>
 {{/if}}

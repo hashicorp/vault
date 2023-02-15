@@ -5,9 +5,11 @@ import (
 	"errors"
 	"net/url"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
 	"github.com/hashicorp/go-hclog"
@@ -18,11 +20,15 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-const eventTypeAll = "*"
+const (
+	eventTypeAll   = "*"
+	defaultTimeout = 60 * time.Second
+)
 
 var (
 	ErrNotStarted              = errors.New("event broker has not been started")
 	cloudEventsFormatterFilter *cloudevents.FormatterFilter
+	subscriptions              atomic.Int64 // keeps track of event subscription count in all event buses
 )
 
 // EventBus contains the main logic of running an event broker for Vault.
@@ -32,6 +38,7 @@ type EventBus struct {
 	broker          *eventlogger.Broker
 	started         atomic.Bool
 	formatterNodeID eventlogger.NodeID
+	timeout         time.Duration
 }
 
 type pluginEventBus struct {
@@ -45,6 +52,12 @@ type asyncChanNode struct {
 	ctx    context.Context
 	ch     chan *logical.EventReceived
 	logger hclog.Logger
+
+	// used to close the connection
+	closeOnce  sync.Once
+	cancelFunc context.CancelFunc
+	pipelineID eventlogger.PipelineID
+	broker     *eventlogger.Broker
 }
 
 var (
@@ -82,6 +95,10 @@ func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, 
 		Timestamp:  timestamppb.New(time.Now()),
 	}
 	bus.logger.Info("Sending event", "event", eventReceived)
+
+	// We can't easily know when the Send is complete, so we can't call the cancel function.
+	// But, it is called automatically after bus.timeout, so there won't be any leak as long as bus.timeout is not too long.
+	ctx, _ = context.WithTimeout(ctx, bus.timeout)
 	_, err := bus.broker.Send(ctx, eventTypeAll, eventReceived)
 	if err != nil {
 		// if no listeners for this event type are registered, that's okay, the event
@@ -145,6 +162,7 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 		logger:          logger,
 		broker:          broker,
 		formatterNodeID: formatterNodeID,
+		timeout:         defaultTimeout,
 	}, nil
 }
 
@@ -192,7 +210,17 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pat
 		return nil, nil, err
 	}
 
-	return asyncNode.ch, cancel, nil
+	addSubscriptions(1)
+	// add info needed to cancel the subscription
+	asyncNode.pipelineID = eventlogger.PipelineID(pipelineID)
+	asyncNode.cancelFunc = cancel
+	return asyncNode.ch, asyncNode.Close, nil
+}
+
+// SetSendTimeout sets the timeout of sending events. If the events are not accepted by the
+// underlying channel before this timeout, then the channel closed.
+func (bus *EventBus) SetSendTimeout(timeout time.Duration) {
+	bus.timeout = timeout
 }
 
 func newFilterNode(ns *namespace.Namespace, pattern string) *eventlogger.Filter {
@@ -224,17 +252,35 @@ func newAsyncNode(ctx context.Context, namespace *namespace.Namespace, logger hc
 	}
 }
 
+// Close tells the bus to stop sending us events.
+func (node *asyncChanNode) Close() {
+	node.closeOnce.Do(func() {
+		defer node.cancelFunc()
+		if node.broker != nil {
+			err := node.broker.RemovePipeline(eventTypeAll, node.pipelineID)
+			if err != nil {
+				node.logger.Warn("Error removing pipeline for closing node", "error", err)
+			}
+		}
+		addSubscriptions(-1)
+	})
+}
+
 func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	// TODO: add timeout on sending to node.ch
 	// sends to the channel async in another goroutine
 	go func() {
 		eventRecv := e.Payload.(*logical.EventReceived)
+		var timeout bool
 		select {
 		case node.ch <- eventRecv:
 		case <-ctx.Done():
-			return
+			timeout = errors.Is(ctx.Err(), context.DeadlineExceeded)
 		case <-node.ctx.Done():
-			return
+			timeout = errors.Is(node.ctx.Err(), context.DeadlineExceeded)
+		}
+		if timeout {
+			node.logger.Info("Subscriber took too long to process event, closing", "ID", eventRecv.Event.ID())
+			node.Close()
 		}
 	}()
 	return e, nil
@@ -246,4 +292,8 @@ func (node *asyncChanNode) Reopen() error {
 
 func (node *asyncChanNode) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
+}
+
+func addSubscriptions(delta int64) {
+	metrics.SetGauge([]string{"events", "subscriptions"}, float32(subscriptions.Add(delta)))
 }

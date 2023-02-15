@@ -8,17 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
-	var resp *logical.Response
-	var err error
 	b, storage := createBackendWithStorage(t)
-
-	paths := []*framework.Path{pathTidySecretID(b)}
 
 	// Create a role
 	createRole(t, b, storage, "role1", "a,b,c")
@@ -29,10 +24,7 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 		Path:      "role/role1/secret-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	_ = b.requestNoErr(t, roleSecretIDReq)
 
 	accessorHashes, err := storage.List(context.Background(), "accessor/")
 	if err != nil {
@@ -85,7 +77,7 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation),
+		schema.GetResponseSchema(t, pathTidySecretID(b), logical.UpdateOperation),
 		secret,
 		true,
 	)
@@ -103,11 +95,7 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 }
 
 func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
-	var resp *logical.Response
-	var err error
 	b, storage := createBackendWithStorage(t)
-
-	paths := []*framework.Path{pathTidySecretID(b)}
 
 	// Create a role
 	createRole(t, b, storage, "role1", "a,b,c")
@@ -118,10 +106,8 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 		Path:      "role/role1/secret-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	_ = b.requestNoErr(t, roleSecretIDReq)
+
 	count := 1
 
 	wg := &sync.WaitGroup{}
@@ -136,7 +122,7 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 			}
 			schema.ValidateResponse(
 				t,
-				schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation),
+				schema.GetResponseSchema(t, pathTidySecretID(b), logical.UpdateOperation),
 				secret,
 				true,
 			)
@@ -149,10 +135,7 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 				Path:      "role/role1/secret-id",
 				Storage:   storage,
 			}
-			resp, err := b.HandleRequest(context.Background(), roleSecretIDReq)
-			if err != nil || (resp != nil && resp.IsError()) {
-				t.Fatalf("err:%v resp:%#v", err, resp)
-			}
+			_ = b.requestNoErr(t, roleSecretIDReq)
 		}()
 
 		entry, err := logical.StorageEntryJSON(
@@ -193,7 +176,7 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation),
+		schema.GetResponseSchema(t, pathTidySecretID(b), logical.UpdateOperation),
 		secret,
 		true,
 	)
