@@ -256,7 +256,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 	}
 	waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create*2-cancel) })
 	// the sends should time out and the subscriptions should drop when the cancelFunc was called
-	waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() == int64(cancel) })
+	waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() == int64(create-cancel) })
 }
 
 // TestBusSubscriptionsBreak verifies that timed out subscriptions are cleaned up.
