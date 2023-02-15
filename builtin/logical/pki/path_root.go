@@ -277,7 +277,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 	}
-	b.incrementTotalCertificatesCount(certsCounted, key)
+	b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 
 	// Build a fresh CRL
 	err = b.crlBuilder.rebuild(sc, true)
@@ -474,7 +474,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 	}
-	b.incrementTotalCertificatesCount(certsCounted, key)
+	b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
 		resp.AddWarning("Max path length of the signed certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")

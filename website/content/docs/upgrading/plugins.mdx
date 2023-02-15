@@ -12,8 +12,9 @@ The following procedures detail steps for upgrading a plugin that has been mount
 at a path on a running server. The steps are the same whether the plugin being
 upgraded is built-in or external.
 
-~> Plugin versioning was introduced with Vault 1.12.0, so if your Vault server is
-  on 1.11.x or earlier, see the [1.11.x version of this page](/vault/docs/v1.11.x/upgrading/plugins)
+~> [Plugin versioning](/vault/docs/plugins#plugin-versioning) was introduced
+  with Vault 1.12.0, so if your Vault server is on 1.11.x or earlier, see the
+  [1.11.x version of this page](/vault/docs/v1.11.x/upgrading/plugins)
   for plugin upgrade instructions.
 
 ### Upgrading auth and secrets plugins
@@ -25,7 +26,7 @@ an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
    Skip this step if your initial plugin is built-in or already registered.
 
     ```shell-session
-    $ vault plugin register
+    $ vault plugin register \
         -sha256=<SHA256 Hex value of the plugin binary> \
         secret \
         my-secret-plugin

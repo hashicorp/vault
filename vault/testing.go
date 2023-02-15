@@ -37,9 +37,11 @@ import (
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -211,6 +213,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.DisableSSCTokens = opts.DisableSSCTokens
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
+	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -770,6 +773,7 @@ type TestCluster struct {
 	CAKeyPEM           []byte
 	Cores              []*TestClusterCore
 	ID                 string
+	Plugins            []pluginhelpers.TestPlugin
 	RootToken          string
 	RootCAs            *x509.CertPool
 	TempDir            string
@@ -1180,6 +1184,16 @@ type TestClusterOptions struct {
 	EffectiveSDKVersionMap map[int]string
 
 	NoDefaultQuotas bool
+
+	Plugins *TestPluginConfig
+
+	// if populated, the callback is called for every request
+	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
+}
+
+type TestPluginConfig struct {
+	Typ      consts.PluginType
+	Versions []string
 }
 
 var DefaultNumCores = 3
@@ -1613,6 +1627,23 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		opts.ClusterLayers = inmemCluster
 	}
 
+	if opts != nil && opts.Plugins != nil {
+		var pluginDir string
+		var cleanup func(t testing.T)
+
+		if coreConfig.PluginDirectory == "" {
+			pluginDir, cleanup = corehelpers.MakeTestPluginDir(t)
+			coreConfig.PluginDirectory = pluginDir
+			t.Cleanup(func() { cleanup(t) })
+		}
+
+		var plugins []pluginhelpers.TestPlugin
+		for _, version := range opts.Plugins.Versions {
+			plugins = append(plugins, pluginhelpers.CompilePlugin(t, opts.Plugins.Typ, version, coreConfig.PluginDirectory))
+		}
+		testCluster.Plugins = plugins
+	}
+
 	// Create cores
 	testCluster.cleanupFuncs = []func(){}
 	cores := []*Core{}
@@ -1906,6 +1937,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 			props.ListenerConfig.MaxRequestDuration = DefaultMaxRequestDuration
 		}
 		handler = opts.HandlerFunc.Handler(&props)
+	}
+
+	if opts != nil && opts.RequestResponseCallback != nil {
+		c.requestResponseCallback = opts.RequestResponseCallback
 	}
 
 	// Set this in case the Seal was manually set before the core was

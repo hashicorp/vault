@@ -136,10 +136,12 @@ module('Acceptance | pki workflow', function (hooks) {
       await fillIn(SELECTORS.configuration.typeField, 'exported');
       await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
       await click('[data-test-save]');
+      await assert.dom(SELECTORS.configuration.csrDetails).exists('renders CSR details after save');
+      await click('[data-test-done]');
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/issuers`,
-        'Transitions to issuers on save success'
+        'Transitions to issuers after viewing csr details'
       );
     });
   });
@@ -427,7 +429,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
       assert
         .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 10 }, 'Renders 10 info table items under default group');
+        .exists({ count: 11 }, 'Renders 10 info table items under default group');
       assert
         .dom(`${SELECTORS.issuerDetails.urlsGroup} ${SELECTORS.issuerDetails.row}`)
         .exists({ count: 3 }, 'Renders 4 info table items under URLs group');

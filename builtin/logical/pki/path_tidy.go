@@ -70,6 +70,8 @@ type tidyConfig struct {
 	SafetyBuffer       time.Duration `json:"safety_buffer"`
 	IssuerSafetyBuffer time.Duration `json:"issuer_safety_buffer"`
 	PauseDuration      time.Duration `json:"pause_duration"`
+	MaintainCount      bool          `json:"maintain_stored_certificate_counts"`
+	PublishMetrics     bool          `json:"publish_stored_certificate_count_metrics"`
 	RevocationQueue    bool          `json:"tidy_revocation_queue"`
 	QueueSafetyBuffer  time.Duration `json:"revocation_queue_safety_buffer"`
 	CrossRevokedCerts  bool          `json:"tidy_cross_cluster_revoked_certs"`
@@ -86,6 +88,8 @@ var defaultTidyConfig = tidyConfig{
 	SafetyBuffer:       72 * time.Hour,
 	IssuerSafetyBuffer: 365 * 24 * time.Hour,
 	PauseDuration:      0 * time.Second,
+	MaintainCount:      false,
+	PublishMetrics:     false,
 	RevocationQueue:    false,
 	QueueSafetyBuffer:  48 * time.Hour,
 	CrossRevokedCerts:  false,
@@ -1339,9 +1343,24 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"missing_issuer_cert_count":             nil,
 			"current_cert_store_count":              nil,
 			"current_revoked_cert_count":            nil,
+			"internal_backend_uuid":                 nil,
 			"revocation_queue_deleted_count":        nil,
 			"cross_revoked_cert_deleted_count":      nil,
 		},
+	}
+
+	resp.Data["internal_backend_uuid"] = b.backendUUID
+
+	if b.certCountEnabled.Load() {
+		resp.Data["current_cert_store_count"] = b.certCount.Load()
+		resp.Data["current_revoked_cert_count"] = b.revokedCertCount.Load()
+		if !b.certsCounted.Load() {
+			resp.AddWarning("Certificates in storage are still being counted, current counts provided may be " +
+				"inaccurate")
+		}
+		if b.certCountError != "" {
+			resp.Data["certificate_counting_error"] = b.certCountError
+		}
 	}
 
 	if b.tidyStatus.state == tidyStatusInactive {
@@ -1386,14 +1405,6 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
 	}
 
-	resp.Data["current_cert_store_count"] = atomic.LoadUint32(b.certCount)
-	resp.Data["current_revoked_cert_count"] = atomic.LoadUint32(b.revokedCertCount)
-
-	if !b.certsCounted.Load() {
-		resp.AddWarning("Certificates in storage are still being counted, current counts provided may be " +
-			"inaccurate")
-	}
-
 	return resp, nil
 }
 
@@ -1406,19 +1417,21 @@ func (b *backend) pathConfigAutoTidyRead(ctx context.Context, req *logical.Reque
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"enabled":                               config.Enabled,
-			"interval_duration":                     int(config.Interval / time.Second),
-			"tidy_cert_store":                       config.CertStore,
-			"tidy_revoked_certs":                    config.RevokedCerts,
-			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
-			"tidy_expired_issuers":                  config.ExpiredIssuers,
-			"tidy_move_legacy_ca_bundle":            config.BackupBundle,
-			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
-			"issuer_safety_buffer":                  int(config.IssuerSafetyBuffer / time.Second),
-			"pause_duration":                        config.PauseDuration.String(),
-			"tidy_revocation_queue":                 config.RevocationQueue,
-			"revocation_queue_safety_buffer":        int(config.QueueSafetyBuffer / time.Second),
-			"tidy_cross_cluster_revoked_certs":      config.CrossRevokedCerts,
+			"enabled":                                  config.Enabled,
+			"interval_duration":                        int(config.Interval / time.Second),
+			"tidy_cert_store":                          config.CertStore,
+			"tidy_revoked_certs":                       config.RevokedCerts,
+			"tidy_revoked_cert_issuer_associations":    config.IssuerAssocs,
+			"tidy_expired_issuers":                     config.ExpiredIssuers,
+			"safety_buffer":                            int(config.SafetyBuffer / time.Second),
+			"issuer_safety_buffer":                     int(config.IssuerSafetyBuffer / time.Second),
+			"pause_duration":                           config.PauseDuration.String(),
+			"publish_stored_certificate_count_metrics": config.PublishMetrics,
+			"maintain_stored_certificate_counts":       config.MaintainCount,
+			"tidy_move_legacy_ca_bundle":               config.BackupBundle,
+			"tidy_revocation_queue":                    config.RevocationQueue,
+			"revocation_queue_safety_buffer":           int(config.QueueSafetyBuffer / time.Second),
+			"tidy_cross_cluster_revoked_certs":         config.CrossRevokedCerts,
 		},
 	}, nil
 }
@@ -1503,6 +1516,17 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 
 	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs || config.ExpiredIssuers || config.BackupBundle || config.RevocationQueue || config.CrossRevokedCerts) {
 		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_expired_issuers / tidy_move_legacy_ca_bundle / tidy_revocation_queue / tidy_cross_cluster_revoked_certs)."), nil
+	}
+
+	if maintainCountEnabledRaw, ok := d.GetOk("maintain_stored_certificate_counts"); ok {
+		config.MaintainCount = maintainCountEnabledRaw.(bool)
+	}
+
+	if runningStorageMetricsEnabledRaw, ok := d.GetOk("publish_stored_certificate_count_metrics"); ok {
+		if config.MaintainCount == false {
+			return logical.ErrorResponse("Can not publish a running storage metrics count to metrics without first maintaining that count.  Enable `maintain_stored_certificate_counts` to enable `publish_stored_certificate_count_metrics."), nil
+		}
+		config.PublishMetrics = runningStorageMetricsEnabledRaw.(bool)
 	}
 
 	if err := sc.writeAutoTidyConfig(config); err != nil {
@@ -1590,7 +1614,7 @@ func (b *backend) tidyStatusIncCertStoreCount() {
 
 	b.tidyStatus.certStoreDeletedCount++
 
-	b.decrementTotalCertificatesCountReport()
+	b.ifCountEnabledDecrementTotalCertificatesCountReport()
 }
 
 func (b *backend) tidyStatusIncRevokedCertCount() {
@@ -1599,7 +1623,7 @@ func (b *backend) tidyStatusIncRevokedCertCount() {
 
 	b.tidyStatus.revokedCertDeletedCount++
 
-	b.decrementTotalRevokedCertificatesCountReport()
+	b.ifCountEnabledDecrementTotalRevokedCertificatesCountReport()
 }
 
 func (b *backend) tidyStatusIncMissingIssuerCertCount() {

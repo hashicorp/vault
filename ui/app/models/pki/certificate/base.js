@@ -36,6 +36,15 @@ export default class PkiCertificateBaseModel extends Model {
   // Required input for all certificates
   @attr('string') commonName;
 
+  @attr({
+    label: 'Not valid after',
+    detailsLabel: 'Issued certificates expire after',
+    subText:
+      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date.',
+    editType: 'yield',
+  })
+  customTtl; // combines ttl and notAfter into one input <PkiNotValidAfterForm>
+
   // Attrs that come back from API POST request
   @attr({ masked: true, label: 'CA Chain' }) caChain;
   @attr('string', { masked: true }) certificate;

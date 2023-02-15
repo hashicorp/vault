@@ -83,7 +83,12 @@ func (b *SystemBackend) loginMFAPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                  b.Core.loginMFABackend.handleMFALoginValidate,
+					Callback: b.Core.loginMFABackend.handleMFALoginValidate,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+						}},
+					},
 					Summary:                   "Validates the login for the given MFA methods. Upon successful validation, it returns an auth response containing the client token",
 					ForwardPerformanceStandby: true,
 				},
@@ -1995,11 +2000,13 @@ func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *
 		case "allow":
 			return nil
 		}
+		timer := time.NewTimer(time.Second)
 
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return fmt.Errorf("duo push verification operation canceled")
-		case <-time.After(time.Second):
+		case <-timer.C:
 		}
 	}
 }
@@ -2124,11 +2131,13 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		default:
 			return fmt.Errorf("unknown status code")
 		}
+		timer := time.NewTimer(time.Second)
 
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return fmt.Errorf("push verification operation canceled")
-		case <-time.After(time.Second):
+		case <-timer.C:
 		}
 	}
 }

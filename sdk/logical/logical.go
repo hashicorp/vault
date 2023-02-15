@@ -105,6 +105,9 @@ type BackendConfig struct {
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string
+
+	// EventsSender provides a mechanism to interact with Vault events.
+	EventsSender EventSender
 }
 
 // Factory is the factory function to create a logical backend.

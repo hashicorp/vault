@@ -30,7 +30,7 @@ type PKIListIntermediateCommand struct {
 }
 
 func (c *PKIListIntermediateCommand) Synopsis() string {
-	return "Determine Which (of a List) of Certificates Were Issued by A Given Parent Certificate"
+	return "Determine which of a list of certificates, were issued by a given parent certificate"
 }
 
 func (c *PKIListIntermediateCommand) Help() string {
@@ -186,10 +186,16 @@ func (c *PKIListIntermediateCommand) Run(args []string) int {
 		"signature_match": c.flagSignatureMatch,
 	}
 
+	issuerResp, err := readIssuer(client, issuer)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to read parent issuer on path %s: %s", issuer, err.Error()))
+		return 1
+	}
+
 	for _, child := range issued {
 		path := sanitizePath(child)
 		if path != "" {
-			err, verifyResults := verifySignBetween(client, issuer, path)
+			verifyResults, err := verifySignBetween(client, issuerResp, path)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Failed to run verification on path %v: %v", path, err))
 				return 1
