@@ -36,7 +36,7 @@ func TestBusBasics(t *testing.T) {
 		t.Errorf("Expected no error sending: %v", err)
 	}
 
-	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
+	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestNamespaceFiltering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType)
+	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,13 +133,13 @@ func TestBus2Subscriptions(t *testing.T) {
 	eventType2 := logical.EventType("someType2")
 	bus.Start()
 
-	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType1)
+	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType1))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cancel1()
 
-	ch2, cancel2, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType2)
+	ch2, cancel2, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType2))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -148,7 +148,7 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	}, nil
 }
 
-func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, eventType logical.EventType) (<-chan *logical.EventReceived, context.CancelFunc, error) {
+func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pattern string) (<-chan *logical.EventReceived, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -160,26 +160,8 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, eve
 		return nil, nil, err
 	}
 
-	filterNode := eventlogger.Filter{
-		Predicate: func(e *eventlogger.Event) (bool, error) {
-			eventRecv := e.Payload.(*logical.EventReceived)
-
-			// Drop if event is not in our namespace.
-			// TODO: add wildcard/child namespace processing here in some cases?
-			if eventRecv.Namespace != ns.Path {
-				return false, nil
-			}
-
-			// Filter for correct event type, including wildcards.
-			if !glob.Glob(string(eventType), eventRecv.EventType) {
-				return false, nil
-			}
-
-			return true, nil
-		},
-	}
-
-	err = bus.broker.RegisterNode(eventlogger.NodeID(filterNodeID), &filterNode)
+	filterNode := newFilterNode(ns, pattern)
+	err = bus.broker.RegisterNode(eventlogger.NodeID(filterNodeID), filterNode)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -211,6 +193,27 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, eve
 	}
 
 	return asyncNode.ch, cancel, nil
+}
+
+func newFilterNode(ns *namespace.Namespace, pattern string) *eventlogger.Filter {
+	return &eventlogger.Filter{
+		Predicate: func(e *eventlogger.Event) (bool, error) {
+			eventRecv := e.Payload.(*logical.EventReceived)
+
+			// Drop if event is not in our namespace.
+			// TODO: add wildcard/child namespace processing here in some cases?
+			if eventRecv.Namespace != ns.Path {
+				return false, nil
+			}
+
+			// Filter for correct event type, including wildcards.
+			if !glob.Glob(pattern, eventRecv.EventType) {
+				return false, nil
+			}
+
+			return true, nil
+		},
+	}
 }
 
 func newAsyncNode(ctx context.Context, namespace *namespace.Namespace, logger hclog.Logger) *asyncChanNode {

@@ -20,13 +20,13 @@ import (
 )
 
 type eventSubscribeArgs struct {
-	ctx       context.Context
-	logger    hclog.Logger
-	events    *eventbus.EventBus
-	ns        *namespace.Namespace
-	eventType logical.EventType
-	conn      *websocket.Conn
-	json      bool
+	ctx     context.Context
+	logger  hclog.Logger
+	events  *eventbus.EventBus
+	ns      *namespace.Namespace
+	pattern string
+	conn    *websocket.Conn
+	json    bool
 }
 
 // handleEventsSubscribeWebsocket runs forever, returning a websocket error code and reason
@@ -34,7 +34,7 @@ type eventSubscribeArgs struct {
 func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCode, string, error) {
 	ctx := args.ctx
 	logger := args.logger
-	ch, cancel, err := args.events.Subscribe(ctx, args.ns, args.eventType)
+	ch, cancel, err := args.events.Subscribe(ctx, args.ns, args.pattern)
 	if err != nil {
 		logger.Info("Error subscribing", "error", err)
 		return websocket.StatusUnsupportedData, "Error subscribing", nil
@@ -97,12 +97,11 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 		if ns.ID != namespace.RootNamespaceID {
 			prefix = fmt.Sprintf("/v1/%ssys/events/subscribe/", ns.Path)
 		}
-		eventTypeStr := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, prefix))
-		if eventTypeStr == "" {
+		pattern := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, prefix))
+		if pattern == "" {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("did not specify eventType to subscribe to"))
 			return
 		}
-		eventType := logical.EventType(eventTypeStr)
 
 		json := false
 		jsonRaw := r.URL.Query().Get("json")
@@ -135,7 +134,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			}
 		}()
 
-		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(eventSubscribeArgs{ctx, logger, core.Events(), ns, eventType, conn, json})
+		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(eventSubscribeArgs{ctx, logger, core.Events(), ns, pattern, conn, json})
 		if err != nil {
 			closeStatus = websocket.CloseStatus(err)
 			if closeStatus == -1 {
