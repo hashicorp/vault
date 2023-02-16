@@ -42,6 +42,13 @@ export default class MountConfigModel extends Model {
   })
   passthroughRequestHeaders;
 
+  @attr({
+    label: 'Allowed response headers',
+    helpText: 'Headers to allow, allowing a plugin to include them in the response.',
+    editType: 'stringArray',
+  })
+  allowedResponseHeaders;
+
   @attr('string', {
     label: 'Token Type',
     helpText:
