@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	"math"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -246,18 +245,18 @@ func TestLifetimeWatcher(t *testing.T) {
 // and therefore should be tested rigorously.
 func TestCalcSleepPeriod(t *testing.T) {
 	c := quick.Config{
-		MaxCount: 1000,
+		MaxCount: 10000,
 		Values: func(values []reflect.Value, r *rand.Rand) {
-			leaseDuration := r.Intn(math.MaxInt64)
-			remainingLeaseDuration := r.Intn(leaseDuration)
-			priorDuration := remainingLeaseDuration
-			increment := r.Intn(leaseDuration + 1)
+			leaseDuration := r.Int63()
+			priorDuration := r.Int63n(leaseDuration)
+			remainingLeaseDuration := r.Int63n(priorDuration)
+			increment := r.Int63n(remainingLeaseDuration)
 
 			values[0] = reflect.ValueOf(r)
 			values[1] = reflect.ValueOf(time.Duration(leaseDuration))
 			values[2] = reflect.ValueOf(time.Duration(priorDuration))
 			values[3] = reflect.ValueOf(time.Duration(remainingLeaseDuration))
-			values[4] = reflect.ValueOf(increment) // integer truncation... could be interesting.
+			values[4] = reflect.ValueOf(time.Duration(increment))
 		},
 	}
 
@@ -266,14 +265,14 @@ func TestCalcSleepPeriod(t *testing.T) {
 	// Inputs are generated so that:
 	// leaseDuration > priorDuration > remainingLeaseDuration
 	// and remainingLeaseDuration > increment
-	if err := quick.Check(func(r *rand.Rand, leaseDuration, priorDuration, remainingLeaseDuration time.Duration, increment int) bool {
+	if err := quick.Check(func(r *rand.Rand, leaseDuration, priorDuration, remainingLeaseDuration, increment time.Duration) bool {
 		lw := LifetimeWatcher{
 			grace:     0,
-			increment: increment,
+			increment: int(increment.Seconds()),
 			random:    r,
 		}
 
-		lw.calculateGrace(remainingLeaseDuration, time.Duration(increment))
+		lw.calculateGrace(remainingLeaseDuration, increment)
 
 		// ensure that we sleep for less than the remaining lease.
 		return lw.calculateSleepDuration(remainingLeaseDuration, priorDuration) < remainingLeaseDuration
