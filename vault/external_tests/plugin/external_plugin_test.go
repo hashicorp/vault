@@ -7,40 +7,50 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/approle"
+	"github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-// TestExternalPlugin_AuthMethod tests that we can build, register and use an
-// external auth method
-func TestExternalPlugin_AuthMethod(t *testing.T) {
+func getCluster(t *testing.T, typ consts.PluginType) *vault.TestCluster {
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 	coreConfig := &vault.CoreConfig{
-		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
+		LogicalBackends: map[string]logical.Factory{
+			"database": database.Factory,
+		},
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		Plugins: &vault.TestPluginConfig{
-			Typ:      consts.PluginTypeCredential,
+			Typ:      typ,
 			Versions: []string{""},
 		},
 		HandlerFunc: vaulthttp.Handler,
 	})
-	plugin := cluster.Plugins[0]
 
 	cluster.Start()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	return cluster
+}
+
+// TestExternalPlugin_AuthMethod tests that we can build, register and use an
+// external auth method
+func TestExternalPlugin_AuthMethod(t *testing.T) {
+	cluster := getCluster(t, consts.PluginTypeCredential)
 	defer cluster.Cleanup()
 
-	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
-	client := cores[0].Client
+	plugin := cluster.Plugins[0]
+	client := cluster.Cores[0].Client
 	client.SetToken(cluster.RootToken)
 
 	// Register
@@ -156,30 +166,11 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 // TestExternalPlugin_SecretsEngine tests that we can build, register and use an
 // external secrets engine
 func TestExternalPlugin_SecretsEngine(t *testing.T) {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
-	coreConfig := &vault.CoreConfig{
-		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
-		PluginDirectory: pluginDir,
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		Plugins: &vault.TestPluginConfig{
-			Typ:      consts.PluginTypeSecrets,
-			Versions: []string{""},
-		},
-		HandlerFunc: vaulthttp.Handler,
-	})
-	plugin := cluster.Plugins[0]
-
-	cluster.Start()
+	cluster := getCluster(t, consts.PluginTypeSecrets)
 	defer cluster.Cleanup()
 
-	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
-	client := cores[0].Client
+	plugin := cluster.Plugins[0]
+	client := cluster.Cores[0].Client
 	client.SetToken(cluster.RootToken)
 
 	// Register
@@ -193,7 +184,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Enable
-	if err := client.Sys().Mount(plugin.Name, &api.EnableAuthOptions{
+	if err := client.Sys().Mount(plugin.Name, &api.MountInput{
 		Type: plugin.Name,
 	}); err != nil {
 		t.Fatal(err)
@@ -252,3 +243,235 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestExternalPlugin_Database tests that we can build, register and use an
+// external database secrets engine
+func TestExternalPlugin_Database(t *testing.T) {
+	cluster := getCluster(t, consts.PluginTypeDatabase)
+	defer cluster.Cleanup()
+
+	plugin := cluster.Plugins[0]
+	client := cluster.Cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	// Register
+	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(consts.PluginTypeDatabase),
+		Command: plugin.Name,
+		SHA256:  plugin.Sha256,
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable
+	if err := client.Sys().Mount(consts.PluginTypeDatabase.String(), &api.MountInput{
+		Type: consts.PluginTypeDatabase.String(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// define a group of parallel tests so we wait for their execution before
+	// continuing on to cleanup
+	// see: https://go.dev/blog/subtests
+	t.Run("parallel execution group", func(t *testing.T) {
+		// loop to mount 5 database connections that will each share a single
+		// plugin process
+		for i := 0; i < 5; i++ {
+			dbName := fmt.Sprintf("%s-%d", plugin.Name, i)
+			t.Run(dbName, func(t *testing.T) {
+				t.Parallel()
+				roleName := "test-role-" + dbName
+
+				cleanupContainer, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background(), "13.4-buster")
+				defer cleanupContainer()
+
+				_, err := client.Logical().Write("database/config/"+dbName, map[string]interface{}{
+					"connection_url": connURL,
+					"plugin_name":    plugin.Name,
+					"allowed_roles":  []string{roleName},
+					"username":       "vaultadmin",
+					"password":       "vaultpass",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				_, err = client.Logical().Write("database/rotate-root/"+dbName, map[string]interface{}{})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				_, err = client.Logical().Write("database/roles/"+roleName, map[string]interface{}{
+					"db_name":             dbName,
+					"creation_statements": testRole,
+					"max_ttl":             "10m",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Generate credentials
+				resp, err := client.Logical().Read("database/creds/" + roleName)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("read creds response is nil")
+				}
+
+				_, err = client.Logical().Write("database/reset/"+dbName, map[string]interface{}{})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Generate credentials
+				resp, err = client.Logical().Read("database/creds/" + roleName)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("read creds response is nil")
+				}
+
+				resp, err = client.Logical().Read("database/creds/" + roleName)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("read creds response is nil")
+				}
+
+				revokeLease := resp.LeaseID
+				// Lookup - expect SUCCESS
+				resp, err = client.Sys().Lookup(revokeLease)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatalf("lease lookup response is nil")
+				}
+
+				// Revoke
+				if err = client.Sys().Revoke(revokeLease); err != nil {
+					t.Fatal(err)
+				}
+
+				// Reset root token
+				client.SetToken(cluster.RootToken)
+
+				// Lookup - expect FAILURE
+				resp, err = client.Sys().Lookup(revokeLease)
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+			})
+		}
+	})
+
+	// Deregister
+	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(plugin.Typ),
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestExternalPlugin_DatabaseReload tests that we can use an external database
+// secrets engine after reload
+func TestExternalPlugin_DatabaseReload(t *testing.T) {
+	cluster := getCluster(t, consts.PluginTypeDatabase)
+	defer cluster.Cleanup()
+
+	plugin := cluster.Plugins[0]
+	client := cluster.Cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	// Register
+	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(consts.PluginTypeDatabase),
+		Command: plugin.Name,
+		SHA256:  plugin.Sha256,
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable
+	if err := client.Sys().Mount(consts.PluginTypeDatabase.String(), &api.MountInput{
+		Type: consts.PluginTypeDatabase.String(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	dbName := fmt.Sprintf("%s-%d", plugin.Name, 0)
+	roleName := "test-role-" + dbName
+
+	cleanupContainer, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background(), "13.4-buster")
+	defer cleanupContainer()
+
+	_, err := client.Logical().Write("database/config/"+dbName, map[string]interface{}{
+		"connection_url": connURL,
+		"plugin_name":    plugin.Name,
+		"allowed_roles":  []string{roleName},
+		"username":       "vaultadmin",
+		"password":       "vaultpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("database/roles/"+roleName, map[string]interface{}{
+		"db_name":             dbName,
+		"creation_statements": testRole,
+		"max_ttl":             "10m",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Read("database/creds/" + roleName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("read creds response is nil")
+	}
+
+	// Reload plugin
+	if _, err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
+		Plugin: plugin.Name,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate credentials after reload
+	resp, err = client.Logical().Read("database/creds/" + roleName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("read creds response is nil")
+	}
+
+	// Deregister
+	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(plugin.Typ),
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+const testRole = `
+CREATE ROLE "{{name}}" WITH
+  LOGIN
+  PASSWORD '{{password}}'
+  VALID UNTIL '{{expiration}}';
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
+`
