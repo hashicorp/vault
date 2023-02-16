@@ -3,7 +3,6 @@ import Route from '@ember/routing/route';
 import { singularize } from 'ember-inflector';
 
 export default Route.extend({
-  wizard: service(),
   pathHelp: service('path-help'),
 
   beforeModel() {

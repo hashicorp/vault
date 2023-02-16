@@ -28,7 +28,7 @@ const transformModel = (queryParams) => {
 };
 
 export default EditBase.extend({
-  wizard: service(),
+  store: service(),
 
   createModel(transition) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
@@ -43,9 +43,6 @@ export default EditBase.extend({
       modelType = 'database/role';
     }
     if (modelType !== 'secret' && modelType !== 'secret-v2') {
-      if (this.wizard.featureState === 'details' && this.wizard.componentState === 'transit') {
-        this.wizard.transitionFeatureMachine('details', 'CONTINUE', 'transit');
-      }
       return this.store.createRecord(modelType);
     }
     // create record in capabilities that checks for access to create metadata
@@ -58,10 +55,6 @@ export default EditBase.extend({
   },
 
   model(params, transition) {
-    // wizard will pause unless we manually continue it -- verify that keymgmt tutorial is in progress
-    if (params.itemType === 'provider' && this.wizard.nextStep === 'provider') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'keymgmt');
-    }
     return hash({
       secret: this.createModel(transition),
       capabilities: {},

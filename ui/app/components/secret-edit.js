@@ -27,7 +27,6 @@ import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 import { alias, or } from '@ember/object/computed';
 
 export default class SecretEdit extends Component {
-  @service wizard;
   @service store;
 
   @tracked secretData = null;
@@ -44,10 +43,6 @@ export default class SecretEdit extends Component {
     const data = KVObject.create({ content: [] }).fromJSON(secrets);
     this.secretData = data;
     this.codemirrorString = data.toJSONString();
-    if (this.wizard.featureState === 'details' && this.args.mode === 'create') {
-      let engine = this.args.model.backend.includes('kv') ? 'kv' : this.args.model.backend;
-      this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
-    }
   }
 
   @maybeQueryRecord(

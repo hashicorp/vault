@@ -24,8 +24,7 @@
     <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} @errors={{this.errors}} />
     {{#if this.showEnable}}
       <FormFieldGroups
-        @model={{this.mountModel}}
-        @onChange={{this.onTypeChange}}
+        @model={{@mountModel}}
         @renderGroup="default"
         @modelValidations={{this.modelValidations}}
         @onKeyUp={{this.onKeyUp}}
