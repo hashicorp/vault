@@ -27,7 +27,10 @@ export default class CreateAndEditRolePageComponent extends Component {
 
   constructor() {
     super(...arguments);
-    this.initRoleRules();
+    // generated role rules are only rendered for the full object chain option
+    if (this.args.model.generationPreference === 'full') {
+      this.initRoleRules();
+    }
     // if editing and annotations or labels exist expand the section
     const { extraAnnotations, extraLabels } = this.args.model;
     if (extraAnnotations || extraLabels) {
@@ -127,7 +130,7 @@ export default class CreateAndEditRolePageComponent extends Component {
   *save() {
     try {
       // set generatedRoleRoles to value of selected template
-      const selectedTemplate = this.roleRulesTemplates.findBy('id', this.selectedTemplateId);
+      const selectedTemplate = this.roleRulesTemplates?.findBy('id', this.selectedTemplateId);
       if (selectedTemplate) {
         this.args.model.generatedRoleRules = selectedTemplate.rules;
       }

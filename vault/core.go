@@ -688,6 +688,10 @@ type Core struct {
 	// contains absolute paths that we intend to forward (and template) when
 	// we're on a secondary cluster.
 	writeForwardedPaths *pathmanager.PathManager
+
+	// if populated, the callback is called for every request
+	// for testing purposes
+	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -1269,7 +1273,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 	c.events = events
-	if c.isExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
+	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
 		c.events.Start()
 	}
 
@@ -3921,7 +3925,8 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 	return status, resourceID
 }
 
-func (c *Core) isExperimentEnabled(experiment string) bool {
+// IsExperimentEnabled is true if the experiment is enabled in the core.
+func (c *Core) IsExperimentEnabled(experiment string) bool {
 	return strutil.StrListContains(c.experiments, experiment)
 }
 
@@ -3979,4 +3984,9 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	}
 
 	return raftBackend.GetAutopilotServerState(ctx)
+}
+
+// Events returns a reference to the common event bus for sending and subscribint to events.
+func (c *Core) Events() *eventbus.EventBus {
+	return c.events
 }

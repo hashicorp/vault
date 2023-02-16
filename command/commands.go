@@ -332,6 +332,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"events subscribe": func() (cli.Command, error) {
+			return &EventsSubscribeCommands{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"lease": func() (cli.Command, error) {
 			return &LeaseCommand{
 				BaseCommand: getBaseCommand(),
@@ -547,6 +552,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 		"pki list-intermediates": func() (cli.Command, error) {
 			return &PKIListIntermediateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki reissue": func() (cli.Command, error) {
+			return &PKIReIssueCACommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

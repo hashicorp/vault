@@ -1186,6 +1186,9 @@ type TestClusterOptions struct {
 	NoDefaultQuotas bool
 
 	Plugins *TestPluginConfig
+
+	// if populated, the callback is called for every request
+	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
 }
 
 type TestPluginConfig struct {
@@ -1934,6 +1937,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 			props.ListenerConfig.MaxRequestDuration = DefaultMaxRequestDuration
 		}
 		handler = opts.HandlerFunc.Handler(&props)
+	}
+
+	if opts != nil && opts.RequestResponseCallback != nil {
+		c.requestResponseCallback = opts.RequestResponseCallback
 	}
 
 	// Set this in case the Seal was manually set before the core was

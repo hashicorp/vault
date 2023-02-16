@@ -136,10 +136,12 @@ module('Acceptance | pki workflow', function (hooks) {
       await fillIn(SELECTORS.configuration.typeField, 'exported');
       await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
       await click('[data-test-save]');
+      await assert.dom(SELECTORS.configuration.csrDetails).exists('renders CSR details after save');
+      await click('[data-test-done]');
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/issuers`,
-        'Transitions to issuers on save success'
+        'Transitions to issuers after viewing csr details'
       );
     });
   });
