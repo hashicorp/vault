@@ -21,6 +21,9 @@ import (
 )
 
 const (
+	// eventTypeAll is purely internal to the event bus. We use it to send all
+	// events down one big firehose, and pipelines define their own filtering
+	// based on what each subscriber is interested in.
 	eventTypeAll   = "*"
 	defaultTimeout = 60 * time.Second
 )
