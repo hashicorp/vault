@@ -244,7 +244,7 @@ to be set on all PR secondary clusters.`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathGetIssuer,
+				Callback:  b.pathGetIssuer,
 				Responses: updateIssuerSchema,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
