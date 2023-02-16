@@ -248,7 +248,7 @@ func TestCalcSleepPeriod(t *testing.T) {
 	c := quick.Config{
 		MaxCount: 1000,
 		Values: func(values []reflect.Value, r *rand.Rand) {
-			leaseDuration := r.Intn(math.MaxInt64)
+			leaseDuration := r.Intn(math.MaxInt)
 			remainingLeaseDuration := r.Intn(leaseDuration)
 			priorDuration := remainingLeaseDuration
 			increment := r.Intn(leaseDuration + 1)
