@@ -198,7 +198,16 @@
       {
         "title": "User Lockout",
         "path": "concepts/user-lockout"
-      }
+      },
+      {
+        "title": "Events",
+        "path": "concepts/events",
+        "badge": {
+          "text": "EXPERIMENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+  }
     ]
   },
   {
