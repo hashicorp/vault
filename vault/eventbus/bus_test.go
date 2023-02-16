@@ -299,6 +299,8 @@ func waitFor(t *testing.T, maxWait time.Duration, f func() bool) {
 	t.Error("Timeout waiting for condition")
 }
 
+// TestBusWildcardSubscriptions tests that a single subscription can receive
+// multiple event types using * for glob patterns.
 func TestBusWildcardSubscriptions(t *testing.T) {
 	bus, err := NewEventBus(nil)
 	if err != nil {
