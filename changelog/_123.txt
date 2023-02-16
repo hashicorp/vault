@@ -1,0 +1,3 @@
+```release-note:feature
+core: Adds support to prevent brute forcing attack for userpass, approle and ldap auth methods.
+```
