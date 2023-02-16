@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	"math"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -246,18 +245,18 @@ func TestLifetimeWatcher(t *testing.T) {
 // and therefore should be tested rigorously.
 func TestCalcSleepPeriod(t *testing.T) {
 	c := quick.Config{
-		MaxCount: 1000,
+		MaxCount: 10000,
 		Values: func(values []reflect.Value, r *rand.Rand) {
-			leaseDuration := r.Intn(math.MaxInt)
-			remainingLeaseDuration := r.Intn(leaseDuration)
+			leaseDuration := r.Int63()
+			remainingLeaseDuration := r.Int63n(leaseDuration)
 			priorDuration := remainingLeaseDuration
-			increment := r.Intn(leaseDuration + 1)
+			increment := r.Intn(int(leaseDuration))
 
 			values[0] = reflect.ValueOf(r)
 			values[1] = reflect.ValueOf(time.Duration(leaseDuration))
 			values[2] = reflect.ValueOf(time.Duration(priorDuration))
 			values[3] = reflect.ValueOf(time.Duration(remainingLeaseDuration))
-			values[4] = reflect.ValueOf(increment) // integer truncation... could be interesting.
+			values[4] = reflect.ValueOf(increment)
 		},
 	}
 
