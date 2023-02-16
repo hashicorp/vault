@@ -21,7 +21,6 @@ export default class PkiEngine extends Engine {
       'secret-mount-path',
       'store',
       'version',
-      'wizard',
     ],
     externalRoutes: ['secrets', 'secretsListRoot', 'secretsListRootConfiguration', 'externalMountIssuer'],
   };

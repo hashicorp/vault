@@ -18,7 +18,6 @@ const Eng = Engine.extend({
       'router',
       'store',
       'version',
-      'wizard',
       'secret-mount-path',
     ],
     externalRoutes: ['secrets'],
