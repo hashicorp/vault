@@ -66,6 +66,7 @@ type asyncChanNode struct {
 	cancelFunc context.CancelFunc
 	pipelineID eventlogger.PipelineID
 	broker     *eventlogger.Broker
+	filter     *eventlogger.Filter
 }
 
 var (
@@ -201,7 +202,7 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pat
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	asyncNode := newAsyncNode(ctx, ns, bus.logger)
+	asyncNode := newAsyncNode(ctx, bus.logger, filterNode)
 	err = bus.broker.RegisterNode(eventlogger.NodeID(sinkNodeID), asyncNode)
 	if err != nil {
 		defer cancel()
@@ -245,7 +246,17 @@ func (bus *EventBus) replayEvents(node *asyncChanNode) {
 	events := bus.copyRecentEvents()
 	bus.logger.Info(fmt.Sprintf("Replaying %d events for %v subscriber", len(events), node.pipelineID))
 	for _, event := range events {
-		node.ch <- event
+		keep := true
+		if node.filter != nil {
+			var err error
+			keep, err = node.filter.Predicate(&eventlogger.Event{Payload: event})
+			if err != nil {
+				bus.logger.Warn("Error filtering event", "error", err)
+			}
+		}
+		if keep {
+			node.ch <- event
+		}
 	}
 }
 
@@ -287,11 +298,12 @@ func newFilterNode(ns *namespace.Namespace, pattern string) *eventlogger.Filter 
 	}
 }
 
-func newAsyncNode(ctx context.Context, namespace *namespace.Namespace, logger hclog.Logger) *asyncChanNode {
+func newAsyncNode(ctx context.Context, logger hclog.Logger, filter *eventlogger.Filter) *asyncChanNode {
 	return &asyncChanNode{
 		ctx:    ctx,
 		ch:     make(chan *logical.EventReceived),
 		logger: logger,
+		filter: filter,
 	}
 }
 

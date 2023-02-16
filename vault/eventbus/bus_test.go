@@ -104,6 +104,12 @@ func TestNamespaceFiltering(t *testing.T) {
 		t.Error(err)
 	}
 
+	ch, cancel, err = bus.Subscribe(ctx, namespace.RootNamespace, string(eventType))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+
 	timeout := time.After(100 * time.Millisecond)
 	select {
 	case <-ch:
