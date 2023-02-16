@@ -199,7 +199,7 @@ to be set on all PR secondary clusters.`,
 					Required:    true,
 				},
 				"leaf_not_after_behavior": {
-					Type:        framework.TypeBool,
+					Type:        framework.TypeString,
 					Description: `Leaf Not After Behavior`,
 					Required:    true,
 				},

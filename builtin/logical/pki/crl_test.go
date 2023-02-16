@@ -5,7 +5,6 @@ import (
 	"encoding/asn1"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"strings"
 	"testing"
@@ -400,7 +399,6 @@ func TestCrlRebuilder(t *testing.T) {
 	ctx := context.Background()
 	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
-	paths := []*framework.Path{pathFetchCRL(b)}
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
 	bundle := genCertBundle(t, b, s)
@@ -437,7 +435,7 @@ func TestCrlRebuilder(t *testing.T) {
 	err = cb.rebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
 	resp = requestCrlFromBackend(t, s, b)
-	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.ReadOperation), resp, true)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("crl/pem"), logical.ReadOperation), resp, true)
 
 	crl3 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 	require.True(t, crl1.ThisUpdate.Before(crl3.ThisUpdate),

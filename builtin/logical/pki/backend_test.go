@@ -16,7 +16,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"math"
 	"math/big"
@@ -1839,7 +1838,6 @@ func TestRolesAltIssuer(t *testing.T) {
 func TestBackend_PathFetchValidRaw(t *testing.T) {
 	t.Parallel()
 	b, storage := CreateBackendWithStorage(t)
-	paths := []*framework.Path{pathFetchCA(b)}
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1881,7 +1879,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		Data:       map[string]interface{}{},
 		MountPoint: "pki/",
 	})
-	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.ReadOperation), resp, true)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("ca/pem"), logical.ReadOperation), resp, true)
 	require.NoError(t, err)
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed read ca/pem, %#v", resp)
@@ -2372,7 +2370,6 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 func TestBackend_Root_Idempotency(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
-	paths := []*framework.Path{pathFetchCAChain(b)}
 
 	// This is a change within 1.11, we are no longer idempotent across generate/internal calls.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -2404,7 +2401,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	// Now because the issued CA's have no links, the call to ca_chain should return the same data (ca chain from default)
 	resp, err = CBRead(b, s, "cert/ca_chain")
 	require.NoError(t, err, "error reading ca_chain: %v", err)
-	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.ReadOperation), resp, true)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("cert/ca_chain"), logical.ReadOperation), resp, true)
 
 	r2Data := resp.Data
 	if !reflect.DeepEqual(r1Data, r2Data) {
@@ -5046,7 +5043,6 @@ AwEHoUQDQgAE57NX8bR/nDoW8yRgLswoXBQcjHrdyfuHS0gPwki6BNnfunUzryVb
 func TestPerIssuerAIA(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
-	paths := []*framework.Path{pathissuer(b)}
 
 	// Generating a root without anything should not have AIAs.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -5065,7 +5061,7 @@ func TestPerIssuerAIA(t *testing.T) {
 	resp, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
 		"issuing_certificates": []string{"https://google.com"},
 	})
-	schema.ValidateResponse(t, schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation), resp, true)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/default"), logical.UpdateOperation), resp, true)
 
 	require.NoError(t, err)
 
