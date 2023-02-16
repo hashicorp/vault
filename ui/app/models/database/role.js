@@ -130,7 +130,6 @@ export default Model.extend({
   credentialPath: lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id'),
   staticCredentialPath: lazyCapabilities(apiPath`${'backend'}/static-creds/${'id'}`, 'backend', 'id'),
   canGenerateCredentials: alias('credentialPath.canRead'),
-  canGenerateStaticCredentials: alias('staticCredentialPath.canRead'),
   canGetCredentials: alias('staticCredentialPath.canRead'),
   databasePath: lazyCapabilities(apiPath`${'backend'}/config/${'database[0]'}`, 'backend', 'database'),
   canUpdateDb: alias('databasePath.canUpdate'),

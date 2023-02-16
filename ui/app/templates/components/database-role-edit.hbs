@@ -38,7 +38,7 @@
       {{/if}}
       {{#if
         (or
-          (and (eq @model.type "static") @model.canGenerateStaticCredentials)
+          (and (eq @model.type "static") @model.canGetCredentials)
           (and (eq @model.type "dynamic") @model.canGenerateCredentials)
         )
       }}
