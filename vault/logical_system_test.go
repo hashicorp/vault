@@ -1904,6 +1904,12 @@ func TestSystemBackend_authTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"token/": map[string]interface{}{
@@ -1935,6 +1941,13 @@ func TestSystemBackend_authTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	if diff := deep.Equal(resp.Data, exp["token/"]); diff != nil {
 		t.Fatal(diff)
 	}
@@ -1962,6 +1975,12 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "auth")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -1971,6 +1990,12 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 	if resp == nil {
 		t.Fatal("resp is nil")
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"foo/": map[string]interface{}{
@@ -2050,6 +2075,12 @@ func TestSystemBackend_disableAuth(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 }
 
 func TestSystemBackend_tuneAuth(t *testing.T) {
@@ -2066,6 +2097,12 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	if resp == nil {
 		t.Fatal("resp is nil")
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"description":       "token based credentials",
@@ -2086,6 +2123,13 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), ErrPluginNotFound.Error()) {
 		t.Fatalf("expected tune request to fail, but got resp: %#v, err: %s", resp, err)
 	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	// Register the plugin in the catalog, and then try the same request again.
 	{
@@ -2120,6 +2164,12 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	if resp == nil {
 		t.Fatal("resp is nil")
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	if resp.Data["description"] != "" {
 		t.Fatalf("got: %#v expect: %#v", resp.Data["description"], "")
