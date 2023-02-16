@@ -49,17 +49,20 @@ func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCo
 		case message := <-ch:
 			logger.Debug("Sending message to websocket", "message", message)
 			var messageBytes []byte
+			var messageType websocket.MessageType
 			if args.json {
 				messageBytes, err = protojson.Marshal(message)
+				messageType = websocket.MessageText
+				messageBytes = []byte(string(messageBytes) + "\n")
 			} else {
 				messageBytes, err = proto.Marshal(message)
+				messageType = websocket.MessageBinary
 			}
 			if err != nil {
 				logger.Warn("Could not serialize websocket event", "error", err)
 				return 0, "", err
 			}
-			messageString := string(messageBytes) + "\n"
-			err = args.conn.Write(ctx, websocket.MessageText, []byte(messageString))
+			err = args.conn.Write(ctx, messageType, messageBytes)
 			if err != nil {
 				return 0, "", err
 			}
