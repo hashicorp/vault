@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: ensure default issuer is set
+```
