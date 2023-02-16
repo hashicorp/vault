@@ -5,7 +5,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 
-module('Integration | Component | database-role-edit meep', function (hooks) {
+module('Integration | Component | database-role-edit', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
