@@ -819,6 +819,19 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 			// Here, we don't need to stitch together the key entries,
 			// because the last run should've done that for us (or, when
 			// importing a key).
+
+			if len(knownIssuers) == 1 {
+				// This one is the only issuer, ensure that it is set as default
+				issuerDefaultSet, err := sc.isDefaultIssuerSet()
+				if err != nil {
+					return nil, false, err
+				}
+				if !issuerDefaultSet {
+					if err = sc.updateDefaultIssuerId(existingIssuer.ID); err != nil {
+						return nil, false, err
+					}
+				}
+			}
 			return existingIssuer, true, nil
 		}
 
