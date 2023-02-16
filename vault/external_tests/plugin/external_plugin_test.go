@@ -275,7 +275,7 @@ func TestExternalPlugin_Database(t *testing.T) {
 	// define a group of parallel tests so we wait for their execution before
 	// continuing on to cleanup
 	// see: https://go.dev/blog/subtests
-	t.Run("group", func(t *testing.T) {
+	t.Run("parallel execution group", func(t *testing.T) {
 		// loop to mount 5 database connections that will each share a single
 		// plugin process
 		for i := 0; i < 5; i++ {
@@ -347,6 +347,9 @@ func TestExternalPlugin_Database(t *testing.T) {
 				// Lookup - expect SUCCESS
 				resp, err = client.Sys().Lookup(revokeLease)
 				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
 					t.Fatalf("lease lookup response is nil")
 				}
 
