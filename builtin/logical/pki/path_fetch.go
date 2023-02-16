@@ -446,7 +446,6 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 
 reply:
 	switch {
-	// To Do: Should we add `http_raw_body` and `http_content_type` as optional in the response
 	case len(contentType) != 0:
 		response = &logical.Response{
 			Data: map[string]interface{}{
