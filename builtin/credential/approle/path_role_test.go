@@ -2697,6 +2697,8 @@ func TestAppRole_SecretID_WithTTL(t *testing.T) {
 	}
 }
 
+// TestAppRole_RoleSecretIDAccessorCrossDelete tests deleting a secret id via
+// secret id accessor belonging to a different role
 func TestAppRole_RoleSecretIDAccessorCrossDelete(t *testing.T) {
 	var resp *logical.Response
 	var err error
