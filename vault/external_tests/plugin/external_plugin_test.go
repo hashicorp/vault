@@ -50,8 +50,7 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
-	cores := cluster.Cores
-	client := cores[0].Client
+	client := cluster.Cores[0].Client
 	client.SetToken(cluster.RootToken)
 
 	// Register
@@ -171,8 +170,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
-	cores := cluster.Cores
-	client := cores[0].Client
+	client := cluster.Cores[0].Client
 	client.SetToken(cluster.RootToken)
 
 	// Register
@@ -253,8 +251,7 @@ func TestExternalPlugin_Database(t *testing.T) {
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
-	cores := cluster.Cores
-	client := cores[0].Client
+	client := cluster.Cores[0].Client
 	client.SetToken(cluster.RootToken)
 
 	// Register
@@ -275,98 +272,187 @@ func TestExternalPlugin_Database(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// loop to mount 5 database connections that will each share a single
-	// plugin process
-	for i := 0; i < 5; i++ {
-		dbName := fmt.Sprintf("%s-%d", plugin.Name, i)
-		roleName := "test-role-" + dbName
+	// define a group of parallel tests so we wait for their execution before
+	// continuing on to cleanup
+	// see: https://go.dev/blog/subtests
+	t.Run("group", func(t *testing.T) {
+		// loop to mount 5 database connections that will each share a single
+		// plugin process
+		for i := 0; i < 5; i++ {
+			dbName := fmt.Sprintf("%s-%d", plugin.Name, i)
+			t.Run(dbName, func(t *testing.T) {
+				t.Parallel()
+				roleName := "test-role-" + dbName
 
-		cleanupContainer, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background(), "13.4-buster")
-		defer cleanupContainer()
+				cleanupContainer, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background(), "13.4-buster")
+				defer cleanupContainer()
 
-		_, err := client.Logical().Write("database/config/"+dbName, map[string]interface{}{
-			"connection_url": connURL,
-			"plugin_name":    plugin.Name,
-			"allowed_roles":  []string{roleName},
-			"username":       "vaultadmin",
-			"password":       "vaultpass",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+				_, err := client.Logical().Write("database/config/"+dbName, map[string]interface{}{
+					"connection_url": connURL,
+					"plugin_name":    plugin.Name,
+					"allowed_roles":  []string{roleName},
+					"username":       "vaultadmin",
+					"password":       "vaultpass",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
 
-		_, err = client.Logical().Write("database/rotate-root/"+dbName, map[string]interface{}{})
-		if err != nil {
-			t.Fatal(err)
-		}
+				_, err = client.Logical().Write("database/rotate-root/"+dbName, map[string]interface{}{})
+				if err != nil {
+					t.Fatal(err)
+				}
 
-		_, err = client.Logical().Write("database/roles/"+roleName, map[string]interface{}{
-			"db_name":             dbName,
-			"creation_statements": testRole,
-			"max_ttl":             "10m",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+				_, err = client.Logical().Write("database/roles/"+roleName, map[string]interface{}{
+					"db_name":             dbName,
+					"creation_statements": testRole,
+					"max_ttl":             "10m",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
 
-		// Generate credentials
-		resp, err := client.Logical().Read("database/creds/" + roleName)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if resp == nil {
-			t.Fatal("read creds response is nil")
-		}
+				// Generate credentials
+				resp, err := client.Logical().Read("database/creds/" + roleName)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("read creds response is nil")
+				}
 
-		_, err = client.Logical().Write("database/reset/"+dbName, map[string]interface{}{})
-		if err != nil {
-			t.Fatal(err)
-		}
+				_, err = client.Logical().Write("database/reset/"+dbName, map[string]interface{}{})
+				if err != nil {
+					t.Fatal(err)
+				}
 
-		// Generate credentials
-		resp, err = client.Logical().Read("database/creds/" + roleName)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if resp == nil {
-			t.Fatal("read creds response is nil")
-		}
+				// Generate credentials
+				resp, err = client.Logical().Read("database/creds/" + roleName)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("read creds response is nil")
+				}
 
-		// Reload plugin
-		if _, err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
-			Plugin: plugin.Name,
-		}); err != nil {
-			t.Fatal(err)
-		}
+				resp, err = client.Logical().Read("database/creds/" + roleName)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("read creds response is nil")
+				}
 
-		resp, err = client.Logical().Read("database/creds/" + roleName)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if resp == nil {
-			t.Fatal("read creds response is nil")
-		}
+				revokeLease := resp.LeaseID
+				// Lookup - expect SUCCESS
+				resp, err = client.Sys().Lookup(revokeLease)
+				if err != nil {
+					t.Fatalf("lease lookup response is nil")
+				}
 
-		revokeLease := resp.LeaseID
-		// Lookup - expect SUCCESS
-		resp, err = client.Sys().Lookup(revokeLease)
-		if err != nil {
-			t.Fatalf("lease lookup response is nil")
-		}
+				// Revoke
+				if err = client.Sys().Revoke(revokeLease); err != nil {
+					t.Fatal(err)
+				}
 
-		// Revoke
-		if err = client.Sys().Revoke(revokeLease); err != nil {
-			t.Fatal(err)
-		}
+				// Reset root token
+				client.SetToken(cluster.RootToken)
 
-		// Reset root token
-		client.SetToken(cluster.RootToken)
-
-		// Lookup - expect FAILURE
-		resp, err = client.Sys().Lookup(revokeLease)
-		if err == nil {
-			t.Fatalf("expected error, got nil")
+				// Lookup - expect FAILURE
+				resp, err = client.Sys().Lookup(revokeLease)
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+			})
 		}
+	})
+
+	// Deregister
+	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(plugin.Typ),
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestExternalPlugin_DatabaseReload tests that we can use an external database
+// secrets engine after reload
+func TestExternalPlugin_DatabaseReload(t *testing.T) {
+	cluster := getCluster(t, consts.PluginTypeDatabase)
+	defer cluster.Cleanup()
+
+	plugin := cluster.Plugins[0]
+	client := cluster.Cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	// Register
+	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(consts.PluginTypeDatabase),
+		Command: plugin.Name,
+		SHA256:  plugin.Sha256,
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable
+	if err := client.Sys().Mount(consts.PluginTypeDatabase.String(), &api.MountInput{
+		Type: consts.PluginTypeDatabase.String(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	dbName := fmt.Sprintf("%s-%d", plugin.Name, 0)
+	roleName := "test-role-" + dbName
+
+	cleanupContainer, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background(), "13.4-buster")
+	defer cleanupContainer()
+
+	_, err := client.Logical().Write("database/config/"+dbName, map[string]interface{}{
+		"connection_url": connURL,
+		"plugin_name":    plugin.Name,
+		"allowed_roles":  []string{roleName},
+		"username":       "vaultadmin",
+		"password":       "vaultpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("database/roles/"+roleName, map[string]interface{}{
+		"db_name":             dbName,
+		"creation_statements": testRole,
+		"max_ttl":             "10m",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Read("database/creds/" + roleName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("read creds response is nil")
+	}
+
+	// Reload plugin
+	if _, err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
+		Plugin: plugin.Name,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate credentials after reload
+	resp, err = client.Logical().Read("database/creds/" + roleName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("read creds response is nil")
 	}
 
 	// Deregister
