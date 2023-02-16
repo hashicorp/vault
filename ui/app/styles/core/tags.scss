@@ -18,6 +18,15 @@
     min-width: 0;
     width: 12px;
   }
+
+  &.is-success {
+    background-color: $green-050;
+    color: $green-700;
+  }
+
+  &.has-extra-padding {
+    padding: $size-11 $spacing-xxs;
+  }
 }
 
 .tag.is-outlined {

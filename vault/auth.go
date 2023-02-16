@@ -802,7 +802,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
 
 			if c.isMountable(ctx, entry, consts.PluginTypeCredential) {
-				c.logger.Warn("skipping plugin-based credential entry", "path", entry.Path)
+				c.logger.Warn("skipping plugin-based auth entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
 			return errLoadAuthFailed
@@ -817,6 +817,22 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// don't set the running version to a builtin if it is running as an external plugin
 			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+			}
+		}
+
+		// Do not start up deprecated builtin plugins. If this is a major
+		// upgrade, stop unsealing and shutdown. If we've already mounted this
+		// plugin, skip backend initialization and mount the data for posterity.
+		if versions.IsBuiltinVersion(entry.RunningVersion) {
+			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential)
+			if c.isMajorVersionFirstMount(ctx) && err != nil {
+				go c.ShutdownCoreError(fmt.Errorf("could not mount %q: %w", entry.Type, err))
+				return errLoadAuthFailed
+			} else if err != nil {
+				c.logger.Error("skipping deprecated auth entry", "name", entry.Type, "path", entry.Path, "error", err)
+				backend.Cleanup(ctx)
+				backend = nil
+				goto ROUTER_MOUNT
 			}
 		}
 
@@ -848,7 +864,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		}
 
 		if c.logger.IsInfo() {
-			c.logger.Info("successfully enabled credential backend", "type", entry.Type, "version", entry.Version, "path", entry.Path, "namespace", entry.Namespace())
+			c.logger.Info("successfully mounted", "type", entry.Type, "version", entry.RunningVersion, "path", entry.Path, "namespace", entry.Namespace())
 		}
 
 		// Ensure the path is tainted if set in the mount table
@@ -882,14 +898,15 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// Bind locally
 			localEntry := entry
 			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				postUnsealLogger := c.logger.With("type", localEntry.Type, "version", localEntry.RunningVersion, "path", localEntry.Path)
 				if backend == nil {
-					c.logger.Error("skipping initialization on nil backend", "path", localEntry.Path)
+					postUnsealLogger.Error("skipping initialization for nil auth backend")
 					return
 				}
 
 				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
 				if err != nil {
-					c.logger.Error("failed to initialize auth entry", "path", localEntry.Path, "error", err)
+					postUnsealLogger.Error("failed to initialize auth backend", "error", err)
 				}
 			})
 		}
@@ -971,12 +988,25 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
 	c.AddLogger(authLogger)
+	pluginEventSender, err := c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
+		MountClass:    consts.PluginTypeCredential.String(),
+		MountAccessor: entry.Accessor,
+		MountPath:     entry.Path,
+		Plugin:        entry.Type,
+		PluginVersion: entry.RunningVersion,
+		Version:       entry.Version,
+	})
+	if err != nil {
+		return nil, "", err
+	}
+
 	config := &logical.BackendConfig{
-		StorageView: view,
-		Logger:      authLogger,
-		Config:      conf,
-		System:      sysView,
-		BackendUUID: entry.BackendAwareUUID,
+		StorageView:  view,
+		Logger:       authLogger,
+		Config:       conf,
+		System:       sysView,
+		BackendUUID:  entry.BackendAwareUUID,
+		EventsSender: pluginEventSender,
 	}
 
 	b, err := f(ctx, config)

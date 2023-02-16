@@ -53,7 +53,12 @@
           </select>
         </div>
         {{#if this.validationError}}
-          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+          <AlertInline
+            @type="danger"
+            @message={{this.validationError}}
+            @paddingTop={{true}}
+            data-test-field-validation={{@attr.name}}
+          />
         {{/if}}
       </div>
     {{/if}}
@@ -120,12 +125,14 @@
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}
-    <TextFile
-      @helpText={{@attr.options.helpText}}
-      @file={{this.file}}
-      @onChange={{this.setFile}}
-      @label={{this.labelString}}
-    />
+    <div class="has-bottom-margin-m">
+      <TextFile
+        @label={{this.labelString}}
+        @helpText={{@attr.options.helpText}}
+        @onChange={{this.setFile}}
+        @validationError={{this.validationError}}
+      />
+    </div>
   {{else if (eq @attr.options.editType "ttl")}}
     {{! TTL Picker }}
     <div class="field">
@@ -208,7 +215,6 @@
       @onChange={{this.setAndBroadcast}}
       @attrName={{@attr.name}}
       @subText={{@attr.options.subText}}
-      @hideFormSection={{@attr.options.hideFormSection}}
     />
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}
@@ -231,8 +237,11 @@
           id={{@attr.name}}
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
           oninput={{this.onChangeWithEvent}}
-          class="textarea"
+          class="textarea {{if this.validationError 'has-error-border'}}"
         ></textarea>
+        {{#if this.validationError}}
+          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+        {{/if}}
       {{else if (eq @attr.options.editType "password")}}
         <Input
           data-test-input={{@attr.name}}
@@ -295,8 +304,9 @@
           autocomplete="off"
           spellcheck="false"
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-          onchange={{this.onChangeWithEvent}}
-          onkeyup={{this.handleKeyUp}}
+          {{on "input" this.onChangeWithEvent}}
+          {{on "change" this.onChangeWithEvent}}
+          {{on "keyup" this.handleKeyUp}}
           class="input {{if this.validationError 'has-error-border'}}"
           maxLength={{@attr.options.characterLimit}}
         />

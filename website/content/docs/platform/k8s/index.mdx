@@ -22,19 +22,19 @@ Kubernetes, as long as they can communicate to the server via the network.
 
 **Accessing and Storing Secrets:** Applications using the Vault service running in
 Kubernetes can access and store secrets from Vault using a number of different
-[secret engines](/docs/secrets) and [authentication methods](/docs/auth).
+[secret engines](/vault/docs/secrets) and [authentication methods](/vault/docs/auth).
 
 **Running a Highly Available Vault Service:** By using pod affinities, highly available
-backend storage (such as Consul) and [auto-unseal](/docs/concepts/seal#auto-unseal),
+backend storage (such as Consul) and [auto-unseal](/vault/docs/concepts/seal#auto-unseal),
 Vault can become a highly available service in Kubernetes.
 
 **Encryption as a Service:** Applications using the Vault service running in Kubernetes
-can leverage the [Transit secret engine](/docs/secrets/transit)
+can leverage the [Transit secret engine](/vault/docs/secrets/transit)
 as "encryption as a service". This allows applications to offload encryption needs
 to Vault before storing data at rest.
 
 **Audit Logs for Vault:** Operators can choose to attach a persistent volume
-to the Vault cluster which can be used to [store audit logs](/docs/audit).
+to the Vault cluster which can be used to [store audit logs](/vault/docs/audit).
 
 **And more!** Vault can run directly on Kubernetes, so in addition to the
 native integrations provided by Vault itself, any other tool built for
@@ -46,16 +46,16 @@ There are several ways to try Vault with Kubernetes in different environments.
 
 ### Guides
 
-- [Vault Installation to Minikube via Helm with Integrated Storage](https://learn.hashicorp.com/tutorials/vault/kubernetes-minikube-raft) covers installing Vault locally using Minikube and the official Helm chart.
+- [Vault Installation to Minikube via Helm with Integrated Storage](/vault/tutorials/kubernetes/kubernetes-minikube-raft) covers installing Vault locally using Minikube and the official Helm chart.
 
-- [Vault Installation to Red Hat OpenShift via Helm](https://learn.hashicorp.com/tutorials/vault/kubernetes-openshift) covers installing Vault using Helm on Red Hat's OpenShift platform.
+- [Vault Installation to Red Hat OpenShift via Helm](/vault/tutorials/kubernetes/kubernetes-openshift) covers installing Vault using Helm on Red Hat's OpenShift platform.
 
-- [Integrate a Kubernetes Cluster with an External Vault](https://learn.hashicorp.com/tutorials/vault/kubernetes-external-vault) provides an example of making Vault accessible via a Kubernetes service and endpoint.
+- [Integrate a Kubernetes Cluster with an External Vault](/vault/tutorials/kubernetes/kubernetes-external-vault) provides an example of making Vault accessible via a Kubernetes service and endpoint.
 
-- [Vault on Kubernetes Deployment Guide](https://learn.hashicorp.com/tutorials/vault/kubernetes-raft-deployment-guide) covers the steps required to install and configure a single HashiCorp Vault cluster as defined in the [Vault on Kubernetes Reference Architecture](https://learn.hashicorp.com/tutorials/vault/kubernetes-reference-architecture).
+- [Vault on Kubernetes Deployment Guide](/vault/tutorials/kubernetes/kubernetes-raft-deployment-guide) covers the steps required to install and configure a single HashiCorp Vault cluster as defined in the [Vault on Kubernetes Reference Architecture](/vault/tutorials/kubernetes/kubernetes-reference-architecture).
 
 ### Documentation
 
-- [Vault on Kubernetes Reference Architecture](https://learn.hashicorp.com/tutorials/vault/kubernetes-reference-architecture) provides recommended practices for running Vault on Kubernetes in production.
+- [Vault on Kubernetes Reference Architecture](/vault/tutorials/kubernetes/kubernetes-reference-architecture) provides recommended practices for running Vault on Kubernetes in production.
 
-- [Vault on Kubernetes Security Considerations](https://learn.hashicorp.com/tutorials/vault/kubernetes-security-concerns) provides recommendations specific to securely running Vault in a production Kubernetes environment.
+- [Vault on Kubernetes Security Considerations](/vault/tutorials/kubernetes/kubernetes-security-concerns) provides recommendations specific to securely running Vault in a production Kubernetes environment.

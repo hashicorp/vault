@@ -214,6 +214,7 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
 		AllowedURISANs:            []string{"*"},
+		AllowedUserIDs:            []string{"*"},
 		CNValidations:             []string{"disabled"},
 		GenerateLease:             new(bool),
 		KeyUsage:                  data.Get("key_usage").([]string),
@@ -418,7 +419,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 		}
-		b.incrementTotalCertificatesCount(certsCounted, key)
+		b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 	}
 
 	if useCSR {

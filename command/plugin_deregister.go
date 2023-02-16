@@ -6,7 +6,6 @@ import (
 
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -64,7 +63,7 @@ func (c *PluginDeregisterCommand) Flags() *FlagSets {
 }
 
 func (c *PluginDeregisterCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultPlugins(consts.PluginTypeUnknown)
+	return c.PredictVaultPlugins(api.PluginTypeUnknown)
 }
 
 func (c *PluginDeregisterCommand) AutocompleteFlags() complete.Flags {
@@ -102,7 +101,7 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 		return 2
 	}
 
-	pluginType, err := consts.ParsePluginType(strings.TrimSpace(pluginTypeRaw))
+	pluginType, err := api.ParsePluginType(strings.TrimSpace(pluginTypeRaw))
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2

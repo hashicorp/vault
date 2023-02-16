@@ -52,11 +52,15 @@ to specify where the configuration is.
   storage backend supports HA coordination and if HA specific options are
   already specified with `storage` parameter. (Refer to [Use Integrated Storage
   for HA
-  Coordination](https://learn.hashicorp.com/vault/operations/raft-ha-storage)
+  Coordination](/vault/tutorials/raft/raft-ha-storage)
   for a usage example.)
 
 - `listener` `([Listener][listener]: <required>)` – Configures how
   Vault is listening for API requests.
+
+- `user_lockout` `([UserLockout][user-lockout]: nil)` –
+  Configures the user-lockout behaviour for failed logins. For more information, please see the
+  [user lockout configuration documentation](/vault/docs/configuration/user-lockout). 
 
 - `seal` `([Seal][seal]: nil)` – Configures the seal type to use for
   auto-unsealing, as well as for
@@ -76,7 +80,7 @@ to specify where the configuration is.
 
 - `disable_mlock` `(bool: false)` – Disables the server from executing the
   `mlock` syscall. `mlock` prevents memory from being swapped to disk. Disabling
-  `mlock` is not recommended unless using [integrated storage](/docs/internals/integrated-storage).
+  `mlock` is not recommended unless using [integrated storage](/vault/docs/internals/integrated-storage).
   Follow the additional security precautions outlined below when disabling `mlock`.
   This can also be provided via the environment variable `VAULT_DISABLE_MLOCK`.
 
@@ -88,7 +92,7 @@ to specify where the configuration is.
   automatically disabled on unsupported platforms.
 
   Disabling `mlock` is strongly recommended if using [integrated
-  storage](/docs/internals/integrated-storage) due to
+  storage](/vault/docs/internals/integrated-storage) due to
   the fact that `mlock` does not interact well with memory mapped files such as
   those created by BoltDB, which is used by Raft to track state. When using
   `mlock`, memory-mapped files get loaded into resident memory which causes
@@ -107,7 +111,7 @@ to specify where the configuration is.
 
   ~> Note: Since each plugin runs as a separate process, you need to do the same
   for each plugin in your [plugins
-  directory](/docs/plugins/plugin-architecture#plugin-directory).
+  directory](/vault/docs/plugins/plugin-architecture#plugin-directory).
 
   If you use a Linux distribution with a modern version of systemd, you can add
   the following directive to the "[Service]" configuration section:
@@ -142,22 +146,30 @@ to specify where the configuration is.
   duration for tokens and secrets. This is specified using a label
   suffix like `"30s"` or `"1h"`. Individual mounts can override this value
   by tuning the mount with the `max-lease-ttl` flag of the
-  [auth](/docs/commands/auth/tune#max-lease-ttl) or
-  [secret](/docs/commands/secrets/tune#max-lease-ttl) commands.
+  [auth](/vault/docs/commands/auth/tune#max-lease-ttl) or
+  [secret](/vault/docs/commands/secrets/tune#max-lease-ttl) commands.
 
 - `default_max_request_duration` `(string: "90s")` – Specifies the default
   maximum request duration allowed before Vault cancels the request. This can
   be overridden per listener via the `max_request_duration` value.
 
+- `detect_deadlocks` `(string: "")` - Specifies the internal mutex locks that should be monitored for
+potential deadlocks. Currently supported value is `statelock`, which will cause "POTENTIAL DEADLOCK:"
+to be logged when an attempt at a core state lock appears to be deadlocked. Enabling this can have
+a negative effect on performance due to the tracking of each lock attempt.
+
 - `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which
   allows the decryption/encryption of raw data into and out of the security
   barrier. This is a highly privileged endpoint.
+
+- `introspection_endpoint` `(bool: false)` - Enables the `sys/internal/inspect` endpoint
+  which allows users with a root token or sudo privileges to inspect certain subsystems inside Vault.
 
 - `ui` `(bool: false)` – Enables the built-in web UI, which is available on all
   listeners (address + port) at the `/ui` path. Browsers accessing the standard
   Vault API address will automatically redirect there. This can also be provided
   via the environment variable `VAULT_UI`. For more information, please see the
-  [ui configuration documentation](/docs/configuration/ui).
+  [ui configuration documentation](/vault/docs/configuration/ui).
 
 - `pid_file` `(string: "")` - Path to the file in which the Vault server's
   Process ID (PID) should be stored.
@@ -187,15 +199,21 @@ to specify where the configuration is.
   ~> Note: Not all parts of Vault's logging can have its log level be changed dynamically this way; in particular,
   secrets/auth plugins are currently not updated dynamically.
 
-- `log_format` - Equivalent to the [`-log-format` command-line flag](/docs/commands/server#_log_format).
+- `log_format` - Equivalent to the [`-log-format` command-line flag](/vault/docs/commands/server#_log_format).
 
-- `log_file` - Equivalent to the [`-log-file` command-line flag](/docs/commands/server#_log_file).
+- `log_file` - Equivalent to the [`-log-file` command-line flag](/vault/docs/commands/server#_log_file).
 
-- `log_rotate_duration` - Equivalent to the [`-log-rotate-duration` command-line flag](/docs/commands/server#_log_rotate_duration).
+- `log_rotate_duration` - Equivalent to the [`-log-rotate-duration` command-line flag](/vault/docs/commands/server#_log_rotate_duration).
 
-- `log_rotate_bytes` - Equivalent to the [`-log-rotate-bytes` command-line flag](/docs/commands/server#_log_rotate_bytes).
+- `log_rotate_bytes` - Equivalent to the [`-log-rotate-bytes` command-line flag](/vault/docs/commands/server#_log_rotate_bytes).
 
-- `log_rotate_max_files` - Equivalent to the [`-log-rotate-max-files` command-line flag](/docs/commands/server#_log_rotate_max_files).
+- `log_rotate_max_files` - Equivalent to the [`-log-rotate-max-files` command-line flag](/vault/docs/commands/server#_log_rotate_max_files).
+
+- `experiments` `(string array: [])` - The list of experiments to enable for this node.
+  Experiments should NOT be used in production, and the associated APIs may have backwards
+  incompatible changes between releases. Additional experiments can also be specified via
+  the `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
+  [`-experiment`](/vault/docs/commands/server#experiment) flag.
 
 ### High Availability Parameters
 
@@ -241,11 +259,11 @@ The following parameters are only used with Vault Enterprise
   provided via the environment variable `VAULT_LICENSE_PATH`, or the license
   itself can be provided in the environment variable `VAULT_LICENSE`.
 
-[storage-backend]: /docs/configuration/storage
-[listener]: /docs/configuration/listener
-[seal]: /docs/configuration/seal
-[sealwrap]: /docs/enterprise/sealwrap
-[telemetry]: /docs/configuration/telemetry
-[sentinel]: /docs/configuration/sentinel
-[high-availability]: /docs/concepts/ha
-[plugins]: /docs/plugins
+[storage-backend]: /vault/docs/configuration/storage
+[listener]: /vault/docs/configuration/listener
+[seal]: /vault/docs/configuration/seal
+[sealwrap]: /vault/docs/enterprise/sealwrap
+[telemetry]: /vault/docs/configuration/telemetry
+[sentinel]: /vault/docs/configuration/sentinel
+[high-availability]: /vault/docs/concepts/ha
+[plugins]: /vault/docs/plugins

@@ -29,7 +29,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -685,6 +684,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 }
 
 func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType string, keyBits int) (interface{}, []byte, string) {
+	t.Helper()
+
 	var priv interface{}
 	var err error
 	switch keyType {
@@ -816,6 +817,8 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 }
 
 func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int) (x509.CertificateRequest, string) {
+	t.Helper()
+
 	csrTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
 			Country:      []string{"MyCountry"},
@@ -3627,6 +3630,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"code_signing_flag":                  false,
 		"issuer_ref":                         "default",
 		"cn_validations":                     []interface{}{"email", "hostname"},
+		"allowed_user_ids":                   []interface{}{},
 	}
 
 	if diff := deep.Equal(expectedData, resp.Data); len(diff) > 0 {
@@ -3798,6 +3802,15 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Set up Metric Configuration, then restart to enable it
+	_, err = client.Logical().Write("pki/config/auto-tidy", map[string]interface{}{
+		"maintain_stored_certificate_counts":       true,
+		"publish_stored_certificate_count_metrics": true,
+	})
+	_, err = client.Logical().Write("/sys/plugins/reload/backend", map[string]interface{}{
+		"mounts": "pki/",
+	})
+
 	// Check the metrics initialized in order to calculate backendUUID for /pki
 	// BackendUUID not consistent during tests with UUID from /sys/mounts/pki
 	metricsSuffix := "total_certificates_stored"
@@ -3834,6 +3847,14 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Set up Metric Configuration, then restart to enable it
+	_, err = client.Logical().Write("pki2/config/auto-tidy", map[string]interface{}{
+		"maintain_stored_certificate_counts":       true,
+		"publish_stored_certificate_count_metrics": true,
+	})
+	_, err = client.Logical().Write("/sys/plugins/reload/backend", map[string]interface{}{
+		"mounts": "pki2/",
+	})
 
 	// Create a CSR for the intermediate CA
 	secret, err := client.Logical().Write("pki2/intermediate/generate/internal", nil)
@@ -3947,6 +3968,9 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"tidy_revoked_certs":                    true,
 			"tidy_revoked_cert_issuer_associations": false,
 			"tidy_expired_issuers":                  false,
+			"tidy_move_legacy_ca_bundle":            false,
+			"tidy_revocation_queue":                 false,
+			"tidy_cross_cluster_revoked_certs":      false,
 			"pause_duration":                        "0s",
 			"state":                                 "Finished",
 			"error":                                 nil,
@@ -3958,6 +3982,9 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"missing_issuer_cert_count":             json.Number("0"),
 			"current_cert_store_count":              json.Number("0"),
 			"current_revoked_cert_count":            json.Number("0"),
+			"revocation_queue_deleted_count":        json.Number("0"),
+			"cross_revoked_cert_deleted_count":      json.Number("0"),
+			"internal_backend_uuid":                 backendUUID,
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -5092,6 +5119,16 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://example.com/ca", "https://backup.example.com/ca"})
 	require.Equal(t, leafCert.OCSPServer, []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"})
 	require.Equal(t, leafCert.CRLDistributionPoints, []string{"https://example.com/crl", "https://backup.example.com/crl"})
+
+	// Validate that we can set an issuer name and remove it.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuer_name": "my-issuer",
+	})
+	require.NoError(t, err)
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuer_name": "",
+	})
+	require.NoError(t, err)
 }
 
 func TestIssuersWithoutCRLBits(t *testing.T) {
@@ -5481,17 +5518,17 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		lastHeaders = client.Headers()
 	}
 
-	time.Sleep(4 * time.Second)
-
-	beforeDeltaRotation := time.Now().Add(-2 * time.Second)
-
 	// Finally, rebuild the delta CRL and ensure that only that is
-	// invalidated. We first need to enable it though.
+	// invalidated. We first need to enable it though, and wait for
+	// all CRLs to rebuild.
 	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
 		"auto_rebuild": true,
 		"enable_delta": true,
 	})
 	require.NoError(t, err)
+	time.Sleep(4 * time.Second)
+	beforeDeltaRotation := time.Now().Add(-2 * time.Second)
+
 	resp, err = client.Logical().Read("pki/crl/rotate-delta")
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -5580,6 +5617,14 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 		serials[i] = resp.Data["serial_number"].(string)
 	}
 
+	// Turn on certificate counting:
+	CBWrite(b, s, "config/auto-tidy", map[string]interface{}{
+		"maintain_stored_certificate_counts":       true,
+		"publish_stored_certificate_count_metrics": false,
+	})
+	// Assert initialize from clean is correct:
+	b.initializeStoredCertificateCounts(ctx)
+
 	// Revoke certificates A + B
 	revocations := serials[0:2]
 	for _, key := range revocations {
@@ -5591,18 +5636,16 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 		}
 	}
 
-	// Assert initialize from clean is correct:
-	b.initializeStoredCertificateCounts(ctx)
-	if atomic.LoadUint32(b.certCount) != 6 {
-		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", atomic.LoadUint32(b.certCount))
+	if b.certCount.Load() != 6 {
+		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", b.certCount.Load())
 	}
-	if atomic.LoadUint32(b.revokedCertCount) != 2 {
-		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", atomic.LoadUint32(b.revokedCertCount))
+	if b.revokedCertCount.Load() != 2 {
+		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", b.revokedCertCount.Load())
 	}
 
 	// Simulates listing while initialize in progress, by "restarting it"
-	atomic.StoreUint32(b.certCount, 0)
-	atomic.StoreUint32(b.revokedCertCount, 0)
+	b.certCount.Store(0)
+	b.revokedCertCount.Store(0)
 	b.certsCounted.Store(false)
 
 	// Revoke certificates C, D
@@ -5631,12 +5674,12 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	b.initializeStoredCertificateCounts(ctx)
 
 	// Test certificate count
-	if *(b.certCount) != 8 {
-		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", *(b.certCount))
+	if b.certCount.Load() != 8 {
+		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", b.certCount.Load())
 	}
 
-	if *(b.revokedCertCount) != 4 {
-		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", *(b.revokedCertCount))
+	if b.revokedCertCount.Load() != 4 {
+		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", b.revokedCertCount.Load())
 	}
 
 	return
@@ -5981,13 +6024,14 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 
 	// Setting templated AIAs should succeed.
 	_, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
-		"path": "http://localhost:8200/v1/pki",
+		"path":     "http://localhost:8200/v1/pki",
+		"aia_path": "http://localhost:8200/cdn/pki",
 	})
 	require.NoError(t, err)
 
 	aiaData := map[string]interface{}{
 		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
-		"issuing_certificates":    "{{cluster_path}}/issuer/{{issuer_id}}/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
 		"ocsp_servers":            "{{cluster_path}}/ocsp",
 		"enable_templating":       true,
 	}
@@ -6033,7 +6077,7 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	// Validate the AIA info is correctly templated.
 	cert := parseCert(t, resp.Data["certificate"].(string))
 	require.Equal(t, cert.OCSPServer, []string{"http://localhost:8200/v1/pki/ocsp"})
-	require.Equal(t, cert.IssuingCertificateURL, []string{"http://localhost:8200/v1/pki/issuer/" + issuerId + "/der"})
+	require.Equal(t, cert.IssuingCertificateURL, []string{"http://localhost:8200/cdn/pki/issuer/" + issuerId + "/der"})
 	require.Equal(t, cert.CRLDistributionPoints, []string{"http://localhost:8200/v1/pki/issuer/" + issuerId + "/crl/der"})
 
 	// Modify our issuer to set custom AIAs: these URLs are bad.
@@ -6077,6 +6121,262 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 		"common_name": "example.com",
 	})
 	require.Error(t, err)
+}
+
+func requireSubjectUserIDAttr(t *testing.T, cert string, target string) {
+	xCert := parseCert(t, cert)
+
+	for _, attr := range xCert.Subject.Names {
+		var userID string
+		if attr.Type.Equal(certutil.SubjectPilotUserIDAttributeOID) {
+			if target == "" {
+				t.Fatalf("expected no UserID (OID: %v) subject attributes in cert:\n%v", certutil.SubjectPilotUserIDAttributeOID, cert)
+			}
+
+			switch aValue := attr.Value.(type) {
+			case string:
+				userID = aValue
+			case []byte:
+				userID = string(aValue)
+			default:
+				t.Fatalf("unknown type for UserID attribute: %v\nCert: %v", attr, cert)
+			}
+
+			if userID == target {
+				return
+			}
+		}
+	}
+
+	if target != "" {
+		t.Fatalf("failed to find UserID (OID: %v) matching %v in cert:\n%v", certutil.SubjectPilotUserIDAttributeOID, target, cert)
+	}
+}
+
+func TestUserIDsInLeafCerts(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// 1. Setup root issuer.
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Vault Root CA",
+		"key_type":    "ec",
+		"ttl":         "7200h",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed generating root issuer")
+
+	// 2. Allow no user IDs.
+	resp, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+		"allowed_user_ids": "",
+		"key_type":         "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed setting up role")
+
+	// - Issue cert without user IDs should work.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "")
+
+	// - Issue cert with user ID should fail.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "humanoid",
+	})
+	require.Error(t, err)
+	require.True(t, resp.IsError())
+
+	// 3. Allow any user IDs.
+	resp, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+		"allowed_user_ids": "*",
+		"key_type":         "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed setting up role")
+
+	// - Issue cert without user IDs.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "")
+
+	// - Issue cert with one user ID.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "humanoid",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
+
+	// - Issue cert with two user IDs.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "humanoid,robot",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "robot")
+
+	// 4. Allow one specific user ID.
+	resp, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+		"allowed_user_ids": "humanoid",
+		"key_type":         "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed setting up role")
+
+	// - Issue cert without user IDs.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "")
+
+	// - Issue cert with approved ID.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "humanoid",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
+
+	// - Issue cert with non-approved user ID should fail.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "robot",
+	})
+	require.Error(t, err)
+	require.True(t, resp.IsError())
+
+	// - Issue cert with one approved and one non-approved should also fail.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "humanoid,robot",
+	})
+	require.Error(t, err)
+	require.True(t, resp.IsError())
+
+	// 5. Allow two specific user IDs.
+	resp, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+		"allowed_user_ids": "humanoid,robot",
+		"key_type":         "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed setting up role")
+
+	// - Issue cert without user IDs.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "")
+
+	// - Issue cert with one approved ID.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "humanoid",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
+
+	// - Issue cert with other user ID.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "robot",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "robot")
+
+	// - Issue cert with unknown user ID will fail.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "robot2",
+	})
+	require.Error(t, err)
+	require.True(t, resp.IsError())
+
+	// - Issue cert with both should succeed.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "humanoid,robot",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "robot")
+
+	// 6. Use a glob.
+	resp, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+		"allowed_user_ids": "human*",
+		"key_type":         "ec",
+		"use_csr_sans":     true, // setup for further testing.
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed setting up role")
+
+	// - Issue cert without user IDs.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "")
+
+	// - Issue cert with approved ID.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "humanoid",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
+
+	// - Issue cert with another approved ID.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "human",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "human")
+
+	// - Issue cert with literal glob.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "human*",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "human*")
+
+	// - Still no robotic certs are allowed; will fail.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "localhost",
+		"user_ids":    "robot",
+	})
+	require.Error(t, err)
+	require.True(t, resp.IsError())
+
+	// Create a CSR and validate it works with both sign/ and sign-verbatim.
+	csrTemplate := x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "localhost",
+			ExtraNames: []pkix.AttributeTypeAndValue{
+				{
+					Type:  certutil.SubjectPilotUserIDAttributeOID,
+					Value: "humanoid",
+				},
+			},
+		},
+	}
+	_, _, csrPem := generateCSR(t, &csrTemplate, "ec", 256)
+
+	// Should work with role-based signing.
+	resp, err = CBWrite(b, s, "sign/testing", map[string]interface{}{
+		"csr": csrPem,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
+
+	// - Definitely will work with sign-verbatim.
+	resp, err = CBWrite(b, s, "sign-verbatim", map[string]interface{}{
+		"csr": csrPem,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
 }
 
 var (

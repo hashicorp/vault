@@ -16,7 +16,7 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 
 	// Create a role with secret ID binding disabled and only bound cidr list
 	// enabled
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp = b.requestNoErr(t, &logical.Request{
 		Path:      "role/testrole",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
@@ -26,24 +26,18 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 		},
 		Storage: s,
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
 
 	// Read the role ID
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp = b.requestNoErr(t, &logical.Request{
 		Path:      "role/testrole/role-id",
 		Operation: logical.ReadOperation,
 		Storage:   s,
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
 
 	roleID := resp.Data["role_id"]
 
 	// Fill in the connection information and login with just the role ID
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp = b.requestNoErr(t, &logical.Request{
 		Path:      "login",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
@@ -52,9 +46,7 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 		Storage:    s,
 		Connection: &logical.Connection{RemoteAddr: "127.0.0.1"},
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+
 	if resp.Auth == nil {
 		t.Fatal("expected login to succeed")
 	}
@@ -66,7 +58,7 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	}
 
 	// Override with a secret-id value, verify it doesn't pass
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp = b.requestNoErr(t, &logical.Request{
 		Path:      "role/testrole",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
@@ -74,9 +66,6 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 		},
 		Storage: s,
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
 
 	roleSecretIDReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -92,13 +81,11 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	}
 
 	roleSecretIDReq.Data["token_bound_cidrs"] = "10.0.0.0/24"
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleSecretIDReq)
+
 	secretID := resp.Data["secret_id"]
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp = b.requestNoErr(t, &logical.Request{
 		Path:      "login",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
@@ -108,9 +95,7 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 		Storage:    s,
 		Connection: &logical.Connection{RemoteAddr: "127.0.0.1"},
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+
 	if resp.Auth == nil {
 		t.Fatal("expected login to succeed")
 	}
@@ -133,10 +118,8 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		Path:      "role/role1/role-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleRoleIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleRoleIDReq)
+
 	roleID := resp.Data["role_id"]
 
 	roleSecretIDReq := &logical.Request{
@@ -144,10 +127,8 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		Path:      "role/role1/secret-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleSecretIDReq)
+
 	secretID := resp.Data["secret_id"]
 
 	loginData := map[string]interface{}{
@@ -216,20 +197,15 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		Storage:   storage,
 		Data:      roleData,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleReq)
 
 	roleRoleIDReq = &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "role/role-period/role-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleRoleIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleRoleIDReq)
+
 	roleID = resp.Data["role_id"]
 
 	roleSecretIDReq = &logical.Request{
@@ -237,10 +213,8 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		Path:      "role/role-period/secret-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleSecretIDReq)
+
 	secretID = resp.Data["secret_id"]
 
 	loginData["role_id"] = roleID
@@ -303,8 +277,6 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 }
 
 func TestAppRole_RoleResolve(t *testing.T) {
-	var resp *logical.Response
-	var err error
 	b, storage := createBackendWithStorage(t)
 
 	role := "role1"
@@ -314,10 +286,8 @@ func TestAppRole_RoleResolve(t *testing.T) {
 		Path:      "role/role1/role-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleRoleIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp := b.requestNoErr(t, roleRoleIDReq)
+
 	roleID := resp.Data["role_id"]
 
 	roleSecretIDReq := &logical.Request{
@@ -325,10 +295,8 @@ func TestAppRole_RoleResolve(t *testing.T) {
 		Path:      "role/role1/secret-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleSecretIDReq)
+
 	secretID := resp.Data["secret_id"]
 
 	loginData := map[string]interface{}{
@@ -345,10 +313,7 @@ func TestAppRole_RoleResolve(t *testing.T) {
 		},
 	}
 
-	resp, err = b.HandleRequest(context.Background(), loginReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, loginReq)
 
 	if resp.Data["role"] != role {
 		t.Fatalf("Role was not as expected. Expected %s, received %s", role, resp.Data["role"])

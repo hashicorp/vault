@@ -12,7 +12,7 @@ description: This is the API documentation for the Vault Consul secrets engine.
 
 This is the API documentation for the Vault Consul secrets engine. For general
 information about the usage and operation of the Consul secrets engine, please
-see the [Vault Consul documentation](/docs/secrets/consul).
+see the [Vault Consul documentation](/vault/docs/secrets/consul).
 
 This documentation assumes the Consul secrets engine is enabled at the `/consul`
 path in Vault. Since it is possible to enable secrets engines at any location,
@@ -162,11 +162,11 @@ To create a client token with service identities attached:
 - `token_type` <sup>DEPRECATED (1.11)</sup> `(string: "client")` - Specifies the type of token to create
   when using this role. Valid values are `"client"` or `"management"`. If a `"management"`
   token, the `policy` parameter is not required. Defaults to `"client`". [Deprecated from Consul as of 1.4 and
-  removed as of Consul 1.11.](https://developer.hashicorp.com/consul/api-docs/acl/legacy)
+  removed as of Consul 1.11.](/consul/api-docs/acl/legacy)
 
 - `policy` <sup>DEPRECATED (1.11)</sup> `(string: "")` – Specifies the base64-encoded ACL policy.
   This is required unless the `token_type` is `"management"`. [Deprecated from Consul as of 1.4 and
-  removed as of Consul 1.11.](https://developer.hashicorp.com/consul/api-docs/acl/legacy)
+  removed as of Consul 1.11.](/consul/api-docs/acl/legacy)
 
 - `policies` <sup>DEPRECATED (1.11)</sup> `(list: <policy or policies>)` - Same as `consul_policies`.
   Deprecated in favor of using `consul_policies`.
@@ -179,10 +179,10 @@ To create a client token with service identities attached:
   1.4 and greater.
 
 - `ttl` `(duration: "")` – Specifies the TTL for this role. If not
-  provided, the default Vault TTL is used. Uses [duration format strings](/docs/concepts/duration-format).
+  provided, the default Vault TTL is used. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 - `max_ttl` `(duration: "")` – Specifies the max TTL for this role. If not
-  provided, the default Vault Max TTL is used. Uses [duration format strings](/docs/concepts/duration-format).
+  provided, the default Vault Max TTL is used. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 ### Sample Payload
 
@@ -197,12 +197,12 @@ To create a client token with policies defined in Consul:
 ### Parameters for Consul version below 1.4
 
 - `lease` <sup>DEPRECATED (1.11)</sup> `(string: "")` – Specifies the lease for this role.
-  Uses [duration format strings](/docs/concepts/duration-format). If not
+  Uses [duration format strings](/vault/docs/concepts/duration-format). If not
   provided, the default Vault lease is used.
 
 - `policy` <sup>DEPRECATED (1.11)</sup> `(string: <policy>)` – Specifies the base64-encoded ACL policy. The
   ACL format can be found in the [Consul ACL
-  documentation](https://developer.hashicorp.com/consul/docs/security/acl/acl-legacy). This is
+  documentation](/consul/docs/security/acl/acl-legacy). This is
   required unless the `token_type` is `"management"`.
 
 ### Sample Payload

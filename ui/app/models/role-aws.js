@@ -24,10 +24,8 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Role name',
-    fieldValue: 'id',
     readOnly: true,
   }),
-  useOpenAPI: false,
   // credentialTypes are for backwards compatibility.
   // we use this to populate "credentialType" in
   // the serializer. if there is more than one, the
@@ -51,6 +49,7 @@ export default Model.extend({
     editType: 'json',
     helpText:
       'A policy is an object in AWS that, when associated with an identity or resource, defines their permissions.',
+    defaultValue: '{\n}',
   }),
   fields: computed('credentialType', function () {
     const credentialType = this.credentialType;

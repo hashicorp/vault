@@ -11,7 +11,7 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Role name',
-    fieldValue: 'id',
+    fieldValue: 'name',
     readOnly: true,
   }),
   useOpenAPI: true,

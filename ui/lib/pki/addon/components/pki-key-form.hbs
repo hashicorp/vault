@@ -1,24 +1,34 @@
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
-    <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI key" />
-    {{#each @model.formFieldGroups as |fieldGroup|}}
-      {{#each-in fieldGroup as |group fields|}}
-        {{#if (eq group "Key parameters")}}
-          <PkiKeyParameters @model={{@model}} @fields={{fields}} @modelValidations={{this.modelValidations}} />
-        {{else}}
-          {{#each fields as |attr|}}
-            <FormField
-              data-test-field={{attr}}
-              @attr={{attr}}
-              @model={{@model}}
-              @modelValidations={{this.modelValidations}}
-              @showHelpText={{false}}
-            />
-          {{/each}}
-        {{/if}}
-      {{/each-in}}
-    {{/each}}
+    <NamespaceReminder @mode={{if @model.isNew "generate" "update"}} @noun="PKI key" />
+    {{#if @model.isNew}}
+      {{#each @model.formFieldGroups as |fieldGroup|}}
+        {{#each-in fieldGroup as |group fields|}}
+          {{#if (eq group "Key parameters")}}
+            <PkiKeyParameters @model={{@model}} @fields={{fields}} @modelValidations={{this.modelValidations}} />
+          {{else}}
+            {{#each fields as |attr|}}
+              <FormField
+                data-test-field={{attr}}
+                @attr={{attr}}
+                @model={{@model}}
+                @modelValidations={{this.modelValidations}}
+                @showHelpText={{false}}
+              />
+            {{/each}}
+          {{/if}}
+        {{/each-in}}
+      {{/each}}
+    {{else}}
+      {{! only key name is edit-able }}
+      {{#let (find-by "name" "keyName" @model.formFields) as |keyName|}}
+        <FormField data-test-field={{keyName}} @attr={{keyName}} @model={{@model}} @showHelpText={{false}} />
+      {{/let}}
+      {{#let (find-by "name" "keyType" @model.formFields) as |keyType|}}
+        <ReadonlyFormField @attr={{keyType}} @value={{@model.keyType}} />
+      {{/let}}
+    {{/if}}
   </div>
   <div class="has-top-padding-s">
     <button
@@ -27,20 +37,26 @@
       disabled={{this.save.isRunning}}
       data-test-pki-key-save
     >
-      {{if @model.isNew "Create" "Update"}}
+      {{if @model.isNew "Generate key" "Edit key"}}
     </button>
     <button
       type="button"
       class="button has-left-margin-s"
       disabled={{this.save.isRunning}}
-      {{on "click" this.cancel}}
+      {{on "click" @onCancel}}
       data-test-pki-key-cancel
     >
       Cancel
     </button>
     {{#if this.invalidFormAlert}}
       <div class="control">
-        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+        <AlertInline
+          @type="danger"
+          @paddingTop={{true}}
+          @message={{this.invalidFormAlert}}
+          @mimicRefresh={{true}}
+          data-test-pki-key-validation-error
+        />
       </div>
     {{/if}}
   </div>

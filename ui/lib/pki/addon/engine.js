@@ -18,12 +18,12 @@ export default class PkiEngine extends Engine {
       'namespace',
       'path-help',
       'router',
+      'secret-mount-path',
       'store',
       'version',
       'wizard',
-      'secret-mount-path',
     ],
-    externalRoutes: ['secrets'],
+    externalRoutes: ['secrets', 'secretsListRoot', 'secretsListRootConfiguration', 'externalMountIssuer'],
   };
 }
 

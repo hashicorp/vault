@@ -41,9 +41,10 @@ $ vault audit enable file file_path=stdout
 
 Note the difference between `audit enable` command options and the `file` backend
 configuration options. Use `vault audit enable -help` to see the command options.
-Following are the configuration options available for the backend.
 
-## Configuration
+The `file` audit device supports the common configuration options documented on
+the [main Audit Devices page](/vault/docs/audit#common-configuration-options), and
+these device-specific options:
 
 - `file_path` `(string: <required>)` - The path to where the audit log will be
   written. If a file already exists at the given path, the audit backend will
@@ -53,21 +54,11 @@ Following are the configuration options available for the backend.
 
   - `discard` writes output (useful in testing scenarios)
 
-- `log_raw` `(bool: false)` - If enabled, logs the security sensitive
-  information without hashing, in the raw format.
-
-- `hmac_accessor` `(bool: true)` - If enabled, enables the hashing of token
-  accessor.
-
 - `mode` `(string: "0600")` - A string containing an octal number representing
   the bit pattern for the file mode, similar to `chmod`. Set to `"0000"` to
   prevent Vault from modifying the file mode.
 
-- `format` `(string: "json")` - Allows selecting the output format. Valid values
-  are `"json"` and `"jsonx"`, which formats the normal log entries as XML.
 
-- `prefix` `(string: "")` - A customizable string prefix to write before the
-  actual log line.
 
 ## Log File Rotation
 

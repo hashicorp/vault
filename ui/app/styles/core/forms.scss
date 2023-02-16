@@ -156,6 +156,11 @@ label {
       padding-right: 10em;
     }
   }
+
+  &.is-align-end {
+    display: flex;
+    align-self: end;
+  }
 }
 
 .input,

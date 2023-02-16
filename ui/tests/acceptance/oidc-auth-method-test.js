@@ -91,6 +91,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       cancelTimers();
     }, 50);
     await click('[data-test-auth-submit]');
+    await waitUntil(() => find('.nav-user-button button'), { timeout: 2000 });
     await click('.nav-user-button button');
     await click('#logout');
     assert

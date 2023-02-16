@@ -1,7 +1,7 @@
-import Route from '@ember/routing/route';
+import PkiOverviewRoute from '../overview';
 import { inject as service } from '@ember/service';
 
-export default class PkiIssuersIndexRoute extends Route {
+export default class PkiIssuersListRoute extends PkiOverviewRoute {
   @service store;
   @service secretMountPath;
   @service pathHelp;
@@ -12,8 +12,6 @@ export default class PkiIssuersIndexRoute extends Route {
   }
 
   model() {
-    // the pathHelp service is needed for adding openAPI to the model
-    this.pathHelp.getNewModel('pki/issuer', 'pki');
     return this.store
       .query('pki/issuer', { backend: this.secretMountPath.currentPath })
       .then((issuersModel) => {
@@ -26,5 +24,14 @@ export default class PkiIssuersIndexRoute extends Route {
           throw err;
         }
       });
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    controller.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
+      { label: 'issuers', route: 'issuers.index' },
+    ];
   }
 }

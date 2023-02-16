@@ -9,12 +9,11 @@ scenario "upgrade" {
     edition         = ["oss", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     seal            = ["awskms", "shamir"]
 
-    # Packages are not offered for the oss edition
+    # Packages are not offered for the oss, ent.fips1402, and ent.hsm.fips1402 editions
     exclude {
-      edition       = ["oss"]
+      edition       = ["oss", "ent.fips1402", "ent.hsm.fips1402"]
       artifact_type = ["package"]
     }
-
   }
 
   terraform_cli = terraform_cli.default
@@ -150,9 +149,13 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id                  = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags             = local.tags
-      consul_cluster_tag      = step.create_backend_cluster.consul_cluster_tag
+      ami_id             = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      common_tags        = local.tags
+      consul_cluster_tag = step.create_backend_cluster.consul_cluster_tag
+      consul_release = matrix.backend == "consul" ? {
+        edition = var.backend_edition
+        version = matrix.consul_version
+      } : null
       dependencies_to_install = local.dependencies_to_install
       instance_type           = local.vault_instance_type
       kms_key_arn             = step.create_vpc.kms_key_arn
@@ -162,6 +165,44 @@ scenario "upgrade" {
       vault_release           = var.vault_upgrade_initial_release
       vault_license           = matrix.edition != "oss" ? step.read_license.license : null
       vpc_id                  = step.create_vpc.vpc_id
+      vault_environment = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
+    }
+  }
+
+  step "get_vault_cluster_ips" {
+    module     = module.vault_get_cluster_ips
+    depends_on = [step.create_vault_cluster]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.vault_root_token
+    }
+  }
+
+  step "verify_write_test_data" {
+    module = module.vault_verify_write_data
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_vault_cluster_ips
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
+      leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.vault_root_token
     }
   }
 
@@ -210,11 +251,11 @@ scenario "upgrade" {
     }
   }
 
-  step "verify_vault_unsealed" {
-    module = module.vault_verify_unsealed
+  step "get_updated_vault_cluster_ips" {
+    module = module.vault_get_cluster_ips
     depends_on = [
       step.create_vault_cluster,
-      step.upgrade_vault,
+      step.upgrade_vault
     ]
 
     providers = {
@@ -225,6 +266,42 @@ scenario "upgrade" {
       vault_instances   = step.create_vault_cluster.vault_instances
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.vault_root_token
+    }
+  }
+
+  step "verify_vault_unsealed" {
+    module = module.vault_verify_unsealed
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_updated_vault_cluster_ips,
+      step.upgrade_vault,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+    }
+  }
+
+  step "verify_read_test_data" {
+    module = module.vault_verify_read_data
+    depends_on = [
+      step.get_updated_vault_cluster_ips,
+      step.verify_write_test_data,
+      step.verify_vault_unsealed
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      node_public_ips   = step.get_updated_vault_cluster_ips.follower_public_ips
+      vault_install_dir = local.vault_install_dir
     }
   }
 
@@ -270,6 +347,21 @@ scenario "upgrade" {
   output "vault_cluster_root_token" {
     description = "The Vault cluster root token"
     value       = step.create_vault_cluster.vault_root_token
+  }
+
+  output "vault_cluster_recovery_key_shares" {
+    description = "The Vault cluster recovery key shares"
+    value       = step.create_vault_cluster.vault_recovery_key_shares
+  }
+
+  output "vault_cluster_recovery_keys_b64" {
+    description = "The Vault cluster recovery keys b64"
+    value       = step.create_vault_cluster.vault_recovery_keys_b64
+  }
+
+  output "vault_cluster_recovery_keys_hex" {
+    description = "The Vault cluster recovery keys hex"
+    value       = step.create_vault_cluster.vault_recovery_keys_hex
   }
 
   output "vault_cluster_unseal_keys_b64" {

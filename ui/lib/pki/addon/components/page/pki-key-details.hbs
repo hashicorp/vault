@@ -1,18 +1,33 @@
 <Toolbar>
   <ToolbarActions>
-    <ConfirmAction
-      @buttonClasses="toolbar-link"
-      @onConfirmAction={{this.deleteKey}}
-      @confirmTitle="Delete key?"
-      @confirmButtonText="Delete"
-      data-test-pki-key-delete
-    >
-      Delete
-    </ConfirmAction>
-    <div class="toolbar-separator"></div>
-    <ToolbarLink @route="keys.key.edit" @model={{@key.model.name}}>
-      Edit key
-    </ToolbarLink>
+    {{#if @canDelete}}
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{this.deleteKey}}
+        @confirmTitle="Delete key?"
+        @confirmButtonText="Delete"
+        data-test-pki-key-delete
+      >
+        Delete
+      </ConfirmAction>
+      <div class="toolbar-separator"></div>
+    {{/if}}
+    {{#if @key.privateKey}}
+      <DownloadButton
+        class="toolbar-link"
+        @filename="{{@key.backend}}-{{or @key.keyName 'private-key'}}"
+        @data={{@key.privateKey}}
+        @extension="pem"
+      >
+        Download private key
+        <Chevron @isButton={{true}} />
+      </DownloadButton>
+    {{/if}}
+    {{#if @canEdit}}
+      <ToolbarLink @route="keys.key.edit" @model={{@key.keyId}} data-test-pki-key-edit>
+        Edit key
+      </ToolbarLink>
+    {{/if}}
   </ToolbarActions>
 </Toolbar>
 
@@ -30,6 +45,7 @@
     <InfoTableRow
       @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
       @value={{get @key attr.name}}
+      @addCopyButton={{eq attr.name "keyId"}}
     />
   {{/each}}
   {{#if @key.privateKey}}

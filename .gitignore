@@ -51,6 +51,7 @@ Vagrantfile
 
 # Configs
 *.hcl
+!.copywrite.hcl
 !.release/ci.hcl
 !.release/security-scan.hcl
 !.release/linux/package/etc/vault.d/vault.hcl
@@ -125,3 +126,5 @@ website/components/node_modules
 .buildcache/
 .releaser/
 *.log
+
+tools/godoctests/.bin

@@ -64,12 +64,12 @@ func (h *AllowIfModifiedSince) Evaluate(e *Executor) (results []*Result, err err
 		return []*Result{&ret}, nil
 	}
 
-	req, err := stringList(h.TuneData["passthrough_request_headers"])
+	req, err := StringList(h.TuneData["passthrough_request_headers"])
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse value from server for passthrough_request_headers: %w", err)
 	}
 
-	resp, err := stringList(h.TuneData["allowed_response_headers"])
+	resp, err := StringList(h.TuneData["allowed_response_headers"])
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse value from server for allowed_response_headers: %w", err)
 	}
