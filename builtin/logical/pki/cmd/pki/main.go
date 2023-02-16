@@ -17,11 +17,9 @@ func main() {
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
-	if err := plugin.ServeMultiplex(&plugin.ServeOpts{
+	if err := plugin.Serve(&plugin.ServeOpts{
 		BackendFactoryFunc: pki.Factory,
-		// set the TLSProviderFunc so that the plugin maintains backwards
-		// compatibility with Vault versions that don’t support plugin AutoMTLS
-		TLSProviderFunc: tlsProviderFunc,
+		TLSProviderFunc:    tlsProviderFunc,
 	}); err != nil {
 		logger := hclog.New(&hclog.LoggerOptions{})
 
