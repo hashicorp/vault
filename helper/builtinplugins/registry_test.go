@@ -11,7 +11,8 @@ import (
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"k8s.io/utils/strings/slices"
+
+	"golang.org/x/exp/slices"
 )
 
 // Test_RegistryGet exercises the (registry).Get functionality by comparing
