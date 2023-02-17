@@ -24,6 +24,14 @@ vault server -dev -dev-root-token-id=root &
 sleep 2
 VAULT_PID=$!
 
+defer_stop_vault() {
+    echo "Stopping Vault..."
+    kill $VAULT_PID
+    sleep 1
+}
+
+trap defer_stop_vault INT TERM EXIT
+
 export VAULT_ADDR=http://127.0.0.1:8200
 
 echo "Mounting all builtin plugins..."
@@ -36,7 +44,7 @@ while read -r line; do
         codeLinesStarted=true
     elif [[ $line == *"databasePlugins:"* ]] ; then
         break
-    elif [ $codeLinesStarted = true ] && [[ $line == *"consts.Deprecated"* || $line == *"consts.PendingRemoval"* ]] ; then
+    elif [ $codeLinesStarted = true ] && [[ $line == *"consts.Deprecated"* || $line == *"consts.PendingRemoval"* || $line == *"consts.Removed"* ]] ; then
         auth_plugin_previous=""
     elif [ $codeLinesStarted = true ] && [[ $line =~ ^\s*\"(.*)\"\:.*$ ]] ; then
         auth_plugin_current=${BASH_REMATCH[1]}
@@ -63,7 +71,7 @@ while read -r line; do
         codeLinesStarted=true
     elif [[ $line == *"addExternalPlugins("* ]] ; then
         break
-    elif [ $codeLinesStarted = true ] && [[ $line == *"consts.Deprecated"* || $line == *"consts.PendingRemoval"* ]] ; then
+    elif [ $codeLinesStarted = true ] && [[ $line == *"consts.Deprecated"* || $line == *"consts.PendingRemoval"* || $line == *"consts.Removed"* ]] ; then
         secrets_plugin_previous=""
     elif [ $codeLinesStarted = true ] && [[ $line =~ ^\s*\"(.*)\"\:.*$ ]] ; then
         secrets_plugin_current=${BASH_REMATCH[1]}
@@ -94,7 +102,7 @@ if [ -f $entRegFile ] && [[ -n "${VAULT_LICENSE}" ]]; then
             codeLinesStarted=true
         elif [[ $line == *"addExtPluginsEntImpl("* ]] ; then
             break
-        elif [ $codeLinesStarted = true ] && [[ $line == *"consts.Deprecated"* || $line == *"consts.PendingRemoval"* ]] ; then
+        elif [ $codeLinesStarted = true ] && [[ $line == *"consts.Deprecated"* || $line == *"consts.PendingRemoval"* || $line == *"consts.Removed"* ]] ; then
             secrets_plugin_previous=""
         elif [ $codeLinesStarted = true ] && [[ $line =~ ^\s*\"(.*)\"\:.*$ ]] ; then
             ent_plugin_current=${BASH_REMATCH[1]}
@@ -116,13 +124,15 @@ fi
 
 # Output OpenAPI, optionally formatted
 if [ "$1" == "-p" ]; then
-  curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" | jq > openapi.json
+    curl --header 'X-Vault-Token: root' \
+         --data '{"generic_mount_paths": true}' \
+            'http://127.0.0.1:8200/v1/sys/internal/specs/openapi' | jq > openapi.json
 else
-  curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" > openapi.json
+    curl --header 'X-Vault-Token: root' \
+         --data '{"generic_mount_paths": true}' \
+            'http://127.0.0.1:8200/v1/sys/internal/specs/openapi' > openapi.json
 fi
-
-kill $VAULT_PID
-sleep 1
 
 echo
 echo "openapi.json generated"
+echo

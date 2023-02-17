@@ -10,4 +10,5 @@ export default class PkiCertificateGenerateModel extends Model {
   formFieldsGroup: {
     [k: string]: FormField[];
   }[];
+  validate(): ModelValidations;
 }

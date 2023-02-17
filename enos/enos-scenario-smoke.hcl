@@ -163,6 +163,9 @@ scenario "smoke" {
       vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       vault_license             = matrix.edition != "oss" ? step.read_license.license : null
       vpc_id                    = step.create_vpc.vpc_id
+      vault_environment = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
     }
   }
 

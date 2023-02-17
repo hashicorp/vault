@@ -73,7 +73,7 @@
 
 <hr class="has-background-gray-200 has-top-margin-l" />
 
-<div class="has-top-margin-s has-bottom-margin-s">
+<div class="has-top-margin-s has-bottom-margin-s is-flex">
   <button
     data-test-config-save
     class="button is-primary"
@@ -92,6 +92,9 @@
   >
     Back
   </button>
+  {{#if this.alert}}
+    <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
+  {{/if}}
 </div>
 
 {{#if this.showConfirm}}

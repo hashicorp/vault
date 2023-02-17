@@ -27,9 +27,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 
 	"github.com/stretchr/testify/require"
 
@@ -129,9 +130,10 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to true and with common name supplied.
 	// It should succeed.
-	_, err = CBWrite(b, s, "issue/example", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
 		"common_name": "foobar.com",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issue/example"), logical.UpdateOperation), resp, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -551,7 +553,6 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				if err != nil {
 					return err
 				}
-
 				if !reflect.DeepEqual(entries, expected) {
 					return fmt.Errorf("expected urls\n%#v\ndoes not match provided\n%#v\n", expected, entries)
 				}
@@ -683,6 +684,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 }
 
 func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType string, keyBits int) (interface{}, []byte, string) {
+	t.Helper()
+
 	var priv interface{}
 	var err error
 	switch keyType {
@@ -814,6 +817,8 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 }
 
 func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int) (x509.CertificateRequest, string) {
+	t.Helper()
+
 	csrTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
 			Country:      []string{"MyCountry"},
@@ -1875,6 +1880,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		Data:       map[string]interface{}{},
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("ca/pem"), logical.ReadOperation), resp, true)
 	require.NoError(t, err)
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed read ca/pem, %#v", resp)
@@ -1980,6 +1986,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		Data:       rootData,
 		MountPoint: "pki/",
 	})
+
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to generate root, %#v", resp)
 	}
@@ -2000,6 +2007,16 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		Data:       urlsData,
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/urls"), logical.UpdateOperation), resp, true)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "config/urls",
+		Storage:    storage,
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/urls"), logical.ReadOperation), resp, true)
+
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to config urls, %#v", resp)
 	}
@@ -2179,6 +2196,8 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		Data:       signVerbatimData,
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("sign-verbatim"), logical.UpdateOperation), resp, true)
+
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to sign-verbatim basic CSR: %#v", *resp)
 	}
@@ -2396,6 +2415,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	// Now because the issued CA's have no links, the call to ca_chain should return the same data (ca chain from default)
 	resp, err = CBRead(b, s, "cert/ca_chain")
 	require.NoError(t, err, "error reading ca_chain: %v", err)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("cert/ca_chain"), logical.ReadOperation), resp, true)
 
 	r2Data := resp.Data
 	if !reflect.DeepEqual(r1Data, r2Data) {
@@ -2407,6 +2427,8 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
 		"pem_bundle": pemBundleRootCA,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/ca"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected ca info")
 	firstImportedKeys := resp.Data["imported_keys"].([]string)
@@ -2493,6 +2515,8 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	resp, err := CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "myint.com",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b_root.Route("intermediate/generate/internal"), logical.UpdateOperation), resp, true)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3793,6 +3817,15 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Set up Metric Configuration, then restart to enable it
+	_, err = client.Logical().Write("pki/config/auto-tidy", map[string]interface{}{
+		"maintain_stored_certificate_counts":       true,
+		"publish_stored_certificate_count_metrics": true,
+	})
+	_, err = client.Logical().Write("/sys/plugins/reload/backend", map[string]interface{}{
+		"mounts": "pki/",
+	})
+
 	// Check the metrics initialized in order to calculate backendUUID for /pki
 	// BackendUUID not consistent during tests with UUID from /sys/mounts/pki
 	metricsSuffix := "total_certificates_stored"
@@ -3829,6 +3862,14 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Set up Metric Configuration, then restart to enable it
+	_, err = client.Logical().Write("pki2/config/auto-tidy", map[string]interface{}{
+		"maintain_stored_certificate_counts":       true,
+		"publish_stored_certificate_count_metrics": true,
+	})
+	_, err = client.Logical().Write("/sys/plugins/reload/backend", map[string]interface{}{
+		"mounts": "pki2/",
+	})
 
 	// Create a CSR for the intermediate CA
 	secret, err := client.Logical().Write("pki2/intermediate/generate/internal", nil)
@@ -3854,6 +3895,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if secret == nil || len(secret.Data) == 0 || len(secret.Data["certificate"].(string)) == 0 {
 		t.Fatal("expected certificate information from read operation")
 	}
@@ -3957,6 +3999,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"current_revoked_cert_count":            json.Number("0"),
 			"revocation_queue_deleted_count":        json.Number("0"),
 			"cross_revoked_cert_deleted_count":      json.Number("0"),
+			"internal_backend_uuid":                 backendUUID,
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -4754,6 +4797,7 @@ func TestRootWithExistingKey(t *testing.T) {
 		"key_type":    "rsa",
 		"issuer_name": "my-issuer1",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuers/generate/root/internal"), logical.UpdateOperation), resp, true)
 	require.NoError(t, err)
 	require.NotNil(t, resp.Data["certificate"])
 	myIssuerId1 := resp.Data["issuer_id"]
@@ -4869,6 +4913,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuers/generate/intermediate/internal"), logical.UpdateOperation), resp, true)
 	require.NoError(t, err)
 	// csr1 := resp.Data["csr"]
 	myKeyId1 := resp.Data["key_id"]
@@ -5033,9 +5078,11 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Empty(t, rootCert.CRLDistributionPoints)
 
 	// Set some local URLs on the issuer.
-	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
 		"issuing_certificates": []string{"https://google.com"},
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/default"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 
 	_, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
@@ -5157,6 +5204,7 @@ TgM7RZnmEjNdeaa4M52o7VY=
 	resp, err := CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
 		"pem_bundle": customBundleWithoutCRLBits,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuers/import/bundle"), logical.UpdateOperation), resp, true)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data)
@@ -5586,6 +5634,14 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 		serials[i] = resp.Data["serial_number"].(string)
 	}
 
+	// Turn on certificate counting:
+	CBWrite(b, s, "config/auto-tidy", map[string]interface{}{
+		"maintain_stored_certificate_counts":       true,
+		"publish_stored_certificate_count_metrics": false,
+	})
+	// Assert initialize from clean is correct:
+	b.initializeStoredCertificateCounts(ctx)
+
 	// Revoke certificates A + B
 	revocations := serials[0:2]
 	for _, key := range revocations {
@@ -5597,18 +5653,16 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 		}
 	}
 
-	// Assert initialize from clean is correct:
-	b.initializeStoredCertificateCounts(ctx)
-	if atomic.LoadUint32(b.certCount) != 6 {
-		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", atomic.LoadUint32(b.certCount))
+	if b.certCount.Load() != 6 {
+		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", b.certCount.Load())
 	}
-	if atomic.LoadUint32(b.revokedCertCount) != 2 {
-		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", atomic.LoadUint32(b.revokedCertCount))
+	if b.revokedCertCount.Load() != 2 {
+		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", b.revokedCertCount.Load())
 	}
 
 	// Simulates listing while initialize in progress, by "restarting it"
-	atomic.StoreUint32(b.certCount, 0)
-	atomic.StoreUint32(b.revokedCertCount, 0)
+	b.certCount.Store(0)
+	b.revokedCertCount.Store(0)
 	b.certsCounted.Store(false)
 
 	// Revoke certificates C, D
@@ -5637,12 +5691,12 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	b.initializeStoredCertificateCounts(ctx)
 
 	// Test certificate count
-	if *(b.certCount) != 8 {
-		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", *(b.certCount))
+	if b.certCount.Load() != 8 {
+		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", b.certCount.Load())
 	}
 
-	if *(b.revokedCertCount) != 4 {
-		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", *(b.revokedCertCount))
+	if b.revokedCertCount.Load() != 4 {
+		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", b.revokedCertCount.Load())
 	}
 
 	return
@@ -5986,11 +6040,16 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	b, s := CreateBackendWithStorage(t)
 
 	// Setting templated AIAs should succeed.
-	_, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
+	resp, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
 		"path":     "http://localhost:8200/v1/pki",
 		"aia_path": "http://localhost:8200/cdn/pki",
 	})
 	require.NoError(t, err)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/cluster"), logical.UpdateOperation), resp, true)
+
+	resp, err = CBRead(b, s, "config/cluster")
+	require.NoError(t, err)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/cluster"), logical.ReadOperation), resp, true)
 
 	aiaData := map[string]interface{}{
 		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
@@ -6019,7 +6078,7 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 		"enable_templating":       false,
 	})
 	require.NoError(t, err)
-	resp, err := CBWrite(b, s, "root/generate/internal", rootData)
+	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
 	requireSuccessNonNilResponse(t, resp, err)
 	issuerId := string(resp.Data["issuer_id"].(issuerID))
 
@@ -6331,6 +6390,7 @@ func TestUserIDsInLeafCerts(t *testing.T) {
 	resp, err = CBWrite(b, s, "sign/testing", map[string]interface{}{
 		"csr": csrPem,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("sign/testing"), logical.UpdateOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
 	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
 

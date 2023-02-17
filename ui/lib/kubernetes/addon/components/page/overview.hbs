@@ -2,7 +2,9 @@
   <ToolbarLink @route="configure">Configure Kubernetes</ToolbarLink>
 </TabPageHeader>
 
-{{#if @config}}
+{{#if @promptConfig}}
+  <ConfigCta />
+{{else}}
   <div class="selectable-card-container has-grid has-top-margin-l has-two-col-grid">
     <OverviewCard
       @cardTitle="Roles"
@@ -38,6 +40,4 @@
       </div>
     </OverviewCard>
   </div>
-{{else}}
-  <ConfigCta />
 {{/if}}

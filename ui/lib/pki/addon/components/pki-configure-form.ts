@@ -4,7 +4,6 @@ import { inject as service } from '@ember/service';
 import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
-import { action } from '@ember/object';
 import PkiActionModel from 'vault/models/pki/action';
 
 interface Args {
@@ -47,10 +46,5 @@ export default class PkiConfigureForm extends Component<Args> {
           'Generate a new CSR for signing, optionally generating a new private key. No new issuer is created by this call.',
       },
     ];
-  }
-
-  @action cancel() {
-    this.args.config.rollbackAttributes();
-    this.router.transitionTo('vault.cluster.secrets.backend.pki.overview');
   }
 }

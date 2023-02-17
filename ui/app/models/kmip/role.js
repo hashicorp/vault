@@ -58,7 +58,7 @@ const ModelExport = Model.extend(COMPUTEDS, {
     ];
 
     const attributes = ['operationAddAttribute', 'operationGetAttributes'];
-    const server = ['operationDiscoverVersion'];
+    const server = ['operationDiscoverVersions'];
     const others = this.operationFieldsWithoutSpecial
       .slice()
       .removeObjects(objects.concat(attributes, server));

@@ -21,28 +21,4 @@
   </nav>
 </div>
 
-<div class="box is-sideless has-background-white-bis has-text-grey has-text-centered has-tall-padding" data-test-pki-error>
-  {{#if (eq this.model.httpStatus 404)}}
-    <h1 class="title is-3 has-text-grey">
-      404 Not Found
-    </h1>
-    <p>Sorry, we were unable to find any content at <code>{{or this.model.path this.path}}</code>.</p>
-  {{else if (eq this.model.httpStatus 403)}}
-    <h1 class="title is-3 has-text-grey">
-      Not authorized
-    </h1>
-    <p>You are not authorized to access content at <code>{{or this.model.path this.path}}</code>.</p>
-  {{else}}
-    <h1 class="title is-3 has-text-grey">
-      Error
-    </h1>
-    <p>
-      {{#if this.model.message}}
-        <p>{{this.model.message}}</p>
-      {{/if}}
-      {{#each this.model.errors as |error|}}
-        <p>{{error}}</p>
-      {{/each}}
-    </p>
-  {{/if}}
-</div>
+<Page::Error @error={{this.model}} />

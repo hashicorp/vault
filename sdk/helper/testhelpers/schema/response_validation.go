@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -88,11 +89,17 @@ func FindResponseSchema(t *testing.T, paths []*framework.Path, pathIdx int, oper
 
 	schemaPath := paths[pathIdx]
 
-	schemaOperation, ok := schemaPath.Operations[operation]
+	return GetResponseSchema(t, schemaPath, operation)
+}
+
+func GetResponseSchema(t *testing.T, path *framework.Path, operation logical.Operation) *framework.Response {
+	t.Helper()
+
+	schemaOperation, ok := path.Operations[operation]
 	if !ok {
 		t.Fatalf(
 			"could not find response schema: %s: %q operation does not exist",
-			schemaPath.Pattern,
+			path.Pattern,
 			operation,
 		)
 	}
@@ -113,10 +120,50 @@ func FindResponseSchema(t *testing.T, paths []*framework.Path, pathIdx int, oper
 	if len(schemaResponses) == 0 {
 		t.Fatalf(
 			"could not find response schema: %s: %q operation: no responses found",
-			schemaPath.Pattern,
+			path.Pattern,
 			operation,
 		)
 	}
 
 	return &schemaResponses[0]
+}
+
+// ResponseValidatingCallback can be used in setting up a [vault.TestCluster] that validates every response against the
+// openapi specifications
+//
+// [vault.TestCluster]: https://pkg.go.dev/github.com/hashicorp/vault/vault#TestCluster
+func ResponseValidatingCallback(t *testing.T) func(logical.Backend, *logical.Request, *logical.Response) {
+	type PathRouter interface {
+		Route(string) *framework.Path
+	}
+
+	return func(b logical.Backend, req *logical.Request, resp *logical.Response) {
+		t.Helper()
+
+		if b == nil {
+			t.Fatalf("non-nil backend required")
+		}
+		backend, ok := b.(PathRouter)
+		if !ok {
+			t.Fatalf("could not cast %T to have `Route(string) *framework.Path`", b)
+		}
+
+		// the full request path includes the backend
+		// but when passing to the backend, we have to trim the mount point
+		// `sys/mounts/secret` -> `mounts/secret`
+		// `auth/token/create` -> `create`
+		requestPath := strings.TrimPrefix(req.Path, req.MountPoint)
+
+		route := backend.Route(requestPath)
+		if route == nil {
+			t.Fatalf("backend %T could not find a route for %s", b, req.Path)
+		}
+
+		ValidateResponse(
+			t,
+			GetResponseSchema(t, route, req.Operation),
+			resp,
+			true,
+		)
+	}
 }

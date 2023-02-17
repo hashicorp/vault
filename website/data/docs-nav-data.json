@@ -1215,10 +1215,6 @@
           {
             "title": "SSH OTP",
             "path": "secrets/ssh/one-time-ssh-passwords"
-          },
-          {
-            "title": "Dynamic Key",
-            "path": "secrets/ssh/dynamic-ssh-keys"
           }
         ]
       },
@@ -1469,8 +1465,8 @@
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Plugin Portal",
-        "path": "plugins/plugin-portal"
+        "title": "Integrations Library",
+        "href": "/vault/integrations"
       }
     ]
   },

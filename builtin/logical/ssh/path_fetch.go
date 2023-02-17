@@ -16,7 +16,7 @@ func pathFetchPublicKey(b *backend) *framework.Path {
 		},
 
 		HelpSynopsis:    `Retrieve the public key.`,
-		HelpDescription: `This allows the public key, that this backend has been configured with, to be fetched. This is a raw response endpoint without JSON encoding; use -format=raw or an external tool (e.g., curl) to fetch this value.`,
+		HelpDescription: `This allows the public key of the SSH CA certificate that this backend has been configured with to be fetched. This is a raw response endpoint without JSON encoding; use -format=raw or an external tool (e.g., curl) to fetch this value.`,
 	}
 }
 

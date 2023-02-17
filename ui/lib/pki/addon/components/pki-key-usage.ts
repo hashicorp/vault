@@ -62,17 +62,6 @@ export default class PkiKeyUsage extends Component<PkiKeyUsageArgs> {
     this.args.model.extKeyUsageOids = value;
   }
 
-  _amendList(checkboxName: string, value: boolean, type: string): string[] {
-    const list = type === 'keyUsage' ? this.args.model.keyUsage : this.args.model.extKeyUsage;
-    const idx = list.indexOf(checkboxName);
-    if (value === true && idx < 0) {
-      list.push(checkboxName);
-    } else if (value === false && idx >= 0) {
-      list.splice(idx, 1);
-    }
-    return list;
-  }
-
   @action checkboxChange(name: string, value: string[]) {
     // Make sure we can set this value type to this model key
     if (name === 'keyUsage' || name === 'extKeyUsage') {

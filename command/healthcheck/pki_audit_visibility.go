@@ -83,7 +83,7 @@ func (h *AuditVisibility) DefaultConfig() map[string]interface{} {
 func (h *AuditVisibility) LoadConfig(config map[string]interface{}) error {
 	var err error
 
-	coerced, err := stringList(config["ignored_parameters"])
+	coerced, err := StringList(config["ignored_parameters"])
 	if err != nil {
 		return fmt.Errorf("error parsing %v.ignored_parameters: %v", h.Name(), err)
 	}
@@ -128,7 +128,7 @@ func (h *AuditVisibility) Evaluate(e *Executor) (results []*Result, err error) {
 		"audit_non_hmac_response_keys": VisibleRespParams,
 	}
 	for source, visibleList := range sourceMap {
-		actual, err := stringList(h.TuneData[source])
+		actual, err := StringList(h.TuneData[source])
 		if err != nil {
 			return nil, fmt.Errorf("error parsing %v from server: %v", source, err)
 		}
@@ -158,7 +158,7 @@ func (h *AuditVisibility) Evaluate(e *Executor) (results []*Result, err error) {
 		"audit_non_hmac_response_keys": HiddenRespParams,
 	}
 	for source, hiddenList := range sourceMap {
-		actual, err := stringList(h.TuneData[source])
+		actual, err := StringList(h.TuneData[source])
 		if err != nil {
 			return nil, fmt.Errorf("error parsing %v from server: %v", source, err)
 		}

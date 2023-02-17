@@ -8,7 +8,7 @@ export default class PkiRolesErrorRoute extends Route {
     super.setupController(...arguments);
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath || 'pki', route: 'overview' },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
     ];
     controller.tabs = [
       { label: 'Overview', route: 'overview' },
