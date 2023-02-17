@@ -439,6 +439,8 @@ func TestCrlRebuilder(t *testing.T) {
 	err = cb.rebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
 	resp = requestCrlFromBackend(t, s, b)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("crl/pem"), logical.ReadOperation), resp, true)
+
 	crl3 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 	require.True(t, crl1.ThisUpdate.Before(crl3.ThisUpdate),
 		"initial crl time: %#v not before next crl rebuild time: %#v", crl1.ThisUpdate, crl3.ThisUpdate)

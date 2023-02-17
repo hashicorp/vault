@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -14,6 +15,51 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+var pathFetchReadSchema = map[int][]framework.Response{
+	http.StatusOK: {{
+		Description: "OK",
+		Fields: map[string]*framework.FieldSchema{
+			"certificate": {
+				Type:        framework.TypeString,
+				Description: `Certificate`,
+				Required:    false,
+			},
+			"revocation_time": {
+				Type:        framework.TypeInt,
+				Description: `Revocation time`,
+				Required:    false,
+			},
+			"revocation_time_rfc3339": {
+				Type:        framework.TypeInt,
+				Description: `Revocation time RFC 3339 formatted`,
+				Required:    false,
+			},
+			"issuer_id": {
+				Type:        framework.TypeString,
+				Description: `ID of the issuer`,
+				Required:    false,
+			},
+			"ca_chain": {
+				Type:        framework.TypeStringSlice,
+				Description: `Issuing CA Chain`,
+				Required:    false,
+			},
+			"http_content_type": {
+				Type:     framework.TypeString,
+				Required: false,
+			},
+			"http_raw_body": {
+				Type:     framework.TypeString,
+				Required: false,
+			},
+			"http_status_code": {
+				Type:     framework.TypeString,
+				Required: false,
+			},
+		},
+	}},
+}
+
 // Returns the CA in raw format
 func pathFetchCA(b *backend) *framework.Path {
 	return &framework.Path{
@@ -21,7 +67,8 @@ func pathFetchCA(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFetchRead,
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
 			},
 		},
 
@@ -37,7 +84,8 @@ func pathFetchCAChain(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFetchRead,
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
 			},
 		},
 
@@ -53,7 +101,8 @@ func pathFetchCRL(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFetchRead,
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
 			},
 		},
 
@@ -92,7 +141,8 @@ hyphen-separated octal`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFetchRead,
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
 			},
 		},
 
@@ -116,7 +166,8 @@ hyphen-separated octal`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFetchRead,
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
 			},
 		},
 
@@ -137,7 +188,8 @@ func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFetchRead,
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
 			},
 		},
 
@@ -154,6 +206,18 @@ func pathFetchListCerts(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathFetchCertList,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `A list of keys`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 

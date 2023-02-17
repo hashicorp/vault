@@ -331,6 +331,8 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 		Data:       map[string]interface{}{"key_name": "new-name"},
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId.String()), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err, "failed updating key with new name")
 	require.NotNil(t, resp, "Got nil response updating key with new name")
 	require.False(t, resp.IsError(), "unexpected error updating key with new name: %#v", resp.Error())
@@ -341,6 +343,8 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 		Storage:    s,
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId.String()), logical.ReadOperation), resp, true)
+
 	require.NoError(t, err, "failed reading key after name update")
 	require.NotNil(t, resp, "Got nil response reading key after name update")
 	require.False(t, resp.IsError(), "unexpected error reading key: %#v", resp.Error())
