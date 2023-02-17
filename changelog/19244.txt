@@ -1,0 +1,4 @@
+```release-note:improvement
+auth/github: Allow for an optional Github auth token to make authenticated requests when fetching org id
+website/docs: Add docs for `token` parameter when writing Github config
+```
