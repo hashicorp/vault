@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -64,27 +65,39 @@ func TestEventsSubscribe(t *testing.T) {
 
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
 
-	// check that the connection fails if we don't have a token
-	_, _, err := websocket.Dial(ctx, wsAddr+"/v1/sys/events/subscribe/"+eventType+"?json=true", nil)
-	if err == nil {
-		t.Error("Expected websocket error but got none")
-	} else if !strings.HasSuffix(err.Error(), "401") {
-		t.Errorf("Expected 401 websocket but got %v", err)
-	}
+	testCases := []struct {
+		json bool
+	}{{true}, {false}}
 
-	conn, _, err := websocket.Dial(ctx, wsAddr+"/v1/sys/events/subscribe/"+eventType+"?json=true", &websocket.DialOptions{
-		HTTPHeader: http.Header{"x-vault-token": []string{token}},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, testCase := range testCases {
+		url := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?json=%v", wsAddr, eventType, testCase.json)
+		// check that the connection fails if we don't have a token
+		_, _, err := websocket.Dial(ctx, url, nil)
+		if err == nil {
+			t.Error("Expected websocket error but got none")
+		} else if !strings.HasSuffix(err.Error(), "401") {
+			t.Errorf("Expected 401 websocket but got %v", err)
+		}
 
-	_, msg, err := conn.Read(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	msgJson := strings.TrimSpace(string(msg))
-	if !strings.HasPrefix(msgJson, "{") || !strings.HasSuffix(msgJson, "}") {
-		t.Errorf("Expected to get JSON event but got: %v", msgJson)
+		conn, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{
+			HTTPHeader: http.Header{"x-vault-token": []string{token}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			conn.Close(websocket.StatusNormalClosure, "")
+		})
+
+		_, msg, err := conn.Read(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if testCase.json {
+			msgJson := strings.TrimSpace(string(msg))
+			if !strings.HasPrefix(msgJson, "{") || !strings.HasSuffix(msgJson, "}") {
+				t.Errorf("Expected to get JSON event but got: %v", msgJson)
+			}
+		}
 	}
 }
