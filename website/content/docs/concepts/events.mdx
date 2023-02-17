@@ -104,7 +104,7 @@ Here is an example event in JSON format:
 
 Vault has an API endpoint, `/v1/sys/events/subscribe/{eventType}`, that allows users to subscribe to events via a
 WebSockets stream.
-This endpoint supports the standard authenticaion and authorization workflows used by other Vault endpoints.
+This endpoint supports the standard authentication and authorization workflows used by other Vault endpoints.
 The `{eventType}` parameter is a non-empty string of what event type to subscribe, which may contain wildcards (`*`)
 to subscribe to multiple events, e.g., `kv-v2/data-*`.
 
