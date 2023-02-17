@@ -46,7 +46,7 @@ func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCo
 			logger.Info("Websocket context is done, closing the connection")
 			return websocket.StatusNormalClosure, "", nil
 		case message := <-ch:
-			logger.Debug("Sending message to websocket", "message", message)
+			logger.Debug("Sending message to websocket", "message", message.Payload)
 			var messageBytes []byte
 			var messageType websocket.MessageType
 			if args.json {
