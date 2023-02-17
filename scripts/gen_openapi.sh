@@ -60,7 +60,7 @@ done <../../vault/helper/builtinplugins/registry.go
 
 if [[ -n "${auth_plugin_previous}" ]] ; then
     echo "enabling auth plugin: ${auth_plugin_previous}"
-    vault auth enable ${auth_plugin_previous}
+    vault auth enable "${auth_plugin_previous}"
 fi
 
 # Enable secrets plugins
