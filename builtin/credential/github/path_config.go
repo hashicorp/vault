@@ -94,7 +94,13 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 	}
 
 	if c.OrganizationID == 0 {
-		client, err := b.Client("")
+		var githubToken string
+		if token, ok := data.GetOk("token"); ok {
+			if t, ok := token.(string); ok {
+				githubToken = t
+			}
+		}
+		client, err := b.Client(githubToken)
 		if err != nil {
 			return nil, err
 		}
