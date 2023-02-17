@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -90,8 +92,11 @@ func TestBackend_CRLConfig(t *testing.T) {
 				"auto_rebuild_grace_period": tc.autoRebuildGracePeriod,
 			})
 			requireSuccessNonNilResponse(t, resp, err)
+			schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/crl"), logical.UpdateOperation), resp, true)
 
 			resp, err = CBRead(b, s, "config/crl")
+			schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/crl"), logical.ReadOperation), resp, true)
+
 			requireSuccessNonNilResponse(t, resp, err)
 			requireFieldsSetInResp(t, resp, "disable", "expiry", "ocsp_disable", "auto_rebuild", "auto_rebuild_grace_period")
 
@@ -434,6 +439,8 @@ func TestCrlRebuilder(t *testing.T) {
 	err = cb.rebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
 	resp = requestCrlFromBackend(t, s, b)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("crl/pem"), logical.ReadOperation), resp, true)
+
 	crl3 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 	require.True(t, crl1.ThisUpdate.Before(crl3.ThisUpdate),
 		"initial crl time: %#v not before next crl rebuild time: %#v", crl1.ThisUpdate, crl3.ThisUpdate)
@@ -766,6 +773,8 @@ func TestIssuerRevocation(t *testing.T) {
 
 	// Revoke it.
 	resp, err = CBWrite(b, s, "issuer/root2/revoke", map[string]interface{}{})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/root2/revoke"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotZero(t, resp.Data["revocation_time"])
@@ -796,7 +805,7 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a leaf cert and ensure it fails (because the issuer is revoked).
-	_, err = CBWrite(b, s, "issuer/root2/issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/root2/issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 	})
 	require.Error(t, err)
@@ -822,6 +831,8 @@ func TestIssuerRevocation(t *testing.T) {
 	resp, err = CBWrite(b, s, "intermediate/set-signed", map[string]interface{}{
 		"certificate": intCert,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("intermediate/set-signed"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["imported_issuers"])
@@ -837,6 +848,8 @@ func TestIssuerRevocation(t *testing.T) {
 	resp, err = CBWrite(b, s, "issuer/int1/issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/int1/issue/local-testing"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["certificate"])
@@ -979,8 +992,9 @@ func TestAutoRebuild(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	crl := getCrlCertificateList(t, client, "pki")
-	lastCRLNumber := crl.Version
+	defaultCrlPath := "/v1/pki/crl"
+	crl := getParsedCrlAtPath(t, client, defaultCrlPath).TBSCertList
+	lastCRLNumber := getCRLNumber(t, crl)
 	lastCRLExpiry := crl.NextUpdate
 	requireSerialNumberInCRL(t, crl, leafSerial)
 
@@ -993,6 +1007,12 @@ func TestAutoRebuild(t *testing.T) {
 		"delta_rebuild_interval":    deltaPeriod,
 	})
 	require.NoError(t, err)
+
+	// Wait for the CRL to update based on the configuration change we just did
+	// so that it doesn't grab the revocation we are going to do afterwards.
+	crl = waitForUpdatedCrl(t, client, defaultCrlPath, lastCRLNumber, lastCRLExpiry.Sub(time.Now()))
+	lastCRLNumber = getCRLNumber(t, crl)
+	lastCRLExpiry = crl.NextUpdate
 
 	// Issue a cert and revoke it.
 	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
@@ -1041,7 +1061,7 @@ func TestAutoRebuild(t *testing.T) {
 
 	// New serial should not appear on CRL.
 	crl = getCrlCertificateList(t, client, "pki")
-	thisCRLNumber := crl.Version
+	thisCRLNumber := getCRLNumber(t, crl)
 	requireSerialNumberInCRL(t, crl, leafSerial) // But the old one should.
 	now := time.Now()
 	graceInterval, _ := time.ParseDuration(gracePeriod)
@@ -1126,8 +1146,13 @@ func TestAutoRebuild(t *testing.T) {
 			deltaCrl := getParsedCrlAtPath(t, client, "/v1/pki/crl/delta").TBSCertList
 			if !requireSerialNumberInCRL(nil, deltaCrl, newLeafSerial) {
 				// Check if it is on the main CRL because its already regenerated.
-				mainCRL := getParsedCrlAtPath(t, client, "/v1/pki/crl").TBSCertList
+				mainCRL := getParsedCrlAtPath(t, client, defaultCrlPath).TBSCertList
 				requireSerialNumberInCRL(t, mainCRL, newLeafSerial)
+			} else {
+				referenceCrlNum := getCrlReferenceFromDelta(t, deltaCrl)
+				if lastCRLNumber < referenceCrlNum {
+					lastCRLNumber = referenceCrlNum
+				}
 			}
 		}
 	}
@@ -1138,32 +1163,9 @@ func TestAutoRebuild(t *testing.T) {
 		time.Sleep(expectedUpdate.Sub(now))
 	}
 
-	// Otherwise, the absolute latest we're willing to wait is some delta
-	// after CRL expiry (to let stuff regenerate &c).
-	interruptChan = time.After(lastCRLExpiry.Sub(now) + delta)
-	for {
-		select {
-		case <-interruptChan:
-			t.Fatalf("expected CRL to regenerate prior to CRL expiry (plus %v grace period)", delta)
-		default:
-			crl = getCrlCertificateList(t, client, "pki")
-			if crl.NextUpdate.Equal(lastCRLExpiry) {
-				// Hack to ensure we got a net-new CRL. If we didn't, we can
-				// exit this default conditional and wait for the next
-				// go-round. When the timer fires, it'll populate the channel
-				// and we'll exit correctly.
-				time.Sleep(1 * time.Second)
-				break
-			}
-
-			now := time.Now()
-			require.True(t, crl.ThisUpdate.Before(now))
-			require.True(t, crl.NextUpdate.After(now))
-			requireSerialNumberInCRL(t, crl, leafSerial)
-			requireSerialNumberInCRL(t, crl, newLeafSerial)
-			return
-		}
-	}
+	crl = waitForUpdatedCrl(t, client, defaultCrlPath, lastCRLNumber, lastCRLExpiry.Sub(now)+delta)
+	requireSerialNumberInCRL(t, crl, leafSerial)
+	requireSerialNumberInCRL(t, crl, newLeafSerial)
 }
 
 func TestTidyIssuerAssociation(t *testing.T) {

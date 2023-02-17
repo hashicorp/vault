@@ -11,7 +11,7 @@
       <DocLink class="has-font-weight-normal" @path="/vault/docs/secrets/pki/rotation-primitives#notes-on-manual_chain">
         update the manual_chain<Icon @name="docs-link" />
       </DocLink>
-      for each of your new certificates listed below,w and the existing issuer.
+      for each of your new certificates listed below, and the existing issuer.
     </p>
     <div class="is-flex-start">
       {{#each this.inputFields as |column|}}
@@ -50,7 +50,7 @@
                       @route="externalMountIssuer"
                       @models={{array (get crossSignRow "intermediateMount") data.issuerId}}
                     >
-                      {{data.issuerName}}
+                      {{data.issuerRef}}
                     </LinkToExternal>
                   {{/if}}
                 </div>
@@ -62,7 +62,7 @@
               @type="danger"
               @title={{if crossSignRow.hasUnsupportedParams crossSignRow.hasError "Cross-sign failed"}}
               @message={{if crossSignRow.hasUnsupportedParams crossSignRow.hasUnsupportedParams crossSignRow.hasError}}
-              @marginless={{true}}
+              class="message-marginless"
             />
           {{/if}}
         </div>
@@ -81,7 +81,11 @@
     </button>
   {{else}}
     <form {{on "submit" (perform this.submit)}} data-test-cross-sign-form>
-      <ObjectListInput @objectKeys={{this.inputFields}} @onChange={{fn (mut this.formData)}} />
+      <ObjectListInput
+        @objectKeys={{this.inputFields}}
+        @onChange={{fn (mut this.formData)}}
+        @validationErrors={{this.validationErrors}}
+      />
       <div class="control box is-fullwidth has-only-top-shadow">
         <button
           type="submit"

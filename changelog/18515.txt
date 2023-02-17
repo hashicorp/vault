@@ -1,0 +1,3 @@
+```release-note:improvement
+openapi: Add openapi response definitions to vault/logical_system_paths.go defined endpoints.
+```

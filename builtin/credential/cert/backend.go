@@ -43,7 +43,7 @@ func Backend() *backend {
 			pathListCRLs(&b),
 			pathCRLs(&b),
 		},
-		AuthRenew:      b.pathLoginRenew,
+		AuthRenew:      b.loginPathWrapper(b.pathLoginRenew),
 		Invalidate:     b.invalidate,
 		BackendType:    logical.TypeCredential,
 		InitializeFunc: b.initialize,
@@ -101,12 +101,12 @@ func (b *backend) initOCSPClient(cacheSize int) {
 	}, cacheSize)
 }
 
-func (b *backend) updatedConfig(config *config) error {
+func (b *backend) updatedConfig(config *config) {
 	b.ocspClientMutex.Lock()
 	defer b.ocspClientMutex.Unlock()
 	b.initOCSPClient(config.OcspCacheSize)
 	b.configUpdated.Store(false)
-	return nil
+	return
 }
 
 func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name string, crl *CRLInfo) error {

@@ -5,13 +5,7 @@
   </h2>
   {{#each this.defaultFields as |field|}}
     {{#let (find-by "name" field @model.allFields) as |attr|}}
-      <FormField
-        @attr={{attr}}
-        @model={{@model}}
-        @modelValidations={{this.modelValidations}}
-        @onChange={{this.checkFormValidity}}
-        data-test-field
-      >
+      <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} data-test-field>
         {{#if (eq field "customTtl")}}
           {{! customTtl attr has editType yield, which will render this }}
           <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
@@ -56,7 +50,7 @@
       <button type="submit" class="button is-primary" data-test-pki-generate-root-save>
         Done
       </button>
-      <button {{on "click" this.cancel}} type="button" class="button has-left-margin-s" data-test-pki-generate-root-cancel>
+      <button {{on "click" @onCancel}} type="button" class="button has-left-margin-s" data-test-pki-generate-root-cancel>
         Cancel
       </button>
     </div>

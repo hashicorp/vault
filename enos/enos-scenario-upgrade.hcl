@@ -165,6 +165,9 @@ scenario "upgrade" {
       vault_release           = var.vault_upgrade_initial_release
       vault_license           = matrix.edition != "oss" ? step.read_license.license : null
       vpc_id                  = step.create_vpc.vpc_id
+      vault_environment = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
     }
   }
 

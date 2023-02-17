@@ -30,10 +30,12 @@ module('Integration | Component | pki role details page', function (hooks) {
       { owner: this.engine }
     );
     assert.dom(SELECTORS.issuerLabel).hasText('Issuer', 'Label is');
-    assert.dom(SELECTORS.keyUsageValue).hasText('None', 'Key usage shows none when array is empty');
+    assert
+      .dom(`${SELECTORS.keyUsageValue} [data-test-icon="minus"]`)
+      .exists('Key usage shows dash when array is empty');
     assert
       .dom(SELECTORS.extKeyUsageValue)
-      .hasText('bar, baz,', 'Key usage shows comma-joined values when array has items');
+      .hasText('bar,baz', 'Key usage shows comma-joined values when array has items');
     assert.dom(SELECTORS.noStoreValue).containsText('Yes', 'noStore shows opposite of what the value is');
     assert.dom(SELECTORS.customTtlValue).containsText('10m', 'TTL shown as duration');
   });

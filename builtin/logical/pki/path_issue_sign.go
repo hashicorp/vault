@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -34,6 +35,48 @@ func buildPathIssue(b *backend, pattern string) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.metricsWrap("issue", roleRequired, b.pathIssue),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+								Required:    true,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing Certificate Authority`,
+								Required:    true,
+							},
+							"ca_chain": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: `Certificate Chain`,
+								Required:    false,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `Serial Number`,
+								Required:    false,
+							},
+							"expiration": {
+								Type:        framework.TypeString,
+								Description: `Time of expiration`,
+								Required:    false,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `Private key`,
+								Required:    false,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `Private key type`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -62,6 +105,48 @@ func buildPathSign(b *backend, pattern string) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.metricsWrap("sign", roleRequired, b.pathSign),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+								Required:    true,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing Certificate Authority`,
+								Required:    true,
+							},
+							"ca_chain": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: `Certificate Chain`,
+								Required:    false,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `Serial Number`,
+								Required:    true,
+							},
+							"expiration": {
+								Type:        framework.TypeString,
+								Description: `Time of expiration`,
+								Required:    true,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `Private key`,
+								Required:    false,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `Private key type`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -98,6 +183,48 @@ func buildPathIssuerSignVerbatim(b *backend, pattern string) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.metricsWrap("sign-verbatim", roleOptional, b.pathSignVerbatim),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+								Required:    true,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing Certificate Authority`,
+								Required:    true,
+							},
+							"ca_chain": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: `Certificate Chain`,
+								Required:    false,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `Serial Number`,
+								Required:    false,
+							},
+							"expiration": {
+								Type:        framework.TypeString,
+								Description: `Time of expiration`,
+								Required:    false,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `Private key`,
+								Required:    false,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `Private key type`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -419,7 +546,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 		}
-		b.incrementTotalCertificatesCount(certsCounted, key)
+		b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 	}
 
 	if useCSR {

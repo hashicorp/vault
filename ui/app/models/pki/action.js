@@ -50,21 +50,25 @@ export default class PkiActionModel extends Model {
 
   @attr('string', {
     label: 'Subject Alternative Names (SANs)',
+    editType: 'stringArray',
   })
   altNames; // comma sep strings
 
   @attr('string', {
     label: 'IP Subject Alternative Names (IP SANs)',
+    editType: 'stringArray',
   })
   ipSans;
 
   @attr('string', {
     label: 'URI Subject Alternative Names (URI SANs)',
+    editType: 'stringArray',
   })
   uriSans;
 
   @attr('string', {
     label: 'Other SANs',
+    editType: 'stringArray',
   })
   otherSans;
 
@@ -112,14 +116,17 @@ export default class PkiActionModel extends Model {
 
   @attr('string', {
     label: 'Organizational Units (OU)',
+    subText:
+      'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
+    editType: 'stringArray',
   })
   ou;
-  @attr('string') organization;
-  @attr('string') country;
-  @attr('string') locality;
-  @attr('string') province;
-  @attr('string') streetAddress;
-  @attr('string') postalCode;
+  @attr({ editType: 'stringArray' }) organization;
+  @attr({ editType: 'stringArray' }) country;
+  @attr({ editType: 'stringArray' }) locality;
+  @attr({ editType: 'stringArray' }) province;
+  @attr({ editType: 'stringArray' }) streetAddress;
+  @attr({ editType: 'stringArray' }) postalCode;
 
   @attr('string', {
     subText: "Specifies the requested Subject's named Serial Number value.",
@@ -162,8 +169,11 @@ export default class PkiActionModel extends Model {
   @attr('string', { readOnly: true }) issuerId; // returned from generate-root action
 
   // For generating and signing a CSR
-  @attr('string') csr;
+  @attr('string', { label: 'CSR', masked: true }) csr;
   @attr caChain;
+  @attr('string', { label: 'Key ID' }) keyId;
+  @attr('string', { masked: true }) privateKey;
+  @attr('string') privateKeyType;
 
   get backend() {
     return this.secretMountPath.currentPath;

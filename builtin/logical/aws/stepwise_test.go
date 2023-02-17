@@ -17,7 +17,7 @@ func TestAccBackend_Stepwise_basic(t *testing.T) {
 	t.Parallel()
 	envOptions := &stepwise.MountOptions{
 		RegistryName:    "aws-sec",
-		PluginType:      stepwise.PluginTypeSecrets,
+		PluginType:      api.PluginTypeSecrets,
 		PluginName:      "aws",
 		MountPathPrefix: "aws-sec",
 	}
