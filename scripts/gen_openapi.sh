@@ -25,7 +25,7 @@ sleep 2
 VAULT_PID=$!
 
 defer_stop_vault() {
-    echo "Stopping Vault.."
+    echo "Stopping Vault..."
     kill $VAULT_PID
     sleep 1
 }
