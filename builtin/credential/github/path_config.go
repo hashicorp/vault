@@ -36,6 +36,10 @@ API-compatible authentication server.`,
 					Group: "GitHub Options",
 				},
 			},
+			"token": {
+				Type:        framework.TypeString,
+				Description: "GitHub personal API token",
+			},
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_ttl"),
@@ -96,9 +100,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 	if c.OrganizationID == 0 {
 		var githubToken string
 		if token, ok := data.GetOk("token"); ok {
-			if t, ok := token.(string); ok {
-				githubToken = t
-			}
+			githubToken = token.(string)
 		}
 		client, err := b.Client(githubToken)
 		if err != nil {
