@@ -203,7 +203,7 @@
         "title": "Events",
         "path": "concepts/events",
         "badge": {
-          "text": "EXPERIMENT",
+          "text": "ALPHA",
           "type": "outlined",
           "color": "neutral"
         }
