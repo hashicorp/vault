@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/eventbus"
-	"google.golang.org/protobuf/encoding/protojson"
 	"nhooyr.io/websocket"
 )
 
@@ -51,11 +50,11 @@ func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCo
 			var messageBytes []byte
 			var messageType websocket.MessageType
 			if args.json {
-				messageBytes, err = protojson.Marshal(message)
+				messageBytes = message.Formatted["cloudevents-json"]
 				messageType = websocket.MessageText
 				messageBytes = []byte(string(messageBytes) + "\n")
 			} else {
-				messageBytes, err = proto.Marshal(message)
+				messageBytes, err = proto.Marshal(message.Payload.(*logical.EventReceived))
 				messageType = websocket.MessageBinary
 			}
 			if err != nil {

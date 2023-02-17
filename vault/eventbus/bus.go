@@ -53,7 +53,7 @@ type pluginEventBus struct {
 type asyncChanNode struct {
 	// TODO: add bounded deque buffer of *EventReceived
 	ctx    context.Context
-	ch     chan *logical.EventReceived
+	ch     chan *eventlogger.Event
 	logger hclog.Logger
 
 	// used to close the connection
@@ -169,7 +169,7 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	}, nil
 }
 
-func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pattern string) (<-chan *logical.EventReceived, context.CancelFunc, error) {
+func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pattern string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -193,7 +193,7 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pat
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	asyncNode := newAsyncNode(ctx, ns, bus.logger)
+	asyncNode := newAsyncNode(ctx, bus.logger)
 	err = bus.broker.RegisterNode(eventlogger.NodeID(sinkNodeID), asyncNode)
 	if err != nil {
 		defer cancel()
@@ -247,10 +247,10 @@ func newFilterNode(ns *namespace.Namespace, pattern string) *eventlogger.Filter 
 	}
 }
 
-func newAsyncNode(ctx context.Context, namespace *namespace.Namespace, logger hclog.Logger) *asyncChanNode {
+func newAsyncNode(ctx context.Context, logger hclog.Logger) *asyncChanNode {
 	return &asyncChanNode{
 		ctx:    ctx,
-		ch:     make(chan *logical.EventReceived),
+		ch:     make(chan *eventlogger.Event),
 		logger: logger,
 	}
 }
@@ -272,17 +272,16 @@ func (node *asyncChanNode) Close() {
 func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	// sends to the channel async in another goroutine
 	go func() {
-		eventRecv := e.Payload.(*logical.EventReceived)
 		var timeout bool
 		select {
-		case node.ch <- eventRecv:
+		case node.ch <- e:
 		case <-ctx.Done():
 			timeout = errors.Is(ctx.Err(), context.DeadlineExceeded)
 		case <-node.ctx.Done():
 			timeout = errors.Is(node.ctx.Err(), context.DeadlineExceeded)
 		}
 		if timeout {
-			node.logger.Info("Subscriber took too long to process event, closing", "ID", eventRecv.Event.ID())
+			node.logger.Info("Subscriber took too long to process event, closing", "ID", e.Payload.(*logical.EventReceived).Event.Id)
 			node.Close()
 		}
 	}()
