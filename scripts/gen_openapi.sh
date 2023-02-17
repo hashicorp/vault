@@ -25,7 +25,7 @@ sleep 2
 VAULT_PID=$!
 
 defer_stop_vault() {
-    echo "stopping vault"
+    echo "Stopping Vault..."
     kill $VAULT_PID
     sleep 1
 }
@@ -60,7 +60,7 @@ done <../../vault/helper/builtinplugins/registry.go
 
 if [[ -n "${auth_plugin_previous}" ]] ; then
     echo "enabling auth plugin: ${auth_plugin_previous}"
-    vault auth enable "${auth_plugin_previous}"
+    vault auth enable blah
 fi
 
 # Enable secrets plugins
