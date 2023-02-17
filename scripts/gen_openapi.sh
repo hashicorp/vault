@@ -24,6 +24,14 @@ vault server -dev -dev-root-token-id=root &
 sleep 2
 VAULT_PID=$!
 
+defer_stop_vault() {
+    echo "Stopping Vault..."
+    kill $VAULT_PID
+    sleep 1
+}
+
+trap defer_stop_vault INT TERM EXIT
+
 export VAULT_ADDR=http://127.0.0.1:8200
 
 echo "Mounting all builtin plugins..."
@@ -125,8 +133,6 @@ else
             'http://127.0.0.1:8200/v1/sys/internal/specs/openapi' > openapi.json
 fi
 
-kill $VAULT_PID
-sleep 1
-
 echo
 echo "openapi.json generated"
+echo
