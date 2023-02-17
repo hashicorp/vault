@@ -50,7 +50,10 @@ func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCo
 			logger.Debug("Sending message to websocket", "message", message)
 			var messageBytes []byte
 			if args.json {
-				messageBytes, err = protojson.Marshal(message)
+				opts := protojson.MarshalOptions{
+					UseProtoNames: true,
+				}
+				messageBytes, err = opts.Marshal(message)
 			} else {
 				messageBytes, err = proto.Marshal(message)
 			}
@@ -78,7 +81,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 		_, _, err := core.CheckToken(ctx, req, false)
 		if err != nil {
 			if errors.Is(err, logical.ErrPermissionDenied) {
-				respondError(w, http.StatusUnauthorized, logical.ErrPermissionDenied)
+				respondError(w, http.StatusForbidden, logical.ErrPermissionDenied)
 				return
 			}
 			logger.Debug("Error validating token", "error", err)
