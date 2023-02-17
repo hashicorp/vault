@@ -163,9 +163,8 @@
     {{#if (eq @model.plugin_name "vault-plugin-database-oracle")}}
       <AlertBanner
         @type="info"
-        @title="Additional configuration may be required if using SSL"
-        @message="To create database connections with SSL or using TNS names you may need to provide additional Oracle configuration files for your Vault cluster. 
-        If you have already done so and are creating new connections to database hosts which are not already covered by the existing configuration files, you may need to update them."
+        @title="Connecting using SSL or TNS Names"
+        @message="To create database connections with SSL or using TNS names you may need to provide additional Oracle configuration files for your Vault cluster."
       >
         <DocLink @path="/vault/docs/secrets/databases/oracle">
           <Icon @name="learn-link" />
