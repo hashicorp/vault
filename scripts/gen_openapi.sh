@@ -72,7 +72,7 @@ vault secrets enable "totp"
 vault secrets enable "transit"
 
 # Enable enterprise features
-if [[ -n "${VAULT_LICENSE}" ]]; then
+if [[ -n "${VAULT_LICENSE:-}" ]]; then
     vault write sys/license text="${VAULT_LICENSE}"
 
     vault secrets enable "keymgmt"
