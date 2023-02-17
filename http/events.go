@@ -50,7 +50,12 @@ func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCo
 			var messageBytes []byte
 			var messageType websocket.MessageType
 			if args.json {
-				messageBytes = message.Formatted["cloudevents-json"]
+				var ok bool
+				messageBytes, ok = message.Format("cloudevents-json")
+				if !ok {
+					logger.Warn("Could not get cloudevents JSON format")
+					return 0, "", errors.New("could not get cloudevents JSON format")
+				}
 				messageType = websocket.MessageText
 			} else {
 				messageBytes, err = proto.Marshal(message.Payload.(*logical.EventReceived))
