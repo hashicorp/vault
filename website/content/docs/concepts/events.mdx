@@ -108,7 +108,7 @@ This endpoint supports the standard authentication and authorization workflows u
 The `{eventType}` parameter is a non-empty string of what event type to subscribe, which may contain wildcards (`*`)
 to subscribe to multiple events, e.g., `kv-v2/data-*`.
 
-By default, the events delivered in protobuf binary format.
+By default, the events are delivered in protobuf binary format.
 The endpoint can also format the data as JSON if the `json` query parameter is set to `true`:
 
 ```shell-session
