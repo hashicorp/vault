@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -121,19 +122,21 @@ func TestGitHub_WriteReadConfig_OrgID(t *testing.T) {
 }
 
 // TestGitHub_WriteReadConfig_Token tests that we can successfully read and
-// write the github auth config with a token param
+// write the github auth config with a token environment variable
 func TestGitHub_WriteReadConfig_Token(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 	// use a test server to return our mock GH org info
 	ts := setupTestServer(t)
 	defer ts.Close()
 
+	err := os.Setenv("VAULT_AUTH_GITHUB_TOKEN", "foobar")
+	assert.NoError(t, err)
+
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "config",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"organization": "foo-org",
-			"token":        "foo-token",
 			"base_url":     ts.URL, // base_url will call the test server
 		},
 		Storage: s,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -35,10 +36,6 @@ API-compatible authentication server.`,
 					Name:  "Base URL",
 					Group: "GitHub Options",
 				},
-			},
-			"token": {
-				Type:        framework.TypeString,
-				Description: "GitHub personal API token",
 			},
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
@@ -98,10 +95,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 	}
 
 	if c.OrganizationID == 0 {
-		var githubToken string
-		if token, ok := data.GetOk("token"); ok {
-			githubToken = token.(string)
-		}
+		githubToken := os.Getenv("VAULT_AUTH_GITHUB_TOKEN")
 		client, err := b.Client(githubToken)
 		if err != nil {
 			return nil, err

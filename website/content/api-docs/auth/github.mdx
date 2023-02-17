@@ -31,9 +31,12 @@ distinction between the `create` and `update` capabilities inside ACL policies.
   of. Vault will attempt to fetch and set this value if it is not provided.
 - `base_url` `(string: "")` - The API endpoint to use. Useful if you are running
   GitHub Enterprise or an API-compatible authentication server.
-- `token` `(string: "")` - An optional GitHub token used to make authenticated GitHub API requests.
-  This can be useful for bypassing GitHub's rate-limiting during automation flows
-  when the `organization_id` is not provided. We encourage you to provide the `organization_id` instead of the `token`.
+
+### Environment variables
+- `VAULT_AUTH_GITHUB_TOKEN` `(string: "")` - An optional GitHub token used to make
+  authenticated GitHub API requests. This can be useful for bypassing GitHub's
+  rate-limiting during automation flows when the `organization_id` is not provided.
+  We encourage you to provide the `organization_id` instead of relying on this environment variable.
 
 @include 'tokenfields.mdx'
 
