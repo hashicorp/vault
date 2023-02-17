@@ -929,6 +929,10 @@
                 "path": "agent/autoauth/methods/kubernetes"
               },
               {
+                "title": "Oracle Cloud Infrastructure",
+                "path": "agent/autoauth/methods/oci"
+              },
+              {
                 "title": "Token File",
                 "path": "agent/autoauth/methods/token_file"
               }
