@@ -1880,6 +1880,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		Data:       map[string]interface{}{},
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("ca/pem"), logical.ReadOperation), resp, true)
 	require.NoError(t, err)
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed read ca/pem, %#v", resp)
@@ -2414,6 +2415,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	// Now because the issued CA's have no links, the call to ca_chain should return the same data (ca chain from default)
 	resp, err = CBRead(b, s, "cert/ca_chain")
 	require.NoError(t, err, "error reading ca_chain: %v", err)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("cert/ca_chain"), logical.ReadOperation), resp, true)
 
 	r2Data := resp.Data
 	if !reflect.DeepEqual(r1Data, r2Data) {
@@ -3893,6 +3895,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if secret == nil || len(secret.Data) == 0 || len(secret.Data["certificate"].(string)) == 0 {
 		t.Fatal("expected certificate information from read operation")
 	}
@@ -5075,9 +5078,11 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Empty(t, rootCert.CRLDistributionPoints)
 
 	// Set some local URLs on the issuer.
-	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
 		"issuing_certificates": []string{"https://google.com"},
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/default"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 
 	_, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
