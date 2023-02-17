@@ -1,5 +1,5 @@
 import { currentRouteName, currentURL, settled } from '@ember/test-helpers';
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
@@ -150,11 +150,11 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await settled();
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
   });
-  // TODO JR: enable once kubernetes routes are defined
-  skip('it should transition to engine route on success if defined in mount config', async function (assert) {
+
+  test('it should transition to engine route on success if defined in mount config', async function (assert) {
     await consoleComponent.runCommands([
       // delete any previous mount with same name
-      `delete sys/mounts/kmip`,
+      `delete sys/mounts/kubernetes`,
     ]);
     await mountSecrets.visit();
     await mountSecrets.selectType('kubernetes');
