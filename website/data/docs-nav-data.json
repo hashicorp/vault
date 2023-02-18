@@ -746,6 +746,10 @@
         ]
       },
       {
+        "title": "<code>print</code>",
+        "path": "commands/print"
+      },
+      {
         "title": "<code>read</code>",
         "path": "commands/read"
       },
