@@ -66,17 +66,17 @@ require (
 	github.com/hashicorp/consul-template v0.29.5
 	github.com/hashicorp/consul/api v1.17.0
 	github.com/hashicorp/errwrap v1.1.0
-	github.com/hashicorp/eventlogger v0.1.0
+	github.com/hashicorp/eventlogger v0.1.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
 	github.com/hashicorp/go-gcp-common v0.8.0
 	github.com/hashicorp/go-hclog v1.4.0
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.7
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.8
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.7-1
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.7
 	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.7
-	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.7
+	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.8
 	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.7
 	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.7
 	github.com/hashicorp/go-memdb v1.3.3
@@ -214,11 +214,11 @@ require (
 )
 
 require (
-	cloud.google.com/go v0.105.0 // indirect
+	cloud.google.com/go v0.107.0 // indirect
 	cloud.google.com/go/compute v1.14.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v0.8.0 // indirect
-	cloud.google.com/go/kms v1.6.0 // indirect
+	cloud.google.com/go/kms v1.8.0 // indirect
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-sdk-for-go v67.2.0+incompatible // indirect
