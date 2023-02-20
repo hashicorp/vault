@@ -84,7 +84,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 		_, _, err := core.CheckToken(ctx, req, false)
 		if err != nil {
 			if errors.Is(err, logical.ErrPermissionDenied) {
-				respondError(w, http.StatusUnauthorized, logical.ErrPermissionDenied)
+				respondError(w, http.StatusForbidden, logical.ErrPermissionDenied)
 				return
 			}
 			logger.Debug("Error validating token", "error", err)
