@@ -1,14 +1,13 @@
-import { schedule, debounce } from '@ember/runloop';
+import { debounce } from '@ember/runloop';
 import { inject as service } from '@ember/service';
-import Component from '@ember/component';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
 
 //TODO MOVE THESE TO THE ADDON
+// ARG TODO RETURN
 import utils from 'vault/lib/key-utils';
 import keys from 'vault/lib/keycodes';
-import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-
-import layout from '../templates/components/navigate-input';
 
 const routeFor = function (type, mode, urls) {
   const MODES = {
@@ -34,25 +33,16 @@ const routeFor = function (type, mode, urls) {
   return useSuffix ? modeVal + '.' + typeVal : modeVal;
 };
 
-export default Component.extend(FocusOnInsertMixin, {
-  layout,
-  router: service(),
+export default class NavigateInput extends Component {
+  @service router;
 
-  classNames: ['navigate-filter'],
-  urls: null,
+  get focusFilter() {
+    return this.args.filter ? true : false;
+  }
 
-  // these get passed in from the outside
-  // actions that get passed in
-  filterFocusDidChange: null,
-  filterDidChange: null,
-  mode: 'secrets',
-  shouldNavigateTree: false,
-  extraNavParams: null,
-
-  baseKey: null,
-  filter: null,
-  filterMatchesKey: null,
-  firstPartialMatch: null,
+  get mode() {
+    return this.args.mode || 'secrets';
+  }
 
   transitionToRoute(...args) {
     const params = args.map((param, index) => {
@@ -63,29 +53,23 @@ export default Component.extend(FocusOnInsertMixin, {
     });
 
     this.router.transitionTo(...params);
-  },
-
-  shouldFocus: false,
-
-  didReceiveAttrs() {
-    this._super(...arguments);
-    if (!this.filter) return;
-    schedule('afterRender', this, 'forceFocus');
-  },
+  }
 
   keyForNav(key) {
     if (this.mode !== 'secrets-cert') {
       return key;
     }
     return `cert/${key}`;
-  },
-  onEnter: function (val) {
-    const { baseKey, mode } = this;
-    const extraParams = this.extraNavParams;
+  }
+
+  onEnter(val) {
+    const mode = this.mode;
+    const baseKey = this.args.baseKey;
+    const extraParams = this.args.extraNavParams;
     if (mode.startsWith('secrets') && (!val || val === baseKey)) {
       return;
     }
-    if (this.filterMatchesKey && !utils.keyIsFolder(val)) {
+    if (this.args.filterMatchesKey && !utils.keyIsFolder(val)) {
       const params = [routeFor('show', mode, this.urls), extraParams, this.keyForNav(val)].compact();
       this.transitionToRoute(...params);
     } else {
@@ -113,29 +97,29 @@ export default Component.extend(FocusOnInsertMixin, {
         });
       }
     }
-  },
+  }
 
   // pop to the nearest parentKey or to the root
-  onEscape: function (val) {
-    var key = utils.parentKeyForKey(val) || '';
-    this.filterDidChange(key);
+  onEscape(val) {
+    const key = utils.parentKeyForKey(val) || '';
+    this.args.filterDidChange(key);
     this.filterUpdated(key);
-  },
+  }
 
-  onTab: function (event) {
-    var firstPartialMatch = this.firstPartialMatch.id;
+  onTab(event) {
+    var firstPartialMatch = this.args.firstPartialMatch.id;
     if (!firstPartialMatch) {
       return;
     }
     event.preventDefault();
-    this.filterDidChange(firstPartialMatch);
+    this.args.filterDidChange(firstPartialMatch);
     this.filterUpdated(firstPartialMatch);
-  },
+  }
 
   // as you type, navigates through the k/v tree
-  filterUpdated: function (val) {
+  filterUpdated(val) {
     var mode = this.mode;
-    if (mode === 'policies' || !this.shouldNavigateTree) {
+    if (mode === 'policies' || !this.args.shouldNavigateTree) {
       this.filterUpdatedNoNav(val, mode);
       return;
     }
@@ -150,7 +134,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
     const pageFilter = val.replace(key, '');
     this.navigate(this.keyForNav(key), mode, pageFilter);
-  },
+  }
 
   navigate(key, mode, pageFilter) {
     const route = routeFor(key ? 'list' : 'list-root', mode, this.urls);
@@ -174,9 +158,9 @@ export default Component.extend(FocusOnInsertMixin, {
       });
     }
     this.transitionToRoute(...args);
-  },
+  }
 
-  filterUpdatedNoNav: function (val, mode) {
+  filterUpdatedNoNav(val, mode) {
     var key = val ? val.trim() : null;
     this.transitionToRoute(routeFor('list-root', mode, this.urls), {
       queryParams: {
@@ -184,37 +168,36 @@ export default Component.extend(FocusOnInsertMixin, {
         page: 1,
       },
     });
-  },
+  }
 
-  actions: {
-    handleInput: function (filter) {
-      if (this.filterDidChange) {
-        this.filterDidChange(filter);
-      }
-      debounce(this, 'filterUpdated', filter, 200);
-    },
-
-    setFilterFocused: function (isFocused) {
-      if (this.filterFocusDidChange) {
-        this.filterFocusDidChange(isFocused);
-      }
-    },
-
-    handleKeyPress: function (event) {
-      if (event.keyCode === keys.TAB) {
-        this.onTab(event);
-      }
-    },
-
-    handleKeyUp: function (event) {
-      var keyCode = event.keyCode;
-      const val = event.target.value;
-      if (keyCode === keys.ENTER) {
-        this.onEnter(val);
-      }
-      if (keyCode === keys.ESC) {
-        this.onEscape(val);
-      }
-    },
-  },
-});
+  @action
+  handleInput(filter) {
+    if (this.args.filterDidChange) {
+      this.args.filterDidChange(filter.target.value);
+    }
+    debounce(this, 'filterUpdated', filter.target.value, 200);
+  }
+  @action
+  setFilterFocused(isFocused) {
+    if (this.args.filterFocusDidChange) {
+      this.args.filterFocusDidChange(isFocused);
+    }
+  }
+  @action
+  handleKeyPress(event) {
+    if (event.keyCode === keys.TAB) {
+      this.onTab(event);
+    }
+  }
+  @action
+  handleKeyUp(event) {
+    var keyCode = event.keyCode;
+    const val = event.target.value;
+    if (keyCode === keys.ENTER) {
+      this.onEnter(val);
+    }
+    if (keyCode === keys.ESC) {
+      this.onEscape(val);
+    }
+  }
+}

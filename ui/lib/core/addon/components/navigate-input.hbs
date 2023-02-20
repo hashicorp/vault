@@ -1,0 +1,22 @@
+<div class="navigate-filter">
+  <div class="field" data-test-nav-input>
+    <p class="control has-icons-left">
+      {{! template-lint-disable no-down-event-binding }}
+      <input
+        class="filter input"
+        value={{@filter}}
+        placeholder={{or @placeholder "Filter keys"}}
+        type="text"
+        data-test-comoponent="navigate-input"
+        {{on "input" this.handleInput}}
+        {{on "keyup" this.handleKeyUp}}
+        {{on "keydown" this.handleKeyPress}}
+        {{on "focus" (fn this.setFilterFocused true)}}
+        {{on "blur" (fn this.setFilterFocused false)}}
+        {{! template-lint-disable no-autofocus-attribute}}
+        autofocus={{this.focusFilter}}
+      />
+      <Icon @name="search" class="search-icon has-text-grey-light" />
+    </p>
+  </div>
+</div>
