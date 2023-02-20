@@ -471,7 +471,7 @@ func LoadConfig(path string) (*Config, error) {
 		defer f.Close()
 
 		if enableFilePermissionsCheck {
-			err = osutil.OwnerPermissionsMatchFile(f, path, 0, 0)
+			err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -528,7 +528,7 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	if enableFilePermissionsCheck {
 		// check permissions of the config file
-		err = osutil.OwnerPermissionsMatchFile(f, path, 0, 0)
+		err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -810,8 +810,8 @@ func LoadConfigDir(dir string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	defer f.Close()
+
 	fi, err := f.Stat()
 	if err != nil {
 		return nil, err

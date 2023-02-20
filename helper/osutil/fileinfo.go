@@ -66,16 +66,12 @@ func OwnerPermissionsMatch(path string, uid int, permissions int) error {
 }
 
 // OwnerPermissionsMatchFile checks if vault user is the owner and permissions are secure for the input file
-func OwnerPermissionsMatchFile(file *os.File, path string, uid int, permissions int) error {
-	if file == nil {
-		return fmt.Errorf("could not verify permissions for file. No file provided")
-	}
-
+func OwnerPermissionsMatchFile(file *os.File, uid int, permissions int) error {
 	info, err := file.Stat()
 	if err != nil {
-		return fmt.Errorf("error stating %q: %w", path, err)
+		return fmt.Errorf("file stat error on path %q: %w", file.Name(), err)
 	}
-	err = checkPathInfo(info, path, uid, permissions)
+	err = checkPathInfo(info, file.Name(), uid, permissions)
 	if err != nil {
 		return err
 	}

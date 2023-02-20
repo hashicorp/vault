@@ -108,8 +108,37 @@ func TestOwnerPermissionsMatchFile(t *testing.T) {
 		t.Fatal("failed to stat test file", err)
 	}
 
-	if err := OwnerPermissionsMatchFile(f, path, int(uid), int(info.Mode())); err != nil {
+	if err := OwnerPermissionsMatchFile(f, int(uid), int(info.Mode())); err != nil {
 		t.Fatalf("expected no error but got %v", err)
+	}
+}
+
+// TestOwnerPermissionsMatchFile_OtherUser creates a file using the user that started the current process and verifies
+// that a different user is not the owner of the file
+func TestOwnerPermissionsMatchFile_OtherUser(t *testing.T) {
+	currentUser, err := user.Current()
+	if err != nil {
+		t.Fatal("failed to get current user", err)
+	}
+	uid, err := strconv.ParseInt(currentUser.Uid, 0, 64)
+	if err != nil {
+		t.Fatal("failed to convert uid", err)
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal("failed to create test file", err)
+	}
+	defer f.Close()
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal("failed to stat test file", err)
+	}
+
+	if err := OwnerPermissionsMatchFile(f, int(uid)+1, int(info.Mode())); err == nil {
+		t.Fatalf("expected error but none")
 	}
 }
 
@@ -145,7 +174,7 @@ func TestOwnerPermissionsMatchFile_Symlink(t *testing.T) {
 	if err != nil {
 		t.Fatal("failed to stat test file", err)
 	}
-	if err := OwnerPermissionsMatchFile(symlinkedFile, symlink, int(uid), int(info.Mode())); err != nil {
+	if err := OwnerPermissionsMatchFile(symlinkedFile, int(uid), int(info.Mode())); err != nil {
 		t.Fatalf("expected no error but got %v", err)
 	}
 }
