@@ -96,6 +96,8 @@ func TestEventsSubscribe(t *testing.T) {
 	}
 }
 
+// TestEventsSubscribeAuth tests that unauthenticated and unauthorized subscriptions
+// fail correctly.
 func TestEventsSubscribeAuth(t *testing.T) {
 	core := vault.TestCore(t)
 	ln, addr := TestServer(t, core)
