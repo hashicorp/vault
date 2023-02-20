@@ -243,13 +243,16 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 	// Handle config merging.
 	external_config := map[string]interface{}{}
 	if c.flagConfig != "" {
-		contents, err := os.ReadFile(c.flagConfig)
+		contents, err := os.Open(c.flagConfig)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Failed to read configuration file %v: %v", c.flagConfig, err))
 			return pkiRetUsage
 		}
 
-		if err := json.Unmarshal(contents, &external_config); err != nil {
+		decoder := json.NewDecoder(contents)
+		decoder.UseNumber() // Use json.Number instead of float64 values as we are decoding to an interface{}.
+
+		if err := decoder.Decode(&external_config); err != nil {
 			c.UI.Error(fmt.Sprintf("Failed to parse configuration file %v: %v", c.flagConfig, err))
 			return pkiRetUsage
 		}
