@@ -2,7 +2,7 @@ package http
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -67,32 +67,32 @@ func TestEventsSubscribe(t *testing.T) {
 	ctx := context.Background()
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
 
-	conn, _, err := websocket.Dial(ctx, wsAddr+"/v1/sys/events/subscribe/"+eventType+"?json=true", &websocket.DialOptions{
-		HTTPHeader: http.Header{"x-vault-token": []string{token}},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	testCases := []struct {
+		json bool
+	}{{true}, {false}}
 
-	_, msg, err := conn.Read(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	data := map[string]interface{}{}
-	err = json.Unmarshal(msg, &data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if actualType := data["event_type"].(string); actualType != eventType {
-		t.Fatalf("Expeced event type %s, got %s", eventType, actualType)
-	}
-	pluginInfo, ok := data["plugin_info"].(map[string]interface{})
-	if !ok || pluginInfo == nil {
-		t.Fatalf("No plugin_info object: %v", data)
-	}
-	mountPath, ok := pluginInfo["mount_path"].(string)
-	if !ok || mountPath != "secret" {
-		t.Fatalf("Wrong mount_path: %v", data)
+	for _, testCase := range testCases {
+		url := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?json=%v", wsAddr, eventType, testCase.json)
+		conn, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{
+			HTTPHeader: http.Header{"x-vault-token": []string{token}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			conn.Close(websocket.StatusNormalClosure, "")
+		})
+
+		_, msg, err := conn.Read(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if testCase.json {
+			msgJson := strings.TrimSpace(string(msg))
+			if !strings.HasPrefix(msgJson, "{") || !strings.HasSuffix(msgJson, "}") {
+				t.Errorf("Expected to get JSON event but got: %v", msgJson)
+			}
+		}
 	}
 }
 

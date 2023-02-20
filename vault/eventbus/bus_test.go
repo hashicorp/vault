@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -58,7 +59,7 @@ func TestBusBasics(t *testing.T) {
 	timeout := time.After(1 * time.Second)
 	select {
 	case message := <-ch:
-		if message.Event.ID() != event.ID() {
+		if message.Payload.(*logical.EventReceived).Event.Id != event.Id {
 			t.Errorf("Got unexpected message: %+v", message)
 		}
 	case <-timeout:
@@ -117,7 +118,7 @@ func TestNamespaceFiltering(t *testing.T) {
 	timeout = time.After(1 * time.Second)
 	select {
 	case message := <-ch:
-		if message.Event.ID() != event.ID() {
+		if message.Payload.(*logical.EventReceived).Event.Id != event.Id {
 			t.Errorf("Got unexpected message %+v but was waiting for %+v", message, event)
 		}
 
@@ -171,7 +172,7 @@ func TestBus2Subscriptions(t *testing.T) {
 	timeout := time.After(1 * time.Second)
 	select {
 	case message := <-ch1:
-		if message.Event.ID() != event1.ID() {
+		if message.Payload.(*logical.EventReceived).Event.Id != event1.Id {
 			t.Errorf("Got unexpected message: %v", message)
 		}
 	case <-timeout:
@@ -179,7 +180,7 @@ func TestBus2Subscriptions(t *testing.T) {
 	}
 	select {
 	case message := <-ch2:
-		if message.Event.ID() != event2.ID() {
+		if message.Payload.(*logical.EventReceived).Event.Id != event2.Id {
 			t.Errorf("Got unexpected message: %v", message)
 		}
 	case <-timeout:
@@ -216,7 +217,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 
 			eventType := logical.EventType("someType")
 
-			var channels []<-chan *logical.EventReceived
+			var channels []<-chan *eventlogger.Event
 			var cancels []context.CancelFunc
 			stopped := atomic.Int32{}
 
@@ -348,7 +349,7 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		select {
 		case message := <-ch1:
-			ch1Seen = append(ch1Seen, message.Event.ID())
+			ch1Seen = append(ch1Seen, message.Payload.(*logical.EventReceived).Event.Id)
 		case <-timeout:
 			t.Error("Timeout waiting for event1")
 		}
@@ -356,17 +357,17 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 	if len(ch1Seen) != 2 {
 		t.Errorf("Expected 2 events but got: %v", ch1Seen)
 	} else {
-		if !strutil.StrListContains(ch1Seen, event1.ID()) {
-			t.Errorf("Did not find %s event1 ID in ch1seen", event1.ID())
+		if !strutil.StrListContains(ch1Seen, event1.Id) {
+			t.Errorf("Did not find %s event1 ID in ch1seen", event1.Id)
 		}
-		if !strutil.StrListContains(ch1Seen, event2.ID()) {
-			t.Errorf("Did not find %s event2 ID in ch1seen", event2.ID())
+		if !strutil.StrListContains(ch1Seen, event2.Id) {
+			t.Errorf("Did not find %s event2 ID in ch1seen", event2.Id)
 		}
 	}
 	// Expect to receive just kv/bar on ch2, which subscribed to */bar
 	select {
 	case message := <-ch2:
-		if message.Event.ID() != event2.ID() {
+		if message.Payload.(*logical.EventReceived).Event.Id != event2.Id {
 			t.Errorf("Got unexpected message: %v", message)
 		}
 	case <-timeout:
