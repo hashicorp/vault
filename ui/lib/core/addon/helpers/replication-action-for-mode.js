@@ -8,6 +8,7 @@ const ACTIONS = {
   },
   dr: {
     primary: ['disable', 'recover', 'reindex', 'demote'],
+    // ARG TODO RETURN
     // TODO: add disable, recover, and reindex when API is ready
     secondary: ['promote', 'update-primary', 'generate-token'],
     bootstrapping: ['disable', 'recover', 'reindex'],

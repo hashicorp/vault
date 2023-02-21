@@ -293,7 +293,6 @@ p.data-details {
   }
 
   g > line {
-    // TODO: mix-blend doesn't work in firefox browser?
     mix-blend-mode: darken;
     color: $ui-gray-300;
   }

@@ -18,6 +18,7 @@ export default Route.extend({
       set(error, 'httpStatus', 404);
       throw error;
     }
+    // ARGTODO come back to this
     // TODO peekRecord here to see if we have the record already
     return hash({
       model: this.store.findRecord(modelType, params.item_alias_id),

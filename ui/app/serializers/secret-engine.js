@@ -50,6 +50,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     } else if (isQueryRecord) {
       backends = this.normalizeBackend(null, payload);
     } else {
+      // ARG TODO RETURN
       // this is terrible, I'm sorry
       // TODO extract AWS and SSH config saving from the secret-engine model to simplify this
       if (payload.data.secret) {

@@ -81,6 +81,7 @@ export default Service.extend({
         path = createPath.path;
         path = path.includes('{') ? path.slice(0, path.indexOf('{') - 1) + '/example' : path;
         if (!path) {
+          // ARG TODO RETURN maybe assertion and test
           // TODO: we don't know if path will ever be falsey
           // if it is never falsey we can remove this.
           return reject();
@@ -231,6 +232,7 @@ export default Service.extend({
     let { apiPath } = pathInfo;
     const getPath = paths.find((path) => path.operations.includes('get'));
 
+    // ARG TODO Return here
     // the action might be "Generate" or something like that so we'll grab the first post endpoint if there
     // isn't one with "Create"
     // TODO: look into a more sophisticated way to determine the create endpoint

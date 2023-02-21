@@ -268,7 +268,6 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   });
 
   test('it can create a credential', async function (assert) {
-    // TODO come back and figure out why issue here with test
     const { path, scope, role } = await createRole();
     await credentialsPage.visit({ backend: path, scope, role });
     await settled();
