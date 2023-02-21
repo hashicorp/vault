@@ -15,18 +15,17 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/eventbus"
-	"google.golang.org/protobuf/encoding/protojson"
 	"nhooyr.io/websocket"
 )
 
 type eventSubscribeArgs struct {
-	ctx       context.Context
-	logger    hclog.Logger
-	events    *eventbus.EventBus
-	ns        *namespace.Namespace
-	eventType logical.EventType
-	conn      *websocket.Conn
-	json      bool
+	ctx     context.Context
+	logger  hclog.Logger
+	events  *eventbus.EventBus
+	ns      *namespace.Namespace
+	pattern string
+	conn    *websocket.Conn
+	json    bool
 }
 
 // handleEventsSubscribeWebsocket runs forever, returning a websocket error code and reason
@@ -34,7 +33,7 @@ type eventSubscribeArgs struct {
 func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCode, string, error) {
 	ctx := args.ctx
 	logger := args.logger
-	ch, cancel, err := args.events.Subscribe(ctx, args.ns, args.eventType)
+	ch, cancel, err := args.events.Subscribe(ctx, args.ns, args.pattern)
 	if err != nil {
 		logger.Info("Error subscribing", "error", err)
 		return websocket.StatusUnsupportedData, "Error subscribing", nil
@@ -47,19 +46,26 @@ func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCo
 			logger.Info("Websocket context is done, closing the connection")
 			return websocket.StatusNormalClosure, "", nil
 		case message := <-ch:
-			logger.Debug("Sending message to websocket", "message", message)
+			logger.Debug("Sending message to websocket", "message", message.Payload)
 			var messageBytes []byte
+			var messageType websocket.MessageType
 			if args.json {
-				messageBytes, err = protojson.Marshal(message)
+				var ok bool
+				messageBytes, ok = message.Format("cloudevents-json")
+				if !ok {
+					logger.Warn("Could not get cloudevents JSON format")
+					return 0, "", errors.New("could not get cloudevents JSON format")
+				}
+				messageType = websocket.MessageText
 			} else {
-				messageBytes, err = proto.Marshal(message)
+				messageBytes, err = proto.Marshal(message.Payload.(*logical.EventReceived))
+				messageType = websocket.MessageBinary
 			}
 			if err != nil {
 				logger.Warn("Could not serialize websocket event", "error", err)
 				return 0, "", err
 			}
-			messageString := string(messageBytes) + "\n"
-			err = args.conn.Write(ctx, websocket.MessageText, []byte(messageString))
+			err = args.conn.Write(ctx, messageType, messageBytes)
 			if err != nil {
 				return 0, "", err
 			}
@@ -78,7 +84,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 		_, _, err := core.CheckToken(ctx, req, false)
 		if err != nil {
 			if errors.Is(err, logical.ErrPermissionDenied) {
-				respondError(w, http.StatusUnauthorized, logical.ErrPermissionDenied)
+				respondError(w, http.StatusForbidden, logical.ErrPermissionDenied)
 				return
 			}
 			logger.Debug("Error validating token", "error", err)
@@ -97,12 +103,11 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 		if ns.ID != namespace.RootNamespaceID {
 			prefix = fmt.Sprintf("/v1/%ssys/events/subscribe/", ns.Path)
 		}
-		eventTypeStr := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, prefix))
-		if eventTypeStr == "" {
+		pattern := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, prefix))
+		if pattern == "" {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("did not specify eventType to subscribe to"))
 			return
 		}
-		eventType := logical.EventType(eventTypeStr)
 
 		json := false
 		jsonRaw := r.URL.Query().Get("json")
@@ -135,7 +140,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			}
 		}()
 
-		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(eventSubscribeArgs{ctx, logger, core.Events(), ns, eventType, conn, json})
+		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(eventSubscribeArgs{ctx, logger, core.Events(), ns, pattern, conn, json})
 		if err != nil {
 			closeStatus = websocket.CloseStatus(err)
 			if closeStatus == -1 {

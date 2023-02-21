@@ -83,7 +83,9 @@ export default SecretEngineModel.extend({
     const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
     // no ttl options for keymgmt
     const ttl = type !== 'keymgmt' ? 'defaultLeaseTtl,maxLeaseTtl,' : '';
-    fields.push(`config.{${ttl}auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`);
+    fields.push(
+      `config.{${ttl}auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`
+    );
     if (type === 'kv' || type === 'generic') {
       fields.push('version');
     }
@@ -105,14 +107,14 @@ export default SecretEngineModel.extend({
         optionFields = [
           'version',
           ...CORE_OPTIONS,
-          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`,
+          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`,
         ];
         break;
       case 'generic':
         optionFields = [
           'version',
           ...CORE_OPTIONS,
-          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`,
+          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`,
         ];
         break;
       case 'database':
@@ -120,21 +122,21 @@ export default SecretEngineModel.extend({
         defaultFields = ['path', 'config.{defaultLeaseTtl}', 'config.{maxLeaseTtl}'];
         optionFields = [
           ...CORE_OPTIONS,
-          'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
         ];
         break;
       case 'keymgmt':
         // no ttl options for keymgmt
         optionFields = [
           ...CORE_OPTIONS,
-          'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
         ];
         break;
       default:
         defaultFields = ['path'];
         optionFields = [
           ...CORE_OPTIONS,
-          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`,
+          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`,
         ];
         break;
     }

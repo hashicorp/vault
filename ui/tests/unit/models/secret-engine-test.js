@@ -59,7 +59,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.listingVisibility',
             'local',
             'sealWrap',
-            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
           ],
         },
       ]);
@@ -84,7 +84,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.listingVisibility',
             'local',
             'sealWrap',
-            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
           ],
         },
       ]);
@@ -109,7 +109,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.listingVisibility',
             'local',
             'sealWrap',
-            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
           ],
         },
       ]);
@@ -133,7 +133,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.listingVisibility',
             'local',
             'sealWrap',
-            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
           ],
         },
       ]);
@@ -157,7 +157,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.listingVisibility',
             'local',
             'sealWrap',
-            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
           ],
         },
       ]);

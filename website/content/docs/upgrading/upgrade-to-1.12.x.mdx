@@ -21,6 +21,14 @@ Vault Enterprise will now perform a supported storage check at startup. There is
 
 @include 'consul-dataplane-upgrade-note.mdx'
 
+### External Plugin Loading
+
+Vault 1.12.0 introduced a change to how external plugins are loaded. Prior to
+Vault 1.12.0 plugins were lazy loaded on startup. This means that plugin
+processes were killed after a successful mount and then respawned when a
+request is routed to them. Vault 1.12.0 introduced auto mutual TLS for
+secrets/auth plugins so we do not lazy load them on startup anymore.
+
 ## Known Issues
 
 ### Pinning to builtin plugin versions may cause failure on upgrade
