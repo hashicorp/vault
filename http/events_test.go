@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -88,10 +89,46 @@ func TestEventsSubscribe(t *testing.T) {
 			t.Fatal(err)
 		}
 		if testCase.json {
-			msgJson := strings.TrimSpace(string(msg))
-			if !strings.HasPrefix(msgJson, "{") || !strings.HasSuffix(msgJson, "}") {
-				t.Errorf("Expected to get JSON event but got: %v", msgJson)
+			event := map[string]interface{}{}
+			err = json.Unmarshal(msg, &event)
+			if err != nil {
+				t.Fatal(err)
 			}
+			t.Log(string(msg))
+			data := event["data"].(map[string]interface{})
+			if actualType := data["event_type"].(string); actualType != eventType {
+				t.Fatalf("Expeced event type %s, got %s", eventType, actualType)
+			}
+			pluginInfo, ok := data["plugin_info"].(map[string]interface{})
+			if !ok || pluginInfo == nil {
+				t.Fatalf("No plugin_info object: %v", data)
+			}
+			mountPath, ok := pluginInfo["mount_path"].(string)
+			if !ok || mountPath != "secret" {
+				t.Fatalf("Wrong mount_path: %v", data)
+			}
+			innerEvent := data["event"].(map[string]interface{})
+			if innerEvent["id"].(string) != event["id"].(string) {
+				t.Fatalf("IDs don't match, expected %s, got %s", innerEvent["id"].(string), event["id"].(string))
+			}
+			if innerEvent["note"].(string) != "testing" {
+				t.Fatalf("Expected 'testing', got %s", innerEvent["note"].(string))
+			}
+
+			checkRequiredCloudEventsFields(t, event)
+		}
+	}
+}
+
+func checkRequiredCloudEventsFields(t *testing.T, event map[string]interface{}) {
+	t.Helper()
+	for _, attr := range []string{"id", "source", "specversion", "type"} {
+		if v, ok := event[attr]; !ok {
+			t.Errorf("Missing attribute %s", attr)
+		} else if str, ok := v.(string); !ok {
+			t.Errorf("Expected %s to be string but got %T", attr, v)
+		} else if str == "" {
+			t.Errorf("%s was empty string", attr)
 		}
 	}
 }
