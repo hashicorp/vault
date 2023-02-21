@@ -688,6 +688,10 @@ type Core struct {
 	// contains absolute paths that we intend to forward (and template) when
 	// we're on a secondary cluster.
 	writeForwardedPaths *pathmanager.PathManager
+
+	// if populated, the callback is called for every request
+	// for testing purposes
+	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
 }
 
 // c.stateLock needs to be held in read mode before calling this function.

@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -20,6 +21,23 @@ func pathListIssuers(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListIssuersHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `A list of keys`,
+								Required:    true,
+							},
+							"key_info": {
+								Type:        framework.TypeMap,
+								Description: `Key info with issuer name`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -146,6 +164,79 @@ to be set on all PR secondary clusters.`,
 		Default: false,
 	}
 
+	updateIssuerSchema := map[int][]framework.Response{
+		http.StatusOK: {{
+			Description: "OK",
+			Fields: map[string]*framework.FieldSchema{
+				"issuer_id": {
+					Type:        framework.TypeString,
+					Description: `Issuer Id`,
+					Required:    true,
+				},
+				"issuer_name": {
+					Type:        framework.TypeString,
+					Description: `Issuer Name`,
+					Required:    true,
+				},
+				"key_id": {
+					Type:        framework.TypeString,
+					Description: `Key Id`,
+					Required:    true,
+				},
+				"certificate": {
+					Type:        framework.TypeString,
+					Description: `Certificate`,
+					Required:    true,
+				},
+				"manual_chain": {
+					Type:        framework.TypeStringSlice,
+					Description: `Manual Chain`,
+					Required:    true,
+				},
+				"ca_chain": {
+					Type:        framework.TypeStringSlice,
+					Description: `CA Chain`,
+					Required:    true,
+				},
+				"leaf_not_after_behavior": {
+					Type:        framework.TypeString,
+					Description: `Leaf Not After Behavior`,
+					Required:    true,
+				},
+				"usage": {
+					Type:        framework.TypeStringSlice,
+					Description: `Usage`,
+					Required:    true,
+				},
+				"revocation_signature_algorithm": {
+					Type:        framework.TypeString,
+					Description: `Revocation Signature Alogrithm`,
+					Required:    true,
+				},
+				"revoked": {
+					Type:        framework.TypeBool,
+					Description: `Revoked`,
+					Required:    true,
+				},
+				"issuing_certificates": {
+					Type:        framework.TypeStringSlice,
+					Description: `Issuing Certificates`,
+					Required:    true,
+				},
+				"crl_distribution_points": {
+					Type:        framework.TypeStringSlice,
+					Description: `CRL Distribution Points`,
+					Required:    true,
+				},
+				"ocsp_servers": {
+					Type:        framework.TypeStringSlice,
+					Description: `OSCP Servers`,
+					Required:    true,
+				},
+			},
+		}},
+	}
+
 	return &framework.Path{
 		// Returns a JSON entry.
 		Pattern: pattern,
@@ -153,22 +244,31 @@ to be set on all PR secondary clusters.`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathGetIssuer,
+				Callback:  b.pathGetIssuer,
+				Responses: updateIssuerSchema,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathUpdateIssuer,
+				Callback:  b.pathUpdateIssuer,
+				Responses: updateIssuerSchema,
+
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathDeleteIssuer,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{
+						Description: "No Content",
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.PatchOperation: &framework.PathOperation{
-				Callback: b.pathPatchIssuer,
+				Callback:  b.pathPatchIssuer,
+				Responses: updateIssuerSchema,
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -962,6 +1062,18 @@ func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathGetIssuerCRL,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"crl": {
+								Type:        framework.TypeString,
+								Description: ``,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
