@@ -129,7 +129,7 @@ func TestGitHub_WriteReadConfig_Token(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	err := os.Setenv("VAULT_AUTH_GITHUB_TOKEN", "foobar")
+	err := os.Setenv("VAULT_AUTH_CONFIG_GITHUB_TOKEN", "foobar")
 	assert.NoError(t, err)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
