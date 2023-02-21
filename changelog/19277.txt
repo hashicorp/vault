@@ -1,0 +1,3 @@
+```release-note:improvement
+openapi: Add openapi response tests to validate the structures of sys endpoints responses added.
+```
