@@ -1,0 +1,4 @@
+```release-note:feature
+**User Lockout**: Adds support to configure the user-lockout behaviour for failed logins to prevent 
+brute force attacks for userpass, approle and ldap auth methods.
+```
