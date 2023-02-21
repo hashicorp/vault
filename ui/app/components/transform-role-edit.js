@@ -1,6 +1,9 @@
 import TransformBase, { addToList, removeFromList } from './transform-edit-base';
+import { inject as service } from '@ember/service';
 
 export default TransformBase.extend({
+  flashMessages: service(),
+  store: service(),
   initialTransformations: null,
 
   init() {
@@ -11,13 +14,13 @@ export default TransformBase.extend({
   handleUpdateTransformations(updateTransformations, roleId, type = 'update') {
     if (!updateTransformations) return;
     const backend = this.model.backend;
-    const promises = updateTransformations.map(transform => {
+    const promises = updateTransformations.map((transform) => {
       return this.store
         .queryRecord('transform', {
           backend,
           id: transform.id,
         })
-        .then(function(transformation) {
+        .then(function (transformation) {
           let roles = transformation.allowed_roles;
           if (transform.action === 'ADD') {
             roles = addToList(roles, roleId);
@@ -30,17 +33,17 @@ export default TransformBase.extend({
             allowed_roles: roles,
           });
 
-          return transformation.save().catch(e => {
+          return transformation.save().catch((e) => {
             return { errorStatus: e.httpStatus, ...transform };
           });
         });
     });
 
-    Promise.all(promises).then(res => {
-      let hasError = res.find(r => !!r.errorStatus);
+    Promise.all(promises).then((res) => {
+      const hasError = res.find((r) => !!r.errorStatus);
       if (hasError) {
-        let errorAdding = res.find(r => r.errorStatus === 403 && r.action === 'ADD');
-        let errorRemoving = res.find(r => r.errorStatus === 403 && r.action === 'REMOVE');
+        const errorAdding = res.find((r) => r.errorStatus === 403 && r.action === 'ADD');
+        const errorRemoving = res.find((r) => r.errorStatus === 403 && r.action === 'REMOVE');
 
         let message =
           'The edits to this role were successful, but allowed_roles for its transformations was not edited due to a lack of permissions.';
@@ -72,7 +75,7 @@ export default TransformBase.extend({
 
         if (!this.initialTransformations) {
           this.handleUpdateTransformations(
-            newModelTransformations.map(t => ({
+            newModelTransformations.map((t) => ({
               id: t,
               action: 'ADD',
             })),
@@ -83,7 +86,7 @@ export default TransformBase.extend({
         }
 
         const updateTransformations = [...newModelTransformations, ...this.initialTransformations]
-          .map(t => {
+          .map((t) => {
             if (this.initialTransformations.indexOf(t) < 0) {
               return {
                 id: t,
@@ -98,7 +101,7 @@ export default TransformBase.extend({
             }
             return null;
           })
-          .filter(t => !!t);
+          .filter((t) => !!t);
         this.handleUpdateTransformations(updateTransformations, roleId);
       });
     },
@@ -106,7 +109,7 @@ export default TransformBase.extend({
     delete() {
       const roleId = this.model?.id;
       const roleTransformations = this.model?.transformations || [];
-      const updateTransformations = roleTransformations.map(t => ({
+      const updateTransformations = roleTransformations.map((t) => ({
         id: t,
         action: 'REMOVE',
       }));

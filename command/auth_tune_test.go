@@ -4,7 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/mitchellh/cli"
 )
 
@@ -73,7 +75,10 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Run("flags_all", func(t *testing.T) {
 			t.Parallel()
-			client, closer := testVaultServer(t)
+			pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
+			defer cleanup(t)
+
+			client, _, closer := testVaultServerPluginDir(t, pluginDir)
 			defer closer()
 
 			ui, cmd := testAuthTuneCommand(t)
@@ -86,13 +91,32 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			auths, err := client.Sys().ListAuth()
+			if err != nil {
+				t.Fatal(err)
+			}
+			mountInfo, ok := auths["my-auth/"]
+			if !ok {
+				t.Fatalf("expected mount to exist: %#v", auths)
+			}
+
+			if exp := ""; mountInfo.PluginVersion != exp {
+				t.Errorf("expected %q to be %q", mountInfo.PluginVersion, exp)
+			}
+
+			_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, "userpass", api.PluginTypeCredential)
+
 			code := cmd.Run([]string{
 				"-description", "new description",
 				"-default-lease-ttl", "30m",
 				"-max-lease-ttl", "1h",
 				"-audit-non-hmac-request-keys", "foo,bar",
 				"-audit-non-hmac-response-keys", "foo,bar",
+				"-passthrough-request-headers", "authorization",
+				"-passthrough-request-headers", "www-authentication",
+				"-allowed-response-headers", "authorization,www-authentication",
 				"-listing-visibility", "unauth",
+				"-plugin-version", version,
 				"my-auth/",
 			})
 			if exp := 0; code != exp {
@@ -105,12 +129,12 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				t.Errorf("expected %q to contain %q", combined, expected)
 			}
 
-			auths, err := client.Sys().ListAuth()
+			auths, err = client.Sys().ListAuth()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			mountInfo, ok := auths["my-auth/"]
+			mountInfo, ok = auths["my-auth/"]
 			if !ok {
 				t.Fatalf("expected auth to exist")
 			}
@@ -120,11 +144,26 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 			if exp := "userpass"; mountInfo.Type != exp {
 				t.Errorf("expected %q to be %q", mountInfo.Type, exp)
 			}
+			if exp := version; mountInfo.PluginVersion != exp {
+				t.Errorf("expected %q to be %q", mountInfo.PluginVersion, exp)
+			}
 			if exp := 1800; mountInfo.Config.DefaultLeaseTTL != exp {
 				t.Errorf("expected %d to be %d", mountInfo.Config.DefaultLeaseTTL, exp)
 			}
 			if exp := 3600; mountInfo.Config.MaxLeaseTTL != exp {
 				t.Errorf("expected %d to be %d", mountInfo.Config.MaxLeaseTTL, exp)
+			}
+			if diff := deep.Equal([]string{"authorization", "www-authentication"}, mountInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)
+			}
+			if diff := deep.Equal([]string{"authorization,www-authentication"}, mountInfo.Config.AllowedResponseHeaders); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in AllowedResponseHeaders. Difference is: %v", diff)
+			}
+			if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACRequestKeys); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys. Difference is: %v", diff)
+			}
+			if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
 			}
 		})
 

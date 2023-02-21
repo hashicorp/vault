@@ -8,7 +8,7 @@ const B64 = 'base64';
 const UTF8 = 'utf-8';
 export default Component.extend({
   tagName: 'button',
-  attributeBindings: ['type'],
+  attributeBindings: ['type', 'data-test-transit-b64-toggle'],
   type: 'button',
   classNames: ['button', 'b64-toggle'],
   classNameBindings: ['isInput:is-input:is-textarea'],
@@ -82,7 +82,7 @@ export default Component.extend({
    * @private
    * @type boolean
    */
-  valuesMatch: computed('value', '_value', function() {
+  valuesMatch: computed('value', '_value', function () {
     const { value, _value } = this;
     const anyBlank = isBlank(value) || isBlank(_value);
     return !anyBlank && value === _value;
@@ -99,6 +99,7 @@ export default Component.extend({
   },
 
   didReceiveAttrs() {
+    this._super();
     // if there's no value, reset encoding
     if (this.value === '') {
       set(this, 'currentEncoding', UTF8);
@@ -115,12 +116,12 @@ export default Component.extend({
   },
 
   click() {
-    let val = this.value;
+    const val = this.value;
     const isUTF8 = this.currentEncoding === UTF8;
     if (!val) {
       return;
     }
-    let newVal = isUTF8 ? encodeString(val) : decodeString(val);
+    const newVal = isUTF8 ? encodeString(val) : decodeString(val);
     const encoding = isUTF8 ? B64 : UTF8;
     set(this, 'value', newVal);
     set(this, '_value', newVal);

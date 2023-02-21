@@ -1,6 +1,6 @@
 # Vault Website
 
-This subdirectory contains the entire source for the [Vault Website](https://vaultproject.io/). This is a [NextJS](https://nextjs.org/) project, which builds a static site from these source files.
+This subdirectory contains the content for the [Vault Website](https://vaultproject.io/).
 
 <!--
   This readme file contains several blocks of generated text, to make it easier to share common information
@@ -77,7 +77,6 @@ This file can be standard Markdown and also supports [YAML frontmatter](https://
 title: 'My Title'
 description: "A thorough, yet succinct description of the page's contents"
 ---
-
 ```
 
 The significant keys in the YAML frontmatter are:
@@ -95,12 +94,12 @@ There is currently a small bug with new page creation - if you create a new page
 
 There are several custom markdown plugins that are available by default that enhance [standard markdown](https://commonmark.org/) to fit our use cases. This set of plugins introduces a couple instances of custom syntax, and a couple specific pitfalls that are not present by default with markdown, detailed below:
 
-- If you see the symbols `~>`, `->`, `=>`, or `!>`, these represent [custom alerts](https://github.com/hashicorp/remark-plugins/tree/master/plugins/paragraph-custom-alerts#paragraph-custom-alerts). These render as colored boxes to draw the user's attention to some type of aside.
+- > **Warning**: We are deprecating the current [paragraph alerts](https://github.com/hashicorp/remark-plugins/tree/master/plugins/paragraph-custom-alerts#paragraph-custom-alerts), in favor of the newer [MDX Inline Alert](#inline-alerts) components. The legacy paragraph alerts are represented by the symbols `~>`, `->`, `=>`, or `!>`.
 - If you see `@include '/some/path.mdx'`, this is a [markdown include](https://github.com/hashicorp/remark-plugins/tree/master/plugins/include-markdown#include-markdown-plugin). It's worth noting as well that all includes resolve from `website/content/partials` by default, and that changes to partials will not live-reload the website.
 - If you see `# Headline ((#slug))`, this is an example of an [anchor link alias](https://github.com/hashicorp/remark-plugins/tree/je.anchor-link-adjustments/plugins/anchor-links#anchor-link-aliases). It adds an extra permalink to a headline for compatibility and is removed from the output.
 - Due to [automatically generated permalinks](https://github.com/hashicorp/remark-plugins/tree/je.anchor-link-adjustments/plugins/anchor-links#anchor-links), any text changes to _headlines_ or _list items that begin with inline code_ can and will break existing permalinks. Be very cautious when changing either of these two text items.
 
-  Headlines are fairly self-explanitory, but here's an example of how list items that begin with inline code look.
+  Headlines are fairly self-explanatory, but here's an example of how to list items that begin with inline code look.
 
   ```markdown
   - this is a normal list item
@@ -120,13 +119,51 @@ There are several custom markdown plugins that are available by default that enh
 
 A number of custom [mdx components](https://mdxjs.com/) are available for use within any `.mdx` file. Each one is documented below:
 
+#### Inline Alerts
+
+There are custom MDX components available to author alert data. [See the full documentation here](https://developer.hashicorp.com/swingset/components/mdxinlinealert). They render as colored boxes to draw the user's attention to some type of aside.
+
+```mdx
+## Alert types
+
+### Tip
+
+<Tip>
+  To provide general information to the user regarding the current context or
+  relevant actions.
+</Tip>
+
+### Highlight
+
+<Highlight>
+  To provide general or promotional information to the user prominently.
+</Highlight>
+
+### Note
+
+<Note>
+  To help users avoid an issue. Provide guidance and actions if possible.
+</Note>
+
+### Warning
+
+<Warning>
+  To indicate critical issues that need immediate action or help users
+  understand something critical.
+</Warning>
+
+## Title override prop
+
+<Note title="Hashiconf 2027">To provide general information.</Note>
+```
+
 #### Tabs
 
 The `Tabs` component creates tabbed content of any type, but is often used for code examples given in different languages. Here's an example of how it looks from the Vagrant documentation website:
 
 ![Tabs Component](https://p176.p0.n0.cdn.getcloudapp.com/items/WnubALZ4/Screen%20Recording%202020-06-11%20at%2006.03%20PM.gif?v=1de81ea720a8cc8ade83ca64fb0b9edd)
 
-> Please refer to the [Swingset](https://react-components.vercel.app/?component=Tabs) documention for the latest examples and API reference.
+> Please refer to the [Swingset](https://react-components.vercel.app/?component=Tabs) documentation for the latest examples and API reference.
 
 It can be used as such within a markdown file:
 
@@ -150,7 +187,7 @@ $ curl ...
 </Tab>
 </Tabs>
 
-Contined normal markdown content
+Continued normal markdown content
 ````
 
 The intentionally skipped line is a limitation of the mdx parser which is being actively worked on. All tabs must have a heading, and there is no limit to the number of tabs, though it is recommended to go for a maximum of three or four.
@@ -404,7 +441,7 @@ This configuration would display something like the following text on the websit
 A {{ release candidate }} for <Product> {{ v1.0.0 }} is available! The release can be <a href='https://releases.hashicorp.com/<product>/{{ 1.0.0-rc1 }}'>downloaded here</a>.
 ```
 
-You may customize the parameters in any way you'd like. To remove a prerelease from the website, simply delete the `prerelease` paremeter from the above component.
+You may customize the parameters in any way you'd like. To remove a prerelease from the website, simply delete the `prerelease` parameter from the above component.
 
 <!-- END: releases -->
 
@@ -448,7 +485,7 @@ One more example - let's say that content is being moved to an external website.
 }
 ```
 
-If we no longer want the link to be in the side nav, we can simply remove it. If we do still want the link in the side nav, but pointing to an external destnation, we need to slightly change the structure as such:
+If we no longer want the link to be in the side nav, we can simply remove it. If we do still want the link in the side nav, but pointing to an external destination, we need to slightly change the structure as such:
 
 ```js
 {
@@ -472,9 +509,9 @@ It's also worth noting that it is possible to do glob-based redirects, for examp
 
 We support the following browsers targeting roughly the versions specified.
 
-| ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/master/src/chrome/chrome_24x24.png) | ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/master/src/firefox/firefox_24x24.png) | ![Opera](https://raw.githubusercontent.com/alrra/browser-logos/master/src/opera/opera_24x24.png) | ![Safari](https://raw.githubusercontent.com/alrra/browser-logos/master/src/safari/safari_24x24.png) | ![Internet Explorer](https://raw.githubusercontent.com/alrra/browser-logos/master/src/edge/edge_24x24.png) |
-| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Latest**                                                                                          | **Latest**                                                                                             | **Latest**                                                                                       | **Latest**                                                                                          | **11+**                                                                                                    |
+| ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome.svg) | ![Edge](https://raw.githubusercontent.com/alrra/browser-logos/main/src/edge/edge.svg) | ![Opera](https://raw.githubusercontent.com/alrra/browser-logos/main/src/opera/opera.svg) | ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/main/src/firefox/firefox.svg) | ![Safari](https://raw.githubusercontent.com/alrra/browser-logos/main/src/safari/safari.svg) |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **Latest**                                                                                  | **Latest**                                                                            | **Latest**                                                                               | **Latest**                                                                                     | **Latest**                                                                                  |
 
 <!-- END: browser-support -->
 

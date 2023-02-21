@@ -11,8 +11,8 @@ export default Mixin.create({
   onEnable() {},
   onDisable() {},
   onPromote() {},
-  submitHandler: task(function*(action, clusterMode, data, event) {
-    let replicationMode = (data && data.replicationMode) || this.replicationMode;
+  submitHandler: task(function* (action, clusterMode, data, event) {
+    const replicationMode = (data && data.replicationMode) || this.replicationMode;
     if (event && event.preventDefault) {
       event.preventDefault();
     }
@@ -36,7 +36,7 @@ export default Mixin.create({
     return yield this.save.perform(action, replicationMode, clusterMode, data);
   }),
 
-  save: task(function*(action, replicationMode, clusterMode, data) {
+  save: task(function* (action, replicationMode, clusterMode, data) {
     let resp;
     try {
       resp = yield this.store
@@ -48,7 +48,7 @@ export default Mixin.create({
     return yield this.submitSuccess.perform(resp, action, clusterMode);
   }).drop(),
 
-  submitSuccess: task(function*(resp, action, mode) {
+  submitSuccess: task(function* (resp, action, mode) {
     const cluster = this.cluster;
     const replicationMode = this.selectedReplicationMode || this.replicationMode;
     const store = this.store;
@@ -74,7 +74,7 @@ export default Mixin.create({
       // do something to show model is pending
       cluster.set(
         replicationMode,
-        store.createFragment('replication-attributes', {
+        store.createRecord('replication-attributes', {
           mode: 'bootstrapping',
         })
       );

@@ -1,0 +1,40 @@
+---
+layout: docs
+page_title: Troubleshoot the Vault EKM Provider
+description: Troubleshooting steps for the Vault EKM Provider for Microsoft SQL Server.
+---
+
+# Troubleshooting the Vault EKM Provider
+
+## Check Windows Event Logs
+
+Logs from the Vault EKM provider will appear in Windows Event Viewer under
+"Windows Logs" > "Application" with source "Transit Vault EKM Provider".
+
+### Enable trace logging
+
+If the logs in the Event Viewer don't give enough information to help debug
+your issue, you can [enable trace logging](/vault/docs/platform/mssql/configuration#enabletrace).
+
+Restart SQL Server for the config change to take effect, and you should see more
+detailed logs in the same section of Windows Event Viewer.
+
+## Error Codes
+
+During installation, the EKM provider registers a manifest of coded event logs to aid debugging. You may see the following error codes during operation.
+
+### 2050 License Error
+
+The EKM provider was unable to verify that Vault has the correct license features. This
+could be due to:
+
+- An incompatible Vault Enterprise license - see the installation [prerequisites](/vault/docs/platform/mssql/installation#prerequisites) for the required license feature.
+- Lack of network connectivity - Check Vault's audit logs to see if any requests are made to
+   authenticate via AppRole or query the `/sys/license/status` API.
+- Misconfigured AppRole auth - Ensure you provided the correct Role ID and Secret ID when
+   configuring the SQL Server `CREDENTIAL`. See the
+   [installation instructions](/vault/docs/platform/mssql/installation) for an end-to-end working example.
+- Incorrect policy permissions - The EKM provider requires the `read` capability
+   on the path `sys/license/status`. See the `tde-policy` created in the
+   [installation instructions](/vault/docs/platform/mssql/installation#configuring-vault)
+   for an example of a working policy.

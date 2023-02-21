@@ -8,7 +8,7 @@ description: This is the API documentation for the Vault Okta auth method.
 
 This is the API documentation for the Vault Okta auth method. For
 general information about the usage and operation of the Okta method, please
-see the [Vault Okta method documentation](/docs/auth/okta).
+see the [Vault Okta method documentation](/vault/docs/auth/okta).
 
 This documentation assumes the Okta method is mounted at the `/auth/okta`
 path in Vault. Since it is possible to enable auth methods at any location,
@@ -352,6 +352,9 @@ Login with the username and password.
 - `username` `(string: <required>)` - Username for this user.
 - `password` `(string: <required>)` - Password for the authenticating user.
 - `totp` `(string: <optional>)` - Okta Verify TOTP passcode.
+- `provider` `(string: <optional>)` - MFA TOTP factor provider. `GOOGLE` and `OKTA` are currently supported.
+- `nonce` `(string: <optional>)` - Nonce provided during a login request to
+  retrieve the number verification challenge for the matching request.
 
 ### Sample Payload
 
@@ -372,7 +375,7 @@ $ curl \
 
 ### Sample Response
 
-```javascript
+```json
 {
   "lease_id": "",
   "renewable": false,
@@ -387,8 +390,45 @@ $ curl \
       "username": "fred",
       "policies": "default"
     },
-  },
-  "lease_duration": 7200,
-  "renewable": true
+    "lease_duration": 7200,
+    "renewable": true
+  }
 }
 ```
+
+## Verify
+
+Verify a number challenge that may result from an Okta Verify Push challenge.
+
+| Method | Path                         |
+| :----- | :--------------------------- |
+| `GET`  | `/auth/okta/verify/:nonce`   |
+
+### Parameters
+
+- `nonce` `(string: <required>)` - Nonce provided if performing login that
+requires number verification challenge. Logins through the vault login CLI
+command will automatically generate a nonce.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/auth/okta/verify/nonce/BCR66Ru6oJKPtC00PxJJ
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "de6a8029-79e5-1dd1-dbe9-6405166b3f94",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "correct_answer": 94
+  },
+  "warnings": null
+}
+```
+

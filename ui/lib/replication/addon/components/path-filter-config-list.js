@@ -6,6 +6,7 @@ import { task, timeout } from 'ember-concurrency';
 
 export default Component.extend({
   'data-test-component': 'path-filter-config',
+  attributeBindings: ['data-test-component'],
   namespace: service(),
   store: service(),
   config: null,
@@ -23,16 +24,16 @@ export default Component.extend({
     }
   },
 
-  fetchMountsForNamespace: task(function*(ns) {
-    let adapter = this.store.adapterFor('application');
-    let secret = [];
-    let auth = [];
-    let mounts = ns
+  fetchMountsForNamespace: task(function* (ns) {
+    const adapter = this.store.adapterFor('application');
+    const secret = [];
+    const auth = [];
+    const mounts = ns
       ? yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET', { namespace: ns })
       : yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET');
 
-    ['secret', 'auth'].forEach(key => {
-      for (let [id, info] of Object.entries(mounts.data[key])) {
+    ['secret', 'auth'].forEach((key) => {
+      for (const [id, info] of Object.entries(mounts.data[key])) {
         let longId;
         if (key === 'auth') {
           longId = ns ? `${ns}/auth/${id}` : `auth/${id}`;
@@ -58,10 +59,10 @@ export default Component.extend({
   }),
 
   filterOptions(list, term) {
-    let paths = this.config.paths;
+    const paths = this.config.paths;
     return list
       .map(({ groupName, options }) => {
-        let trimmedOptions = options.filter(op => {
+        const trimmedOptions = options.filter((op) => {
           if (term) {
             return op.searchText.includes(term) && !paths.includes(op.id);
           }
@@ -72,24 +73,24 @@ export default Component.extend({
       .compact();
   },
 
-  setAutoCompleteOptions: task(function*(term) {
-    let { namespaces, lastOptions } = this;
-    let namespaceToFetch = namespaces.find(ns => ns === term);
+  setAutoCompleteOptions: task(function* (term) {
+    const { namespaces, lastOptions } = this;
+    const namespaceToFetch = namespaces.find((ns) => ns === term);
     let secretList = [];
     let authList = [];
-    let options = [];
+    const options = [];
     if (term) {
       yield timeout(200);
     }
     if (!term || (term && namespaceToFetch)) {
       // fetch auth and secret methods from sys/internal/ui/mounts for the given namespace
-      let result = yield this.fetchMountsForNamespace.perform(namespaceToFetch);
+      const result = yield this.fetchMountsForNamespace.perform(namespaceToFetch);
       secretList = result.secret;
       authList = result.auth;
     }
     var currentSecrets = lastOptions && lastOptions.findBy('groupName', 'Secret Engines');
     var currentAuths = lastOptions && lastOptions.findBy('groupName', 'Auth Methods');
-    let formattedNamespaces = namespaces.map(val => {
+    const formattedNamespaces = namespaces.map((val) => {
       return {
         id: val,
         name: val,
@@ -98,13 +99,13 @@ export default Component.extend({
     });
 
     options.push({ groupName: 'Namespaces', options: formattedNamespaces });
-    let secretOptions = currentSecrets ? [...currentSecrets.options, ...secretList] : secretList;
+    const secretOptions = currentSecrets ? [...currentSecrets.options, ...secretList] : secretList;
 
     options.push({ groupName: 'Secret Engines', options: secretOptions.uniqBy('id') });
-    let authOptions = currentAuths ? [...currentAuths.options, ...authList] : authList;
+    const authOptions = currentAuths ? [...currentAuths.options, ...authList] : authList;
 
     options.push({ groupName: 'Auth Methods', options: authOptions.uniqBy('id') });
-    let filtered = term ? this.filterOptions(options, term) : this.filterOptions(options);
+    const filtered = term ? this.filterOptions(options, term) : this.filterOptions(options);
     if (!term) {
       this.set('autoCompleteOptions', filtered);
     }
@@ -113,7 +114,7 @@ export default Component.extend({
   }),
 
   // singleton mounts are not eligible for per-mount-filtering
-  singletonMountTypes: computed(function() {
+  singletonMountTypes: computed(function () {
     return ['cubbyhole', 'system', 'token', 'identity', 'ns_system', 'ns_identity', 'ns_token'];
   }),
 
@@ -122,12 +123,20 @@ export default Component.extend({
   },
 
   actions: {
-    pathsChanged(paths) {
+    async pathsChanged(paths) {
       // set paths on the model
       set(this.config, 'paths', paths);
+
+      // if dropdown is empty or has options without groupName, re-fetch
+      if (
+        this.autoCompleteOptions.length === 0 ||
+        this.autoCompleteOptions.any((option) => !Object.keys(option).includes('groupName'))
+      ) {
+        await this.setAutoCompleteOptions.perform();
+      }
       if (paths.length) {
         // remove the selected item from the default list of options
-        let filtered = this.filterOptions(this.autoCompleteOptions);
+        const filtered = this.filterOptions(this.autoCompleteOptions);
         this.set('autoCompleteOptions', filtered);
       } else {
         // if there's no paths, we need to re-fetch like on init

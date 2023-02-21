@@ -5,36 +5,34 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import Service from '@ember/service';
-
 import { create } from 'ember-cli-page-object';
 import authConfigForm from 'vault/tests/pages/components/auth-config-form/options';
 
 const component = create(authConfigForm);
-const routerService = Service.extend({
-  transitionTo() {
-    return {
-      followRedirects() {
-        return resolve();
-      },
-    };
-  },
-  replaceWith() {
-    return resolve();
-  },
-});
 
-module('Integration | Component | auth-config-form options', function(hooks) {
+module('Integration | Component | auth-config-form options', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
-    this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
+    this.router.reopen({
+      transitionTo() {
+        return {
+          followRedirects() {
+            return resolve();
+          },
+        };
+      },
+      replaceWith() {
+        return resolve();
+      },
+    });
   });
 
-  test('it submits data correctly', async function(assert) {
-    let model = EmberObject.create({
+  test('it submits data correctly', async function (assert) {
+    assert.expect(1);
+    const model = EmberObject.create({
       tune() {
         return resolve();
       },
@@ -46,7 +44,7 @@ module('Integration | Component | auth-config-form options', function(hooks) {
     });
     sinon.spy(model.config, 'serialize');
     this.set('model', model);
-    await render(hbs`{{auth-config-form/options model=model}}`);
+    await render(hbs`{{auth-config-form/options model=this.model}}`);
     component.save();
     return settled().then(() => {
       assert.ok(model.config.serialize.calledOnce);

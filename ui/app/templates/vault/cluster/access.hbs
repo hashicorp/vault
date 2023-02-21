@@ -2,8 +2,23 @@
   <MenuSidebar @title="Access" @class="is-3" @data-test-sidebar={{true}}>
     {{#if (has-permission "access" routeParams="methods")}}
       <li>
-        <LinkTo @route="vault.cluster.access.methods" data-test-link={{true}} @current-when="vault.cluster.access.methods vault.cluster.access.method">
+        <LinkTo
+          @route="vault.cluster.access.methods"
+          data-test-link={{true}}
+          @current-when="vault.cluster.access.methods vault.cluster.access.method"
+        >
           Auth Methods
+        </LinkTo>
+      </li>
+    {{/if}}
+    {{#if (has-permission "access" routeParams="mfa")}}
+      <li>
+        <LinkTo
+          @route="vault.cluster.access.mfa.methods"
+          @current-when="vault.cluster.access.mfa.methods vault.cluster.access.mfa.enforcements vault.cluster.access.mfa.index"
+          data-test-link="mfa"
+        >
+          Multi-factor authentication
         </LinkTo>
       </li>
     {{/if}}
@@ -37,8 +52,19 @@
     {{/if}}
     {{#if (and (has-feature "Control Groups") (has-permission "access" routeParams="control-groups"))}}
       <li>
-        <LinkTo @route="vault.cluster.access.control-groups" data-test-link={{true}} @current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor vault.cluster.access.control-groups-configure">
+        <LinkTo
+          @route="vault.cluster.access.control-groups"
+          data-test-link={{true}}
+          @current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor vault.cluster.access.control-groups-configure"
+        >
           Control Groups
+        </LinkTo>
+      </li>
+    {{/if}}
+    {{#if (has-permission "access" routeParams="oidc")}}
+      <li>
+        <LinkTo @route="vault.cluster.access.oidc" data-test-link="oidc">
+          OIDC Provider
         </LinkTo>
       </li>
     {{/if}}

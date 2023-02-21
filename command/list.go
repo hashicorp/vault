@@ -42,7 +42,8 @@ Usage: vault list [options] PATH
 }
 
 func (c *ListCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat | FlagSetOutputDetailed)
+	return set
 }
 
 func (c *ListCommand) AutocompleteArgs() complete.Predictor {
@@ -77,17 +78,16 @@ func (c *ListCommand) Run(args []string) int {
 		return 2
 	}
 
-	// Append trailing slash
-	path := args[0]
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
-
-	path = sanitizePath(path)
+	path := sanitizePath(args[0])
 	secret, err := client.Logical().List(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing %s: %s", path, err))
 		return 2
+	}
+
+	// If the secret is wrapped, return the wrapped response.
+	if secret != nil && secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
+		return OutputSecret(c.UI, secret)
 	}
 
 	_, ok := extractListData(secret)
@@ -105,11 +105,6 @@ func (c *ListCommand) Run(args []string) int {
 	if secret.Data == nil {
 		// If secret wasn't nil, we have warnings, so output them anyways. We
 		// may also have non-keys info.
-		return OutputSecret(c.UI, secret)
-	}
-
-	// If the secret is wrapped, return the wrapped response.
-	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
 		return OutputSecret(c.UI, secret)
 	}
 

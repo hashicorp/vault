@@ -18,7 +18,7 @@ export default Component.extend({
     'tutorialComponent',
     'tutorialState',
     'wizard.{featureComponent,featureMachineHistory}',
-    function() {
+    function () {
       if (!this.tutorialComponent) return;
       return (
         this.tutorialComponent.includes('active') &&
@@ -29,38 +29,43 @@ export default Component.extend({
   ),
   featureMachineHistory: alias('wizard.featureMachineHistory'),
   totalFeatures: reads('wizard.featureList.length'),
-  completedFeatures: computed('wizard.currentMachine', function() {
+  completedFeatures: computed('wizard.currentMachine', function () {
     return this.wizard.getCompletedFeatures();
   }),
-  currentFeatureProgress: computed('currentMachine', 'featureMachineHistory.[]', 'tutorialState', function() {
-    if (this.tutorialState.includes('active.feature')) {
-      let totalSteps = FEATURE_MACHINE_STEPS[this.currentMachine];
-      if (this.currentMachine === 'secrets') {
-        if (this.featureMachineHistory.includes('secret')) {
-          totalSteps = totalSteps['secret']['secret'];
+  currentFeatureProgress: computed(
+    'currentMachine',
+    'featureMachineHistory.[]',
+    'tutorialState',
+    function () {
+      if (this.tutorialState.includes('active.feature')) {
+        let totalSteps = FEATURE_MACHINE_STEPS[this.currentMachine];
+        if (this.currentMachine === 'secrets') {
+          if (this.featureMachineHistory.includes('secret')) {
+            totalSteps = totalSteps['secret']['secret'];
+          }
+          if (this.featureMachineHistory.includes('list')) {
+            totalSteps = totalSteps['secret']['list'];
+          }
+          if (this.featureMachineHistory.includes('encryption')) {
+            totalSteps = totalSteps['encryption'];
+          }
+          if (this.featureMachineHistory.includes('role') || typeof totalSteps === 'object') {
+            totalSteps = totalSteps['role'];
+          }
         }
-        if (this.featureMachineHistory.includes('list')) {
-          totalSteps = totalSteps['secret']['list'];
-        }
-        if (this.featureMachineHistory.includes('encryption')) {
-          totalSteps = totalSteps['encryption'];
-        }
-        if (this.featureMachineHistory.includes('role') || typeof totalSteps === 'object') {
-          totalSteps = totalSteps['role'];
-        }
+        return {
+          percentage: (this.featureMachineHistory.length / totalSteps) * 100,
+          feature: this.currentMachine,
+          text: `Step ${this.featureMachineHistory.length} of ${totalSteps}`,
+        };
       }
-      return {
-        percentage: (this.featureMachineHistory.length / totalSteps) * 100,
-        feature: this.currentMachine,
-        text: `Step ${this.featureMachineHistory.length} of ${totalSteps}`,
-      };
+      return null;
     }
-    return null;
-  }),
-  currentTutorialProgress: computed('tutorialState', function() {
+  ),
+  currentTutorialProgress: computed('tutorialState', function () {
     if (this.tutorialState.includes('init.active')) {
-      let currentStepName = this.tutorialState.split('.')[2];
-      let currentStepNumber = INIT_STEPS.indexOf(currentStepName) + 1;
+      const currentStepName = this.tutorialState.split('.')[2];
+      const currentStepNumber = INIT_STEPS.indexOf(currentStepName) + 1;
       return {
         percentage: (currentStepNumber / INIT_STEPS.length) * 100,
         text: `Step ${currentStepNumber} of ${INIT_STEPS.length}`,
@@ -75,8 +80,8 @@ export default Component.extend({
     'currentMachine',
     'currentTutorialProgress.percentage',
     'wizard.featureList',
-    function() {
-      let bar = [];
+    function () {
+      const bar = [];
       if (this.currentTutorialProgress) {
         bar.push({
           style: htmlSafe(`width:${this.currentTutorialProgress.percentage}%;`),
@@ -85,10 +90,10 @@ export default Component.extend({
         });
       } else {
         if (this.currentFeatureProgress) {
-          this.completedFeatures.forEach(feature => {
+          this.completedFeatures.forEach((feature) => {
             bar.push({ style: htmlSafe('width:100%;'), completed: true, feature: feature, showIcon: true });
           });
-          this.wizard.featureList.forEach(feature => {
+          this.wizard.featureList.forEach((feature) => {
             if (feature === this.currentMachine) {
               bar.push({
                 style: htmlSafe(`width:${this.currentFeatureProgress.percentage}%;`),

@@ -8,18 +8,18 @@ description: |-
 
 # list
 
-The `list` command lists data from Vault at the given path. This can be used to
-list keys in a given secrets engine.
+The `list` command lists data from Vault at the given path (wrapper command for
+HTTP LIST). This can be used to list keys in a given secrets engine.
 
 ## Examples
 
-List values under the "my-app" folder of the KV secrets engine:
+List available entities by their identifiers:
 
 ```shell-session
-$ vault list secret/my-app/
+$ vault list identity/entity/id
 ```
 
 ## Usage
 
-There are no flags beyond the [standard set of flags](/docs/commands)
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
 included on all commands.

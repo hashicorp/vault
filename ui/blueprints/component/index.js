@@ -1,6 +1,6 @@
 'use strict';
 /* eslint-disable node/no-extraneous-require */
-
+/* eslint-disable ember/no-string-prototype-extensions */
 const path = require('path');
 const stringUtil = require('ember-cli-string-utils');
 const pathUtil = require('ember-cli-path-utils');
@@ -19,28 +19,28 @@ module.exports = {
     },
   ],
 
-  filesPath: function() {
-    let filesDirectory = 'files';
+  filesPath: function () {
+    const filesDirectory = 'files';
 
     return path.join(this.path, filesDirectory);
   },
 
-  fileMapTokens: function() {
+  fileMapTokens: function () {
     return {
-      __path__: function(options) {
+      __path__: function (options) {
         if (options.pod) {
           return path.join(options.podPath, options.locals.path, options.dasherizedModuleName);
         } else {
           return 'components';
         }
       },
-      __templatepath__: function(options) {
+      __templatepath__: function (options) {
         if (options.pod) {
           return path.join(options.podPath, options.locals.path, options.dasherizedModuleName);
         }
         return 'templates/components';
       },
-      __templatename__: function(options) {
+      __templatename__: function (options) {
         if (options.pod) {
           return 'template';
         }
@@ -49,16 +49,18 @@ module.exports = {
     };
   },
 
-  normalizeEntityName: function(entityName) {
+  normalizeEntityName: function (entityName) {
     return normalizeEntityName(entityName);
   },
 
-  locals: function(options) {
-    let templatePath = '';
+  locals: function (options) {
+    let exportDefault = 'export default ';
+    let exportAddOn = '';
     let importTemplate = '';
-    let contents = '';
+    let setComponentTemplate = '';
+    let templatePath = '';
 
-    // if we're in an addon, build import statement
+    // if we're in an addon, build import statement and set layout
     if (options.project.isEmberCLIAddon() || (options.inRepoAddon && !options.inDummy) || !!options.in) {
       if (options.pod) {
         templatePath = './template';
@@ -68,13 +70,19 @@ module.exports = {
           'templates/components/' +
           stringUtil.dasherize(options.entity.name);
       }
-      importTemplate = "import layout from '" + templatePath + "';\n";
-      contents = '\n  layout';
+      exportDefault = '';
+      exportAddOn = `export default setComponentTemplate(layout, ${stringUtil.classify(
+        options.entity.name
+      )})`;
+      importTemplate = "import layout from '" + templatePath + "';";
+      setComponentTemplate = "import { setComponentTemplate } from '@ember/component'; \n";
     }
 
     return {
+      exportDefault: exportDefault,
+      exportAddOn: exportAddOn,
       importTemplate: importTemplate,
-      contents: contents,
+      setComponentTemplate: setComponentTemplate,
       path: getPathOption(options),
     };
   },

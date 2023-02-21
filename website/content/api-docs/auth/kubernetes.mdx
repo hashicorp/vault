@@ -6,9 +6,11 @@ description: This is the API documentation for the Vault Kubernetes auth method 
 
 # Kubernetes Auth Method (API)
 
+@include 'x509-sha1-deprecation.mdx'
+
 This is the API documentation for the Vault Kubernetes auth method plugin. To
 learn more about the usage and operation, see the
-[Vault Kubernetes auth method](/docs/auth/kubernetes).
+[Vault Kubernetes auth method](/vault/docs/auth/kubernetes).
 
 This documentation assumes the Kubernetes method is mounted at the
 `/auth/kubernetes` path in Vault. Since it is possible to enable auth methods at
@@ -29,18 +31,26 @@ access the Kubernetes API.
 
 - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
 - `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API. NOTE: Every line must end with a newline: `\n`
+  If not set, the local CA cert will be used if running in a Kubernetes pod.
 - `token_reviewer_jwt` `(string: "")` - A service account JWT used to access the TokenReview
   API to validate other JWTs during login. If not set,
+  the local service account token is used if running in a Kubernetes pod, otherwise
   the JWT submitted in the login payload will be used to access the Kubernetes TokenReview API.
 - `pem_keys` `(array: [])` - Optional list of PEM-formatted public keys or certificates
   used to verify the signatures of Kubernetes service account
   JWTs. If a certificate is given, its public key will be
   extracted. Not every installation of Kubernetes exposes these
   keys.
-- `issuer` `(string: "")` - Optional JWT issuer. If no issuer is specified, then this plugin will
-  use `kubernetes/serviceaccount` as the default issuer.
-- `disable_iss_validation` `(bool: false)` - Disable JWT issuer validation. Allows to skip ISS validation.
 - `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
+
+### Deprecated Parameters
+
+-> The following fields have been deprecated and will be removed in a future release:
+
+- `disable_iss_validation` `(bool: true)` **Deprecated** Disable JWT issuer validation. Allows to skip ISS validation.
+
+- `issuer` `(string: "")` **Deprecated** Optional JWT issuer. If no issuer is specified, then this plugin will use `kubernetes/serviceaccount` as the default issuer.
+See [these instructions](/vault/docs/auth/kubernetes#discovering-the-service-account-issuer) for looking up the issuer for a given Kubernetes cluster.
 
 ### Caveats
 
@@ -75,7 +85,7 @@ $ curl \
 
 ## Read Config
 
-Returns the previously configured config, including credentials.
+Returns the previously configured config, excluding credentials.
 
 | Method | Path                      |
 | :----- | :------------------------ |
@@ -97,7 +107,6 @@ $ curl \
     "kubernetes_host": "https://192.168.99.100:8443",
     "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
     "pem_keys": ["-----BEGIN CERTIFICATE-----.....", .....],
-    "disable_iss_validation": false,
     "disable_local_ca_jwt": false
   }
 }
@@ -122,6 +131,15 @@ entities attempting to login.
 - `bound_service_account_namespaces` `(array: <required>)` - List of namespaces
   allowed to access this role. If set to "\*" all namespaces are allowed.
 - `audience` `(string: "")` - Optional Audience claim to verify in the JWT.
+- `alias_name_source` `(string: "serviceaccount_uid")` - Configures how identity aliases are generated.
+  Valid choices are: `serviceaccount_uid`, `serviceaccount_name`
+  When `serviceaccount_uid` is specified, the machine generated UID from the service account will be used as the identity alias name.
+  When `serviceaccount_name` is specified, the service account's namespace and name will be used as the identity alias name e.g `vault/vault-auth`.
+  While it is strongly advised that you use `serviceaccount_uid`, you may also use `serviceaccount_name` in cases where
+  you want to set the alias ahead of time, and the risks are mitigated or otherwise acceptable given your use case.
+  It is very important to limit who is able to delete/create service accounts within a given cluster.
+  See the [Create an Entity Alias](/vault/api-docs/secret/identity/entity-alias#create-an-entity-alias) document
+  which further expands on the potential security implications mentioned above.
 
 @include 'tokenfields.mdx'
 
@@ -240,7 +258,7 @@ entity and then authorizes the entity for the given role.
 | :----- | :----------------------- |
 | `POST` | `/auth/kubernetes/login` |
 
-### Sample Payload
+### Parameters
 
 - `role` `(string: <required>)` - Name of the role against which the login is being
   attempted.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/url"
 	"os"
 	"sort"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/server"
@@ -21,6 +23,7 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -35,8 +38,10 @@ type OperatorMigrateCommand struct {
 
 	PhysicalBackends map[string]physical.Factory
 	flagConfig       string
+	flagLogLevel     string
 	flagStart        string
 	flagReset        bool
+	flagMaxParallel  int
 	logger           log.Logger
 	ShutdownCh       chan struct{}
 }
@@ -96,6 +101,24 @@ func (c *OperatorMigrateCommand) Flags() *FlagSets {
 		Usage:  "Reset the migration lock. No migration will occur.",
 	})
 
+	f.IntVar(&IntVar{
+		Name:    "max-parallel",
+		Default: 10,
+		Target:  &c.flagMaxParallel,
+		Usage: "Specifies the maximum number of parallel migration threads (goroutines) that may be used when migrating. " +
+			"This can speed up the migration process on slow backends but uses more resources.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "log-level",
+		Target:     &c.flagLogLevel,
+		Default:    "info",
+		EnvVar:     "VAULT_LOG_LEVEL",
+		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
+		Usage: "Log verbosity level. Supported values (in order of detail) are " +
+			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\". These are not case sensitive.",
+	})
+
 	return set
 }
 
@@ -108,11 +131,22 @@ func (c *OperatorMigrateCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *OperatorMigrateCommand) Run(args []string) int {
-	c.logger = logging.NewVaultLogger(log.Info)
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())
+		return 1
+	}
+	c.flagLogLevel = strings.ToLower(c.flagLogLevel)
+	validLevels := []string{"trace", "debug", "info", "warn", "error"}
+	if !strutil.StrListContains(validLevels, c.flagLogLevel) {
+		c.UI.Error(fmt.Sprintf("%s is an unknown log level. Valid log levels are: %s", c.flagLogLevel, validLevels))
+		return 1
+	}
+	c.logger = logging.NewVaultLogger(log.LevelFromString(c.flagLogLevel))
+
+	if c.flagMaxParallel < 1 {
+		c.UI.Error(fmt.Sprintf("Argument to flag -max-parallel must be between 1 and %d", math.MaxInt))
 		return 1
 	}
 
@@ -145,7 +179,7 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 }
 
 // migrate attempts to instantiate the source and destinations backends,
-// and then invoke the migration the the root of the keyspace.
+// and then invoke the migration the root of the keyspace.
 func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 	from, err := c.newBackend(config.StorageSource.Type, config.StorageSource.Config)
 	if err != nil {
@@ -190,7 +224,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 	doneCh := make(chan error)
 	go func() {
-		doneCh <- c.migrateAll(ctx, from, to)
+		doneCh <- c.migrateAll(ctx, from, to, c.flagMaxParallel)
 	}()
 
 	select {
@@ -206,8 +240,8 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 }
 
 // migrateAll copies all keys in lexicographic order.
-func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
-	return dfsScan(ctx, from, func(ctx context.Context, path string) error {
+func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend, maxParallel int) error {
+	return dfsScan(ctx, from, maxParallel, func(ctx context.Context, path string) error {
 		if path < c.flagStart || path == storageMigrationLock || path == vault.CoreLockPath {
 			return nil
 		}
@@ -313,11 +347,11 @@ func (c *OperatorMigrateCommand) loadMigratorConfig(path string) (*migratorConfi
 	for _, stanza := range []string{"storage_source", "storage_destination"} {
 		o := list.Filter(stanza)
 		if len(o.Items) != 1 {
-			return nil, fmt.Errorf("exactly one '%s' block is required", stanza)
+			return nil, fmt.Errorf("exactly one %q block is required", stanza)
 		}
 
 		if err := parseStorage(&result, o, stanza); err != nil {
-			return nil, fmt.Errorf("error parsing '%s': %w", stanza, err)
+			return nil, fmt.Errorf("error parsing %q: %w", stanza, err)
 		}
 	}
 	return &result, nil
@@ -346,10 +380,20 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 
 // dfsScan will invoke cb with every key from source.
 // Keys will be traversed in lexicographic, depth-first order.
-func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.Context, path string) error) error {
+func dfsScan(ctx context.Context, source physical.Backend, maxParallel int, cb func(ctx context.Context, path string) error) error {
 	dfs := []string{""}
 
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.SetLimit(maxParallel)
+
 	for l := len(dfs); l > 0; l = len(dfs) {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		key := dfs[len(dfs)-1]
 		if key == "" || strings.HasSuffix(key, "/") {
 			children, err := source.List(ctx, key)
@@ -366,19 +410,14 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 				}
 			}
 		} else {
-			err := cb(ctx, key)
-			if err != nil {
-				return err
-			}
+			// Pooling
+			eg.Go(func() error {
+				return cb(ctx, key)
+			})
 
 			dfs = dfs[:len(dfs)-1]
 		}
-
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-		}
 	}
-	return nil
+
+	return eg.Wait()
 }

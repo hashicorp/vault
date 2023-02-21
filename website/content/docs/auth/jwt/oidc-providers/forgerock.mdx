@@ -1,0 +1,42 @@
+---
+layout: docs
+page_title: OIDC Provider Setup - Auth Methods - ForgeRock
+description: OIDC provider configuration for ForgeRock
+---
+
+## ForgeRock
+
+1. Navigate to Applications -> OAuth 2.0 -> Clients in ForgeRock Access Management.
+1. Create new client.
+1. Configure Client ID, Client Secret, Scopes and Redirection URIs.
+  - `client ID`
+  - `client secret`
+  - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
+  - `oidc_scopes` should be set to the OIDC scopes.
+1. Save Client ID and Client Secret.
+
+### Configuration
+
+1. In Vault, enable the OIDC auth method.
+
+1. Configure the OIDC auth method with the `oidc_client_id` (client ID), `oidc_client_secret`
+   (client secret), and `oidc_discovery_url` (endpoint URL) from ForgeRock.
+   ```shell
+   vault write auth/oidc/config \
+      oidc_client_id="your_client_id" \
+      oidc_client_secret="your_client_secret" \
+      default_role="your_default_role" \
+      oidc_discovery_url="https://openam.example.com:8443/openam/oauth2"
+   ```
+
+1. Configure the [OIDC Role](/vault/api-docs/auth/jwt) with the following:
+  - `user_claim` should be `"sub"`.
+  - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
+  - `oidc_scopes` should be set to the OIDC scopes.
+   ```shell
+   vault write auth/oidc/role/your_default_role \
+      user_claim="sub" \
+      allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
+      oidc_scopes="your_oidc_scopes" \
+      policies=default
+   ```

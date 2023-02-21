@@ -4,17 +4,17 @@ import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/methods';
 import authPage from 'vault/tests/pages/auth';
 
-module('Acceptance | /access/', function(hooks) {
+module('Acceptance | /access/', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test('it navigates', async function(assert) {
+  test('it navigates', async function (assert) {
     await page.visit();
-    assert.ok(currentRouteName(), 'vault.cluster.access.methods', 'navigates to the correct route');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.access.methods', 'navigates to the correct route');
     assert.ok(page.navLinks.objectAt(0).isActive, 'the first link is active');
-    assert.equal(page.navLinks.objectAt(0).text, 'Auth Methods');
+    assert.strictEqual(page.navLinks.objectAt(0).text, 'Auth Methods');
   });
 });

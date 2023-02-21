@@ -9,7 +9,7 @@ import (
 
 func TestRaftFolderPerms(t *testing.T) {
 	// Make sure overpermissive permissions are caught
-	err := os.Mkdir("diagnose", 0777)
+	err := os.Mkdir("diagnose", 0o777)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestRaftFolderPerms(t *testing.T) {
 	}
 
 	// Make sure underpermissiveness is caught
-	err = os.Chmod("diagnose", 0100)
+	err = os.Chmod("diagnose", 0o100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestRaftFolderPerms(t *testing.T) {
 	}
 
 	// Make sure actually setting owner rw returns properly
-	err = os.Chmod("diagnose", 0600)
+	err = os.Chmod("diagnose", 0o600)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestRaftFolderPerms(t *testing.T) {
 	}
 
 	// Make sure we can clean up the diagnose folder
-	os.Chmod("diagnose", 0777)
+	os.Chmod("diagnose", 0o777)
 
 	// Clean up test diagnose folder
 	err = os.RemoveAll("diagnose")
@@ -78,19 +78,19 @@ func TestRaftStorageQuorum(t *testing.T) {
 	m.raftServerQuorumType = 0
 	twoVoterCluster := RaftStorageQuorum(context.Background(), m)
 
-	if !strings.Contains(twoVoterCluster, "error") {
+	if !strings.Contains(twoVoterCluster, "Please ensure that Vault has access to an odd number of voter nodes.") {
 		t.Fatalf("two voter cluster yielded wrong error: %+s", twoVoterCluster)
 	}
 
 	m.raftServerQuorumType = 1
 	threeVoterCluster := RaftStorageQuorum(context.Background(), m)
-	if !strings.Contains(threeVoterCluster, "voter quorum exists") {
+	if !strings.Contains(threeVoterCluster, "Voter quorum exists") {
 		t.Fatalf("three voter cluster yielded incorrect error: %s", threeVoterCluster)
 	}
 
 	m.raftServerQuorumType = 2
 	threeNodeTwoVoterCluster := RaftStorageQuorum(context.Background(), m)
-	if !strings.Contains(threeNodeTwoVoterCluster, "error") {
+	if !strings.Contains(threeNodeTwoVoterCluster, "Please ensure that Vault has access to an odd number of voter nodes.") {
 		t.Fatalf("two voter cluster yielded wrong error: %+s", threeNodeTwoVoterCluster)
 	}
 

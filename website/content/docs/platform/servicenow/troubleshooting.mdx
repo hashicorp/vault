@@ -1,0 +1,32 @@
+---
+layout: docs
+page_title: Troubleshooting the Vault ServiceNow Credential Resolver
+description: Troubleshooting tips for the Vault ServiceNow Credential Resolver.
+---
+
+# Troubleshooting
+
+## Check the logs
+
+Check the [log files] inside `logs/` in the agent installation folder for logs and
+errors. The resolver logs a line for each credential ID that it successfully
+queries, and also logs the fields that the credentials were extracted from.
+
+If a particular credential ID is failing, search for that ID in the logs, and
+check that it is successfully queried and that the credentials were extracted
+from the fields you expected.
+
+You will also find any exceptions that the resolver throws in the logs, including
+if it didn't find the minimum set of required fields as specified in
+[configuration](/vault/docs/platform/servicenow/configuration#creating-a-secret-in-vault),
+or if it couldn't communicate with Vault.
+
+[log files]: https://docs.servicenow.com/bundle/quebec-servicenow-platform/page/product/mid-server/reference/r_MIDServerTroubleshooting.html
+
+## Use the Test credential feature
+
+When creating or configuring a credential in the ServiceNow UI, you should be
+able to click "Test credential" to perform a quick targeted test. Select the
+MID server that should query Vault, and select a target that the credential
+should work for to check that everything works as expected. If it doesn't, check
+the logs for errors and debug information as detailed above.

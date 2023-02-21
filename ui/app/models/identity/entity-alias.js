@@ -6,7 +6,7 @@ import identityCapabilities from 'vault/macros/identity-capabilities';
 
 export default IdentityModel.extend({
   parentType: 'entity',
-  formFields: computed(function() {
+  formFields: computed(function () {
     return ['name', 'mountAccessor'];
   }),
   entity: belongsTo('identity/entity', { readOnly: true, async: false }),

@@ -12,14 +12,15 @@ import (
 	"net/http"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool) http.Handler {
+func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
@@ -35,7 +36,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		}
 
 		// Parse and reset body.
-		reqBody, err := ioutil.ReadAll(r.Body)
+		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			logger.Error("failed to read request body")
 			logical.RespondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
@@ -44,7 +45,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		if r.Body != nil {
 			r.Body.Close()
 		}
-		r.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
+		r.Body = io.NopCloser(bytes.NewReader(reqBody))
 		req := &SendRequest{
 			Token:       token,
 			Request:     r,
@@ -53,24 +54,35 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 
 		resp, err := proxier.Send(ctx, req)
 		if err != nil {
-			// If this is a api.Response error, don't wrap the response.
+			// If this is an api.Response error, don't wrap the response.
 			if resp != nil && resp.Response.Error() != nil {
 				copyHeader(w.Header(), resp.Response.Header)
 				w.WriteHeader(resp.Response.StatusCode)
 				io.Copy(w, resp.Response.Body)
+				metrics.IncrCounter([]string{"agent", "proxy", "client_error"}, 1)
 			} else {
+				metrics.IncrCounter([]string{"agent", "proxy", "error"}, 1)
 				logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
 			}
 			return
 		}
 
-		err = processTokenLookupResponse(ctx, logger, inmemSink, req, resp)
+		err = sanitizeAutoAuthTokenResponse(ctx, logger, inmemSink, req, resp)
 		if err != nil {
 			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to process token lookup response: %w", err))
 			return
 		}
 
 		defer resp.Response.Body.Close()
+
+		metrics.IncrCounter([]string{"agent", "proxy", "success"}, 1)
+		if resp.CacheMeta != nil {
+			if resp.CacheMeta.Hit {
+				metrics.IncrCounter([]string{"agent", "cache", "hit"}, 1)
+			} else {
+				metrics.IncrCounter([]string{"agent", "cache", "miss"}, 1)
+			}
+		}
 
 		// Set headers
 		setHeaders(w, resp)
@@ -108,11 +120,10 @@ func setHeaders(w http.ResponseWriter, resp *SendResponse) {
 	w.WriteHeader(resp.Response.StatusCode)
 }
 
-// processTokenLookupResponse checks if the request was one of token
-// lookup-self. If the auto-auth token was used to perform lookup-self, the
-// identifier of the token and its accessor same will be stripped off of the
-// response.
-func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, inmemSink sink.Sink, req *SendRequest, resp *SendResponse) error {
+// sanitizeAutoAuthTokenResponse checks if the request was a lookup or renew
+// and if the auto-auth token was used to perform lookup-self, the identifier
+// of the token and its accessor same will be stripped off of the response.
+func sanitizeAutoAuthTokenResponse(ctx context.Context, logger hclog.Logger, inmemSink sink.Sink, req *SendRequest, resp *SendResponse) error {
 	// If auto-auth token is not being used, there is nothing to do.
 	if inmemSink == nil {
 		return nil
@@ -126,11 +137,11 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, inmemS
 
 	_, path := deriveNamespaceAndRevocationPath(req)
 	switch path {
-	case vaultPathTokenLookupSelf:
+	case vaultPathTokenLookupSelf, vaultPathTokenRenewSelf:
 		if req.Token != autoAuthToken {
 			return nil
 		}
-	case vaultPathTokenLookup:
+	case vaultPathTokenLookup, vaultPathTokenRenew:
 		jsonBody := map[string]interface{}{}
 		if err := json.Unmarshal(req.RequestBody, &jsonBody); err != nil {
 			return err
@@ -158,15 +169,26 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, inmemS
 	if err != nil {
 		return fmt.Errorf("failed to parse token lookup response: %v", err)
 	}
-	if secret == nil || secret.Data == nil {
+	if secret == nil {
+		return nil
+	} else if secret.Data != nil {
+		// lookup endpoints
+		if secret.Data["id"] == nil && secret.Data["accessor"] == nil {
+			return nil
+		}
+		delete(secret.Data, "id")
+		delete(secret.Data, "accessor")
+	} else if secret.Auth != nil {
+		// renew endpoints
+		if secret.Auth.Accessor == "" && secret.Auth.ClientToken == "" {
+			return nil
+		}
+		secret.Auth.Accessor = ""
+		secret.Auth.ClientToken = ""
+	} else {
+		// nothing to redact
 		return nil
 	}
-	if secret.Data["id"] == nil && secret.Data["accessor"] == nil {
-		return nil
-	}
-
-	delete(secret.Data, "id")
-	delete(secret.Data, "accessor")
 
 	bodyBytes, err := json.Marshal(secret)
 	if err != nil {

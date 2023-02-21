@@ -8,7 +8,9 @@ description: Learn about the autopilot subsystem of integrated raft storage in V
 
 Autopilot enables automated workflows for managing Raft clusters. The current
 feature set includes 3 main features: Server Stabilization, Dead Server Cleanup
-and State API. These three features are introduced in Vault 1.7.
+and State API. These three features were introduced in Vault 1.7. The Enterprise
+feature set includes 2 main features: Automated Upgrades and Redundancy Zones.
+These two features were introduced in Vault 1.11.
 
 ## Server Stabilization
 
@@ -49,31 +51,77 @@ Raft clusters deployed with older versions of Vault will also transition to use
 Autopilot automatically.
 
 Autopilot exposes a [configuration
-API](/api/system/storage/raftautopilot#set-configuration) to manage its
+API](/vault/api-docs/system/storage/raftautopilot#set-configuration) to manage its
 behavior. Autopilot gets initialized with the following default values.
 
 - `cleanup_dead_servers` - `false`
+  - This controls whether to remove dead servers from
+    the Raft peer list periodically or when a new server joins. This requires that
+    `min-quorum` is also set.
 
 - `dead_server_last_contact_threshold` - `24h`
+  - Limit on the amount of time
+    a server can go without leader contact before being considered failed. This
+    takes effect only when `cleanup_dead_servers` is set.
 
-- `min_quorum` - This doesn't default to anything and will need to be set to at
-  least 3 when `cleanup_dead_servers` is set as `true`.
+- `min_quorum` - This doesn't default to anything and should be set to the expected
+  number of voters in your cluster when `cleanup_dead_servers` is set as `true`.
+  - Minimum number of servers that should always be present in a cluster.
+  Autopilot will not prune servers below this number.
 
 - `max_trailing_logs` - `1000`
+  - Amount of entries in the Raft Log that a server
+    can be behind before being considered unhealthy.
 
 - `last_contact_threshold` - `10s`
+  - Limit on the amount of time a server can go without leader contact before being considered unhealthy.
 
 - `server_stabilization_time` - `10s`
+  - Minimum amount of time a server must be in a healthy state before it can become a voter. Until that happens,
+    it will be visible as a peer in the cluster, but as a non-voter, meaning it won't contribute to quorum.
+
+- `disable_upgrade_migration` - `false`
+  - Controls whether to disable automated upgrade migrations, an Enterprise-only feature.
+
+~> **Note**: Autopilot in Vault does similar things to what autopilot does in
+[Consul](https://www.consul.io/). However, the configuration in these 2 systems
+differ in terms of default values and thresholds; some additional parameters
+might also show up in Vault in comparison to Consul as well. Autopilot in Vault
+and Consul use different technical underpinnings requiring these differences, to
+provide the autopilot functionality.
+
+## Automated Upgrades
+
+Automated Upgrades lets you automatically upgrade a cluster of Vault nodes to a new version as
+updated server nodes join the cluster. Once the number of nodes on the new version is
+equal to or greater than the number of nodes on the old version, Autopilot will promote
+the newer versioned nodes to voters, demote the older versioned nodes to non-voters,
+and initiate a leadership transfer from the older version leader to one of the newer
+versioned nodes. After the leadership transfer completes, the older versioned non-voting
+nodes can be removed from the cluster.
+
+## Redundancy Zones
+
+Redundancy Zones provide both scaling and resiliency benefits by deploying non-voting
+nodes alongside voting nodes on a per availability zone basis. When using redundancy zones,
+each zone will have exactly one voting node and as many additional non-voting nodes as desired.
+If the voting node in a zone fails, a non-voting node will be automatically promoted to
+voter. If an entire zone is lost, a non-voting node from another zone will be promoted to voter,
+maintaining quorum. These non-voting nodes function not only as hot standbys, but also
+increase read scalability.
 
 ## Replication
 
-Performance secondary clusters have their own Autopilot configuration, managed
+DR secondary and Performance secondary clusters have their own Autopilot configurations, managed
 independently of their primary.
 
-DR secondary clusters do not currently support Autopilot.
+The [Autopilot API](/vault/api-docs/system/storage/raftautopilot) uses DR operation tokens for
+authorization when executed against a DR secondary cluster.
 
-## Learn
+## Tutorial
 
-Refer to [Integrated Storage
-Autopilot](https://learn.hashicorp.com/tutorials/vault/raft-autopilot) for a
-step-by-step tutorial.
+Refer to the following tutorials to learn more.
+
+- [Integrated Storage Autopilot](/vault/tutorials/raft/raft-autopilot)
+- [Fault Tolerance with Redundancy Zones](/vault/tutorials/raft/raft-redundancy-zones)
+- [Automate Upgrades with Vault Enterprise](/vault/tutorials/raft/raft-upgrade-automation)

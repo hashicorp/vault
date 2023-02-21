@@ -2,91 +2,48 @@
   <p.top>
     <nav class="breadcrumb">
       <li>
-        <LinkTo @route="vault.cluster.policies" @model={{policyType}} data-test-policy-list-link={{true}}>
+        <LinkTo @route="vault.cluster.policies" @model={{this.policyType}} data-test-policy-list-link={{true}}>
           <span class="sep">&#x0002f;</span>
-          {{uppercase policyType}} policies
+          {{uppercase this.policyType}}
+          policies
         </LinkTo>
       </li>
     </nav>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{model.id}}
-      {{#if model.enforcementLevel}}
-        <span class="tag is-medium" aria-label="Enforcement level: {{model.enforcementLevel}}">
-          {{model.enforcementLevel}}
+      {{this.model.id}}
+      {{#if this.model.enforcementLevel}}
+        <span class="tag is-medium" aria-label="Enforcement level: {{this.model.enforcementLevel}}">
+          {{this.model.enforcementLevel}}
         </span>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
-{{#if (and (not-eq model.id "root") (or capabilities.canUpdate capabilities.canDelete))}}
+{{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink
-        @params={{array 'vault.cluster.policy.show' model.id}}
-        @data-test-policy-edit-toggle=true
-      >
-        Back to policy
-      </ToolbarLink>
-      <div class="toolbar-separator" />
-      {{#if (and (not-eq model.id "default") capabilities.canDelete)}}
+      {{#if (and (not-eq this.model.id "default") this.capabilities.canDelete)}}
         <ConfirmAction
           @buttonClasses="toolbar-link"
           @confirmMessage="This may affect access to Vault data."
-          @onConfirmAction={{action "deletePolicy" model}}
+          @onConfirmAction={{this.deletePolicy}}
           data-test-policy-delete="true"
         >
           Delete
         </ConfirmAction>
+        <div class="toolbar-separator"></div>
       {{/if}}
+      <ToolbarLink @route="vault.cluster.policy.show" @model={{this.model.id}} data-test-policy-edit-toggle>
+        Back to policy
+      </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
 {{/if}}
-<form {{action "savePolicy" model on="submit"}}>
-  <div class="box is-bottomless is-fullwidth is-marginless">
-    <MessageError @model={{model}} />
-    <NamespaceReminder @mode="edit" @noun="policy" />
-    <div class="field">
-      <JsonEditor
-        @title="Policy"
-        @value={{model.policy}} 
-        @valueUpdated={{action (mut model.policy)}} 
-        @options={{hash
-          mode='ruby'
-          extraKeys=(hash
-            Shift-Enter=(action "savePolicy" model)
-          )
-        }} />
-      <div class="box is-shadowless is-fullwidth has-short-padding">
-        <p class="help-text has-text-grey-dark is-size-7">
-          You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field
-        </p>
-      </div>
-    </div>
-    {{#each model.additionalAttrs as |attr|}}
-      {{form-field data-test-field attr=attr model=model}}
-    {{/each}}
-    <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
-      <div class="field is-grouped">
-        {{#if capabilities.canUpdate}}
-          <div class="control">
-            <button
-               type="submit"
-               disabled={{buttonDisabled}}
-               class="button is-primary"
-               data-test-policy-save=true
-             >
-               Save
-            </button>
-          </div>
-        {{/if}}
-        <div class="control">
-          <LinkTo @route="vault.cluster.policy.show" @model={{model.id}} @replace={{true}} class="button">
-            Cancel
-          </LinkTo>
-        </div>
-      </div>
-    </div>
-  </div>
-</form>
+
+<PolicyForm
+  @model={{this.model}}
+  @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
+  @onCancel={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
+/>

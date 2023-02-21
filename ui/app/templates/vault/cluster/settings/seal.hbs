@@ -6,14 +6,12 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if model.seal.canUpdate}}
+{{#if this.model.seal.canUpdate}}
   <div class="box is-sideless is-fullwidth is-marginless">
     <p>
-    Sealing a vault tells the Vault server to stop responding to any
-    access operations until it is unsealed again. A sealed vault throws away
-    its master key to unlock the data, so it physically is blocked from
-    responding to operations again until the Vault is unsealed again with
-    the "unseal" command or via the API.
+      Sealing a vault tells the Vault server to stop responding to any access operations until it is unsealed again. A sealed
+      vault throws away its root key to unlock the data, so it physically is blocked from responding to operations again
+      until the Vault is unsealed again with the "unseal" command or via the API.
     </p>
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -30,7 +28,5 @@
     </ConfirmAction>
   </div>
 {{else}}
-  <EmptyState
-    @title="This token does not have sufficient capabilities to seal this vault"
-  />
+  <EmptyState @title="This token does not have sufficient capabilities to seal this vault" />
 {{/if}}

@@ -1,0 +1,76 @@
+{{! the class linkable-item is needed for the read-more component }}
+<div data-test-info-table-item-array {{did-insert this.fetchOptions}} class="linkable-item">
+  {{#if @isLink}}
+    <div data-test-row-value={{@label}}>
+      {{#if this.fetchComplete}}
+        <ReadMore>
+          {{#each this.displayArrayTruncated as |item|}}
+            {{#if (is-wildcard-string item)}}
+              {{#let (filter-wildcard item this.allOptions) as |wildcardCount|}}
+                <span>{{item}}</span>
+                <span class="tag is-light has-text-grey-dark" data-test-count={{wildcardCount}}>
+                  {{if (not-eq wildcardCount undefined) (concat "includes " wildcardCount)}}
+                  {{if (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)}}
+                </span>
+                {{#if (eq this.displayArrayTruncated.lastObject item)}}
+                  <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
+                    <span data-test-view-all={{lowercase @label}}>View all {{lowercase @label}}.</span>
+                  </LinkTo>
+                {{/if}}
+              {{/let}}
+            {{else}}
+              {{#if (is-array this.itemRoute)}}
+                <LinkTo
+                  @route={{(get this.itemRoute "0")}}
+                  @models={{array (get this.itemRoute "1") item (get this.itemRoute "2")}}
+                >
+                  {{or (get this.itemNameById item) item}}
+                </LinkTo>
+              {{else}}
+                <LinkTo
+                  @route={{this.itemRoute}}
+                  @model={{if @queryParam (concat @queryParam "/" item) item}}
+                  data-test-item={{item}}
+                >
+                  <span>{{or (get this.itemNameById item) item}}</span>
+                </LinkTo>
+              {{/if}}
+            {{/if}}
+            {{#if (not-eq item this.displayArrayTruncated.lastObject)}}
+              ,&nbsp;
+            {{/if}}
+            {{#unless this.doNotTruncate}}
+              {{#if (and (eq item this.displayArrayTruncated.lastObject) (gte @displayArray.length 10))}}
+                {{! dec is a math helper that decrements by 5 the length of the array ex: 11-5 = "and 6 others."}}
+                <span data-test-and={{dec 5 @displayArray.length}}>
+                  &nbsp;and
+                  {{dec 5 @displayArray.length}}
+                  others.&nbsp;
+                </span>
+              {{/if}}
+              {{#if (and (eq item this.displayArrayTruncated.lastObject) (gte @displayArray.length 10))}}
+                {{#if (is-array @rootRoute)}}
+                  <LinkTo @route={{(get @rootRoute "0")}} @model={{(get @rootRoute "1")}}>
+                    <span data-test-view-all={{lowercase @label}}>View all {{lowercase @label}}.</span>
+                  </LinkTo>
+                {{else}}
+                  <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
+                    <span data-test-view-all={{lowercase @label}}>View all {{lowercase @label}}.</span>
+                  </LinkTo>
+                {{/if}}
+              {{/if}}
+            {{/unless}}
+          {{/each}}
+        </ReadMore>
+      {{/if}}
+    </div>
+  {{else}}
+    <code class="is-word-break has-text-black" data-test-row-value={{@label}}>
+      {{if
+        (gte @displayArray.length 10)
+        (concat @displayArray ", and " (dec 5 @displayArray.length) " more.")
+        @displayArray
+      }}
+    </code>
+  {{/if}}
+</div>

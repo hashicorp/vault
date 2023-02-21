@@ -1,5 +1,5 @@
-{{#each outputLog as |message|}}
+{{#each this.outputLog as |message|}}
   {{#unless message.hidden}}
-    {{component (concat 'console/log-' message.type) content=message.content}}
+    {{component (concat "console/log-" message.type) content=message.content}}
   {{/unless}}
 {{/each}}

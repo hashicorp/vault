@@ -1,0 +1,3 @@
+```release-note:bug
+auth/token: Fix ignored parameter warnings for valid parameters on token create
+```

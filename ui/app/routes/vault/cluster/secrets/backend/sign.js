@@ -1,7 +1,9 @@
 import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
+import { inject as service } from '@ember/service';
 
 export default Route.extend(UnloadModel, {
+  store: service(),
   templateName: 'vault/cluster/secrets/backend/sign',
 
   backendModel() {
@@ -26,7 +28,7 @@ export default Route.extend(UnloadModel, {
     if (backendModel.get('type') !== 'ssh') {
       return this.transitionTo('vault.cluster.secrets.backend.list-root', backend);
     }
-    return this.store.queryRecord('capabilities', this.pathQuery(role, backend)).then(capabilities => {
+    return this.store.queryRecord('capabilities', this.pathQuery(role, backend)).then((capabilities) => {
       if (!capabilities.get('canUpdate')) {
         return this.transitionTo('vault.cluster.secrets.backend.list-root', backend);
       }

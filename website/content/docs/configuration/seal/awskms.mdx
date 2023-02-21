@@ -8,6 +8,8 @@ description: |-
 
 # `awskms` Seal
 
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documenation for more information.
+
 The AWS KMS seal configures Vault to use AWS KMS as the seal wrapping mechanism.
 The AWS KMS seal is activated by one of the following:
 
@@ -53,15 +55,19 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   also be specified by the `AWS_SECRET_ACCESS_KEY` environment variable or as
   part of the AWS profile from the AWS CLI or instance profile.
 
-- `kms_key_id` `(string: <required>)`: The AWS KMS key ID to use for encryption
+- `kms_key_id` `(string: <required>)`: The AWS KMS key ID or ARN to use for encryption
   and decryption. May also be specified by the `VAULT_AWSKMS_SEAL_KEY_ID`
-  environment variable.
+  environment variable.  An alias in the format `alias/key-alias-name` may also be used here.
+
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
 
 - `endpoint` `(string: "")`: The KMS API endpoint to be used to make AWS KMS
   requests. May also be specified by the `AWS_KMS_ENDPOINT` environment
   variable. This is useful, for example, when connecting to KMS over a [VPC
   Endpoint](https://docs.aws.amazon.com/kms/latest/developerguide/kms-vpc-endpoint.html).
   If not set, Vault will use the default API endpoint for your region.
+
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 
 ## Authentication
 
@@ -104,7 +110,7 @@ Vault Seal specific values:
 
 ## Key Rotation
 
-This seal supports rotating the master keys defined in AWS KMS
+This seal supports rotating the root keys defined in AWS KMS
 [doc](https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html). Both automatic
 rotation and manual rotation is supported for KMS since the key information is stored with the
 encrypted data. Old keys must not be disabled or deleted and are used to decrypt older data.
@@ -115,7 +121,7 @@ or set to current under a key alias.
 
 @include 'aws-imds-timeout.mdx'
 
-## Learn
+## Tutorial
 
-Refer to the [Auto-unseal using AWS KMS](https://learn.hashicorp.com/vault/operations/ops-autounseal-aws-kms)
-guide for a step-by-step tutorial.
+Refer to the [Auto-unseal using AWS KMS](/vault/tutorials/auto-unseal/autounseal-aws-kms)
+tutorial to learn how to auto-unseal Vault using AWS KMS.

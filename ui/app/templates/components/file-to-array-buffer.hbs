@@ -1,36 +1,45 @@
 <div class="field">
   <div class="control is-expanded">
     <label class="is-label">
-      {{#if label}}
-        {{label}}
+      {{#if this.label}}
+        {{this.label}}
       {{/if}}
     </label>
     <div class="file has-name is-fullwidth">
-      <label class="file-label">
-        <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-file-input>
-        <span class="file-cta button">
-          <Icon @glyph="upload" class="has-light-grey-text" />
+      <div class="file-label" aria-label="Choose a file">
+        <input id="file-input" class="file-input" type="file" onchange={{action "pickedFile"}} data-test-file-input />
+        <label for="file-input" class="file-cta button">
+          <Icon @name="upload" class="has-light-grey-text" />
           Choose a file…
+        </label>
+        <span class="file-name has-text-grey-dark" data-test-text-file-input-label={{true}}>
+          {{or this.filename "No file chosen"}}
         </span>
-        <span class="file-name has-text-grey-dark" data-test-text-file-input-label=true>
-          {{or this.fileName "No file chosen"}}
-        </span>
-        {{#if this.fileName}}
-          <button type="button" class="file-delete-button" {{action 'clearFile'}} data-test-text-clear>
-            <Icon @glyph="cancel-circle-outline" />
+        {{#if this.filename}}
+          <button
+            type="button"
+            class="file-delete-button"
+            aria-label="Clear file selection"
+            {{action "clearFile"}}
+            data-test-text-clear
+          >
+            <Icon @name="x-circle" />
           </button>
         {{/if}}
-      </label>
+      </div>
     </div>
   </div>
-  {{#if this.fileName}}
-  <p class="help has-text-grey">
-    This file is {{this.fileSize}} and was created on {{date-format this.fileLastModified 'MMM dd, yyyy hh:mm:ss a'}}.
-  </p>
+  {{#if this.filename}}
+    <p class="help has-text-grey">
+      This file is
+      {{this.fileSize}}
+      and was created on
+      {{date-format this.fileLastModified "MMM dd, yyyy hh:mm:ss a"}}.
+    </p>
   {{/if}}
   {{#if @fileHelpText}}
-  <p class="help has-text-grey">
-    {{@fileHelpText}}
-  </p>
+    <p class="help has-text-grey">
+      {{@fileHelpText}}
+    </p>
   {{/if}}
 </div>

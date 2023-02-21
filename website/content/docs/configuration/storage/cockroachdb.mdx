@@ -3,9 +3,7 @@ layout: docs
 page_title: CockroachDB - Storage Backends - Configuration
 description: >-
   The CockroachDB storage backend is used to persist Vault's data in a
-  CockroachDB
-
-  server or cluster.
+  CockroachDB server or cluster.
 ---
 
 # CockroachDB Storage Backend
@@ -13,8 +11,7 @@ description: >-
 The CockroachDB storage backend is used to persist Vault's data in a
 [CockroachDB][cockroachdb] server or cluster.
 
-- **No High Availability** – the CockroachDB storage backend does not support
-  high availability.
+- **High Availability** – the CockroachDB storage backend supports high availability.
 
 - **Community Supported** – the CockroachDB storage backend is supported by the
   community. While it has undergone development and review by HashiCorp
@@ -33,24 +30,29 @@ uses that driver to interact with the database.
 
 - `connection_url` `(string: <required>)` – Specifies the connection string to
   use to authenticate and connect to CockroachDB. A full list of supported
-  parameters can be found in [the pq library documentation][pglib]. For example
-  connection string URLs, see the examples section below.
+  parameters can be found in the [pgx library][pgxlib] and [PostgreSQL connection string][pg_conn_docs]
+  documentation. For example connection string URLs, see the examples section below.
 
 - `table` `(string: "vault_kv_store")` – Specifies the name of the table in
-  which to write Vault data. This table must already exist (Vault will not
-  attempt to create it).
+  which to write Vault data. If this table does not exist Vault will attempt to create it.
 
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to CockroachDB.
 
+- `ha_enabled` `(string: "true|false")` - Default not enabled.
+
+- `ha_table` `(string: "vault_ha_locks")` - Specifies the name of the table to use
+  for storing high availability information.
+
 ## `cockroachdb` Examples
 
-This example shows connecting to a PostgreSQL cluster using full SSL
-verification (recommended).
+This example shows connecting to a CockroachDB cluster using full SSL
+verification (recommended) and high availability enabled.
 
 ```hcl
 storage "cockroachdb" {
-  connection_url = "postgres://user:pass@localhost:5432/database?sslmode=verify-full"
+  connection_url = "postgres://user:pass@localhost:26257/database?sslmode=verify-full"
+  ha_enabled     = "true"
 }
 ```
 
@@ -59,9 +61,11 @@ To disable SSL verification (not recommended), replace `verify-full` with
 
 ```hcl
 storage "cockroachdb" {
-  connection_url = "postgres://user:pass@localhost:5432/database?sslmode=disable"
+  connection_url = "postgres://user:pass@localhost:26257/database?sslmode=disable"
+  ha_enabled     = "true"
 }
 ```
 
 [cockroachdb]: https://www.cockroachlabs.com/
-[pglib]: https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters
+[pgxlib]: https://pkg.go.dev/github.com/jackc/pgx/stdlib
+[pg_conn_docs]: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING

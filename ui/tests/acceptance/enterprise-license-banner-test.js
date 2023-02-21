@@ -5,7 +5,7 @@ import Pretender from 'pretender';
 import formatRFC3339 from 'date-fns/formatRFC3339';
 import { addDays, subDays } from 'date-fns';
 
-const generateHealthResponse = state => {
+const generateHealthResponse = (state) => {
   let expiry;
   switch (state) {
     case 'expired':
@@ -37,17 +37,21 @@ const generateHealthResponse = state => {
   };
 };
 
-module('Acceptance | Enterprise | License banner warnings', function(hooks) {
+module('Acceptance | Enterprise | License banner warnings', function (hooks) {
   setupApplicationTest(hooks);
 
-  test('it shows no license banner if license expires in > 30 days', async function(assert) {
+  hooks.afterEach(function () {
+    this.server.shutdown();
+  });
+
+  test('it shows no license banner if license expires in > 30 days', async function (assert) {
     const healthResp = generateHealthResponse();
-    this.server = new Pretender(function() {
-      this.get('/v1/sys/health', response => {
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/health', (response) => {
         return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];
       });
       this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
-      // this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.get('/v1/sys/license/features', this.passthrough);
     });
@@ -55,13 +59,14 @@ module('Acceptance | Enterprise | License banner warnings', function(hooks) {
     assert.dom('[data-test-license-banner]').doesNotExist('license banner does not show');
     this.server.shutdown();
   });
-  test('it shows license banner warning if license expires within 30 days', async function(assert) {
+  test('it shows license banner warning if license expires within 30 days', async function (assert) {
     const healthResp = generateHealthResponse('expiring');
-    this.server = new Pretender(function() {
-      this.get('/v1/sys/health', response => {
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/health', (response) => {
         return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];
       });
       this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.get('/v1/sys/license/features', this.passthrough);
     });
@@ -70,13 +75,14 @@ module('Acceptance | Enterprise | License banner warnings', function(hooks) {
     this.server.shutdown();
   });
 
-  test('it shows license banner alert if license has already expired', async function(assert) {
+  test('it shows license banner alert if license has already expired', async function (assert) {
     const healthResp = generateHealthResponse('expired');
-    this.server = new Pretender(function() {
-      this.get('/v1/sys/health', response => {
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/health', (response) => {
         return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];
       });
       this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.get('/v1/sys/license/features', this.passthrough);
     });

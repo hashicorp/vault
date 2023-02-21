@@ -6,13 +6,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
+
+func TestSystem_GRPC_ReturnsErrIfSystemViewNil(t *testing.T) {
+	_, err := new(gRPCSystemViewServer).ReplicationState(context.Background(), nil)
+	if err == nil {
+		t.Error("Expected error when using server with no impl")
+	}
+}
 
 func TestSystem_GRPC_GRPC_impl(t *testing.T) {
 	var _ logical.SystemView = new(gRPCSystemViewClient)
@@ -104,10 +111,6 @@ func TestSystem_GRPC_replicationState(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("expected: %v, got: %v", expected, actual)
 	}
-}
-
-func TestSystem_GRPC_responseWrapData(t *testing.T) {
-	t.SkipNow()
 }
 
 func TestSystem_GRPC_lookupPlugin(t *testing.T) {
@@ -213,7 +216,9 @@ func TestSystem_GRPC_groupsForEntity(t *testing.T) {
 func TestSystem_GRPC_pluginEnv(t *testing.T) {
 	sys := logical.TestSystemView()
 	sys.PluginEnvironment = &logical.PluginEnvironment{
-		VaultVersion: "0.10.42",
+		VaultVersion:           "0.10.42",
+		VaultVersionPrerelease: "dev",
+		VaultVersionMetadata:   "ent",
 	}
 	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
 		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{

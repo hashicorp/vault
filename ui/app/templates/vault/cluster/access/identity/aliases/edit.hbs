@@ -1,9 +1,10 @@
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Edit {{model.name}}
+      Edit
+      {{this.model.name}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-<Identity::EditForm @mode="edit" @model={{model}} @onSave={{perform navAfterSave}} />
+<Identity::EditForm @mode="edit" @model={{this.model}} @onSave={{perform this.navAfterSave}} />

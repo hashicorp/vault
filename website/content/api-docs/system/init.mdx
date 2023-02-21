@@ -35,11 +35,11 @@ $ curl \
 
 This endpoint initializes a new Vault. The Vault must not have been previously
 initialized. The recovery options, as well as the stored shares option, are only
-available when using Vault HSM.
+available when using [Auto Unseal](/vault/docs/concepts/seal#auto-unseal).
 
 | Method | Path        |
 | :----- | :---------- |
-| `PUT`  | `/sys/init` |
+| `POST`  | `/sys/init` |
 
 ### Parameters
 
@@ -53,30 +53,29 @@ available when using Vault HSM.
   original binary representation.
 
 - `secret_shares` `(int: <required>)` – Specifies the number of shares to
-  split the master key into.
+  split the root key into.
 
 - `secret_threshold` `(int: <required>)` – Specifies the number of shares
-  required to reconstruct the master key. This must be less than or equal
-  `secret_shares`. If using Vault HSM with auto-unsealing, this value must be
-  the same as `secret_shares`.
+  required to reconstruct the root key. This must be less than or equal
+  `secret_shares`.
 
-Additionally, the following options are only supported on Vault Pro/Enterprise:
+Additionally, the following options are only supported using Auto Unseal:
 
 - `stored_shares` `(int: <required>)` – Specifies the number of shares that
   should be encrypted by the HSM and stored for auto-unsealing. Currently must
   be the same as `secret_shares`.
 
-- `recovery_shares` `(int: <required>)` – Specifies the number of shares to
-  split the recovery key into.
+- `recovery_shares` `(int: 0)` – Specifies the number of shares to
+  split the recovery key into. This is only available when using Auto Unseal.
 
-- `recovery_threshold` `(int: <required>)` – Specifies the number of shares
+- `recovery_threshold` `(int: 0)` – Specifies the number of shares
   required to reconstruct the recovery key. This must be less than or equal to
-  `recovery_shares`.
+  `recovery_shares`. This is only available when using Auto Unseal.
 
 - `recovery_pgp_keys` `(array<string>: nil)` – Specifies an array of PGP public
   keys used to encrypt the output recovery keys. Ordering is preserved. The keys
   must be base64-encoded from their original binary representation. The size of
-  this array must be the same as `recovery_shares`.
+  this array must be the same as `recovery_shares`. This is only available when using Auto Unseal.
 
 ### Sample Payload
 
@@ -91,7 +90,7 @@ Additionally, the following options are only supported on Vault Pro/Enterprise:
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/init
 ```
@@ -99,7 +98,7 @@ $ curl \
 ### Sample Response
 
 A JSON-encoded object including the (possibly encrypted, if `pgp_keys` was
-provided) master keys, base 64 encoded master keys and initial root token:
+provided) root keys, base 64 encoded root keys and initial root token:
 
 ```json
 {
@@ -108,3 +107,10 @@ provided) master keys, base 64 encoded master keys and initial root token:
   "root_token": "foo"
 }
 ```
+
+-> **Warning:** Please be reminded that recovery keys are used as an 
+authentication flow for rekeying and regeneration of root credentials and cannot 
+be used to unseal Vault in the case of the unavailability of the seal mechanism.
+Refer to the full warning in the documentation for 
+[Auto Unseal](/vault/docs/concepts/seal#auto-unseal).
+

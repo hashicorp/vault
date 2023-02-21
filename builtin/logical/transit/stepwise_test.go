@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
+	stepwise "github.com/hashicorp/vault-testing-stepwise"
+	dockerEnvironment "github.com/hashicorp/vault-testing-stepwise/environments/docker"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
-	"github.com/hashicorp/vault/sdk/testing/stepwise"
-	dockerEnvironment "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -18,7 +18,7 @@ func TestAccBackend_basic_docker(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	envOptions := stepwise.MountOptions{
 		RegistryName:    "updatedtransit",
-		PluginType:      stepwise.PluginTypeSecrets,
+		PluginType:      api.PluginTypeSecrets,
 		PluginName:      "transit",
 		MountPathPrefix: "transit_temp",
 	}
@@ -147,7 +147,7 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 			if d.MinEncryptionVersion != minEncryptionVersion {
 				return fmt.Errorf("minimum encryption version mismatch, expected (%#v), found (%#v)", minEncryptionVersion, d.MinDecryptionVersion)
 			}
-			if d.DeletionAllowed == true {
+			if d.DeletionAllowed {
 				return fmt.Errorf("expected DeletionAllowed to be false, but got true")
 			}
 			if d.Derived != derived {
@@ -162,7 +162,8 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 }
 
 func testAccStepwiseEncryptContext(
-	t *testing.T, name, plaintext, context string, decryptData map[string]interface{}) stepwise.Step {
+	t *testing.T, name, plaintext, context string, decryptData map[string]interface{},
+) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -188,7 +189,8 @@ func testAccStepwiseEncryptContext(
 }
 
 func testAccStepwiseDecrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{}) stepwise.Step {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "decrypt/" + name,

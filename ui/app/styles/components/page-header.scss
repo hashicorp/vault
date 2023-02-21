@@ -24,6 +24,10 @@
     margin-top: $size-1;
   }
 
+  .title-with-icon {
+    display: flex;
+  }
+
   .breadcrumb + .level .title {
     margin-top: $size-4;
   }

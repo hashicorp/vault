@@ -1,0 +1,100 @@
+<div
+  {{did-insert (perform this.fetchOptions)}}
+  {{did-update (perform this.fetchOptions) (or @options @models)}}
+  id={{@id}}
+  class="field search-select {{if @displayInherit 'display-inherit'}}"
+  data-test-component="search-select"
+  ...attributes
+>
+  {{#if this.shouldUseFallback}}
+    {{component
+      @fallbackComponent
+      id=@id
+      label=@label
+      subText=@subText
+      onChange=@onChange
+      inputValue=@inputValue
+      helpText=@helpText
+      placeholder=@placeholder
+    }}
+  {{else}}
+    {{#if @label}}
+      <label for={{@id}} class={{or @labelClass "is-label"}} data-test-field-label>
+        {{@label}}
+        {{#if @helpText}}
+          <InfoTooltip>{{@helpText}}</InfoTooltip>
+        {{/if}}
+      </label>
+    {{/if}}
+    {{#if @subText}}
+      <p class="sub-text">{{@subText}}</p>
+    {{/if}}
+    {{#unless this.hidePowerSelect}}
+      <PowerSelect
+        @eventType="click"
+        @placeholder={{@placeholder}}
+        @searchEnabled={{true}}
+        @search={{this.searchAndSuggest}}
+        @options={{this.dropdownOptions}}
+        @onChange={{this.selectOrCreate}}
+        @placeholderComponent={{component "search-select-placeholder"}}
+        @verticalPosition="below"
+        as |option|
+      >
+        {{#if this.shouldRenderName}}
+          {{option.name}}
+          <small class="search-select-list-key" data-test-smaller-id="true">
+            {{get option this.idKey}}
+          </small>
+        {{else}}
+          {{option.id}}
+        {{/if}}
+      </PowerSelect>
+    {{/unless}}
+    <ul class="search-select-list">
+      {{#each this.selectedOptions as |selected index|}}
+        <li class="search-select-list-item" data-test-selected-option={{index}}>
+          {{#if this.shouldRenderName}}
+            {{selected.name}}
+            <small class="search-select-list-key" data-test-smaller-id={{index}}>
+              {{get selected this.idKey}}
+            </small>
+          {{else}}
+            <div>
+              {{selected.id}}
+              {{#if @wildcardLabel}}
+                {{#if (is-wildcard-string selected.id)}}
+                  {{#let (filter-wildcard selected this.allOptions) as |wildcardCount|}}
+                    <span class="tag is-light has-text-grey-dark" data-test-count={{wildcardCount}}>
+                      includes
+                      {{wildcardCount}}
+                      {{if (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)}}
+                    </span>
+                  {{/let}}
+                {{/if}}
+              {{/if}}
+            </div>
+          {{/if}}
+          <div class="control">
+            {{#if selected.addTooltip}}
+              <InfoTooltip>
+                {{selected.addTooltip}}
+              </InfoTooltip>
+            {{/if}}
+            <button
+              type="button"
+              class="button is-ghost"
+              data-test-selected-list-button="delete"
+              {{on "click" (fn this.discardSelection selected)}}
+            >
+              <Icon @name="trash" class="has-text-grey" />
+            </button>
+          </div>
+        </li>
+      {{/each}}
+    </ul>
+    {{#if (has-block)}}
+      {{yield}}
+    {{/if}}
+  {{/if}}
+</div>

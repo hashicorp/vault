@@ -20,13 +20,13 @@ stored in Vault's configuration file, read access to the file should be tightly
 controlled to appropriate users. (Vault's configuration file should always have
 tight write controls.) Rather than storing these values into Vault's
 configuration file, they can also be supplied via the environment; see the
-[Configuration](/docs/configuration/seal/pkcs11) page for more details.
+[Configuration](/vault/docs/configuration/seal/pkcs11) page for more details.
 
 The attack surface of stolen PKCS#11 credentials depends highly on the
 individual HSM, but generally speaking, it should be assumed that if an
 attacker can see these credentials and has access to a machine on which Vault
 is running, the attacker will be able to access the HSM key protecting Vault's
-master key. Therefore, it is extremely important that access to the machine on
+root key. Therefore, it is extremely important that access to the machine on
 which Vault is running is also tightly controlled.
 
 ## Recovery Key Shares Protection

@@ -1,0 +1,3 @@
+```release-note:bug
+auth/aws: Fix ec2 auth on instances that have a cert in their PKCS7 signature
+```

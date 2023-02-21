@@ -2,11 +2,9 @@ package command
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -18,6 +16,8 @@ var (
 
 type PluginListCommand struct {
 	*BaseCommand
+
+	flagDetailed bool
 }
 
 func (c *PluginListCommand) Synopsis() string {
@@ -40,13 +40,30 @@ Usage: vault plugin list [options] [TYPE]
 
       $ vault plugin list database
 
+  List all available plugins with detailed output:
+
+      $ vault plugin list -detailed
+
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
 func (c *PluginListCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:    "detailed",
+		Target:  &c.flagDetailed,
+		Default: false,
+		Usage: "Print detailed plugin information such as plugin type, " +
+			"version, and deprecation status for each plugin. This option " +
+			"is only applicable to table-formatted output.",
+	})
+
+	return set
 }
 
 func (c *PluginListCommand) AutocompleteArgs() complete.Predictor {
@@ -72,12 +89,12 @@ func (c *PluginListCommand) Run(args []string) int {
 		return 1
 	}
 
-	pluginType := consts.PluginTypeUnknown
+	pluginType := api.PluginTypeUnknown
 	if len(args) > 0 {
 		pluginTypeStr := strings.TrimSpace(args[0])
 		if pluginTypeStr != "" {
 			var err error
-			pluginType, err = consts.ParsePluginType(pluginTypeStr)
+			pluginType, err = api.ParsePluginType(pluginTypeStr)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error parsing type: %s", err))
 				return 2
@@ -105,25 +122,45 @@ func (c *PluginListCommand) Run(args []string) int {
 
 	switch Format(c.UI) {
 	case "table":
-		var flattenedNames []string
-		namesAdded := make(map[string]bool)
-		for _, names := range resp.PluginsByType {
-			for _, name := range names {
-				if ok := namesAdded[name]; !ok {
-					flattenedNames = append(flattenedNames, name)
-					namesAdded[name] = true
-				}
-			}
-			sort.Strings(flattenedNames)
+		if c.flagDetailed {
+			c.UI.Output(tableOutput(c.detailedResponse(resp), nil))
+			return 0
 		}
-		list := append([]string{"Plugins"}, flattenedNames...)
-		c.UI.Output(tableOutput(list, nil))
+		c.UI.Output(tableOutput(c.simpleResponse(resp, pluginType), nil))
 		return 0
 	default:
 		res := make(map[string]interface{})
 		for k, v := range resp.PluginsByType {
 			res[k.String()] = v
 		}
+		res["details"] = resp.Details
 		return OutputData(c.UI, res)
 	}
+}
+
+func (c *PluginListCommand) simpleResponse(plugins *api.ListPluginsResponse, pluginType api.PluginType) []string {
+	var out []string
+	switch pluginType {
+	case api.PluginTypeUnknown:
+		out = []string{"Name | Type | Version"}
+		for _, plugin := range plugins.Details {
+			out = append(out, fmt.Sprintf("%s | %s | %s", plugin.Name, plugin.Type, plugin.Version))
+		}
+	default:
+		out = []string{"Name | Version"}
+		for _, plugin := range plugins.Details {
+			out = append(out, fmt.Sprintf("%s | %s", plugin.Name, plugin.Version))
+		}
+	}
+
+	return out
+}
+
+func (c *PluginListCommand) detailedResponse(plugins *api.ListPluginsResponse) []string {
+	out := []string{"Name | Type | Version | Deprecation Status"}
+	for _, plugin := range plugins.Details {
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s", plugin.Name, plugin.Type, plugin.Version, plugin.DeprecationStatus))
+	}
+
+	return out
 }

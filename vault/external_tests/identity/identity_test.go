@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/stretchr/testify/require"
@@ -80,6 +80,7 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 			"canonical_id":   groupID,
 			"mount_accessor": accessor,
 		})
+		require.NoError(t, err)
 
 		// Create a user in Vault
 		_, err = client.Logical().Write("auth/"+path+"/users/hermes conrad", map[string]interface{}{
@@ -129,6 +130,7 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
 		"password": "hermes",
 	})
+	require.NoError(t, err)
 
 	secret, err = client.Logical().Read("identity/group/id/" + groupID1)
 	require.NoError(t, err)
@@ -626,8 +628,20 @@ func assertMember(t *testing.T, client *api.Client, entityID, groupName, groupID
 		t.Fatal(err)
 	}
 	groupMap := secret.Data
+
+	groupEntityMembers, ok := groupMap["member_entity_ids"].([]interface{})
+	if !ok && expectFound {
+		t.Fatalf("expected member_entity_ids not to be nil")
+	}
+
+	// if type assertion fails and expectFound is false, groupEntityMembers
+	// is nil, then let's just return, nothing to be done!
+	if !ok && !expectFound {
+		return
+	}
+
 	found := false
-	for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
+	for _, entityIDRaw := range groupEntityMembers {
 		if entityIDRaw.(string) == entityID {
 			found = true
 		}

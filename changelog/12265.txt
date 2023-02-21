@@ -1,0 +1,3 @@
+```release-note:bug
+auth/jwt: Fixes OIDC auth from the Vault UI when using `form_post` as the `oidc_response_mode`.
+```

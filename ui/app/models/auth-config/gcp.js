@@ -13,7 +13,7 @@ export default AuthConfig.extend({
 
   googleCertsEndpoint: attr('string'),
 
-  fieldGroups: computed('newFields', function() {
+  fieldGroups: computed('newFields', function () {
     let groups = [
       { default: ['credentials'] },
       {

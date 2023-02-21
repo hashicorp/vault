@@ -3,125 +3,7 @@ import { computed } from '@ember/object';
 import { alias, or } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-
-const AVAILABLE_PLUGIN_TYPES = [
-  {
-    value: 'mongodb-database-plugin',
-    displayName: 'MongoDB',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'connection_url' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'write_concern', group: 'pluginConfig' },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-  {
-    value: 'mssql-database-plugin',
-    displayName: 'MSSQL',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'connection_url' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'max_open_connections', group: 'pluginConfig' },
-      { attr: 'max_idle_connections', group: 'pluginConfig' },
-      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-  {
-    value: 'mysql-database-plugin',
-    displayName: 'MySQL/MariaDB',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'connection_url', group: 'pluginConfig' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'max_open_connections', group: 'pluginConfig' },
-      { attr: 'max_idle_connections', group: 'pluginConfig' },
-      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-  {
-    value: 'mysql-aurora-database-plugin',
-    displayName: 'MySQL (Aurora)',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'connection_url', group: 'pluginConfig' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'max_open_connections', group: 'pluginConfig' },
-      { attr: 'max_idle_connections', group: 'pluginConfig' },
-      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-  {
-    value: 'mysql-rds-database-plugin',
-    displayName: 'MySQL (RDS)',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'connection_url', group: 'pluginConfig' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'max_open_connections', group: 'pluginConfig' },
-      { attr: 'max_idle_connections', group: 'pluginConfig' },
-      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-  {
-    value: 'mysql-legacy-database-plugin',
-    displayName: 'MySQL (Legacy)',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'connection_url', group: 'pluginConfig' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'max_open_connections', group: 'pluginConfig' },
-      { attr: 'max_idle_connections', group: 'pluginConfig' },
-      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-];
+import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-helpers';
 
 /**
  * fieldsToGroups helper fn
@@ -129,14 +11,14 @@ const AVAILABLE_PLUGIN_TYPES = [
  * @param {*} key item by which to group the fields. If item has no group it will be under "default"
  * @returns array of objects where the key is default or the name of the option group, and the value is an array of attr names
  */
-const fieldsToGroups = function(arr, key = 'subgroup') {
+const fieldsToGroups = function (arr, key = 'subgroup') {
   const fieldGroups = [];
-  const byGroup = arr.reduce(function(rv, x) {
+  const byGroup = arr.reduce(function (rv, x) {
     (rv[x[key]] = rv[x[key]] || []).push(x);
     return rv;
   }, {});
-  Object.keys(byGroup).forEach(key => {
-    const attrsArray = byGroup[key].map(obj => obj.attr);
+  Object.keys(byGroup).forEach((key) => {
+    const attrsArray = byGroup[key].map((obj) => obj.attr);
     const group = key === 'undefined' ? 'default' : key;
     fieldGroups.push({ [group]: attrsArray });
   });
@@ -149,7 +31,7 @@ export default Model.extend({
   }),
   // required
   name: attr('string', {
-    label: 'Connection Name',
+    label: 'Connection name',
   }),
   plugin_name: attr('string', {
     label: 'Database plugin',
@@ -172,27 +54,43 @@ export default Model.extend({
     defaultSubText:
       'Unless a custom policy is specified, Vault will use a default: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.',
     defaultShown: 'Default',
-    docLink: 'https://www.vaultproject.io/docs/concepts/password-policies',
+    docLink: '/vault/docs/concepts/password-policies',
   }),
 
   // common fields
   connection_url: attr('string', {
-    subText: 'The connection string used to connect to the database.',
+    label: 'Connection URL',
+    subText:
+      'The connection string used to connect to the database. This allows for simple templating of username and password of the root user in the {{field_name}} format.',
   }),
   url: attr('string', {
-    subText:
-      'The connection string used to connect to the database. This allows for simple templating of username and password of the root user.',
+    label: 'URL',
+    subText: `The URL for Elasticsearch's API ("https://localhost:9200").`,
   }),
   username: attr('string', {
-    subText: 'Optional. The name of the user to use as the "root" user when connecting to the database.',
+    subText: `The name of the user to use as the "root" user when connecting to the database.`,
   }),
   password: attr('string', {
-    subText:
-      'Optional. The password to use when connecting to the database. Typically used in the connection_url field via the templating directive {{password}}.',
+    subText: 'The password to use when connecting with the above username.',
     editType: 'password',
   }),
 
   // optional
+  ca_cert: attr('string', {
+    label: 'CA certificate',
+    subText: `The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity.`,
+  }),
+  ca_path: attr('string', {
+    label: 'CA path',
+    subText: `The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity.`,
+  }),
+  client_cert: attr('string', {
+    label: 'Client certificate',
+    subText: 'The path to the certificate for the Elasticsearch client to present for communication.',
+  }),
+  client_key: attr('string', {
+    subText: 'The path to the key for the Elasticsearch client to use for communication.',
+  }),
   hosts: attr('string', {}),
   host: attr('string', {}),
   port: attr('string', {}),
@@ -208,7 +106,7 @@ export default Model.extend({
     subText: 'Enter the custom username template to use.',
     defaultSubText:
       'Template describing how dynamic usernames are generated. Vault will use the default for this plugin.',
-    docLink: 'https://www.vaultproject.io/docs/concepts/username-templating',
+    docLink: '/vault/docs/concepts/username-templating',
     defaultShown: 'Default',
   }),
   max_open_connections: attr('number', {
@@ -219,6 +117,10 @@ export default Model.extend({
   }),
   max_connection_lifetime: attr('string', {
     defaultValue: '0s',
+  }),
+  insecure: attr('boolean', {
+    label: 'Disable SSL verification',
+    defaultValue: false,
   }),
   tls: attr('string', {
     label: 'TLS Certificate Key',
@@ -232,49 +134,57 @@ export default Model.extend({
       'x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.',
     editType: 'file',
   }),
+  tls_server_name: attr('string', {
+    label: 'TLS server name',
+    subText: 'If set, this name is used to set the SNI host when connecting via 1TLS.',
+  }),
   root_rotation_statements: attr({
     subText: `The database statements to be executed to rotate the root user's credentials. If nothing is entered, Vault will use a reasonable default.`,
     editType: 'stringArray',
     defaultShown: 'Default',
   }),
 
-  showAttrs: computed('plugin_name', function() {
-    const fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
-      .fields.filter(f => f.show !== false)
-      .map(f => f.attr);
+  isAvailablePlugin: computed('plugin_name', function () {
+    return !!AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name);
+  }),
+
+  showAttrs: computed('plugin_name', function () {
+    const fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
+      .fields.filter((f) => f.show !== false)
+      .map((f) => f.attr);
     fields.push('allowed_roles');
     return expandAttributeMeta(this, fields);
   }),
 
-  fieldAttrs: computed('plugin_name', function() {
+  fieldAttrs: computed('plugin_name', function () {
     // for both create and edit fields
     let fields = ['plugin_name', 'name', 'connection_url', 'verify_connection', 'password_policy'];
     if (this.plugin_name) {
-      fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
-        .fields.filter(f => !f.group)
-        .map(field => field.attr);
+      fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
+        .fields.filter((f) => !f.group)
+        .map((field) => field.attr);
     }
     return expandAttributeMeta(this, fields);
   }),
 
-  pluginFieldGroups: computed('plugin_name', function() {
+  pluginFieldGroups: computed('plugin_name', function () {
     if (!this.plugin_name) {
       return null;
     }
-    let pluginFields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name).fields.filter(
-      f => f.group === 'pluginConfig'
+    const pluginFields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name).fields.filter(
+      (f) => f.group === 'pluginConfig'
     );
-    let groups = fieldsToGroups(pluginFields, 'subgroup');
+    const groups = fieldsToGroups(pluginFields, 'subgroup');
     return fieldToAttrs(this, groups);
   }),
 
-  statementFields: computed('plugin_name', function() {
+  statementFields: computed('plugin_name', function () {
     if (!this.plugin_name) {
       return expandAttributeMeta(this, ['root_rotation_statements']);
     }
-    let fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
-      .fields.filter(f => f.group === 'statements')
-      .map(field => field.attr);
+    const fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
+      .fields.filter((f) => f.group === 'statements')
+      .map((field) => field.attr);
     return expandAttributeMeta(this, fields);
   }),
 

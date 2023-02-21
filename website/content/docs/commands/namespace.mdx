@@ -16,10 +16,22 @@ List all namespaces:
 $ vault namespace list
 ```
 
-Create a namespace at the path `ns1/`:
+Create a namespace at the path `ns1/` with no custom metadata:
 
 ```shell-session
 $ vault namespace create ns1/
+```
+
+Create a namespace at the path `ns1/` with multiple custom metadata keys:
+
+```shell-session
+$ vault namespace create -custom-metadata=foo=abc -custom-metadata=bar=123 ns1/
+```
+
+Patch an existing namespace at the path `ns1/` to add custom metadata key `bar` and remove key `foo`
+
+```shell-session
+$ vault namespace patch -custom-metadata=bar=123 -remove-custom-metadata=foo ns1/
 ```
 
 Delete the namespace at path `ns1/`:
@@ -34,6 +46,30 @@ Lookup the namespace information at path `ns1/`:
 $ vault namespace lookup ns1/
 ```
 
+Lock the API for the current namespace:
+
+```shell-session
+$ vault namespace lock
+```
+
+Lock the API for a descendant namespace at path `current/namespace/ns1/`:
+
+```shell-session
+$ vault namespace lock ns1/
+```
+
+Unlock the API for the current namespace:
+
+```shell-session
+$ vault namespace unlock -unlock-key <unlock key>
+```
+
+Unlock the API for a descendant namespace at path `current/namespacens1/`:
+
+```shell-session
+$ vault namespace unlock -unlock-key <unlock key> ns1/
+```
+
 ## Usage
 
 ```text
@@ -44,10 +80,12 @@ Usage: vault namespace <subcommand> [options] [args]
   current logged in token belongs to.
 
 Subcommands:
-    create    Create a new namespace
-    delete    Delete an existing namespace
-    list      List child namespaces
-    lookup    Look up an existing namespace
+    create   Create a new namespace
+    delete   Delete an existing namespace
+    list     List child namespaces
+    lookup   Look up an existing namespace
+    lock     Lock the API for a namespace
+    unlock   Unlock the API for a namespace
 ```
 
 For more information, examples, and usage about a subcommand, click on the name

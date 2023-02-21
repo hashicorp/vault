@@ -14,30 +14,56 @@ and expects a [JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519)
 signed by Azure Active Directory for the configured tenant.
 
 This method supports authentication for system-assigned and user-assigned
-managed identities. See [Azure Managed Service Identity (MSI)](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/overview) for more information about these resources.
+managed identities. See [Managed identities for Azure resources](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview)
+for more information about these resources.
+
+This documentation assumes the Azure method is mounted at the `/auth/azure`
+path in Vault. Since it is possible to enable auth methods at any location,
+please update your API calls accordingly.
 
 ## Prerequisites:
 
-The following documentation assumes that the method has been
-[mounted](/docs/plugin) at `auth/azure`.
+The Azure auth method requires client credentials to access Azure APIs. The following
+are required to configure the auth method:
 
-- A configured [Azure AD application](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications) which is used as the resource for generating MSI access tokens.
-- Client credentials (shared secret) for accessing the Azure Resource Manager with read access to compute endpoints. See [Azure AD Service to Service Client Credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service)
+- A configured [Azure AD application](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications)
+  which is used as the resource for generating MSI access tokens.
+- Client credentials (shared secret) with read access to particular Azure Resource Manager
+  resources. See [Azure AD Service to Service Client Credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service).
 
-Required Azure API permissions to be granted to Vault user:
+If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret.
+A managed identity must be [enabled](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/)
+on the resource that acquires the access token.
 
-- `Microsoft.Compute/virtualMachines/*/read`
-- `Microsoft.Compute/virtualMachineScaleSets/*/read`
+The following Azure [role assignments](https://learn.microsoft.com/en-us/azure/role-based-access-control/overview#role-assignments)
+must be granted to the Azure AD application in order for the auth method to access Azure
+APIs during authentication.
 
-_NOTE:_ The above permissions are only required when the associated vm\* parameters are used on login. Please see the [API doc](https://www.vaultproject.io/api-docs/auth/azure#login) for more details.
+### Role Assignments
 
-If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret. MSI must be [enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm) on the VMs hosting Vault.
+~> **Note:** The role assignments are only required when the
+[`vm_name`](/vault/api-docs/auth/azure#vm_name), [`vmss_name`](/vault/api-docs/auth/azure#vmss_name),
+or [`resource_id`](/vault/api-docs/auth/azure#resource_id) parameters are used on login.
 
-The next sections review how the authN/Z workflows work. If you
-have already reviewed these sections, here are some quick links to:
+| Azure Environment | Login Parameter | Azure API Permission |
+| ----------- | --------------- | -------------------- |
+| Virtual Machine | [`vm_name`](/vault/api-docs/auth/azure#vm_name) | `Microsoft.Compute/virtualMachines/*/read` |
+| Virtual Machine Scale Set ([Uniform Orchestration][vmss-uniform]) | [`vmss_name`](/vault/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` |
+| Virtual Machine Scale Set ([Flexible Orchestration][vmss-flex]) | [`vmss_name`](/vault/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` `Microsoft.ManagedIdentity/userAssignedIdentities/*/read` |
+| Services that ([support managed identities][managed-identities]) for Azure resources | [`resource_id`](/vault/api-docs/auth/azure#resource_id) | `read` on the resource used to obtain the JWT |
 
-- [Usage](/docs/secrets/azure#usage)
-- [API documentation](/api/auth/azure) docs.
+[vmss-uniform]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-uniform-orchestration
+[vmss-flex]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-flexible-orchestration
+[managed-identities]: https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/managed-identities-status
+
+### API Permissions
+
+The following [API permissions](https://learn.microsoft.com/en-us/azure/active-directory/develop/permissions-consent-overview#types-of-permissions)
+must be assigned to the service principal provided to Vault for managing the root rotation in Azure:
+
+| Permission Name               | Type        |
+| ----------------------------- | ----------- |
+| Application.ReadWrite.All     | Application |
 
 ## Authentication
 
@@ -55,13 +81,18 @@ $ vault write auth/azure/login \
     vm_name="test-vm"
 ```
 
-The `role` and `jwt` parameters are required. When using `bound_service_principal_ids` and `bound_group_ids` in the token roles, all the information is required in the JWT (except for _vm_name_ and _vmss_name_). When using other `bound_*` parameters, calls to Azure APIs will be made and subscription id, resource group name, and vm name/vmss_name are all required and can be obtained through instance metadata.
+The `role` and `jwt` parameters are required. When using
+`bound_service_principal_ids` and `bound_group_ids` in the token roles, all the
+information is required in the JWT (except for `vm_name`, `vmss_name`, `resource_id`). When
+using other `bound_*` parameters, calls to Azure APIs will be made and
+`subscription_id`, `resource_group_name`, and `vm_name`/`vmss_name` are all required
+and can be obtained through instance metadata.
 
 For example:
 
 ```shell-session
 $ vault write auth/azure/login role="dev-role" \
-     jwt="$(curl -s 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.hashicorp.com%2F' -H Metadata:true | jq -r '.access_token')" \
+     jwt="$(curl -s 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F' -H Metadata:true | jq -r '.access_token')" \
      subscription_id=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .subscriptionId')  \
      resource_group_name=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .resourceGroupName') \
      vm_name=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .name')
@@ -103,16 +134,16 @@ tool.
 
 1. Enable Azure authentication in Vault:
 
-   ```text
+   ```shell-session
    $ vault auth enable azure
    ```
 
 1. Configure the Azure auth method:
 
-   ```text
+   ```shell-session
    $ vault write auth/azure/config \
        tenant_id=7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
-       resource=https://vault.hashicorp.com \
+       resource=https://management.azure.com/ \
        client_id=dd794de4-4c6c-40b3-a930-d84cd32e9699 \
        client_secret=IT3B2XfZvWnfB98s1cie8EMe7zWg483Xy8zY004=
    ```
@@ -122,7 +153,7 @@ tool.
 
 1. Create a role:
 
-   ```text
+   ```shell-session
    $ vault write auth/azure/role/dev-role \
        policies="prod,dev" \
        bound_subscription_ids=6a1d5988-5917-4221-b224-904cd7e24a25 \
@@ -134,13 +165,13 @@ tool.
    authentication type, as well as overall constraints and configuration for
    the generated auth tokens.
 
-   For the complete list of role options, please see the [API documentation](/api/auth/azure).
+   For the complete list of role options, please see the [API documentation](/vault/api-docs/auth/azure).
 
 ### Via the API
 
 1. Enable Azure authentication in Vault:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -150,7 +181,7 @@ tool.
 
 1. Configure the Azure auth method:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -160,7 +191,7 @@ tool.
 
 1. Create a role:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -168,30 +199,208 @@ tool.
        https://127.0.0.1:8200/v1/auth/azure/role/dev-role
    ```
 
-### Plugin Setup
+## Azure Managed Identities
 
-~> The following section is only relevant if you decide to enable the azure auth
-method as an external plugin. The azure plugin method is integrated into Vault as
-a builtin method by default.
+There are two types of [managed identities](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview#managed-identity-types)
+in Azure: System-assigned and User-assigned. System-assigned identities are unique to
+every virtual machine in Azure. If the resources using Azure auth are recreated
+frequently, using system-assigned identities could result in many Vault entities being
+created. For environments with high ephemeral workloads, user-assigned identities are
+recommended.
 
-Assuming you have saved the binary `vault-plugin-auth-azure` to some folder and
-configured the [plugin directory](/docs/internals/plugins#plugin-directory)
-for your server at `path/to/plugins`:
 
-1. Enable the plugin in the catalog:
+### Limitations
 
-   ```text
-   $ vault write sys/plugins/catalog/auth/azure-auth \
-       command="vault-plugin-auth-azure" \
-       sha256="..."
-   ```
+The TTL of the access token returned by Azure AD for a managed identity is
+24hrs and is not configurable. See ([limitations of using managed identities][id-limitations])
+for more info.
 
-1. Enable the azure auth method as a plugin:
+[id-limitations]: https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/managed-identity-best-practice-recommendations#limitation-of-using-managed-identities-for-authorization
 
-   ```text
-   $ vault auth enable -path=azure azure-auth
-   ```
+## Azure Debug Logs
+
+The Azure auth plugin supports debug logging which includes additional information
+about requests and responses from the Azure API.
+
+To enable the Azure debug logs, set the following environment variable on the Vault
+server:
+
+```shell
+AZURE_GO_SDK_LOG_LEVEL=DEBUG
+```
 
 ## API
 
-The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/api/auth/azure) for more details.
+The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/vault/api-docs/auth/azure) for more details.
+
+## Code Example
+
+The following example demonstrates the Azure auth method to authenticate
+with Vault.
+
+<CodeTabs>
+
+<CodeBlockConfig>
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+
+	vault "github.com/hashicorp/vault/api"
+	auth "github.com/hashicorp/vault/api/auth/azure"
+)
+
+// Fetches a key-value secret (kv-v2) after authenticating to Vault via Azure authentication.
+// This example assumes you have a configured Azure AD Application.
+func getSecretWithAzureAuth() (string, error) {
+	config := vault.DefaultConfig() // modify for more granular configuration
+
+	client, err := vault.NewClient(config)
+	if err != nil {
+		return "", fmt.Errorf("unable to initialize Vault client: %w", err)
+	}
+
+	azureAuth, err := auth.NewAzureAuth(
+		"dev-role-azure",
+	)
+	if err != nil {
+		return "", fmt.Errorf("unable to initialize Azure auth method: %w", err)
+	}
+
+	authInfo, err := client.Auth().Login(context.Background(), azureAuth)
+	if err != nil {
+		return "", fmt.Errorf("unable to login to Azure auth method: %w", err)
+	}
+	if authInfo == nil {
+		return "", fmt.Errorf("no auth info was returned after login")
+	}
+
+	// get secret from the default mount path for KV v2 in dev mode, "secret"
+	secret, err := client.KVv2("secret").Get(context.Background(), "creds")
+	if err != nil {
+		return "", fmt.Errorf("unable to read secret: %w", err)
+	}
+
+	// data map can contain more than one key-value pair,
+	// in this case we're just grabbing one of them
+	value, ok := secret.Data["password"].(string)
+	if !ok {
+		return "", fmt.Errorf("value type assertion failed: %T %#v", secret.Data["password"], secret.Data["password"])
+	}
+
+	return value, nil
+}
+
+```
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```cs
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using Newtonsoft.Json;
+using VaultSharp;
+using VaultSharp.V1.AuthMethods;
+using VaultSharp.V1.AuthMethods.Azure;
+using VaultSharp.V1.Commons;
+
+namespace Examples
+{
+    public class AzureAuthExample
+    {
+        public class InstanceMetadata
+        {
+            public string name { get; set; }
+            public string resourceGroupName { get; set; }
+            public string subscriptionId { get; set; }
+        }
+
+        const string MetadataEndPoint = "http://169.254.169.254/metadata/instance?api-version=2017-08-01";
+        const string AccessTokenEndPoint = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/";
+
+        /// <summary>
+        /// Fetches a key-value secret (kv-v2) after authenticating to Vault via Azure authentication.
+        /// This example assumes you have a configured Azure AD Application.
+        /// </summary>
+        public string GetSecretWithAzureAuth()
+        {
+            string vaultAddr = Environment.GetEnvironmentVariable("VAULT_ADDR");
+            if(String.IsNullOrEmpty(vaultAddr))
+            {
+                throw new System.ArgumentNullException("Vault Address");
+            }
+
+            string roleName = Environment.GetEnvironmentVariable("VAULT_ROLE");
+            if(String.IsNullOrEmpty(roleName))
+            {
+                throw new System.ArgumentNullException("Vault Role Name");
+            }
+
+            string jwt = GetJWT();
+            InstanceMetadata metadata = GetMetadata();
+
+            IAuthMethodInfo authMethod = new AzureAuthMethodInfo(roleName: roleName, jwt: jwt, subscriptionId: metadata.subscriptionId, resourceGroupName: metadata.resourceGroupName, virtualMachineName: metadata.name);
+            var vaultClientSettings = new VaultClientSettings(vaultAddr, authMethod);
+
+            IVaultClient vaultClient = new VaultClient(vaultClientSettings);
+
+            // We can retrieve the secret from the VaultClient object
+            Secret<SecretData> kv2Secret = null;
+            kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
+
+            var password = kv2Secret.Data.Data["password"];
+
+            return password.ToString();
+        }
+
+        /// <summary>
+        /// Query Azure Resource Manage for metadata about the Azure instance
+        /// </summary>
+        private InstanceMetadata GetMetadata()
+        {
+            HttpWebRequest metadataRequest = (HttpWebRequest)WebRequest.Create(MetadataEndPoint);
+            metadataRequest.Headers["Metadata"] = "true";
+            metadataRequest.Method = "GET";
+
+            HttpWebResponse metadataResponse = (HttpWebResponse)metadataRequest.GetResponse();
+
+            StreamReader streamResponse = new StreamReader(metadataResponse.GetResponseStream());
+            string stringResponse = streamResponse.ReadToEnd();
+            var resultsDict = JsonConvert.DeserializeObject<Dictionary<string, InstanceMetadata>>(stringResponse);
+
+            return resultsDict["compute"];
+        }
+
+        /// <summary>
+        /// Query Azure Resource Manager (ARM) for an access token
+        /// </summary>
+        private string GetJWT()
+        {
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(AccessTokenEndPoint);
+            request.Headers["Metadata"] = "true";
+            request.Method = "GET";
+
+            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+
+            // Pipe response Stream to a StreamReader and extract access token
+            StreamReader streamResponse = new StreamReader(response.GetResponseStream());
+            string stringResponse = streamResponse.ReadToEnd();
+            var resultsDict = JsonConvert.DeserializeObject<Dictionary<string, string>>(stringResponse);
+
+            return resultsDict["access_token"];
+        }
+    }
+}
+```
+
+</CodeBlockConfig>
+
+</CodeTabs>

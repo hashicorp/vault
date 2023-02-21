@@ -11,6 +11,8 @@ description: |-
 
 ## Create/update an automated snapshots config
 
+-> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
+
 **This endpoint requires sudo capability.**
 
 This endpoint creates or updates a named configuration. Each configuration
@@ -40,7 +42,7 @@ environment variables or files on disk in predefined locations.
 
 - `path_prefix` `(string: <required>)` - For `storage_type=local`, the directory to
   write the snapshots in. For cloud storage types, the bucket prefix to use.
-  Types `azure-s3` and `google-gcs` require a trailing `/` (slash).
+  Types `azure-blob` and `google-gcs` require a trailing `/` (slash).
   Types `local` and `aws-s3` the trailing `/` is optional.
 
 - `file_prefix` `(string: "vault-snapshot")` - Within the directory or bucket
@@ -54,7 +56,8 @@ environment variables or files on disk in predefined locations.
 #### storage_type=local
 
 - `local_max_space` `(integer: <required>)` - For `storage_type=local`, the maximum
-  space, in bytes, to use for snapshots. Snapshot attempts will fail if there is not enough
+  space, in bytes, to use for all snapshots with the given `file_prefix` in the `path_prefix` directory. 
+  Snapshot attempts will fail if there is not enough
   space left in this allowance.
 
 #### storage_type=aws-s3
@@ -81,7 +84,7 @@ environment variables or files on disk in predefined locations.
 
 - `aws_s3_enable_kms` `(boolean)` - Use KMS to encrypt bucket contents.
 
-- `aws_s3_server_side_encryption` `(boolean)` - Use AES256 to encrypt bucket contents.
+- `aws_s3_server_side_encryption` `(boolean)` - Use AES256 to encrypt bucket contents. Cannot use with `aws_s3_enable_kms` parameter.
 
 - `aws_s3_kms_key` `(string)` - Use named KMS key, when `aws_s3_enable_kms=true`
 

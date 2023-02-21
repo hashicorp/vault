@@ -1,19 +1,17 @@
 <form onsubmit={{action @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce key_version=@key_version)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="rewrap" />
-      <div class="content">
-        <p>You can rewrap the provided ciphertext using the latest version of <code>{{@key.name}}</code> as the encryption key.</p>
-      </div>
+    <div class="content">
+      <p>
+        You can rewrap the provided ciphertext using the latest version of
+        <code>{{@key.name}}</code>
+        as the encryption key.
+      </p>
+    </div>
     <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div class="control is-expanded">
-        <JsonEditor
-              @title="Ciphertext"
-              @valueUpdated={{action (mut @ciphertext)}} 
-              @options={{hash
-                mode='ruby'
-              }} 
-            />
+        <JsonEditor @title="Ciphertext" @valueUpdated={{action (mut @ciphertext)}} @mode="ruby" />
       </div>
     </div>
     {{#if @key.derived}}
@@ -23,7 +21,7 @@
         </label>
         <div class="field has-addons">
           <div class="control">
-            <Input @type="text" @id="context" @value={{@context}} class="input" data-test-transit-input="context" />
+            <Input @type="text" id="context" @value={{@context}} class="input" data-test-transit-input="context" />
           </div>
           <div class="control">
             <B64Toggle @value={{@context}} @data-test-transit-b64-toggle="context" />
@@ -36,7 +34,7 @@
         <label for="nonce" class="is-label">Nonce</label>
         <div class="field has-addons">
           <div class="control">
-            <Input @type="text" @id="nonce" @value={{@nonce}} class="input" data-test-transit-input="nonce" />
+            <Input @type="text" id="nonce" @value={{@nonce}} class="input" data-test-transit-input="nonce" />
           </div>
           <div class="control">
             <B64Toggle @value={{@nonce}} @data-test-transit-b64-toggle="nonce" />
@@ -48,7 +46,9 @@
   <div class="field box is-fullwidth is-bottomless">
     <div class="content">
       <p class="help">
-        Submitting this form will update the <code>ciphertext</code> in-place.
+        Submitting this form will update the
+        <code>ciphertext</code>
+        in-place.
       </p>
     </div>
     <div class="control">
@@ -64,16 +64,26 @@
       <h2 class="title is-6">Ciphertext</h2>
       <div class="copy-text level">
         <code class="level-left" data-test-encrypted-value="ciphertext">{{@ciphertext}}</code>
-        <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
-          @clipboardText={{@ciphertext}} @buttonType="button" @success={{action (set-flash-message 'Ciphertext copied!')}}>
-          <Icon @glyph="copy-action" aria-label="Copy" />
+        <CopyButton
+          class="button is-compact is-transparent level-right"
+          data-test-button="modal-copy"
+          @clipboardText={{@ciphertext}}
+          @buttonType="button"
+          @success={{action (set-flash-message "Ciphertext copied!")}}
+        >
+          <Icon @name="clipboard-copy" aria-label="Copy" />
         </CopyButton>
       </div>
     </div>
   </section>
   <footer class="modal-card-foot">
-    <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{@ciphertext}}
-      @buttonType="button" @success={{action @toggleModal "Ciphertext copied!"}}>
+    <CopyButton
+      class="button is-primary copy-close"
+      data-test-button="modal-copy-close"
+      @clipboardText={{@ciphertext}}
+      @buttonType="button"
+      @success={{action @toggleModal "Ciphertext copied!"}}
+    >
       Copy &amp; Close
     </CopyButton>
   </footer>

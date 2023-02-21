@@ -34,11 +34,9 @@ const TWEAK_SOURCE = [
 ];
 
 const ModelExport = Model.extend({
-  useOpenAPI: false,
   name: attr('string', {
     // CBS TODO: make this required for making a transformation
     label: 'Name',
-    fieldValue: 'id',
     readOnly: true,
     subText: 'The name for your transformation. This cannot be edited later.',
   }),
@@ -63,30 +61,31 @@ const ModelExport = Model.extend({
   }),
   template: attr('array', {
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     label: 'Template', // CBS TODO: make this required for making a transformation
     models: ['transform/template'],
     selectLimit: 1,
     onlyAllowExisting: true,
-    subLabel: 'Template Name',
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. Type to use an existing template or create a new one.',
   }),
   allowed_roles: attr('array', {
     editType: 'searchSelect',
+    isSectionHeader: true,
     label: 'Allowed roles',
     fallbackComponent: 'string-list',
     models: ['transform/role'],
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
     wildcardLabel: 'role',
   }),
-  transformAttrs: computed('type', function() {
+  transformAttrs: computed('type', function () {
     if (this.type === 'masking') {
       return ['name', 'type', 'masking_character', 'template', 'allowed_roles'];
     }
     return ['name', 'type', 'tweak_source', 'template', 'allowed_roles'];
   }),
-  transformFieldAttrs: computed('transformAttrs', function() {
+  transformFieldAttrs: computed('transformAttrs', function () {
     return expandAttributeMeta(this, this.transformAttrs);
   }),
 

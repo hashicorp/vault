@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Warn when `generate_lease` and `no_store` are both set to `true` on requests.
+```

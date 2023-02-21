@@ -11,7 +11,7 @@ export default Component.extend({
     if (num) {
       num = parseInt(num, 10);
     }
-    let list = this.newList(num);
+    const list = this.newList(num);
     this.set('listData', list);
   },
 
@@ -31,13 +31,10 @@ export default Component.extend({
       list = this.listData.slice(0, this.listLength);
     } else if (this.listLength > this.listData.length) {
       // add to the current list by creating a new list and copying over existing list
-      list = this.newList(this.listLength);
-      if (this.listData.length) {
-        list.splice(0, this.listData.length, ...this.listData);
-      }
+      list = [...this.listData, ...this.newList(this.listLength - this.listData.length)];
     }
     this.set('listData', list || this.listData);
-    this.onDataUpdate((list || this.listData).compact().map(k => k.value));
+    this.onDataUpdate((list || this.listData).compact().map((k) => k.value));
   },
 
   newList(length) {
@@ -48,9 +45,9 @@ export default Component.extend({
 
   actions: {
     setKey(index, key) {
-      let { listData } = this;
+      const { listData } = this;
       listData.splice(index, 1, key);
-      this.onDataUpdate(listData.compact().map(k => k.value));
+      this.onDataUpdate(listData.compact().map((k) => k.value));
     },
   },
 });

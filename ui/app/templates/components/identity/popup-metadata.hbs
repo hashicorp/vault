@@ -7,7 +7,7 @@
           @confirmTitle="Remove metadata?"
           @confirmMessage="This data may be used outside of Vault."
           @confirmButtonText="Remove"
-          @onConfirmAction={{action "performTransaction" model key}}
+          @onConfirmAction={{action "performTransaction" this.model this.key}}
         >
           Remove
         </ConfirmAction>

@@ -8,18 +8,21 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/internalshared/gatedwriter"
+	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/version"
-	"github.com/mholt/archiver"
+	"github.com/hashicorp/vault/version"
+	"github.com/mholt/archiver/v3"
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
@@ -55,6 +58,7 @@ type debugIndex struct {
 	Version                int                    `json:"version"`
 	VaultAddress           string                 `json:"vault_address"`
 	ClientVersion          string                 `json:"client_version"`
+	ServerVersion          string                 `json:"server_version"`
 	Timestamp              time.Time              `json:"timestamp"`
 	DurationSeconds        int                    `json:"duration_seconds"`
 	IntervalSeconds        int                    `json:"interval_seconds"`
@@ -89,6 +93,9 @@ type DebugCommand struct {
 	flagOutput          string
 	flagTargets         []string
 
+	// logFormat defines the output format for Monitor
+	logFormat string
+
 	// debugIndex is used to keep track of the index state, which gets written
 	// to a file at the end.
 	debugIndex *debugIndex
@@ -106,6 +113,7 @@ type DebugCommand struct {
 	metricsCollection           []map[string]interface{}
 	replicationStatusCollection []map[string]interface{}
 	serverStatusCollection      []map[string]interface{}
+	inFlightReqStatusCollection []map[string]interface{}
 
 	// cachedClient holds the client retrieved during preflight
 	cachedClient *api.Client
@@ -175,6 +183,14 @@ func (c *DebugCommand) Flags() *FlagSets {
 			"replication-status, server-status, log.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "log-format",
+		Target:  &c.logFormat,
+		Default: "standard",
+		Usage: "Log format to be captured if \"log\" target specified. " +
+			"Supported values are \"standard\" and \"json\". The default is \"standard\".",
+	})
+
 	return set
 }
 
@@ -241,6 +257,7 @@ func (c *DebugCommand) Run(args []string) int {
 	c.UI.Output("==> Starting debug capture...")
 	c.UI.Info(fmt.Sprintf("         Vault Address: %s", c.debugIndex.VaultAddress))
 	c.UI.Info(fmt.Sprintf("        Client Version: %s", c.debugIndex.ClientVersion))
+	c.UI.Info(fmt.Sprintf("        Server Version: %s", c.debugIndex.ServerVersion))
 	c.UI.Info(fmt.Sprintf("              Duration: %s", c.flagDuration))
 	c.UI.Info(fmt.Sprintf("              Interval: %s", c.flagInterval))
 	c.UI.Info(fmt.Sprintf("      Metrics Interval: %s", c.flagMetricsInterval))
@@ -332,7 +349,7 @@ func (c *DebugCommand) generateIndex() error {
 
 		dir, file := filepath.Split(relPath)
 		if len(dir) != 0 {
-			dir = strings.TrimSuffix(dir, "/")
+			dir = filepath.Clean(dir)
 			filesArr := outputLayout[dir].(map[string]interface{})["files"]
 			outputLayout[dir].(map[string]interface{})["files"] = append(filesArr.([]string), file)
 		} else {
@@ -354,7 +371,7 @@ func (c *DebugCommand) generateIndex() error {
 	}
 
 	// Write out file
-	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "index.json"), bytes, 0o644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "index.json"), bytes, 0o600); err != nil {
 		return fmt.Errorf("error generating index file; %s", err)
 	}
 
@@ -408,8 +425,19 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to create client to connect to Vault: %s", err)
 	}
-	if _, err := client.Sys().Health(); err != nil {
+	serverHealth, err := client.Sys().Health()
+	if err != nil {
 		return "", fmt.Errorf("unable to connect to the server: %s", err)
+	}
+
+	// Check if server is DR Secondary and we need to further
+	// ignore any targets due to endpoint restrictions
+	if serverHealth.ReplicationDRMode == "secondary" {
+		invalidDRTargets := strutil.Difference(c.flagTargets, c.validDRSecondaryTargets(), true)
+		if len(invalidDRTargets) != 0 {
+			c.UI.Info(fmt.Sprintf("Ignoring invalid targets for DR Secondary: %s", strings.Join(invalidDRTargets, ", ")))
+			c.flagTargets = strutil.Difference(c.flagTargets, invalidDRTargets, true)
+		}
 	}
 	c.cachedClient = client
 
@@ -420,7 +448,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	}
 
 	// Strip trailing slash before proceeding
-	c.flagOutput = strings.TrimSuffix(c.flagOutput, "/")
+	c.flagOutput = filepath.Clean(c.flagOutput)
 
 	// If compression is enabled, trim the extension so that the files are
 	// written to a directory even if compression somehow fails. We ensure the
@@ -451,7 +479,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	_, err = os.Stat(c.flagOutput)
 	switch {
 	case os.IsNotExist(err):
-		err := os.MkdirAll(c.flagOutput, 0o755)
+		err := os.MkdirAll(c.flagOutput, 0o700)
 		if err != nil {
 			return "", fmt.Errorf("unable to create output directory: %s", err)
 		}
@@ -465,6 +493,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	c.debugIndex = &debugIndex{
 		VaultAddress:           client.Address(),
 		ClientVersion:          version.GetVersion().VersionNumber(),
+		ServerVersion:          serverHealth.Version,
 		Compress:               c.flagCompress,
 		DurationSeconds:        int(c.flagDuration.Seconds()),
 		IntervalSeconds:        int(c.flagInterval.Seconds()),
@@ -480,7 +509,11 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 }
 
 func (c *DebugCommand) defaultTargets() []string {
-	return []string{"config", "host", "metrics", "pprof", "replication-status", "server-status", "log"}
+	return []string{"config", "host", "requests", "metrics", "pprof", "replication-status", "server-status", "log"}
+}
+
+func (c *DebugCommand) validDRSecondaryTargets() []string {
+	return []string{"metrics", "replication-status", "server-status"}
 }
 
 func (c *DebugCommand) captureStaticTargets() error {
@@ -492,6 +525,7 @@ func (c *DebugCommand) captureStaticTargets() error {
 		if err != nil {
 			c.captureError("config", err)
 			c.logger.Error("config: error capturing config state", "error", err)
+			return nil
 		}
 
 		if resp != nil && resp.Data != nil {
@@ -580,6 +614,16 @@ func (c *DebugCommand) capturePollingTargets() error {
 		})
 	}
 
+	// Collect in-flight request status if target is specified
+	if strutil.StrListContains(c.flagTargets, "requests") {
+		g.Add(func() error {
+			c.collectInFlightRequestStatus(ctx)
+			return nil
+		}, func(error) {
+			cancelFunc()
+		})
+	}
+
 	if strutil.StrListContains(c.flagTargets, "log") {
 		g.Add(func() error {
 			c.writeLogs(ctx)
@@ -611,7 +655,9 @@ func (c *DebugCommand) capturePollingTargets() error {
 	if err := c.persistCollection(c.hostInfoCollection, "host_info.json"); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "host_info.json", err))
 	}
-
+	if err := c.persistCollection(c.inFlightReqStatusCollection, "requests.json"); err != nil {
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "requests.json", err))
+	}
 	return nil
 }
 
@@ -635,6 +681,7 @@ func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 		resp, err := c.cachedClient.RawRequestWithContext(ctx, r)
 		if err != nil {
 			c.captureError("host", err)
+			return
 		}
 		if resp != nil {
 			defer resp.Body.Close()
@@ -642,6 +689,7 @@ func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 			secret, err := api.ParseSecret(resp.Body)
 			if err != nil {
 				c.captureError("host", err)
+				return
 			}
 			if secret != nil && secret.Data != nil {
 				hostEntry := secret.Data
@@ -666,21 +714,6 @@ func (c *DebugCommand) collectMetrics(ctx context.Context) {
 
 		c.logger.Info("capturing metrics", "count", idxCount)
 		idxCount++
-
-		healthStatus, err := c.cachedClient.Sys().Health()
-		if err != nil {
-			c.captureError("metrics", err)
-			continue
-		}
-
-		// Check replication status. We skip on processing metrics if we're one
-		// a DR node, though non-perf standbys will fail if they aren't using
-		// unauthenticated_metrics_access.
-		switch {
-		case healthStatus.ReplicationDRMode == "secondary":
-			c.logger.Info("skipping metrics capture on DR secondary node")
-			continue
-		}
 
 		// Perform metrics request
 		r := c.cachedClient.NewRequest("GET", "/v1/sys/metrics")
@@ -724,7 +757,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 		// Create a sub-directory for pprof data
 		currentDir := currentTimestamp.Format(fileFriendlyTimeFormat)
 		dirName := filepath.Join(c.flagOutput, currentDir)
-		if err := os.MkdirAll(dirName, 0o755); err != nil {
+		if err := os.MkdirAll(dirName, 0o700); err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating sub-directory for time interval: %s", err))
 			continue
 		}
@@ -741,7 +774,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 					return
 				}
 
-				err = ioutil.WriteFile(filepath.Join(dirName, target+".prof"), data, 0o644)
+				err = ioutil.WriteFile(filepath.Join(dirName, target+".prof"), data, 0o600)
 				if err != nil {
 					c.captureError("pprof."+target, err)
 				}
@@ -759,7 +792,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "goroutines.txt"), data, 0o644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "goroutines.txt"), data, 0o600)
 			if err != nil {
 				c.captureError("pprof.goroutines-text", err)
 			}
@@ -783,7 +816,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "profile.prof"), data, 0o644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "profile.prof"), data, 0o600)
 			if err != nil {
 				c.captureError("pprof.profile", err)
 			}
@@ -799,7 +832,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "trace.out"), data, 0o644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "trace.out"), data, 0o600)
 			if err != nil {
 				c.captureError("pprof.trace", err)
 			}
@@ -829,6 +862,7 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 		resp, err := c.cachedClient.RawRequestWithContext(ctx, r)
 		if err != nil {
 			c.captureError("replication-status", err)
+			return
 		}
 		if resp != nil {
 			defer resp.Body.Close()
@@ -836,6 +870,7 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 			secret, err := api.ParseSecret(resp.Body)
 			if err != nil {
 				c.captureError("replication-status", err)
+				return
 			}
 			if secret != nil && secret.Data != nil {
 				replicationEntry := secret.Data
@@ -880,6 +915,47 @@ func (c *DebugCommand) collectServerStatus(ctx context.Context) {
 	}
 }
 
+func (c *DebugCommand) collectInFlightRequestStatus(ctx context.Context) {
+	idxCount := 0
+	intervalTicker := time.Tick(c.flagInterval)
+
+	for {
+		if idxCount > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-intervalTicker:
+			}
+		}
+
+		c.logger.Info("capturing in-flight request status", "count", idxCount)
+		idxCount++
+
+		req := c.cachedClient.NewRequest("GET", "/v1/sys/in-flight-req")
+		resp, err := c.cachedClient.RawRequestWithContext(ctx, req)
+		if err != nil {
+			c.captureError("requests", err)
+			return
+		}
+
+		var data map[string]interface{}
+		if resp != nil {
+			defer resp.Body.Close()
+			err = jsonutil.DecodeJSONFromReader(resp.Body, &data)
+			if err != nil {
+				c.captureError("requests", err)
+				return
+			}
+
+			statusEntry := map[string]interface{}{
+				"timestamp":          time.Now().UTC(),
+				"in_flight_requests": data,
+			}
+			c.inFlightReqStatusCollection = append(c.inFlightReqStatusCollection, statusEntry)
+		}
+	}
+}
+
 // persistCollection writes the collected data for a particular target onto the
 // specified file. If the collection is empty, it returns immediately.
 func (c *DebugCommand) persistCollection(collection []map[string]interface{}, outFile string) error {
@@ -892,7 +968,7 @@ func (c *DebugCommand) persistCollection(collection []map[string]interface{}, ou
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, outFile), bytes, 0o644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, outFile), bytes, 0o600); err != nil {
 		return err
 	}
 
@@ -900,6 +976,10 @@ func (c *DebugCommand) persistCollection(collection []map[string]interface{}, ou
 }
 
 func (c *DebugCommand) compress(dst string) error {
+	if runtime.GOOS != "windows" {
+		defer osutil.Umask(osutil.Umask(0o077))
+	}
+
 	tgz := archiver.NewTarGz()
 	if err := tgz.Archive([]string{c.flagOutput}, dst); err != nil {
 		return fmt.Errorf("failed to compress data: %s", err)
@@ -984,14 +1064,25 @@ func (c *DebugCommand) captureError(target string, err error) {
 }
 
 func (c *DebugCommand) writeLogs(ctx context.Context) {
-	out, err := os.Create(filepath.Join(c.flagOutput, "vault.log"))
+	out, err := os.OpenFile(filepath.Join(c.flagOutput, "vault.log"), os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		c.captureError("log", err)
 		return
 	}
 	defer out.Close()
 
-	logCh, err := c.cachedClient.Sys().Monitor(ctx, "trace")
+	// Create Monitor specific client based on the cached client
+	mClient, err := c.cachedClient.Clone()
+	if err != nil {
+		c.captureError("log", err)
+		return
+	}
+	mClient.SetToken(c.cachedClient.Token())
+
+	// Set timeout to match the context explicitly
+	mClient.SetClientTimeout(c.flagDuration + debugDurationGrace)
+
+	logCh, err := mClient.Sys().Monitor(ctx, "trace", c.logFormat)
 	if err != nil {
 		c.captureError("log", err)
 		return
@@ -1000,10 +1091,15 @@ func (c *DebugCommand) writeLogs(ctx context.Context) {
 	for {
 		select {
 		case log := <-logCh:
-			_, err = out.WriteString(log)
-			if err != nil {
-				c.captureError("log", err)
-				return
+			if len(log) > 0 {
+				if !strings.HasSuffix(log, "\n") {
+					log += "\n"
+				}
+				_, err = out.WriteString(log)
+				if err != nil {
+					c.captureError("log", err)
+					return
+				}
 			}
 		case <-ctx.Done():
 			return

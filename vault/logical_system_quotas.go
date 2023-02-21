@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"time"
 
@@ -34,9 +35,33 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleQuotasConfigUpdate(),
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleQuotasConfigRead(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"enable_rate_limit_audit_logging": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"enable_rate_limit_response_headers": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"rate_limit_exempt_paths": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(quotasHelp["quotas-config"][0]),
@@ -47,6 +72,17 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasList(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(quotasHelp["rate-limit-list"][0]),
@@ -69,6 +105,11 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 global quota. For example namespace1/ adds a quota to a full namespace,
 namespace1/auth/userpass adds a quota to userpass in namespace1.`,
 				},
+				"role": {
+					Type: framework.TypeString,
+					Description: `Login role to apply this quota to. Note that when set, path must be configured
+to a valid auth method with a concept of roles.`,
+				},
 				"rate": {
 					Type: framework.TypeFloat,
 					Description: `The maximum number of requests in a given interval to be allowed by the quota rule.
@@ -87,12 +128,57 @@ from any further requests until after the 'block_interval' has elapsed.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasUpdate(),
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: http.StatusText(http.StatusNoContent),
+						}},
+					},
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasRead(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"type": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"name": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"path": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"role": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"rate": {
+									Type:     framework.TypeFloat,
+									Required: true,
+								},
+								"interval": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"block_interval": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasDelete(),
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(quotasHelp["rate-limit"][0]),
@@ -186,15 +272,41 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			mountPath = strings.TrimPrefix(mountPath, ns.Path)
 		}
 
+		var pathSuffix string
 		if mountPath != "" {
-			match := b.Core.router.MatchingMount(namespace.ContextWithNamespace(ctx, ns), mountPath)
-			if match == "" {
+			me := b.Core.router.MatchingMountEntry(namespace.ContextWithNamespace(ctx, ns), mountPath)
+			if me == nil {
 				return logical.ErrorResponse("invalid mount path %q", mountPath), nil
 			}
+
+			mountAPIPath := me.APIPathNoNamespace()
+			pathSuffix = strings.TrimSuffix(strings.TrimPrefix(mountPath, mountAPIPath), "/")
+			mountPath = mountAPIPath
 		}
+
+		role := d.Get("role").(string)
+		// If this is a quota with a role, ensure the backend supports role resolution
+		if role != "" {
+			if pathSuffix != "" {
+				return logical.ErrorResponse("Quotas cannot contain both a path suffix and a role. If a role is provided, path must be a valid auth mount with a concept of roles"), nil
+			}
+			authBackend := b.Core.router.MatchingBackend(namespace.ContextWithNamespace(ctx, ns), mountPath)
+			if authBackend == nil || authBackend.Type() != logical.TypeCredential {
+				return logical.ErrorResponse("Mount path %q is not a valid auth method and therefore unsuitable for use with role-based quotas", mountPath), nil
+			}
+			// We will always error as we aren't supplying real data, but we're looking for "unsupported operation" in particular
+			_, err := authBackend.HandleRequest(ctx, &logical.Request{
+				Path:      "login",
+				Operation: logical.ResolveRoleOperation,
+			})
+			if err != nil && (err == logical.ErrUnsupportedOperation || err == logical.ErrUnsupportedPath) {
+				return logical.ErrorResponse("Mount path %q does not support use with role-based quotas", mountPath), nil
+			}
+		}
+
 		// Disallow creation of new quota that has properties similar to an
 		// existing quota.
-		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath)
+		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath, pathSuffix, role)
 		if err != nil {
 			return nil, err
 		}
@@ -210,14 +322,15 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval, blockInterval)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, role, rate, interval, blockInterval)
 		default:
-			rlq := quota.(*quotas.RateLimitQuota)
 			// Re-inserting the already indexed object in memdb might cause problems.
 			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.
-			rlq = rlq.Clone()
+			clonedQuota := quota.Clone()
+			rlq := clonedQuota.(*quotas.RateLimitQuota)
 			rlq.NamespacePath = ns.Path
 			rlq.MountPath = mountPath
+			rlq.PathSuffix = pathSuffix
 			rlq.Rate = rate
 			rlq.Interval = interval
 			rlq.BlockInterval = blockInterval
@@ -264,7 +377,8 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 		data := map[string]interface{}{
 			"type":           qType,
 			"name":           rlq.Name,
-			"path":           nsPath + rlq.MountPath,
+			"path":           nsPath + rlq.MountPath + rlq.PathSuffix,
+			"role":           rlq.Role,
 			"rate":           rlq.Rate,
 			"interval":       int(rlq.Interval.Seconds()),
 			"block_interval": int(rlq.BlockInterval.Seconds()),

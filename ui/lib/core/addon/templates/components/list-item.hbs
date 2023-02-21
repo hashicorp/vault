@@ -1,16 +1,28 @@
-{{#if componentName}}
-  {{component componentName item=item}}
-{{else if linkParams}}
-  <LinkedBlock @params={{linkParams}} @linkPrefix={{@linkPrefix}} @class="list-item-row" data-test-list-item-link>
+{{#if this.componentName}}
+  {{component this.componentName item=this.item}}
+{{else if this.linkParams}}
+  <LinkedBlock
+    @params={{this.linkParams}}
+    @queryParams={{@queryParams}}
+    @linkPrefix={{@linkPrefix}}
+    class="list-item-row"
+    data-test-list-item-link
+  >
     <div class="level is-mobile">
       <div class="level-left is-flex-1" data-test-list-item-content>
-        {{#link-to params=linkParams class="has-text-weight-semibold has-text-black is-display-flex is-flex-1 is-no-underline"}}
+        <LinkTo
+          @route={{this.link.route}}
+          @models={{this.link.models}}
+          class="has-text-weight-semibold has-text-black is-display-flex is-flex-1 is-no-underline"
+        >
           {{yield (hash content=(component "list-item/content"))}}
-        {{/link-to}}
-    </div>
+        </LinkTo>
+      </div>
       <div class="level-right">
         <div class="level-item" data-test-list-item-popup>
-          {{yield (hash callMethod=callMethod menu=(component "list-item/popup-menu" item=item hasMenu=hasMenu))}}
+          {{yield
+            (hash callMethod=this.callMethod menu=(component "list-item/popup-menu" item=this.item hasMenu=this.hasMenu))
+          }}
         </div>
       </div>
     </div>
@@ -23,10 +35,11 @@
       </div>
       <div class="level-right">
         <div class="level-item" data-test-list-item-popup>
-            {{yield (hash callMethod=callMethod menu=(component "list-item/popup-menu" item=item hasMenu=hasMenu))}}
+          {{yield
+            (hash callMethod=this.callMethod menu=(component "list-item/popup-menu" item=this.item hasMenu=this.hasMenu))
+          }}
         </div>
       </div>
     </div>
   </div>
 {{/if}}
-

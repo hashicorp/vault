@@ -1,10 +1,13 @@
 <PopupMenu @name="alias-menu">
   <Confirm as |c|>
-    {{#with params.firstObject as |item|}}
+    {{#let this.params.firstObject as |item|}}
       <nav class="menu">
         <ul class="menu-list">
           <li class="action">
-            <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array (pluralize item.parentType) item.id "details"}}>
+            <LinkTo
+              @route="vault.cluster.access.identity.aliases.show"
+              @models={{array (pluralize item.parentType) item.id "details"}}
+            >
               Details
             </LinkTo>
           </li>
@@ -17,23 +20,22 @@
           {{else}}
             {{#if item.canEdit}}
               <li class="action">
-                <LinkTo @route="vault.cluster.access.identity.aliases.edit" @models={{array (pluralize item.parentType) item.id}}>
+                <LinkTo
+                  @route="vault.cluster.access.identity.aliases.edit"
+                  @models={{array (pluralize item.parentType) item.id}}
+                >
                   Edit
                 </LinkTo>
               </li>
             {{/if}}
             {{#if item.canDelete}}
               <li class="action">
-                <c.Message
-                  @id={{item.id}}
-                  @onConfirm={{action "performTransaction" item}}
-                  data-test-item-delete
-                  />
+                <c.Message @id={{item.id}} @onConfirm={{action "performTransaction" item}} data-test-item-delete />
               </li>
             {{/if}}
           {{/if}}
         </ul>
       </nav>
-    {{/with}}
+    {{/let}}
   </Confirm>
 </PopupMenu>

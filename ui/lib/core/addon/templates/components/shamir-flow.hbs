@@ -1,56 +1,65 @@
-{{#if encoded_token}}
+{{#if this.encoded_token}}
   <div class="box is-marginless is-shadowless">
     <div class="message is-list has-copy-button" tabindex="-1">
-      <HoverCopyButton @copyValue={{encoded_token}} />
+      <HoverCopyButton @copyValue={{this.encoded_token}} />
       <div class="message-body">
         <h4 class="title is-7 is-marginless">
           Encoded Operation Token
         </h4>
-        <code class="is-word-break">{{encoded_token}}</code>
+        <code class="is-word-break">{{this.encoded_token}}</code>
       </div>
     </div>
-    {{#if otp}}
+    {{#if this.otp}}
       <div class="message is-list has-copy-button" tabindex="-1">
-        <HoverCopyButton @copyValue={{otp}} />
+        <HoverCopyButton @copyValue={{this.otp}} />
         <div class="message-body">
           <h4 class="title is-7 is-marginless">
             One Time Password (otp)
           </h4>
-          <code class="is-word-break">{{otp}}</code>
+          <code class="is-word-break">{{this.otp}}</code>
         </div>
       </div>
     {{/if}}
-      <div class="message is-list has-copy-button" tabindex="-1">
-        {{#let (if otp
-          (concat 'vault operator generate-root -otp="' otp '" -decode="' encoded_token '"') (concat 'vault operator generate-root -otp="<enter your otp here>" -decode="' encoded_token '"') ) as |cmd|}}
-          <HoverCopyButton @copyValue={{cmd}} />
-          <div class="message-body">
-            <h4 class="title is-7 is-marginless">
-              DR Operation Token Command
-            </h4>
-            <code class="is-word-break">{{cmd}}</code>
-          </div>
-        {{/let}}
-      </div>
+    <div class="message is-list has-copy-button" tabindex="-1">
+      {{! template-lint-disable quotes }}
+      {{#let
+        (if
+          this.otp
+          (concat 'vault operator generate-root -otp="' this.otp '" -decode="' this.encoded_token '"')
+          (concat 'vault operator generate-root -otp="<enter your otp here>" -decode="' this.encoded_token '"')
+        )
+        as |cmd|
+      }}
+        <HoverCopyButton @copyValue={{cmd}} />
+        <div class="message-body">
+          <h4 class="title is-7 is-marginless">
+            DR Operation Token Command
+          </h4>
+          <code class="is-word-break">{{cmd}}</code>
+        </div>
+      {{/let}}
+      {{! template-lint-enable quotes }}
+    </div>
   </div>
   <div class="box is-marginless is-shadowless">
-    <button type="button" class="button" {{action 'reset'}}>
+    <button type="button" class="button" {{action "reset"}}>
       Clear Token
     </button>
   </div>
-{{else if (and generateAction (not started))}}
-  <form {{action 'startGenerate' (hash pgp_key=pgp_key) on="submit"}} id="shamir">
-    {{message-error errors=errors}}
-    {{#if (eq generateStep 'chooseMethod')}}
+{{else if (and this.generateAction (not this.started))}}
+  <form {{action "startGenerate" (hash pgp_key=this.pgp_key) on="submit"}} id="shamir" aria-label="shamir generate form">
+    <MessageError @errors={{this.errors}} />
+    {{#if (eq this.generateStep "chooseMethod")}}
       <div class="box is-marginless is-shadowless">
         <p>
-        Updating or promoting this cluster requires an operation token. Let's generate one by
-        inputting the master key shares. If you'd like to encrypt the token with a PGP Key, please click "Provide PGP Key" below, otherwise we can begin generation of the Operation Token.
+          Updating or promoting this cluster requires an operation token. Let's generate one by inputting the root key
+          shares. If you'd like to encrypt the token with a PGP Key, please click "Provide PGP Key" below, otherwise we can
+          begin generation of the Operation Token.
         </p>
       </div>
       <div class="box is-shadowless field is-grouped is-grouped-centered">
         <div class="control">
-          <button type="button" class="button is-primary" {{action (mut generateWithPGP) true}}>
+          <button type="button" class="button is-primary" {{action (mut this.generateWithPGP) true}}>
             Provide PGP Key
           </button>
         </div>
@@ -66,13 +75,13 @@
         </div>
       </div>
     {{/if}}
-    {{#if (eq generateStep 'providePGPKey')}}
+    {{#if (eq this.generateStep "providePGPKey")}}
       <div class="box is-marginless is-shadowless">
         <p>
-          Choose a PGP Key from your computer or paste the contents of one in the form below.
-          This key will be used to Encrypt the generated Operation Token.
+          Choose a PGP Key from your computer or paste the contents of one in the form below. This key will be used to
+          Encrypt the generated Operation Token.
         </p>
-        {{pgp-file index='' key=pgpKeyFile onChange=(action 'setKey')}}
+        <PgpFile @index="" @key={{this.pgpKeyFile}} @onChange={{action "setKey"}} />
       </div>
       <div class="field is-grouped box is-marginless is-shadowless">
         <div class="control">
@@ -81,25 +90,26 @@
           </button>
         </div>
         <div class="control">
-          <button type="button" disabled={{not pgp_key}} class="button is-primary" {{action "savePGPKey"}}>
+          <button type="button" disabled={{not this.pgp_key}} class="button is-primary" {{action "savePGPKey"}}>
             Use PGP Key
           </button>
         </div>
       </div>
     {{/if}}
-    {{#if (eq generateStep 'beginGenerationWithPGP')}}
+    {{#if (eq this.generateStep "beginGenerationWithPGP")}}
       <div class="box is-marginless is-shadowless">
         <p>
-          Below is the base-64 encoded PGP Key that will be used to encrypt the generated Operation Token.
-          Next we'll enter portions of the master key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
+          Below is the base-64 encoded PGP Key that will be used to encrypt the generated Operation Token. Next we'll enter
+          portions of the root key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
         </p>
         <div class="message is-list has-copy-button" tabindex="-1">
-          <HoverCopyButton @copyValue={{pgp_key}} />
+          <HoverCopyButton @copyValue={{this.pgp_key}} />
           <div class="message-body">
             <h4 class="title is-7 is-marginless">
-              PGP Key {{pgpKeyFile.fileName}}
+              PGP Key
+              {{this.pgpKeyFile.filename}}
             </h4>
-            <code class="is-word-break">{{pgp_key}}</code>
+            <code class="is-word-break">{{this.pgp_key}}</code>
           </div>
         </div>
       </div>
@@ -110,7 +120,7 @@
           </button>
         </div>
         <div class="control">
-          <button type="submit" disabled={{and (not pgp_key)}} class="button is-primary">
+          <button type="submit" disabled={{and (not this.pgp_key)}} class="button is-primary">
             Generate Operation Token
           </button>
         </div>
@@ -118,32 +128,35 @@
     {{/if}}
   </form>
 {{else}}
-  <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
+  <form {{action "onSubmit" (hash key=this.key) on="submit"}} id="shamir" aria-label="shamir form">
     <div class="box is-shadowless">
-      {{#if errors}}
+      {{#if this.errors}}
         <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">
-          {{message-error errors=errors}}
+          <MessageError @errors={{this.errors}} />
         </div>
       {{/if}}
       <div class="box is-shadowless is-marginless no-padding-top is-fullwidth" data-test-form-text>
-        {{#if otp}}
+        {{#if this.otp}}
           <p>
-            <AlertBanner @type="info" @message="Below is the generated OTP. This will be used to encode the generated Operation Token. Make sure to save this, as you will need it later to decode the Operation Token." />
+            <AlertBanner
+              @type="info"
+              @message="Below is the generated OTP. This will be used to encode the generated Operation Token. Make sure to save this, as you will need it later to decode the Operation Token."
+            />
           </p>
           <div class="message is-list has-copy-button" tabindex="-1">
-            <HoverCopyButton @copyValue={{otp}} />
+            <HoverCopyButton @copyValue={{this.otp}} />
             <div class="message-body">
               <h4 class="title is-7 is-marginless">
                 One Time Password (otp)
               </h4>
-              <code class="is-word-break">{{otp}}</code>
+              <code class="is-word-break">{{this.otp}}</code>
             </div>
           </div>
         {{/if}}
         {{#if (has-block)}}
           {{yield}}
-        {{else if formText}}
-          {{formText}}
+        {{else if this.formText}}
+          {{this.formText}}
         {{/if}}
       </div>
       <div class="field">
@@ -151,28 +164,20 @@
           Unseal Key Portion
         </label>
         <div class="control">
-          {{input class="input"type="password" name="key" value=key data-test-shamir-input=true}}
+          <Input class="input" @type="password" name="key" @value={{this.key}} data-test-shamir-input={{true}} />
         </div>
       </div>
     </div>
     <div class="box is-marginless is-shadowless">
       <div class="columns is-mobile">
         <div class="column is-narrow">
-          <button
-            type="submit"
-            class="button is-primary"
-            disabled={{loading}}
-            data-test-shamir-submit=true
-          >
-            {{if generateAction "Generate Token" buttonText}}
+          <button type="submit" class="button is-primary" disabled={{this.loading}} data-test-shamir-submit={{true}}>
+            {{if this.generateAction "Generate Token" this.buttonText}}
           </button>
         </div>
         <div class="column is-flex-v-centered is-flex-end">
-          {{#if (or started hasProgress)}}
-            <ShamirProgress
-              @threshold={{threshold}}
-              @progress={{progress}}
-            />
+          {{#if (or this.started this.hasProgress)}}
+            <ShamirProgress @threshold={{this.threshold}} @progress={{this.progress}} />
           {{/if}}
         </div>
       </div>

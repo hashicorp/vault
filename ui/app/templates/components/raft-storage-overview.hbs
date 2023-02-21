@@ -5,88 +5,81 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-  <Toolbar>
-    <ToolbarActions>
-      <BasicDropdown
-        @class="popup-menu"
-        @horizontalPosition="auto-right"
-        @verticalPosition="below"
-        as |D|
+<Toolbar>
+  <ToolbarActions>
+    <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+      <D.Trigger
+        data-test-popup-menu-trigger="true"
+        class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+        @htmlTag="button"
       >
-        <D.trigger
-          data-test-popup-menu-trigger="true"
-          @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-          @tagName="button"
-        >
-          Snapshots
-          <Chevron @direction="down" @isButton={{true}} />
-        </D.trigger>
-        <D.content @class="popup-menu-content">
-          <nav class="box menu">
-            <ul class="menu-list">
-              <li class="action">
-                {{#if this.useServiceWorker}}
-                <a href="/v1/sys/storage/raft/snapshot" onclick={{queue (action "downloadViaServiceWorker") (action D.actions.close)}}>
-                    Download
-                  </a>
-                {{else}}
-                  <button type="button" class="link is-ghost" onclick={{queue (action "downloadSnapshot") (action D.actions.close)}}>
-                    Download
+        Snapshots
+        <Chevron @direction="down" @isButton={{true}} />
+      </D.Trigger>
+      <D.Content @defaultClass="popup-menu-content">
+        <nav class="box menu" aria-label="snapshots actions">
+          <ul class="menu-list">
+            <li class="action">
+              {{#if this.useServiceWorker}}
+                <ExternalLink
+                  @href="/v1/sys/storage/raft/snapshot"
+                  @sameTab={{true}}
+                  onclick={{queue (action "downloadViaServiceWorker") (action D.actions.close)}}
+                >
+                  Download
+                </ExternalLink>
+              {{else}}
+                <button
+                  type="button"
+                  class="link is-ghost"
+                  onclick={{queue (action "downloadSnapshot") (action D.actions.close)}}
+                >
+                  Download
                 </button>
-                {{/if}}
-              </li>
-              <li class="action">
-                <LinkTo @route="vault.cluster.storage-restore">
-                  Restore
-                </LinkTo>
-              </li>
-            </ul>
-          </nav>
-        </D.content>
-      </BasicDropdown>
-    </ToolbarActions>
-  </Toolbar>
+              {{/if}}
+            </li>
+            <li class="action">
+              <LinkTo @route="vault.cluster.storage-restore">
+                Restore
+              </LinkTo>
+            </li>
+          </ul>
+        </nav>
+      </D.Content>
+    </BasicDropdown>
+  </ToolbarActions>
+</Toolbar>
 
-  <table class="vlt-table is-fullwidth">
-    <caption class="is-collapsed">Raft servers</caption>
-    <thead class="has-text-weight-semibold">
-      <tr>
-        <th scope="col">Address</th>
-        <th scope="col">Voter</th>
-        <th scope="col"></th>
-      </tr>
-    </thead>
-    <tbody>
-      {{#each @model as |server|}}
-        <tr data-raft-row>
-          <td>
-            {{server.address}}
-            {{#if server.leader}}
+<table class="vlt-table is-fullwidth">
+  <caption class="is-collapsed">Raft servers</caption>
+  <thead class="has-text-weight-semibold">
+    <tr>
+      <th scope="col">Address</th>
+      <th scope="col">Voter</th>
+      <th scope="col"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each @model as |server|}}
+      <tr data-raft-row>
+        <td>
+          {{server.address}}
+          {{#if server.leader}}
             <span class="tag">Leader</span>
-            {{/if}}
-          </td>
-          <td>
+          {{/if}}
+        </td>
+        <td>
 
-      {{#if server.voter}}
-        <Icon
-          aria-label="Yes"
-          class="icon-true has-text-success"
-          @size="l"
-          @glyph="check-circle-outline"
-        />
-      {{else}}
-        <Icon
-          aria-label="No"
-          class="icon-false"
-          @size="l"
-          @glyph="cancel-square-outline"
-        />
-      {{/if}}
-            </td>
-          <td class="middle no-padding has-text-right">
-            <PopupMenu>
-              <Confirm as |c|>
-              <nav>
+          {{#if server.voter}}
+            <Icon @name="check-circle" aria-label="Yes" class="icon-true has-text-success" />
+          {{else}}
+            <Icon @name="x-square" aria-label="No" class="icon-false" />
+          {{/if}}
+        </td>
+        <td class="middle no-padding has-text-right">
+          <PopupMenu>
+            <Confirm as |c|>
+              <nav aria-label="remove peer">
                 <ul>
                   <li class="action">
                     <c.Message
@@ -100,10 +93,10 @@
                   </li>
                 </ul>
               </nav>
-              </Confirm>
-            </PopupMenu>
-          </td>
-        </tr>
-      {{/each}}
-    </tbody>
-  </table>
+            </Confirm>
+          </PopupMenu>
+        </td>
+      </tr>
+    {{/each}}
+  </tbody>
+</table>

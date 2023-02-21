@@ -1,0 +1,62 @@
+---
+layout: docs
+page_title: 1.8.0
+description: |-
+  This page contains release notes for Vault 1.8.0.
+---
+
+# Vault 1.8.0
+
+## Vault 1.8 Release Highlights
+
+**Licensing Changes:** There are a few key licensing changes that are introduced with 1.8:
+
+- Autoloading of licenses which simplifies the license installation workflow via the ability to load a license from an environment variable or from the disk
+- The need for a valid license for Vault to successfully boot-up for EULA compliance.
+- The license can be in-storage (as is the case prior to 1.8), providing a seamless experience when existing clusters are upgraded to 1.8. Support for in-storage licenses will be removed in a future release, and so it is recommended that customers migrate to autoloaded licenses.
+- For new cluster deployments, licenses must be autoloaded.
+- Support for license-free trial period for Enterprise binaries (30 min/6h) has been removed, and a default 1-day grace time for eval licenses has now been introduced.
+
+**Vault Diagnose:** A new `vault operator diagnose` command enables faster troubleshooting and user-friendly diagnostics in situations when Vault is not starting.
+
+### Secrets Engine Enhancements
+
+- **Key Management Secrets Engine (Enterprise ADP-KM Module Only)**: Key Management Secrets Engine that was released as generally available for Azure in Vault 1.7, is now generally available for AWS.
+- **UI for the Database Secrets Engine:** Expansion of the UI for the database secrets engine, allowing for users to interact with MSSQL and MySQL database engines via the Vault UI.
+- **GCP Static Accounts:** The GCP secrets engine now has the ability to use existing service accounts for generation of service account keys and access tokens.
+- **Username templating:** With Vault 1.8 users have the ability to customize usernames for the snowflake, redshift, elasticsearch, influxdb, rabbitmq and mongodb atlas database engines.
+- **Active Directory:** Vault now has the ability to manually rotate a credential for an account being managed via the AD secrets engine.
+
+### Other Enhancements
+
+- **ServiceNow Credential Resolver:** Vault can now act as an external credential store for the ServiceNow MID servers when using a ServiceNow workflow for service discovery
+- **RedHat certified helm charts:** Vault’s Kubernetes Helm charts are now certified by RedHat!
+- **Integrated Storage Autopilot:** Autopilot capabilities to monitor and manage clusters are now supported with DR.
+- **SSH Secrets Engine identity template support:** When configuring a role for the SSH Secrets Engine, users may now specify Vault identity templates in the _default_extensions_ field. This allows Vault to conform to the required identity semantics for services such as GitHub Enterprise when functioning as an SSH CA.
+
+- **Expiration manager improvements**
+
+  - Fair-sharing logic to help with lease revocations
+  - The ability to mark some leases as irrevocable
+  - The addition of an HTTP API and a CLI for operators to obtain information about irrevocable leases, to be able to tidy them
+
+- **Vault Agent Enhancements:** The following Vault Agent enhancements have been added to 1.8 to improve the operational experience.
+
+  - **Infinite Retry:** This release reintroduces the default behavior of agent template indefinitely retrying and not exit on failures.
+  - **Configurable timeout for non-renewable secrets:** Agent template now has the ability to configure how often to fetch non-renewable secrets (from the default 5m)
+  - **Update Agent Auth with GCP to use new SignJWT endpoint:** This enhancement should benefit GCP customers who want to use the Vault Agent to authenticate using GCP’s IAM Service Account Credentials for signing JWTs.
+
+- **Control Group triggers:** This enhancement provides flexibility to customers to apply control groups to only certain permissions in a path. Vault now supports a new parameter called controlled_capabilities in the control_group stanza factors. This is a list of permissions, which when invoked will result in the control group workflow only being triggered if the operation that initiated the request is included in the list.
+- **Password policies in namespaces:** Vault now supports setting up password policies in namespaces
+- **Obscuring secret Values in the UI:** Vault now provides the ability to mask secrets on entry - whether they be KV secrets or certificates - anywhere secrets are entered in the UI.
+
+### Deprecations:
+
+The following API endpoints have been deprecated and will be removed in a future release:
+
+- `POST sys/license` to store licenses in storage; it is recommended to use
+  [License Autoloading](/vault/docs/enterprise/license/autoloading) instead.
+
+- `/gcp/token/:roleset` and `/gcp/key/:roleset` paths for generating secrets for rolesets
+
+For more detailed information, please refer to the [Changelog](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md).

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -44,7 +45,7 @@ func getBackend(t *testing.T) logical.Backend {
 	return be
 }
 
-func TestBackend_basic(t *testing.T) {
+func TestAcceptanceBackend_basic(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -58,7 +59,7 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
-func TestBackend_IamUserWithPermissionsBoundary(t *testing.T) {
+func TestAcceptanceBackend_IamUserWithPermissionsBoundary(t *testing.T) {
 	t.Parallel()
 	roleData := map[string]interface{}{
 		"credential_type":          iamUserCred,
@@ -77,15 +78,15 @@ func TestBackend_IamUserWithPermissionsBoundary(t *testing.T) {
 	})
 }
 
-func TestBackend_basicSTS(t *testing.T) {
+func TestAcceptanceBackend_basicSTS(t *testing.T) {
 	t.Parallel()
 	awsAccountID, err := getAccountID()
 	if err != nil {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
-	roleName := generateUniqueName(t.Name())
-	userName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
+	userName := generateUniqueUserName(t.Name())
 	accessKey := &awsAccessKey{}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -126,7 +127,7 @@ func TestBackend_policyCrud(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
+		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
@@ -195,12 +196,33 @@ func TestBackend_throttled(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
+	if !hasAWSCredentials() {
+		t.Skip("Skipping because AWS credentials could not be resolved. See https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials for information on how to set up AWS credentials.")
+	}
+
 	initSetup.Do(func() {
 		if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
 			log.Println("[INFO] Test: Using us-west-2 as test region")
 			os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 		}
 	})
+}
+
+func hasAWSCredentials() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return false
+	}
+
+	creds, err := cfg.Credentials.Retrieve(ctx)
+	if err != nil {
+		return false
+	}
+
+	return creds.HasKeys()
 }
 
 func getAccountID() (string, error) {
@@ -235,8 +257,11 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
               "Principal": {
                   "AWS": "arn:aws:iam::%s:root"
               },
-              "Action": "sts:AssumeRole"
-           }
+              "Action": [
+                  "sts:AssumeRole",
+                  "sts:SetSourceIdentity"
+              ]
+          }
       ]
 }
 `
@@ -655,19 +680,26 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 	}
 }
 
-func testAccStepReadTTL(name string, maximumTTL time.Duration) logicaltest.TestStep {
+func testAccStepReadSTSResponse(name string, maximumTTL uint64) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
 		Check: func(resp *logical.Response) error {
-			if resp.Secret == nil {
-				return fmt.Errorf("bad: nil Secret returned")
+			if resp.Secret != nil {
+				return fmt.Errorf("bad: STS tokens should return a nil secret, received: %+v", resp.Secret)
 			}
-			ttl := resp.Secret.TTL
-			if ttl > maximumTTL {
-				return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl/time.Second, maximumTTL/time.Second)
+
+			if ttl, exists := resp.Data["ttl"]; exists {
+				ttlVal := ttl.(uint64)
+
+				if ttlVal > maximumTTL {
+					return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl, maximumTTL)
+				}
+
+				return nil
 			}
-			return nil
+
+			return fmt.Errorf("response data missing ttl, received: %+v", resp.Data)
 		},
 	}
 }
@@ -871,6 +903,7 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				"user_path":                "",
 				"permissions_boundary_arn": "",
 				"iam_groups":               []string(nil),
+				"iam_tags":                 map[string]string(nil),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -955,7 +988,7 @@ func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logical
 	}
 }
 
-func TestBackend_basicPolicyArnRef(t *testing.T) {
+func TestAcceptanceBackend_basicPolicyArnRef(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -969,13 +1002,13 @@ func TestBackend_basicPolicyArnRef(t *testing.T) {
 	})
 }
 
-func TestBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
+func TestAcceptanceBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 	t.Parallel()
 	compacted, err := compactJSON(testDynamoPolicy)
 	if err != nil {
 		t.Fatalf("bad: %#v", err)
 	}
-	groupName := generateUniqueName(t.Name())
+	groupName := generateUniqueGroupName(t.Name())
 	roleData := map[string]interface{}{
 		"policy_document": testDynamoPolicy,
 		"policy_arns":     []string{ec2PolicyArn, iamPolicyArn},
@@ -993,6 +1026,7 @@ func TestBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 		"user_path":                "/path/",
 		"permissions_boundary_arn": "",
 		"iam_groups":               []string{groupName},
+		"iam_tags":                 map[string]string(nil),
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1017,10 +1051,10 @@ func TestBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 
 // Similar to TestBackend_iamUserManagedInlinePoliciesGroups() but managing
 // policies only with groups
-func TestBackend_iamUserGroups(t *testing.T) {
+func TestAcceptanceBackend_iamUserGroups(t *testing.T) {
 	t.Parallel()
-	group1Name := generateUniqueName(t.Name())
-	group2Name := generateUniqueName(t.Name())
+	group1Name := generateUniqueGroupName(t.Name())
+	group2Name := generateUniqueGroupName(t.Name())
 	roleData := map[string]interface{}{
 		"iam_groups":      []string{group1Name, group2Name},
 		"credential_type": iamUserCred,
@@ -1036,6 +1070,7 @@ func TestBackend_iamUserGroups(t *testing.T) {
 		"user_path":                "/path/",
 		"permissions_boundary_arn": "",
 		"iam_groups":               []string{group1Name, group2Name},
+		"iam_tags":                 map[string]string(nil),
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1062,9 +1097,9 @@ func TestBackend_iamUserGroups(t *testing.T) {
 	})
 }
 
-func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
+func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
 	// This looks a bit curious. The policy document and the role document act
 	// as a logical intersection of policies. The role allows ec2:Describe*
 	// (among other permissions). This policy allows everything BUT
@@ -1113,9 +1148,9 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	})
 }
 
-func TestBackend_AssumedRoleWithPolicyARN(t *testing.T) {
+func TestAcceptanceBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
 
 	awsAccountID, err := getAccountID()
 	if err != nil {
@@ -1148,10 +1183,10 @@ func TestBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 	})
 }
 
-func TestBackend_AssumedRoleWithGroups(t *testing.T) {
+func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
-	groupName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
+	groupName := generateUniqueGroupName(t.Name())
 	// This looks a bit curious. The policy document and the role document act
 	// as a logical intersection of policies. The role allows ec2:Describe*
 	// (among other permissions). This policy allows everything BUT
@@ -1205,9 +1240,9 @@ func TestBackend_AssumedRoleWithGroups(t *testing.T) {
 	})
 }
 
-func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
+func TestAcceptanceBackend_FederationTokenWithPolicyARN(t *testing.T) {
 	t.Parallel()
-	userName := generateUniqueName(t.Name())
+	userName := generateUniqueUserName(t.Name())
 	accessKey := &awsAccessKey{}
 
 	roleData := map[string]interface{}{
@@ -1236,10 +1271,10 @@ func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
 	})
 }
 
-func TestBackend_FederationTokenWithGroups(t *testing.T) {
+func TestAcceptanceBackend_FederationTokenWithGroups(t *testing.T) {
 	t.Parallel()
-	userName := generateUniqueName(t.Name())
-	groupName := generateUniqueName(t.Name())
+	userName := generateUniqueUserName(t.Name())
+	groupName := generateUniqueGroupName(t.Name())
 	accessKey := &awsAccessKey{}
 
 	// IAM policy where Statement is a single element, not a list
@@ -1286,9 +1321,9 @@ func TestBackend_FederationTokenWithGroups(t *testing.T) {
 	})
 }
 
-func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
+func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
 	minAwsAssumeRoleDuration := 900
 	awsAccountID, err := getAccountID()
 	if err != nil {
@@ -1313,7 +1348,7 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
-			testAccStepReadTTL("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
+			testAccStepReadSTSResponse("test", uint64(minAwsAssumeRoleDuration)), // allow a little slack
 		},
 		Teardown: func() error {
 			return deleteTestRole(roleName)
@@ -1324,7 +1359,7 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 func TestBackend_policyArnCrud(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
+		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
@@ -1359,6 +1394,7 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				"user_path":                "",
 				"permissions_boundary_arn": "",
 				"iam_groups":               []string(nil),
+				"iam_tags":                 map[string]string(nil),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1382,7 +1418,7 @@ func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAcc
 func TestBackend_iamGroupsCrud(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
+		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
@@ -1428,6 +1464,7 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 				"user_path":                "",
 				"permissions_boundary_arn": "",
 				"iam_groups":               groups,
+				"iam_tags":                 map[string]string(nil),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1440,7 +1477,7 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 
 func TestBackend_iamTagsCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
+		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
@@ -1497,8 +1534,24 @@ func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) l
 	}
 }
 
-func generateUniqueName(prefix string) string {
-	return testhelpers.RandomWithPrefix(prefix)
+func generateUniqueRoleName(prefix string) string {
+	return generateUniqueName(prefix, 64)
+}
+
+func generateUniqueUserName(prefix string) string {
+	return generateUniqueName(prefix, 64)
+}
+
+func generateUniqueGroupName(prefix string) string {
+	return generateUniqueName(prefix, 128)
+}
+
+func generateUniqueName(prefix string, maxLength int) string {
+	name := testhelpers.RandomWithPrefix(prefix)
+	if len(name) > maxLength {
+		return name[:maxLength]
+	}
+	return name
 }
 
 type awsAccessKey struct {

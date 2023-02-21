@@ -7,10 +7,13 @@ import Ember from 'ember';
 const SPLASH_DELAY = Ember.testing ? 0 : 300;
 
 export default Route.extend({
+  store: service(),
   version: service(),
+
   beforeModel() {
     return this.version.fetchVersion();
   },
+
   model() {
     // hardcode single cluster
     const fixture = {
@@ -23,7 +26,7 @@ export default Route.extend({
       },
     };
     this.store.push(fixture);
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       later(() => {
         resolve(this.store.peekAll('cluster'));
       }, SPLASH_DELAY);

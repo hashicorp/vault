@@ -1,0 +1,3 @@
+```release-note:change
+core/fips: Disable and warn about entropy augmentation in FIPS 140-2 Inside mode
+```

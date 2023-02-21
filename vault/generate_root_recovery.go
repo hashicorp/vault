@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"go.uber.org/atomic"
 )
 
@@ -21,12 +22,12 @@ type generateRecoveryToken struct {
 }
 
 func (g *generateRecoveryToken) authenticate(ctx context.Context, c *Core, combinedKey []byte) error {
-	key, err := c.unsealKeyToMasterKeyPostUnseal(ctx, combinedKey)
+	key, err := c.unsealKeyToRootKeyPostUnseal(ctx, combinedKey)
 	if err != nil {
 		return fmt.Errorf("unable to authenticate: %w", err)
 	}
 
-	// Use the retrieved master key to unseal the barrier
+	// Use the retrieved root key to unseal the barrier
 	if err := c.barrier.Unseal(ctx, key); err != nil {
 		return fmt.Errorf("recovery operation token generation failed, cannot unseal barrier: %w", err)
 	}
@@ -40,11 +41,18 @@ func (g *generateRecoveryToken) authenticate(ctx context.Context, c *Core, combi
 }
 
 func (g *generateRecoveryToken) generate(ctx context.Context, c *Core) (string, func(), error) {
-	id, err := base62.Random(TokenLength)
+	var id string
+	var err error
+	id, err = base62.Random(TokenLength)
 	if err != nil {
 		return "", nil, err
 	}
-	token := "r." + id
+	var token string
+	if c.DisableSSCTokens() {
+		token = consts.LegacyRecoveryTokenPrefix + id
+	} else {
+		token = consts.RecoveryTokenPrefix + id
+	}
 	g.token.Store(token)
 
 	return token, func() { g.token.Store("") }, nil

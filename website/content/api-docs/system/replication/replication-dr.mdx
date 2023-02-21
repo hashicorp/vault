@@ -15,7 +15,7 @@ description: >-
 This endpoint prints information about the status of replication (mode,
 sync progress, etc).
 
-This is an authenticated endpoint.
+This is an unauthenticated endpoint.
 
 | Method | Path                         |
 | :----- | :--------------------------- |
@@ -221,7 +221,7 @@ $ curl \
 
 This endpoint revokes a DR secondary's ability to connect to the DR primary cluster;
 the DR secondary will immediately be disconnected and will not be allowed to
-connect again unless given a new activation token.
+connect again unless given a new activation token.  This command can be run from any node on the DR primary cluster.
 
 | Method | Path                                           |
 | :----- | :--------------------------------------------- |
@@ -327,7 +327,7 @@ secondaries, and there should never be more than one primary at a time.
 If the DR secondary's primary cluster is also in a performance replication set,
 the DR secondary will be promoted into that replication set. Care should be
 taken when promoting to ensure multiple performance primary clusters are not
-activate at the same time.
+active at the same time.
 
 If the DR secondary's primary cluster is a performance secondary, the promoted
 cluster will attempt to connect to the performance primary cluster using the
@@ -339,6 +339,12 @@ docs](#generate-disaster-recovery-operation-token) for more information.
 
 !> Only one performance primary should be active at a given time. Multiple primaries may
 result in data loss!
+
+~> It is not safe to replicate from a newer version of Vault to an older version.
+When upgrading replicated clusters, ensure that upstream clusters are always
+on older versions of Vault than downstream clusters. See
+[Upgrading Vault](/vault/docs/upgrading#replication-installations) for an example.
+
 
 | Method | Path                                    |
 | :----- | :-------------------------------------- |
@@ -524,7 +530,7 @@ generation attempt can take place at a time.
 
 | Method | Path                                                             |
 | :----- | :--------------------------------------------------------------- |
-| `PUT`  | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
+| `POST` | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
 
 ### Parameters
 
@@ -536,7 +542,7 @@ generation attempt can take place at a time.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
 ```
 
@@ -574,19 +580,19 @@ $ curl \
 
 ## Provide Key Share to Generate Token
 
-This endpoint is used to enter a single master key share to progress the
-generation attempt. If the threshold number of master key shares is reached,
+This endpoint is used to enter a single root key share to progress the
+generation attempt. If the threshold number of root key shares is reached,
 Vault will complete the generation and issue the new token. Otherwise,
 this API must be called multiple times until that threshold is met. The attempt
 nonce must be provided with each call.
 
 | Method | Path                                                            |
 | :----- | :-------------------------------------------------------------- |
-| `PUT`  | `/sys/replication/dr/secondary/generate-operation-token/update` |
+| `POST` | `/sys/replication/dr/secondary/generate-operation-token/update` |
 
 ### Parameters
 
-- `key` `(string: <required>)` – Specifies a single master key share.
+- `key` `(string: <required>)` – Specifies a single root key share.
 
 - `nonce` `(string: <required>)` – Specifies the nonce of the attempt.
 
@@ -603,7 +609,7 @@ nonce must be provided with each call.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/update
 ```

@@ -6,31 +6,77 @@ description: These are general upgrade instructions for Vault plugins.
 
 # Upgrading Vault Plugins
 
-The following procedure details steps for upgrading a plugin that has already
-been registered to the catalog on a running server. This procedure is applicable
-to secret, auth, and database plugins.
+## Plugin Upgrade Procedure
 
-## Upgrade Procedure
+The following procedures detail steps for upgrading a plugin that has been mounted
+at a path on a running server. The steps are the same whether the plugin being
+upgraded is built-in or external.
 
-Vault executes plugin binaries when they are configured and roles are established
-around them. The binary cannot be modified or replaced while running, so
-upgrades cannot be performed by simply swapping the binary and updating the hash
-in the plugin catalog.
+~> [Plugin versioning](/vault/docs/plugins#plugin-versioning) was introduced
+  with Vault 1.12.0, so if your Vault server is on 1.11.x or earlier, see the
+  [1.11.x version of this page](/vault/docs/v1.11.x/upgrading/plugins)
+  for plugin upgrade instructions.
 
-Instead, you can restart or reload a plugin with the
-`sys/plugins/reload/backend` [API][plugin_reload_api]. Follow these steps to
-replace or upgrade a Vault plugin binary:
+### Upgrading auth and secrets plugins
 
-1. Register plugin_v1 to the catalog
-2. Mount the plugin backend
-3. Register plugin_v2 to the catalog under the same plugin name, but with
-   updated command to run plugin_v2 and updated sha256 of plugin_v2
-4. Trigger a plugin reload with `sys/plugins/reload/backend` to reload all
+The process is nearly identical for auth and secret plugins. If you are upgrading
+an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
+
+1. [Register][plugin_registration] the first version of your plugin to the catalog.
+   Skip this step if your initial plugin is built-in or already registered.
+
+    ```shell-session
+    $ vault plugin register \
+        -sha256=<SHA256 Hex value of the plugin binary> \
+        secret \
+        my-secret-plugin
+    ```
+
+1. [Mount][plugin_management] the plugin. Skip this step if your initial plugin
+   is already mounted.
+
+    ```shell-session
+    $ vault secrets enable my-secret-plugin
+    ```
+
+1. Register a second version of your plugin. You **must** use the same plugin
+   type and name (the last two arguments) as the plugin being upgraded. This is
+   true regardless of whether the plugin being upgraded is built-in or external.
+
+    ```shell-session
+    $ vault plugin register \
+        -sha256=<SHA256 Hex value of the plugin binary> \
+        -command=my-secret-plugin-1.0.1 \
+        -version=v1.0.1 \
+        secret \
+        my-secret-plugin
+    ```
+
+1. Tune the existing mount to configure it to use the newly registered version.
+
+   ```shell-session
+   $ vault secrets tune -plugin-version=v1.0.1 my-secret-plugin
+   ```
+
+1. If you wish, you can check the updated configuration. Notice the "Version" is
+   now different from the "Running Version".
+
+   ```shell-session
+   $ vault secrets list -detailed
+   ```
+
+1. Finally, trigger a [plugin reload](/vault/docs/commands/plugin/reload) to reload all
    mounted backends using that plugin or a subset of the mounts using that plugin
-   with either the `plugin` or `mounts` parameter respectively.
+   with either the `plugin` or `mounts` flag respectively.
 
-Until step 4, the mount will still use plugin_v1, and when the reload is
-triggered, Vault will kill plugin_v1’s process and start a plugin_v2 process.
+    ```shell-session
+    $ vault plugin reload -plugin my-secret-plugin
+    ```
+
+Until the last step, the mount will still run the first version of `my-secret-plugin`. When
+the reload is triggered, Vault will kill `my-secret-plugin`’s process and start the
+new plugin process for `my-secret-plugin` version 1.0.1. The "Running Version" should also
+now match the "Version" when you run `vault secrets list -detailed`.
 
 -> **Important:** Plugin reload of a new plugin binary must be
 performed on each Vault instance. Performing a plugin upgrade on a single
@@ -38,4 +84,106 @@ instance or through a load balancer can result in mismatched
 plugin binaries within a cluster. On a replicated cluster this may be accomplished
 by setting the 'scope' parameter of the reload to 'global'.
 
-[plugin_reload_api]: /api/system/plugins-reload-backend
+### Upgrading database plugins
+
+1. [Register][plugin_registration] the first version of your plugin to the catalog.
+   Skip this step if your initial plugin is built-in or already registered.
+
+    ```shell-session
+    $ vault plugin register
+        -sha256=<SHA256 Hex value of the plugin binary> \
+        database \
+        my-db-plugin
+    ```
+
+1. [Mount][plugin_management] the plugin. Skip this step if your initial plugin
+   is already mounted.
+
+    ```shell-session
+    $ vault secrets enable database
+    $ vault write database/config/my-db \
+        plugin_name=my-db-plugin \
+        # ...
+    ```
+
+1. Register a second version of your plugin. You **must** use the same plugin
+   type and name (the last two arguments) as the plugin being upgraded. This is
+   true regardless of whether the plugin being upgraded is built-in or external.
+
+    ```shell-session
+    $ vault plugin register \
+        -sha256=<SHA256 Hex value of the plugin binary> \
+        -command=my-db-plugin-1.0.1 \
+        -version=v1.0.1 \
+        database \
+        my-db-plugin
+    ```
+
+1. Update the database config with the new version. The database secrets
+   engine will immediately reload the plugin, using the new version. Any omitted
+   config parameters will not be updated.
+
+    ```shell-session
+    $ vault write database/config/my-db \
+        plugin_version=v1.0.1
+    ```
+
+Until the last step, the mount will still run the first version of `my-db-plugin`. When
+the reload is triggered, Vault will kill `my-db-plugin`’s process and start the
+new plugin process for `my-db-plugin` version 1.0.1.
+
+### Downgrading Plugins
+
+Plugin downgrades follow the same procedure as upgrades. You can use the Vault
+plugin list command to check what plugin versions are available to downgrade to:
+
+```shell-session
+$ vault plugin list secret
+Name                Version
+----                -------
+ad                  v0.14.0+builtin
+alicloud            v0.13.0+builtin
+aws                 v1.12.0+builtin.vault
+azure               v0.14.0+builtin
+cassandra           v1.12.0+builtin.vault
+consul              v1.12.0+builtin.vault
+gcp                 v0.14.0+builtin
+gcpkms              v0.13.0+builtin
+kv                  v0.13.3+builtin
+ldap                v1.12.0+builtin.vault
+mongodb             v1.12.0+builtin.vault
+mongodbatlas        v0.8.0+builtin
+mssql               v1.12.0+builtin.vault
+mysql               v1.12.0+builtin.vault
+nomad               v1.12.0+builtin.vault
+openldap            v0.9.0+builtin
+pki                 v1.12.0+builtin.vault
+postgresql          v1.12.0+builtin.vault
+rabbitmq            v1.12.0+builtin.vault
+ssh                 v1.12.0+builtin.vault
+terraform           v0.6.0+builtin
+totp                v1.12.0+builtin.vault
+transit             v1.12.0+builtin.vault
+```
+
+### Additional Upgrade Notes
+
+* As mentioned earlier, disabling existing mounts will wipe the existing data.
+* Overwriting an existing version in the catalog will affect all uses of that
+  plugin version. So if you have 5 different Azure Secrets mounts using v1.0.0,
+  they'll all start using the new binary if you overwrite it. We recommend
+  treating plugin versions in the catalog as immutable, much like version control
+  tags.
+* Each plugin has its own data within Vault storage. While it is rare for HashiCorp
+  maintained plugins to update their storage schema, it is up to plugin authors
+  to manage schema upgrades and downgrades. Check the plugin release notes for
+  any unsupported upgrade or downgrade transitions, especially before moving to
+  a new major version or downgrading.
+* Existing Vault [leases](/vault/docs/concepts/lease) and [tokens](/vault/docs/concepts/tokens)
+  are generally unaffected by plugin upgrades and reloads. This is because the lifecycle
+  of leases and tokens is handled by core systems within Vault. The plugin itself only
+  handles renewal and revocation of them when it’s requested by those core systems.
+
+[plugin_reload_api]: /vault/api-docs/system/plugins-reload-backend
+[plugin_registration]: /vault/docs/plugins/plugin-architecture#plugin-registration
+[plugin_management]: /vault/docs/plugins/plugin-management#enabling-disabling-external-plugins

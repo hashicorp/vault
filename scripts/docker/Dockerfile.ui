@@ -1,9 +1,8 @@
 # Multi-stage builder to avoid polluting users environment with wrong
-# architecture binaries.  Since this binary is used in an alpine container,
-# we're explicitly compiling for 'linux/amd64'
+# architecture binaries. This file only currently works for linux/amd64.
 FROM debian:buster AS builder
 
-ARG VERSION=1.16.2
+ARG VERSION
 ARG CGO_ENABLED=0
 ARG BUILD_TAGS
 ENV JOBS=2
@@ -20,7 +19,7 @@ RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          libltdl-dev \
                          libltdl7
 
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
 RUN curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
 RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
 
@@ -38,7 +37,7 @@ ENV PATH $GOROOT/bin:$GOPATH/bin:$PATH
 WORKDIR /go/src/github.com/hashicorp/vault
 COPY . .
 RUN make bootstrap static-dist \
-  && CGO_ENABLED=$CGO_ENABLED BUILD_TAGS="${BUILD_TAGS} ui" VAULT_DEV_BUILD=1 XC_OSARCH='linux/amd64' sh -c "'./scripts/build.sh'"
+  && CGO_ENABLED=$CGO_ENABLED BUILD_TAGS="${BUILD_TAGS} ui" VAULT_DEV_BUILD=1 GOOS=linux GOARCH=amd64 sh -c "'./scripts/build.sh'"
 
 # Docker Image
 
@@ -53,7 +52,7 @@ RUN addgroup vault && \
 RUN set -eux; \
     apk add --no-cache ca-certificates libcap su-exec dumb-init tzdata
 
-COPY --from=builder /go/bin/vault /bin/vault
+COPY --from=builder /go/src/github.com/hashicorp/vault/bin/vault /bin/vault
 
 # /vault/logs is made available to use as a location to store audit logs, if
 # desired; /vault/file is made available to use as a location with the file

@@ -73,7 +73,7 @@ number indicating how many characters to generate.<br/>
 
 Each secret engine provides a different set of data to the template. Please see the associated secret engine's
 documentation for details on what values are provided to the template. The examples below are modeled after the
-[Database engine's](/docs/secrets/databases) data, however the specific fields that are provided from a given engine
+[Database engine's](/vault/docs/secrets/databases) data, however the specific fields that are provided from a given engine
 may differ from these examples. Additionally, the time is assumed to be 2009-02-13 11:31:30PM GMT
 (unix timestamp: 1234567890) and random characters are the ordered english alphabet: `abcdefghijklmnopqrstuvwxyz`.
 
@@ -150,9 +150,9 @@ Each of these values are passed to `printf "v_%s_%s_%s_%s"` which prepends them 
 each field. This results in `v_token-wi_my_custo_abcdefghijklmnopqrst_1234567890`. This value is then passed to
 `truncate 45` where the last 6 characters are removed which results in `v_token-wi_my_custo_abcdefghijklmnopqrst_1234`.
 
-## Learn
+## Tutorial
 
 Refer to the following tutorials for step-by-step instructions.
 
-- [Database Secrets Engine with MongoDB](https://learn.hashicorp.com/tutorials/vault/database-mongodb#customize-the-generated-username-schema)
-- [Dynamic Secrets: Database Secrets Engine](https://learn.hashicorp.com/tutorials/vault/database-secrets#define-a-username-template)
+- [Database Secrets Engine with MongoDB](/vault/tutorials/db-credentials/database-mongodb#customize-the-generated-username-schema)
+- [Dynamic Secrets: Database Secrets Engine](/vault/tutorials/db-credentials/database-secrets#define-a-username-template)

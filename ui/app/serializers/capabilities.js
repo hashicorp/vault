@@ -8,7 +8,7 @@ export default ApplicationSerializer.extend({
     if (id) {
       payload.path = id;
     }
-    let response = {
+    const response = {
       ...payload.data,
       path: payload.path,
     };

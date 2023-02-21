@@ -3,13 +3,15 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
 const (
@@ -29,7 +31,7 @@ var (
 			return os.Getenv(EnvVaultWrapTTL)
 		}
 
-		if (operation == "PUT" || operation == "POST") && path == "sys/wrapping/wrap" {
+		if (operation == http.MethodPut || operation == http.MethodPost) && path == "sys/wrapping/wrap" {
 			return DefaultWrappingTTL
 		}
 
@@ -48,11 +50,95 @@ func (c *Client) Logical() *Logical {
 }
 
 func (c *Logical) Read(path string) (*Secret, error) {
-	return c.ReadWithData(path, nil)
+	return c.ReadWithDataWithContext(context.Background(), path, nil)
+}
+
+func (c *Logical) ReadWithContext(ctx context.Context, path string) (*Secret, error) {
+	return c.ReadWithDataWithContext(ctx, path, nil)
 }
 
 func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, error) {
-	r := c.c.NewRequest("GET", "/v1/"+path)
+	return c.ReadWithDataWithContext(context.Background(), path, data)
+}
+
+func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	resp, err := c.readRawWithDataWithContext(ctx, path, data)
+	return c.ParseRawResponseAndCloseBody(resp, err)
+}
+
+// ReadRaw attempts to read the value stored at the given Vault path
+// (without '/v1/' prefix) and returns a raw *http.Response.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please use ReadRawWithContext
+// instead and set the timeout through context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRaw(path string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(context.Background(), path, nil)
+}
+
+// ReadRawWithContext attempts to read the value stored at the give Vault path
+// (without '/v1/' prefix) and returns a raw *http.Response.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please set it through
+// context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRawWithContext(ctx context.Context, path string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(ctx, path, nil)
+}
+
+// ReadRawWithData attempts to read the value stored at the given Vault
+// path (without '/v1/' prefix) and returns a raw *http.Response. The 'data' map
+// is added as query parameters to the request.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please use
+// ReadRawWithDataWithContext instead and set the timeout through
+// context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRawWithData(path string, data map[string][]string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(context.Background(), path, data)
+}
+
+// ReadRawWithDataWithContext attempts to read the value stored at the given
+// Vault path (without '/v1/' prefix) and returns a raw *http.Response. The 'data'
+// map is added as query parameters to the request.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please set it through
+// context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
+	return c.readRawWithDataWithContext(ctx, path, data)
+}
+
+func (c *Logical) ParseRawResponseAndCloseBody(resp *Response, err error) (*Secret, error) {
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if resp != nil && resp.StatusCode == 404 {
+		secret, parseErr := ParseSecret(resp.Body)
+		switch parseErr {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, parseErr
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseSecret(resp.Body)
+}
+
+func (c *Logical) readRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
+	r := c.c.NewRequest(http.MethodGet, "/v1/"+path)
 
 	var values url.Values
 	for k, v := range data {
@@ -68,43 +154,24 @@ func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, 
 		r.Params = values
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-	if resp != nil && resp.StatusCode == 404 {
-		secret, parseErr := ParseSecret(resp.Body)
-		switch parseErr {
-		case nil:
-		case io.EOF:
-			return nil, nil
-		default:
-			return nil, err
-		}
-		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
-			return secret, nil
-		}
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return ParseSecret(resp.Body)
+	return c.c.RawRequestWithContext(ctx, r)
 }
 
 func (c *Logical) List(path string) (*Secret, error) {
+	return c.ListWithContext(context.Background(), path)
+}
+
+func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("LIST", "/v1/"+path)
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
-	r.Method = "GET"
+	r.Method = http.MethodGet
 	r.Params.Set("list", "true")
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -115,7 +182,7 @@ func (c *Logical) List(path string) (*Secret, error) {
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, err
+			return nil, parseErr
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, nil
@@ -130,25 +197,44 @@ func (c *Logical) List(path string) (*Secret, error) {
 }
 
 func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
-	r := c.c.NewRequest("PUT", "/v1/"+path)
+	return c.WriteWithContext(context.Background(), path, data)
+}
+
+func (c *Logical) WriteWithContext(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
-	return c.write(path, r)
+	return c.write(ctx, path, r)
+}
+
+func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
+	r := c.c.NewRequest(http.MethodPatch, "/v1/"+path)
+	r.Headers.Set("Content-Type", "application/merge-patch+json")
+	if err := r.SetJSONBody(data); err != nil {
+		return nil, err
+	}
+
+	return c.write(ctx, path, r)
 }
 
 func (c *Logical) WriteBytes(path string, data []byte) (*Secret, error) {
-	r := c.c.NewRequest("PUT", "/v1/"+path)
-	r.BodyBytes = data
-
-	return c.write(path, r)
+	return c.WriteBytesWithContext(context.Background(), path, data)
 }
 
-func (c *Logical) write(path string, request *Request) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Logical) WriteBytesWithContext(ctx context.Context, path string, data []byte) (*Secret, error) {
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
+	r.BodyBytes = data
+
+	return c.write(ctx, path, r)
+}
+
+func (c *Logical) write(ctx context.Context, path string, request *Request) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, request)
+
+	resp, err := c.c.rawRequestWithContext(ctx, request)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -159,7 +245,7 @@ func (c *Logical) write(path string, request *Request) (*Secret, error) {
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, err
+			return nil, parseErr
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, err
@@ -173,11 +259,22 @@ func (c *Logical) write(path string, request *Request) (*Secret, error) {
 }
 
 func (c *Logical) Delete(path string) (*Secret, error) {
-	return c.DeleteWithData(path, nil)
+	return c.DeleteWithContext(context.Background(), path)
+}
+
+func (c *Logical) DeleteWithContext(ctx context.Context, path string) (*Secret, error) {
+	return c.DeleteWithDataWithContext(ctx, path, nil)
 }
 
 func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret, error) {
-	r := c.c.NewRequest("DELETE", "/v1/"+path)
+	return c.DeleteWithDataWithContext(context.Background(), path, data)
+}
+
+func (c *Logical) DeleteWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodDelete, "/v1/"+path)
 
 	var values url.Values
 	for k, v := range data {
@@ -193,9 +290,7 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 		r.Params = values
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -206,7 +301,7 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, err
+			return nil, parseErr
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, err
@@ -220,25 +315,31 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 }
 
 func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
+	return c.UnwrapWithContext(context.Background(), wrappingToken)
+}
+
+func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	var data map[string]interface{}
+	wt := strings.TrimSpace(wrappingToken)
 	if wrappingToken != "" {
 		if c.c.Token() == "" {
-			c.c.SetToken(wrappingToken)
+			c.c.SetToken(wt)
 		} else if wrappingToken != c.c.Token() {
 			data = map[string]interface{}{
-				"token": wrappingToken,
+				"token": wt,
 			}
 		}
 	}
 
-	r := c.c.NewRequest("PUT", "/v1/sys/wrapping/unwrap")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/wrapping/unwrap")
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -259,7 +360,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	case io.EOF:
 		return nil, nil
 	default:
-		return nil, err
+		return nil, parseErr
 	}
 	if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 		return secret, nil
@@ -273,7 +374,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 		c.c.SetToken(wrappingToken)
 	}
 
-	secret, err = c.Read(wrappedResponseLocation)
+	secret, err = c.ReadWithContext(ctx, wrappedResponseLocation)
 	if err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("error reading %q: {{err}}", wrappedResponseLocation), err)
 	}
@@ -289,7 +390,9 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 
 	wrappedSecret := new(Secret)
 	buf := bytes.NewBufferString(secret.Data["response"].(string))
-	if err := jsonutil.DecodeJSONFromReader(buf, wrappedSecret); err != nil {
+	dec := json.NewDecoder(buf)
+	dec.UseNumber()
+	if err := dec.Decode(wrappedSecret); err != nil {
 		return nil, errwrap.Wrapf("error unmarshalling wrapped secret: {{err}}", err)
 	}
 

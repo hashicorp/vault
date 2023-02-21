@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -70,6 +71,9 @@ func testLoginWrite(t *testing.T, d map[string]interface{}, expectedTTL time.Dur
 		ErrorOk:   true,
 		Data:      d,
 		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				return errors.New("expected a response but got nil")
+			}
 			if resp.IsError() && expectFail {
 				return nil
 			}

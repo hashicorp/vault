@@ -10,8 +10,8 @@ const hasFeatureMethod = (context, featureKey) => {
   }
   return features.includes(featureKey);
 };
-const hasFeature = featureKey => {
-  return computed('features', 'features.[]', function() {
+const hasFeature = (featureKey) => {
+  return computed('features', 'features.[]', function () {
     return hasFeatureMethod(this, featureKey);
   });
 };
@@ -47,21 +47,21 @@ export default Service.extend({
     this.set('_features', resp.features);
   },
 
-  getVersion: task(function*() {
+  getVersion: task(function* () {
     if (this.version) {
       return;
     }
-    let response = yield this.store.adapterFor('cluster').health();
+    const response = yield this.store.adapterFor('cluster').health();
     this.setVersion(response);
     return;
   }),
 
-  getFeatures: task(function*() {
+  getFeatures: task(function* () {
     if (this.features?.length || this.isOSS) {
       return;
     }
     try {
-      let response = yield this.store.adapterFor('cluster').features();
+      const response = yield this.store.adapterFor('cluster').features();
       this.setFeatures(response);
       return;
     } catch (err) {
@@ -69,10 +69,10 @@ export default Service.extend({
     }
   }).keepLatest(),
 
-  fetchVersion: function() {
+  fetchVersion: function () {
     return this.getVersion.perform();
   },
-  fetchFeatures: function() {
+  fetchFeatures: function () {
     return this.getFeatures.perform();
   },
 });

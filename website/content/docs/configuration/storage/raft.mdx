@@ -32,14 +32,15 @@ cluster_addr = "http://127.0.0.1:8201"
 ```
 
 ~> **Note:** When using the Integrated Storage backend, it is required to provide
-`cluster_addr` to indicate the address and port to be used for communication
+[`cluster_addr`](/vault/docs/concepts/ha#per-node-cluster-address) to indicate the address and port to be used for communication
 between the nodes in the Raft cluster.
 
-~> **Note:** When using the Integrated Storage backend, a separate `ha_storage`
+~> **Note:** When using the Integrated Storage backend, a separate
+[`ha_storage`](/vault/docs/configuration#ha_storage)
 backend cannot be declared.
 
 ~> **Note:** When using the Integrated Storage backend, it is strongly recommended to
-set `disable_mlock` to `true`, and to disable memory swapping on the system.
+set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to disable memory swapping on the system.
 
 ## `raft` Parameters
 
@@ -73,59 +74,92 @@ set `disable_mlock` to `true`, and to disable memory swapping on the system.
   consider reducing write throughput or the amount of data stored on Vault. The
   default value is 10000 which is suitable for all normal workloads.
 
-- `snapshot_threshold` `(integer: 8192)` - This controls the minimum number of raft
+- `snapshot_threshold` `(integer: 8192)` - This controls the minimum number of Raft
   commit entries between snapshots that are saved to disk. This is a low-level
   parameter that should rarely need to be changed. Very busy clusters
   experiencing excessive disk IO may increase this value to reduce disk IO and
   minimize the chances of all servers taking snapshots at the same time.
   Increasing this trades off disk IO for disk space since the log will grow much
-  larger and the space in the raft.db file can't be reclaimed till the next
+  larger and the space in the `raft.db` file can't be reclaimed till the next
   snapshot. Servers may take longer to recover from crashes or failover if this
   is increased significantly as more logs will need to be replayed.
 
-- `retry_join` `(list: [])` - There can be one or more `retry_join` stanzas.
-  When the raft cluster is getting bootstrapped, if the connection details of all
-  the nodes are known beforehand, then specifying this config stanzas enables the
-  nodes to automatically join a raft cluster. All the nodes would mention all
-  other nodes that they could join using this config. When one of the nodes is
-  initialized, it becomes the leader and all the other nodes will join the
-  leader node to form the cluster. When using Shamir seal, the joined nodes will
-  still need to be unsealed manually. See the section below that describes the
-  parameters accepted by the `retry_join` stanza.
+- `retry_join` `(list: [])` - There can be one or more
+  [`retry_join`](#retry_join-stanza) stanzas. When the Raft cluster is getting
+  bootstrapped, if the connection details of all the nodes are known beforehand,
+  then specifying this config stanzas enables the nodes to automatically join a
+  Raft cluster. All the nodes would mention all other nodes that they could join
+  using this config. When one of the nodes is initialized, it becomes the leader
+  and all the other nodes will join the leader node to form the cluster. When
+  using Shamir seal, the joined nodes will still need to be unsealed manually.
+  See [the section below](#retry_join-stanza) that describes the parameters
+  accepted by the [`retry_join`](#retry_join-stanza) stanza.
+
+- `retry_join_as_non_voter` `(boolean: false)` - If set, causes any `retry_join`
+  config to join the Raft cluster as a non-voter. The node will not participate
+  in the Raft quorum but will still receive the data replication stream, adding
+  read scalability to a cluster. This option has the same effect as the
+  [`-non-voter`](/vault/docs/commands/operator/raft#non-voter) flag for the
+  `vault operator raft join` command, but only affects voting status when joining
+  via `retry_join` config. This setting can be overridden to true by setting the
+  `VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER` environment variable to any non-empty value.
+  Only valid if there is at least one `retry_join` stanza.
 
 - `max_entry_size` `(integer: 1048576)` - This configures the maximum number of
-  bytes for a raft entry. It applies to both Put operations and transactions.
+  bytes for a Raft entry. It applies to both Put operations and transactions.
   Any put or transaction operation exceeding this configuration value will cause
   the respective operation to fail. Raft has a suggested max size of data in a
-  raft log entry. This is based on current architecture, default timing, etc.
-  Integrated storage also uses a chunk size that is the threshold used for
+  Raft log entry. This is based on current architecture, default timing, etc.
+  Integrated Storage also uses a chunk size that is the threshold used for
   breaking a large value into chunks. By default, the chunk size is the same as
-  raft's max size log entry. The default value for this configuration is 1048576
+  Raft's max size log entry. The default value for this configuration is 1048576
   -- two times the chunking size.
 
-- `autopilot_reconcile_interval` `(string: "")` - This is the interval after
+- `autopilot_reconcile_interval` `(string: "10s")` - This is the interval after
   which autopilot will pick up any state changes. State change could mean multiple
   things; for example a newly joined voter node, initially added as non-voter to
-  the raft cluster by autopilot has successfully completed the stabilization
+  the Raft cluster by autopilot has successfully completed the stabilization
   period thereby qualifying for being promoted as a voter, a node that has become
   unhealthy and needs to be shown as such in the state API, a node has been marked
-  as dead needing eviction from raft configuration, etc. Defaults to 10s.
+  as dead needing eviction from Raft configuration, etc.
+
+- `autopilot_update_interval` `(string: "2s")` - This is the interval after which
+  autopilot will poll Vault for any updates to the information it cares about. This
+  includes things like the autopilot configuration, current autopilot state, raft
+  configuration, known servers, latest raft index, and stats for all the known servers.
+  The information that autopilot receives will be used to calculate its next state.
+
+- `autopilot_upgrade_version` `(string: "")` - This is an optional string that, if
+  provided, will be used reported to autopilot as Vault's version. This is then used
+  by autopilot when it makes decisions regarding
+  [automated upgrades](/vault/docs/enterprise/automated-upgrades). If omitted, the
+  version of Vault currently in use will be used. Note that this string must conform
+  to [Semantic Versioning](https://semver.org). Use of this feature requires Vault
+  Enterprise.
+
+- `autopilot_redundancy_zone` `(string: "")` - This is an optional string that specifies
+  Vault's [redundancy zone](/vault/docs/enterprise/redundancy-zones). This is reported to autopilot
+  and is used to enhance scaling and resiliency. Use of this feature requires Vault Enterprise.
 
 ### `retry_join` stanza
 
 - `leader_api_addr` `(string: "")` - Address of a possible leader node.
 
-- `auto_join` `(string: "")` - Cloud auto-join configuration.
+- `auto_join` `(string: "")` - Cloud auto-join configuration, using
+  [go-discover](https://github.com/hashicorp/go-discover) syntax.
 
 - `auto_join_scheme` `(string: "")` - The optional URI protocol scheme for addresses
-  discovered via auto-join.
+  discovered via auto-join. Available values are `http` or `https`.
 
 - `auto_join_port` `(uint: "")` - The optional port used for addressed discovered
   via auto-join.
 
-- `leader_tls_servername` `(string: "")` - TLS servername to use when connecting with HTTPS.
-  Should match one of the names in the DNS SANs of the remote server certificate.
-  See also [Integrated Storage and TLS](https://www.vaultproject.io/docs/concepts/integrated-storage#autojoin-with-tls-servername)
+- `leader_tls_servername` `(string: "")` - The TLS server name to use when
+  connecting with HTTPS.
+  Should match one of the names in the [DNS
+  SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name) of the remote
+  server certificate.
+  See also [Integrated Storage and TLS](/vault/docs/concepts/integrated-storage#autojoin-with-tls-servername)
 
 - `leader_ca_cert_file` `(string: "")` - File path to the CA cert of the
   possible leader node.
@@ -145,20 +179,24 @@ set `disable_mlock` to `true`, and to disable memory swapping on the system.
 - `leader_client_key` `(string: "")` - Client key for the follower node to
   establish client authentication with the possible leader node.
 
-Each `retry_join` block may provide TLS certificates via file paths or as a
-single-line certificate string value with newlines delimited by `\n`, but not a
-combination of both. Each `retry_join` stanza may contain either a `leader_api_addr`
-value or a cloud `auto_join` configuration value, but not both. When an `auto_join`
-value is provided, Vault will automatically attempt to discover and resolve
-potential Raft leader addresses.
+Each [`retry_join`](#retry_join-stanza) block may provide TLS certificates via
+file paths or as a single-line certificate string value with newlines delimited
+by `\n`, but not a combination of both. Each [`retry_join`](#retry_join-stanza)
+stanza may contain either a [`leader_api_addr`](#leader_api_addr) value or a
+cloud [`auto_join`](#auto_join) configuration value, but not both. When an
+[`auto_join`](#auto_join) value is provided, Vault will automatically attempt to
+discover and resolve potential Raft leader addresses using [go-discover](https://github.com/hashicorp/go-discover).
+See the go-discover
+[README](https://github.com/hashicorp/go-discover/blob/master/README.md)
+for details on the format of the `auto_join` value.
 
-By default, Vault will attempt to reach discovered peers using HTTPS and port 8200.
-Operators may override these through the `auto_join_scheme` and `auto_join_port`
+By default, Vault will attempt to reach discovered peers using HTTPS and port 8200. Operators may override these through the
+[`auto_join_scheme`](#auto_join_scheme) and [`auto_join_port`](#auto_join_port)
 fields respectively.
 
 Example Configuration:
 
-```
+```hcl
 storage "raft" {
   path    = "/Users/foo/raft/"
   node_id = "node1"
@@ -187,10 +225,9 @@ storage "raft" {
 }
 ```
 
-## Learn
+## Tutorial
 
-Refer to [Integrated
-Storage](https://learn.hashicorp.com/collections/vault/raft) for a collection of
-tutorials on integrated storage.
+Refer to the [Integrated
+Storage](/vault/tutorials/raft) series of tutorials to learn more about implementing Vault using Integrated Storage.
 
 [raft]: https://raft.github.io/ 'The Raft Consensus Algorithm'

@@ -39,7 +39,7 @@ func pathLogin(b *backend) *framework.Path {
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := strings.ToLower(d.Get("username").(string))
+	username := d.Get("username").(string)
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
@@ -86,14 +86,26 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	// Check for a password match. Check for a hash collision for Vault 0.2+,
 	// but handle the older legacy passwords with a constant time comparison.
 	passwordBytes := []byte(password)
-	if !legacyPassword {
+	switch {
+	case !legacyPassword:
 		if err := bcrypt.CompareHashAndPassword(userPassword, passwordBytes); err != nil {
-			return logical.ErrorResponse("invalid username or password"), nil
+			// The failed login info of existing users alone are tracked as only
+			// existing user's failed login information is stored in storage for optimization
+			if user == nil || userError != nil {
+				return logical.ErrorResponse("invalid username or password"), nil
+			}
+			return logical.ErrorResponse("invalid username or password"), logical.ErrInvalidCredentials
 		}
-	} else {
+	default:
 		if subtle.ConstantTimeCompare(userPassword, passwordBytes) != 1 {
-			return logical.ErrorResponse("invalid username or password"), nil
+			// The failed login info of existing users alone are tracked as only
+			// existing user's failed login information is stored in storage for optimization
+			if user == nil || userError != nil {
+				return logical.ErrorResponse("invalid username or password"), nil
+			}
+			return logical.ErrorResponse("invalid username or password"), logical.ErrInvalidCredentials
 		}
+
 	}
 
 	if userError != nil {

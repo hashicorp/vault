@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
 	"io"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	wordwrap "github.com/mitchellh/go-wordwrap"
 	"go.opentelemetry.io/otel/codes"
@@ -19,10 +20,10 @@ import (
 
 const (
 	status_unknown = "[      ] "
-	status_ok      = "\u001b[32m[  ok  ]\u001b[0m "
-	status_failed  = "\u001b[31m[failed]\u001b[0m "
-	status_warn    = "\u001b[33m[ warn ]\u001b[0m "
-	status_skipped = "\u001b[90m[ skip ]\u001b[0m "
+	status_ok      = "\u001b[32m[ success ]\u001b[0m "
+	status_failed  = "\u001b[31m[ failure ]\u001b[0m "
+	status_warn    = "\u001b[33m[ warning ]\u001b[0m "
+	status_skipped = "\u001b[90m[ skipped ]\u001b[0m "
 	same_line      = "\x0d"
 	ErrorStatus    = 2
 	WarningStatus  = 1
@@ -177,7 +178,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 	if !ok {
 		r = &Result{
 			Name:    s.Name(),
-			Message: s.StatusMessage(),
+			Message: s.Status().Description,
 			Time:    s.StartTime(),
 		}
 		for _, e := range s.Events() {
@@ -198,7 +199,6 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						Status:  ErrorStatus,
 						Message: message,
 					})
-
 				}
 			case spotCheckOkEventName:
 				checkName, message := findAttributes(e, nameKey, messageKey)
@@ -209,6 +209,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 							Status:  OkStatus,
 							Message: message,
 							Time:    e.Time,
+							Advice:  findAttribute(e, adviceKey),
 						})
 				}
 			case spotCheckWarnEventName:
@@ -220,6 +221,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 							Status:  WarningStatus,
 							Message: message,
 							Time:    e.Time,
+							Advice:  findAttribute(e, adviceKey),
 						})
 				}
 			case spotCheckErrorEventName:
@@ -231,6 +233,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 							Status:  ErrorStatus,
 							Message: message,
 							Time:    e.Time,
+							Advice:  findAttribute(e, adviceKey),
 						})
 				}
 			case spotCheckSkippedEventName:
@@ -242,6 +245,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 							Status:  SkippedStatus,
 							Message: message,
 							Time:    e.Time,
+							Advice:  findAttribute(e, adviceKey),
 						})
 				}
 			case adviceEventName:
@@ -250,9 +254,8 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 					r.Advice = message
 				}
 			}
-
 		}
-		switch s.StatusCode() {
+		switch s.Status().Code {
 		case codes.Unset:
 			if len(r.Warnings) > 0 {
 				r.Status = WarningStatus
@@ -273,7 +276,16 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 	return r
 }
 
-func findAttributes(e trace.Event, attr1, attr2 attribute.Key) (string, string) {
+func findAttribute(e sdktrace.Event, attr attribute.Key) string {
+	for _, a := range e.Attributes {
+		if a.Key == attr {
+			return a.Value.AsString()
+		}
+	}
+	return ""
+}
+
+func findAttributes(e sdktrace.Event, attr1, attr2 attribute.Key) (string, string) {
 	var av1, av2 string
 	for _, a := range e.Attributes {
 		switch a.Key {
@@ -318,22 +330,20 @@ func (r *Result) StringWrapped(wrapLimit int) string {
 func (r *Result) write(sb *strings.Builder, depth int, limit int) {
 	indent(sb, depth)
 	var prelude string
-	if len(r.Warnings) == 0 {
-		switch r.Status {
-		case OkStatus:
-			prelude = status_ok
-		case WarningStatus:
-			prelude = status_warn
-		case ErrorStatus:
-			prelude = status_failed
-		case SkippedStatus:
-			prelude = status_skipped
-		}
-		prelude = prelude + r.Name
+	switch r.Status {
+	case OkStatus:
+		prelude = status_ok
+	case WarningStatus:
+		prelude = status_warn
+	case ErrorStatus:
+		prelude = status_failed
+	case SkippedStatus:
+		prelude = status_skipped
+	}
+	prelude = prelude + r.Name
 
-		if r.Message != "" {
-			prelude = prelude + ": " + r.Message
-		}
+	if r.Message != "" {
+		prelude = prelude + ": " + r.Message
 	}
 	warnings := r.Warnings
 	if r.Message == "" && len(warnings) > 0 {
@@ -343,6 +353,7 @@ func (r *Result) write(sb *strings.Builder, depth int, limit int) {
 			warnings = warnings[1:]
 		}
 	}
+
 	writeWrapped(sb, prelude, depth+1, limit)
 	for _, w := range warnings {
 		sb.WriteRune('\n')
@@ -352,10 +363,10 @@ func (r *Result) write(sb *strings.Builder, depth int, limit int) {
 	}
 
 	if r.Advice != "" {
-		sb.WriteString("\n\n")
-		indent(sb, depth+1)
-		writeWrapped(sb, r.Advice, depth+1, limit)
+		advice := "\u001b[35m" + r.Advice + "\u001b[0m"
 		sb.WriteRune('\n')
+		indent(sb, depth+1)
+		writeWrapped(sb, advice, depth+1, limit)
 	}
 	sb.WriteRune('\n')
 	for _, c := range r.Children {

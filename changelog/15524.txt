@@ -1,0 +1,4 @@
+```release-note:change
+secrets/pki: the signed CA certificate from the sign-intermediate api will now appear within the ca_chain
+response field along with the issuer's ca chain.
+```

@@ -10,14 +10,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"go.uber.org/atomic"
@@ -122,7 +123,7 @@ func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 }
 
 // Initialized checks if the barrier has been initialized
-// and has a master key set.
+// and has a root key set.
 func (b *AESGCMBarrier) Initialized(ctx context.Context) (bool, error) {
 	if b.initialized.Load() {
 		return true, nil
@@ -148,7 +149,7 @@ func (b *AESGCMBarrier) Initialized(ctx context.Context) (bool, error) {
 }
 
 // Initialize works only if the barrier has not been initialized
-// and makes use of the given master key.
+// and makes use of the given root key.
 func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, reader io.Reader) error {
 	// Verify the key size
 	min, max := b.KeyLength()
@@ -171,7 +172,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 
 	// Create a new keyring, install the keys
 	keyring := NewKeyring()
-	keyring = keyring.SetMasterKey(key)
+	keyring = keyring.SetRootKey(key)
 	keyring, err = keyring.AddKey(&Key{
 		Term:    1,
 		Version: 1,
@@ -205,7 +206,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 }
 
 // persistKeyring is used to write out the keyring using the
-// master key to encrypt it.
+// root key to encrypt it.
 func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) error {
 	// Create the keyring entry
 	keyringBuf, err := keyring.Serialize()
@@ -215,7 +216,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 	}
 
 	// Create the AES-GCM
-	gcm, err := b.aeadFromKey(keyring.MasterKey())
+	gcm, err := b.aeadFromKey(keyring.RootKey())
 	if err != nil {
 		return err
 	}
@@ -235,36 +236,36 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 		return fmt.Errorf("failed to persist keyring: %w", err)
 	}
 
-	// Serialize the master key value
+	// Serialize the root key value
 	key := &Key{
 		Term:    1,
 		Version: 1,
-		Value:   keyring.MasterKey(),
+		Value:   keyring.RootKey(),
 	}
 	keyBuf, err := key.Serialize()
 	defer memzero(keyBuf)
 	if err != nil {
-		return fmt.Errorf("failed to serialize master key: %w", err)
+		return fmt.Errorf("failed to serialize root key: %w", err)
 	}
 
-	// Encrypt the master key
+	// Encrypt the root key
 	activeKey := keyring.ActiveKey()
 	aead, err := b.aeadFromKey(activeKey.Value)
 	if err != nil {
 		return err
 	}
-	value, err = b.encryptTracked(masterKeyPath, activeKey.Term, aead, keyBuf)
+	value, err = b.encryptTracked(rootKeyPath, activeKey.Term, aead, keyBuf)
 	if err != nil {
 		return err
 	}
 
-	// Update the masterKeyPath for standby instances
+	// Update the rootKeyPath for standby instances
 	pe = &physical.Entry{
-		Key:   masterKeyPath,
+		Key:   rootKeyPath,
 		Value: value,
 	}
 	if err := b.backend.Put(ctx, pe); err != nil {
-		return fmt.Errorf("failed to persist master key: %w", err)
+		return fmt.Errorf("failed to persist root key: %w", err)
 	}
 	return nil
 }
@@ -292,14 +293,14 @@ func (b *AESGCMBarrier) Sealed() (bool, error) {
 	return sealed, nil
 }
 
-// VerifyMaster is used to check if the given key matches the master key
-func (b *AESGCMBarrier) VerifyMaster(key []byte) error {
+// VerifyRoot is used to check if the given key matches the root key
+func (b *AESGCMBarrier) VerifyRoot(key []byte) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 	if b.sealed {
 		return ErrBarrierSealed
 	}
-	if subtle.ConstantTimeCompare(key, b.keyring.MasterKey()) != 1 {
+	if subtle.ConstantTimeCompare(key, b.keyring.RootKey()) != 1 {
 		return ErrBarrierInvalidKey
 	}
 	return nil
@@ -313,7 +314,7 @@ func (b *AESGCMBarrier) ReloadKeyring(ctx context.Context) error {
 	defer b.l.Unlock()
 
 	// Create the AES-GCM
-	gcm, err := b.aeadFromKey(b.keyring.MasterKey())
+	gcm, err := b.aeadFromKey(b.keyring.RootKey())
 	if err != nil {
 		return err
 	}
@@ -367,19 +368,19 @@ func (b *AESGCMBarrier) recoverKeyring(plaintext []byte) error {
 	return nil
 }
 
-// ReloadMasterKey is used to re-read the underlying masterkey.
-// This is used for HA deployments to ensure the latest master key
+// ReloadRootKey is used to re-read the underlying root key.
+// This is used for HA deployments to ensure the latest root key
 // is available for keyring reloading.
-func (b *AESGCMBarrier) ReloadMasterKey(ctx context.Context) error {
-	// Read the masterKeyPath upgrade
-	out, err := b.Get(ctx, masterKeyPath)
+func (b *AESGCMBarrier) ReloadRootKey(ctx context.Context) error {
+	// Read the rootKeyPath upgrade
+	out, err := b.Get(ctx, rootKeyPath)
 	if err != nil {
-		return fmt.Errorf("failed to read master key path: %w", err)
+		return fmt.Errorf("failed to read root key path: %w", err)
 	}
 
-	// The masterKeyPath could be missing (backwards incompatible),
+	// The rootKeyPath could be missing (backwards incompatible),
 	// we can ignore this and attempt to make progress with the current
-	// master key.
+	// root key.
 	if out == nil {
 		return nil
 	}
@@ -388,35 +389,35 @@ func (b *AESGCMBarrier) ReloadMasterKey(ctx context.Context) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	out, err = b.lockSwitchedGet(ctx, masterKeyPath, false)
+	out, err = b.lockSwitchedGet(ctx, rootKeyPath, false)
 	if err != nil {
-		return fmt.Errorf("failed to read master key path: %w", err)
+		return fmt.Errorf("failed to read root key path: %w", err)
 	}
 
 	if out == nil {
 		return nil
 	}
 
-	// Deserialize the master key
+	// Deserialize the root key
 	key, err := DeserializeKey(out.Value)
 	memzero(out.Value)
 	if err != nil {
 		return fmt.Errorf("failed to deserialize key: %w", err)
 	}
 
-	// Check if the master key is the same
-	if subtle.ConstantTimeCompare(b.keyring.MasterKey(), key.Value) == 1 {
+	// Check if the root key is the same
+	if subtle.ConstantTimeCompare(b.keyring.RootKey(), key.Value) == 1 {
 		return nil
 	}
 
-	// Update the master key
+	// Update the root key
 	oldKeyring := b.keyring
-	b.keyring = b.keyring.SetMasterKey(key.Value)
+	b.keyring = b.keyring.SetRootKey(key.Value)
 	oldKeyring.Zeroize(false)
 	return nil
 }
 
-// Unseal is used to provide the master key which permits the barrier
+// Unseal is used to provide the root key which permits the barrier
 // to be unsealed. If the key is not correct, the barrier remains sealed.
 func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 	b.l.Lock()
@@ -499,9 +500,9 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 
 	// Setup a new keyring, this is for backwards compatibility
 	keyringNew := NewKeyring()
-	keyring := keyringNew.SetMasterKey(key)
+	keyring := keyringNew.SetRootKey(key)
 
-	// AddKey reuses the master, so we are only zeroizing after this call
+	// AddKey reuses the root, so we are only zeroizing after this call
 	defer keyringNew.Zeroize(false)
 
 	keyring, err = keyring.AddKey(&Key{
@@ -719,12 +720,12 @@ func (b *AESGCMBarrier) ActiveKeyInfo() (*KeyInfo, error) {
 	return info, nil
 }
 
-// Rekey is used to change the master key used to protect the keyring
+// Rekey is used to change the root key used to protect the keyring
 func (b *AESGCMBarrier) Rekey(ctx context.Context, key []byte) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	newKeyring, err := b.updateMasterKeyCommon(key)
+	newKeyring, err := b.updateRootKeyCommon(key)
 	if err != nil {
 		return err
 	}
@@ -741,13 +742,13 @@ func (b *AESGCMBarrier) Rekey(ctx context.Context, key []byte) error {
 	return nil
 }
 
-// SetMasterKey updates the keyring's in-memory master key but does not persist
+// SetRootKey updates the keyring's in-memory root key but does not persist
 // anything to storage
-func (b *AESGCMBarrier) SetMasterKey(key []byte) error {
+func (b *AESGCMBarrier) SetRootKey(key []byte) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	newKeyring, err := b.updateMasterKeyCommon(key)
+	newKeyring, err := b.updateRootKeyCommon(key)
 	if err != nil {
 		return err
 	}
@@ -759,9 +760,9 @@ func (b *AESGCMBarrier) SetMasterKey(key []byte) error {
 	return nil
 }
 
-// Performs common tasks related to updating the master key; note that the lock
+// Performs common tasks related to updating the root key; note that the lock
 // must be held before calling this function
-func (b *AESGCMBarrier) updateMasterKeyCommon(key []byte) (*Keyring, error) {
+func (b *AESGCMBarrier) updateRootKeyCommon(key []byte) (*Keyring, error) {
 	if b.sealed {
 		return nil, ErrBarrierSealed
 	}
@@ -772,7 +773,7 @@ func (b *AESGCMBarrier) updateMasterKeyCommon(key []byte) (*Keyring, error) {
 		return nil, fmt.Errorf("key size must be %d or %d", min, max)
 	}
 
-	return b.keyring.SetMasterKey(key), nil
+	return b.keyring.SetRootKey(key), nil
 }
 
 // Put is used to insert or update an entry
@@ -959,10 +960,13 @@ func (b *AESGCMBarrier) aeadFromKey(key []byte) (cipher.AEAD, error) {
 func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain []byte) ([]byte, error) {
 	// Allocate the output buffer with room for tern, version byte,
 	// nonce, GCM tag and the plaintext
-	capacity := termSize + 1 + gcm.NonceSize() + gcm.Overhead() + len(plain)
-	if capacity < 0 {
+
+	extra := termSize + 1 + gcm.NonceSize() + gcm.Overhead()
+	if len(plain) > math.MaxInt-extra {
 		return nil, ErrPlaintextTooLarge
 	}
+
+	capacity := len(plain) + extra
 	size := termSize + 1 + gcm.NonceSize()
 	out := make([]byte, size, capacity)
 
@@ -1010,6 +1014,9 @@ func termLabel(term uint32) []metrics.Label {
 
 // decrypt is used to decrypt a value using the keyring
 func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]byte, error) {
+	if len(cipher) < 5+gcm.NonceSize() {
+		return nil, fmt.Errorf("invalid cipher length")
+	}
 	// Capture the parts
 	nonce := cipher[5 : 5+gcm.NonceSize()]
 	raw := cipher[5+gcm.NonceSize():]
@@ -1061,7 +1068,16 @@ func (b *AESGCMBarrier) Decrypt(_ context.Context, key string, ciphertext []byte
 		return nil, ErrBarrierSealed
 	}
 
+	if len(ciphertext) == 0 {
+		b.l.RUnlock()
+		return nil, fmt.Errorf("empty ciphertext")
+	}
+
 	// Verify the term
+	if len(ciphertext) < 4 {
+		b.l.RUnlock()
+		return nil, fmt.Errorf("invalid ciphertext term")
+	}
 	term := binary.BigEndian.Uint32(ciphertext[:4])
 
 	// Get the GCM by term

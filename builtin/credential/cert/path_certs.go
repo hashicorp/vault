@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-sockaddr"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -47,7 +48,32 @@ Must be x509 PEM encoded.`,
 					EditType: "file",
 				},
 			},
-
+			"ocsp_enabled": {
+				Type:        framework.TypeBool,
+				Description: `Whether to attempt OCSP verification of certificates at login`,
+			},
+			"ocsp_ca_certificates": {
+				Type:        framework.TypeString,
+				Description: `Any additional CA certificates needed to communicate with OCSP servers`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					EditType: "file",
+				},
+			},
+			"ocsp_servers_override": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated list of OCSP server addresses.  If unset, the OCSP server is determined 
+from the AuthorityInformationAccess extension on the certificate being inspected.`,
+			},
+			"ocsp_fail_open": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "If set to true, if an OCSP revocation cannot be made successfully, login will proceed rather than failing.  If false, failing to get an OCSP status fails the request.",
+			},
+			"ocsp_query_all_servers": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "If set to true, rather than accepting the first successful OCSP response, query all servers and consider the certificate valid only if all servers agree.",
+			},
 			"allowed_names": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
@@ -112,6 +138,14 @@ At least one must exist in the OU field.`,
 				Description: `A comma-separated string or array of extensions
 formatted as "oid:value". Expects the extension value to be some type of ASN1 encoded string.
 All values much match. Supports globbing on "value".`,
+			},
+
+			"allowed_metadata_extensions": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated string or array of oid extensions.
+Upon successful authentication, these extensions will be added as metadata if they are present
+in the certificate. The metadata key will be the string consisting of the oid numbers
+separated by a dash (-) instead of a dot (.) to allow usage in ACL templates.`,
 			},
 
 			"display_name": {
@@ -243,6 +277,7 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 		"allowed_uri_sans":             cert.AllowedURISANs,
 		"allowed_organizational_units": cert.AllowedOrganizationalUnits,
 		"required_extensions":          cert.RequiredExtensions,
+		"allowed_metadata_extensions":  cert.AllowedMetadataExtensions,
 	}
 	cert.PopulateTokenData(data)
 
@@ -285,6 +320,21 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	if certificateRaw, ok := d.GetOk("certificate"); ok {
 		cert.Certificate = certificateRaw.(string)
 	}
+	if ocspCertificatesRaw, ok := d.GetOk("ocsp_ca_certificates"); ok {
+		cert.OcspCaCertificates = ocspCertificatesRaw.(string)
+	}
+	if ocspEnabledRaw, ok := d.GetOk("ocsp_enabled"); ok {
+		cert.OcspEnabled = ocspEnabledRaw.(bool)
+	}
+	if ocspServerOverrides, ok := d.GetOk("ocsp_servers_override"); ok {
+		cert.OcspServersOverride = ocspServerOverrides.([]string)
+	}
+	if ocspFailOpen, ok := d.GetOk("ocsp_fail_open"); ok {
+		cert.OcspFailOpen = ocspFailOpen.(bool)
+	}
+	if ocspQueryAll, ok := d.GetOk("ocsp_query_all_servers"); ok {
+		cert.OcspQueryAllServers = ocspQueryAll.(bool)
+	}
 	if displayNameRaw, ok := d.GetOk("display_name"); ok {
 		cert.DisplayName = displayNameRaw.(string)
 	}
@@ -308,6 +358,9 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 	if requiredExtensionsRaw, ok := d.GetOk("required_extensions"); ok {
 		cert.RequiredExtensions = requiredExtensionsRaw.([]string)
+	}
+	if allowedMetadataExtensionsRaw, ok := d.GetOk("allowed_metadata_extensions"); ok {
+		cert.AllowedMetadataExtensions = allowedMetadataExtensionsRaw.([]string)
 	}
 
 	// Get tokenutil fields
@@ -387,7 +440,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 		}
 		if !clientAuth {
-			return logical.ErrorResponse("non-CA certificates should have TLS client authentication set as an extended key usage"), nil
+			return logical.ErrorResponse("nonCA certificates should have TLS client authentication set as an extended key usage"), nil
 		}
 	}
 
@@ -424,7 +477,14 @@ type CertEntry struct {
 	AllowedURISANs             []string
 	AllowedOrganizationalUnits []string
 	RequiredExtensions         []string
+	AllowedMetadataExtensions  []string
 	BoundCIDRs                 []*sockaddr.SockAddrMarshaler
+
+	OcspCaCertificates  string
+	OcspEnabled         bool
+	OcspServersOverride []string
+	OcspFailOpen        bool
+	OcspQueryAllServers bool
 }
 
 const pathCertHelpSyn = `
@@ -436,6 +496,7 @@ This endpoint allows you to create, read, update, and delete trusted certificate
 that are allowed to authenticate.
 
 Deleting a certificate will not revoke auth for prior authenticated connections.
-To do this, do a revoke on "login". If you don't need to revoke login immediately,
+To do this, do a revoke on "login". If you don'log need to revoke login immediately,
 then the next renew will cause the lease to expire.
+
 `

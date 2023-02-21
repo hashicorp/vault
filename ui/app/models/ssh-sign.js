@@ -45,8 +45,8 @@ export default Model.extend({
   serialNumber: attr('string'),
   signedKey: attr('string'),
 
-  attrs: computed('signedKey', function() {
-    let keys = this.signedKey ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
+  attrs: computed('signedKey', function () {
+    const keys = this.signedKey ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
   }),
 });

@@ -8,6 +8,9 @@ description: The `/sys/monitor` endpoint is used to receive streaming logs from 
 
 The `/sys/monitor` endpoint is used to receive streaming logs from the Vault server.
 
+If Vault is emitting log messages faster than a receiver can process them, then
+some log lines will be dropped.
+
 ## Monitor system logs
 
 This endpoint streams logs back to the client from Vault. Note that unlike most API endpoints in Vault, this one
@@ -23,12 +26,15 @@ default, this is text.
 - `log_level` `(string: "info")` – Specifies the log level to use when streaming logs. This defaults to `info`
   if not specified.
 
+- `log_format` `(string: "standard")` – Specifies the log format to emit when streaming logs. Supported values are "standard" and "json". The default is `standard`,
+if not specified.
+
 ### Sample Request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/monitor?log_level=debug"
+    'http://127.0.0.1:8200/v1/sys/monitor?log_level=debug'
 ```
 
 ### Sample Response

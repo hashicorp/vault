@@ -1,40 +1,58 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
 )
 
-// Config is the configuration for the vault server.
+// Config is the configuration for Vault Agent.
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth       *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth  bool                       `hcl:"exit_after_auth"`
-	Cache          *Cache                     `hcl:"cache"`
-	Vault          *Vault                     `hcl:"vault"`
-	TemplateConfig *TemplateConfig            `hcl:"template_config"`
-	Templates      []*ctconfig.TemplateConfig `hcl:"templates"`
+	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
+	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
+	Cache                       *Cache                     `hcl:"cache"`
+	APIProxy                    *APIProxy                  `hcl:"api_proxy""`
+	Vault                       *Vault                     `hcl:"vault"`
+	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
+	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
+	DisableIdleConns            []string                   `hcl:"disable_idle_connections"`
+	DisableIdleConnsAPIProxy    bool                       `hcl:"-"`
+	DisableIdleConnsTemplating  bool                       `hcl:"-"`
+	DisableIdleConnsAutoAuth    bool                       `hcl:"-"`
+	DisableKeepAlives           []string                   `hcl:"disable_keep_alives"`
+	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
+	DisableKeepAlivesTemplating bool                       `hcl:"-"`
+	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
 }
+
+const (
+	DisableIdleConnsEnv  = "VAULT_AGENT_DISABLE_IDLE_CONNECTIONS"
+	DisableKeepAlivesEnv = "VAULT_AGENT_DISABLE_KEEP_ALIVES"
+)
 
 func (c *Config) Prune() {
 	for _, l := range c.Listeners {
 		l.RawConfig = nil
 		l.Profiling.UnusedKeys = nil
 		l.Telemetry.UnusedKeys = nil
+		l.CustomResponseHeaders = nil
 	}
 	c.FoundKeys = nil
 	c.UnusedKeys = nil
@@ -63,14 +81,34 @@ type Vault struct {
 	Retry            *Retry      `hcl:"retry"`
 }
 
-// Cache contains any configuration needed for Cache mode
-type Cache struct {
+// transportDialer is an interface that allows passing a custom dialer function
+// to an HTTP client's transport config
+type transportDialer interface {
+	// Dial is intended to match https://pkg.go.dev/net#Dialer.Dial
+	Dial(network, address string) (net.Conn, error)
+
+	// DialContext is intended to match https://pkg.go.dev/net#Dialer.DialContext
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
+// APIProxy contains any configuration needed for proxy mode
+type APIProxy struct {
 	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
 	UseAutoAuthToken    bool        `hcl:"-"`
 	ForceAutoAuthToken  bool        `hcl:"-"`
 	EnforceConsistency  string      `hcl:"enforce_consistency"`
 	WhenInconsistent    string      `hcl:"when_inconsistent"`
-	Persist             *Persist    `hcl:"persist"`
+}
+
+// Cache contains any configuration needed for Cache mode
+type Cache struct {
+	UseAutoAuthTokenRaw interface{}     `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool            `hcl:"-"`
+	ForceAutoAuthToken  bool            `hcl:"-"`
+	EnforceConsistency  string          `hcl:"enforce_consistency"`
+	WhenInconsistent    string          `hcl:"when_inconsistent"`
+	Persist             *Persist        `hcl:"persist"`
+	InProcDialer        transportDialer `hcl:"-"`
 }
 
 // Persist contains configuration needed for persistent caching
@@ -98,9 +136,12 @@ type Method struct {
 	MountPath     string        `hcl:"mount_path"`
 	WrapTTLRaw    interface{}   `hcl:"wrap_ttl"`
 	WrapTTL       time.Duration `hcl:"-"`
+	MinBackoffRaw interface{}   `hcl:"min_backoff"`
+	MinBackoff    time.Duration `hcl:"-"`
 	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
 	MaxBackoff    time.Duration `hcl:"-"`
 	Namespace     string        `hcl:"namespace"`
+	ExitOnError   bool          `hcl:"exit_on_err"`
 	Config        map[string]interface{}
 }
 
@@ -119,7 +160,9 @@ type Sink struct {
 
 // TemplateConfig defines global behaviors around template
 type TemplateConfig struct {
-	ExitOnRetryFailure bool `hcl:"exit_on_retry_failure"`
+	ExitOnRetryFailure       bool          `hcl:"exit_on_retry_failure"`
+	StaticSecretRenderIntRaw interface{}   `hcl:"static_secret_render_interval"`
+	StaticSecretRenderInt    time.Duration `hcl:"-"`
 }
 
 func NewConfig() *Config {
@@ -128,9 +171,248 @@ func NewConfig() *Config {
 	}
 }
 
+// Merge merges two Agent configurations.
+func (c *Config) Merge(c2 *Config) *Config {
+	if c2 == nil {
+		return c
+	}
+
+	result := NewConfig()
+
+	result.SharedConfig = c.SharedConfig
+	if c2.SharedConfig != nil {
+		result.SharedConfig = c.SharedConfig.Merge(c2.SharedConfig)
+	}
+
+	result.AutoAuth = c.AutoAuth
+	if c2.AutoAuth != nil {
+		result.AutoAuth = c2.AutoAuth
+	}
+
+	result.Cache = c.Cache
+	if c2.Cache != nil {
+		result.Cache = c2.Cache
+	}
+
+	result.APIProxy = c.APIProxy
+	if c2.APIProxy != nil {
+		result.APIProxy = c2.APIProxy
+	}
+
+	result.DisableMlock = c.DisableMlock
+	if c2.DisableMlock {
+		result.DisableMlock = c2.DisableMlock
+	}
+
+	// For these, ignore the non-specific one and overwrite them all
+	result.DisableIdleConnsAutoAuth = c.DisableIdleConnsAutoAuth
+	if c2.DisableIdleConnsAutoAuth {
+		result.DisableIdleConnsAutoAuth = c2.DisableIdleConnsAutoAuth
+	}
+
+	result.DisableIdleConnsAPIProxy = c.DisableIdleConnsAPIProxy
+	if c2.DisableIdleConnsAPIProxy {
+		result.DisableIdleConnsAPIProxy = c2.DisableIdleConnsAPIProxy
+	}
+
+	result.DisableIdleConnsTemplating = c.DisableIdleConnsTemplating
+	if c2.DisableIdleConnsTemplating {
+		result.DisableIdleConnsTemplating = c2.DisableIdleConnsTemplating
+	}
+
+	result.DisableKeepAlivesAutoAuth = c.DisableKeepAlivesAutoAuth
+	if c2.DisableKeepAlivesAutoAuth {
+		result.DisableKeepAlivesAutoAuth = c2.DisableKeepAlivesAutoAuth
+	}
+
+	result.DisableKeepAlivesAPIProxy = c.DisableKeepAlivesAPIProxy
+	if c2.DisableKeepAlivesAPIProxy {
+		result.DisableKeepAlivesAPIProxy = c2.DisableKeepAlivesAPIProxy
+	}
+
+	result.DisableKeepAlivesTemplating = c.DisableKeepAlivesTemplating
+	if c2.DisableKeepAlivesTemplating {
+		result.DisableKeepAlivesTemplating = c2.DisableKeepAlivesTemplating
+	}
+
+	result.TemplateConfig = c.TemplateConfig
+	if c2.TemplateConfig != nil {
+		result.TemplateConfig = c2.TemplateConfig
+	}
+
+	for _, l := range c.Templates {
+		result.Templates = append(result.Templates, l)
+	}
+	for _, l := range c2.Templates {
+		result.Templates = append(result.Templates, l)
+	}
+
+	result.ExitAfterAuth = c.ExitAfterAuth
+	if c2.ExitAfterAuth {
+		result.ExitAfterAuth = c2.ExitAfterAuth
+	}
+
+	result.Vault = c.Vault
+	if c2.Vault != nil {
+		result.Vault = c2.Vault
+	}
+
+	result.PidFile = c.PidFile
+	if c2.PidFile != "" {
+		result.PidFile = c2.PidFile
+	}
+
+	return result
+}
+
+// ValidateConfig validates an Agent configuration after it has been fully merged together, to
+// ensure that required combinations of configs are there
+func (c *Config) ValidateConfig() error {
+	if c.APIProxy != nil && c.Cache != nil {
+		if c.Cache.UseAutoAuthTokenRaw != nil {
+			if c.APIProxy.UseAutoAuthTokenRaw != nil {
+				return fmt.Errorf("use_auto_auth_token defined in both api_proxy and cache config. Please remove this configuration from the cache block")
+			} else {
+				c.APIProxy.ForceAutoAuthToken = c.Cache.ForceAutoAuthToken
+			}
+		}
+	}
+
+	if c.Cache != nil {
+		if len(c.Listeners) < 1 && len(c.Templates) < 1 {
+			return fmt.Errorf("enabling the cache requires at least 1 template or 1 listener to be defined")
+		}
+
+		if c.Cache.UseAutoAuthToken {
+			if c.AutoAuth == nil {
+				return fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
+			}
+			if c.AutoAuth != nil && c.AutoAuth.Method != nil && c.AutoAuth.Method.WrapTTL > 0 {
+				return fmt.Errorf("cache.use_auto_auth_token is true and auto_auth uses wrapping")
+			}
+		}
+	}
+
+	if c.APIProxy != nil {
+		if len(c.Listeners) < 1 {
+			return fmt.Errorf("configuring the api_proxy requires at least 1 listener to be defined")
+		}
+
+		if c.APIProxy.UseAutoAuthToken {
+			if c.AutoAuth == nil {
+				return fmt.Errorf("api_proxy.use_auto_auth_token is true but auto_auth not configured")
+			}
+			if c.AutoAuth != nil && c.AutoAuth.Method != nil && c.AutoAuth.Method.WrapTTL > 0 {
+				return fmt.Errorf("api_proxy.use_auto_auth_token is true and auto_auth uses wrapping")
+			}
+		}
+	}
+
+	if c.AutoAuth != nil {
+		if len(c.AutoAuth.Sinks) == 0 &&
+			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) &&
+			len(c.Templates) == 0 {
+			return fmt.Errorf("auto_auth requires at least one sink or at least one template or api_proxy.use_auto_auth_token=true")
+		}
+	}
+
+	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
+		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
+	return nil
+}
+
 // LoadConfig loads the configuration at the given path, regardless if
-// its a file or directory.
+// it's a file or directory.
 func LoadConfig(path string) (*Config, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if fi.IsDir() {
+		return LoadConfigDir(path)
+	}
+	return LoadConfigFile(path)
+}
+
+// LoadConfigDir loads the configuration at the given path if it's a directory
+func LoadConfigDir(dir string) (*Config, error) {
+	f, err := os.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !fi.IsDir() {
+		return nil, fmt.Errorf("configuration path must be a directory: %q", dir)
+	}
+
+	var files []string
+	err = nil
+	for err != io.EOF {
+		var fis []os.FileInfo
+		fis, err = f.Readdir(128)
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+
+		for _, fi := range fis {
+			// Ignore directories
+			if fi.IsDir() {
+				continue
+			}
+
+			// Only care about files that are valid to load.
+			name := fi.Name()
+			skip := true
+			if strings.HasSuffix(name, ".hcl") {
+				skip = false
+			} else if strings.HasSuffix(name, ".json") {
+				skip = false
+			}
+			if skip || isTemporaryFile(name) {
+				continue
+			}
+
+			path := filepath.Join(dir, name)
+			files = append(files, path)
+		}
+	}
+
+	result := NewConfig()
+	for _, f := range files {
+		config, err := LoadConfigFile(f)
+		if err != nil {
+			return nil, fmt.Errorf("error loading %q: %w", f, err)
+		}
+
+		if result == nil {
+			result = config
+		} else {
+			result = result.Merge(config)
+		}
+	}
+
+	return result, nil
+}
+
+// isTemporaryFile returns true or false depending on whether the
+// provided file name is a temporary file for the following editors:
+// emacs or vim.
+func isTemporaryFile(name string) bool {
+	return strings.HasSuffix(name, "~") || // vim
+		strings.HasPrefix(name, ".#") || // emacs
+		(strings.HasPrefix(name, "#") && strings.HasSuffix(name, "#")) // emacs
+}
+
+// LoadConfigFile loads the configuration at the given path if it's a file
+func LoadConfigFile(path string) (*Config, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -141,7 +423,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -170,6 +452,12 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Pruning custom headers for Agent for now
+	for _, ln := range sharedConfig.Listeners {
+		ln.CustomResponseHeaders = nil
+	}
+
 	result.SharedConfig = sharedConfig
 
 	list, ok := obj.Node.(*ast.ObjectList)
@@ -185,6 +473,10 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'cache':%w", err)
 	}
 
+	if err := parseAPIProxy(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'api_proxy':%w", err)
+	}
+
 	if err := parseTemplateConfig(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'template_config': %w", err)
 	}
@@ -193,26 +485,10 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'template': %w", err)
 	}
 
-	if result.Cache != nil {
-		if len(result.Listeners) < 1 {
-			return nil, fmt.Errorf("at least one listener required when cache enabled")
-		}
-
-		if result.Cache.UseAutoAuthToken {
-			if result.AutoAuth == nil {
-				return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
-			}
-			if result.AutoAuth.Method.WrapTTL > 0 {
-				return nil, fmt.Errorf("cache.use_auto_auth_token is true and auto_auth uses wrapping")
-			}
-		}
-	}
-
-	if result.AutoAuth != nil {
-		if len(result.AutoAuth.Sinks) == 0 &&
-			(result.Cache == nil || !result.Cache.UseAutoAuthToken) &&
-			len(result.Templates) == 0 {
-			return nil, fmt.Errorf("auto_auth requires at least one sink or at least one template or cache.use_auto_auth_token=true")
+	if result.Cache != nil && result.APIProxy == nil {
+		result.APIProxy = &APIProxy{
+			UseAutoAuthToken:   result.Cache.UseAutoAuthToken,
+			ForceAutoAuthToken: result.Cache.ForceAutoAuthToken,
 		}
 	}
 
@@ -221,19 +497,61 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'vault':%w", err)
 	}
 
-	if result.Vault == nil {
-		result.Vault = &Vault{}
+	if result.Vault != nil {
+		// Set defaults
+		if result.Vault.Retry == nil {
+			result.Vault.Retry = &Retry{}
+		}
+		switch result.Vault.Retry.NumRetries {
+		case 0:
+			result.Vault.Retry.NumRetries = ctconfig.DefaultRetryAttempts
+		case -1:
+			result.Vault.Retry.NumRetries = 0
+		}
 	}
 
-	// Set defaults
-	if result.Vault.Retry == nil {
-		result.Vault.Retry = &Retry{}
+	if disableIdleConnsEnv := os.Getenv(DisableIdleConnsEnv); disableIdleConnsEnv != "" {
+		result.DisableIdleConns, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableIdleConnsEnv))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableIdleConnsEnv, err)
+		}
 	}
-	switch result.Vault.Retry.NumRetries {
-	case 0:
-		result.Vault.Retry.NumRetries = ctconfig.DefaultRetryAttempts
-	case -1:
-		result.Vault.Retry.NumRetries = 0
+
+	for _, subsystem := range result.DisableIdleConns {
+		switch subsystem {
+		case "auto-auth":
+			result.DisableIdleConnsAutoAuth = true
+		case "caching", "proxying":
+			result.DisableIdleConnsAPIProxy = true
+		case "templating":
+			result.DisableIdleConnsTemplating = true
+		case "":
+			continue
+		default:
+			return nil, fmt.Errorf("unknown disable_idle_connections value: %s", subsystem)
+		}
+	}
+
+	if disableKeepAlivesEnv := os.Getenv(DisableKeepAlivesEnv); disableKeepAlivesEnv != "" {
+		result.DisableKeepAlives, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableKeepAlivesEnv))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableKeepAlivesEnv, err)
+		}
+	}
+
+	for _, subsystem := range result.DisableKeepAlives {
+		switch subsystem {
+		case "auto-auth":
+			result.DisableKeepAlivesAutoAuth = true
+		case "caching", "proxying":
+			result.DisableKeepAlivesAPIProxy = true
+		case "templating":
+			result.DisableKeepAlivesTemplating = true
+		case "":
+			continue
+		default:
+			return nil, fmt.Errorf("unknown disable_keep_alives value: %s", subsystem)
+		}
 	}
 
 	return result, nil
@@ -301,6 +619,50 @@ func parseRetry(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.Vault.Retry = &r
+
+	return nil
+}
+
+func parseAPIProxy(result *Config, list *ast.ObjectList) error {
+	name := "api_proxy"
+
+	apiProxyList := list.Filter(name)
+	if len(apiProxyList.Items) == 0 {
+		return nil
+	}
+
+	if len(apiProxyList.Items) > 1 {
+		return fmt.Errorf("one and only one %q block is required", name)
+	}
+
+	item := apiProxyList.Items[0]
+
+	var apiProxy APIProxy
+	err := hcl.DecodeObject(&apiProxy, item.Val)
+	if err != nil {
+		return err
+	}
+
+	if apiProxy.UseAutoAuthTokenRaw != nil {
+		apiProxy.UseAutoAuthToken, err = parseutil.ParseBool(apiProxy.UseAutoAuthTokenRaw)
+		if err != nil {
+			// Could be a value of "force" instead of "true"/"false"
+			switch apiProxy.UseAutoAuthTokenRaw.(type) {
+			case string:
+				v := apiProxy.UseAutoAuthTokenRaw.(string)
+
+				if !strings.EqualFold(v, "force") {
+					return fmt.Errorf("value of 'use_auto_auth_token' can be either true/false/force, %q is an invalid option", apiProxy.UseAutoAuthTokenRaw)
+				}
+				apiProxy.UseAutoAuthToken = true
+				apiProxy.ForceAutoAuthToken = true
+
+			default:
+				return err
+			}
+		}
+	}
+	result.APIProxy = &apiProxy
 
 	return nil
 }
@@ -448,6 +810,14 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 		result.AutoAuth.Method.MaxBackoffRaw = nil
 	}
 
+	if result.AutoAuth.Method.MinBackoffRaw != nil {
+		var err error
+		if result.AutoAuth.Method.MinBackoff, err = parseutil.ParseDurationSecond(result.AutoAuth.Method.MinBackoffRaw); err != nil {
+			return err
+		}
+		result.AutoAuth.Method.MinBackoffRaw = nil
+	}
+
 	return nil
 }
 
@@ -585,6 +955,14 @@ func parseTemplateConfig(result *Config, list *ast.ObjectList) error {
 
 	result.TemplateConfig = &cfg
 
+	if result.TemplateConfig.StaticSecretRenderIntRaw != nil {
+		var err error
+		if result.TemplateConfig.StaticSecretRenderInt, err = parseutil.ParseDurationSecond(result.TemplateConfig.StaticSecretRenderIntRaw); err != nil {
+			return err
+		}
+		result.TemplateConfig.StaticSecretRenderIntRaw = nil
+	}
+
 	return nil
 }
 
@@ -610,17 +988,22 @@ func parseTemplates(result *Config, list *ast.ObjectList) error {
 			return errors.New("error converting config")
 		}
 
-		// flatten the wait field. The initial "wait" value, if given, is a
+		// flatten the wait or exec fields. The initial "wait" or "exec" value, if given, is a
 		// []map[string]interface{}, but we need it to be map[string]interface{}.
 		// Consul Template has a method flattenKeys that walks all of parsed and
 		// flattens every key. For Vault Agent, we only care about the wait input.
-		// Only one wait stanza is supported, however Consul Template does not error
+		// Only one wait/exec stanza is supported, however Consul Template does not error
 		// with multiple instead it flattens them down, with last value winning.
-		// Here we take the last element of the parsed["wait"] slice to keep
+		// Here we take the last element of the parsed["wait"] or parsed["exec"] slice to keep
 		// consistency with Consul Template behavior.
 		wait, ok := parsed["wait"].([]map[string]interface{})
 		if ok {
 			parsed["wait"] = wait[len(wait)-1]
+		}
+
+		exec, ok := parsed["exec"].([]map[string]interface{})
+		if ok {
+			parsed["exec"] = exec[len(exec)-1]
 		}
 
 		var tc ctconfig.TemplateConfig

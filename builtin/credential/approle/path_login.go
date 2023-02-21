@@ -3,12 +3,13 @@ package approle
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -29,9 +30,33 @@ func pathLogin(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathLoginUpdate,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+					}},
+				},
 			},
 			logical.AliasLookaheadOperation: &framework.PathOperation{
 				Callback: b.pathLoginUpdateAliasLookahead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+					}},
+				},
+			},
+			logical.ResolveRoleOperation: &framework.PathOperation{
+				Callback: b.pathLoginResolveRole,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+						Fields: map[string]*framework.FieldSchema{
+							"role": {
+								Type:     framework.TypeString,
+								Required: true,
+							},
+						},
+					}},
+				},
 			},
 		},
 		HelpSynopsis:    pathLoginHelpSys,
@@ -52,6 +77,39 @@ func (b *backend) pathLoginUpdateAliasLookahead(ctx context.Context, req *logica
 			},
 		},
 	}, nil
+}
+
+func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// RoleID must be supplied during every login
+	roleID := strings.TrimSpace(data.Get("role_id").(string))
+	if roleID == "" {
+		return logical.ErrorResponse("missing role_id"), nil
+	}
+
+	// Look for the storage entry that maps the roleID to role
+	roleIDIndex, err := b.roleIDEntry(ctx, req.Storage, roleID)
+	if err != nil {
+		return nil, err
+	}
+	if roleIDIndex == nil {
+		return logical.ErrorResponse("invalid role ID"), nil
+	}
+
+	roleName := roleIDIndex.Name
+
+	roleLock := b.roleLock(roleName)
+	roleLock.RLock()
+
+	role, err := b.roleEntry(ctx, req.Storage, roleName)
+	roleLock.RUnlock()
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse("invalid role ID"), nil
+	}
+
+	return logical.ResolveRoleResponse(roleName)
 }
 
 // Returns the Auth object indicating the authentication and authorization information
@@ -119,7 +177,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 			return nil, err
 		}
 		if entry == nil {
-			return logical.ErrorResponse("invalid secret id"), nil
+			return logical.ErrorResponse("invalid secret id"), logical.ErrInvalidCredentials
 		}
 
 		// If a secret ID entry does not have a corresponding accessor
@@ -178,11 +236,14 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 				}
 
 				belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, entry.CIDRList)
-				if !belongs || err != nil {
+				if err != nil {
+					return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+				}
+
+				if !belongs {
 					return logical.ErrorResponse(fmt.Errorf(
-						"source address %q unauthorized through CIDR restrictions on the secret ID: %w",
+						"source address %q unauthorized through CIDR restrictions on the secret ID",
 						req.Connection.RemoteAddr,
-						err,
 					).Error()), nil
 				}
 			}

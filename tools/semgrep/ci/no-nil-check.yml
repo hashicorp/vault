@@ -1,0 +1,147 @@
+rules:
+  - id: nil-check-logical-storage
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $VAR, $ERR = ($S : logical.Storage).Get(...)
+              ...
+              $VAR.$FOO
+          - pattern: |
+              $VAR, $ERR = ($S : logical.Storage).Get(...)
+              ...
+              $FUNC2(..., $VAR, ...)
+      - pattern-not: |
+          $VAR, $ERR = ($S : logical.Storage).Get(...)
+          ...
+          if <... $VAR == nil ...> {
+              ...
+          }
+          ...
+      - pattern-not: |
+          $VAR, $ERR = ($S : logical.Storage).Get(...)
+          ...
+          if <... $VAR != nil ...> {
+              ...
+          }
+          ...
+    message: missed nil check 
+    languages:
+      - go
+    severity: ERROR
+
+
+# physical.Storage.Get
+  - id: nil-check-physical-storage
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $VAR, $ERR = ($S : physical.Storage).Get(...)
+              ...
+              $VAR.$FOO
+          - pattern: |
+              $VAR, $ERR = ($S : physical.Storage).Get(...)
+              ...
+              $FUNC2(..., $VAR, ...)
+      - pattern-not: |
+          $VAR, $ERR = ($S : physical.Storage).Get(...)
+          ...
+          if <... $VAR == nil ...> {
+              ...
+          }
+          ...
+      - pattern-not: |
+          $VAR, $ERR = ($S : physical.Storage).Get(...)
+          ...
+          if <... $VAR != nil ...> {
+              ...
+          }
+          ...
+    message: missed nil check 
+    languages:
+      - go
+    severity: ERROR
+
+# NamespaceByID 
+  - id: nil-check-physical-storage-by-nsid
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $VAR, $ERR = NamespaceByID(...)
+              ...
+              $VAR.$FOO
+          - pattern: |
+              $VAR, $ERR = NamespaceByID(...)
+              ...
+              $FUNC2(..., $VAR, ...)
+      - pattern-not: |
+          $VAR, $ERR = NamespaceByID(...)
+          ...
+          if <... $VAR == nil ...> {
+              ...
+          }
+          ...
+      - pattern-not: |
+          $VAR, $ERR = NamespaceByID(...)
+          ...
+          if <... $VAR != nil ...> {
+              ...
+          }
+          ...
+      # this is a special case for custom nil namespace handling logic in
+      # activity log
+      - pattern-not: |
+          $VAR, $ERR = NamespaceByID(...)
+          ...
+          if a.includeInResponse(..., $VAR) {
+              ...
+          }
+          ...
+    message: missed nil check 
+    languages:
+      - go
+    severity: ERROR
+
+  - id: nil-check-logical-storage-regex
+    paths:
+      exclude:
+          # This file has a valid case that I couldn't work around easily in the
+          # semgrep rule. Ignore it for now
+        - "vault/ui.go"
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $VAR, $ERR = $STORAGE.Get(...)
+              ...
+              $VAR.$FOO
+          - pattern: |
+              $VAR, $ERR = $STORAGE.Get(...)
+              ...
+              $FUNC2(..., $VAR, ...)
+      - pattern-not: |
+          $VAR, $ERR = $STORAGE.Get(...)
+          ...
+          if <... $VAR == nil ...> {
+              ...
+          }
+          ...
+      - pattern-not: |
+          $VAR, $ERR = $STORAGE.Get(...)
+          ...
+          if <... $VAR != nil ...> {
+              ...
+          }
+          ...
+      - pattern-not: |
+          $VAR, $ERR = $STORAGE.Get(...)
+          ...
+          switch $VAR {
+          case ...
+          }
+          ...
+      - metavariable-regex:
+          metavariable: $STORAGE
+          regex: ((.*)Storage|(.*)\.s|(.*)\.barrier|(.*)\.view|(.*)\.barrierView|(.*)\.physical|(.*)\.underlying)
+    message: missed nil check 
+    languages:
+      - go
+    severity: ERROR

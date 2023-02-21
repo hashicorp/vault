@@ -1,128 +1,145 @@
-{{#if showNav}}
-  <NavHeader data-test-header-with-nav @class="{{if consoleOpen 'panel-open'}}"
-    as |Nav|>
+{{#if this.showNav}}
+  <NavHeader data-test-header-with-nav @class={{if this.consoleOpen "panel-open"}} as |Nav|>
     <Nav.home>
       <HomeLink @class="navbar-item has-text-white has-current-color-fill">
-        <Icon @glyph="vault-logo" @size="l" />
+        <Icon @name="vault-logo" />
       </HomeLink>
     </Nav.home>
     <Nav.main>
-      <ul class="navbar-sections {{if (has-feature "Namespaces") 'with-ns-picker'}}">
+      <ul class="navbar-sections {{if (has-feature 'Namespaces') 'with-ns-picker'}}">
         {{#if (has-feature "Namespaces")}}
           <li>
-            <NamespacePicker
-              @class="navbar-item"
-              @namespace={{namespaceQueryParam}}
-            >
-            </NamespacePicker>
+            <NamespacePicker @class="navbar-item" @namespace={{this.namespaceQueryParam}} />
           </li>
         {{/if}}
-        <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
-          {{#link-to
-            "vault.cluster.secrets"
-            current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
-            invokeAction=(action Nav.closeDrawer)
-            data-test-navbar-item='secrets'
-          }}
+        <li>
+          <LinkTo
+            @route="vault.cluster.secrets"
+            @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
+            class={{if (is-active-route "vault.cluster.secrets") "is-active"}}
+            {{on "click" Nav.closeDrawer}}
+            data-test-navbar-item="secrets"
+          >
             Secrets
-          {{/link-to}}
+          </LinkTo>
         </li>
-        {{#if (has-permission 'access')}}
-          <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
-            {{#link-to
-              params=(route-params-for 'access')
-              current-when="vault.cluster.access vault.cluster.settings.auth"
-              invokeAction=(action Nav.closeDrawer)
-              data-test-navbar-item='access'
-              }}
+        {{#if (has-permission "access")}}
+          <li>
+            <LinkTo
+              @route={{get (route-params-for "access") "route"}}
+              @models={{get (route-params-for "access") "models"}}
+              @current-when="vault.cluster.access vault.cluster.settings.auth"
+              class={{if (is-active-route "vault.cluster.access") "is-active"}}
+              {{on "click" Nav.closeDrawer}}
+              data-test-navbar-item="access"
+            >
               Access
-            {{/link-to}}
+            </LinkTo>
           </li>
         {{/if}}
-        {{#if (has-permission 'policies')}}
-          <li class="{{if (is-active-route (array 'vault.cluster.policies' 'vault.cluster.policy')) 'is-active'}}">
-            {{#link-to
-              "vault.cluster.policies"
-              (route-params-for 'policies')
-              current-when="vault.cluster.policies vault.cluster.policy"
-              invokeAction=(action Nav.closeDrawer)
-              data-test-navbar-item='policies'
-            }}
+        {{#if (has-permission "policies")}}
+          <li>
+            <LinkTo
+              @route="vault.cluster.policies"
+              @models={{get (route-params-for "policies") "models"}}
+              @current-when="vault.cluster.policies vault.cluster.policy"
+              class={{if (is-active-route (array "vault.cluster.policies" "vault.cluster.policy")) "is-active"}}
+              {{on "click" Nav.closeDrawer}}
+              data-test-navbar-item="policies"
+            >
               Policies
-            {{/link-to}}
+            </LinkTo>
           </li>
         {{/if}}
-        {{#if (has-permission 'tools')}}
-          <li class="{{if (is-active-route 'vault.cluster.tools') 'is-active'}}">
-            {{#link-to
-              "vault.cluster.tools.tool"
-              (route-params-for 'tools')
-              invokeAction=(action Nav.closeDrawer)
-            }}
+        {{#if (has-permission "tools")}}
+          <li>
+            <LinkTo
+              @route="vault.cluster.tools.tool"
+              @models={{get (route-params-for "tools") "models"}}
+              class={{if (is-active-route "vault.cluster.tools") "is-active"}}
+              {{on "click" Nav.closeDrawer}}
+            >
               Tools
-            {{/link-to}}
+            </LinkTo>
           </li>
         {{/if}}
       </ul>
     </Nav.main>
     <Nav.items>
       <div class="navbar-separator is-hidden-tablet"></div>
-      {{#if namespaceService.inRootNamespace}}
-        <div class="navbar-item status-indicator-button" data-status="{{if activeCluster.unsealed "good" "bad"}}">
+      {{! template-lint-disable block-indentation }}
+      {{#if this.namespaceService.inRootNamespace}}
+        <div class="navbar-item status-indicator-button" data-status={{if this.activeCluster.unsealed "good" "bad"}}>
           <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
         </div>
         <div class="navbar-separator is-hidden-mobile"></div>
-      {{else if (and (has-permission 'metrics' routeParams='activity') (not cluster.dr.isSecondary) auth.currentToken)}}
+      {{else if (and
+        (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary) this.auth.currentToken
+      )}}
         <div class="navbar-sections">
-          <div class="{{if (is-active-route 'vault.cluster.metrics') 'is-active'}}">
-            {{#link-to
-              "vault.cluster.metrics"
-              current-when="vault.cluster.metrics"
-              data-test-navbar-item='metrics'
-            }}
-              Metrics
-            {{/link-to}}
+          <div class={{if (is-active-route "vault.cluster.clients") "is-active"}}>
+            <LinkTo @route="vault.cluster.clients.dashboard" data-test-navbar-item="metrics">
+              Client count
+            </LinkTo>
           </div>
         </div>
       {{/if}}
+      {{! template-lint-enable block-indentation }}
       <div class="navbar-item">
-        <button type="button" class="button is-transparent nav-console-button{{if consoleOpen " popup-open"}}"
-          {{action (queue (action 'toggleConsole') (action Nav.closeDrawer))}} data-test-console-toggle>
-          <Icon @glyph="console" @size="l" />
+        <button
+          type="button"
+          class="button is-transparent nav-console-button{{if this.consoleOpen ' popup-open'}}"
+          {{action (queue (action "toggleConsole") (action Nav.closeDrawer))}}
+          data-test-console-toggle
+        >
+          <Icon @name="terminal-screen" />
           <div class="status-menu-label">
             Console
           </div>
           <Chevron @direction="down" class="has-text-white is-status-chevron" />
         </button>
       </div>
-      <div class="navbar-item nav-user-button {{if auth.allowExpiration "may-expire"}}" data-test-allow-expiration="{{auth.allowExpiration}}">
+      <div
+        class="navbar-item nav-user-button {{if this.auth.allowExpiration 'may-expire'}}"
+        data-test-allow-expiration={{this.auth.allowExpiration}}
+      >
         <StatusMenu @type="user" @label="User" @onLinkClick={{action Nav.closeDrawer}} />
       </div>
     </Nav.items>
   </NavHeader>
 {{/if}}
-<LicenseBanners @expiry={{activeCluster.licenseExpiry}} @autoloaded={{eq activeCluster.licenseState 'autoloaded'}} />
+<LicenseBanners
+  @expiry={{this.activeCluster.licenseExpiry}}
+  @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
+/>
 <div class="global-flash">
-  {{#each flashMessages.queue as |flash|}}
-    {{#flash-message data-test-flash-message=true flash=flash as |customComponent flash close|}}
+  {{#each this.flashMessages.queue as |flash|}}
+    <FlashMessage data-test-flash-message={{true}} @flash={{flash}} as |customComponent flash close|>
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
       {{else}}
-        <AlertPopup @type={{message-types flash.type}} @message={{flash.message}} @close={{close}} @isPreformatted={{flash.preformatted}} />
+        <AlertPopup
+          @type={{message-types flash.type}}
+          @message={{flash.message}}
+          @close={{close}}
+          @isPreformatted={{flash.preformatted}}
+        />
       {{/if}}
-    {{/flash-message}}
+    </FlashMessage>
   {{/each}}
 </div>
-{{#if showNav}}
-  <UiWizard>
+{{#if this.currentlyLoading}}
+  <LogoSplash />
+{{else}}
+  {{#if this.showNav}}
     <section class="section">
       <div class="container is-widescreen">
-        <TokenExpireWarning @expirationDate={{auth.tokenExpirationDate}}>
+        <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
           {{outlet}}
         </TokenExpireWarning>
       </div>
     </section>
-  </UiWizard>
-{{else}}
-  {{outlet}}
+  {{else}}
+    {{outlet}}
+  {{/if}}
 {{/if}}

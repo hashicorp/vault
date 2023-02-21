@@ -8,7 +8,7 @@ description: Short list of third-party tools that work with or are related to Va
 
 ## Hashicorp Tools
 
-- The [Terraform Vault provider](https://www.terraform.io/docs/providers/vault/index.html) can read from, write to, and configure Vault from [HashiCorp Terraform](https://www.terraform.io/)
+- The [Terraform Vault provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs) can read from, write to, and configure Vault from [HashiCorp Terraform](https://www.terraform.io/)
 - [consul-template](https://github.com/hashicorp/consul-template) is a template renderer, notifier, and supervisor for HashiCorp Consul and Vault data
 - [envconsul](https://github.com/hashicorp/envconsul) allows you to read and set environmental variables for processes from Consul and Vault data
 - The [vault-ssh-helper](https://github.com/hashicorp/vault-ssh-helper) can be used to enable one-time passwords for SSH authentication via Vault
@@ -29,9 +29,10 @@ The following list of tools is maintained by the community of Vault users; Hashi
 - [sequelize-vault](https://github.com/linyows/sequelize-vault) - A Sequelize plugin for easily integrating Vault secrets.
 - [ansible-modules-hashivault](https://github.com/TerryHowe/ansible-modules-hashivault) - An Ansible module for configuring most things in Vault including secrets, backends and policies.
 - [Docker credential helper](https://github.com/morningconsult/docker-credential-vault-login) - A program that automatically reads Docker credentials from your Vault server and passes them to the Docker daemon to authenticate to your Docker registry when pulling an image
-- [Cruise Daytona](https://github.com/cruise-automation/daytona) - An alternative implementation of the Vault client CLI for services and containers. Its core features are the abilty to automate authentication, fetching of secrets, and automated token renewal. Support for AWS, GCP, & Kubernetes Vault Auth Backends.
+- [Cruise Daytona](https://github.com/cruise-automation/daytona) - An alternative implementation of the Vault client CLI for services and containers. Its core features are the ability to automate authentication, fetching of secrets, and automated token renewal. Support for AWS, GCP, & Kubernetes Vault Auth Backends.
 - [Vault-CRD](https://vault.koudingspawn.de/) - Synchronize secrets stored in HashiCorp Vault to Kubernetes Secrets for better GitOps without secrets stored in git manifest files.
-- [nc-vault-env](https://github.com/namecheap/nc-vault-env) - JS CLI tool that fetches secrets in parallel, puts them into the environment and then `exec`s the process that needs them. Supports auth token renewal, multiple auth backends, verbose logging and dummy mode.
 - [vsh](https://github.com/fishi0x01/vsh) - Interactive shell with tab-completion. Allows recursive operations on paths. Allows migration of secrets between both KV versions.
+- [HashiBox](https://github.com/nunchistudio/hashibox) - Vagrant environment to simulate highly-available cloud with Consul, Nomad, Vault, and optional support for Waypoint. OSS & Enterprise supported.
+- [vkv](https://github.com/FalcoSuessgott/vkv) - Recursively list key-values entries from Vaults KV2 engine in various formats.
 
-Want to add your own project, or one that you use? Additions are welcome via [pull requests](https://github.com/hashicorp/vault/blob/master/website/pages/api-docs/relatedtools.mdx).
+Want to add your own project, or one that you use? Additions are welcome via [pull requests](https://github.com/hashicorp/vault/blob/main/website/content/api-docs/relatedtools.mdx).

@@ -8,7 +8,7 @@ description: |-
 
 # Highly Available Vault Cluster with Integrated Storage (Raft)
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
+@include 'helm/version.mdx'
 
 Integrated storage (raft) can be enabled using the `server.ha.raft.enabled` value:
 
@@ -48,7 +48,7 @@ kubectl exec -ti vault-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----
@@ -57,4 +57,4 @@ e6876c97-aaaa-a92e-b99a-0aafab105745    vault-1.vault-internal:8201    follower 
 4b5d7383-ff31-44df-e008-6a606828823b    vault-2.vault-internal:8201    follower    true
 ```
 
-Vault with integrated storage (Raft) is now ready to use!
+Vault with Integrated Storage (Raft) is now ready to use!

@@ -6,9 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/parseip"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -76,6 +78,14 @@ func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, roleBoundCIDRList []st
 		// If there are no CIDR blocks on the role, then the subset
 		// requirement would be satisfied
 		if len(roleBoundCIDRList) != 0 {
+			// Address blocks with /32 mask do not get stored with the CIDR mask
+			// Check if there are any /32 addresses and append CIDR mask
+			for i, block := range roleBoundCIDRList {
+				if !strings.Contains(block, "/") {
+					roleBoundCIDRList[i] = fmt.Sprint(block, "/32")
+				}
+			}
+
 			subset, err := cidrutil.SubsetBlocks(roleBoundCIDRList, secretIDCIDRs)
 			if !subset || err != nil {
 				return fmt.Errorf(
@@ -91,12 +101,19 @@ func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, roleBoundCIDRList []st
 	return nil
 }
 
+const maxHmacInputLength = 4096
+
 // Creates a SHA256 HMAC of the given 'value' using the given 'key' and returns
 // a hex encoded string.
 func createHMAC(key, value string) (string, error) {
 	if key == "" {
 		return "", fmt.Errorf("invalid HMAC key")
 	}
+
+	if len(value) > maxHmacInputLength {
+		return "", fmt.Errorf("value is longer than maximum of %d bytes", maxHmacInputLength)
+	}
+
 	hm := hmac.New(sha256.New, []byte(key))
 	hm.Write([]byte(value))
 	return hex.EncodeToString(hm.Sum(nil)), nil
@@ -108,6 +125,30 @@ func (b *backend) secretIDLock(secretIDHMAC string) *locksutil.LockEntry {
 
 func (b *backend) secretIDAccessorLock(secretIDAccessor string) *locksutil.LockEntry {
 	return locksutil.LockForKey(b.secretIDAccessorLocks, secretIDAccessor)
+}
+
+func decodeSecretIDStorageEntry(entry *logical.StorageEntry) (*secretIDStorageEntry, error) {
+	result := secretIDStorageEntry{}
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	cleanup := func(in []string) []string {
+		if len(in) == 0 {
+			// Don't change unnecessarily, if it was empty list leave as empty list
+			// instead of making it nil.
+			return in
+		}
+		var out []string
+		for _, s := range in {
+			out = append(out, parseip.TrimLeadingZeroesCIDR(s))
+		}
+		return out
+	}
+
+	result.CIDRList = cleanup(result.CIDRList)
+	result.TokenBoundCIDRs = cleanup(result.TokenBoundCIDRs)
+	return &result, nil
 }
 
 // nonLockedSecretIDStorageEntry fetches the secret ID properties from physical
@@ -134,8 +175,8 @@ func (b *backend) nonLockedSecretIDStorageEntry(ctx context.Context, s logical.S
 		return nil, nil
 	}
 
-	result := secretIDStorageEntry{}
-	if err := entry.DecodeJSON(&result); err != nil {
+	result, err := decodeSecretIDStorageEntry(entry)
+	if err != nil {
 		return nil, err
 	}
 
@@ -154,12 +195,12 @@ func (b *backend) nonLockedSecretIDStorageEntry(ctx context.Context, s logical.S
 	}
 
 	if persistNeeded {
-		if err := b.nonLockedSetSecretIDStorageEntry(ctx, s, roleSecretIDPrefix, roleNameHMAC, secretIDHMAC, &result); err != nil {
+		if err := b.nonLockedSetSecretIDStorageEntry(ctx, s, roleSecretIDPrefix, roleNameHMAC, secretIDHMAC, result); err != nil {
 			return nil, fmt.Errorf("failed to upgrade role storage entry %w", err)
 		}
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 // nonLockedSetSecretIDStorageEntry creates or updates a secret ID entry at the

@@ -1,0 +1,3 @@
+```release-note:improvement
+command: Fix shell completion for KV v2 mounts
+```

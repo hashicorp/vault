@@ -1,0 +1,363 @@
+---
+layout: api
+page_title: /sys/managed-keys - HTTP API
+description: The `/sys/managed-keys` endpoint is used to manage the managed keys in Vault.
+---
+
+# `/sys/managed-keys`
+
+The `/sys/managed-keys` endpoint is used to manage the Managed Key configuration within Vault.
+See the [Managed Keys](/vault/docs/enterprise/managed-keys) section for further details on the Managed Keys system.
+
+## List managed keys.
+
+This endpoint lists all the Managed Keys of a certain type within the namespace.
+
+| Method | Path                      |
+|:-------|:--------------------------|
+| `LIST` | `/sys/managed-keys/:type` |
+
+### Parameters
+- `type` `(string: <required>)` – The backend type of keys to be listed.
+Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request LIST \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/managed-keys/pkcs11
+```
+
+### Sample Response
+
+```json
+{
+  "keys": [
+    "hsm-key1",
+    "hsm-key2"
+  ]
+}
+```
+
+## Create/Update managed key
+
+An endpoint that will create or update a Managed Key within a given namespace. The :type refers to the backend type
+that the key is to use, such as `pkcs11`. The :name argument is unique name within all managed key types in
+the namespace.
+
+| Method | Path                            |
+|:-------|:--------------------------------|
+| `POST` | `/sys/managed-keys/:type/:name` |
+
+### Sample Payload
+
+```json
+{
+  "library": "softhsm",
+  "slot": "693149389",
+  "pin": "12345",
+  "key_label": "hsm-key1",
+  "mechanism": "0x0001"
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request POST \
+    --header "X-Vault-Token: ..." \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/managed-keys/pkcs11/hsm-key1
+```
+
+### Generic Parameters
+- `name` `(string: <required>)` - A unique lowercase name that serves as identifying the key. Must be
+  unique throughout all types in the namespace.
+
+- `type` `(string: <required>)` – The backend type that will be leveraged for the managed key.
+  Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
+
+- `allow_generate_key` `(string: "false")` - If no existing key can be found in the referenced backend, instructs
+  Vault to generate a key within the backend.
+
+- `allow_replace_key` `(string: "false")` - Controls the ability for Vault to replace through generation or importing
+  a key into the configured backend even if a key is present, if set to false those operations are forbidden
+  if a key exists.
+
+- `allow_store_key` `(string: "false")` - Controls the ability for Vault to import a key
+  to the configured backend, if "false" those operations will be forbidden.
+
+- `any_mount` `(string: "false")` - Allow usage from any mount point within the namespace if "true". If "false"
+  specific mount points will need their `allowed_managed_keys` parameter to be updated with the key name to
+  grant usage.
+
+- `usages` `(comma-delimited string: "sign,verify")` - A comma-delimited list of the allowed usages of this key. Valid values
+  are encrypt, decrypt, sign, verify, wrap, unwrap, mac, and random.
+
+#### PKCS#11 backend Parameters
+
+~> NOTE: The `pkcs11` backend is only available with Vault Enterprise Plus (HSMs) edition
+
+- `type` `(string: "pkcs11")` - To select a PKCS#11 backend, the type parameter must be set to `pkcs11`.
+
+- `library` `(string: <required>)` - The name of the `kms_library` stanza to use from Vault's config to
+   lookup the local library path. See [kms_library stanza](/vault/docs/configuration/kms-library) for further details.
+
+- `key_label` `(string: <required>)` - The label of the key to use. If the key does not exist
+  and generation is enabled, this is the label that will be given to the generated key. This
+  value or `key_id` must be specified.
+
+- `key_id` `(string: <required>)` - The id of a PKCS#11 key to use. As key ids are created by
+  the HSM, it is an error if the key does not yet exist. This value or `key_label` must be
+  specified.
+
+- `mechanism` `(string: <required>)` - The encryption/decryption mechanism to use,
+  specified as a hexadecimal (prefixed by 0x) string. The following are supported mechanisms
+    - `0x1041` `CKM_ECDSA`
+    - `0x000D` `CKM_RSA_PKCS_PSS`
+    - `0x0009` `CKM_RSA_PKCS_OAEP`
+    - `0x0001` `CKM_RSA_PKCS`
+
+- `pin` `(string: <required>)`: The PIN for login.
+
+- `slot` `(string: <slot or token label required>)`: The slot number to use,
+  specified as a string in a decimal format (e.g. `"2305843009213693953"`).
+
+  ~> **Note**: Slots are typically listed as hex-decimal values in the OS setup
+  utility but this configuration uses their decimal equivalent. For example, using the
+  HSM command-line `pkcs11-tool`, a slot listed as `0x2000000000000001`in hex is equal
+  to `2305843009213693953` in decimal; these values may be listed shorter or
+  differently as determined by the HSM in use.
+
+- `token_label` `(string: <slot or token label required>)`: The slot token label to
+  use.
+
+- `curve` `(string: "" <required if allow_generate_key is true>)` - supplies the curve value when using the `CKM_ECDSA mechanism`.
+  The supported values are
+    - `P384`
+    - `P521`
+    - `P256`
+
+- `key_bits` `(int: 0 <required if allow_generate_key is true>)` - supplies the size in bits of the key when using `CKM_RSA_PKCS_PSS`,
+  `CKM_RSA_PKCS_OAEP` or `CKM_RSA_PKCS` as a value for `mechanism`.
+  The supported values are
+    - 2048
+    - 3072
+    - 4096
+
+- `force_rw_session` `(string: "false")` - Force all operations to open up
+  a read-write session to the HSM. This is a boolean expressed as a string (e.g.
+  `"true"`). This key is mainly to work around a limitation within AWS's CloudHSM v5
+  pkcs11 implementation.
+
+- `max_parallel` `(int: 1)` - The number of concurrent requests that may be in
+  flight to the HSM at any given time.
+
+#### AWS KMS Parameters
+- `type` `(string: "awskms")` - To select an AWS KMS backend, the type parameter must be set to `awskms`.
+
+- `access_key` `(string: <required>)`: The AWS access key to use. This may also be provided in
+  the `AWS_ACCESS_KEY_ID` environment variable or as part of the AWS profile from the AWS CLI or
+  instance profile.
+
+- `curve` `(string: "" <required if allow_generate_key is true>)`: The curve to use for an ECDSA key.
+  This field is used when `key_type` is `ECDSA`. Supported options are `P256`, `P384`, or `P521`.
+
+- `endpoint` `(string: "")`: Used to specify a custom AWS endpoint. If not set, Vault will use
+  the default API endpoint for your region.
+
+- `key_bits` `(string: <required>)`: The size in bits for an RSA key. This field is required when
+  `key_type` is `RSA`. Supported values are `2048`, `3072`, and `4096`.
+
+- `key_type` `(string: <required>)`: The type of key to use. Supported values are `RSA` and
+  `ECDSA` (not case sensitive). If the key type is `RSA`, the `key_bits` field is also required.
+  If the key type is `ECDSA`, the `curve` field is required.
+
+- `kms_key` `(string: <required>)`: An identifier for the key. If `allow_generate_key` is set to
+  `false`, the value can be either an ARN, an AWS alias, or the key ID generated by AWS KMS. If
+  `allow_generate_key` is set to `true`, the value must be an AWS alias. If a key with the provided
+  alias does not already exist, Vault will generate a key and create an alias for it using this parameter.
+
+  ~> **Note**: when creating a key through AWS KMS to be used with managed keys, note
+  that the key usage must be `SIGN_VERIFY`. When using an elliptic curve key, the
+  combination `key_type=ECDSA` and `curve=P256` corresponds to the AWS Key Spec
+  `ECC_NIST_P256`.
+
+- `region` `(string: "us-east-1")`: The AWS region where the keys are stored (or will be stored).
+  This may also be provided in the `AWS_REGION` or `AWS_DEFAULT_REGION` environment variables,
+  from your `~/.aws/config` file, or from instance metadata.
+
+- `secret_key` `(string: <required>)`: The AWS secret key ID to use. This may also be provided in
+  the `AWS_SECRET_ACCESS_KEY` environment variable or as part of the AWS profile from the AWS CLI
+  or instance profile.
+
+#### Azure Key Vault Parameters
+- `type` `(string: "azurekeyvault")` - To select an Azure Key Vault backend, the type parameter must be set to `azurekeyvault`.
+
+- `tenant_id` `(string: <required>)`: The tenant id for the Azure Active Directory organization.
+
+- `client_id` `(string: <required or MSI>)`: The client id for credentials to query the Azure APIs.
+
+- `client_secret` `(string: <required or MSI>)`: The client secret for credentials to query the
+  Azure APIs.
+
+- `environment` `(string: "AZUREPUBLICCLOUD")`: The Azure Cloud environment API endpoints to use.
+
+- `vault_name` `(string: <required>)`: The Key Vault vault to use the encryption keys for
+  encryption and decryption.
+
+- `key_name` `(string: <required>)`: The Key Vault key to use for encryption and decryption.
+
+- `resource` `(string: "vault.azure.net")`: The Azure Key Vault resource's DNS Suffix to connect
+  to. Needs to be changed to connect to Azure's Managed HSM KeyVault instance type.
+
+- `key_bits` `(string: <required if allow_generate_key is true>)`: The size in bits for an RSA key.
+   This field is required when `key_type` is `RSA`. Supported values are `2048`, `3072`, and `4096`.
+
+- `key_type` `(string: <required>)`: The type of key to use. At this time only supported value is `RSA-HSM`.
+
+#### GCP Cloud KMS Parameters
+- `type` `(string: "gcpckms")` - To select an GCP Cloud KMS backend, the type parameter must be set to `gcpckms`.
+
+- `credentials` `(string: <required>)`: The path of the credential file to use for authenticating to GCP.
+  This can also be provided in the `GOOGLE_CREDENTIALS` or `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
+
+- `crypto_key` `(string: <required>)`: The name of the GCP Cloud KMS key. If there is no existing key
+  and `allow_generate_key` is `true`, Vault will generate a key with this name.
+
+- `crypto_key_version` `(string: "1")`: The version of the key to use.
+
+- `key_ring` `(string: <required>)`: The name of the key ring in GCP Cloud KMS. This needs to be created
+  prior to key creation.
+
+- `project` `(string: <required>)`: The ID of the GCP project. This can also be provided with
+  the `GOOGLE_PROJECT` environment variable.
+
+- `region` `(string: <required>)`: The region where the key ring was created. This can also be provided
+  with the `GOOGLE_REGION` environment variable.
+
+- `algorithm` `(string: <required>)`: The signature algorithm to be used with the key. Supported
+  values for signature algorithms are:
+  - `EC_SIGN_P256_SHA256`
+  - `EC_SIGN_P384_SHA384`
+  - `RSA_SIGN_PSS_2048_SHA256`
+  - `RSA_SIGN_PSS_3072_SHA256`
+  - `RSA_SIGN_PSS_4096_SHA256`
+  - `RSA_SIGN_PSS_4096_SHA512`
+  - `RSA_SIGN_PKCS1_2048_SHA256`
+  - `RSA_SIGN_PKCS1_3072_SHA256`
+  - `RSA_SIGN_PKCS1_4096_SHA256`
+  - `RSA_SIGN_PKCS1_4096_SHA512`
+
+  For more information, see the GCP Cloud KMS [documentation for signing algorithms](https://cloud.google.com/kms/docs/algorithms).
+
+## Read managed key
+
+This endpoint returns the managed key configuration at the given path.
+
+| Method | Path                            |
+|:-------|:--------------------------------|
+| `GET`  | `/sys/managed-keys/:type/:name` |
+
+### Parameters
+- `name` `(string: <required>)` - The lowercase name identifying the key.
+
+- `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/managed-keys/pkcs11/hsm-key1
+```
+
+### Sample Response
+
+```json
+{
+  "UUID": "af0a688e-d2c1-fc07-b365-40325674114d",
+  "allow_generate_key": true,
+  "allow_replace_key": false,
+  "allow_store_key": false,
+  "any_mount": false,
+  "curve": "",
+  "force_rw_session": false,
+  "key_bits": 0,
+  "key_label": "test-kms-root",
+  "library": "softhsm",
+  "mechanism": 1,
+  "name": "hsm-key1",
+  "pin": "redacted",
+  "slot": 1,
+  "token_label": "",
+  "type": "pkcs11"
+}
+```
+
+## Test Sign with a managed key
+
+This endpoint allows an operator to validate that a managed key configuration works
+by signing and verifying some randomly generated data. If the call returns a successful HTTP
+status code, the configuration can be considered valid.
+
+~> **Note**: if key generation is allowed and no existing key can be found, this call will generate the key
+
+| Method | Path                                      |
+|:-------|:------------------------------------------|
+| `POST` | `/sys/managed-keys/:type/:name/test/sign` |
+
+### Parameters
+- `name` `(string: <required>)` - The lowercase name identifying the key.
+
+- `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms`, `azurekeyvault`, or `gcpckms`.
+
+- `use_pss` `(bool: false)` - Use RSA PSS signatures within the signing/verification api calls.
+
+- `hash_algorithm` `(string: sha2-256)` - Use the following hashing algorithm within the signing/verification api calls.
+  The supported values are
+   - sha1
+   - sha2-224
+   - sha2-256
+   - sha2-384
+   - sha2-512
+   - sha3-224
+   - sha3-256
+   - sha3-384
+   - sha3-512
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request POST \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/managed-keys/pkcs11/hsm-key1/test/sign
+```
+
+
+## Delete managed key
+
+This endpoint deletes the managed key at the given path provided it is not
+listed within any mount point's `allowed_managed_keys`.
+
+| Method   | Path                            |
+|:---------|:--------------------------------|
+| `DELETE` | `/sys/managed-keys/:type/:name` |
+
+### Parameters
+- `name` `(string: <required>)` - The lowercase name identifying the key.
+
+- `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request DELETE \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/managed-keys/pkcs11/hsm-key1
+```

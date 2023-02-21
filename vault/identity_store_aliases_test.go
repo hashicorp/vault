@@ -210,7 +210,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		t.Fatal("failed to create test identity store")
 	}
 
-	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
+	validateMountResp := is.router.ValidateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}
@@ -240,6 +240,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 			"testkey1": "testmetadatavalue1",
 			"testkey2": "testmetadatavalue2",
 		},
+		LocalBucketKey: is.localAliasPacker.BucketKey(entity.ID),
 	}
 
 	txn = is.db.Txn(true)
@@ -278,6 +279,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 			"testkey1": "testmetadatavalue1",
 			"testkey3": "testmetadatavalue3",
 		},
+		LocalBucketKey: is.localAliasPacker.BucketKey(entity.ID),
 	}
 
 	txn = is.db.Txn(true)
@@ -353,14 +355,354 @@ func TestIdentityStore_AliasRegister(t *testing.T) {
 }
 
 func TestIdentityStore_AliasUpdate(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	tests := []struct {
+		name       string
+		createData map[string]interface{}
+		updateData map[string]interface{}
+	}{
+		{
+			name: "noop",
+			createData: map[string]interface{}{
+				"name":           "noop",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"foo": "baz",
+					"bar": "qux",
+				},
+			},
+			updateData: map[string]interface{}{
+				"name":           "noop",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"foo": "baz",
+					"bar": "qux",
+				},
+			},
+		},
+		{
+			name: "no-custom-metadata",
+			createData: map[string]interface{}{
+				"name":           "no-custom-metadata",
+				"mount_accessor": githubAccessor,
+			},
+			updateData: map[string]interface{}{
+				"name":           "no-custom-metadata",
+				"mount_accessor": githubAccessor,
+			},
+		},
+		{
+			name: "update-name-custom-metadata",
+			createData: map[string]interface{}{
+				"name":            "update-name-custom-metadata",
+				"mount_accessor":  githubAccessor,
+				"custom_metadata": make(map[string]string),
+			},
+			updateData: map[string]interface{}{
+				"name":           "update-name-custom-metadata-2",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"bar": "qux",
+				},
+			},
+		},
+		{
+			name: "update-name",
+			createData: map[string]interface{}{
+				"name":           "update-name",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"foo": "baz",
+				},
+			},
+			updateData: map[string]interface{}{
+				"name":           "update-name-2",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"foo": "baz",
+				},
+			},
+		},
+		{
+			name: "update-metadata",
+			createData: map[string]interface{}{
+				"name":           "update-metadata",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"foo": "bar",
+				},
+			},
+			updateData: map[string]interface{}{
+				"name":           "update-metadata",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"foo": "baz",
+					"bar": "qux",
+				},
+			},
+		},
+		{
+			name: "clear-metadata",
+			createData: map[string]interface{}{
+				"name":           "clear",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"foo": "bar",
+				},
+			},
+			updateData: map[string]interface{}{
+				"name":            "clear",
+				"mount_accessor":  githubAccessor,
+				"custom_metadata": map[string]string{},
+			},
+		},
+	}
+
+	handleRequest := func(t *testing.T, req *logical.Request) *logical.Response {
+		t.Helper()
+		resp, err := is.HandleRequest(ctx, req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		return resp
+	}
+
+	respDefaults := map[string]interface{}{
+		"custom_metadata": map[string]string{},
+	}
+
+	checkValues := func(t *testing.T, reqData, respData map[string]interface{}) {
+		t.Helper()
+		expected := make(map[string]interface{})
+		for k := range reqData {
+			expected[k] = reqData[k]
+		}
+
+		for k := range respDefaults {
+			if _, ok := expected[k]; !ok {
+				expected[k] = respDefaults[k]
+			}
+		}
+
+		actual := make(map[string]interface{}, len(expected))
+		for k := range expected {
+			actual[k] = respData[k]
+		}
+
+		if !reflect.DeepEqual(expected, actual) {
+			t.Fatalf("expected data %#v, actual %#v", expected, actual)
+		}
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := handleRequest(t, &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "entity-alias",
+				Data:      tt.createData,
+			})
+
+			readReq := &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      "entity-alias/id/" + resp.Data["id"].(string),
+			}
+
+			// check create
+			resp = handleRequest(t, readReq)
+			checkValues(t, tt.createData, resp.Data)
+
+			// check update
+			resp = handleRequest(t, &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      readReq.Path,
+				Data:      tt.updateData,
+			})
+			resp = handleRequest(t, readReq)
+			checkValues(t, tt.updateData, resp.Data)
+		})
+	}
+}
+
+// Test to check that the alias cannot be updated with a new entity
+// which already has an alias for the mount on the alias to be updated
+func TestIdentityStore_AliasMove_DuplicateAccessor(t *testing.T) {
 	var err error
 	var resp *logical.Response
 	ctx := namespace.RootContext(nil)
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
 
+	// Create 2 entities and 1 alias on each, against the same github mount
+	resp, err = is.HandleRequest(ctx, &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "testentity1",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	entity1ID := resp.Data["id"].(string)
+
+	alias1Data := map[string]interface{}{
+		"name":           "testaliasname1",
+		"mount_accessor": githubAccessor,
+		"canonical_id":   entity1ID,
+	}
+
+	aliasReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity-alias",
+		Data:      alias1Data,
+	}
+
+	// This will create an alias against the requested entity
+	resp, err = is.HandleRequest(ctx, aliasReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	resp, err = is.HandleRequest(ctx, &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "testentity2",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	entity2ID := resp.Data["id"].(string)
+
+	alias2Data := map[string]interface{}{
+		"name":           "testaliasname2",
+		"mount_accessor": githubAccessor,
+		"canonical_id":   entity2ID,
+	}
+
+	aliasReq.Data = alias2Data
+
+	// This will create an alias against the requested entity
+	resp, err = is.HandleRequest(ctx, aliasReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	alias2ID := resp.Data["id"].(string)
+
+	// Attempt to update the second alias to point to the first entity
+	updateData := map[string]interface{}{
+		"canonical_id": entity1ID,
+	}
+
+	aliasReq.Data = updateData
+	aliasReq.Path = "entity-alias/id/" + alias2ID
+	resp, err = is.HandleRequest(ctx, aliasReq)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected an error as alias on the github accessor exists for testentity1")
+	}
+}
+
+// Test that the alias cannot be changed to a mount for which
+// the entity already has an alias
+func TestIdentityStore_AliasUpdate_DuplicateAccessor(t *testing.T) {
+	var err error
+	var resp *logical.Response
+	ctx := namespace.RootContext(nil)
+
+	is, ghAccessor, upAccessor, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
+
+	// Create 1 entity and 2 aliases on it, one for each mount
+	resp, err = is.HandleRequest(ctx, &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "testentity",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	entityID := resp.Data["id"].(string)
+
+	alias1Data := map[string]interface{}{
+		"name":           "testaliasname1",
+		"mount_accessor": ghAccessor,
+		"canonical_id":   entityID,
+	}
+
+	aliasReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity-alias",
+		Data:      alias1Data,
+	}
+
+	// This will create an alias against the requested entity
+	resp, err = is.HandleRequest(ctx, aliasReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	alias2Data := map[string]interface{}{
+		"name":           "testaliasname2",
+		"mount_accessor": upAccessor,
+		"canonical_id":   entityID,
+	}
+
+	aliasReq.Data = alias2Data
+
+	// This will create an alias against the requested entity
+	resp, err = is.HandleRequest(ctx, aliasReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	alias2ID := resp.Data["id"].(string)
+
+	// Attempt to update the userpass mount to point to the github mount
+	updateData := map[string]interface{}{
+		"mount_accessor": ghAccessor,
+	}
+
+	aliasReq.Data = updateData
+	aliasReq.Path = "entity-alias/id/" + alias2ID
+	resp, err = is.HandleRequest(ctx, aliasReq)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected an error as an alias on the github accessor already exists for testentity")
+	}
+}
+
+// Test that alias creation fails if an alias for the specified mount
+// and entity has already been created
+func TestIdentityStore_AliasCreate_DuplicateAccessor(t *testing.T) {
+	var err error
+	var resp *logical.Response
+	ctx := namespace.RootContext(nil)
+	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	resp, err = is.HandleRequest(ctx, &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	entityID := resp.Data["id"].(string)
+
 	aliasData := map[string]interface{}{
 		"name":           "testaliasname",
 		"mount_accessor": githubAccessor,
+		"canonical_id":   entityID,
 	}
 
 	aliasReq := &logical.Request{
@@ -369,33 +711,27 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 		Data:      aliasData,
 	}
 
-	// This will create an alias and a corresponding entity
-	resp, err = is.HandleRequest(ctx, aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-	aliasID := resp.Data["id"].(string)
-
-	updateData := map[string]interface{}{
-		"name":           "updatedaliasname",
-		"mount_accessor": githubAccessor,
-	}
-
-	aliasReq.Data = updateData
-	aliasReq.Path = "entity-alias/id/" + aliasID
+	// This will create an alias against the requested entity
 	resp, err = is.HandleRequest(ctx, aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	aliasReq.Operation = logical.ReadOperation
-	resp, err = is.HandleRequest(ctx, aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
+	aliasData["name"] = "testaliasname2"
+	aliasReq = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity-alias",
+		Data:      aliasData,
 	}
 
-	if resp.Data["name"] != "updatedaliasname" {
-		t.Fatalf("failed to update alias information; \n response data: %#v\n", resp.Data)
+	// This will try to create a new alias with the same accessor and entity
+	resp, err = is.HandleRequest(ctx, aliasReq)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected an error as alias already exists for this accessor and entity")
 	}
 }
 
@@ -425,9 +761,12 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 		t.Fatalf("expected an error due to invalid alias id")
 	}
 
+	customMetadata := make(map[string]string)
+	customMetadata["foo"] = "abc"
 	registerData := map[string]interface{}{
-		"name":           "testaliasname",
-		"mount_accessor": githubAccessor,
+		"name":            "testaliasname",
+		"mount_accessor":  githubAccessor,
+		"custom_metadata": customMetadata,
 	}
 
 	registerReq := &logical.Request{
@@ -468,6 +807,9 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 	if resp.Data["name"] != "updatedaliasname" {
 		t.Fatalf("failed to update alias information; \n response data: %#v\n", resp.Data)
 	}
+	if !reflect.DeepEqual(resp.Data["custom_metadata"], customMetadata) {
+		t.Fatalf("failed to update alias information; \n response data: %#v\n", resp.Data)
+	}
 
 	delete(registerReq.Data, "name")
 
@@ -498,10 +840,13 @@ func TestIdentityStore_AliasReadDelete(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
 
+	customMetadata := make(map[string]string)
+	customMetadata["foo"] = "abc"
 	registerData := map[string]interface{}{
-		"name":           "testaliasname",
-		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=hashicorp", "team=vault"},
+		"name":            "testaliasname",
+		"mount_accessor":  githubAccessor,
+		"metadata":        []string{"organization=hashicorp", "team=vault"},
+		"custom_metadata": customMetadata,
 	}
 
 	registerReq := &logical.Request{
@@ -537,7 +882,7 @@ func TestIdentityStore_AliasReadDelete(t *testing.T) {
 	if resp.Data["id"].(string) == "" ||
 		resp.Data["canonical_id"].(string) == "" ||
 		resp.Data["name"].(string) != registerData["name"] ||
-		resp.Data["mount_type"].(string) != "github" {
+		resp.Data["mount_type"].(string) != "github" || !reflect.DeepEqual(resp.Data["custom_metadata"], customMetadata) {
 		t.Fatalf("bad: alias read response; \nexpected: %#v \nactual: %#v\n", registerData, resp.Data)
 	}
 

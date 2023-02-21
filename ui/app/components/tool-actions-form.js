@@ -4,11 +4,12 @@ import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { setProperties, computed, set } from '@ember/object';
 import { addSeconds, parseISO } from 'date-fns';
+import { A } from '@ember/array';
 
 const DEFAULTS = {
   token: null,
   rewrap_token: null,
-  errors: [],
+  errors: A(),
   wrap_info: null,
   creation_time: null,
   creation_ttl: null,
@@ -25,7 +26,6 @@ const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
 
 export default Component.extend(DEFAULTS, {
   store: service(),
-  wizard: service(),
   // putting these attrs here so they don't get reset when you click back
   //random
   bytes: 32,
@@ -62,7 +62,7 @@ export default Component.extend(DEFAULTS, {
 
   dataIsEmpty: match('data', new RegExp(DEFAULTS.data)),
 
-  expirationDate: computed('creation_time', 'creation_ttl', function() {
+  expirationDate: computed('creation_time', 'creation_ttl', function () {
     const { creation_time, creation_ttl } = this;
     if (!(creation_time && creation_ttl)) {
       return null;
@@ -77,9 +77,9 @@ export default Component.extend(DEFAULTS, {
 
   handleSuccess(resp, action) {
     let props = {};
-    let secret = (resp && resp.data) || resp.auth;
+    const secret = (resp && resp.data) || resp.auth;
     if (secret && action === 'unwrap') {
-      let details = {
+      const details = {
         'Request ID': resp.request_id,
         'Lease ID': resp.lease_id || 'None',
         Renewable: resp.renewable ? 'Yes' : 'No',
@@ -91,9 +91,6 @@ export default Component.extend(DEFAULTS, {
     if (resp && resp.wrap_info) {
       const keyName = action === 'rewrap' ? 'rewrap_token' : 'token';
       props = assign({}, props, { [keyName]: resp.wrap_info.token });
-    }
-    if (props.token || props.rewrap_token || props.unwrap_data || action === 'lookup') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
     }
     setProperties(this, props);
   },
@@ -127,7 +124,10 @@ export default Component.extend(DEFAULTS, {
       this.store
         .adapterFor('tools')
         .toolAction(action, data, { wrapTTL })
-        .then(resp => this.handleSuccess(resp, action), (...errArgs) => this.handleError(...errArgs));
+        .then(
+          (resp) => this.handleSuccess(resp, action),
+          (...errArgs) => this.handleError(...errArgs)
+        );
     },
 
     onClear() {

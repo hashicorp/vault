@@ -26,10 +26,10 @@ const routerService = Service.extend({
   transitionTo: sinon.stub().returns(resolve()),
 });
 
-module('Integration | Component | replication actions', function(hooks) {
+module('Integration | Component | replication actions', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     run(() => {
       this.owner.register('service:router', routerService);
       this.owner.unregister('service:store');
@@ -37,16 +37,14 @@ module('Integration | Component | replication actions', function(hooks) {
       this.storeService = this.owner.lookup('service:store');
     });
   });
-
-  let testCases = [
+  const confirmInput = (confirmText) => fillIn('[data-test-confirmation-modal-input]', confirmText);
+  const testCases = [
     [
       'dr',
       'primary',
       'disable',
       'Disable Replication',
-      async function() {
-        fillIn('[data-test-confirmation-modal-input]', 'Disaster Recovery');
-      },
+      () => confirmInput('Disaster Recovery'),
       ['disable', 'primary'],
       false,
     ],
@@ -55,9 +53,7 @@ module('Integration | Component | replication actions', function(hooks) {
       'primary',
       'disable',
       'Disable Replication',
-      async function() {
-        fillIn('[data-test-confirmation-modal-input]', 'Performance');
-      },
+      () => confirmInput('Performance'),
       ['disable', 'primary'],
       false,
     ],
@@ -66,22 +62,36 @@ module('Integration | Component | replication actions', function(hooks) {
       'secondary',
       'disable',
       'Disable Replication',
-      async function() {
-        fillIn('[data-test-confirmation-modal-input]', 'Performance');
-      },
+      () => confirmInput('Performance'),
       ['disable', 'secondary'],
       false,
     ],
-    ['dr', 'primary', 'recover', 'Recover', null, ['recover'], false],
-    ['performance', 'primary', 'recover', 'Recover', null, ['recover'], false],
-    ['performance', 'secondary', 'recover', 'Recover', null, ['recover'], false],
+    ['dr', 'primary', 'recover', 'Recover', () => confirmInput('Disaster Recovery'), ['recover'], false],
+    ['performance', 'primary', 'recover', 'Recover', () => confirmInput('Performance'), ['recover'], false],
+    ['performance', 'secondary', 'recover', 'Recover', () => confirmInput('Performance'), ['recover'], false],
 
-    ['dr', 'primary', 'reindex', 'Reindex', null, ['reindex'], false],
-    ['performance', 'primary', 'reindex', 'Reindex', null, ['reindex'], false],
-    ['performance', 'secondary', 'reindex', 'Reindex', null, ['reindex'], false],
+    ['dr', 'primary', 'reindex', 'Reindex', () => confirmInput('Disaster Recovery'), ['reindex'], false],
+    ['performance', 'primary', 'reindex', 'Reindex', () => confirmInput('Performance'), ['reindex'], false],
+    ['performance', 'secondary', 'reindex', 'Reindex', () => confirmInput('Performance'), ['reindex'], false],
 
-    ['dr', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary'], false],
-    ['performance', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary'], false],
+    [
+      'dr',
+      'primary',
+      'demote',
+      'Demote cluster',
+      () => confirmInput('Disaster Recovery'),
+      ['demote', 'primary'],
+      false,
+    ],
+    [
+      'performance',
+      'primary',
+      'demote',
+      'Demote cluster',
+      () => confirmInput('Performance'),
+      ['demote', 'primary'],
+      false,
+    ],
 
     // we don't do dr secondary promote in this component so just test perf
     // re-enable this test when the DR secondary disable API endpoint is fixed
@@ -92,9 +102,10 @@ module('Integration | Component | replication actions', function(hooks) {
       'secondary',
       'promote',
       'Promote cluster',
-      async function() {
+      async function () {
         await fillIn('[name="primary_cluster_addr"]', 'cluster addr');
         await blur('[name="primary_cluster_addr"]');
+        await confirmInput('Performance');
       },
       ['promote', 'secondary', { primary_cluster_addr: 'cluster addr' }],
       false,
@@ -104,18 +115,19 @@ module('Integration | Component | replication actions', function(hooks) {
       'secondary',
       'update-primary',
       'Update primary',
-      async function() {
+      async function () {
         await fillIn('#secondary-token', 'token');
         await blur('#secondary-token');
         await fillIn('#primary_api_addr', 'addr');
         await blur('#primary_api_addr');
+        await confirmInput('Performance');
       },
       ['update-primary', 'secondary', { token: 'token', primary_api_addr: 'addr' }],
       false,
     ],
   ];
 
-  for (let [
+  for (const [
     replicationMode,
     clusterMode,
     action,
@@ -124,7 +136,8 @@ module('Integration | Component | replication actions', function(hooks) {
     expectedOnSubmit,
     oldVersion,
   ] of testCases) {
-    test(`replication mode ${replicationMode}, cluster mode: ${clusterMode}, action: ${action}`, async function(assert) {
+    test(`replication mode ${replicationMode}, cluster mode: ${clusterMode}, action: ${action}`, async function (assert) {
+      assert.expect(1);
       const testKey = `${replicationMode}-${clusterMode}-${action}`;
       this.set('model', {
         replicationAttrs: {
@@ -134,6 +147,7 @@ module('Integration | Component | replication actions', function(hooks) {
           mode: clusterMode,
           modeForUrl: clusterMode,
         },
+        replicationModeForDisplay: replicationMode === 'dr' ? 'Disaster Recovery' : 'Performance',
         reload() {
           return resolve();
         },
@@ -153,11 +167,16 @@ module('Integration | Component | replication actions', function(hooks) {
       await render(
         hbs`
         <div id="modal-wormhole"></div>
-        {{replication-actions model=model replicationMode=replicationMode selectedAction=selectedAction onSubmit=(action onSubmit)}}
+        <ReplicationActions
+          @model={{this.model}}
+          @replicationMode={{this.replicationMode}}
+          @selectedAction={{this.selectedAction}}
+          @onSubmit={{action this.onSubmit}}
+        />
         `
       );
 
-      let selector = oldVersion ? 'h4' : `[data-test-${action}-replication] h4`;
+      const selector = oldVersion ? 'h4' : `[data-test-${action}-replication] h4`;
       assert
         .dom(selector)
         .hasText(headerText, `${testKey}: renders the correct component header (${oldVersion})`);

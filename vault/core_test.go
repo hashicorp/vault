@@ -2,22 +2,31 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/version"
+	"github.com/sasha-s/go-deadlock"
 )
 
 // invalidKey is used to test Unseal
@@ -50,6 +59,26 @@ func TestSealConfig_Invalid(t *testing.T) {
 	err := s.Validate()
 	if err == nil {
 		t.Fatalf("expected err")
+	}
+}
+
+// TestCore_HasVaultVersion checks that versionHistory is correct and initialized
+// after a core has been unsealed.
+func TestCore_HasVaultVersion(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	if c.versionHistory == nil {
+		t.Fatalf("Version timestamps for core were not initialized for a new core")
+	}
+	versionEntry, ok := c.versionHistory[version.Version]
+	if !ok {
+		t.Fatalf("%s upgrade time not found", version.Version)
+	}
+
+	upgradeTime := versionEntry.TimestampInstalled
+
+	if upgradeTime.After(time.Now()) || upgradeTime.Before(time.Now().Add(-1*time.Hour)) {
+		t.Fatalf("upgrade time isn't within reasonable bounds of new core initialization. " +
+			fmt.Sprintf("time is: %+v, upgrade time is %+v", time.Now(), upgradeTime))
 	}
 }
 
@@ -126,6 +155,109 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 
 	if !c.Sealed() {
 		t.Fatalf("should be sealed")
+	}
+}
+
+// TestCore_UseSSCTokenToggleOn will check that the root SSC
+// token can be used even when disableSSCTokens is toggled on
+func TestCore_UseSSCTokenToggleOn(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	c.disableSSCTokens = true
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: root,
+	}
+	ctx := namespace.RootContext(nil)
+	resp, err := c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the key
+	req.Operation = logical.ReadOperation
+	req.Data = nil
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	resp, err = c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Secret.TTL != time.Hour {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Data["foo"] != "bar" {
+		t.Fatalf("bad: %#v", resp.Data)
+	}
+}
+
+// TestCore_UseNonSSCTokenToggleOff will check that the root
+// non-SSC token can be used even when disableSSCTokens is toggled
+// off.
+func TestCore_UseNonSSCTokenToggleOff(t *testing.T) {
+	coreConfig := &CoreConfig{
+		DisableSSCTokens: true,
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	if len(root) > TokenLength+OldTokenPrefixLength || !strings.HasPrefix(root, consts.LegacyServiceTokenPrefix) {
+		t.Fatalf("token is not an old token type: %s, %d", root, len(root))
+	}
+	c.disableSSCTokens = false
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: root,
+	}
+	ctx := namespace.RootContext(nil)
+	resp, err := c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the key
+	req.Operation = logical.ReadOperation
+	req.Data = nil
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	resp, err = c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Secret.TTL != time.Hour {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Data["foo"] != "bar" {
+		t.Fatalf("bad: %#v", resp.Data)
 	}
 }
 
@@ -234,6 +366,131 @@ func TestCore_SealUnseal(t *testing.T) {
 	}
 }
 
+// TestCore_RunLockedUserUpdatesForStaleEntry tests that stale locked user entries
+// get deleted upon unseal
+func TestCore_RunLockedUserUpdatesForStaleEntry(t *testing.T) {
+	core, keys, root := TestCoreUnsealed(t)
+	storageUserLockoutPath := fmt.Sprintf(coreLockedUsersPath + "ns1/mountAccessor1/aliasName1")
+
+	// cleanup
+	defer core.barrier.Delete(context.Background(), storageUserLockoutPath)
+
+	// create invalid entry in storage to test stale entries get deleted on unseal
+	// last failed login time for this path is 1970-01-01 00:00:00 +0000 UTC
+	// since user lockout configurations are not configured, lockout duration will
+	// be set to default (15m) internally
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(int(time.Unix(0, 0).Unix()), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create an entry
+	entry := &logical.StorageEntry{
+		Key:   storageUserLockoutPath,
+		Value: compressedBytes,
+	}
+
+	// Write to the physical backend
+	err = core.barrier.Put(context.Background(), entry)
+	if err != nil {
+		t.Fatalf("failed to write invalid locked user entry, err: %v", err)
+	}
+
+	// seal and unseal vault
+	if err := core.Seal(root); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(core, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("err: should be unsealed")
+		}
+	}
+
+	// locked user entry must be deleted upon unseal as it is stale
+	lastFailedLoginRaw, err := core.barrier.Get(context.Background(), storageUserLockoutPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lastFailedLoginRaw != nil {
+		t.Fatal("err: stale locked user entry exists")
+	}
+}
+
+// TestCore_RunLockedUserUpdatesForValidEntry tests that valid locked user entries
+// do not get removed on unseal
+// Also tests that the userFailedLoginInfo map gets updated with correct information
+func TestCore_RunLockedUserUpdatesForValidEntry(t *testing.T) {
+	core, keys, root := TestCoreUnsealed(t)
+	storageUserLockoutPath := fmt.Sprintf(coreLockedUsersPath + "ns1/mountAccessor1/aliasName1")
+
+	// cleanup
+	defer core.barrier.Delete(context.Background(), storageUserLockoutPath)
+
+	// create valid storage entry for locked user
+	lastFailedLoginTime := int(time.Now().Unix())
+
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(lastFailedLoginTime, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create an entry
+	entry := &logical.StorageEntry{
+		Key:   storageUserLockoutPath,
+		Value: compressedBytes,
+	}
+
+	// Write to the physical backend
+	err = core.barrier.Put(context.Background(), entry)
+	if err != nil {
+		t.Fatalf("failed to write invalid locked user entry, err: %v", err)
+	}
+
+	// seal and unseal vault
+	if err := core.Seal(root); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(core, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("err: should be unsealed")
+		}
+	}
+
+	// locked user entry must exist as it is still valid
+	existingEntry, err := core.barrier.Get(context.Background(), storageUserLockoutPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if existingEntry == nil {
+		t.Fatalf("err: entry must exist for locked user in storage")
+	}
+
+	// userFailedLoginInfo map should have the correct information for locked user
+	loginUserInfoKey := FailedLoginUser{
+		aliasName:     "aliasName1",
+		mountAccessor: "mountAccessor1",
+	}
+
+	failedLoginInfoFromMap := core.GetUserFailedLoginInfo(context.Background(), loginUserInfoKey)
+	if failedLoginInfoFromMap == nil {
+		t.Fatalf("err: entry must exist for locked user in userFailedLoginInfo map")
+	}
+	if failedLoginInfoFromMap.lastFailedLoginTime != lastFailedLoginTime {
+		t.Fatalf("err: incorrect failed login time information for locked user updated in userFailedLoginInfo map")
+	}
+	if int(failedLoginInfoFromMap.count) != configutil.UserLockoutThresholdDefault {
+		t.Fatalf("err: incorrect failed login count information for locked user updated in userFailedLoginInfo map")
+	}
+}
+
 // Attempt to shutdown after unseal
 func TestCore_Shutdown(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -247,11 +504,15 @@ func TestCore_Shutdown(t *testing.T) {
 
 // verify the channel returned by ShutdownDone is closed after Finalize
 func TestCore_ShutdownDone(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c := TestCoreWithSealAndUINoCleanup(t, &CoreConfig{})
+	testCoreUnsealed(t, c)
 	doneCh := c.ShutdownDone()
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		c.Shutdown()
+		err := c.Shutdown()
+		if err != nil {
+			t.Fatal(err)
+		}
 	}()
 
 	select {
@@ -272,6 +533,106 @@ func TestCore_Seal_BadToken(t *testing.T) {
 	}
 	if c.Sealed() {
 		t.Fatal("was sealed")
+	}
+}
+
+func TestCore_PreOneTen_BatchTokens(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// load up some versions and ensure that 1.9 is the most recent one by timestamp (even though this isn't realistic)
+	upgradeTimePlusEpsilon := time.Now().UTC()
+
+	versionEntries := []VaultVersion{
+		{Version: "1.10.1", TimestampInstalled: upgradeTimePlusEpsilon.Add(-4 * time.Hour)},
+		{Version: "1.9.2", TimestampInstalled: upgradeTimePlusEpsilon.Add(2 * time.Hour)},
+	}
+
+	for _, entry := range versionEntries {
+		_, err := c.storeVersionEntry(context.Background(), &entry, false)
+		if err != nil {
+			t.Fatalf("failed to write version entry %#v, err: %s", entry, err.Error())
+		}
+	}
+
+	err := c.loadVersionHistory(c.activeContext)
+	if err != nil {
+		t.Fatalf("failed to populate version history cache, err: %s", err.Error())
+	}
+
+	// double check that we're working with 1.9
+	v, _, err := c.FindNewestVersionTimestamp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "1.9.2" {
+		t.Fatalf("expected 1.9.2, found: %s", v)
+	}
+
+	// generate a batch token
+	te := &logical.TokenEntry{
+		NumUses:     1,
+		Policies:    []string{"root"},
+		NamespaceID: namespace.RootNamespaceID,
+		Type:        logical.TokenTypeBatch,
+	}
+	err = c.tokenStore.create(namespace.RootContext(nil), te)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify it uses the legacy prefix
+	if !strings.HasPrefix(te.ID, consts.LegacyBatchTokenPrefix) {
+		t.Fatalf("expected 1.9 batch token IDs to start with b. but it didn't: %s", te.ID)
+	}
+}
+
+func TestCore_OneTenPlus_BatchTokens(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// load up some versions and ensure that 1.10 is the most recent version
+	upgradeTimePlusEpsilon := time.Now().UTC()
+
+	versionEntries := []VaultVersion{
+		{Version: "1.9.2", TimestampInstalled: upgradeTimePlusEpsilon.Add(-4 * time.Hour)},
+		{Version: "1.10.1", TimestampInstalled: upgradeTimePlusEpsilon.Add(2 * time.Hour)},
+	}
+
+	for _, entry := range versionEntries {
+		_, err := c.storeVersionEntry(context.Background(), &entry, false)
+		if err != nil {
+			t.Fatalf("failed to write version entry %#v, err: %s", entry, err.Error())
+		}
+	}
+
+	err := c.loadVersionHistory(c.activeContext)
+	if err != nil {
+		t.Fatalf("failed to populate version history cache, err: %s", err.Error())
+	}
+
+	// double check that we're working with 1.10
+	v, _, err := c.FindNewestVersionTimestamp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "1.10.1" {
+		t.Fatalf("expected 1.10.1, found: %s", v)
+	}
+
+	// generate a batch token
+	te := &logical.TokenEntry{
+		NumUses:     1,
+		Policies:    []string{"root"},
+		NamespaceID: namespace.RootNamespaceID,
+		Type:        logical.TokenTypeBatch,
+	}
+	err = c.tokenStore.create(namespace.RootContext(nil), te)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify it uses the legacy prefix
+	if !strings.HasPrefix(te.ID, consts.BatchTokenPrefix) {
+		t.Fatalf("expected 1.10 batch token IDs to start with hvb. but it didn't: %s", te.ID)
 	}
 }
 
@@ -336,7 +697,10 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = c.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -379,7 +743,10 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = c.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -422,7 +789,10 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = c.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -453,10 +823,10 @@ func TestCore_HandleRequest_MissingToken(t *testing.T) {
 		},
 	}
 	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil || !errwrap.Contains(err, logical.ErrInvalidRequest.Error()) {
+	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "missing client token" {
+	if resp.Data["error"] != logical.ErrPermissionDenied.Error() {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -726,12 +1096,15 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	}
 
 	// Check the policy and metadata
-	te, err := c.tokenStore.Lookup(namespace.RootContext(nil), clientToken)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	innerToken, _ := c.DecodeSSCToken(clientToken)
+	te, err := c.tokenStore.Lookup(namespace.RootContext(nil), innerToken)
+	if err != nil || te == nil {
+		t.Fatalf("tok: %s, err: %v", clientToken, err)
 	}
+
+	expectedID, _ := c.DecodeSSCToken(clientToken)
 	expect := &logical.TokenEntry{
-		ID:       clientToken,
+		ID:       expectedID,
 		Accessor: te.Accessor,
 		Parent:   "",
 		Policies: []string{"bar", "default", "foo"},
@@ -759,10 +1132,10 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	// Create a noop audit backend
-	noop := &NoopAudit{}
+	noop := &corehelpers.NoopAudit{}
 	c, _, root := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		noop = &NoopAudit{
+		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}
 		return noop, nil
@@ -811,7 +1184,7 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 		t.Fatalf("bad: %#v", noop)
 	}
 	if !reflect.DeepEqual(noop.RespAuth[1], auth) {
-		t.Fatalf("bad: %#v", auth)
+		t.Fatalf("bad: %#v, vs %#v", auth, noop.RespAuth)
 	}
 	if len(noop.RespReq) != 2 || !reflect.DeepEqual(noop.RespReq[1], req) {
 		t.Fatalf("Bad: %#v", noop.RespReq[1])
@@ -823,10 +1196,10 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	// Create a noop audit backend
-	var noop *NoopAudit
+	var noop *corehelpers.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		noop = &NoopAudit{
+		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}
 		return noop, nil
@@ -910,21 +1283,24 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 		ClientToken: root,
 	}
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	if _, err := c.HandleRequest(namespace.RootContext(nil), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(noop.RespNonHMACKeys) != 1 || noop.RespNonHMACKeys[0] != "baz" {
+	if len(noop.RespNonHMACKeys) != 1 || !strutil.EquivalentSlices(noop.RespNonHMACKeys[0], []string{"baz"}) {
 		t.Fatalf("Bad: %#v", noop.RespNonHMACKeys)
 	}
-	if len(noop.RespReqNonHMACKeys) != 1 || noop.RespReqNonHMACKeys[0] != "foo" {
+	if len(noop.RespReqNonHMACKeys) != 1 || !strutil.EquivalentSlices(noop.RespReqNonHMACKeys[0], []string{"foo"}) {
 		t.Fatalf("Bad: %#v", noop.RespReqNonHMACKeys)
 	}
 }
 
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
-	noop := &NoopAudit{}
+	noop := &corehelpers.NoopAudit{}
 	noopBack := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
@@ -945,7 +1321,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 		return noopBack, nil
 	}
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		noop = &NoopAudit{
+		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}
 		return noop, nil
@@ -1037,10 +1413,14 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	expectedID, _ := c.DecodeSSCToken(clientToken)
+	expectedRootID, _ := c.DecodeSSCToken(root)
+
 	expect := &logical.TokenEntry{
-		ID:           clientToken,
+		ID:           expectedID,
 		Accessor:     te.Accessor,
-		Parent:       root,
+		Parent:       expectedRootID,
 		Policies:     []string{"default", "foo"},
 		Path:         "auth/token/create",
 		DisplayName:  "token",
@@ -1085,10 +1465,14 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	expectedID, _ := c.DecodeSSCToken(clientToken)
+	expectedRootID, _ := c.DecodeSSCToken(root)
+
 	expect := &logical.TokenEntry{
-		ID:           clientToken,
+		ID:           expectedID,
 		Accessor:     te.Accessor,
-		Parent:       root,
+		Parent:       expectedRootID,
 		Policies:     []string{"foo"},
 		Path:         "auth/token/create",
 		DisplayName:  "token",
@@ -1636,10 +2020,11 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	// Create the first core and initialize it
 	redirectOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
-		Physical:     inm,
-		HAPhysical:   inmha,
-		RedirectAddr: redirectOriginal,
-		DisableMlock: true,
+		Physical:        inm,
+		HAPhysical:      inmha,
+		RedirectAddr:    redirectOriginal,
+		DisableMlock:    true,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1955,7 +2340,10 @@ func TestCore_RenewSameLease(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -2042,8 +2430,9 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 	}
 
 	// Verify the token exists
-	if resp.Data["id"] != newClient {
-		t.Fatalf("bad: %#v", resp.Data)
+	if newClient != resp.Data["id"].(string) {
+		t.Fatalf("bad: return IDs: expected %v, got %v",
+			resp.Data["id"], newClient)
 	}
 }
 
@@ -2126,7 +2515,10 @@ path "secret/*" {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -2573,5 +2965,53 @@ func TestCore_ServiceRegistration(t *testing.T) {
 		notifyInitCount:   1,
 	}); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestDetectedDeadlock(t *testing.T) {
+	testCore, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: "statelock"})
+	InduceDeadlock(t, testCore, 1)
+}
+
+func TestDefaultDeadlock(t *testing.T) {
+	testCore, _, _ := TestCoreUnsealed(t)
+	InduceDeadlock(t, testCore, 0)
+}
+
+func RestoreDeadlockOpts() func() {
+	opts := deadlock.Opts
+	return func() {
+		deadlock.Opts = opts
+	}
+}
+
+func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
+	defer RestoreDeadlockOpts()()
+	var deadlocks uint32
+	deadlock.Opts.OnPotentialDeadlock = func() {
+		atomic.AddUint32(&deadlocks, 1)
+	}
+	var mtx deadlock.Mutex
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		vaultcore.expiration.coreStateLock.Lock()
+		mtx.Lock()
+		mtx.Unlock()
+		vaultcore.expiration.coreStateLock.Unlock()
+	}()
+	wg.Wait()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		mtx.Lock()
+		vaultcore.expiration.coreStateLock.RLock()
+		vaultcore.expiration.coreStateLock.RUnlock()
+		mtx.Unlock()
+	}()
+	wg.Wait()
+	if atomic.LoadUint32(&deadlocks) != expected {
+		t.Fatalf("expected 1 deadlock, detected %d", deadlocks)
 	}
 }

@@ -2,11 +2,9 @@ package pki
 
 import (
 	"context"
-	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -21,74 +19,40 @@ secret key and certificate.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathCAWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathImportIssuers,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"mapping": {
+								Type:        framework.TypeMap,
+								Description: "A mapping of issuer_id to key_id for all issuers included in this request",
+								Required:    true,
+							},
+							"imported_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Net-new keys imported as a part of this request",
+								Required:    true,
+							},
+							"imported_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Net-new issuers imported as a part of this request",
+								Required:    true,
+							},
+						},
+					}},
+				},
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathConfigCAHelpSyn,
 		HelpDescription: pathConfigCAHelpDesc,
 	}
-}
-
-func (b *backend) pathCAWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	pemBundle := data.Get("pem_bundle").(string)
-
-	if pemBundle == "" {
-		return logical.ErrorResponse("'pem_bundle' was empty"), nil
-	}
-
-	parsedBundle, err := certutil.ParsePEMBundle(pemBundle)
-	if err != nil {
-		switch err.(type) {
-		case errutil.InternalError:
-			return nil, err
-		default:
-			return logical.ErrorResponse(err.Error()), nil
-		}
-	}
-
-	if parsedBundle.PrivateKey == nil {
-		return logical.ErrorResponse("private key not found in the PEM bundle"), nil
-	}
-
-	if parsedBundle.PrivateKeyType == certutil.UnknownPrivateKey {
-		return logical.ErrorResponse("unknown private key found in the PEM bundle"), nil
-	}
-
-	if parsedBundle.Certificate == nil {
-		return logical.ErrorResponse("no certificate found in the PEM bundle"), nil
-	}
-
-	if !parsedBundle.Certificate.IsCA {
-		return logical.ErrorResponse("the given certificate is not marked for CA use and cannot be used with this backend"), nil
-	}
-
-	cb, err := parsedBundle.ToCertBundle()
-	if err != nil {
-		return nil, fmt.Errorf("error converting raw values into cert bundle: %w", err)
-	}
-
-	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
-	if err != nil {
-		return nil, err
-	}
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
-
-	// For ease of later use, also store just the certificate at a known
-	// location, plus a fresh CRL
-	entry.Key = "ca"
-	entry.Value = parsedBundle.CertificateBytes
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
-
-	err = buildCRL(ctx, b, req, true)
-
-	return nil, err
 }
 
 const pathConfigCAHelpSyn = `
@@ -103,36 +67,312 @@ secret key and certificate.
 For security reasons, the secret key cannot be retrieved later.
 `
 
-const pathConfigCAGenerateHelpSyn = `
-Generate a new CA certificate and private key used for signing.
+func pathConfigIssuers(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "config/issuers",
+		Fields: map[string]*framework.FieldSchema{
+			defaultRef: {
+				Type:        framework.TypeString,
+				Description: `Reference (name or identifier) to the default issuer.`,
+			},
+			"default_follows_latest_issuer": {
+				Type:        framework.TypeBool,
+				Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+				Default:     false,
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathCAIssuersRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+								Required:    true,
+							},
+							"default_follows_latest_issuer": {
+								Type:        framework.TypeBool,
+								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+								Required:    true,
+							},
+						},
+					}},
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCAIssuersWrite,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+							},
+							"default_follows_latest_issuer": {
+								Type:        framework.TypeBool,
+								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+							},
+						},
+					}},
+				},
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+		},
+
+		HelpSynopsis:    pathConfigIssuersHelpSyn,
+		HelpDescription: pathConfigIssuersHelpDesc,
+	}
+}
+
+func pathReplaceRoot(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "root/replace",
+		Fields: map[string]*framework.FieldSchema{
+			"default": {
+				Type:        framework.TypeString,
+				Description: `Reference (name or identifier) to the default issuer.`,
+				Default:     "next",
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCAIssuersWrite,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+								Required:    true,
+							},
+							"default_follows_latest_issuer": {
+								Type:        framework.TypeBool,
+								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+								Required:    true,
+							},
+						},
+					}},
+				},
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+		},
+
+		HelpSynopsis:    pathConfigIssuersHelpSyn,
+		HelpDescription: pathConfigIssuersHelpDesc,
+	}
+}
+
+func (b *backend) pathCAIssuersRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Cannot read defaults until migration has completed"), nil
+	}
+
+	sc := b.makeStorageContext(ctx, req.Storage)
+	config, err := sc.getIssuersConfig()
+	if err != nil {
+		return logical.ErrorResponse("Error loading issuers configuration: " + err.Error()), nil
+	}
+
+	return b.formatCAIssuerConfigRead(config), nil
+}
+
+func (b *backend) formatCAIssuerConfigRead(config *issuerConfigEntry) *logical.Response {
+	return &logical.Response{
+		Data: map[string]interface{}{
+			defaultRef:                      config.DefaultIssuerId,
+			"default_follows_latest_issuer": config.DefaultFollowsLatestIssuer,
+		},
+	}
+}
+
+func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Cannot update defaults until migration has completed"), nil
+	}
+
+	sc := b.makeStorageContext(ctx, req.Storage)
+
+	// Validate the new default reference.
+	newDefault := data.Get(defaultRef).(string)
+	if len(newDefault) == 0 || newDefault == defaultRef {
+		return logical.ErrorResponse("Invalid issuer specification; must be non-empty and can't be 'default'."), nil
+	}
+	parsedIssuer, err := sc.resolveIssuerReference(newDefault)
+	if err != nil {
+		return logical.ErrorResponse("Error resolving issuer reference: " + err.Error()), nil
+	}
+	entry, err := sc.fetchIssuerById(parsedIssuer)
+	if err != nil {
+		return logical.ErrorResponse("Unable to fetch issuer: " + err.Error()), nil
+	}
+
+	// Get the other new parameters. This doesn't exist on the /root/replace
+	// variant of this call.
+	var followIssuer bool
+	followIssuersRaw, followOk := data.GetOk("default_follows_latest_issuer")
+	if followOk {
+		followIssuer = followIssuersRaw.(bool)
+	}
+
+	// Update the config
+	config, err := sc.getIssuersConfig()
+	if err != nil {
+		return logical.ErrorResponse("Unable to fetch existing issuers configuration: " + err.Error()), nil
+	}
+	config.DefaultIssuerId = parsedIssuer
+	if followOk {
+		config.DefaultFollowsLatestIssuer = followIssuer
+	}
+
+	// Add our warning if necessary.
+	response := b.formatCAIssuerConfigRead(config)
+	if len(entry.KeyID) == 0 {
+		msg := "This selected default issuer has no key associated with it. Some operations like issuing certificates and signing CRLs will be unavailable with the requested default issuer until a key is imported or the default issuer is changed."
+		response.AddWarning(msg)
+		b.Logger().Error(msg)
+	}
+
+	if err := sc.setIssuersConfig(config); err != nil {
+		return logical.ErrorResponse("Error updating issuer configuration: " + err.Error()), nil
+	}
+
+	return response, nil
+}
+
+const pathConfigIssuersHelpSyn = `Read and set the default issuer certificate for signing.`
+
+const pathConfigIssuersHelpDesc = `
+This path allows configuration of issuer parameters.
+
+Presently, the "default" parameter controls which issuer is the default,
+accessible by the existing signing paths (/root/sign-intermediate,
+/root/sign-self-issued, /sign-verbatim, /sign/:role, and /issue/:role).
+
+The /root/replace path is aliased to this path, with default taking the
+value of the issuer with the name "next", if it exists.
 `
 
-const pathConfigCAGenerateHelpDesc = `
-This path generates a CA certificate and private key to be used for
-credentials generated by this mount. The path can either
-end in "internal" or "exported"; this controls whether the
-unencrypted private key is exported after generation. This will
-be your only chance to export the private key; for security reasons
-it cannot be read or exported later.
+func pathConfigKeys(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "config/keys",
+		Fields: map[string]*framework.FieldSchema{
+			defaultRef: {
+				Type:        framework.TypeString,
+				Description: `Reference (name or identifier) of the default key.`,
+			},
+		},
 
-If the "type" option is set to "self-signed", the generated
-certificate will be a self-signed root CA. Otherwise, this mount
-will act as an intermediate CA; a CSR will be returned, to be signed
-by your chosen CA (which could be another mount of this backend).
-Note that the CRL path will be set to this mount's CRL path; if you
-need further customization it is recommended that you create a CSR
-separately and get it signed. Either way, use the "config/ca/set"
-endpoint to load the signed certificate into Vault.
-`
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathKeyDefaultWrite,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+								Required:    true,
+							},
+						},
+					}},
+				},
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathKeyDefaultRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+							},
+						},
+					}},
+				},
+				ForwardPerformanceStandby:   false,
+				ForwardPerformanceSecondary: false,
+			},
+		},
 
-const pathConfigCASignHelpSyn = `
-Generate a signed CA certificate from a CSR.
-`
+		HelpSynopsis:    pathConfigKeysHelpSyn,
+		HelpDescription: pathConfigKeysHelpDesc,
+	}
+}
 
-const pathConfigCASignHelpDesc = `
-This path generates a CA certificate to be used for credentials
-generated by the certificate's destination mount.
+func (b *backend) pathKeyDefaultRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Cannot read key defaults until migration has completed"), nil
+	}
 
-Use the "config/ca/set" endpoint to load the signed certificate
-into Vault another Vault mount.
+	sc := b.makeStorageContext(ctx, req.Storage)
+	config, err := sc.getKeysConfig()
+	if err != nil {
+		return logical.ErrorResponse("Error loading keys configuration: " + err.Error()), nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			defaultRef: config.DefaultKeyId,
+		},
+	}, nil
+}
+
+func (b *backend) pathKeyDefaultWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating keys here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Cannot update key defaults until migration has completed"), nil
+	}
+
+	newDefault := data.Get(defaultRef).(string)
+	if len(newDefault) == 0 || newDefault == defaultRef {
+		return logical.ErrorResponse("Invalid key specification; must be non-empty and can't be 'default'."), nil
+	}
+
+	sc := b.makeStorageContext(ctx, req.Storage)
+	parsedKey, err := sc.resolveKeyReference(newDefault)
+	if err != nil {
+		return logical.ErrorResponse("Error resolving issuer reference: " + err.Error()), nil
+	}
+
+	err = sc.updateDefaultKeyId(parsedKey)
+	if err != nil {
+		return logical.ErrorResponse("Error updating issuer configuration: " + err.Error()), nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			defaultRef: parsedKey,
+		},
+	}, nil
+}
+
+const pathConfigKeysHelpSyn = `Read and set the default key used for signing`
+
+const pathConfigKeysHelpDesc = `
+This path allows configuration of key parameters.
+
+The "default" parameter controls which key is the default used by signing paths.
 `

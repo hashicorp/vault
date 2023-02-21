@@ -1,0 +1,3 @@
+```release-note:changes
+ui: pki issuer delete capabilities have been removed from the UI and reserved for the API and CLI
+```

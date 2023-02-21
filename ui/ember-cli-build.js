@@ -3,64 +3,67 @@
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 const config = require('./config/environment')();
+const nodeSass = require('node-sass');
 
 const environment = EmberApp.env();
 const isProd = environment === 'production';
 const isTest = environment === 'test';
-const isCI = !!process.env.CI;
+// const isCI = !!process.env.CI;
 
-module.exports = function(defaults) {
-  var app = new EmberApp(defaults, {
-    'ember-service-worker': {
-      serviceWorkerScope: config.serviceWorkerScope,
-      skipWaitingOnMessage: true,
+const appConfig = {
+  'ember-service-worker': {
+    serviceWorkerScope: config.serviceWorkerScope,
+    skipWaitingOnMessage: true,
+  },
+  svgJar: {
+    //optimize: false,
+    //paths: [],
+    optimizer: {},
+    sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
+    rootURL: '/ui/',
+  },
+  fingerprint: {
+    exclude: ['images/'],
+  },
+  assetLoader: {
+    generateURI: function (filePath) {
+      return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
     },
-    svgJar: {
-      //optimize: false,
-      //paths: [],
-      optimizer: {},
-      sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
-      rootURL: '/ui/',
-    },
-    assetLoader: {
-      generateURI: function(filePath) {
-        return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
-      },
-    },
-    codemirror: {
-      modes: ['javascript', 'ruby'],
-      keyMaps: ['sublime'],
-    },
-    babel: {
-      plugins: ['@babel/plugin-proposal-object-rest-spread'],
-    },
-    'ember-cli-babel': {
-      includePolyfill: isTest || isProd || isCI,
-    },
-    hinting: isTest,
-    tests: isTest,
-    sourcemaps: {
-      enabled: !isProd,
-    },
-    sassOptions: {
-      sourceMap: false,
-      onlyIncluded: true,
-    },
-    autoprefixer: {
-      enabled: isTest || isProd,
-      grid: true,
-      browsers: ['defaults', 'ie 11'],
-    },
-    autoImport: {
-      forbidEval: true,
-    },
-    'ember-test-selectors': {
-      strip: isProd,
-    },
-    'ember-composable-helpers': {
-      except: ['array'],
-    },
-  });
+  },
+  babel: {
+    plugins: [['inline-json-import', {}]],
+  },
+  hinting: isTest,
+  tests: isTest,
+  sourcemaps: {
+    enabled: !isProd,
+  },
+  sassOptions: {
+    implementation: nodeSass,
+    sourceMap: false,
+    onlyIncluded: true,
+  },
+  autoprefixer: {
+    enabled: isTest || isProd,
+    grid: true,
+    browsers: ['defaults'],
+  },
+  autoImport: {
+    forbidEval: true,
+  },
+  'ember-test-selectors': {
+    strip: isProd,
+  },
+  'ember-composable-helpers': {
+    except: ['array'],
+  },
+  'ember-cli-deprecation-workflow': {
+    enabled: true,
+  },
+};
+
+module.exports = function (defaults) {
+  const app = new EmberApp(defaults, appConfig);
 
   app.import('vendor/string-includes.js');
   app.import('node_modules/string.prototype.endswith/endswith.js');
@@ -68,9 +71,10 @@ module.exports = function(defaults) {
 
   app.import('node_modules/jsonlint/lib/jsonlint.js');
   app.import('node_modules/codemirror/addon/lint/lint.css');
-  app.import('node_modules/codemirror/addon/lint/lint.js');
-  app.import('node_modules/codemirror/addon/lint/json-lint.js');
+  app.import('node_modules/codemirror/lib/codemirror.css');
   app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
+  app.import('node_modules/jsondiffpatch/dist/jsondiffpatch.umd.js');
+  app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
 

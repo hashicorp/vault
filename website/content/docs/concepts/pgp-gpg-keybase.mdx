@@ -1,23 +1,23 @@
 ---
 layout: docs
-page_title: 'Using PGP, GPG, and Keybase'
+page_title: 'Using PGP, GnuPG, and Keybase'
 description: |-
-  Vault has the ability to integrate with OpenPGP-compatible programs like GPG
-  and services like Keybase.io to provide an additional layer of security when
-  performing certain operations.  This page details the various GPG
+  Vault has the ability to integrate with OpenPGP-compatible programs like
+  GnuPG and services like Keybase.io to provide an additional layer of security
+  when performing certain operations.  This page details the various PGP
   integrations, their use, and operation.
 ---
 
-# Using PGP, GPG, and Keybase
+# Using PGP, GnuPG, and Keybase
 
-Vault has the ability to integrate with OpenPGP-compatible programs like GPG
+Vault has the ability to integrate with OpenPGP-compatible programs like GnuPG
 and services like Keybase.io to provide an additional layer of security when
 performing certain operations. This page details the various PGP integrations,
 their use, and operation.
 
 Keybase.io support is available only in the command-line tool and not via the
 Vault HTTP API, tools that help with initialization should use the Keybase.io
-API in order to obtain the GPG keys needed for a secure initialization if you
+API in order to obtain the PGP keys needed for a secure initialization if you
 want them to use Keybase for keys.
 
 Once the Vault has been initialized, it is possible to use Keybase to decrypt
@@ -37,7 +37,7 @@ able to decrypt the value, revealing the plain-text unseal key.
 First, you must create, acquire, or import the appropriate key(s) onto the
 local machine from which you are initializing Vault. This guide will not
 attempt to cover all aspects of PGP keys but give examples using two popular
-programs: Keybase and GPG.
+programs: Keybase and GnuPG.
 
 For beginners, we suggest using [Keybase.io](https://keybase.io/) ("Keybase")
 as it can be both simpler and has a number of useful behaviors and properties
@@ -107,10 +107,10 @@ Key (will be hidden): ...
 
 ---
 
-## Initializing with GPG
+## Initializing with GnuPG
 
-GPG is an open-source implementation of the OpenPGP standard and is available
-on nearly every platform. For more information, please see the [GPG
+GnuPG is an open-source implementation of the OpenPGP standard and is available
+on nearly every platform. For more information, please see the [GnuPG
 manual](https://gnupg.org/gph/en/manual.html).
 
 To create a new PGP key, run, following the prompts:
@@ -158,7 +158,7 @@ to Vishal, and the third to Seth. These keys can be distributed over almost any
 medium, although common sense and judgement are best advised. The encrypted
 keys are base64 encoded before returning.
 
-### Unsealing with a GPG
+### Unsealing with GnuPG
 
 Assuming you have been given an unseal key that was encrypted using your public
 PGP key, you are now tasked with entering your unseal key. To get the

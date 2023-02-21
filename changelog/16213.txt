@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: API generate-recovery-token documentation.
+```

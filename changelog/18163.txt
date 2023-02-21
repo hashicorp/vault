@@ -1,0 +1,3 @@
+```release-note:bug
+cli/kv: skip formatting of nil secrets for patch and put with field parameter set
+```

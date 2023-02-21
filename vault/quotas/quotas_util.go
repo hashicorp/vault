@@ -1,4 +1,4 @@
-// +build !enterprise
+//go:build !enterprise
 
 package quotas
 
@@ -40,7 +40,7 @@ func (*entManager) Reset() error {
 
 type LeaseCountQuota struct{}
 
-func (l LeaseCountQuota) allow(request *Request) (Response, error) {
+func (l LeaseCountQuota) allow(_ context.Context, _ *Request) (Response, error) {
 	panic("implement me")
 }
 
@@ -56,10 +56,14 @@ func (l LeaseCountQuota) initialize(logger log.Logger, sink *metricsutil.Cluster
 	panic("implement me")
 }
 
-func (l LeaseCountQuota) close() error {
+func (l LeaseCountQuota) close(_ context.Context) error {
 	panic("implement me")
 }
 
-func (l LeaseCountQuota) handleRemount(s string) {
+func (l LeaseCountQuota) Clone() Quota {
+	panic("implement me")
+}
+
+func (l LeaseCountQuota) handleRemount(mountPath, nsPath string) {
 	panic("implement me")
 }

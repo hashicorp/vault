@@ -1,46 +1,44 @@
-{{#if model.replicationAttrs.isPrimary}}
+{{#if this.model.replicationAttrs.isPrimary}}
   <Toolbar>
     <ToolbarActions>
-      {{#if model.replicationAttrs.knownSecondaries.length}}
-        {{#if model.canRevokeSecondary}}
-          <ToolbarLink
-            @params={{array "mode.secondaries.revoke" replicationMode}}
-          >
+      {{#if this.model.replicationAttrs.knownSecondaries.length}}
+        {{#if this.model.canRevokeSecondary}}
+          <ToolbarLink @route="mode.secondaries.revoke" @model={{this.replicationMode}}>
             Revoke secondary
           </ToolbarLink>
         {{/if}}
       {{/if}}
-      {{#if model.canAddSecondary}}
-        <ToolbarLink
-          @type="add"
-          @params={{array "mode.secondaries.add" replicationMode}}
-          @data-test-secondary-add=true
-        >
+      {{#if this.model.canAddSecondary}}
+        <ToolbarLink @route="mode.secondaries.add" @model={{this.replicationMode}} @type="add" data-test-secondary-add>
           Add secondary
         </ToolbarLink>
       {{/if}}
     </ToolbarActions>
   </Toolbar>
-  {{#if model.replicationAttrs.knownSecondaries.length}}
-    {{#each model.replicationAttrs.knownSecondaries as |secondary|}}
+  {{#if this.model.replicationAttrs.knownSecondaries.length}}
+    {{#each this.model.replicationAttrs.knownSecondaries as |secondary|}}
       <div class="list-item-row" data-test-secondary-name={{secondary}}>
         <div class="columns is-mobile">
           <div class="column is-10">
             {{secondary}}
           </div>
           <div class="column has-text-right">
-            {{#if (or (eq replicationMode 'performance') model.canRevokeSecondary)}}
-              {{#popup-menu name="secondary-details"}}
+            {{#if (or (eq this.replicationMode "performance") this.model.canRevokeSecondary)}}
+              <PopupMenu @name="secondary-details">
                 <nav class="menu">
                   <ul class="menu-list">
-                    {{#if (eq replicationMode 'performance')}}
+                    {{#if (eq this.replicationMode "performance")}}
                       <li class="action">
-                        {{#link-to "mode.secondaries.config-show" replicationMode secondary data-test-replication-mount-filter-link=true}}
-                          Mount filter config
-                        {{/link-to}}
+                        <LinkTo
+                          @route="mode.secondaries.config-show"
+                          @models={{array this.replicationMode secondary}}
+                          data-test-replication-path-filter-link={{true}}
+                        >
+                          Path filter config
+                        </LinkTo>
                       </li>
                     {{/if}}
-                    {{#if model.canRevokeSecondary}}
+                    {{#if this.model.canRevokeSecondary}}
                       <li class="action">
                         <ConfirmAction
                           @buttonClasses="button link is-destroy"
@@ -56,7 +54,7 @@
                     {{/if}}
                   </ul>
                 </nav>
-              {{/popup-menu}}
+              </PopupMenu>
             {{/if}}
           </div>
         </div>
@@ -65,13 +63,13 @@
     {{/each}}
   {{else}}
     <EmptyState
-      @title="No known {{performanceMode}} secondary clusters associated with this cluster"
+      @title="No known {{this.performanceMode}} secondary clusters associated with this cluster"
       @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
     >
-      {{#if model.canAddSecondary}}
-        {{#link-to "mode.secondaries.add" replicationMode class="link" }}
+      {{#if this.model.canAddSecondary}}
+        <LinkTo @route="mode.secondaries.add" @model={{this.replicationMode}} class="link">
           Add secondary
-        {{/link-to}}
+        </LinkTo>
       {{/if}}
       <DocLink @path="/docs/internals/replication.html">
         Learn more

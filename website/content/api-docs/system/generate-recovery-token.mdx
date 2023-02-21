@@ -2,7 +2,7 @@
 layout: api
 page_title: /sys/generate-recovery-token - HTTP API
 description: |-
-  The `/sys/generate-recovery-token/` endpoints are used to create a new 
+  The `/sys/generate-recovery-token/` endpoints are used to create a new
   recovery token for Vault.  They are only active in recovery mode.
 ---
 
@@ -65,7 +65,7 @@ recovery token generation attempt can take place at a time.
 
 | Method | Path                                   |
 | :----- | :------------------------------------- |
-| `PUT`  | `/sys/generate-recovery-token/attempt` |
+| `POST` | `/sys/generate-recovery-token/attempt` |
 
 ### Parameters
 
@@ -77,7 +77,7 @@ recovery token generation attempt can take place at a time.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/generate-recovery-token/attempt
 ```
 
@@ -116,8 +116,8 @@ $ curl \
 
 ## Provide Key Share to Generate Recovery Token
 
-This endpoint is used to enter a single master key share to progress the
-recovery token generation attempt. If the threshold number of master key shares
+This endpoint is used to enter a single root key share to progress the
+recovery token generation attempt. If the threshold number of root key shares
 is reached, Vault will complete the recovery token generation and issue the new
 token. Otherwise, this API must be called multiple times until that threshold
 is met. The attempt nonce must be provided with each call.
@@ -127,11 +127,11 @@ only in memory and thus will only be valid until the next restart.
 
 | Method | Path                                  |
 | :----- | :------------------------------------ |
-| `PUT`  | `/sys/generate-recovery-token/update` |
+| `POST` | `/sys/generate-recovery-token/update` |
 
 ### Parameters
 
-- `key` `(string: <required>)` – Specifies a single master key share.
+- `key` `(string: <required>)` – Specifies a single root key share.
 
 - `nonce` `(string: <required>)` – Specifies the nonce of the attempt.
 
@@ -148,7 +148,7 @@ only in memory and thus will only be valid until the next restart.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/generate-recovery-token/update
 ```

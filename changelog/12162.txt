@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/raft: Best-effort handling of cancelled contexts.
+```

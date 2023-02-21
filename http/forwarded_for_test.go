@@ -46,7 +46,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -89,7 +89,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -125,7 +125,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -159,7 +159,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -193,7 +193,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -230,7 +230,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()

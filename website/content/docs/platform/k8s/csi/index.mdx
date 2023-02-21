@@ -33,7 +33,7 @@ The following features are supported by the Vault CSI Provider:
 - TLS/mTLS communications with Vault.
 - Rendering Vault secrets to files.
 - Syncing secrets to Kubernetes secrets to be used as environment variables.
-- Installation via [Vault Helm](/docs/platform/k8s/helm)
+- Installation via [Vault Helm](/vault/docs/platform/k8s/helm)
 
 ## Authenticating with Vault
 
@@ -41,7 +41,7 @@ The primary method of authentication with Vault when using the Vault CSI Provide
 is the service account attached to the pod. At this time no other authentication methods
 are supported.
 
-For [Kubernetes authentication](/docs/auth/kubernetes), the service account must be bound to a Vault role and a
+For [Kubernetes authentication](/vault/docs/auth/kubernetes), the service account must be bound to a Vault role and a
 policy granting access to the secrets desired.
 
 A service account must be present to use the Vault CSI Provider with the Kubernetes
@@ -50,7 +50,9 @@ account provided to pods if no service account is defined.
 
 ### Setting `issuer` for Kubernetes authentication
 
-You will likely need to set [`issuer`](/api-docs/auth/kubernetes#issuer) when
+-> **Deprecated:** The `issuer` parameter has been deprecated as of Vault 1.9 and will be removed in a future release.
+
+If running Vault prior to version 1.9, you will likely need to set [`issuer`](/vault/api-docs/auth/kubernetes#issuer) when
 configuring Kubernetes authentication for the Vault CSI Provider.
 Vault CSI Provider does not use the default token associated with service accounts.
 Instead, it creates a token with a short TTL whose lifetime is also bound to the
@@ -58,34 +60,9 @@ lifetime of the requesting pod. A key difference between default tokens and
 ephemeral tokens is the JWT issuer. Default tokens use `kubernetes/serviceaccount`,
 which is the default value that Kubernetes auth will try to validate. However,
 ephemeral tokens use the value of `kube-apiserver`'s `--service-account-issuer`
-flag as the issuer, which is normally a URL instead.
-
-When configuring Vault Kubernetes auth for the CSI provider, you will need to set
-[`issuer`](/api-docs/auth/kubernetes#issuer) to the same value as
-`kube-apiserver`'s `--service-account-issuer` flag. If you are unable to check
-this value directly, you can run the following and look for the `"iss"` field
-to find the required value:
-
-```bash
-kubectl proxy &
-curl --silent http://127.0.0.1:8001/api/v1/namespaces/default/serviceaccounts/default/token \
-  -H "Content-Type: application/json" \
-  -X POST \
-  -d '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
-  | jq -r '.status.token' \
-  | cut -d. -f2 \
-  | base64 -D
-```
-
-This value is then used when configuring Kubernetes auth, e.g.:
-
-```bash
-vault write auth/kubernetes/config \
-  token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-  kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443" \
-  kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
-  issuer="\"test-aks-cluster-dns-d6cbb78e.hcp.uksouth.azmk8s.io\""
-```
+flag as the issuer, which is normally a URL instead. See the [Kubernetes auth
+docs](/vault/docs/auth/kubernetes#discovering-the-service-account-issuer) for
+ways to check the issuer using the Kubernetes API.
 
 Importantly, this means most common configurations of Vault Agent Injector and
 Vault CSI Provider **cannot share the same Kubernetes auth mount**. Vault
@@ -168,7 +145,7 @@ spec:
 In this example `volumes.csi` is created on the application deployment and references
 the Secret Provider Class named `vault-db-creds`.
 
-## Learn
+## Tutorial
 
-Refer to the [Vault CSI Provider](https://learn.hashicorp.com/tutorials/vault/kubernetes-secret-store-driver?in=vault/kubernetes)
-guide for a step-by-step tutorial.
+Refer to the [Vault CSI Provider](/vault/tutorials/kubernetes/kubernetes-secret-store-driver)
+tutorial to learn how to set up Vault and its depedencies with a Helm chart.

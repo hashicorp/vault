@@ -16,8 +16,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var testPolicyName = "testpolicy"
-var rawTestPasswordPolicy = `
+var (
+	testPolicyName        = "testpolicy"
+	rawTestPasswordPolicy = `
 length = 20
 rule "charset" {
 	charset = "abcdefghijklmnopqrstuvwxyz"
@@ -31,6 +32,7 @@ rule "charset" {
 	charset = "0123456789"
 	min_chars = 1
 }`
+)
 
 func TestIdentity_BackendTemplating(t *testing.T) {
 	var err error
@@ -205,7 +207,7 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
 	defer cancel()
 
 	ctx = namespace.RootContext(ctx)
-	dsv := dynamicSystemView{core: cluster.Cores[0].Core}
+	dsv := TestDynamicSystemView(cluster.Cores[0].Core, nil)
 
 	runeset := map[rune]bool{}
 	runesFound := []rune{}
@@ -272,11 +274,11 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_failed(t *testing.T) {
 				getErr:   test.getErr,
 			}
 
-			dsv := dynamicSystemView{
-				core: &Core{
-					systemBarrierView: NewBarrierView(testStorage, "sys/"),
-				},
+			core := &Core{
+				systemBarrierView: NewBarrierView(testStorage, "sys/"),
 			}
+			dsv := TestDynamicSystemView(core, nil)
+
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 			actualPassword, err := dsv.GeneratePasswordFromPolicy(ctx, test.policyName)

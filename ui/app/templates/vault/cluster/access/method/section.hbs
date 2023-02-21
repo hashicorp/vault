@@ -13,18 +13,28 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{model.id}}
+      {{this.model.id}}
     </h1>
   </p.levelLeft>
 </PageHeader>
-{{section-tabs model "authShow" paths}}
-{{#if (eq section "configuration")}}
+
+{{#if (not (includes this.model.type (supported-managed-auth-backends)))}}
+  <div class="has-text-grey has-top-bottom-margin" data-test-doc-link>
+    The Vault UI only supports configuration for this authentication method. For management, the
+    <DocLink @path="/api/auth">API or CLI</DocLink>
+    should be used.
+  </div>
+{{/if}}
+
+{{section-tabs this.model "authShow" this.paths}}
+
+{{#if (eq this.section "configuration")}}
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink @params={{array "vault.cluster.settings.auth.configure" model.id}} @data-test-configure-link="true">
+      <ToolbarLink @route="vault.cluster.settings.auth.configure" @model={{this.model.id}} data-test-configure-link="true">
         Configure
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
 {{/if}}
-{{component (concat "auth-method/" section) model=model}}
+{{component (concat "auth-method/" this.section) model=this.model}}

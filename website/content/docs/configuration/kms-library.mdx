@@ -1,0 +1,59 @@
+---
+layout: docs
+page_title: Kms Library - Configuration
+description: >-
+  The kms_library stanza allows node specific configuration for access to
+  KMS access libraries
+---
+
+# `kms_library` Stanza
+
+The `kms_library` stanza isolates platform specific configuration for managed keys.
+It defines logical names that are referenced within an API configuration keeping cluster
+and node specific details separated along with deployment concerns for each.
+
+At the moment managed keys are only available as a feature set within Vault Enterprise HSM edition.
+
+## Requirements
+
+The following software packages are required for Vault Enterprise HSM:
+
+- PKCS#11 compatible HSM integration library. Vault targets version 2.2 or
+  higher of PKCS#11. Depending on any given HSM, some functions (such as key
+  generation) may have to be performed manually.
+- The [GNU libltdl
+  library](https://www.gnu.org/software/libtool/manual/html_node/Using-libltdl.html)
+  — ensure that it is installed for the correct architecture of your servers
+
+## Configuration
+
+Multiple kms_library stanza's can be defined with the only limitation that the value for the
+name key needs to be a unique value across all the stanza definitions in a case-insensitive
+manner.
+
+The type argument only supports "pkcs11" at the moment.
+
+Example `kms_library` stanza:
+
+```hcl
+kms_library [TYPE] {
+  name = "<logical name>"
+  # ...
+}
+```
+
+## `pkcs11` Parameters
+
+These parameters apply to the `kms_library` stanza of type `pkcs11` in the Vault configuration file:
+
+- `name` `(string: <required>)`: The logical name to be referenced by a managed key
+- `library` `(string: <required>)`: The path to the PKCS#11 library shared object file.
+
+For example:
+
+```hcl
+kms_library "pkcs11" {
+  name = "hsm1"
+  library = "/usr/lib/Cryptoki.so"
+}
+```

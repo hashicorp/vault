@@ -8,13 +8,13 @@ description: |-
 
 # Highly Available Vault Enterprise Performance Clusters with Integrated Storage (Raft)
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
+@include 'helm/version.mdx'
 
 The following is an example of creating a performance cluster using Vault Helm.
 
-For more information on Disaster Recovery, [see the official documentation](/docs/enterprise/replication/).
+For more information on Disaster Recovery, [see the official documentation](/vault/docs/enterprise/replication/).
 
--> For license configuration refer to [Running Vault Enterprise](/docs/platform/k8s/helm/enterprise).
+-> For license configuration refer to [Running Vault Enterprise](/vault/docs/platform/k8s/helm/enterprise).
 
 ## Primary Cluster
 
@@ -23,7 +23,7 @@ First, create the primary cluster:
 ```shell
 helm install vault-primary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.7.3_ent' \
+  --set='server.image.tag=1.12.1-ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
@@ -58,7 +58,7 @@ kubectl exec -ti vault-primary-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-primary-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-primary-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----
@@ -74,7 +74,7 @@ With the primary cluster created, next create a secondary cluster.
 ```shell
 helm install vault-secondary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.7.3_ent' \
+  --set='server.image.tag=1.12.1-ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
@@ -109,7 +109,7 @@ kubectl exec -ti vault-secondary-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-secondary-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-secondary-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----
@@ -120,7 +120,7 @@ e6876c97-aaaa-a92e-b99a-0aafab105745    vault-secondary-1.vault-secondary-intern
 
 ## Enable Performance Replication On Primary
 
-With the initial clusters setup, we can now configure them for performance replication.
+With the initial clusters setup, we can now configure them for Performance Replication.
 
 First, on the primary cluster, enable replication:
 
@@ -138,7 +138,7 @@ The token in the output will be used when configuring the secondary cluster.
 
 ## Enable Performance Replication On Secondary
 
-Using the token created in the last step, enable performance replication on the secondary:
+Using the token created in the last step, enable Performance Replication on the secondary:
 
 ```shell
 kubectl exec -ti vault-secondary-0 -- vault write sys/replication/performance/secondary/enable token=<TOKEN FROM PRIMARY>

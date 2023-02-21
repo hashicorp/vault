@@ -1,0 +1,3 @@
+```release-note:bug
+command: do not report listener and storage types as key not found warnings
+```

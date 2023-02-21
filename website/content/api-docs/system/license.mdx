@@ -1,166 +1,36 @@
 ---
 layout: api
-page_title: /sys/license - HTTP API
+page_title: /sys/license/status - HTTP API
 description: |-
-  The `/sys/license` endpoint is used to view and update the license used in
+  The `/sys/license/status` endpoint is used to view the license used in
   Vault.
 ---
 
-# `/sys/license`
+# `/sys/license/status`
 
 ~> **Enterprise Only** – These endpoints require Vault Enterprise.
 
-The `/sys/license` endpoint is used to view and update the license used in
+The `/sys/license/status` endpoint is used to view update the license used in
 Vault.
-
-## Read License
-
-~> This API is deprecated and will be removed in a future version of Vault.
-Please use [license autoloading](/docs/enterprise/license/autoloading) instead,
-and see [License Status](#license-status) below for the non-deprecated equivalent API.
-
-This endpoint returns information about the currently installed license.
-
-| Method | Path           |
-| :----- | :------------- |
-| `GET`  | `/sys/license` |
-
-### Sample Request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/license
-```
-
-### Sample Response
-
-```json
-{
-  "data": {
-    "expiration_time": "2017-11-14T16:34:36.546753-05:00",
-    "features": ["UI", "HSM", "Performance Replication", "DR Replication"],
-    "license_id": "temporary",
-    "start_time": "2017-11-14T16:04:36.546753-05:00"
-  },
-  "warnings": ["time left on license is 29m33s"]
-}
-```
-
-## Read Signed License
-
-~> This API is deprecated and will be removed in a future version of Vault.
-Please use [license autoloading](/docs/enterprise/license/autoloading) instead.
-
-This endpoint returns the signed license blob for the currently installed license.
-
-| Method | Path           |
-| :----- | :------------- |
-| `GET`  | `/sys/license/signed` |
-
-### Sample Request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/license/signed
-```
-
-### Sample Response
-
-```json
-{
-  "data": {
-    "signed": "01ABCDEFG..."
-  }
-}
-```
-
-## Install License
-
-~> This API is deprecated and will be removed in a future version of Vault.
-Please use [license autoloading](/docs/enterprise/license/autoloading) instead.
-
-This endpoint is used to install a license into Vault.  This will return an
-error if license autoloading is in use.
-
-| Method | Path           |
-| :----- | :------------- |
-| `PUT`  | `/sys/license` |
-
-### Parameters
-
-- `text` `(string: <required>)` – The text of the license.
-
-_DR Secondary Specific Parameters_
-
-- `dr_operation_token` `(string: <required>)` - DR operation token used to authorize this request.
-Note that this is the legacy mechanism for providing a DR operation token. It is
-equally valid to provide the DR operation token in the `X-Vault-Token` header, as
-with a regular vault token.
-
-### Sample Payload
-
-```json
-{
-  "text": "01ABCDEFG..."
-}
-```
-
-### Sample Request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request PUT \
-    --data @payload.json \
-    http://127.0.0.1:8200/v1/sys/license
-```
-
-## Delete License
-
-~> This API is deprecated and will be removed in a future version of Vault.
-Please use [license autoloading](/docs/enterprise/license/autoloading) instead.
-
-This endpoint is used to delete a stored license in Vault.  This will return
-an error unless license autoloading is in use.
-
-| Method | Path           |
-| :----- | :------------- |
-| `DELETE`  | `/sys/license` |
-
-
-### Sample Request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request DELETE \
-    http://127.0.0.1:8200/v1/sys/license
-```
 
 ## License Status
 
-This endpoint returns information about licensing.  It returns similar information
-to a GET of `sys/license`, but whereas that endpoint reports solely on the
-license Vault is currently using, this one reports on all licensing
-information the Vault cluster has.  See
-[license autoloading](/docs/enterprise/license/autoloading) for background.
+This endpoint returns information about licensing. See [license autoloading](/vault/docs/enterprise/license/autoloading) for additional background.
 
 In the response:
-* `autoloading_used` will be true if an autoloaded license was provided to the
-  node, false otherwise.
-* `autoloaded` is the autoloaded license if autoloading_used is true.
-* `persisted_autoload` is the autoloaded license the active node last wrote to
+
+- `autoloading_used` will be true if an autoloaded license was provided to the
+  node, false otherwise. This should always be true from Vault 1.11.0 onward.
+- `autoloaded` is the autoloaded license if autoloading_used is true.
+- `persisted_autoload` is the autoloaded license the active node last wrote to
   storage; this is only used to detect inconsistently licensed nodes in the
   cluster. It cannot be used as a license itself.
-* `stored` is the stored license if any, i.e. one written using `PUT sys/license`.
+- `stored` was used for the stored license prior to Vault 1.11.0. Stored licenses are no longer supported.
 
-`autoloaded`, `persisted_autoload`, and `stored` all have the same structure,
-which is also the same structure as the top-level `data` returned by `GET sys/license`.
+`autoloaded`, and `persisted_autoload` will both have the same structure.
 
-| Method | Path           |
-| :----- | :------------- |
+| Method | Path                  |
+| :----- | :-------------------- |
 | `GET`  | `/sys/license/status` |
 
 ### Sample Request
@@ -178,7 +48,7 @@ $ curl \
   "data": {
     "autoloading_used": true,
     "autoloaded": {
-      "expiration_time": "2022-05-17T23:59:59.999Z",
+      "expiration_time": "2022-05-17T23:59:59Z",
       "features": [
         "HSM",
         "Performance Replication",
@@ -198,10 +68,11 @@ $ curl \
       ],
       "license_id": "060d7820-fa59-f95c-832b-395db0aeb9ba",
       "performance_standby_count": 9999,
-      "start_time": "2021-05-17T00:00:00Z"
+      "start_time": "2021-05-17T00:00:00Z",
+      "termination_time": "2031-05-17T23:59:59Z"
     },
     "persisted_autoload": {
-      "expiration_time": "2022-05-17T23:59:59.999Z",
+      "expiration_time": "2022-05-17T23:59:59Z",
       "features": [
         "HSM",
         "Performance Replication",
@@ -221,8 +92,9 @@ $ curl \
       ],
       "license_id": "060d7820-fa59-f95c-832b-395db0aeb9ba",
       "performance_standby_count": 9999,
-      "start_time": "2021-05-17T00:00:00Z"
+      "start_time": "2021-05-17T00:00:00Z",
+      "termination_time": "2031-05-17T23:59:59Z"
     }
-  },
+  }
 }
 ```

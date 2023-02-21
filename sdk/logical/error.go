@@ -17,6 +17,11 @@ var (
 	// ErrPermissionDenied is returned if the client is not authorized
 	ErrPermissionDenied = errors.New("permission denied")
 
+	// ErrInvalidCredentials is returned when the provided credentials are incorrect
+	// This is used internally for user lockout purposes. This is not seen externally.
+	// The status code returned does not change because of this error
+	ErrInvalidCredentials = errors.New("invalid credentials")
+
 	// ErrMultiAuthzPending is returned if the the request needs more
 	// authorizations
 	ErrMultiAuthzPending = errors.New("request needs further approval")
@@ -47,6 +52,10 @@ var (
 	// with the data in the local node's storage, based on the provided
 	// X-Vault-Index request header.
 	ErrMissingRequiredState = errors.New("required index state not present")
+
+	// Error indicating that the requested path used to serve a purpose in older
+	// versions, but the functionality has now been removed
+	ErrPathFunctionalityRemoved = errors.New("functionality on this path has been removed")
 )
 
 type HTTPCodedError interface {

@@ -9,8 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkBackendRoute(b *testing.B) {
@@ -43,6 +46,52 @@ func BenchmarkBackendRoute(b *testing.B) {
 
 func TestBackend_impl(t *testing.T) {
 	var _ logical.Backend = new(Backend)
+}
+
+func TestBackendHandleRequestFieldWarnings(t *testing.T) {
+	handler := func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"an_int":   data.Get("an_int"),
+				"a_string": data.Get("a_string"),
+				"name":     data.Get("name"),
+			},
+		}, nil
+	}
+
+	backend := &Backend{
+		Paths: []*Path{
+			{
+				Pattern: "foo/bar/(?P<name>.+)",
+				Fields: map[string]*FieldSchema{
+					"an_int":   {Type: TypeInt},
+					"a_string": {Type: TypeString},
+					"name":     {Type: TypeString},
+				},
+				Operations: map[logical.Operation]OperationHandler{
+					logical.UpdateOperation: &PathOperation{Callback: handler},
+				},
+			},
+		},
+	}
+	ctx := context.Background()
+	resp, err := backend.HandleRequest(ctx, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "foo/bar/baz",
+		Data: map[string]interface{}{
+			"an_int":        10,
+			"a_string":      "accepted",
+			"unrecognized1": "unrecognized",
+			"unrecognized2": 20.2,
+			"name":          "noop",
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	t.Log(resp.Warnings)
+	require.Len(t, resp.Warnings, 2)
+	require.True(t, strutil.StrListContains(resp.Warnings, "Endpoint ignored these unrecognized parameters: [unrecognized1 unrecognized2]"))
+	require.True(t, strutil.StrListContains(resp.Warnings, "Endpoint replaced the value of these parameters with the values captured from the endpoint's path: [name]"))
 }
 
 func TestBackendHandleRequest(t *testing.T) {
@@ -240,14 +289,17 @@ func TestBackendHandleRequest_badwrite(t *testing.T) {
 		},
 	}
 
-	_, err := b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "3false3"},
 	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 
-	if err == nil {
-		t.Fatalf("should have thrown a conversion error")
+	if !strings.Contains(resp.Data["error"].(string), "Field validation failed") {
+		t.Fatalf("bad: %#v", resp)
 	}
 }
 

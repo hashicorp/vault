@@ -20,7 +20,7 @@ export default Controller.extend({
 
     saveConfig(config) {
       // if the mode is null, we want no filtering, so we should delete any existing config
-      let isDelete = config.mode === null;
+      const isDelete = config.mode === null;
       const flash = this.flashMessages;
       const id = config.id;
       const redirectArgs = isDelete
@@ -41,7 +41,7 @@ export default Controller.extend({
               );
             });
         })
-        .catch(e => {
+        .catch((e) => {
           const errString = e.errors.join('.');
           flash.error(
             `There was an error ${isDelete ? 'deleting' : 'saving'} the config for ${id}: ${errString}`

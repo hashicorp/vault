@@ -9,9 +9,9 @@ import (
 	// We must import sha512 so that it registers with the runtime so that
 	// certificates that use it can be parsed.
 
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/mitchellh/cli"
 )
 
@@ -20,7 +20,8 @@ type ListenerFactory func(*configutil.Listener, io.Writer, cli.Ui) (net.Listener
 
 // BuiltinListeners is the list of built-in listener types.
 var BuiltinListeners = map[string]ListenerFactory{
-	"tcp": tcpListenerFactory,
+	"tcp":  tcpListenerFactory,
+	"unix": unixListenerFactory,
 }
 
 // NewListener creates a new listener of the given type with the given

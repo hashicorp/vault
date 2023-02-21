@@ -4,16 +4,16 @@ import { computed } from '@ember/object';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export default Model.extend({
-  formFields: computed(function() {
+  formFields: computed(function () {
     return assert('formFields should be overridden', false);
   }),
 
-  fields: computed('formFields', 'formFields.[]', function() {
+  fields: computed('formFields', 'formFields.[]', function () {
     return expandAttributeMeta(this, this.formFields);
   }),
 
-  identityType: computed('constructor.modelName', function() {
-    let modelType = this.constructor.modelName.split('/')[1];
+  identityType: computed('constructor.modelName', function () {
+    const modelType = this.constructor.modelName.split('/')[1];
     return modelType;
   }),
 });

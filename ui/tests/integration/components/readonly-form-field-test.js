@@ -17,12 +17,12 @@ const customLabelAttr = {
   },
 };
 
-module('Integration | Component | readonly-form-field', function(hooks) {
+module('Integration | Component | readonly-form-field', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     this.set('attr', EmberObject.create(minimumAttr));
-    await render(hbs`<ReadonlyFormField @attr={{attr}} @value="value" />`);
+    await render(hbs`<ReadonlyFormField @attr={{this.attr}} @value="value" />`);
     assert
       .dom('[data-test-readonly-label]')
       .includesText('My input', 'formats the attr name when no label provided');
@@ -30,9 +30,9 @@ module('Integration | Component | readonly-form-field', function(hooks) {
     assert.dom(`[data-test-input="${minimumAttr.name}"]`).hasAttribute('readonly');
   });
 
-  test('it renders with options', async function(assert) {
+  test('it renders with options', async function (assert) {
     this.set('attr', customLabelAttr);
-    await render(hbs`<ReadonlyFormField @attr={{attr}} @value="another value" />`);
+    await render(hbs`<ReadonlyFormField @attr={{this.attr}} @value="another value" />`);
     assert
       .dom('[data-test-readonly-label]')
       .includesText('Custom-label', 'Uses the provided label as passed');

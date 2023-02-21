@@ -43,13 +43,14 @@ flags or by specifying a configuration file):
   seal/unseal, then only the single outputted key is required.
 
 - **Key Value store mounted** - A v2 KV secret engine is mounted at
-  `secret/`.
+  `secret/`. Please be aware that there are differences with v1 KV.
+  If you want to use v1, use this flag `-dev-kv-v1`.
 
 ## Use Case
 
 The dev server should be used for experimentation with Vault features, such
 as different auth methods, secrets engines, audit devices, etc.
-If you're new to Vault, you may want to pick up with [Your First Secret](/intro/getting-started/first-secret) in our getting started guide.
+If you're new to Vault, you may want to pick up with [Your First Secret](/vault/tutorials/getting-started/getting-started-first-secret) in our getting started guide.
 
 In addition to experimentation, the dev server is very easy to automate
 for development environments.

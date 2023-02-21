@@ -1,17 +1,20 @@
 import { inject as service } from '@ember/service';
 import Mixin from '@ember/object/mixin';
 import RSVP from 'rsvp';
-const INIT = 'vault.cluster.init';
-const UNSEAL = 'vault.cluster.unseal';
-const AUTH = 'vault.cluster.auth';
-const CLUSTER = 'vault.cluster';
-const CLUSTER_INDEX = 'vault.cluster.index';
-const OIDC_CALLBACK = 'vault.cluster.oidc-callback';
-const DR_REPLICATION_SECONDARY = 'vault.cluster.replication-dr-promote';
-const DR_REPLICATION_SECONDARY_DETAILS = 'vault.cluster.replication-dr-promote.details';
-const EXCLUDED_REDIRECT_URLS = ['/vault/logout'];
-
-export { INIT, UNSEAL, AUTH, CLUSTER, CLUSTER_INDEX, DR_REPLICATION_SECONDARY };
+import {
+  INIT,
+  UNSEAL,
+  AUTH,
+  CLUSTER,
+  CLUSTER_INDEX,
+  OIDC_CALLBACK,
+  OIDC_PROVIDER,
+  NS_OIDC_PROVIDER,
+  DR_REPLICATION_SECONDARY,
+  DR_REPLICATION_SECONDARY_DETAILS,
+  EXCLUDED_REDIRECT_URLS,
+  REDIRECT,
+} from 'vault/lib/route-paths';
 
 export default Mixin.create({
   auth: service(),
@@ -20,18 +23,19 @@ export default Mixin.create({
 
   transitionToTargetRoute(transition = {}) {
     const targetRoute = this.targetRouteName(transition);
-
     if (
       targetRoute &&
       targetRoute !== this.routeName &&
       targetRoute !== transition.targetName &&
       targetRoute !== this.router.currentRouteName
     ) {
+      // there may be query params so check for inclusion rather than exact match
+      const isExcluded = EXCLUDED_REDIRECT_URLS.find((url) => this.router.currentURL?.includes(url));
       if (
         // only want to redirect if we're going to authenticate
         targetRoute === AUTH &&
         transition.targetName !== CLUSTER_INDEX &&
-        !EXCLUDED_REDIRECT_URLS.includes(this.router.currentURL)
+        !isExcluded
       ) {
         return this.transitionTo(targetRoute, { queryParams: { redirect_to: this.router.currentURL } });
       }
@@ -81,6 +85,12 @@ export default Mixin.create({
       return DR_REPLICATION_SECONDARY;
     }
     if (!isAuthed) {
+      if ((transition && transition.targetName === OIDC_PROVIDER) || this.routeName === OIDC_PROVIDER) {
+        return OIDC_PROVIDER;
+      }
+      if ((transition && transition.targetName === NS_OIDC_PROVIDER) || this.routeName === NS_OIDC_PROVIDER) {
+        return NS_OIDC_PROVIDER;
+      }
       if ((transition && transition.targetName === OIDC_CALLBACK) || this.routeName === OIDC_CALLBACK) {
         return OIDC_CALLBACK;
       }
@@ -89,10 +99,13 @@ export default Mixin.create({
     if (
       (!cluster.needsInit && this.routeName === INIT) ||
       (!cluster.sealed && this.routeName === UNSEAL) ||
-      (!cluster?.dr?.isSecondary && this.routeName === DR_REPLICATION_SECONDARY) ||
-      (isAuthed && this.routeName === AUTH)
+      (!cluster?.dr?.isSecondary && this.routeName === DR_REPLICATION_SECONDARY)
     ) {
       return CLUSTER;
+    }
+    if (isAuthed && this.routeName === AUTH) {
+      // if you're already authed and you wanna go to auth, you probably want to redirect
+      return REDIRECT;
     }
     return null;
   },

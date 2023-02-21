@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fixes parsing boolean values for ha_storage backends in config
+```

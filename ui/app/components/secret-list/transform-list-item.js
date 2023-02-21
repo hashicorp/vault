@@ -20,7 +20,7 @@ export default Component.extend({
   itemPath: '',
   itemType: '',
 
-  isBuiltin: computed('item', 'itemType', function() {
+  isBuiltin: computed('item', 'itemType', function () {
     const item = this.item;
     if (this.itemType === 'alphabet' || this.itemType === 'template') {
       return item.get('id').startsWith('builtin/');

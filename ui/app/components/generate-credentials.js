@@ -16,7 +16,7 @@ const MODEL_TYPES = {
     backIsListLink: true,
   },
   'pki-issue': {
-    model: 'pki-certificate',
+    model: 'pki/cert',
     title: 'Issue Certificate',
   },
   'pki-sign': {
@@ -26,7 +26,6 @@ const MODEL_TYPES = {
 };
 
 export default Component.extend({
-  wizard: service(),
   store: service(),
   router: service(),
   // set on the component
@@ -48,7 +47,7 @@ export default Component.extend({
     this.router.transitionTo('vault.cluster.secrets.backend.list-root', this.backendPath);
   },
 
-  options: computed('action', 'backendType', function() {
+  options: computed('action', 'backendType', function () {
     const action = this.action || 'creds';
     return MODEL_TYPES[`${this.backendType}-${action}`];
   }),
@@ -58,14 +57,10 @@ export default Component.extend({
     this.createOrReplaceModel();
   },
 
-  didReceiveAttrs() {
-    if (this.wizard.featureState === 'displayRole') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.backendType);
-    }
-  },
-
   willDestroy() {
-    this.model.unloadRecord();
+    if (!this.model.isDestroyed && !this.model.isDestroying) {
+      this.model.unloadRecord();
+    }
     this._super(...arguments);
   },
 
@@ -93,19 +88,12 @@ export default Component.extend({
 
   actions: {
     create() {
-      let model = this.model;
+      const model = this.model;
       this.set('loading', true);
-      this.model
-        .save()
-        .catch(() => {
-          if (this.wizard.featureState === 'credentials') {
-            this.wizard.transitionFeatureMachine(this.wizard.featureState, 'ERROR', this.backendType);
-          }
-        })
-        .finally(() => {
-          model.set('hasGenerated', true);
-          this.set('loading', false);
-        });
+      this.model.save().finally(() => {
+        model.set('hasGenerated', true);
+        this.set('loading', false);
+      });
     },
 
     codemirrorUpdated(attr, val, codemirror) {

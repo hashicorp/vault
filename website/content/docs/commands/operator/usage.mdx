@@ -8,14 +8,17 @@ description: |-
 # operator usage
 
 The `operator usage` command allows an administrator to retrieve a
-[client count](https://www.vaultproject.io/docs/concepts/client-count) report
+[client count](/vault/docs/concepts/client-count) report
 for the default reporting period, or for a specific time range of months.
 
-The command output will list distinct entities, non-entity tokens, and total
+The command output will list clients by distinct entities, non-entity tokens, and total
 active clients for each namespace, and the total for the entire cluster. It may
 indicate that no data is available for the requested time range, which may be
 because the client count reporting is disabled, the time range is too far
 in the past, or no data has yet been collected since the feature was enabled.
+
+> Refer to the [Vault Usage Metrics](/vault/tutorials/monitoring/usage-metrics) tutorial to learn more about usage metrics,
+> including required policy and data collection details.
 
 ## Examples
 
@@ -50,7 +53,7 @@ Total            954                 176                 1130
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
 ### Output Options
 

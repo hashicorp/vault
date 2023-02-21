@@ -1,0 +1,46 @@
+<NamespaceReminder @mode="save" @noun="PKI change" />
+
+{{#if (eq this.section "tidy")}}
+  <p class="has-text-grey-dark" data-test-text="true">
+    You can tidy up the backend storage and/or CRL by removing certificates that have expired and are past a certain buffer
+    period beyond their expiration time.
+  </p>
+{{else if (eq this.section "crl")}}
+  <h2 class="title is-5" data-test-title="true">
+    Certificate Revocation List (CRL) config
+  </h2>
+  <p class="has-text-grey-dark" data-test-text="true">
+    Set the duration for which the generated CRL should be marked valid.
+  </p>
+{{/if}}
+
+<MessageError @model={{this.config}} @errors={{this.errors}} />
+<form {{action "save" this.section on="submit"}} class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
+  {{#if (eq this.section "crl")}}
+    <TtlPicker
+      data-test-input="expiry"
+      @onChange={{action "handleCrlTtl"}}
+      @label={{if (get this.config "disable") "CRL building disabled" "CRL building enabled"}}
+      @helperTextDisabled="The CRL will not be built."
+      @helperTextEnabled="The CRL will expire after"
+      @initialValue={{get this.config "expiry"}}
+      @initialEnabled={{not (get this.config "disable")}}
+    />
+  {{else}}
+    {{#each (get this.config (concat this.section "Attrs")) as |attr|}}
+      <FormField @attr={{attr}} @model={{this.config}} @data-test-field={{attr.name}} />
+    {{/each}}
+  {{/if}}
+  <div class="field has-top-margin-m is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        data-test-submit
+        type="submit"
+        class="button is-primary {{if this.loading 'is-loading'}}"
+        disabled={{this.loading}}
+      >
+        Save
+      </button>
+    </div>
+  </div>
+</form>

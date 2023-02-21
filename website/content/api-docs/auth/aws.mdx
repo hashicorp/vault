@@ -6,9 +6,13 @@ description: This is the API documentation for the Vault AWS auth method.
 
 # AWS Auth Method (API)
 
+@include 'x509-sha1-deprecation.mdx'
+
+@include 'aws-sha1-deprecation.mdx'
+
 This is the API documentation for the Vault AWS auth method. For
 general information about the usage and operation of the AWS method, please
-see the [Vault AWS method documentation](/docs/auth/aws).
+see the [Vault AWS method documentation](/vault/docs/auth/aws).
 
 This documentation assumes the AWS method is mounted at the `/auth/aws`
 path in Vault. Since it is possible to enable auth methods at any location,
@@ -184,7 +188,7 @@ The new access key Vault uses is returned by this operation.
 ## Configure Identity Integration
 
 This configures the way that Vault interacts with the
-[Identity](/docs/secrets/identity) store. The default (as of Vault
+[Identity](/vault/docs/secrets/identity) store. The default (as of Vault
 1.0.3) is `role_id` for both values.
 
 | Method | Path                        |
@@ -280,10 +284,21 @@ $ curl \
 ## Create Certificate Configuration
 
 Registers an AWS public key to be used to verify the instance identity
-documents. While the PKCS#7 signature of the identity documents have DSA
-digest, the identity signature will have RSA digest, and hence the public
-keys for each type varies respectively. Indicate the type of the public key
-using the "type" parameter.
+documents. Indicate the type of the public key using the `type` parameter.
+Vault has the default
+[documented](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html)
+set of AWS certificates built-in.
+
+The `pkcs7` type is used to verify PKCS#7 signatures from the AWS
+`http://169.254.169.254/latest/dynamic/instance-identity/pkcs7` and
+`http://169.254.169.254/latest/dynamic/instance-identity/rsa2048` endpoints.
+
+The `identity` type is used to verify signatures from the
+`http://169.254.169.254/latest/dynamic/instance-identity/document` and
+`http://169.254.169.254/latest/dynamic/instance-identity/signature` endpoints.
+
+See the [AWS docs](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html)
+for more information on the signature types and the corresponding certificates.
 
 | Method | Path                                      |
 | :----- | :---------------------------------------- |
@@ -292,13 +307,18 @@ using the "type" parameter.
 ### Parameters
 
 - `cert_name` `(string: <required>)` - Name of the certificate.
-- `aws_public_cert` `(string: <required>)` - Base64 encoded AWS Public key required to verify
-  PKCS7 signature of the EC2 instance metadata.
+- `aws_public_cert` `(string: <required>)` - Base64-encoded AWS Public key required to verify
+  PKCS#7 signature of the EC2 instance metadata.
 - `type` `(string: "pkcs7")` - Takes the value of either "pkcs7" or "identity",
   indicating the type of document which can be verified using the given
-  certificate. The PKCS#7 document will have a DSA digest and the identity
-  signature will have an RSA signature, and accordingly the public certificates
-  to verify those also vary. Defaults to "pkcs7".
+  certificate. The PKCS#7 document can be a DSA digest from the
+  [/pkcs7](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-pkcs7.html)
+  endpoint or an RSA-2048 signature from the
+  [/rsa2048](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-rsa2048.html)
+  endpoint.
+  The identity signature is used to validate RSA signatures from the
+  [/signature](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-signature.html)
+  endpoint. Defaults to "pkcs7".
 
 ### Sample Payload
 
@@ -1000,19 +1020,22 @@ $ curl \
 
 ## Login
 
-Fetch a token. This endpoint verifies the pkcs7 signature of the instance
+Fetch a token. This endpoint verifies the PKCS#7 signature of the instance
 identity document or the signature of the signed GetCallerIdentity request.
 With the ec2 auth method, or when inferring an EC2 instance, verifies that
 the instance is actually in a running state. Cross checks the constraints
 defined on the role with which the login is being performed. With the ec2
-auth method, as an alternative to pkcs7 signature, the identity document
-along with its RSA digest can be supplied to this endpoint.
+auth method, as an alternative to PKCS#7 signature, the identity document
+along with its RSA signature can be supplied to this endpoint.
+
+See the [AWS docs](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html)
+for more information on the signature types.
 
 | Method | Path              |
 | :----- | :---------------- |
 | `POST` | `/auth/aws/login` |
 
-### Sample Payload
+### Parameters
 
 - `role` `(string: "")` - Name of the role against which the login is being
   attempted. If `role` is not specified, then the login endpoint looks for a
@@ -1021,15 +1044,23 @@ along with its RSA digest can be supplied to this endpoint.
   username) of the IAM principal authenticated. If a matching role is not found,
   login fails.
 - `identity` `(string: <required-ec2>)` - Base64 encoded EC2 instance identity
-  document. This needs to be supplied along with the `signature` parameter. If
-  using `curl` for fetching the identity document, consider using the option
+  document, which can usually be obtained from the
+  `http://169.254.169.254/latest/dynamic/instance-identity/document` endpoint.
+  When using `curl` for fetching the identity document, consider using the option
   `-w 0` while piping the output to `base64` binary.
-- `signature` `(string: <required-ec2>)` - Base64 encoded SHA256 RSA signature of
-  the instance identity document. This needs to be supplied along with
-  `identity` parameter when using the ec2 auth method.
-- `pkcs7` `(string: <required-ec2>)` - PKCS7 signature of the identity document with
-  all `\n` characters removed. Either this needs to be set _OR_ both `identity`
-  and `signature` need to be set when using the ec2 auth method.
+  Either both of this and `signature` must be set _OR_ `pkcs7` must be set
+  when using the ec2 auth method.
+- `signature` `(string: <required-ec2>)` - Base64-encoded SHA256 RSA signature of
+  the instance identity document, which can usually be obtained from the
+  `http://169.254.169.254/latest/dynamic/instance-identity/document` endpoint.
+  Either both this _AND_ `identity` must be set _OR_ `pkcs7` must be set
+  when using the ec2 auth method.
+- `pkcs7` `(string: <required-ec2>)` - PKCS#7 signature of the identity document
+  with all `\n` characters removed. This supports signatures from the AWS
+  `http://169.254.169.254/latest/dynamic/instance-identity/rsa2048`
+  or `http://169.254.169.254/latest/dynamic/instance-identity/pkcs7` endpoints.
+  Either this needs to be set _OR_ both `identity` and
+  `signature` need to be set when using the ec2 auth method.
 - `nonce` `(string: "")` - The nonce to be used for subsequent login requests.
   If this parameter is not specified at all and if reauthentication is allowed,
   then the method will generate a random nonce, attaches it to the instance's
@@ -1051,7 +1082,7 @@ along with its RSA digest can be supplied to this endpoint.
   method.
 - `iam_request_body` `(string: <required-iam>)` - Base64-encoded body of the
   signed request. Most likely
-  `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==` which is the
+  `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==`, which is the
   base64 encoding of `Action=GetCallerIdentity&Version=2011-06-15`. This is
   required when using the iam auth method.
 - `iam_request_headers` `(string: <required-iam>)` - Key/value pairs of headers

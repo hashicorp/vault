@@ -1,13 +1,12 @@
 {{#each @model.policies as |policyName|}}
-  {{#linked-block
-    "vault.cluster.policy.show"
-    "acl"
-    item
-    class="list-item-row"
-  }}
+  <LinkedBlock @params={{array "vault.cluster.policy.show" "acl" policyName}} class="list-item-row">
     <div class="columns is-mobile">
       <div class="column is-10">
-        <LinkTo @route="vault.cluster.policy.show" @models={{array "acl" policyName}} class="is-block has-text-black has-text-weight-semibold">
+        <LinkTo
+          @route="vault.cluster.policy.show"
+          @models={{array "acl" policyName}}
+          class="is-block has-text-black has-text-weight-semibold"
+        >
           <span class="is-underline">{{policyName}}</span>
         </LinkTo>
       </div>
@@ -17,9 +16,7 @@
         {{/if}}
       </div>
     </div>
-  {{/linked-block}}
+  </LinkedBlock>
 {{else}}
-  <EmptyState
-    @title="No policies associated with {{@model.name}} yet"
-  />
+  <EmptyState @title="No policies associated with {{@model.name}} yet" />
 {{/each}}

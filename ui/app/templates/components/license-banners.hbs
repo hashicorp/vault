@@ -1,23 +1,45 @@
-{{#if this.licenseExpired}}
+{{#if (and this.licenseExpired (not this.expiredDismissed))}}
   <div class="license-banner-wrapper" data-test-license-banner data-test-license-banner-expired>
     <AlertBanner
       @type="danger"
       @title="License expired"
-      @message="Your Vault license expired on {{date-format @expiry "MMM d, yyyy"}}. Add a new license to your configuration and restart Vault."
-      @marginless={{true}}
+      @message="Your Vault license expired on {{date-format
+        @expiry
+        'MMM d, yyyy'
+      }}. Add a new license to your configuration and restart Vault."
+      class="message-marginless"
     >
-      <a href="https://learn.hashicorp.com/tutorials/nomad/hashicorp-enterprise-license" target="_blank" rel="noreferrer noopener">Read documentation</a>
+      <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
+        <Icon @name="learn-link" />
+        Read documentation
+      </DocLink>
+      <button type="button" class="close-button" {{on "click" (fn this.dismissBanner "expired")}} data-test-dismiss-expired>
+        <Icon @name="x" aria-label="dismiss license expired warning" />
+      </button>
     </AlertBanner>
   </div>
-{{else if (lte this.licenseExpiringInDays 30)}}
+{{else if (and (lte this.licenseExpiringInDays 30) (not this.warningDismissed))}}
   <div class="license-banner-wrapper" data-test-license-banner data-test-license-banner-warning>
     <AlertBanner
       @type="warning"
       @title="Vault license expiring"
-      @message="Your Vault license will expire in {{this.licenseExpiringInDays}} days at {{date-format @expiry "hh:mm:ss a"}} on {{date-format @expiry "MMM d, yyyy"}}. {{if @autoloaded 'Add a new license to your configuration.' 'Keep in mind that your next license will need to be autoloaded'}}"
-      @marginless={{true}}
+      @message="Your Vault license will expire in {{this.licenseExpiringInDays}} days at {{date-format
+        @expiry
+        'hh:mm:ss a'
+      }} on {{date-format @expiry 'MMM d, yyyy'}}. {{if
+        @autoloaded
+        'Add a new license to your configuration.'
+        'Keep in mind that your next license will need to be autoloaded'
+      }}"
+      class="message-marginless"
     >
-      <a href="https://learn.hashicorp.com/tutorials/nomad/hashicorp-enterprise-license" target="_blank" rel="noreferrer noopener">Read documentation</a>
+      <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
+        <Icon @name="learn-link" />
+        Read documentation
+      </DocLink>
+      <button type="button" class="close-button" {{on "click" (fn this.dismissBanner "warning")}} data-test-dismiss-warning>
+        <Icon @name="x" aria-label="dismiss license expire soon warning" />
+      </button>
     </AlertBanner>
   </div>
 {{/if}}

@@ -1,5 +1,5 @@
-{{!-- DR Secondary has a different Nav Header with access only to the Status menu --}}
-{{#if isSecondary}}
+{{! DR Secondary has a different Nav Header with access only to the Status menu }}
+{{#if this.isSecondary}}
   <NavHeader as |Nav|>
     <Nav.home>
       <HomeLink @class="navbar-item splash-page-logo has-text-white">
@@ -7,7 +7,7 @@
       </HomeLink>
     </Nav.home>
     <Nav.items>
-      <div class="navbar-item status-indicator-button" data-status="{{if data.unsealed "good" "bad"}}">
+      <div class="navbar-item status-indicator-button" data-status={{if this.data.unsealed "good" "bad"}}>
         <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
       </div>
     </Nav.items>
@@ -15,70 +15,58 @@
 {{/if}}
 <PageHeader as |p|>
   <p.top>
-    {{#unless (or isSummaryDashboard isSecondary) }}
-      {{#key-value-header
-        baseKey=baseKey
-        path="vault.cluster.replication-dr-promote"
-        root=backendCrumb
-      }}
+    {{! template-lint-configure simple-unless "warn" }}
+    {{#unless (or this.isSummaryDashboard this.isSecondary)}}
+      <KeyValueHeader @baseKey={{this.baseKey}} @path="vault.cluster.replication-dr-promote" @root={{this.backendCrumb}}>
         <li>
           <span class="sep">
             /
           </span>
-          {{#link-to "vault.cluster.replication.index"}}
+          <LinkTo @route="vault.cluster.replication.index">
             Replication
-          {{/link-to}}
+          </LinkTo>
         </li>
-      {{/key-value-header}}
+      </KeyValueHeader>
     {{/unless}}
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{title}}
-      {{#if data.anyReplicationEnabled}}
+      {{this.title}}
+      {{#if this.data.anyReplicationEnabled}}
         <span class="tag is-light has-text-grey-dark" data-test-mode>
-          {{if isSecondary 'secondary' 'primary'}}
+          {{if this.isSecondary "secondary" "primary"}}
         </span>
         <span class="tag is-light has-text-grey-dark" data-test-secondaryId>
-          {{secondaryId}}
+          {{this.secondaryId}}
         </span>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if showTabs}}
+{{#if this.showTabs}}
   <div class="tabs-container box is-bottomless is-fullwidth is-paddingless" data-test-tabs>
     <nav class="tabs">
-      {{#unless isSummaryDashboard}}
-        <ul>
-          {{#link-to
-            "vault.cluster.replication-dr-promote.details"
-            tagName="li"
-            activeClass="is-active"
-          }}
-            {{#link-to "vault.cluster.replication-dr-promote.details"}}
-              Details
-            {{/link-to}}
-          {{/link-to}}
-          {{#link-to
-            "vault.cluster.replication-dr-promote"
-            tagName="li"
-            activeClass="is-active"
-            current-when="vault.cluster.replication-dr-promote.index"
-          }}
-            {{#link-to "vault.cluster.replication-dr-promote"}}
-              Manage
-            {{/link-to}}
-        {{/link-to}}
-      </ul>
-      {{else}}
+      {{#if this.isSummaryDashboard}}
         <ul>
           <li class="is-active">
-            {{link-to-external "Summary" "replication"}}
+            <LinkToExternal @route="replication">Summary</LinkToExternal>
           </li>
         </ul>
-      {{/unless}}
+      {{else}}
+        <ul>
+          <LinkTo @route="vault.cluster.replication-dr-promote.details" @activeClass="is-active">
+            Details
+          </LinkTo>
+          <LinkTo
+            @route="vault.cluster.replication-dr-promote"
+            @activeClass="is-active"
+            @current-when="vault.cluster.replication-dr-promote.index"
+          >
+            Manage
+          </LinkTo>
+        </ul>
+      {{/if}}
     </nav>
   </div>
 {{/if}}

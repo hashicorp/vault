@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add KV secret search box when no metadata list access.
+```

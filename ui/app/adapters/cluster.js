@@ -38,12 +38,12 @@ export default ApplicationAdapter.extend({
   },
 
   findRecord(store, type, id, snapshot) {
-    let fetches = {
+    const fetches = {
       health: this.health(),
-      sealStatus: this.sealStatus().catch(e => e),
+      sealStatus: this.sealStatus().catch((e) => e),
     };
     if (this.version.isEnterprise && this.namespaceService.inRootNamespace) {
-      fetches.replicationStatus = this.replicationStatus().catch(e => e);
+      fetches.replicationStatus = this.replicationStatus().catch((e) => e);
     }
     return hash(fetches).then(({ health, sealStatus, replicationStatus }) => {
       let ret = {
@@ -107,10 +107,10 @@ export default ApplicationAdapter.extend({
   },
 
   authenticate({ backend, data }) {
-    const { role, jwt, token, password, username, path } = data;
+    const { role, jwt, token, password, username, path, nonce } = data;
     const url = this.urlForAuth(backend, username, path);
     const verb = backend === 'token' ? 'GET' : 'POST';
-    let options = {
+    const options = {
       unauthenticated: true,
     };
     if (backend === 'token') {
@@ -119,11 +119,36 @@ export default ApplicationAdapter.extend({
       };
     } else if (backend === 'jwt' || backend === 'oidc') {
       options.data = { role, jwt };
+    } else if (backend === 'okta') {
+      options.data = { password, nonce };
     } else {
       options.data = token ? { token, password } : { password };
     }
 
     return this.ajax(url, verb, options);
+  },
+
+  mfaValidate({ mfa_request_id, mfa_constraints }) {
+    const options = {
+      data: {
+        mfa_request_id,
+        mfa_payload: mfa_constraints.reduce((obj, { selectedMethod, passcode }) => {
+          let payload = [];
+          if (passcode) {
+            // duo requires passcode= prepended to the actual passcode
+            // this isn't a great UX so we add it behind the scenes to fulfill the requirement
+            // check if user added passcode= to avoid duplication
+            payload =
+              selectedMethod.type === 'duo' && !passcode.includes('passcode=')
+                ? [`passcode=${passcode}`]
+                : [passcode];
+          }
+          obj[selectedMethod.id] = payload;
+          return obj;
+        }, {}),
+      },
+    };
+    return this.ajax('/v1/sys/mfa/validate', 'POST', options);
   },
 
   urlFor(endpoint) {

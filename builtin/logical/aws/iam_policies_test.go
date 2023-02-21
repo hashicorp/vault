@@ -207,7 +207,7 @@ func Test_combinePolicyDocuments(t *testing.T) {
 				`{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "NotAction": "ec2:DescribeAvailabilityZones", "Resource": "*"}]}`,
 			},
 			expectedOutput: `{"Version": "2012-10-17","Statement":[{"Effect": "Allow","NotAction": "ec2:DescribeAvailabilityZones",	"Resource": "*"}]}`,
-			expectedErr: false,
+			expectedErr:    false,
 		},
 		{
 			description: "one blank policy",
@@ -246,7 +246,12 @@ func Test_combinePolicyDocuments(t *testing.T) {
 				t.Fatalf("got unexpected error: %s", err)
 			}
 			// remove whitespace
-			tc.expectedOutput, err = compactJSON(tc.expectedOutput)
+			if tc.expectedOutput != "" {
+				tc.expectedOutput, err = compactJSON(tc.expectedOutput)
+				if err != nil {
+					t.Fatalf("error compacting JSON: %s", err)
+				}
+			}
 			if policyOut != tc.expectedOutput {
 				t.Fatalf("did not receive expected output: want %s, got %s", tc.expectedOutput, policyOut)
 			}

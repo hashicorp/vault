@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/vault/vault"
 )
@@ -40,6 +42,12 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	// Parse the request
 	var req InitRequest
 	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
+		respondError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	// Validate init request parameters
+	if err := validateInitParameters(core, req); err != nil {
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -127,4 +135,42 @@ type InitResponse struct {
 
 type InitStatusResponse struct {
 	Initialized bool `json:"initialized"`
+}
+
+// Validates if the right parameters are used based on AutoUnseal
+func validateInitParameters(core *vault.Core, req InitRequest) error {
+	recoveryFlags := make([]string, 0)
+	barrierFlags := make([]string, 0)
+
+	if req.SecretShares != 0 {
+		barrierFlags = append(barrierFlags, "secret_shares")
+	}
+	if req.SecretThreshold != 0 {
+		barrierFlags = append(barrierFlags, "secret_threshold")
+	}
+	if len(req.PGPKeys) != 0 {
+		barrierFlags = append(barrierFlags, "pgp_keys")
+	}
+	if req.RecoveryShares != 0 {
+		recoveryFlags = append(recoveryFlags, "recovery_shares")
+	}
+	if req.RecoveryThreshold != 0 {
+		recoveryFlags = append(recoveryFlags, "recovery_threshold")
+	}
+	if len(req.RecoveryPGPKeys) != 0 {
+		recoveryFlags = append(recoveryFlags, "recovery_pgp_keys")
+	}
+
+	switch core.SealAccess().RecoveryKeySupported() {
+	case true:
+		if len(barrierFlags) > 0 {
+			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(barrierFlags, ","), core.SealAccess().BarrierType())
+		}
+	default:
+		if len(recoveryFlags) > 0 {
+			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(recoveryFlags, ","), core.SealAccess().BarrierType())
+		}
+
+	}
+	return nil
 }

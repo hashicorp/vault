@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/gcp: Fixes a potential panic in the service account policy rollback for rolesets.
+```

@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/cassandra: tuning parameters for clustered environments `connection_timeout`, `initial_connection_timeout`, `simple_retry_policy_retries`.
+```

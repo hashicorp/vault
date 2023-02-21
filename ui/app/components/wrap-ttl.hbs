@@ -1,0 +1,12 @@
+<div class="field">
+  <TtlPicker
+    @label="Wrap response"
+    @helperTextDisabled="Will not wrap response"
+    @helperTextEnabled="Will wrap response with a lease of"
+    @initialEnabled={{true}}
+    @initialValue="30m"
+    @onChange={{this.changedValue}}
+    @changeOnInit={{true}}
+    data-test-wrap-ttl-picker
+  />
+</div>

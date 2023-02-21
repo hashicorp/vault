@@ -1,0 +1,6 @@
+```release-note:bug
+auth/kubernetes: Fix error code when using the wrong service account
+```
+```release-note:change
+auth/kubernetes: If `kubernetes_ca_cert` is unset, and there is no pod-local CA available, an error will be surfaced when writing config instead of waiting for login.
+```

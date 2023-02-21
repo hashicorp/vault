@@ -10,14 +10,14 @@ description: >-
 
 Authentication in Vault is the process by which user or machine supplied
 information is verified against an internal or external system. Vault supports
-multiple [auth methods](/docs/auth) including GitHub,
+multiple [auth methods](/vault/docs/auth) including GitHub,
 LDAP, AppRole, and more. Each auth method has a specific use case.
 
 Before a client can interact with Vault, it must _authenticate_ against an
 auth method. Upon authentication, a token is generated. This token is
 conceptually similar to a session ID on a website. The token may have attached
 policy, which is mapped at authentication time. This process is described in
-detail in the [policies concepts](/docs/concepts/policies) documentation.
+detail in the [policies concepts](/vault/docs/concepts/policies) documentation.
 
 ## auth methods
 
@@ -48,7 +48,7 @@ access, although some backends do support MFA.
 
 ## Tokens
 
-There is an [entire page dedicated to tokens](/docs/concepts/tokens),
+There is an [entire page dedicated to tokens](/vault/docs/concepts/tokens),
 but it is important to understand that authentication works by verifying
 your identity and then generating a token to associate with that identity.
 
@@ -60,7 +60,7 @@ the API you'll have to do this manually.
 This token given for authentication with any backend can also be used
 with the full set of token commands, such as creating new sub-tokens,
 revoking tokens, and renewing tokens. This is all covered on the
-[token concepts page](/docs/concepts/tokens).
+[token concepts page](/vault/docs/concepts/tokens).
 
 ## Authenticating
 
@@ -99,7 +99,7 @@ be used.
 ## Auth Leases
 
 Just like secrets, identities have
-[leases](/docs/concepts/lease) associated with them. This means that
+[leases](/vault/docs/concepts/lease) associated with them. This means that
 you must reauthenticate after the given lease period to continue accessing
 Vault.
 
@@ -110,3 +110,118 @@ how leasing is implemented.
 And just like secrets, identities can be renewed without having to
 completely reauthenticate. Just use `vault token renew <token>` with the
 leased token associated with your identity to renew it.
+
+## Code Example
+
+The following code snippet demonstrates how to renew auth tokens.
+
+<CodeTabs heading="token renewal example">
+
+<CodeBlockConfig lineNumbers>
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	vault "github.com/hashicorp/vault/api"
+	auth "github.com/hashicorp/vault/api/auth/userpass"
+)
+
+// Once you've set the token for your Vault client, you will need to
+// periodically renew its lease.
+//
+// A function like this should be run as a goroutine to avoid blocking.
+//
+// Production applications may also wish to be more tolerant of failures and
+// retry rather than exiting.
+//
+// Additionally, enterprise Vault users should be aware that due to eventual
+// consistency, the API may return unexpected errors when running Vault with
+// performance standbys or performance replication, despite the client having
+// a freshly renewed token. See https://www.vaultproject.io/docs/enterprise/consistency#vault-1-7-mitigations
+// for several ways to mitigate this which are outside the scope of this code sample.
+func renewToken(client *vault.Client) {
+	for {
+		vaultLoginResp, err := login(client)
+		if err != nil {
+			log.Fatalf("unable to authenticate to Vault: %v", err)
+		}
+		tokenErr := manageTokenLifecycle(client, vaultLoginResp)
+		if tokenErr != nil {
+			log.Fatalf("unable to start managing token lifecycle: %v", tokenErr)
+		}
+	}
+}
+
+// Starts token lifecycle management. Returns only fatal errors as errors,
+// otherwise returns nil so we can attempt login again.
+func manageTokenLifecycle(client *vault.Client, token *vault.Secret) error {
+	renew := token.Auth.Renewable // You may notice a different top-level field called Renewable. That one is used for dynamic secrets renewal, not token renewal.
+	if !renew {
+		log.Printf("Token is not configured to be renewable. Re-attempting login.")
+		return nil
+	}
+
+	watcher, err := client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{
+		Secret:    token,
+		Increment: 3600, // Learn more about this optional value in https://www.vaultproject.io/docs/concepts/lease#lease-durations-and-renewal
+	})
+	if err != nil {
+		return fmt.Errorf("unable to initialize new lifetime watcher for renewing auth token: %w", err)
+	}
+
+	go watcher.Start()
+	defer watcher.Stop()
+
+	for {
+		select {
+		// `DoneCh` will return if renewal fails, or if the remaining lease
+		// duration is under a built-in threshold and either renewing is not
+		// extending it or renewing is disabled. In any case, the caller
+		// needs to attempt to log in again.
+		case err := <-watcher.DoneCh():
+			if err != nil {
+				log.Printf("Failed to renew token: %v. Re-attempting login.", err)
+				return nil
+			}
+			// This occurs once the token has reached max TTL.
+			log.Printf("Token can no longer be renewed. Re-attempting login.")
+			return nil
+
+		// Successfully completed renewal
+		case renewal := <-watcher.RenewCh():
+			log.Printf("Successfully renewed: %#v", renewal)
+		}
+	}
+}
+
+func login(client *vault.Client) (*vault.Secret, error) {
+	// WARNING: A plaintext password like this is obviously insecure.
+	// See the hashicorp/vault-examples repo for full examples of how to securely
+	// log in to Vault using various auth methods. This function is just
+	// demonstrating the basic idea that a *vault.Secret is returned by
+	// the login call.
+	userpassAuth, err := auth.NewUserpassAuth("my-user", &auth.Password{FromString: "my-password"})
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize userpass auth method: %w", err)
+	}
+
+	authInfo, err := client.Auth().Login(context.TODO(), userpassAuth)
+	if err != nil {
+		return nil, fmt.Errorf("unable to login to userpass auth method: %w", err)
+	}
+	if authInfo == nil {
+		return nil, fmt.Errorf("no auth info was returned after login")
+	}
+
+	return authInfo, nil
+}
+```
+
+</CodeBlockConfig>
+
+</CodeTabs>

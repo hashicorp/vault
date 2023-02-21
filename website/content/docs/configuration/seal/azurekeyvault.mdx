@@ -10,6 +10,8 @@ description: >-
 
 # `azurekeyvault` Seal
 
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documenation for more information.
+
 The Azure Key Vault seal configures Vault to use Azure Key Vault as the seal
 wrapping mechanism. The Azure Key Vault seal is activated by one of the following:
 
@@ -57,6 +59,15 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `key_name` `(string: <required>)`: The Key Vault key to use for encryption and decryption. May also be specified by the
   `VAULT_AZUREKEYVAULT_KEY_NAME` environment variable.
 
+- `resource` `(string: "vault.azure.net")`: The AZ KeyVault resource's DNS Suffix to connect to.
+  May also be specified in the `AZURE_AD_RESOURCE` environment variable.
+  Needs to be changed to connect to Azure's Managed HSM KeyVault instance type.
+
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+
+
 ## Authentication
 
 Authentication-related values must be provided, either as environment
@@ -68,6 +79,7 @@ Azure authentication values:
 - `AZURE_CLIENT_ID`
 - `AZURE_CLIENT_SECRET`
 - `AZURE_ENVIRONMENT`
+- `AZURE_AD_RESOURCE`
 
 ~> **Note:** If Vault is hosted on Azure, Vault can use Managed Service
 Identities (MSI) to access Azure instead of an environment and shared client id
@@ -76,8 +88,12 @@ and secret. MSI must be
 on the VMs hosting Vault, and it is the preferred configuration since MSI
 prevents your Azure credentials from being stored as clear text. Refer to the
 [Production
-Hardening](https://learn.hashicorp.com/vault/day-one/production-hardening) guide
+Hardening](/vault/tutorials/operations/production-hardening) tutorial
 for more best practices.
+
+-> **Note:** If you are using a Managed HSM KeyVault, `AZURE_AD_RESOURCE` or the `resource`
+configuration parameter must be specified; usually this should point to `managedhsm.azure.net`,
+but could point to other suffixes depending on Azure environment.
 
 ## `azurekeyvault` Environment Variables
 
@@ -95,7 +111,7 @@ decryption operations. Simply [set up Azure Key Vault with key
 rotation](https://docs.microsoft.com/en-us/azure/key-vault/key-vault-key-rotation-log-monitoring)
 using Azure Automation Account and Vault will recognize newly rotated keys.
 
-## Learn
+## Tutorial
 
-Refer to the [Auto-unseal using Azure Key Vault](https://learn.hashicorp.com/vault/operations/autounseal-azure-keyvault)
-guide for a step-by-step tutorial.
+Refer to the [Auto-unseal using Azure Key Vault](/vault/tutorials/auto-unseal/autounseal-azure-keyvault)
+tutorial to learn how to use the Azure Key Vault to auto-unseal a Vault server.

@@ -3,27 +3,11 @@
 /* eslint-disable no-process-exit */
 /* eslint-disable node/no-extraneous-require */
 
-var fs = require('fs');
-var path = require('path');
 var readline = require('readline');
-var execa = require('execa');
-var chalk = require('chalk');
-
-function run(command, args = [], shareStd = true) {
-  console.log(chalk.dim('$ ' + command + ' ' + args.join(' ')));
-  // cleanup means that execa will handle stopping the vault subprocess
-  // inherit all of the stdin/out/err so that testem still works as if you were running it directly
-  if (shareStd) {
-    return execa(command, args, { cleanup: true, stdin: 'inherit', stdout: 'inherit', stderr: 'inherit' });
-  }
-  let p = execa(command, args, { cleanup: true });
-  p.stdout.pipe(process.stdout);
-  p.stderr.pipe(process.stderr);
-  return p;
-}
+const testHelper = require('./test-helper');
 
 var output = '';
-var unseal, root, written;
+var unseal, root, written, initError;
 
 async function processLines(input, eachLine = () => {}) {
   const rl = readline.createInterface({
@@ -35,9 +19,9 @@ async function processLines(input, eachLine = () => {}) {
   }
 }
 
-(async function() {
+(async function () {
   try {
-    let vault = run(
+    const vault = testHelper.run(
       'vault',
       [
         'server',
@@ -49,8 +33,7 @@ async function processLines(input, eachLine = () => {}) {
       ],
       false
     );
-
-    processLines(vault.stdout, function(line) {
+    processLines(vault.stdout, function (line) {
       if (written) {
         output = null;
         return;
@@ -58,41 +41,30 @@ async function processLines(input, eachLine = () => {}) {
       output = output + line;
       var unsealMatch = output.match(/Unseal Key: (.+)$/m);
       if (unsealMatch && !unseal) {
-        unseal = unsealMatch[1];
+        unseal = [unsealMatch[1]];
       }
       var rootMatch = output.match(/Root Token: (.+)$/m);
       if (rootMatch && !root) {
         root = rootMatch[1];
       }
+      var errorMatch = output.match(/Error initializing core: (.*)$/m);
+      if (errorMatch) {
+        initError = errorMatch[1];
+      }
       if (root && unseal && !written) {
-        fs.writeFile(
-          path.join(process.cwd(), 'tests/helpers/vault-keys.js'),
-          `export default ${JSON.stringify({ unseal, root }, null, 2)}`,
-          err => {
-            if (err) throw err;
-          }
-        );
+        testHelper.writeKeysFile(unseal, root);
         written = true;
         console.log('VAULT SERVER READY');
+      } else if (initError) {
+        console.log('VAULT SERVER START FAILED');
+        console.log(
+          'If this is happening, run `export VAULT_LICENSE_PATH=/Users/username/license.hclic` to your valid local vault license filepath, or use OSS Vault'
+        );
+        process.exit(1);
       }
     });
     try {
-      if (process.argv[2] === '--browserstack') {
-        await run('ember', ['browserstack:connect']);
-        try {
-          await run('ember', ['test', '-f=secrets/secret/create', '-c', 'testem.browserstack.js']);
-
-          console.log('success');
-          process.exit(0);
-        } finally {
-          if (process.env.CI === 'true') {
-            await run('ember', ['browserstack:results']);
-          }
-          await run('ember', ['browserstack:disconnect']);
-        }
-      } else {
-        await run('ember', ['test', ...process.argv.slice(2)]);
-      }
+      await testHelper.run('ember', ['test', ...process.argv.slice(2)]);
     } catch (error) {
       console.log(error);
       process.exit(1);

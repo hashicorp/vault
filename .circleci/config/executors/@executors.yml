@@ -1,48 +1,49 @@
-go-machine:
-  machine: true
-  shell: /usr/bin/env bash -euo pipefail -c
-  environment:
-    CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
-    GO_VERSION: 1.16.5  # Pin Go to patch version (ex: 1.2.3)
-    GOTESTSUM_VERSION: 0.5.2  # Pin gotestsum to patch version (ex: 1.2.3)
+references:
+  environment: &ENVIRONMENT
+    CIRCLECI_CLI_VERSION: 0.1.5546 # Pin CircleCI CLI to patch version (ex: 1.2.3)
+    GOTESTSUM_VERSION: 0.5.2 # Pin gotestsum to patch version (ex: 1.2.3)
+    GOFUMPT_VERSION: 0.3.1 # Pin gofumpt to patch version (ex: 1.2.3)
     GO_TAGS: ""
-  working_directory: /go/src/github.com/hashicorp/vault
+    GO_IMAGE: &GO_IMAGE "docker.mirror.hashicorp.services/cimg/go:1.20"
+go-machine:
+  machine:
+    image: ubuntu-2004:2022.10.1
+  environment: *ENVIRONMENT
+  shell: /usr/bin/env bash -euo pipefail -c
+  working_directory: /home/circleci/go/src/github.com/hashicorp/vault
 node:
   docker:
-    - image: docker.mirror.hashicorp.services/node:10-buster
+    - image: docker.mirror.hashicorp.services/circleci/node:14-browsers
+      environment:
+        # See https://git.io/vdao3 for details.
+        JOBS: 2
   shell: /usr/bin/env bash -euo pipefail -c
-  working_directory: /go/src/github.com/hashicorp/vault
+  working_directory: /home/circleci/go/src/github.com/hashicorp/vault
 python:
   docker:
     - image: docker.mirror.hashicorp.services/python:3-alpine
   shell: /usr/bin/env bash -euo pipefail -c
-  working_directory: /go/src/github.com/hashicorp/vault
-alpine:
+  working_directory: /home/circleci/go/src/github.com/hashicorp/vault
+semgrep:
   docker:
-    - image: docker.mirror.hashicorp.services/alpine:3.13
+    - image: docker.mirror.hashicorp.services/returntocorp/semgrep:0.113.0
   shell: /bin/sh
-  working_directory: /go/src/github.com/hashicorp/vault
+  working_directory: /home/circleci/go/src/github.com/hashicorp/vault
 docker-env-go-test-remote-docker:
   resource_class: medium
   docker:
-    - image: "docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster"
-  environment:
-    CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
-    GO_TAGS: ""
-  working_directory: /go/src/github.com/hashicorp/vault
+    - image: *GO_IMAGE
+  environment: *ENVIRONMENT
+  working_directory: /home/circleci/go/src/github.com/hashicorp/vault
 docker-env-go-test:
   resource_class: large
   docker:
-    - image: "docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster"
-  environment:
-    CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
-    GO_TAGS: ""
-  working_directory: /go/src/github.com/hashicorp/vault
+    - image: *GO_IMAGE
+  environment: *ENVIRONMENT
+  working_directory: /home/circleci/go/src/github.com/hashicorp/vault
 docker-env-go-test-race:
   resource_class: xlarge
   docker:
-    - image: "docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster"
-  environment:
-    CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
-    GO_TAGS: ""
-  working_directory: /go/src/github.com/hashicorp/vault
+    - image: *GO_IMAGE
+  environment: *ENVIRONMENT
+  working_directory: /home/circleci/go/src/github.com/hashicorp/vault

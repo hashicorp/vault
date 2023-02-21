@@ -1,5 +1,7 @@
-import Component from '@ember/component';
-import layout from '../templates/components/confirm-action';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { assert } from '@ember/debug';
+import { tracked } from '@glimmer/tracking';
 
 /**
  * @module ConfirmAction
@@ -14,43 +16,70 @@ import layout from '../templates/components/confirm-action';
  *  </ConfirmAction>
  * ```
  *
- * @property {Func} [onConfirmAction=null] - The action to take upon confirming.
- * @property {String} [confirmTitle=Delete this?] - The title to display when confirming.
- * @property {String} [confirmMessage=You will not be able to recover it later.] - The message to display when confirming.
- * @property {String} [confirmButtonText=Delete] - The confirm button text.
- * @property {String} [cancelButtonText=Cancel] - The cancel button text.
+ * @param {Func} [onConfirmAction=null] - The action to take upon confirming.
+ * @param {String} [confirmTitle=Delete this?] - The title to display when confirming.
+ * @param {String} [confirmMessage=You will not be able to recover it later.] - The message to display when confirming.
+ * @param {String} [confirmButtonText=Delete] - The confirm button text.
+ * @param {String} [cancelButtonText=Cancel] - The cancel button text.
+ * @param {String} [buttonClasses] - A string to indicate the button class.
+ * @param {String} [horizontalPosition=auto-right] - For the position of the dropdown.
+ * @param {String} [verticalPosition=below] - For the position of the dropdown.
+ * @param {Boolean} [isRunning=false] - If action is still running disable the confirm.
+ * @param {Boolean} [disable=false] - To disable the confirm action.
  *
  */
 
-export default Component.extend({
-  layout,
-  tagName: '',
-  supportsDataTestProperties: true,
-  buttonText: 'Delete',
-  confirmTitle: 'Delete this?',
-  confirmMessage: 'You will not be able to recover it later.',
-  confirmButtonText: 'Delete',
-  cancelButtonText: 'Cancel',
-  horizontalPosition: 'auto-right',
-  verticalPosition: 'below',
-  disabled: false,
-  showConfirm: false,
-  onConfirmAction: null,
+export default class ConfirmActionComponent extends Component {
+  @tracked showConfirm = false;
 
-  actions: {
-    toggleConfirm() {
-      this.toggleProperty('showConfirm');
-    },
+  get horizontalPosition() {
+    return this.args.horizontalPosition || 'auto-right';
+  }
 
-    onConfirm() {
-      const confirmAction = this.onConfirmAction;
+  get verticalPosition() {
+    return this.args.verticalPosition || 'below';
+  }
 
-      if (typeof confirmAction !== 'function') {
-        throw new Error('confirm-action components expects `onConfirmAction` attr to be a function');
-      } else {
-        confirmAction();
-        this.toggleProperty('showConfirm');
-      }
-    },
-  },
-});
+  get isRunning() {
+    return this.args.isRunning || false;
+  }
+
+  get disabled() {
+    return this.args.disabled || false;
+  }
+
+  get confirmTitle() {
+    return this.args.confirmTitle || 'Delete this?';
+  }
+
+  get confirmMessage() {
+    return this.args.confirmMessage || 'You will not be able to recover it later.';
+  }
+
+  get confirmButtonText() {
+    return this.args.confirmButtonText || 'Delete';
+  }
+
+  get cancelButtonText() {
+    return this.args.cancelButtonText || 'Cancel';
+  }
+
+  @action
+  toggleConfirm() {
+    // toggle
+    this.showConfirm = !this.showConfirm;
+  }
+
+  @action
+  onConfirm(actions) {
+    const confirmAction = this.args.onConfirmAction;
+
+    if (typeof confirmAction !== 'function') {
+      assert('confirm-action components expects `onConfirmAction` attr to be a function');
+    } else {
+      confirmAction();
+      // close the dropdown content
+      actions.close();
+    }
+  }
+}

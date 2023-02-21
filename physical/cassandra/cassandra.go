@@ -102,6 +102,14 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	cluster.Port = port
 	cluster.Keyspace = keyspace
 
+	if retryCountStr, ok := conf["simple_retry_policy_retries"]; ok {
+		retryCount, err := strconv.Atoi(retryCountStr)
+		if err != nil || retryCount <= 0 {
+			return nil, fmt.Errorf("'simple_retry_policy_retries' must be a positive integer")
+		}
+		cluster.RetryPolicy = &gocql.SimpleRetryPolicy{NumRetries: retryCount}
+	}
+
 	cluster.ProtoVersion = 2
 	if protoVersionStr, ok := conf["protocol_version"]; ok {
 		protoVersion, err := strconv.Atoi(protoVersionStr)
@@ -122,10 +130,18 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 		cluster.Authenticator = authenticator
 	}
 
+	if initialConnectionTimeoutStr, ok := conf["initial_connection_timeout"]; ok {
+		initialConnectionTimeout, err := strconv.Atoi(initialConnectionTimeoutStr)
+		if err != nil || initialConnectionTimeout <= 0 {
+			return nil, fmt.Errorf("'initial_connection_timeout' must be a positive integer")
+		}
+		cluster.ConnectTimeout = time.Duration(initialConnectionTimeout) * time.Second
+	}
+
 	if connTimeoutStr, ok := conf["connection_timeout"]; ok {
 		connectionTimeout, err := strconv.Atoi(connTimeoutStr)
-		if err != nil {
-			return nil, fmt.Errorf("'connection_timeout' must be an integer")
+		if err != nil || connectionTimeout <= 0 {
+			return nil, fmt.Errorf("'connection_timeout' must be a positive integer")
 		}
 		cluster.Timeout = time.Duration(connectionTimeout) * time.Second
 	}

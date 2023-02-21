@@ -1,0 +1,291 @@
+---
+layout: docs
+page_title: FAQ
+description: An FAQ page to answer the most commonly asked questions about client count.
+---
+
+# Client Count FAQ
+
+~> **Note 1**: Starting in Vault 1.9, Vault changed the non-entity token computation logic to deduplicate non-entity tokens.  For non-entity tokens (where there is no entity to which tokens map) Vault uses the contents of the token to generate a unique client identifier, based on the namespace ID and policies. The clientID will prevent the same token from being duplicated in the overall client count. Non-entity token tracking is done on access instead of creation. Since the change was made, Vault 1.10 (via the UI, API, documentation, etc.) refers to these non-entity tokens as non-entity clients, and unique entities as entity clients. To summarize, starting in Vault 1.9, the terms used are: total clients = entity clients + non entity clients. Previously, the terms used were: total clients = unique entities + non-entity tokens.
+
+~> **Note 2**: In March 2022, we deprecated the Vault auditor tool. While you can still use the tool, there are no plans to release new versions of the tool.
+
+This FAQ section contains frequently asked questions about the client count feature.
+
+- [Q: What is a client?](#q-what-is-a-client)
+- [Q: Where can I learn more about Vault clients?](#q-where-can-i-learn-more-about-vault-clients)
+- [Q: What is the difference between a direct entity (entity client) and a non-entity token (non-entity client)?](#q-what-is-the-difference-between-a-direct-entity-entity-client-and-a-non-entity-token-non-entity-client)
+- [Q: Which Vault version reflects the most accurate client counts?](#q-which-vault-version-reflects-the-most-accurate-client-counts)
+- [Q: For customers using versions of Vault older than Vault 1.6, what’s the best way to compute clients](#q-for-customers-using-versions-of-vault-older-than-1-6-what-s-the-best-way-to-compute-clients)
+- [Q: For customers using newer versions than Vault 1.6, what's the best way to compute clients?](#q-for-customers-using-newer-versions-than-vault-1-6-what-s-the-best-way-to-compute-clients)
+- [Q: Why do we have two different tools (auditor tool and UI/API) to compute clients? Do we plan to deprecate one in the future?](#q-why-do-we-have-two-different-tools-auditor-tool-and-ui-api-to-compute-clients-do-we-plan-to-deprecate-one-in-the-future)
+- [Q: How can I compute KMIP clients for Vault?](#q-how-can-i-compute-kmip-clients-for-vault)
+- [Q: Why do the Vault auditor tool and the usage metrics UI show me different results for the total number of clients?](#q-why-do-the-vault-auditor-tool-and-the-usage-metrics-ui-show-me-different-results-for-the-total-number-of-clients)
+- [Q: When I upgrade to a version of Vault that's greater than Vault 1.6, will the clients be available for the entire history of the billing period, or only available after the upgrade occurred during the billing period?](#q-when-i-upgrade-to-a-version-of-vault-that-s-greater-vault-1-6-will-the-clients-be-available-for-the-entire-history-of-the-billing-period-or-only-available-after-the-upgrade-occurred-during-the-billing-period)
+- [Q: If I upgrade from Vault 1.8 to 1.9+, how will the changes to non-entity token logic and local auth mount made in Vault 1.9 affect the clients created prior to the upgrade?](#q-if-i-upgrade-from-vault-1-8-to-1-9-+-how-will-the-changes-to-non-entity-token-logic-and-local-auth-mount-made-in-vault-1-9-affect-the-clients-created-prior-to-the-upgrade)
+- [Q: Post Vault 1.9, will the clientID be viewable via the audit logs when non-entity tokens are used?](#q-post-vault-1-9-will-the-clientid-be-viewable-via-the-audit-logs-when-non-entity-tokens-are-used)
+- [Q: Is it possible to view a list of unique client IDs that contributed to the client count aggregate?](#q-is-it-possible-to-view-a-list-of-unique-client-ids-that-contributed-to-the-client-count-aggregate)
+- [Q: What happens if audit logs are unreadable for use by the Vault auditor tool?](#q-what-happens-if-audit-logs-are-unreadable-for-use-by-the-vault-auditor-tool)
+- [Q: What does the usage metrics UI look like for Vault 1.9?](#q-what-does-the-usage-metrics-ui-look-like-for-vault-1-9)
+- [Q: What does the usage metrics look like for Vault 1.10?](#q-what-does-the-usage-metrics-look-like-for-vault-1-10)
+- [Q: What does the usage metrics UI look like for Vault 1.11?](#q-what-does-the-usage-metrics-ui-look-like-for-vault-1-11)
+- [Q: In older Vault versions including Vault 1.10, how do I compute changes to clients month to month from the UI?](#q-in-older-vault-versions-including-vault-1-10-how-do-i-compute-changes-to-clients-month-to-month-from-the-ui)
+- [Q: What if I selected an inaccurate billing period via the UI/API?](#q-what-if-i-selected-an-inaccurate-billing-period-via-the-ui-api)
+- [Q: What if I want to skip computation of clients for a period of time during the billing period?](#q-what-if-i-want-to-skip-computation-of-clients-for-a-period-of-time-during-the-billing-period)
+- [Q: What are the known client count issues in the auditor tool as well as in the UI/API?](#q-what-are-the-known-client-count-issues-in-the-auditor-tool-as-well-as-in-the-ui-api)
+- [Q: What conditions can cause the loss of client data?](#q-what-conditions-can-cause-the-loss-of-client-data)
+- [Q: How can I disable the counting of client activity?](#q-how-can-i-disable-the-counting-of-client-activity)
+- [Q: If I request data for January 2021 - December 2021, but April’s data does not exist, what will be included in the total client count result?](#q-if-i-request-data-for-january-2021-december-2021-but-april-s-data-does-not-exist-what-will-be-included-in-the-total-client-count-result)
+- [Q: How can I configure the activity for log retention?](#q-how-can-i-configure-the-activity-for-log-retention)
+- [Q: Do child namespaces create duplicate tokens?](#q-do-child-namespaces-create-duplicate-tokens)
+- [Q: How does the Nomad Vault integration affect client counts?](#q-how-does-the-nomad-vault-integration-affect-client-counts)
+- [Q: Starting in Vault 1.7, Vault does not allow creating two aliases from the same auth mount under a single entity. What changed and how does this impact client counting?](#q-starting-in-vault-1-7-vault-does-not-allow-creating-two-aliases-from-the-same-auth-mount-under-a-single-entity-what-changed-and-how-does-this-impact-client-counting)
+- [Q: How does mount migration impact the client count metric?](#q-how-does-mount-migration-impact-the-client-count-metric)
+- [Q: Vault 1.9 added support for providing custom user filters through the userfilter parameter. How does this affect client counts?](#q-vault-1-9-added-support-for-providing-custom-user-filters-through-the-userfilter-parameter-how-does-this-affect-client-counts)
+- [Q: Are batch tokens counted differently than service tokens?](#q-are-batch-tokens-counted-differently-than-service-tokens)
+
+### Q: What is a client?
+
+Clients are unique applications, services, or users that authenticate to a HashiCorp Vault cluster. For billing and consumption, only unique and active clients during the billing period (monthly in the case of HCP and annual in the case of self-managed Vault) count towards totals. Each client is counted just once within a billing period, regardless of how many times it's been active. When a client authenticates to a cluster, those clients have unlimited access to that cluster for the remainder of the billing period. The client metric is a combination of active identity entities and active non-entity tokens. To learn more, refer to the documentation on [What is a Client?](/vault/docs/concepts/client-count#what-is-a-client).
+
+~> **Note**: For KMIP, a different metric is used to compute clients, as described in the **Vault Usage Metrics** documentation under the [KMIP Client metrics](/vault/tutorials/monitoring/usage-metrics) section.
+
+### Q: Where can I learn more about Vault clients?
+
+Refer to the table below for documentation resources.
+
+| Resource                                                                                           | Description                                                                                                      |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| [What is a Client?](/vault/docs/concepts/client-count/#what-is-a-client)                                 | Provides a conceptual overview of Vault client                                                                   |
+| [Usage Metrics UI](/vault/tutorials/monitoring/usage-metrics)                      | Provides an overview of the client count dashboard and how to use it                                             |
+| [Client Count API](/vault/api-docs/system/internal-counters#client-count)     | Provides information about the client count API endpoints                                                        |
+| [Vault Auditor Tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool) | Provides a walkthrough on how to use the vault-auditor tool to extract metrics from the server audit device logs |
+
+### Q: What is the difference between a direct entity (entity client) and a non-entity token (non-entity client)?
+
+While the definition of clients appears to be simple on the surface, there are many nuances involved in the computation of clients. As mentioned, clients are unique applications, services, and/or users that authenticate to a Vault cluster. When anything authenticates to Vault, it is associated with a unique identity entity within the [Vault Identity system](/vault/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies, and each entity is created or verified during authorization.
+
+One thing to note is that Vault clients are a combination of active identities as well as non-entity tokens. Identity entities are unique users, and when identities authenticate to Vault, corresponding tokens are generated. However, there are some situations in which tokens are generated without corresponding identities (e.g., when using the token auth method to create a token for someone else whose identity is unknown). As such, these non-entity tokens also represent users, and are counted towards the overall client aggregates. Here are some situations in which non-entity tokens get created within Vault.
+
+- Tokens within Vault are the core method for authentication. You can use Tokens to authenticate directly, or use the [auth methods](/vault/docs/concepts/auth) to dynamically generate tokens based on external identities.
+- There are scenarios where tokens are created outside of the identity system without an associated entity. For this reason, unique identity entities alone cannot always add up to the total unique authentications made to Vault over a stipulated time period.
+- In a scenario where tokens are created outside of the identity system, these tokens are considered clients. Note that it should be rare for production usage to have any tokens created outside any identity systems.
+- There are a few ways of creating tokens without entities: _Token Roles_, _Token Create APIs_, _Wrapping Tokens_, and _Control Groups_. For more information, refer to the [What is a Client?](/vault/docs/concepts/client-count/#what-is-a-client) documentation.
+
+Client counts are not computed solely using a combination of unique identity entities within Vault but also computed using a combination of unique identity entities and non-entity tokens.
+
+### Q: Which Vault version reflects the most accurate client counts?
+
+Although client counts have been available via the usage metrics UI since Vault 1.6 and the Vault auditor tool was available around the same time, we have since made improvements to the Vault client count computation logic in newer versions of Vault. These changes are reflected only in the usage metrics UI (and the corresponding internal API leveraged by the UI) and not in the auditor tool. The initial version and improvements made after that with their corresponding versions are:
+
+**API/UI**:
+
+- Vault 1.6: Introduction of client counts in the usage metrics UI
+- Vault 1.8:
+  - Eliminated wrapped tokens and control groups from client count, thereby reducing the non-entity token count. Previously, the creation and usage of control groups and wrapping tokens incremented the client count via non-entity tokens, each time a wrapped token and a control group were created.
+  - Changed the logic of counting of active identity entities on usage instead of at create time, resulting in more accurate client counts
+- Vault 1.9:
+
+  - Changed the non-entity token computation logic to deduplicate non-entity tokens, reducing the overall client count. Moving forward, non-entity tokens, where there is no entity to map tokens, Vault will use the contents of the token to generate a unique client identifier based on the namespace ID and associated policies. The clientID will prevent duplicating the same token in the overall client count when the token is used again during the billing period.
+  - Changed the tracking of non-entity tokens to complete on access instead of creation.
+  - Changed the computation logic to not include root tokens in the client count aggregate.
+  - Changed the local auth mount computation logic such that local auth mounts count towards clients but not as non-entity tokens. Prior to Vault 1.9, local auth mounts counted towards non-entity tokens. Refer to the [What is a Client?](/vault/docs/concepts/client-count) documentation to learn more.
+  - Added ability to display clients per namespace (top 10, descending order) in the UI and export data for all namespaces. Prior to Vault 1.9, you could not view view the split of clients per namespace on the UI, nor could you export this data via the UI.
+  - Added ability to display clients earlier than a month (within ten minutes of enabling the feature) in the UI. Prior to Vault 1.9, after enabling the counting of clients, you had to wait for a month to view the client aggregates in the UI.
+  - Changed functionality to disallow creating two aliases from the same auth mount under a single entity. For more information, refer to the question [Starting in Vault 1.9, Vault does not allow creating two aliases from the same auth mount under a single entity. What changed and how does this impact client counting?](#q-starting-in-vault-1-9-vault-does-not-allow-creating-two-aliases-from-the-same-auth-mount-under-a-single-entity-what-changed-and-how-does-this-impact-client-counting)
+
+- Vault 1.10:
+  - Display of clients per auth mount within a namespace in the UI.
+  - Display of clients month to month for a selected billing period via the API.
+
+- Vault 1.11:
+  - (Tech preview) New functionality to export the unique clients that contribute to the client count aggregate for the selected billing period - available via a new [activity export API endpoint](/vault/api-docs/system/internal-counters#activity-export).
+  - Display of clients month over month in the UI.
+
+**Auditor tool**:
+
+- This tool is independent of the Vault binary and the version run by the customer. The tool can be used for versions 1.3-1.5 (tested) and prior versions as early as Vault 1.0. The auditor tool was introduced in Vault 1.6.
+- In Vault 1.7, we introduced KMIP clients to this auditor tool
+- This tool does not contain any of the updates made to the client count computation logic that the API/UI have had since Vault 1.8
+- The tool is deprecated as of March 2022. While you can stil use the auditor tool, there are no plans to release newer versions.
+
+The latest GA version of the Vault binary contains the most updated version of the client count computation logic. However, it’s important to note that even if one upgrades to the latest version and the billing period falls on either side of the upgrade time, the compute logic may be different across the billing period. For more details, refer to the question [If I migrate from Vault 1.8 to 1.9, how will the changes to non-entity token logic and local auth mount made in Vault 1.9 affect the clients created prior to the migration?](#q-if-i-migrate-from-vault-1-8-to-1-9-how-will-the-changes-to-non-entity-token-logic-and-local-auth-mount-made-in-vault-1-9-affect-the-clients-created-prior-to-the-migration).
+
+### Q: For customers using versions of Vault older than 1.6, what’s the best way to compute clients?
+
+The Vault [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool) was built to compute clients for Vault versions older than Vault 1.6. It has been tested for versions 1.3 to 1.5 but should work for earlier versions, such as Vault 1.0, although not officially tested. To use the Vault [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool), customers should have audit logs for the billing period for computed client counts. You can also set a specific date range in the [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool).
+
+The auditor tool is separate from the Vault binary. It does not include the latest updates for the usage metrics UI/API (e.g., it does not contain changes made to the deduplication of non-entity tokens logic). Currently, there are no plans to augment the capabilities of the [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool).
+
+### Q: For customers using newer versions than Vault 1.6, what’s the best way to compute clients?
+
+The usage metrics UI that leverages the internal client count API is the best way to compute clients for versions greater than or equal to Vault 1.6. It’s important to note that the upgrade should have occurred before the ‘billing period’ started. Otherwise, it’s best to use the [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool) to compute clients because the usage metrics UI will not reflect all clients for the billing period; it will only reflect active unique clients since the upgrade.
+
+### Q: Why do we have two different tools (auditor tool and UI/API) to compute clients? Do we plan to deprecate one in the future?
+
+Not all customers may be on a version greater than Vault version 1.6 that leverages the client count API to display clients via the UI. The [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool) is available for customers running older Vault versions to compute client counts. The [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool) does not contain client count computation logic updates (e.g., non-entity token computation logic made in Vault 1.9). In the future, we will deprecate the [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool).
+
+### Q: How can I compute KMIP clients for Vault?
+
+As of Vault 1.11.0, KMIP clients are not available via the usage metrics UI or the client count API; they are provided via the [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool). To learn more, refer to the [Vault Usage Metrics](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool) documentation.
+
+### Q: Why do the Vault auditor tool and the usage metrics UI show me different results for the total number of clients?
+
+For versions prior to Vault 1.7, the [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool) and usage metrics UI should typically result in the same number of total unique clients for the billing period, unless there is some discrepancy in the underlying data represented by both or due to some other error. For example:
+
+- If there is a discrepancy between the dates selected in the two tools, then the clients reflected in the results may be different
+- If the auditor tool does not leverage audit data for the billing period, the auditor results may be incorrect
+- If the Vault upgrade made to a version that computes clients in the usage metrics UI (any version greater than Vault 1.6) happened during the billing period, then the results shown in the usage metrics UI will only reflect the period since the upgrade occurred
+
+However, there is one fine detail to keep in mind: the usage metrics UI only allows selection of billing periods from the start of a month to the end of a month (not mid-month). If the dates represented by the audit logs fed into the auditor tool begin and end mid-month, this may result in a subtle change of client counts between the two tools.
+
+For newer versions of Vault 1.8, the API/UI for client counts was updated to reflect count clients more accurately. These changes were not made in the auditor tool and may cause a difference in the results generated by the two tools. For more information on the specific differences, refer to the question [Which Vault version reflects the most accurate count of clients within Vault?](#q-which-version-of-vault-reflects-the-most-accurate-client-counts).
+
+### Q: When I upgrade to a version of Vault that's greater Vault 1.6, will the clients be available for the entire history of the billing period, or only available after the upgrade occurred during the billing period?
+
+The client counts will only be available after the upgrade occurs. For the complete billing period data, it’s preferable to refer to the [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool). However, keep in mind that since Vault 1.8, we made improvements to the client count API/UI that may cause mismatched results from the [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool). For more details, refer to the question [If I migrate from Vault 1.8 to 1.9, how will the changes to non-entity token logic and local auth mount made in Vault 1.9 affect the clients created prior to the migration?](/vault/docs/concepts/client-count/faq#q-if-i-migrate-from-vault-1-8-to-1-9-how-will-the-changes-to-non-entity-token-logic-and-local-auth-mount-made-in-vault-1-9-affect-the-clients-created-prior-to-the-migration).
+A workaround is to leverage the results from the UI/API (if on a newer version greater than Vault 1.8) instead of the [auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool), and extrapolate the clients for the available period to the billing period.
+
+### Q: If I upgrade from Vault 1.8 to 1.9+, how will the changes to non-entity token logic and local auth mount made in Vault 1.9 affect the clients created prior to the upgrade?
+
+If you have a non-entity token for a fragment pre-Vault 1.9 version and then use the same token post-Vault 1.9 version, it will be counted again. However, for post-upgrade, the token will have an ID associated with it. From there, the subsequent uses of the token will not be counted again, as the token is tracked with the unique clientID. Hence, only for the period post the upgrade, the new deduplication logic for non-entity tokens are accounted for.
+
+As for the local auth mounts, the tokens issued by the local auth mounts pre-Vault 1.9 version will be non-entity-tokens and counted as clients - 1 for each token. After the upgrade to Vault 1.9, the older tokens will continue to be counted as they were counted before, but the newer tokens issued will be part of entities and counted as far lesser clients (equal to the number of entities). To learn more, refer to the documentation on [What is a Client?](/vault/docs/concepts/client-count#what-is-a-client).
+
+### Q: Post Vault 1.9, will the clientID be viewable via the audit logs when non-entity tokens are used?
+
+Yes, beginning with Vault 1.9, audit logs have a new field called clientID, which is the entity ID or the computed client ID of the corresponding non-entity token.
+
+### Q: Is it possible to view a list of unique client IDs that contributed to the client count aggregate?
+
+Yes. This is possible starting with Vault 1.11, with new functionality (tech preview) to export the unique clients that contribute to the client count aggregate for the selected billing period. This is possible via a new [activity export API endpoint](/vault/api-docs/system/internal-counters#activity-export).
+
+### Q: What happens if audit logs are unreadable for use by the Vault auditor tool?
+
+This issue may arise if the logs are too large and cannot be read, or you are running an older version than Vault 1.6. We encourage you to upgrade to a newer version of Vault so you can use the API/UI to compute clients. After the upgrade, even if you have only limited historical data on clients (since the upgrade), that data could be extrapolated for future client prediction. Account teams need to look into this on a case-by-case basis.
+
+### Q: What does the usage metrics UI look like for Vault 1.9?
+
+In Vault 1.9, the client count dashboard provides two separate tabs: the **Current month** and the **Monthly history**. In addition to usage totals (active client count and its breakdown into entities and non-entity tokens), each tab will include a list of the top ten namespaces by client count and the ability to export client count data for all namespaces. Here is a screenshot for your reference:
+
+![Vault Client Count](/img/client-counts.jpg)
+
+### Q: What does the usage metrics look like for Vault 1.10?
+
+In Vault 1.10, the client count dashboard is broken down into tabs, similar to Vault 1.9- the current month and the monthly history. On top of the namespace attribution provided in Vault 1.9 (see [What does the usage metrics UI look like for Vault 1.9?](#q-what-does-the-usage-metrics-ui-look-like-for-vault-1-9) for further information), the UI also contains attribution of clients per auth mount.
+
+![Vault Client Count](/img/vault-usage-metrics-1-10.png)
+
+The Vault 1.10 UI does not include monthly attribution of clients, although the API for Vault 1.10 supports the same.
+
+### Q: What does the usage metrics UI look like for Vault 1.11?
+
+The 1.11 UI includes the ability to view changes to client counts month over month the running client total and new monthly clients. All the namespace and auth mount attribution capabilities from earlier versions are also available.
+
+![Vault Usage Metrics](/img/vault-usage-metrics-1-11.png)
+
+### Q: In older Vault versions including Vault 1.10, how do I compute changes to clients month to month from the UI?
+
+To perform this calculation, you must know the billing period. For the sake of this example, assume your billing period starts on January 1st and ends on December 31st:
+
+1. To compute new active unique clients (clients who are new to Vault) for January, you need to use the UI to set the billing start date to January 1st and end date to January 31st:
+
+   -Unique clients for Jan = [Jan1 to Jan31]
+
+1. To compute new active unique clients for February, you need to do the following:
+
+   -Unique clients for Jan + Feb = [Jan 1 to Feb 28/29]
+
+   -Unique clients for Jan = [Jan1 to Jan31]
+
+   -Unique clients for Feb = (Unique clients for Jan + Feb) - (Unique clients for Jan)
+
+1. To compute new active unique clients for March, you need to do the following:
+
+   -Unique clients for Jan + Feb + Mar = [Jan 1 to Mar 31]
+
+   -Unique clients for Jan + Feb = [Jan1 to Feb 28/29]
+
+   -Unique clients for Feb = (Unique clients for Jan + Feb + Mar) - (Unique clients for Jan + feb)
+   … and so on.
+
+### Q: What if I selected an inaccurate billing period via the UI/API?
+
+If you selected an inaccurate billing period, then the clients reflected in the result will be incorrect. The API/UI considers the start date as a fresh start to re-count unique clients that were counted towards the billing period.
+
+### Q: What if I want to skip computation of clients for a period of time during the billing period?
+
+If you break the billing period, duplicates may likely occur. For instance, assume the start date of your billing period is January 1st and December 31st. You compute clients for period 1 = January 1st to March 31st and then period 2 = May 1st to December 31st (thus skipping the month of April). Clients that were already counted during period 1 may be recounted in period 2. Therefore, the addition of clients for period 1 + period 2 will include duplicates.
+
+### Q: What are the known client count issues in the auditor tool as well as in the UI/API?
+
+Known issues for both tools include the following:
+
+**Auditor tool**:
+
+- New updates to the client count logic (made in the API/UI starting Vault 1.8) are not reflected in the Vault auditor tool. We do not plan to update the auditor tool to be consistent with the API/UI and will eventually deprecate it. Use this tool as a stop-gap until you upgrade to a newer version of Vault
+
+**UI/API**:
+
+- Via the UI/API, the billing period cannot be computed for start and end dates that fall in the middle of a month. For example, if the billing period starts on March 15th and ends on March 14th within the subsequent year, the tool can only compute the billing period assuming March 1 is the start date or April 1 is the start date, but not using the March 15th start date
+- As of Vault 1.10, KMIP clients are not provided by the API/CLI. We have plans to add this to a future version
+- As of Vault 1.10, the data on the current month tab does not take the billing period into account. This means that it may include clients that have already been previously counted. However, the monthly history tab does take the billing period into account.
+
+### Q: What conditions can cause the loss of client data?
+
+The activity log (component within Vault responsible for computing clients) is tracked on standby nodes and periodically transmitted to the active node over gRPC. The transmission is triggered when the information on the standby node reaches a maximum size of 8KB or 10 minutes has elapsed.
+
+Should a Vault node go down any time during the 10-minute window (e.g., at the 8-minute mark of that 10-minute window), any client activity from those 8-minute period, as well as the time period while the Vault node is down, will be lost. This behavior is expected as there are no activities taking place if the node is down. Lost client activity is acceptable partly because it works in the customer’s favor - if a new client has activity during the lost window, the customer would not be billed for that client.
+
+### Q: How can I disable the counting of client activity?
+
+You can disable the count of client activity by using the enabled parameter in the client count config. For more information, refer to the documentation on [Update the Client Count Configuration](/vault/api-docs/system/internal-counters#update-the-client-count-configuration). Disabling the feature during the middle of a month will discard any data recorded for that month but does not delete previous months.
+
+### Q: If I request data for January 2021 - December 2021, but April’s data does not exist, what will be included in the total client count result?
+
+In this scenario where you requested data for January 2021 through December 2021, and April's data does not exist because tracking was disabled for that particular month while other months have data, Vault will only return the most recent contiguous set of data, so in this case, data will only be returned for May 2021 through December 2021.
+
+### Q: How can I configure the activity for log retention?
+
+Specify retention months in the client config by following the steps in the documentation on [Update the Client Count Configuration](/vault/api-docs/system/internal-counters#update-the-client-count-configuration).
+
+### Q: Do child namespaces create duplicate tokens?
+
+A token created in a parent namespace can be used in a child namespace without adding additional clients.
+
+However, creating a new token across a parent/child namespace boundary could result in a token without an entity and a new client. This is because identity is scoped to a single namespace and tokens cannot be associated with identities that live outside their namespace.
+
+### Q: How does the Nomad Vault integration affect client counts?
+
+The [Nomad Vault integration](/nomad/docs/integrations/vault-integration#token-role-based-integration) uses [token roles](/nomad/docs/integrations/vault-integration#vault-token-role-configuration#vault-token-role-configuration). A single token role creates tokens for many Nomad jobs. If no [explicit identity aliases](/vault/api-docs/auth/token#entity_alias) are provided (which is not currently supported in the integration), this would create a non-entity token for every running instance of a Nomad job.
+Prior to Vault 1.9, the Nomad Vault integration caused duplicate clients, resulting in an elevated client count. Post Vault 1.9, with the introduction of the deduplication logic, the number of clients created by the integration is reduced. For more information on improvements made to client count in Vault 1.9, refer to the question [Which version of Vault reflects the most accurate count of clients with Vault?](#q-which-vault-version-reflects-the-most-accurate-client-counts).
+
+### Q: Starting in Vault 1.7, Vault does not allow creating two aliases from the same auth mount under a single entity. What changed and how does this impact client counting?
+
+Prior to 1.9, customers could create more than one alias from the same auth mount under a single entity. However, we made a fix in Vault 1.9 to prevent this from occurring as a remediation for a security issue.
+
+This could potentially impact the number of clients generated for customers. For example, pre Vault 1.9, a customer (using K8s, with many namespaces and services accounts in the cluster) could perform entity management by mapping multiple service accounts under different namespaces under a single entity. By default, each service account will create a unique entity. Post Vault 1.9, they can only map a single K8s cluster to a single K8s auth mount.
+
+To provide further clarity, post Vault 1.9, if there was an auth mount per namespace, the customer could create an alias for a service account in namespace-1 and an alias for a service account in namespace-2 onto the same entity without issues. However, within namespace-1, which has a single auth mount, if they have a service account-1 and service account-2, both accounts cannot be aliased to a single client.
+
+### Q: How does mount migration impact the client count metric?
+
+In Vault 1.10, we made improvements to the [`sys/remount`](/vault/api-docs/system/remount) API endpoint to simplify the complexities of moving data, such as secret engine and authentication method configuration from one mount to another, within a namespace or across namespaces. This can help with restructuring namespaces and mounts for various reasons, including [migrating mounts](/vault/docs/concepts/mount-migration) from root to other namespaces when transitioning to using namespaces for the first time. To learn more, refer to the [Mount Move](/vault/tutorials/enterprise/mount-move) tutorial.
+
+When migrating mounts, any aliases that refer to users on the auth mount could now point to an invalid mount when an auth mount is moved. Pointing to an invalid mount may not be the case for every instance; a remount within a namespace will end in the aliases pointing to a valid mount. Still, a remount across namespaces will always result in the aliases pointing to an invalid mount. In the latter case, the Vault operator should find and remove those aliases from the source namespace, and create equivalent aliases and entities for the new mount in the target namespace. If new entities and aliases aren’t created in the target namespace, Vault will dynamically generate them upon login operations.
+
+When migrating mounts within a namespace, client counts are not impacted.
+
+- For each existing alias on the source mount and its corresponding entity, if the new namespace has an entity corresponding to it, then you can assign a corresponding alias for the mount and the client count will not be impacted. For example, say I am a user `abc` on namespace `ns1/` and namespace `ns2/`, and I have an alias on the source mount in `ns1/`. After the move operation, I just need an alias added to the `abc` entity in `ns2/` for the target mount. This keeps the client counts the same.
+- For the example above, say I do not have an entity `abc` in `ns2/`. This will need to be created in order to make an alias associating it with the target mount. This increases the client count by 1.
+- Following the above example, let's say after the move operation, the entity `abc` in `ns1/` has no other aliases associated with it, i.e., the alias for the source mount was its only alias. At this point, we can clean up and remove the `abc` entity in `ns1/`. This will decrease the client count by 1, as the old entity may have already been used during the billing period.
+
+### Q: Vault 1.9 added support for providing custom user filters through the userfilter parameter. How does this affect client counts?
+
+Vault 1.9 added support for providing custom user filters through the [userfilter](/vault/api-docs/auth/ldap#userfilter) parameter. This addition changed the way that entity alias gets mapped to an entity. Prior to Vault 1.9, alias names were always based on the [login username](/vault/api-docs/auth/ldap#username-3) (which in turn is based on the value of the [userattr](/vault/api-docs/auth/ldap#userattr)). In Vault 1.9, alias names no longer always map to the login username. Instead, the mapping depends on other config values as well, such as [updomain](/vault/api-docs/auth/ldap#upndomain), [binddn](/vault/api-docs/auth/ldap#binddn), [discoverydn](/vault/api-docs/auth/ldap#discoverdn), and userattr.
+
+Vault 1.10 re-introduces the option to force the alias name to map to the login username with the optional parameter username_as_alias. Users that have the LDAP auth method enabled prior to Vault 1.9 may want to consider setting this to true to revert back to the old behavior. Otherwise, depending on the other aforementioned config values, logins may generate a new and different entity for an existing user that already had an entity associated in Vault. This in turn affects client counts since there may be more than one entity tied to this user. The username_as_alias flag will also be made available in subsequent Vault 1.8.1x and Vault 1.9.x releases to allow for this to be set prior to a Vault 1.10 upgrade.
+
+### Q: Are batch tokens counted differently than service tokens?
+
+Batch token clients are counted like service token clients. They can still be mapped to entities, and if they are not, they are counted by the combinations of their namespaces and the policies assigned to them.

@@ -6,7 +6,7 @@ export const storeMVP = {
   },
 };
 
-export default function(modelName) {
+export default function (modelName) {
   return [
     {
       adapterMethod: 'findRecord',
@@ -23,13 +23,13 @@ export default function(modelName) {
     },
     {
       adapterMethod: 'updateRecord',
-      args: [storeMVP, { modelName }, { id: 'foo' }],
+      args: [storeMVP, { modelName }, { id: 'foo', modelName }],
       url: `/v1/${modelName}/id/foo`,
       method: 'PUT',
     },
     {
       adapterMethod: 'deleteRecord',
-      args: [storeMVP, { modelName }, { id: 'foo' }],
+      args: [storeMVP, { modelName }, { id: 'foo', modelName }],
       url: `/v1/${modelName}/id/foo`,
       method: 'DELETE',
     },

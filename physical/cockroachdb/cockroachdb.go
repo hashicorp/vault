@@ -14,11 +14,11 @@ import (
 	"github.com/cockroachdb/cockroach-go/crdb"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 
 	// CockroachDB uses the Postgres SQL driver
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 // Verify CockroachDBBackend satisfies the correct interfaces
@@ -28,18 +28,23 @@ var (
 )
 
 const (
-	defaultTableName = "vault_kv_store"
+	defaultTableName   = "vault_kv_store"
+	defaultHATableName = "vault_ha_locks"
 )
 
 // CockroachDBBackend Backend is a physical backend that stores data
 // within a CockroachDB database.
 type CockroachDBBackend struct {
-	table         string
-	client        *sql.DB
-	rawStatements map[string]string
-	statements    map[string]*sql.Stmt
-	logger        log.Logger
-	permitPool    *physical.PermitPool
+	table           string
+	haTable         string
+	client          *sql.DB
+	rawStatements   map[string]string
+	statements      map[string]*sql.Stmt
+	rawHAStatements map[string]string
+	haStatements    map[string]*sql.Stmt
+	logger          log.Logger
+	permitPool      *physical.PermitPool
+	haEnabled       bool
 }
 
 // NewCockroachDBBackend constructs a CockroachDB backend using the given
@@ -51,6 +56,8 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 		return nil, fmt.Errorf("missing connection_url")
 	}
 
+	haEnabled := conf["ha_enabled"] == "true"
+
 	dbTable := conf["table"]
 	if dbTable == "" {
 		dbTable = defaultTableName
@@ -59,6 +66,16 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 	err := validateDBTable(dbTable)
 	if err != nil {
 		return nil, fmt.Errorf("invalid table: %w", err)
+	}
+
+	dbHATable, ok := conf["ha_table"]
+	if !ok {
+		dbHATable = defaultHATableName
+	}
+
+	err = validateDBTable(dbHATable)
+	if err != nil {
+		return nil, fmt.Errorf("invalid HA table: %w", err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -74,22 +91,35 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 	}
 
 	// Create CockroachDB handle for the database.
-	db, err := sql.Open("postgres", connURL)
+	db, err := sql.Open("pgx", connURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to cockroachdb: %w", err)
 	}
 
-	// Create the required table if it doesn't exists.
+	// Create the required tables if they don't exist.
 	createQuery := "CREATE TABLE IF NOT EXISTS " + dbTable +
 		" (path STRING, value BYTES, PRIMARY KEY (path))"
 	if _, err := db.Exec(createQuery); err != nil {
-		return nil, fmt.Errorf("failed to create mysql table: %w", err)
+		return nil, fmt.Errorf("failed to create CockroachDB table: %w", err)
+	}
+	if haEnabled {
+		createHATableQuery := "CREATE TABLE IF NOT EXISTS " + dbHATable +
+			"(ha_key                                      TEXT NOT NULL, " +
+			" ha_identity                                 TEXT NOT NULL, " +
+			" ha_value                                    TEXT, " +
+			" valid_until                                 TIMESTAMP WITH TIME ZONE NOT NULL, " +
+			" CONSTRAINT ha_key PRIMARY KEY (ha_key) " +
+			");"
+		if _, err := db.Exec(createHATableQuery); err != nil {
+			return nil, fmt.Errorf("failed to create CockroachDB HA table: %w", err)
+		}
 	}
 
 	// Setup the backend
 	c := &CockroachDBBackend{
-		table:  dbTable,
-		client: db,
+		table:   dbTable,
+		haTable: dbHATable,
+		client:  db,
 		rawStatements: map[string]string{
 			"put": "INSERT INTO " + dbTable + " VALUES($1, $2)" +
 				" ON CONFLICT (path) DO " +
@@ -99,26 +129,45 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 			"list":   "SELECT path FROM " + dbTable + " WHERE path LIKE $1",
 		},
 		statements: make(map[string]*sql.Stmt),
-		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		rawHAStatements: map[string]string{
+			"get": "SELECT ha_value FROM " + dbHATable + " WHERE NOW() <= valid_until AND ha_key = $1",
+			"upsert": "INSERT INTO " + dbHATable + " as t (ha_identity, ha_key, ha_value, valid_until)" +
+				" VALUES ($1, $2, $3, NOW() + $4) " +
+				" ON CONFLICT (ha_key) DO " +
+				" UPDATE SET (ha_identity, ha_key, ha_value, valid_until) = ($1, $2, $3, NOW() + $4) " +
+				" WHERE (t.valid_until < NOW() AND t.ha_key = $2) OR " +
+				" (t.ha_identity = $1 AND t.ha_key = $2)  ",
+			"delete": "DELETE FROM " + dbHATable + " WHERE ha_key = $1",
+		},
+		haStatements: make(map[string]*sql.Stmt),
+		logger:       logger,
+		permitPool:   physical.NewPermitPool(maxParInt),
+		haEnabled:    haEnabled,
 	}
 
 	// Prepare all the statements required
 	for name, query := range c.rawStatements {
-		if err := c.prepare(name, query); err != nil {
+		if err := c.prepare(c.statements, name, query); err != nil {
 			return nil, err
+		}
+	}
+	if haEnabled {
+		for name, query := range c.rawHAStatements {
+			if err := c.prepare(c.haStatements, name, query); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return c, nil
 }
 
-// prepare is a helper to prepare a query for future execution
-func (c *CockroachDBBackend) prepare(name, query string) error {
+// prepare is a helper to prepare a query for future execution.
+func (c *CockroachDBBackend) prepare(statementMap map[string]*sql.Stmt, name, query string) error {
 	stmt, err := c.client.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("failed to prepare %q: %w", name, err)
 	}
-	c.statements[name] = stmt
+	statementMap[name] = stmt
 	return nil
 }
 
@@ -255,8 +304,8 @@ func (c *CockroachDBBackend) transaction(tx *sql.Tx, txns []*physical.TxnEntry) 
 // https://www.cockroachlabs.com/docs/stable/keywords-and-identifiers.html#identifiers
 //
 //   - All values that accept an identifier must:
-//     - Begin with a Unicode letter or an underscore (_). Subsequent characters can be letters,
-//     - underscores, digits (0-9), or dollar signs ($).
+//   - Begin with a Unicode letter or an underscore (_). Subsequent characters can be letters,
+//   - underscores, digits (0-9), or dollar signs ($).
 //   - Not equal any SQL keyword unless the keyword is accepted by the element's syntax. For example,
 //     name accepts Unreserved or Column Name keywords.
 //

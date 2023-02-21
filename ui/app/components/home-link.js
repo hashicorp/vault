@@ -1,5 +1,4 @@
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+import Component from '@glimmer/component';
 
 /**
  * @module HomeLink
@@ -11,19 +10,19 @@ import { computed } from '@ember/object';
  *  <LogoEdition />
  * </HomeLink>
  * ```
+ * @param {string} class - Classes attached to the the component.
+ * @param {string} text - Text displayed instead of logo.
  *
  * @see {@link https://github.com/hashicorp/vault/search?l=Handlebars&q=HomeLink|Uses of HomeLink}
- * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/home-link.js|HomeLink Source Code}
+ * @see {@link https://github.com/hashicorp/vault/blob/main/ui/app/components/home-link.js|HomeLink Source Code}
  */
 
-export default Component.extend({
-  tagName: '',
-
-  text: computed(function() {
+export default class HomeLink extends Component {
+  get text() {
     return 'home';
-  }),
+  }
 
-  computedClasses: computed('classNames', function() {
+  get computedClasses() {
     return this.classNames.join(' ');
-  }),
-});
+  }
+}

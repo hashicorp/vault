@@ -3,61 +3,33 @@
   "description": "HashiCorp Vault documentation website",
   "version": "1.0.0",
   "author": "HashiCorp",
-  "dependencies": {
-    "@hashicorp/mktg-global-styles": "3.0.2",
-    "@hashicorp/mktg-logos": "1.2.0",
-    "@hashicorp/nextjs-scripts": "19.0.2",
-    "@hashicorp/react-alert-banner": "6.1.1",
-    "@hashicorp/react-button": "5.1.0",
-    "@hashicorp/react-case-study-slider": "6.1.0",
-    "@hashicorp/react-code-block": "4.1.2",
-    "@hashicorp/react-content": "7.0.1",
-    "@hashicorp/react-docs-page": "13.4.0",
-    "@hashicorp/react-featured-slider": "4.1.0",
-    "@hashicorp/react-hashi-stack-menu": "2.0.4",
-    "@hashicorp/react-head": "3.0.2",
-    "@hashicorp/react-hero": "7.3.0",
-    "@hashicorp/react-image": "4.0.1",
-    "@hashicorp/react-inline-svg": "6.0.1",
-    "@hashicorp/react-logo-grid": "4.1.0",
-    "@hashicorp/react-markdown-page": "1.2.0",
-    "@hashicorp/react-product-downloads-page": "2.1.0",
-    "@hashicorp/react-section-header": "5.0.2",
-    "@hashicorp/react-subnav": "8.3.0",
-    "@hashicorp/react-tabs": "6.0.1",
-    "@hashicorp/react-text-split": "3.2.0",
-    "@hashicorp/react-text-splits": "3.2.2",
-    "@hashicorp/react-use-cases": "3.0.2",
-    "@hashicorp/react-vertical-text-block-list": "6.0.2",
-    "next": "10.2.2",
-    "next-mdx-remote": "3.0.2",
-    "next-remote-watch": "1.0.0",
-    "react": "16.14.0",
-    "react-dom": "16.14.0",
-    "tippy.js": "4.0.0"
-  },
   "devDependencies": {
-    "@types/react": "^17.0.11",
-    "dart-linkcheck": "^2.0.15",
-    "husky": "^4.3.8",
-    "inquirer": "^8.1.1",
-    "prettier": "^2.3.1"
+    "@hashicorp/platform-cli": "^2.5.1",
+    "dart-linkcheck": "2.0.15",
+    "next": "^12.3.1",
+    "prettier": "2.2.1",
+    "simple-git-hooks": "^2.6.1"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "next-hashicorp precommit"
-    }
+  "engines": {
+    "npm": ">=7.0.0",
+    "node": ">=12.0.0 <= 16.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hashicorp/vault",
+    "directory": "website"
   },
   "scripts": {
-    "build": "next build",
-    "dynamic": "NODE_ENV=production next build && next start",
-    "export": "next export",
+    "build": "./scripts/website-build.sh",
     "format": "next-hashicorp format",
     "generate:component": "next-hashicorp generate component",
     "generate:readme": "next-hashicorp markdown-blocks README.md",
     "linkcheck": "linkcheck https://www.vaultproject.io",
     "lint": "next-hashicorp lint",
-    "start": "next-remote-watch ./content/**/*.mdx",
-    "static": "npm run build && npm run export && cp _redirects out/."
+    "postinstall": "simple-git-hooks",
+    "start": "./scripts/website-start.sh"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "cd website && ./node_modules/.bin/next-hashicorp precommit"
   }
 }

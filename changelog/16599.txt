@@ -1,0 +1,3 @@
+```release-note:bug
+identity/oidc: Change the `state` parameter of the Authorization Endpoint to optional.
+```

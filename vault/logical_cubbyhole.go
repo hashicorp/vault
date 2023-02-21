@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -15,7 +17,8 @@ import (
 func CubbyholeBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := &CubbyholeBackend{}
 	b.Backend = &framework.Backend{
-		Help: strings.TrimSpace(cubbyholeHelp),
+		Help:           strings.TrimSpace(cubbyholeHelp),
+		RunningVersion: versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 	}
 
 	b.Backend.Paths = append(b.Backend.Paths, b.paths()...)

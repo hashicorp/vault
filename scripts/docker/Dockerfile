@@ -1,7 +1,6 @@
 # Multi-stage builder to avoid polluting users environment with wrong
-# architecture binaries.  Since this binary is used in an alpine container,
-# we're explicitly compiling for 'linux/amd64'
-ARG VERSION=1.16.5
+# architecture binaries.
+ARG VERSION
 
 FROM golang:${VERSION} AS builder
 
@@ -12,7 +11,7 @@ WORKDIR /go/src/github.com/hashicorp/vault
 COPY . .
 
 RUN make bootstrap \
-  && CGO_ENABLED=$CGO_ENABLED BUILD_TAGS="${BUILD_TAGS}" VAULT_DEV_BUILD=1 XC_OSARCH='linux/amd64' sh -c "'./scripts/build.sh'"
+  && CGO_ENABLED=$CGO_ENABLED BUILD_TAGS="${BUILD_TAGS}" VAULT_DEV_BUILD=1 sh -c "'./scripts/build.sh'"
 
 # Docker Image
 
@@ -27,7 +26,7 @@ RUN addgroup vault && \
 RUN set -eux; \
     apk add --no-cache ca-certificates libcap su-exec dumb-init tzdata
 
-COPY --from=builder /go/bin/vault /bin/vault
+COPY --from=builder /go/src/github.com/hashicorp/vault/bin/vault /bin/vault
 
 # /vault/logs is made available to use as a location to store audit logs, if
 # desired; /vault/file is made available to use as a location with the file

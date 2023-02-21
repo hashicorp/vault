@@ -6,7 +6,7 @@ steps:
       name: Check branch name
       command: |
         case "$CIRCLE_BRANCH" in
-        main|ui/*|release/*|merge*) ;;
+        main|ui/*|backport/ui/*|release/*|merge*) ;;
         *) # If the branch being tested doesn't match one of the above patterns,
            # we don't need to run test-ui and can abort the job.
            circleci-agent step halt

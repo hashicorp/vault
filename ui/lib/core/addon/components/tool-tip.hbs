@@ -1,0 +1,24 @@
+<BasicDropdown
+  @renderInPlace={{@renderInPlace}}
+  @verticalPosition={{@verticalPosition}}
+  @horizontalPosition={{this.horizontalPosition}}
+  @matchTriggerWidth={{@matchTriggerWidth}}
+  @triggerComponent={{@triggerComponent}}
+  @contentComponent={{@contentComponent}}
+  @calculatePosition={{@calculatePosition}}
+  @onOpen={{@onOpen}}
+  @onClose={{@onClose}}
+  @onFocus={{@onFocus}}
+  @calculateInPlacePosition={{@calculateInPlacePosition}}
+  as |dd|
+>
+  {{yield
+    (assign
+      dd
+      (hash
+        Trigger=(component dd.Trigger onMouseDown=this.prevent onMouseEnter=this.open onMouseLeave=this.close)
+        Content=(component dd.Content onMouseEnter=this.open onMouseLeave=this.close)
+      )
+    )
+  }}
+</BasicDropdown>

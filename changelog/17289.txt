@@ -1,0 +1,3 @@
+```release-note:improvement
+plugins: Allow selecting builtin plugins by their reported semantic version of the form `vX.Y.Z+builtin` or `vX.Y.Z+builtin.vault`.
+```

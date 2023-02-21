@@ -1,19 +1,20 @@
-<div class="field">
+<div class="field" data-test-nav-input>
   <p class="control has-icons-left">
-  <input
-    class="filter input"
-    disabled={{disabled}}
-    value={{@filter}}
-    placeholder={{ or @placeholder "Filter keys" }}
-    type="text"
-    data-test-comoponent="navigate-input"
-
-    oninput={{action "handleInput" value="target.value"}}
-    onkeyup={{action "handleKeyUp" }}
-    onkeydown={{action "handleKeyPress"}}
-    onfocus={{action "setFilterFocused" true}}
-    onblur={{action "setFilterFocused" false}}
-   />
-    <Icon @glyph="search" @size="l" class="search-icon has-text-grey-light" />
+    {{! template-lint-disable no-down-event-binding }}
+    <input
+      class="filter input"
+      disabled={{this.disabled}}
+      value={{@filter}}
+      placeholder={{or @placeholder "Filter keys"}}
+      type="text"
+      data-test-comoponent="navigate-input"
+      oninput={{action "handleInput" value="target.value"}}
+      onkeyup={{action "handleKeyUp"}}
+      onkeydown={{action "handleKeyPress"}}
+      onfocus={{action "setFilterFocused" true}}
+      onblur={{action "setFilterFocused" false}}
+    />
+    {{! template-lint-enable no-down-event-binding }}
+    <Icon @name="search" class="search-icon has-text-grey-light" />
   </p>
 </div>

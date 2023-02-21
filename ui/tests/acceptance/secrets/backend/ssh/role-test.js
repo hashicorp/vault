@@ -8,10 +8,10 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 
-module('Acceptance | secrets/ssh', function(hooks) {
+module('Acceptance | secrets/ssh', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
@@ -24,18 +24,23 @@ module('Acceptance | secrets/ssh', function(hooks) {
     return path;
   };
 
-  test('it creates a role and redirects', async function(assert) {
+  test('it creates a role and redirects', async function (assert) {
+    assert.expect(5);
     const path = await mountAndNav(assert);
     await editPage.createOTPRole('role');
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
     assert.ok(showPage.generateIsPresent, 'shows the generate button');
 
     await showPage.visit({ backend: path, id: 'role' });
     await settled();
     await showPage.generate();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.credentials',
       'navs to the credentials page'
@@ -43,13 +48,14 @@ module('Acceptance | secrets/ssh', function(hooks) {
 
     await listPage.visitRoot({ backend: path });
     await settled();
-    assert.equal(listPage.secrets.length, 1, 'shows role in the list');
-    let secret = listPage.secrets.objectAt(0);
+    assert.strictEqual(listPage.secrets.length, 1, 'shows role in the list');
+    const secret = listPage.secrets.objectAt(0);
     await secret.menuToggle();
     assert.ok(listPage.menuItems.length > 0, 'shows links in the menu');
   });
 
-  test('it deletes a role', async function(assert) {
+  test('it deletes a role', async function (assert) {
+    assert.expect(2);
     const path = await mountAndNav(assert);
     await editPage.createOTPRole('role');
     await settled();
@@ -57,22 +63,31 @@ module('Acceptance | secrets/ssh', function(hooks) {
     await settled();
     await showPage.deleteRole();
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'redirects to list page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.list-root',
+      'redirects to list page'
+    );
     assert.ok(listPage.backendIsEmpty, 'no roles listed');
   });
 
-  test('it generates an OTP', async function(assert) {
+  test('it generates an OTP', async function (assert) {
+    assert.expect(6);
     const path = await mountAndNav(assert);
     await editPage.createOTPRole('role');
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
     assert.ok(showPage.generateIsPresent, 'shows the generate button');
 
     await showPage.visit({ backend: path, id: 'role' });
     await settled();
     await showPage.generate();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.credentials',
       'navs to the credentials page'

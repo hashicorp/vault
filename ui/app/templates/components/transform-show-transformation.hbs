@@ -1,11 +1,27 @@
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{#each model.transformFieldAttrs as |attr|}}
+  {{#each this.model.transformFieldAttrs as |attr|}}
     {{#if (eq attr.type "object")}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get model attr.name)}} />
+      <InfoTableRow
+        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+        @value={{stringify (get this.model attr.name)}}
+      />
     {{else if (eq attr.type "array")}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} @type={{attr.type}} @isLink={{eq attr.name "allowed_roles"}} @queryParam="role" @modelType="transform/role" @wildcardLabel={{attr.options.wildcardLabel}} @viewAll="roles" @backend={{model.backend}} />
+      <InfoTableRow
+        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+        @value={{get this.model attr.name}}
+        @type={{attr.type}}
+        @isLink={{eq attr.name "allowed_roles"}}
+        @queryParam="role"
+        @modelType="transform/role"
+        @wildcardLabel={{attr.options.wildcardLabel}}
+        @backend={{this.model.backend}}
+      />
     {{else}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} @type={{attr.type}} />
+      <InfoTableRow
+        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+        @value={{get this.model attr.name}}
+        @type={{attr.type}}
+      />
     {{/if}}
   {{/each}}
 </div>
@@ -20,11 +36,15 @@
       </span>
     </div>
     <div class="copy-text level">
-      {{#let (concat "vault write " model.backend "/encode/" cliCommand) as |copyEncodeCommand|}}
-        <code>vault write {{model.backend}}/encode/{{cliCommand}}</code>
-        <CopyButton class="button is-transparent level-right" @clipboardText={{copyEncodeCommand}}
-          @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
-          <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
+      {{#let (concat "vault write " this.model.backend "/encode/" this.cliCommand) as |copyEncodeCommand|}}
+        <code>vault write {{this.model.backend}}/encode/{{this.cliCommand}}</code>
+        <CopyButton
+          class="button is-transparent level-right"
+          @clipboardText={{copyEncodeCommand}}
+          @buttonType="button"
+          @success={{action (set-flash-message "Command copied!")}}
+        >
+          <Icon @name="clipboard-copy" aria-label="Copy" />
         </CopyButton>
       {{/let}}
     </div>
@@ -33,17 +53,22 @@
     <h2 class="title is-6">Decode</h2>
     <div class="has-bottom-margin-s">
       <span class="helper-text has-text-grey">
-        To test decoding capability of your transformation, use the encoded_value in the following command. It should return your original input.
+        To test decoding capability of your transformation, use the encoded_value in the following command. It should return
+        your original input.
       </span>
     </div>
     <div class="copy-text level">
-      {{#let (concat "vault write " model.backend "/decode/" cliCommand) as |copyDecodeCommand|}}
-        <code>vault write {{model.backend}}/decode/{{cliCommand}}</code>
-        <CopyButton class="button is-transparent level-right" @clipboardText={{copyDecodeCommand}}
-          @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
-          <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
+      {{#let (concat "vault write " this.model.backend "/decode/" this.cliCommand) as |copyDecodeCommand|}}
+        <code>vault write {{this.model.backend}}/decode/{{this.cliCommand}}</code>
+        <CopyButton
+          class="button is-transparent level-right"
+          @clipboardText={{copyDecodeCommand}}
+          @buttonType="button"
+          @success={{action (set-flash-message "Command copied!")}}
+        >
+          <Icon @name="clipboard-copy" aria-label="Copy" />
         </CopyButton>
       {{/let}}
     </div>
-  </div> 
+  </div>
 </div>

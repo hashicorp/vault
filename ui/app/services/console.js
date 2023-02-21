@@ -31,13 +31,13 @@ export default Service.extend({
     return getOwner(this).lookup('adapter:console');
   },
   commandHistory: filterBy('log', 'type', 'command'),
-  log: computed(function() {
+  log: computed(function () {
     return [];
   }),
   commandIndex: null,
 
   shiftCommandIndex(keyCode, setCommandFn = () => {}) {
-    let [newIndex, newCommand] = shiftCommandIndex(keyCode, this.commandHistory, this.commandIndex);
+    const [newIndex, newCommand] = shiftCommandIndex(keyCode, this.commandHistory, this.commandIndex);
     if (newCommand !== undefined && newIndex !== undefined) {
       this.set('commandIndex', newIndex);
       setCommandFn(newCommand);
@@ -45,7 +45,7 @@ export default Service.extend({
   },
 
   clearLog(clearAll = false) {
-    let log = this.log;
+    const log = this.log;
     let history;
     if (!clearAll) {
       history = this.commandHistory.slice();
@@ -58,7 +58,7 @@ export default Service.extend({
   },
 
   logAndOutput(command, logContent) {
-    let log = this.log;
+    const log = this.log;
     if (command) {
       log.pushObject({ type: 'command', content: command });
       this.set('commandIndex', null);
@@ -69,10 +69,10 @@ export default Service.extend({
   },
 
   ajax(operation, path, options = {}) {
-    let verb = VERBS[operation];
-    let adapter = this.adapter();
-    let url = adapter.buildURL(encodePath(path));
-    let { data, wrapTTL } = options;
+    const verb = VERBS[operation];
+    const adapter = this.adapter();
+    const url = adapter.buildURL(encodePath(path));
+    const { data, wrapTTL } = options;
     return adapter.ajax(url, verb, {
       data,
       wrapTTL,
@@ -92,7 +92,7 @@ export default Service.extend({
   },
 
   list(path, data, wrapTTL) {
-    let listPath = ensureTrailingSlash(sanitizePath(path));
+    const listPath = ensureTrailingSlash(sanitizePath(path));
     return this.ajax('list', listPath, {
       data: {
         list: true,

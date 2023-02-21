@@ -1,87 +1,88 @@
-{{#if (or (eq policyType "acl") (has-feature "Sentinel"))}}
+{{#if (or (eq this.policyType "acl") (has-feature "Sentinel"))}}
   <PageHeader as |p|>
     <p.levelLeft>
       <h1 class="title is-3">
-        {{uppercase policyType}} Policies
-        {{#unless (eq policyType "acl")}}
-          <span class="tag" aria-label="Enforcement level: {{model.enforcementLevel}}">
+        {{uppercase this.policyType}}
+        Policies
+        {{#if (not-eq this.policyType "acl")}}
+          <span class="tag" aria-label="Enforcement level: {{this.model.enforcementLevel}}">
             Sentinel
           </span>
-        {{/unless}}
+        {{/if}}
       </h1>
     </p.levelLeft>
   </PageHeader>
   <Toolbar>
-    {{#if model.meta.total}}
+    {{#if this.model.meta.total}}
       <ToolbarFilters>
         <NavigateInput
           filterFocusDidChange={{action "setFilterFocus"}}
           @filterDidChange={{action "setFilter"}}
           @filter={{this.filter}}
-          @filterMatchesKey={{filterMatchesKey}}
-          @firstPartialMatch={{firstPartialMatch}}
-          @extraNavParams={{policyType}}
+          @filterMatchesKey={{this.filterMatchesKey}}
+          @firstPartialMatch={{this.firstPartialMatch}}
+          @extraNavParams={{this.policyType}}
           @placeholder="Filter policies"
           @mode="policy"
         />
-        {{#if filterFocused}}
-          {{#if filterMatchesKey}}
+        {{#if this.filterFocused}}
+          {{#if this.filterMatchesKey}}
             <p class="input-hint">
-              <kbd>ENTER</kbd> to go to <code>{{or pageFilter filter}}</code>
+              <kbd>ENTER</kbd>
+              to go to
+              <code>{{or this.pageFilter this.filter}}</code>
             </p>
           {{/if}}
-          {{#if firstPartialMatch}}
+          {{#if this.firstPartialMatch}}
             <p class="input-hint">
-              <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
+              <kbd>TAB</kbd>
+              to complete
+              <code>{{this.firstPartialMatch.id}}</code>
             </p>
           {{/if}}
         {{/if}}
       </ToolbarFilters>
     {{/if}}
     <ToolbarActions>
-      <ToolbarLink
-        @type="add"
-        @params={{array 'vault.cluster.policies.create'}}
-        @data-test-policy-create-link=true
-      >
-        Create {{uppercase policyType}} policy
+      <ToolbarLink @route="vault.cluster.policies.create" @type="add" data-test-policy-create-link>
+        Create
+        {{uppercase this.policyType}}
+        policy
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
-  {{#if model.meta.total}}
-    {{#each model as |item|}}
+  {{#if this.model.meta.total}}
+    {{#each this.model as |item|}}
       {{#if (eq item.id "root")}}
         <div class="list-item-row is-flex" data-test-policy-item>
-          <Icon
-            aria-hidden="true"
-            class="has-text-grey-light"
-            @glyph="file-outline"
-          />
+          <Icon @name="file" class="has-text-grey-light" />
           <div>
             <span class="has-text-weight-semibold has-text-grey" data-test-policy-name>
               {{item.id}}
             </span>
             <p class="help has-text-grey">
-              The <code>root</code> policy does not contain any rules but can
-              do anything within Vault. It should be used with extreme care.
+              The
+              <code>root</code>
+              policy does not contain any rules but can do anything within Vault. It should be used with extreme care.
             </p>
           </div>
         </div>
       {{else}}
-        {{#linked-block
-          "vault.cluster.policy.show"
-          policyType
-          item.id
+        <LinkedBlock
+          @params={{array "vault.cluster.policy.show" this.policyType item.id}}
           class="list-item-row"
-          data-test-policy-link=item.id
-        }}
+          data-test-policy-link={{item.id}}
+        >
           <div class="columns is-mobile">
             <div class="column is-10">
-              <LinkTo @route="vault.cluster.policy.show" @models={{array policyType item.id}} class="has-text-black has-text-weight-semibold" data-test-policy-item={{true}}><Icon
-                  aria-hidden="true"
-                  class="has-text-grey-light"
-                  @glyph="file-outline"
-                /><span class="is-underline" data-test-policy-name>{{item.id}}</span>
+              <LinkTo
+                @route="vault.cluster.policy.show"
+                @models={{array this.policyType item.id}}
+                class="has-text-black has-text-weight-semibold"
+                data-test-policy-item={{true}}
+              >
+                <Icon @name="file" class="has-text-grey-light" />
+                <span class="is-underline" data-test-policy-name>{{item.id}}</span>
               </LinkTo>
             </div>
             <div class="column has-text-right">
@@ -103,14 +104,22 @@
                       {{else}}
                         {{#if item.canRead}}
                           <li class="action">
-                            <LinkTo @route="vault.cluster.policy.show" @models={{array policyType item.id}} data-test-policy-link="show">
+                            <LinkTo
+                              @route="vault.cluster.policy.show"
+                              @models={{array this.policyType item.id}}
+                              data-test-policy-link="show"
+                            >
                               Details
                             </LinkTo>
                           </li>
                         {{/if}}
                         {{#if item.canEdit}}
                           <li class="action">
-                            <LinkTo @route="vault.cluster.policy.edit" @models={{array policyType item.id}} data-test-policy-link="edit">
+                            <LinkTo
+                              @route="vault.cluster.policy.edit"
+                              @models={{array this.policyType item.id}}
+                              data-test-policy-link="edit"
+                            >
                               Edit
                             </LinkTo>
                           </li>
@@ -121,7 +130,8 @@
                               @id={{item.id}}
                               @confirmMessage="This will permanently delete this policy and may affect access to some data"
                               @onConfirm={{action "deletePolicy" item}}
-                              data-test-policy-delete={{item.id}}/>
+                              data-test-policy-delete={{item.id}}
+                            />
                           </li>
                         {{/if}}
                       {{/if}}
@@ -131,29 +141,35 @@
               </PopupMenu>
             </div>
           </div>
-        {{/linked-block}}
+        </LinkedBlock>
       {{/if}}
     {{else}}
-      <EmptyState
-        @title="No policies matching &quot;{{pageFilter}}&quot;"
-      />
+      <EmptyState @title="No policies matching &quot;{{this.pageFilter}}&quot;" />
     {{/each}}
-    {{#if (gt model.meta.lastPage 1) }}
-      <ListPagination @page={{model.meta.currentPage}} @lastPage={{model.meta.lastPage}} @link="vault.cluster.policies.index" />
+    {{#if (gt this.model.meta.lastPage 1)}}
+      <ListPagination
+        @page={{this.model.meta.currentPage}}
+        @lastPage={{this.model.meta.lastPage}}
+        @link="vault.cluster.policies.index"
+      />
     {{/if}}
   {{else}}
     <EmptyState
-      @title="No {{uppercase policyType}} policies yet"
-      @message="A list of policies will be listed here. Create your first {{uppercase policyType}} policy to get started."
+      @title="No {{uppercase this.policyType}} policies yet"
+      @message="A list of policies will be listed here. Create your first {{uppercase
+        this.policyType
+      }} policy to get started."
     >
       <LinkTo @route="vault.cluster.policies.create" class="link">
-        Create {{uppercase policyType}} policy
+        Create
+        {{uppercase this.policyType}}
+        policy
         <Chevron />
       </LinkTo>
-      <LearnLink @path="/vault/getting-started/policies">
+      <DocLink @path="/vault/tutorials/getting-started/getting-started-policies">
         Learn more
         <Chevron />
-      </LearnLink>
+      </DocLink>
     </EmptyState>
   {{/if}}
 {{else}}

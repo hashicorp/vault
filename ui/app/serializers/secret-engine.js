@@ -1,10 +1,26 @@
 import { assign } from '@ember/polyfills';
 import ApplicationSerializer from './application';
+import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 
-export default ApplicationSerializer.extend({
+export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
+  attrs: {
+    config: { embedded: 'always' },
+  },
+
+  normalize(modelClass, data) {
+    // embedded records need a unique value to be stored
+    // set id for config to uuid of secret engine
+    if (data.config && !data.config.id) {
+      data.config.id = data.uuid;
+    }
+    // move version out of options so it can be defined on secret-engine model
+    data.version = data.options ? data.options.version : null;
+    return this._super(modelClass, data);
+  },
+
   normalizeBackend(path, backend) {
     let struct = {};
-    for (let attribute in backend) {
+    for (const attribute in backend) {
       struct[attribute] = backend[attribute];
     }
     //queryRecord adds path to the response
@@ -37,11 +53,11 @@ export default ApplicationSerializer.extend({
       // this is terrible, I'm sorry
       // TODO extract AWS and SSH config saving from the secret-engine model to simplify this
       if (payload.data.secret) {
-        backends = Object.keys(payload.data.secret).map(id =>
+        backends = Object.keys(payload.data.secret).map((id) =>
           this.normalizeBackend(id, payload.data.secret[id])
         );
       } else if (!payload.data.path) {
-        backends = Object.keys(payload.data).map(id => this.normalizeBackend(id, payload[id]));
+        backends = Object.keys(payload.data).map((id) => this.normalizeBackend(id, payload[id]));
       } else {
         backends = [this.normalizeBackend(payload.data.path, payload.data)];
       }
@@ -51,8 +67,18 @@ export default ApplicationSerializer.extend({
   },
 
   serialize(snapshot) {
-    let type = snapshot.record.get('engineType');
-    let data = this._super(...arguments);
+    const type = snapshot.record.get('engineType');
+    const data = this._super(...arguments);
+    // move version back to options
+    data.options = data.version ? { version: data.version } : {};
+    delete data.version;
+
+    if (type !== 'kv' || data.options.version === 1) {
+      // These items are on the model, but used by the kv-v2 config endpoint only
+      delete data.max_versions;
+      delete data.cas_required;
+      delete data.delete_version_after;
+    }
     // only KV uses options
     if (type !== 'kv' && type !== 'generic') {
       delete data.options;

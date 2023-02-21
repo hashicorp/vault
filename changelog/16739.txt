@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix naming of permitted_dns_domains form parameter on CA creation (root generation and sign intermediate).
+```

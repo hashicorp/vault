@@ -9,5 +9,11 @@
 
   .message {
     box-shadow: $box-shadow-high;
+    .message-body {
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      word-break: break-word;
+      display: inline-flex;
+    }
   }
 }

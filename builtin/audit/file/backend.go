@@ -71,6 +71,15 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		logRaw = b
 	}
 
+	elideListResponses := false
+	if elideListResponsesRaw, ok := conf.Config["elide_list_responses"]; ok {
+		value, err := strconv.ParseBool(elideListResponsesRaw)
+		if err != nil {
+			return nil, err
+		}
+		elideListResponses = value
+	}
+
 	// Check if mode is provided
 	mode := os.FileMode(0o600)
 	if modeRaw, ok := conf.Config["mode"]; ok {
@@ -78,9 +87,21 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		if err != nil {
 			return nil, err
 		}
-		if m != 0 {
+		switch m {
+		case 0:
+			// if mode is 0000, then do not modify file mode
+			if path != "stdout" && path != "discard" {
+				fileInfo, err := os.Stat(path)
+				if err != nil {
+					return nil, err
+				}
+				mode = fileInfo.Mode()
+			}
+		default:
 			mode = os.FileMode(m)
+
 		}
+
 	}
 
 	b := &Backend{
@@ -90,8 +111,9 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		saltView:   conf.SaltView,
 		salt:       new(atomic.Value),
 		formatConfig: audit.FormatterConfig{
-			Raw:          logRaw,
-			HMACAccessor: hmacAccessor,
+			Raw:                logRaw,
+			HMACAccessor:       hmacAccessor,
+			ElideListResponses: elideListResponses,
 		},
 	}
 

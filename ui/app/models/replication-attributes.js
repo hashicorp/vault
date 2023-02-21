@@ -1,11 +1,10 @@
+import Model, { attr } from '@ember-data/model';
 import { match, not } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import { attr } from '@ember-data/model';
-import Fragment from 'ember-data-model-fragments/fragment';
 
-export default Fragment.extend({
+export default Model.extend({
   clusterId: attr('string'),
-  clusterIdDisplay: computed('clusterId', 'mode', function() {
+  clusterIdDisplay: computed('clusterId', 'mode', function () {
     const clusterId = this.clusterId;
     return clusterId ? clusterId.split('-')[0] : null;
   }),
@@ -23,13 +22,13 @@ export default Fragment.extend({
   // secondary attrs
   isSecondary: match('mode', /secondary/),
   connection_state: attr('string'),
-  modeForUrl: computed('isPrimary', 'isSecondary', 'mode', function() {
+  modeForUrl: computed('isPrimary', 'isSecondary', 'mode', function () {
     const mode = this.mode;
     return mode === 'bootstrapping'
       ? 'bootstrapping'
       : (this.isSecondary && 'secondary') || (this.isPrimary && 'primary');
   }),
-  modeForHeader: computed('mode', function() {
+  modeForHeader: computed('mode', function () {
     const mode = this.mode;
     if (!mode) {
       // mode will be false or undefined if it calls the status endpoint while still setting up the cluster
@@ -60,7 +59,7 @@ export default Fragment.extend({
     };
   },
 
-  syncProgressPercent: computed('syncProgress', function() {
+  syncProgressPercent: computed('syncProgress', function () {
     const syncProgress = this.syncProgress;
     if (!syncProgress) {
       return null;
@@ -70,7 +69,7 @@ export default Fragment.extend({
     return Math.floor(100 * (progress / total));
   }),
 
-  modeDisplay: computed('mode', function() {
+  modeDisplay: computed('mode', function () {
     const displays = {
       disabled: 'Disabled',
       unknown: 'Unknown',

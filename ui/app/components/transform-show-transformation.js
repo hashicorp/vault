@@ -2,17 +2,17 @@ import TransformBase from './transform-edit-base';
 import { computed } from '@ember/object';
 
 export default TransformBase.extend({
-  cliCommand: computed('model.{allowed_roles,type,tweak_source}', function() {
+  cliCommand: computed('model.{allowed_roles,type,tweak_source}', function () {
     if (!this.model) {
       return;
     }
 
-    let { type, allowed_roles, tweak_source, name } = this.model;
-    let wildCardRole = allowed_roles.find(role => role.includes('*'));
+    const { type, allowed_roles, tweak_source, name } = this.model;
+    const wildCardRole = allowed_roles.find((role) => role.includes('*'));
 
     // values to be returned
     let role = '<choose a role>';
-    let value = 'value=<enter your value here>';
+    const value = 'value=<enter your value here>';
     let tweak = '';
 
     // determine the role

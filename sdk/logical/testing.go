@@ -73,6 +73,7 @@ func TestSystemView() *StaticSystemView {
 	return &StaticSystemView{
 		DefaultLeaseTTLVal: defaultLeaseTTLVal,
 		MaxLeaseTTLVal:     maxLeaseTTLVal,
+		VersionString:      "testVersionString",
 	}
 }
 

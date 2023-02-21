@@ -1,6 +1,12 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{baseKey}} @path="vault.cluster.access.leases.list" @model={{clusterController.model.name}} @root={{backendCrumb}} @showCurrent={{true}} />
+    <KeyValueHeader
+      @baseKey={{this.baseKey}}
+      @path="vault.cluster.access.leases.list"
+      @model={{this.clusterController.model.name}}
+      @root={{this.backendCrumb}}
+      @showCurrent={{true}}
+    />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -17,52 +23,56 @@
       @filterFocusDidChange={{action "setFilterFocus"}}
       @filterDidChange={{action "setFilter"}}
       @filter={{this.filter}}
-      @filterMatchesKey={{filterMatchesKey}}
-      @firstPartialMatch={{firstPartialMatch}}
-      @baseKey={{get baseKey "id"}}
+      @filterMatchesKey={{this.filterMatchesKey}}
+      @firstPartialMatch={{this.firstPartialMatch}}
+      @baseKey={{get this.baseKey "id"}}
       @shouldNavigateTree={{true}}
       @mode="leases"
-      @placeholder="Filter leases" />
-     {{#if filterFocused}}
-       &nbsp;
-       &nbsp;
-       {{#if filterMatchesKey}}
-         {{#unless filterIsFolder}}
-           <p class="help has-text-grey is-size-8">
-             <kbd>ENTER</kbd> to go to see details
-           </p>
-         {{/unless}}
-       {{/if}}
-       {{#if firstPartialMatch}}
-         <p class="help has-text-grey is-size-8">
-           <kbd>TAB</kbd> to complete
-         </p>
-       {{/if}}
-     {{/if}}
+      @placeholder="Filter leases"
+    />
+    {{#if this.filterFocused}}
+      {{! template-lint-disable no-whitespace-for-layout }}
+      &nbsp; &nbsp;
+      {{! template-lint-enable no-whitespace-for-layout }}
+      {{#if this.filterMatchesKey}}
+        {{#unless this.filterIsFolder}}
+          <p class="help has-text-grey is-size-8">
+            <kbd>ENTER</kbd>
+            to go to see details
+          </p>
+        {{/unless}}
+      {{/if}}
+      {{#if this.firstPartialMatch}}
+        <p class="help has-text-grey is-size-8">
+          <kbd>TAB</kbd>
+          to complete
+        </p>
+      {{/if}}
+    {{/if}}
   </ToolbarFilters>
   <ToolbarActions>
-    {{#if (not-eq baseKey.id '')}}
+    {{#if (not-eq this.baseKey.id "")}}
       <div class="control">
-        {{#if (and capabilities.forceRevokePrefix.canUpdate (not confirmingRevoke))}}
+        {{#if (and this.capabilities.forceRevokePrefix.canUpdate (not this.confirmingRevoke))}}
           <ConfirmAction
             @buttonClasses="toolbar-link"
             @confirmTitle="Disable this?"
             @confirmMessage={{concat "All leases under this one will also be removed and disregard any errors encountered."}}
             @confirmButtonText="Revoke"
-            @onConfirmAction={{action "revokePrefix" baseKey.id true}}
+            @onConfirmAction={{action "revokePrefix" this.baseKey.id true}}
           >
             Force revoke prefix
           </ConfirmAction>
         {{/if}}
       </div>
       <div class="control">
-        {{#if (and capabilities.revokePrefix.canUpdate (not confirmingForceRevoke))}}
+        {{#if (and this.capabilities.revokePrefix.canUpdate (not this.confirmingForceRevoke))}}
           <ConfirmAction
             @buttonClasses="toolbar-link"
             @confirmTitle="Revoke this?"
             @confirmMessage={{concat "All leases under this one will also be removed"}}
             @confirmButtonText="Revoke"
-            @onConfirmAction={{action "revokePrefix" baseKey.id}}
+            @onConfirmAction={{action "revokePrefix" this.baseKey.id}}
             data-test-lease-revoke-prefix="true"
           >
             Revoke prefix
@@ -73,22 +83,28 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#if model.meta.total}}
-  {{#each model as |item|}}
-    <LinkTo @route={{if item.isFolder "vault.cluster.access.leases.list" "vault.cluster.access.leases.show" }} @model={{item.id}} class="list-item-row" data-test-lease-link={{item.id}}><Icon
-      @glyph={{if item.isFolder 'folder-outline' 'file-outline'}}
-      class="has-text-grey-light"
-    /><span class="has-text-weight-semibold">{{or item.keyWithoutParent item.id}}</span></LinkTo>
+{{#if this.model.meta.total}}
+  {{#each this.model as |item|}}
+    <LinkTo
+      @route={{if item.isFolder "vault.cluster.access.leases.list" "vault.cluster.access.leases.show"}}
+      @model={{item.id}}
+      class="list-item-row"
+      data-test-lease-link={{item.id}}
+    >
+      <Icon @name={{if item.isFolder "folder" "file"}} class="has-text-grey-light" />
+      <span class="has-text-weight-semibold">{{or item.keyWithoutParent item.id}}</span>
+    </LinkTo>
   {{else}}
-    <EmptyState
-      @title="There are no leases matching &quot;{{this.filter}}&quot;"
-    />
+    <EmptyState @title="There are no leases matching &quot;{{this.filter}}&quot;" />
   {{/each}}
 {{else}}
-  <EmptyState
-    @title={{this.emptyTitle}}
-  />
+  <EmptyState @title={{this.emptyTitle}} />
 {{/if}}
-{{#if (gt model.meta.lastPage 1) }}
-  <ListPagination @page={{model.meta.currentPage}} @lastPage={{model.meta.lastPage}} @link={{concat "vault.cluster.access.leases.list" (unless baseKey.id "-root")}} @model={{compact (array (if baseKey.id baseKey.id))}} />
+{{#if (gt this.model.meta.lastPage 1)}}
+  <ListPagination
+    @page={{this.model.meta.currentPage}}
+    @lastPage={{this.model.meta.lastPage}}
+    @link={{concat "vault.cluster.access.leases.list" (unless this.baseKey.id "-root")}}
+    @models={{compact (array (if this.baseKey.id this.baseKey.id))}}
+  />
 {{/if}}

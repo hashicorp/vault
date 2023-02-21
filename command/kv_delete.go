@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -18,6 +19,7 @@ type KVDeleteCommand struct {
 	*BaseCommand
 
 	flagVersions []string
+	flagMount    string
 }
 
 func (c *KVDeleteCommand) Synopsis() string {
@@ -34,11 +36,17 @@ Usage: vault kv delete [options] PATH
 
   To delete the latest version of the key "foo": 
 
+      $ vault kv delete -mount=secret foo
+
+  The deprecated path-like syntax can also be used, but this should be avoided 
+  for KV v2, as the fact that it is not actually the full API path to 
+  the secret (secret/data/foo) can cause confusion: 
+  
       $ vault kv delete secret/foo
 
   To delete version 3 of key foo:
 
-      $ vault kv delete -versions=3 secret/foo
+      $ vault kv delete -mount=secret -versions=3 foo
 
   To delete all versions and metadata, see the "vault kv metadata" subcommand.
 
@@ -50,7 +58,7 @@ Usage: vault kv delete [options] PATH
 }
 
 func (c *KVDeleteCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 	// Common Options
 	f := set.NewFlagSet("Common Options")
 
@@ -59,6 +67,17 @@ func (c *KVDeleteCommand) Flags() *FlagSets {
 		Target:  &c.flagVersions,
 		Default: nil,
 		Usage:   `Specifies the version numbers to delete.`,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /data/ automatically appended between KV 
+		v2 secrets.`,
 	})
 
 	return set
@@ -96,30 +115,76 @@ func (c *KVDeleteCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := sanitizePath(args[0])
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	mountFlagSyntax := c.flagMount != ""
+
+	var (
+		mountPath   string
+		partialPath string
+		v2          bool
+	)
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
 	}
 
 	var secret *api.Secret
+	var fullPath string
 	if v2 {
-		secret, err = c.deleteV2(path, mountPath, client)
+		secret, err = c.deleteV2(partialPath, mountPath, client)
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
 	} else {
-		secret, err = client.Logical().Delete(path)
+		// v1
+		if mountFlagSyntax {
+			fullPath = path.Join(mountPath, partialPath)
+		} else {
+			fullPath = partialPath
+		}
+		secret, err = client.Logical().Delete(fullPath)
 	}
 
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", fullPath, err))
 		if secret != nil {
 			OutputSecret(c.UI, secret)
 		}
 		return 2
 	}
 
-	c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", path))
-	return 0
+	if secret == nil {
+		// Don't output anything unless using the "table" format
+		if Format(c.UI) == "table" {
+			c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", fullPath))
+		}
+		return 0
+	}
+
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	return OutputSecret(c.UI, secret)
 }
 
 func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (*api.Secret, error) {
@@ -127,23 +192,13 @@ func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (
 	var secret *api.Secret
 	switch {
 	case len(c.flagVersions) > 0:
-		path = addPrefixToVKVPath(path, mountPath, "delete")
-		if err != nil {
-			return nil, err
-		}
-
+		path = addPrefixToKVPath(path, mountPath, "delete")
 		data := map[string]interface{}{
 			"versions": kvParseVersionsFlags(c.flagVersions),
 		}
-
 		secret, err = client.Logical().Write(path, data)
 	default:
-
-		path = addPrefixToVKVPath(path, mountPath, "data")
-		if err != nil {
-			return nil, err
-		}
-
+		path = addPrefixToKVPath(path, mountPath, "data")
 		secret, err = client.Logical().Delete(path)
 	}
 

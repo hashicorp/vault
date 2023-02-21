@@ -1,22 +1,20 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{model}} @path="vault.cluster.access.method" @root={{root}} @showCurrent={{true}} />
+    <KeyValueHeader @baseKey={{this.model}} @path="vault.cluster.access.method" @root={{this.root}} @showCurrent={{true}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      Configure {{get (find-by "type" model.type (mountable-auth-methods)) "displayName"}}
+      Configure
+      {{get (find-by "type" this.model.type (mountable-auth-methods)) "displayName"}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{section-tabs model}}
+{{section-tabs this.model}}
 
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink
-      @params={{array "vault.cluster.access.method" model.id}}
-      @data-test-backend-view-link=true
-    >
+    <ToolbarLink @route="vault.cluster.access.method" @model={{this.model.id}} data-test-backend-view-link>
       View method
     </ToolbarLink>
   </ToolbarActions>

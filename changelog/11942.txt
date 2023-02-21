@@ -1,0 +1,3 @@
+```release-note:feature
+**Support manual rotation of Active Directory roles**: `rotate-role` endpoint has been added to the Active Directory secret engine to allow manual rotations of service accounts.
+```

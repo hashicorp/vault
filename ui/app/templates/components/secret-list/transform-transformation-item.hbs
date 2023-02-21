@@ -1,74 +1,64 @@
-{{!-- CBS TODO do not let click if !canRead --}}
+{{! CBS TODO do not let click if !canRead }}
 {{#if (eq @options.item "transformation")}}
-  {{#linked-block
-    "vault.cluster.secrets.backend.show"
-    @item.id
+  <LinkedBlock
+    @params={{array "vault.cluster.secrets.backend.show" @item.id}}
     class="list-item-row"
-    data-test-secret-link=@item.id
-    encode=true
-    queryParams=(secret-query-params @backendModel.type)
-  }}
+    data-test-secret-link={{@item.id}}
+    @encode={{true}}
+    @queryParams={{secret-query-params @backendModel.type}}
+  >
     <div class="columns is-mobile">
-    <div class="column is-10">
-      <SecretLink
-        @mode="show"
-        @secret={{@item.id}}
-        @queryParams={{if (eq @backendModel.type "transform") (query-params tab="actions") ""}}
-        @class="has-text-black has-text-weight-semibold">
-        <Icon
-          @glyph='file-outline'
-          @class="has-text-grey-light"/>
-        {{if (eq @item.id ' ') '(self)' (or @item.keyWithoutParent @item.id)}}
-      </SecretLink>
+      <div class="column is-10">
+        <SecretLink
+          @mode="show"
+          @secret={{@item.id}}
+          @queryParams={{if (eq @backendModel.type "transform") (hash tab="actions") ""}}
+          class="has-text-black has-text-weight-semibold"
+        >
+          <Icon @name="file" class="has-text-grey-light" />
+          {{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}
+        </SecretLink>
+      </div>
+      <div class="column has-text-right">
+        {{#if (or @item.updatePath.canRead @item.updatePath.canUpdate)}}
+          <PopupMenu name="secret-menu">
+            <nav class="menu">
+              <ul class="menu-list">
+                {{#if (or @item.versionPath.isLoading @item.secretPath.isLoading)}}
+                  <li class="action">
+                    <button disabled type="button" class="link button is-loading is-transparent">
+                      loading
+                    </button>
+                  </li>
+                {{else}}
+                  {{#if @item.updatePath.canRead}}
+                    <li class="action">
+                      <SecretLink @mode="show" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
+                        Details
+                      </SecretLink>
+                    </li>
+                  {{/if}}
+                  {{#if @item.updatePath.canUpdate}}
+                    <li class="action">
+                      <SecretLink @mode="edit" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
+                        Edit
+                      </SecretLink>
+                    </li>
+                  {{/if}}
+                {{/if}}
+              </ul>
+            </nav>
+          </PopupMenu>
+        {{/if}}
+      </div>
     </div>
-    <div class="column has-text-right">
-      {{#if (or @item.updatePath.canRead @item.updatePath.canUpdate)}}
-      <PopupMenu name="secret-menu">
-        <nav class="menu">
-          <ul class="menu-list">
-            {{#if (or @item.versionPath.isLoading @item.secretPath.isLoading)}}
-              <li class="action">
-                <button disabled type="button" class="link button is-loading is-transparent">
-                  loading
-                </button>
-              </li>
-            {{else}}
-              {{#if @item.updatePath.canRead}}
-                <li class="action">
-                  <SecretLink
-                    @mode="show"
-                    @secret={{@item.id}}
-                    @class="has-text-black has-text-weight-semibold">
-                    Details
-                  </SecretLink>
-                </li>
-              {{/if}}
-              {{#if @item.updatePath.canUpdate}}
-                <li class="action">
-                  <SecretLink
-                    @mode="edit"
-                    @secret={{@item.id}}
-                    @class="has-text-black has-text-weight-semibold">
-                    Edit
-                  </SecretLink>
-                </li>
-              {{/if}}
-            {{/if}}
-          </ul>
-        </nav>
-      </PopupMenu>
-      {{/if}}
-    </div>
-  </div>
-  {{/linked-block}}
+  </LinkedBlock>
 {{else}}
   <div class="list-item-row">
     <div class="columns is-mobile">
       <div class="column is-12 has-text-grey has-text-weight-semibold">
-        <Icon
-          @glyph='file-outline'
-          @class="has-text-grey-light"/>
-        {{if (eq @item.id ' ') '(self)' (or @item.keyWithoutParent @item.id)}}
+        <Icon @name="file" class="has-text-grey-light" />
+        {{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}
       </div>
     </div>
   </div>

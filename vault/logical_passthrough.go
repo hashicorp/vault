@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -16,20 +16,32 @@ import (
 // PassthroughBackendFactory returns a PassthroughBackend
 // with leases switched off
 func PassthroughBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(ctx, conf, false)
+	return LeaseSwitchedPassthroughBackend(ctx, conf, nil)
 }
 
 // LeasedPassthroughBackendFactory returns a PassthroughBackend
 // with leases switched on
 func LeasedPassthroughBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(ctx, conf, true)
+	return LeaseSwitchedPassthroughBackend(ctx, conf, func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		return nil, nil
+	})
 }
+
+type revokeFunc func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error)
 
 // LeaseSwitchedPassthroughBackend returns a PassthroughBackend
 // with leases switched on or off
-func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendConfig, leases bool) (logical.Backend, error) {
+func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendConfig, revoke revokeFunc) (logical.Backend, error) {
 	var b PassthroughBackend
-	b.generateLeases = leases
+	if revoke == nil {
+		// We probably don't need this, since we should never have to handle revoke requests, but just in case...
+		b.revoke = func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+			return nil, nil
+		}
+	} else {
+		b.generateLeases = true
+		b.revoke = revoke
+	}
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(passthroughHelp),
 
@@ -65,7 +77,7 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 			Type: "kv",
 
 			Renew:  b.handleRead,
-			Revoke: b.handleRevoke,
+			Revoke: b.revoke,
 		},
 	}
 
@@ -84,6 +96,7 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 type PassthroughBackend struct {
 	*framework.Backend
 	generateLeases bool
+	revoke         func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error)
 }
 
 func (b *PassthroughBackend) handleRevoke(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

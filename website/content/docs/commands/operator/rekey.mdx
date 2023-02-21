@@ -4,7 +4,7 @@ page_title: operator rekey - Command
 description: |-
   The "operator rekey" command generates a new set of unseal keys. This can
   optionally change the total number of key shares or the required threshold of
-  those key shares to reconstruct the master key. This operation is zero
+  those key shares to reconstruct the root key. This operation is zero
   downtime, but it requires the Vault is unsealed and a quorum of existing
   unseal keys are provided.
 ---
@@ -13,7 +13,7 @@ description: |-
 
 The `operator rekey` command generates a new set of unseal keys. This can
 optionally change the total number of key shares or the required threshold of
-those key shares to reconstruct the master key. This operation is zero downtime,
+those key shares to reconstruct the root key. This operation is zero downtime,
 but it requires the Vault is unsealed and a quorum of existing unseal keys are
 provided.
 
@@ -21,7 +21,7 @@ An unseal key may be provided directly on the command line as an argument to the
 command. If key is specified as "-", the command will read from stdin. If a TTY
 is available, the command will prompt for text.
 
-Please see the [rotating and rekeying](/guides/operations/rekeying-and-rotating) for
+Please see the [rotating and rekeying](/vault/tutorials/operations/rekeying-and-rotating) for
 step-by-step instructions.
 
 ## Examples
@@ -30,6 +30,16 @@ Initialize a rekey:
 
 ```shell-session
 $ vault operator rekey \
+    -init \
+    -key-shares=15 \
+    -key-threshold=9
+```
+
+Initialize a rekey when Auto Unseal is used for the Vault cluster:
+
+```shell-session
+$ vault operator rekey \
+    -target=recovery \
     -init \
     -key-shares=15 \
     -key-threshold=9
@@ -96,7 +106,7 @@ $ vault operator rekey -verify -nonce="..."
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
 ### Output Options
 
@@ -118,14 +128,14 @@ flags](/docs/commands) included on all commands.
   `-n`
 
 - `-key-threshold` `(int: 3)` - Number of key shares required to reconstruct the
-  master key. This must be less than or equal to -key-shares. This is aliased as
+  root key. This must be less than or equal to -key-shares. This is aliased as
   `-t`.
 
 - `-nonce` `(string: "")` - Nonce value provided at initialization. The same
   nonce value must be provided with each unseal key.
 
 - `-pgp-keys` `(string: "...")` - Comma-separated list of paths to files on disk
-  containing public GPG keys OR a comma-separated list of Keybase usernames
+  containing public PGP keys OR a comma-separated list of Keybase usernames
   using the format `keybase:<username>`. When supplied, the generated unseal
   keys will be encrypted and base64-encoded in the order specified in this list.
 
@@ -133,7 +143,7 @@ flags](/docs/commands) included on all commands.
   providing an unseal key. The default is false.
 
 - `-target` `(string: "barrier")` - Target for rekeying. "recovery" only applies
-  when HSM support is enabled or using [Auto Unseal](/docs/concepts/seal#auto-unseal).
+  when HSM support is enabled or using [Auto Unseal](/vault/docs/concepts/seal#auto-unseal).
 
 - `-verify` `(bool: false)` - Indicate during the phase `-init` that the
   verification process is activated for the rekey. Along with `-nonce` option
@@ -144,7 +154,7 @@ flags](/docs/commands) included on all commands.
 - `-backup` `(bool: false)` - Store a backup of the current PGP encrypted unseal
   keys in Vault's core. The encrypted values can be recovered in the event of
   failure or discarded after success. See the -backup-delete and
-  -backup-retrieve options for more information. This option only applies when
+  \-backup-retrieve options for more information. This option only applies when
   the existing unseal keys were PGP encrypted.
 
 - `-backup-delete` `(bool: false)` - Delete any stored backup unseal keys.

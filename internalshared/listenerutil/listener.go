@@ -11,9 +11,9 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/internalshared/reloadutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/jefferai/isbadcipher"
 	"github.com/mitchellh/cli"
 )
@@ -75,7 +75,8 @@ func UnixSocketListener(path string, unixSocketsConfig *UnixSocketsConfig) (net.
 func TLSConfig(
 	l *configutil.Listener,
 	props map[string]string,
-	ui cli.Ui) (*tls.Config, reloadutil.ReloadFunc, error) {
+	ui cli.Ui,
+) (*tls.Config, reloadutil.ReloadFunc, error) {
 	props["tls"] = "disabled"
 
 	if l.TLSDisable {
@@ -101,10 +102,9 @@ func TLSConfig(
 
 PASSPHRASECORRECT:
 	tlsConf := &tls.Config{
-		GetCertificate:           cg.GetCertificate,
-		NextProtos:               []string{"h2", "http/1.1"},
-		ClientAuth:               tls.RequestClientCert,
-		PreferServerCipherSuites: l.TLSPreferServerCipherSuites,
+		GetCertificate: cg.GetCertificate,
+		NextProtos:     []string{"h2", "http/1.1"},
+		ClientAuth:     tls.RequestClientCert,
 	}
 
 	if l.TLSMinVersion == "" {

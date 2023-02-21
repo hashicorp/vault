@@ -1,0 +1,3 @@
+```release-note:bug
+cassandra: Update gocql Cassandra client to fix "no hosts available in the pool" error
+```

@@ -1,6 +1,7 @@
 import { resolve } from 'rsvp';
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import ControlGroupError from 'vault/lib/control-group-error';
 
 const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'pki'];
 
@@ -18,17 +19,46 @@ export default Route.extend({
     if (backend != 'ssh') {
       return;
     }
-    let modelType = 'ssh-otp-credential';
+    const modelType = 'ssh-otp-credential';
     return this.pathHelp.getNewModel(modelType, backend);
   },
 
-  model(params) {
-    let role = params.secret;
-    let backendModel = this.backendModel();
-    let backendPath = backendModel.get('id');
-    let backendType = backendModel.get('type');
-    let roleType = params.roleType;
+  getDatabaseCredential(backend, secret, roleType = '') {
+    return this.store.queryRecord('database/credential', { backend, secret, roleType }).catch((error) => {
+      if (error instanceof ControlGroupError) {
+        throw error;
+      }
+      // Unless it's a control group error, we want to pass back error info
+      // so we can render it on the GenerateCredentialsDatabase component
+      const status = error?.httpStatus;
+      let title;
+      let message = `We ran into a problem and could not continue: ${
+        error?.errors ? error.errors[0] : 'See Vault logs for details.'
+      }`;
+      if (status === 403) {
+        // 403 is forbidden
+        title = 'You are not authorized';
+        message =
+          "Role wasn't found or you do not have permissions. Ask your administrator if you think you should have access.";
+      }
+      return {
+        errorHttpStatus: status,
+        errorTitle: title,
+        errorMessage: message,
+      };
+    });
+  },
 
+  async model(params) {
+    const role = params.secret;
+    const backendModel = this.backendModel();
+    const backendPath = backendModel.get('id');
+    const backendType = backendModel.get('type');
+    const roleType = params.roleType;
+    let dbCred;
+    if (backendType === 'database') {
+      dbCred = await this.getDatabaseCredential(backendPath, role, roleType);
+    }
     if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendModel.get('type'))) {
       return this.transitionTo('vault.cluster.secrets.backend.list-root', backendPath);
     }
@@ -37,6 +67,7 @@ export default Route.extend({
       backendType,
       roleName: role,
       roleType,
+      dbCred,
     });
   },
 

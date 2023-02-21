@@ -1,121 +1,185 @@
-<div class="auth-form">
-  {{#if hasMethodsWithPath}}
-    <nav class="tabs is-marginless">
-      <ul>
-        {{#each methodsToShow as |method|}}
-          {{#with (or method.path method.type) as |methodKey|}}
-              <li class="{{if (and selectedAuthIsPath (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey)) 'is-active' ''}}" data-test-auth-method>
-                <LinkTo @route="vault.cluster.auth" @model={{cluster.name}} @query={{hash with=methodKey}} data-test-auth-method-link={{method.type}}>
+<div class="auth-form" data-test-auth-form>
+  {{#if (and this.waitingForOktaNumberChallenge (not this.cancelAuthForOktaNumberChallenge))}}
+    <OktaNumberChallenge
+      @correctAnswer={{this.oktaNumberChallengeAnswer}}
+      @hasError={{(not-eq this.error null)}}
+      @onReturnToLogin={{action "returnToLoginFromOktaNumberChallenge"}}
+    />
+  {{else}}
+    {{#if this.hasMethodsWithPath}}
+      <nav class="tabs is-marginless">
+        <ul>
+          {{#each this.methodsToShow as |method|}}
+            {{#let (or method.path method.type) as |methodKey|}}
+              <li
+                class={{if
+                  (and
+                    this.selectedAuthIsPath (eq (or this.selectedAuthBackend.path this.selectedAuthBackend.type) methodKey)
+                  )
+                  "is-active"
+                  ""
+                }}
+                data-test-auth-method
+              >
+                <LinkTo
+                  @route="vault.cluster.auth"
+                  @model={{this.cluster.name}}
+                  @query={{hash with=methodKey}}
+                  data-test-auth-method-link={{method.type}}
+                >
                   {{or method.id (capitalize method.type)}}
                 </LinkTo>
               </li>
-          {{/with}}
-        {{/each}}
-        {{#if hasMethodsWithPath}}
-          <li class="{{unless selectedAuthIsPath 'is-active' ''}}" data-test-auth-method>
-            <LinkTo @route="vault.cluster.auth" @model={{cluster.name}} @query={{hash with='token'}} data-test-auth-method-link="other">
-              Other
-            </LinkTo>
-          </li>
-        {{/if}}
-      </ul>
-    </nav>
-  {{/if}}
-  <div class="box is-marginless is-shadowless">
-    <MessageError
-      @errorMessage={{if (and cluster.standby hasCSPError) cspErrorText error}}
-      data-test-auth-error
-    />
-    <div class="has-bottom-margin-s ">
-      <p class="is-label">{{this.selectedAuthBackend.path}}</p>
-      <span class="description has-text-grey" data-test-description={{true}}>{{this.selectedAuthBackend.mountDescription}}</span>
-    </div>
-    {{#if (or (not hasMethodsWithPath) (not selectedAuthIsPath))}}
-      <Select
-        @label='Method'
-        @name='auth-method'
-        @options={{supported-auth-backends}}
-        @valueAttribute={{'type'}}
-        @labelAttribute={{'typeDisplay'}}
-        @isFullwidth={{true}}
-        @selectedValue={{this.selectedAuth}}
-        @onChange={{action (mut this.selectedAuth)}}
-        />
+            {{/let}}
+          {{/each}}
+          {{#if this.hasMethodsWithPath}}
+            <li class={{unless this.selectedAuthIsPath "is-active" ""}} data-test-auth-method>
+              <LinkTo
+                @route="vault.cluster.auth"
+                @model={{this.cluster.name}}
+                @query={{hash with="token"}}
+                data-test-auth-method-link="other"
+              >
+                Other
+              </LinkTo>
+            </li>
+          {{/if}}
+        </ul>
+      </nav>
     {{/if}}
-  {{#if (or (eq this.selectedAuthBackend.type "jwt") (eq this.selectedAuthBackend.type "oidc"))}}
-    <AuthJwt
-      @onError={{action "handleError"}}
-      @onLoading={{action (mut this.isLoading)}}
-      @onToken={{action (mut this.token)}}
-      @namespace={{this.namespace}}
-      @onNamespace={{action (mut this.namespace)}}
-      @onSelectedAuth={{action (mut this.selectedAuth)}}
-      @onSubmit={{action "doSubmit"}}
-      @onRoleName={{action (mut this.roleName)}}
-      @roleName={{this.roleName}}
-      @selectedAuthType={{this.selectedAuthBackend.type}}
-      @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
-      @disabled={{or authenticate.isRunning this.isLoading}}
-    >
-      <AuthFormOptions
-        @customPath={{this.customPath}}
-        @onPathChange={{action (mut this.customPath)}}
-        @selectedAuthIsPath={{this.selectedAuthIsPath}}
+    <div class="box is-marginless is-shadowless">
+      <MessageError
+        @errorMessage={{if (and this.cluster.standby this.hasCSPError) this.cspErrorText this.error}}
+        data-test-auth-error
       />
-    </AuthJwt>
-  {{else}}
-    <form
-      id="auth-form"
-      onsubmit={{action "doSubmit"}}
-    >
-        {{#if (eq providerName 'github')}}
-          <div class="field">
-            <label for="token" class="is-label">GitHub token</label>
-            <div class="control">
-              <Input @type="password" @value={{token}} @name="token" @id="token" class="input" data-test-token={{true}} @autocomplete="off" @spellcheck="false" />
-            </div>
-          </div>
-        {{else if (eq providerName 'token')}}
-          <div class="field">
-            <label for="token" class="is-label">Token</label>
-            <div class="control">
-              <Input @type="password" @value={{token}} @name="token" class="input" @autocomplete="off" @spellcheck="false" data-test-token={{true}} />
-            </div>
-          </div>
-        {{else}}
-          <div class="field">
-            <label for="username" class="is-label">Username</label>
-            <div class="control">
-              <Input @value={{username}} @name="username" @id="username" class="input" @autocomplete="off" @spellcheck="false" data-test-username={{true}} />
-            </div>
-          </div>
-          <div class="field">
-            <label for="password" class="is-label">Password</label>
-            <div class="control">
-              <Input @value={{password}} @name="password" @id="password" @type="password" class="input" @autocomplete="off" @spellcheck="false" data-test-password={{true}} />
-            </div>
-          </div>
-        {{/if}}
-        {{#if (not-eq selectedAuthBackend.type "token")}}
+      <div class="has-bottom-margin-s">
+        <p class="is-label">{{this.selectedAuthBackend.path}}</p>
+        <span class="description has-text-grey" data-test-description={{true}}>
+          {{this.selectedAuthBackend.mountDescription}}
+        </span>
+      </div>
+      {{#if (or (not this.hasMethodsWithPath) (not this.selectedAuthIsPath))}}
+        <Select
+          @label="Method"
+          @name="auth-method"
+          @options={{this.authMethods}}
+          @valueAttribute={{"type"}}
+          @labelAttribute={{"typeDisplay"}}
+          @isFullwidth={{true}}
+          @selectedValue={{this.selectedAuth}}
+          @onChange={{action (mut this.selectedAuth)}}
+        />
+      {{/if}}
+      {{#if (or (eq this.selectedAuthBackend.type "jwt") (eq this.selectedAuthBackend.type "oidc"))}}
+        <AuthJwt
+          @onError={{action "handleError"}}
+          @onLoading={{action (mut this.isLoading)}}
+          @namespace={{this.namespace}}
+          @onNamespace={{action (mut this.namespace)}}
+          @onSubmit={{action "doSubmit"}}
+          @onRoleName={{action (mut this.roleName)}}
+          @roleName={{this.roleName}}
+          @selectedAuthType={{this.selectedAuthBackend.type}}
+          @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
+          @disabled={{or this.authenticate.isRunning this.isLoading}}
+        >
           <AuthFormOptions
             @customPath={{this.customPath}}
             @onPathChange={{action (mut this.customPath)}}
             @selectedAuthIsPath={{this.selectedAuthIsPath}}
           />
-        {{/if}}
-        <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading'}}" id="auth-submit">
-          Sign In
-        </button>
-        {{#if (and delayAuthMessageReminder.isIdle showLoading)}}
-          <AlertInline
-            @paddingTop=true
-            @sizeSmall=true
-            @type="info"
-            @message="If login takes longer than usual, you may need to check your device for an MFA notification, or contact your administrator if login times out."
-            data-test-auth-message="push"
-          />
-        {{/if}}
-    </form>
+        </AuthJwt>
+      {{else}}
+        <form id="auth-form" onsubmit={{action "doSubmit" null}}>
+          {{#if (eq this.providerName "github")}}
+            <div class="field">
+              <label for="token" class="is-label">GitHub token</label>
+              <div class="control">
+                <Input
+                  @type="password"
+                  @value={{this.token}}
+                  name="token"
+                  id="token"
+                  class="input"
+                  data-test-token={{true}}
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+              </div>
+            </div>
+          {{else if (eq this.providerName "token")}}
+            <div class="field">
+              <label for="token" class="is-label">Token</label>
+              <div class="control">
+                <Input
+                  @type="password"
+                  @value={{this.token}}
+                  name="token"
+                  class="input"
+                  autocomplete="off"
+                  spellcheck="false"
+                  data-test-token={{true}}
+                />
+              </div>
+            </div>
+          {{else}}
+            <div class="field">
+              <label for="username" class="is-label">Username</label>
+              <div class="control">
+                <Input
+                  @value={{this.username}}
+                  name="username"
+                  id="username"
+                  class="input"
+                  autocomplete="off"
+                  spellcheck="false"
+                  data-test-username={{true}}
+                />
+              </div>
+            </div>
+            <div class="field">
+              <label for="password" class="is-label">Password</label>
+              <div class="control">
+                <Input
+                  @value={{this.password}}
+                  name="password"
+                  id="password"
+                  @type="password"
+                  class="input"
+                  autocomplete="off"
+                  spellcheck="false"
+                  data-test-password={{true}}
+                />
+              </div>
+            </div>
+          {{/if}}
+          {{#if (not-eq this.selectedAuthBackend.type "token")}}
+            <AuthFormOptions
+              @customPath={{this.customPath}}
+              @onPathChange={{action (mut this.customPath)}}
+              @selectedAuthIsPath={{this.selectedAuthIsPath}}
+            />
+          {{/if}}
+          <button
+            data-test-auth-submit={{true}}
+            type="submit"
+            disabled={{this.authenticate.isRunning}}
+            class="button is-primary {{if this.authenticate.isRunning 'is-loading'}}"
+            id="auth-submit"
+          >
+            Sign In
+          </button>
+          {{#if (and this.delayAuthMessageReminder.isIdle this.showLoading)}}
+            <AlertInline
+              @paddingTop={{true}}
+              @sizeSmall={{true}}
+              @type="info"
+              @message="If login takes longer than usual, you may need to check your device for an MFA notification, or contact your administrator if login times out."
+              data-test-auth-message="push"
+            />
+          {{/if}}
+        </form>
+      {{/if}}
+    </div>
   {{/if}}
-  </div>
 </div>

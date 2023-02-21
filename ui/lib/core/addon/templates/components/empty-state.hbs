@@ -1,39 +1,42 @@
 <div data-test-component="empty-state" class="empty-state" ...attributes>
   <div class="empty-state-content">
-    {{#if icon}}
+    {{#if this.icon}}
       <div class="empty-state-icon">
-        <Icon @glyph={{icon}} @size="xxl" />
+        <Icon @name={{this.icon}} @size="24" />
         <h3 class="empty-state-title" data-test-empty-state-title>
-          {{title}}
+          {{this.title}}
         </h3>
       </div>
-      {{#if subTitle}}
+      {{#if this.subTitle}}
         <p class="empty-state-subTitle" data-test-empty-state-subText>
-          {{subTitle}}
+          {{this.subTitle}}
         </p>
       {{/if}}
     {{else}}
-    <h3 class="empty-state-title" data-test-empty-state-title>
-      {{title}}
-    </h3>
-    {{#if subTitle}}
-      <p class="empty-state-subTitle" data-test-empty-state-subText>
-        {{subTitle}}
+      <h3 class={{concat "empty-state-title" (if this.subTitle " has-bottom-margin-m")}} data-test-empty-state-title>
+        {{this.title}}
+      </h3>
+      {{#if this.subTitle}}
+        <p class="empty-state-subTitle" data-test-empty-state-subText>
+          {{this.subTitle}}
+        </p>
+      {{/if}}
+    {{/if}}
+    {{#if this.message}}
+      <p
+        class={{concat "empty-state-message" (if this.bottomBorder " has-border-bottom-light")}}
+        data-test-empty-state-message
+      >
+        {{this.message}}
       </p>
     {{/if}}
-    {{/if}}
-    {{#if message}}
-    <p class={{concat "empty-state-message" (if bottomBorder " has-border-bottom-light")}} data-test-empty-state-message>
-      {{message}}
-    </p>
-    {{/if}}
     {{#if (has-block)}}
-      <div class="empty-state-actions">
+      <div class="empty-state-actions" data-test-empty-state-actions>
         {{yield}}
       </div>
-    {{else if emptyActions}}
-      <div class="empty-state-actions">
-        {{component emptyActions}}
+    {{else if this.emptyActions}}
+      <div class="empty-state-actions" data-test-empty-state-actions>
+        {{component this.emptyActions}}
       </div>
     {{/if}}
   </div>

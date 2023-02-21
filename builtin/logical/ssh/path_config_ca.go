@@ -2,16 +2,24 @@ package ssh
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
+	"io"
 
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ssh"
+
+	"github.com/mikesmitty/edkey"
 )
 
 const (
@@ -43,6 +51,16 @@ func pathConfigCA(b *backend) *framework.Path {
 				Type:        framework.TypeBool,
 				Description: `Generate SSH key pair internally rather than use the private_key and public_key fields.`,
 				Default:     true,
+			},
+			"key_type": {
+				Type:        framework.TypeString,
+				Description: `Specifies the desired key type when generating; could be a OpenSSH key type identifier (ssh-rsa, ecdsa-sha2-nistp256, ecdsa-sha2-nistp384, ecdsa-sha2-nistp521, or ssh-ed25519) or an algorithm (rsa, ec, ed25519).`,
+				Default:     "ssh-rsa",
+			},
+			"key_bits": {
+				Type:        framework.TypeInt,
+				Description: `Specifies the desired key bits when generating variable-length keys (such as when key_type="ssh-rsa") or which NIST P-curve to use when key_type="ec" (256, 384, or 521).`,
+				Default:     0,
 			},
 		},
 
@@ -190,7 +208,10 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 	}
 
 	if generateSigningKey {
-		publicKey, privateKey, err = generateSSHKeyPair()
+		keyType := data.Get("key_type").(string)
+		keyBits := data.Get("key_bits").(int)
+
+		publicKey, privateKey, err = generateSSHKeyPair(b.Backend.GetRandomReader(), keyType, keyBits)
 		if err != nil {
 			return nil, err
 		}
@@ -264,19 +285,98 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 	return nil, nil
 }
 
-func generateSSHKeyPair() (string, string, error) {
-	privateSeed, err := rsa.GenerateKey(rand.Reader, 4096)
-	if err != nil {
-		return "", "", err
+func generateSSHKeyPair(randomSource io.Reader, keyType string, keyBits int) (string, string, error) {
+	if randomSource == nil {
+		randomSource = rand.Reader
 	}
 
-	privateBlock := &pem.Block{
-		Type:    "RSA PRIVATE KEY",
-		Headers: nil,
-		Bytes:   x509.MarshalPKCS1PrivateKey(privateSeed),
+	var publicKey crypto.PublicKey
+	var privateBlock *pem.Block
+
+	switch keyType {
+	case ssh.KeyAlgoRSA, "rsa":
+		if keyBits == 0 {
+			keyBits = 4096
+		}
+
+		if keyBits < 2048 {
+			return "", "", fmt.Errorf("refusing to generate weak %v key: %v bits < 2048 bits", keyType, keyBits)
+		}
+
+		privateSeed, err := rsa.GenerateKey(randomSource, keyBits)
+		if err != nil {
+			return "", "", err
+		}
+
+		privateBlock = &pem.Block{
+			Type:    "RSA PRIVATE KEY",
+			Headers: nil,
+			Bytes:   x509.MarshalPKCS1PrivateKey(privateSeed),
+		}
+
+		publicKey = privateSeed.Public()
+	case ssh.KeyAlgoECDSA256, ssh.KeyAlgoECDSA384, ssh.KeyAlgoECDSA521, "ec":
+		var curve elliptic.Curve
+		switch keyType {
+		case ssh.KeyAlgoECDSA256:
+			curve = elliptic.P256()
+		case ssh.KeyAlgoECDSA384:
+			curve = elliptic.P384()
+		case ssh.KeyAlgoECDSA521:
+			curve = elliptic.P521()
+		default:
+			switch keyBits {
+			case 0, 256:
+				curve = elliptic.P256()
+			case 384:
+				curve = elliptic.P384()
+			case 521:
+				curve = elliptic.P521()
+			default:
+				return "", "", fmt.Errorf("unknown ECDSA key pair algorithm and bits: %v / %v", keyType, keyBits)
+			}
+		}
+
+		privateSeed, err := ecdsa.GenerateKey(curve, randomSource)
+		if err != nil {
+			return "", "", err
+		}
+
+		marshalled, err := x509.MarshalECPrivateKey(privateSeed)
+		if err != nil {
+			return "", "", err
+		}
+
+		privateBlock = &pem.Block{
+			Type:    "EC PRIVATE KEY",
+			Headers: nil,
+			Bytes:   marshalled,
+		}
+
+		publicKey = privateSeed.Public()
+	case ssh.KeyAlgoED25519, "ed25519":
+		_, privateSeed, err := ed25519.GenerateKey(randomSource)
+		if err != nil {
+			return "", "", err
+		}
+
+		marshalled := edkey.MarshalED25519PrivateKey(privateSeed)
+		if marshalled == nil {
+			return "", "", errors.New("unable to marshal ed25519 private key")
+		}
+
+		privateBlock = &pem.Block{
+			Type:    "OPENSSH PRIVATE KEY",
+			Headers: nil,
+			Bytes:   marshalled,
+		}
+
+		publicKey = privateSeed.Public()
+	default:
+		return "", "", fmt.Errorf("unknown ssh key pair algorithm: %v", keyType)
 	}
 
-	public, err := ssh.NewPublicKey(&privateSeed.PublicKey)
+	public, err := ssh.NewPublicKey(publicKey)
 	if err != nil {
 		return "", "", err
 	}

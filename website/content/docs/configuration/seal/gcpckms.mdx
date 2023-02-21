@@ -10,6 +10,8 @@ description: >-
 
 # `gcpckms` Seal
 
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documenation for more information.
+
 The GCP Cloud KMS seal configures Vault to use GCP Cloud KMS as the seal
 wrapping mechanism. The GCP Cloud KMS seal is activated by one of the following:
 
@@ -57,6 +59,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `crypto_key` `(string: <required>)`: The GCP CKMS crypto key to use for
   encryption and decryption. May also be specified by the
   `VAULT_GCPCKMS_SEAL_CRYPTO_KEY` environment variable.
+
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 
 ## Authentication &amp; Permissions
 
@@ -108,7 +114,7 @@ rotation is supported for CKMS since the key information. Old keys version must 
 disabled or deleted and are used to decrypt older data. Any new or updated data will be
 encrypted with the primary key version.
 
-## Learn
+## Tutorial
 
-Refer to the [Auto-unseal using GCP Cloud KMS](https://learn.hashicorp.com/vault/operations/autounseal-gcp-kms)
+Refer to the [Auto-unseal using GCP Cloud KMS](/vault/tutorials/auto-unseal/autounseal-gcp-kms)
 guide for a step-by-step tutorial.

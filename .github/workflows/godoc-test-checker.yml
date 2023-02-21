@@ -1,0 +1,27 @@
+name: Check Go Docs for tests
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    # Runs on PRs to main
+    branches:
+      - main
+
+jobs:
+  godoc-test-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: get metadata
+        id: get-metadata
+        run: echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
+      - name: Set Up Go
+        uses: actions/setup-go@v3
+        with:
+          cache: true
+          go-version: ${{ steps.get-metadata.outputs.go-version }}
+      - name: Verify new tests have go docs
+        run: make ci-vet-godoctests

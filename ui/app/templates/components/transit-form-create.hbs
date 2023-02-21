@@ -4,17 +4,28 @@
     <NamespaceReminder @mode="create" @noun="transit key" />
     <div class="field">
       <label for="key-name" class="is-label">Name</label>
-      <Input @id="key-name" @value={{@key.name}} class="input" data-test-transit-key-name={{true}} />
+      <Input id="key-name" @value={{@key.name}} class="input" data-test-transit-key-name={{true}} />
+    </div>
+    <div class="field">
+      <TtlPicker
+        @initialValue="30d"
+        @initialEnabled={{false}}
+        @label="Auto-rotation period"
+        @helperTextDisabled="Key will never be automatically rotated"
+        @helperTextEnabled="Key will be automatically rotated every"
+        @onChange={{@handleAutoRotateChange}}
+        @errorMessage={{if @autoRotateInvalid "Duration must be longer than 1 hour"}}
+      />
     </div>
     <div class="field">
       <label for="key-type" class="is-label">Type</label>
-      <div class="control is-expanded" >
+      <div class="control is-expanded">
         <div class="select is-fullwidth">
           <select
             name="key-type"
             id="key-type"
             onchange={{action (mut @key.type) value="target.value"}}
-            data-test-transit-key-type=true
+            data-test-transit-key-type={{true}}
           >
             <option selected={{eq @key.type "aes128-gcm96"}} value="aes128-gcm96">
               aes128-gcm96
@@ -52,19 +63,21 @@
     </div>
     <div class="field">
       <div class="b-checkbox">
-        <input type="checkbox"
+        <input
+          type="checkbox"
           id="key-exportable"
           class="styled"
           checked={{@key.exportable}}
           onchange={{@setValueOnKey}}
-          data-test-transit-key-exportable=true
+          data-test-transit-key-exportable={{true}}
         />
         <label for="key-exportable" class="is-label">
           Exportable
         </label>
       </div>
     </div>
-    {{#if (or
+    {{#if
+      (or
         (eq @key.type "aes128-gcm96")
         (eq @key.type "aes256-gcm96")
         (eq @key.type "chacha20-poly1305")
@@ -73,12 +86,13 @@
     }}
       <div class="field">
         <div class="b-checkbox">
-          <input type="checkbox"
+          <input
+            type="checkbox"
             id="key-derived"
             class="styled"
             checked={{@key.derived}}
             onchange={{@derivedChange}}
-            data-test-transit-key-derived=true
+            data-test-transit-key-derived={{true}}
           />
           <label for="key-derived" class="is-label">
             Derived
@@ -86,20 +100,16 @@
         </div>
       </div>
     {{/if}}
-    {{#if (or
-        (eq @key.type "aes128-gcm96")
-        (eq @key.type "aes256-gcm96")
-        (eq @key.type "chacha20-poly1305")
-      )
-    }}
+    {{#if (or (eq @key.type "aes128-gcm96") (eq @key.type "aes256-gcm96") (eq @key.type "chacha20-poly1305"))}}
       <div class="field">
         <div class="b-checkbox">
-          <input type="checkbox"
-           data-test-transit-key-convergent-encryption
-           id="key-convergent"
-           class="styled"
-           checked={{@key.convergentEncryption}}
-           onchange={{@convergentEncryptionChange}}
+          <input
+            type="checkbox"
+            data-test-transit-key-convergent-encryption
+            id="key-convergent"
+            class="styled"
+            checked={{@key.convergentEncryption}}
+            onchange={{@convergentEncryptionChange}}
           />
           <label for="key-convergent" class="is-label">
             Enable convergent encryption
@@ -120,7 +130,7 @@
       </button>
     </div>
     <div class="control">
-      <SecretLink @mode="list" @class="button">
+      <SecretLink @mode="list" class="button">
         Cancel
       </SecretLink>
     </div>

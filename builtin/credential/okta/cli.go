@@ -1,12 +1,15 @@
 package okta
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/base62"
+	pwd "github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
-	pwd "github.com/hashicorp/vault/sdk/helper/password"
 )
 
 // CLIHandler struct
@@ -38,20 +41,41 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		"password": password,
 	}
 
-	// Okta totp code
+	// Okta or Google totp code
 	if totp, ok := m["totp"]; ok {
 		data["totp"] = totp
 	}
 
-	// Legacy MFA support
-	mfa_method, ok := m["method"]
-	if ok {
-		data["method"] = mfa_method
+	// provider is an optional parameter
+	if provider, ok := m["provider"]; ok {
+		data["provider"] = provider
 	}
-	mfa_passcode, ok := m["passcode"]
-	if ok {
-		data["passcode"] = mfa_passcode
-	}
+
+	nonce := base62.MustRandom(20)
+	data["nonce"] = nonce
+
+	// Create a done channel to signal termination of the login so that we can
+	// clean up the goroutine
+	doneCh := make(chan struct{})
+	defer close(doneCh)
+
+	go func() {
+		for {
+			timer := time.NewTimer(time.Second)
+			select {
+			case <-doneCh:
+				timer.Stop()
+				return
+			case <-timer.C:
+			}
+
+			resp, _ := c.Logical().Read(fmt.Sprintf("auth/%s/verify/%s", mount, nonce))
+			if resp != nil {
+				fmt.Fprintf(os.Stderr, "In Okta Verify, tap the number %q\n", resp.Data["correct_answer"].(json.Number))
+				return
+			}
+		}
+	}()
 
 	path := fmt.Sprintf("auth/%s/login/%s", mount, username)
 	secret, err := c.Logical().Write(path, data)

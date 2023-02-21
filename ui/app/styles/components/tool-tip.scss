@@ -2,6 +2,7 @@
   font-size: $size-7;
   text-transform: none;
   margin: 8px 0px 0 -4px;
+
   .box {
     position: relative;
     color: $white;
@@ -10,6 +11,11 @@
     padding: 0.5rem;
     line-height: 1.4;
   }
+
+  .fit-content {
+    max-width: fit-content;
+  }
+
   @include css-top-arrow(8px, $grey, 1px, $grey-dark, 20px);
   &.ember-basic-dropdown-content--below.ember-basic-dropdown--transitioning-in {
     animation: drop-fade-above 0.15s;
@@ -22,6 +28,9 @@
   }
   &.ember-basic-dropdown-content--above.ember-basic-dropdown--transitioning-out {
     animation: drop-fade-below 0.15s reverse;
+  }
+  &.smaller-font {
+    font-size: $size-8;
   }
 }
 

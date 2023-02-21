@@ -9,28 +9,59 @@ description: |-
 
 # read
 
-The `read` command reads data from Vault at the given path. This can be used to
-read secrets, generate dynamic credentials, get configuration details, and more.
-
-For a full list of examples and paths, please see the documentation that
-corresponds to the secrets engine in use.
+The `read` command reads data from Vault at the given path (wrapper command for
+HTTP GET). You can use the command to read secrets, generate dynamic
+credentials, get configuration details, and more.
 
 ## Examples
 
-Read a secret from the static secrets engine:
+Read entity details of a given ID:
 
 ```shell-session
-$ vault read secret/my-secret
-Key                 Value
----                 -----
-refresh_interval    768h
-foo                 bar
+$ vault read identity/entity/id/2f09126d-d161-abb8-2241-555886491d97
 ```
+
+Generate dynamic AWS credentials for a `my-role`:
+
+```shell-session
+$ vault read aws/creds/my-role
+```
+
+### API versus CLI
+
+Assuming that you have K/V version 2 (`kv-v2`) secrets engine enabled at
+`secret/`, the following command reads secrets at the `secret/data/customers`
+API path:
+
+```shell-session
+$ vault read secret/data/customers
+```
+
+This is equivalent to:
+
+```shell-session
+$ curl --request GET --header "X-Vault-Token: $VAULT_TOKEN" \
+    $VAULT_ADDR/v1/secret/data/customers
+```
+
+Since K/V secrets engine is a commonly used feature, Vault CLI provides the
+[`kv`](/vault/docs/commands/kv) command. Read secrets from the `secret/data/customers`
+path using the `kv` CLI command:
+
+```shell-session
+$ vault kv get -mount=secret customers
+```
+
+-> **Comparison:** All three commands retrieve the same data, but display the
+output in a different format. By default, `vault read` prints output in
+key-value format. The `curl` command prints the response in JSON. Since the
+`kv` command is designed to handle operations associated with K/V secrets
+engine, it prints the output in more structured format that is easy to read.
 
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
 ### Output Options
 
@@ -39,5 +70,8 @@ flags](/docs/commands) included on all commands.
   will not have a trailing newline making it ideal for piping to other processes.
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
-  `VAULT_FORMAT` environment variable.
+  formats are "table", "json", "yaml", or "raw". This can also be specified
+  via the `VAULT_FORMAT` environment variable.
+
+For a full list of examples and paths, please see the documentation that
+corresponds to the secrets engine in use.

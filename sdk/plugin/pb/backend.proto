@@ -4,6 +4,7 @@ package pb;
 option go_package = "github.com/hashicorp/vault/sdk/plugin/pb";
 
 import "google/protobuf/timestamp.proto";
+import "sdk/logical/event.proto";
 import "sdk/logical/identity.proto";
 import "sdk/logical/plugin.proto";
 
@@ -47,6 +48,13 @@ message Paths {
 	// should be seal wrapped with extra encryption. It is exact matching
 	// unless it ends with '/' in which case it will be treated as a prefix.
 	repeated string seal_wrap_storage = 4;
+
+	// WriteForwardedStorage are storage paths that, when running on a PR
+	// Secondary cluster, cause a GRPC call up to the PR Primary cluster's
+	// active node to handle storage.Put(...) and storage.Delete(...) events.
+	//
+	// See extended note in /sdk/logical/logical.go.
+	repeated string write_forwarded_storage = 5;
 }
 
 message Request {
@@ -235,11 +243,15 @@ message TokenEntry {
 	string namespace_id = 16;
 	string cubbyhole_id = 17;
 	uint32 type = 18;
+	map<string, string> internal_meta = 19;
+	string inline_policy = 20;
+	bool no_identity_policies = 21;
+	string external_id = 22;
 }
 
 message LeaseOptions {
 	int64 TTL = 1;
-	
+
 	bool renewable = 2;
 
 	int64 increment = 3;
@@ -385,7 +397,7 @@ message HandleExistenceCheckReply {
 
 // SetupArgs is the args for Setup method.
 message SetupArgs {
-	uint32 broker_id = 1; 
+	uint32 broker_id = 1;
 	map<string, string> Config = 2;
 	string backendUUID = 3;
 }
@@ -563,6 +575,12 @@ message GeneratePasswordFromPolicyReply {
 	string password = 1;
 }
 
+message ClusterInfoReply {
+	string cluster_name = 1;
+	string cluster_id = 2;
+	string err = 3;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -615,9 +633,53 @@ service SystemView {
 
 	// GeneratePasswordFromPolicy generates a password from an existing password policy
 	rpc GeneratePasswordFromPolicy(GeneratePasswordFromPolicyRequest) returns (GeneratePasswordFromPolicyReply);
+
+	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
+	rpc ClusterInfo(Empty) returns (ClusterInfoReply);
 }
 
 message Connection {
 	// RemoteAddr is the network address that sent the request.
 	string remote_addr = 1;
+
+	// RemotePort is the network port that sent the request.
+	int32 remote_port = 3;
+
+	// ConnectionState is the marshalled tls.ConnectionState from the original
+	// request
+	ConnectionState connection_state = 2;
+}
+
+message ConnectionState {
+	uint32           version                        = 1;
+	bool             handshake_complete             = 2;
+	bool             did_resume                     = 3;
+	uint32           cipher_suite                   = 4;
+	string           negotiated_protocol            = 5;
+	bool             negotiated_protocol_is_mutual  = 6;
+	string           server_name                    = 7;
+	CertificateChain peer_certificates              = 8;
+
+	repeated CertificateChain verified_chains               =  9;
+	repeated bytes            signed_certificate_timestamps = 10;
+
+	bytes ocsp_response = 11;
+	bytes tls_unique    = 12;
+}
+
+message Certificate {
+	bytes asn1_data = 1;
+}
+
+message CertificateChain {
+	repeated Certificate certificates = 1;
+}
+
+message SendEventRequest {
+	string event_type = 1;
+	logical.EventData event = 2;
+}
+
+service Events {
+	rpc SendEvent(SendEventRequest) returns (Empty);
 }

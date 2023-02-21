@@ -1,0 +1,6 @@
+```release-note:change
+plugins: `GET /sys/plugins/catalog` endpoint now returns an additional `detailed` field in the response data with a list of additional plugin metadata.
+```
+```release-note:change
+plugins: `GET /sys/plugins/catalog/:type/:name` endpoint now returns an additional `version` field in the response data.
+```

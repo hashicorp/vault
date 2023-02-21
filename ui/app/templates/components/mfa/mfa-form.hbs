@@ -1,0 +1,74 @@
+<div class="auth-form" data-test-mfa-form>
+  <div class="box is-marginless is-shadowless">
+    <p data-test-mfa-description>
+      {{this.description}}
+    </p>
+    <form id="auth-form" {{on "submit" this.submit}}>
+      <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
+      <div class="field has-top-margin-l">
+        {{#each this.constraints as |constraint index|}}
+          {{#if index}}
+            <hr />
+          {{/if}}
+          {{#if (gt constraint.methods.length 1)}}
+            <Select
+              @label="Multi-factor authentication method"
+              @options={{constraint.methods}}
+              @valueAttribute={{"id"}}
+              @labelAttribute={{"label"}}
+              @isFullwidth={{true}}
+              @noDefault={{true}}
+              @selectedValue={{constraint.selectedId}}
+              @onChange={{fn this.onSelect constraint}}
+              data-test-mfa-select={{index}}
+            />
+          {{else}}
+            <label for="passcode" class="is-label" data-test-mfa-label>
+              {{constraint.selectedMethod.label}}
+            </label>
+          {{/if}}
+          {{#if constraint.selectedMethod.uses_passcode}}
+            <div class="control">
+              {{! template-lint-disable no-autofocus-attribute}}
+              <Input
+                id="passcode"
+                name="passcode"
+                class="input"
+                autocomplete="off"
+                placeholder={{if (gt constraint.methods.length 1) "Enter passcode"}}
+                spellcheck="false"
+                autofocus="true"
+                disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
+                @value={{constraint.passcode}}
+                data-test-mfa-passcode={{index}}
+              />
+              {{! template-lint-enable no-autofocus-attribute}}
+            </div>
+          {{else if (eq constraint.methods.length 1)}}
+            <p class="has-text-grey-400" data-test-mfa-push-instruction>
+              Check device for push notification
+            </p>
+          {{/if}}
+        {{/each}}
+      </div>
+      {{#if this.newCodeDelay.isRunning}}
+        <div>
+          <AlertInline @type="danger" @sizeSmall={{true}} @message={{this.codeDelayMessage}} />
+        </div>
+      {{/if}}
+      <button
+        id="validate"
+        type="submit"
+        disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
+        class="button is-primary {{if this.validate.isRunning 'is-loading'}}"
+        data-test-mfa-validate
+      >
+        Verify
+      </button>
+      {{#if this.newCodeDelay.isRunning}}
+        <Icon @name="delay" class="has-text-grey" />
+        <span class="has-text-grey is-v-centered" data-test-mfa-countdown>{{this.countdown}}</span>
+      {{/if}}
+    </form>
+  </div>
+</div>

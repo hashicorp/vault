@@ -2,6 +2,10 @@
 .subtitle:not(:last-child) {
   display: block;
   margin-bottom: 1rem;
+
+  &.has-bottom-margin-xs {
+    margin-bottom: $spacing-xs;
+  }
 }
 
 .title {
@@ -11,8 +15,17 @@
     color: $black;
     text-decoration: none;
   }
+  .has-font-weight-normal {
+    font-weight: $font-weight-normal;
+  }
 }
 
 .form-section .title {
   margin-bottom: $spacing-s;
+}
+
+.is-subtitle-gray {
+  text-transform: uppercase;
+  font-size: $size-7;
+  color: $ui-gray-500;
 }

@@ -1,9 +1,5 @@
 [
   {
-    "title": "Overview",
-    "path": "index"
-  },
-  {
     "title": "Client Libraries",
     "path": "libraries"
   },
@@ -102,6 +98,14 @@
             "path": "secret/databases/postgresql"
           },
           {
+            "title": "Redis",
+            "path": "secret/databases/redis"
+          },
+          {
+            "title": "Redis ElastiCache",
+            "path": "secret/databases/rediselasticache"
+          },
+          {
             "title": "Redshift",
             "path": "secret/databases/redshift"
           },
@@ -118,44 +122,6 @@
       {
         "title": "Google Cloud KMS",
         "path": "secret/gcpkms"
-      },
-      {
-        "title": "Key Management <sup>ENTERPRISE</sup>",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secret/key-management"
-          },
-          {
-            "title": "Azure Key Vault",
-            "path": "secret/key-management/azurekeyvault"
-          },
-          {
-            "title": "AWS KMS",
-            "path": "secret/key-management/awskms"
-          }
-        ]
-      },
-      {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
-        "path": "secret/kmip"
-      },
-      {
-        "title": "Key/Value",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secret/kv"
-          },
-          {
-            "title": "K/V Version 1",
-            "path": "secret/kv/kv-v1"
-          },
-          {
-            "title": "K/V Version 2",
-            "path": "secret/kv/kv-v2"
-          }
-        ]
       },
       {
         "title": "Identity",
@@ -187,8 +153,97 @@
           {
             "title": "Lookup",
             "path": "secret/identity/lookup"
+          },
+          {
+            "title": "OIDC Provider",
+            "path": "secret/identity/oidc-provider"
+          },
+          {
+            "title": "MFA",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "secret/identity/mfa"
+              },
+              {
+                "title": "Duo",
+                "path": "secret/identity/mfa/duo"
+              },
+              {
+                "title": "Okta",
+                "path": "secret/identity/mfa/okta"
+              },
+              {
+                "title": "PingID",
+                "path": "secret/identity/mfa/pingid"
+              },
+              {
+                "title": "TOTP",
+                "path": "secret/identity/mfa/totp"
+              },
+              {
+                "title": "Login Enforcement",
+                "path": "secret/identity/mfa/login-enforcement"
+              }
+            ]
           }
         ]
+      },
+      {
+        "title": "Key Management",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/key-management"
+          },
+          {
+            "title": "Azure Key Vault",
+            "path": "secret/key-management/azurekeyvault"
+          },
+          {
+            "title": "AWS KMS",
+            "path": "secret/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secret/key-management/gcpkms"
+          }
+        ]
+      },
+      {
+        "title": "Key/Value",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/kv"
+          },
+          {
+            "title": "K/V Version 1",
+            "path": "secret/kv/kv-v1"
+          },
+          {
+            "title": "K/V Version 2",
+            "path": "secret/kv/kv-v2"
+          }
+        ]
+      },
+      {
+        "title": "KMIP",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "secret/kmip"
+      },
+      {
+        "title": "Kubernetes",
+        "path": "secret/kubernetes"
       },
       {
         "title": "MongoDB Atlas",
@@ -199,8 +254,8 @@
         "path": "secret/nomad"
       },
       {
-        "title": "OpenLDAP",
-        "path": "secret/openldap"
+        "title": "LDAP",
+        "path": "secret/ldap"
       },
       {
         "title": "PKI",
@@ -223,7 +278,12 @@
         "path": "secret/totp"
       },
       {
-        "title": "Transform <sup>ENTERPRISE</sup>",
+        "title": "Transform",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "secret/transform"
       },
       {
@@ -308,7 +368,12 @@
         "path": "auth/userpass"
       },
       {
-        "title": "App ID <sup>DEPRECATED</sup>",
+        "title": "App ID",
+        "badge": {
+          "text": "DEPRECATED",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "auth/app-id"
       }
     ]
@@ -357,6 +422,15 @@
         "path": "system/config-cors"
       },
       {
+        "title": "<code>/sys/config/group-policy-application</code>",
+        "path": "system/config-group-policy-application",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "<code>/sys/config/reload</code>",
         "path": "system/config-reload"
       },
@@ -373,9 +447,12 @@
         "path": "system/control-group"
       },
       {
+        "title": "<code>/sys/experiments</code>",
+        "path": "system/experiments"
+      },
+      {
         "title": "<code>/sys/generate-recovery-token</code>",
-        "path": "system/generate-recovery-token",
-        "hidden": true
+        "path": "system/generate-recovery-token"
       },
       {
         "title": "<code>/sys/generate-root</code>",
@@ -390,12 +467,29 @@
         "path": "system/host-info"
       },
       {
+        "title": "<code>/sys/in-flight-req</code>",
+        "path": "system/in-flight-req"
+      },
+      {
         "title": "<code>/sys/init</code>",
         "path": "system/init"
       },
       {
         "title": "<code>/sys/internal/counters</code>",
         "path": "system/internal-counters"
+      },
+      {
+        "title": "<code>/sys/internal/inspect</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "system/inspect"
+          },
+          {
+            "title": "<code>/sys/internal/inspect/router</code>",
+            "path": "system/inspect/router"
+          }
+        ]
       },
       {
         "title": "<code>/sys/internal/specs/openapi</code>",
@@ -410,8 +504,20 @@
         "path": "system/internal-ui-mounts"
       },
       {
+        "title": "<code>/sys/internal/ui/namespaces</code>",
+        "path": "system/internal-ui-namespaces"
+      },
+      {
+        "title": "<code>/sys/internal/ui/resultant-acl</code>",
+        "path": "system/internal-ui-resultant-acl"
+      },
+      {
         "title": "<code>/sys/key-status</code>",
         "path": "system/key-status"
+      },
+      {
+        "title": "<code>/sys/ha-status</code>",
+        "path": "system/ha-status"
       },
       {
         "title": "<code>/sys/leader</code>",
@@ -422,8 +528,25 @@
         "path": "system/leases"
       },
       {
-        "title": "<code>/sys/license</code>",
+        "title": "<code>/sys/license/status</code>",
         "path": "system/license"
+      },
+      {
+        "title": "<code>/sys/locked-users</code>",
+        "path": "system/user-lockout"
+      },
+      {
+        "title": "<code>/sys/loggers</code>",
+        "path": "system/loggers"
+      },
+      {
+        "title": "<code>/sys/managed-keys</code>",
+        "path": "system/managed-keys",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/metrics</code>",
@@ -451,6 +574,10 @@
           {
             "title": "<code>/sys/mfa/method/totp</code>",
             "path": "system/mfa/totp"
+          },
+          {
+            "title": "<code>/sys/mfa/validate</code>",
+            "path": "system/mfa/validate"
           }
         ]
       },
@@ -587,6 +714,10 @@
       {
         "title": "<code>/sys/unseal</code>",
         "path": "system/unseal"
+      },
+      {
+        "title": "<code>/sys/version-history</code>",
+        "path": "system/version-history"
       },
       {
         "title": "<code>/sys/wrapping/lookup</code>",

@@ -786,6 +786,40 @@ func TestBackend_urlPassedNonGeneratedKeyMissingAccountNameandIssuer(t *testing.
 	})
 }
 
+func TestBackend_urlPassedNonGeneratedKeyMissingAccountNameandIssuerandPadding(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	urlString := "otpauth://totp/?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZAU&algorithm=SHA512&digits=6&period=60"
+
+	keyData := map[string]interface{}{
+		"url":      urlString,
+		"generate": false,
+	}
+
+	expected := map[string]interface{}{
+		"issuer":       "",
+		"account_name": "",
+		"digits":       otplib.DigitsSix,
+		"period":       60,
+		"algorithm":    otplib.AlgorithmSHA512,
+		"key":          "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZAU===",
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateKey(t, "test", keyData, false),
+			testAccStepReadKey(t, "test", expected),
+			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+		},
+	})
+}
+
 func TestBackend_generatedKeyInvalidSkew(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}

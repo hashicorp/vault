@@ -218,13 +218,12 @@ func (c *Core) setupCluster(ctx context.Context) error {
 
 		// Create a certificate
 		if c.localClusterCert.Load().([]byte) == nil {
-			c.logger.Debug("generating local cluster certificate")
-
 			host, err := uuid.GenerateUUID()
 			if err != nil {
 				return err
 			}
 			host = fmt.Sprintf("fw-%s", host)
+			c.logger.Debug("generating local cluster certificate", "host", host)
 			template := &x509.Certificate{
 				Subject: pkix.Name{
 					CommonName: host,
@@ -319,13 +318,18 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	networkLayer := c.clusterNetworkLayer
 
 	if networkLayer == nil {
-		networkLayer = cluster.NewTCPLayer(c.clusterListenerAddrs, c.logger.Named("cluster-listener.tcp"))
+		tcpLogger := c.logger.Named("cluster-listener.tcp")
+		networkLayer = cluster.NewTCPLayer(c.clusterListenerAddrs, tcpLogger)
+		c.AddLogger(tcpLogger)
 	}
 
+	listenerLogger := c.logger.Named("cluster-listener")
 	c.clusterListener.Store(cluster.NewListener(networkLayer,
 		c.clusterCipherSuites,
-		c.logger.Named("cluster-listener"),
+		listenerLogger,
 		5*c.clusterHeartbeatInterval))
+
+	c.AddLogger(listenerLogger)
 
 	err := c.getClusterListener().Run(ctx)
 	if err != nil {
@@ -383,4 +387,8 @@ func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 
 func (c *Core) SetClusterHandler(handler http.Handler) {
 	c.clusterHandler = handler
+}
+
+func (c *Core) ClusterID() string {
+	return c.clusterID.Load()
 }

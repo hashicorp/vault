@@ -10,6 +10,7 @@ export default Controller.extend({
   router: service(),
   permissions: service(),
   namespaceService: service('namespace'),
+  flashMessages: service(),
 
   vaultVersion: service('version'),
   console: service(),
@@ -25,17 +26,17 @@ export default Controller.extend({
 
   namespaceQueryParam: '',
 
-  onQPChange: observer('namespaceQueryParam', function() {
+  onQPChange: observer('namespaceQueryParam', function () {
     this.namespaceService.setNamespace(this.namespaceQueryParam);
   }),
 
   consoleOpen: alias('console.isOpen'),
 
-  activeCluster: computed('auth.activeCluster', function() {
+  activeCluster: computed('auth.activeCluster', function () {
     return this.store.peekRecord('cluster', this.auth.activeCluster);
   }),
 
-  activeClusterName: computed('activeCluster', function() {
+  activeClusterName: computed('activeCluster', function () {
     const activeCluster = this.activeCluster;
     return activeCluster ? activeCluster.get('name') : null;
   }),
@@ -45,7 +46,7 @@ export default Controller.extend({
     'activeClusterName',
     'auth.currentToken',
     'activeCluster.{dr.isSecondary,needsInit,sealed}',
-    function() {
+    function () {
       if (this.activeCluster.dr?.isSecondary || this.activeCluster.needsInit || this.activeCluster.sealed) {
         return false;
       }

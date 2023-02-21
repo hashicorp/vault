@@ -42,6 +42,8 @@
 
 .empty-state-actions {
   margin-top: $spacing-xs;
+  display: flex;
+  justify-content: space-between;
 
   a,
   .link,
@@ -54,10 +56,12 @@
 
   > * + * {
     margin-left: $spacing-s;
+    margin-right: $spacing-s;
   }
 }
 
-.empty-state-icon > .hs-icon {
+.empty-state-icon > .hs-icon,
+.empty-state-icon > .flight-icon {
   float: left;
   margin-right: $spacing-xs;
 }

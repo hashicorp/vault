@@ -1,0 +1,3 @@
+```release-note:improvement
+core/identity: Add machine-readable output to body of response upon alias clash during entity merge
+```

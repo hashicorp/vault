@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -27,20 +29,20 @@ const (
 	adviceKey                 = attribute.Key("advice")
 )
 
-var (
-	MainSection = trace.WithAttributes(attribute.Key("diagnose").String("main-section"))
-)
+var MainSection = trace.WithAttributes(attribute.Key("diagnose").String("main-section"))
 
-var diagnoseSession = struct{}{}
-var noopTracer = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
+var (
+	diagnoseSession = struct{}{}
+	noopTracer      = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
+)
 
 type testFunction func(context.Context) error
 
 type Session struct {
-	tc     *TelemetryCollector
-	tracer trace.Tracer
-	tp     *sdktrace.TracerProvider
-	skip   map[string]bool
+	tc          *TelemetryCollector
+	tracer      trace.Tracer
+	tp          *sdktrace.TracerProvider
+	SkipFilters []string
 }
 
 // New initializes a Diagnose tracing session.  In particular this wires a TelemetryCollector, which
@@ -48,10 +50,10 @@ type Session struct {
 // when the outermost span ends.
 func New(w io.Writer) *Session {
 	tc := NewTelemetryCollector(w)
-	//so, _ := stdout.NewExporter(stdout.WithPrettyPrint())
+	// so, _ := stdout.NewExporter(stdout.WithPrettyPrint())
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		//sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(so)),
+		// sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(so)),
 		sdktrace.WithSpanProcessor(tc),
 	)
 	tracer := tp.Tracer("vault-diagnose")
@@ -59,21 +61,14 @@ func New(w io.Writer) *Session {
 		tp:     tp,
 		tc:     tc,
 		tracer: tracer,
-		skip:   make(map[string]bool),
 	}
 	return sess
 }
 
-func (s *Session) SetSkipList(ls []string) {
-	for _, e := range ls {
-		s.skip[e] = true
-	}
-}
-
-// IsSkipped returns true if skipName is present in the skip list.  Can be used in combination with Skip to mark a
-// span skipped and conditionally skip some logic.
-func (s *Session) IsSkipped(skipName string) bool {
-	return s.skip[skipName]
+// IsSkipped returns true if skipName is present in the SkipFilters list.  Can be used in combination with Skip to mark a
+// span skipped and conditionally skips some logic.
+func (s *Session) IsSkipped(spanName string) bool {
+	return strutil.StrListContainsCaseInsensitive(s.SkipFilters, spanName)
 }
 
 // Context returns a new context with a defined diagnose session
@@ -85,9 +80,7 @@ func Context(ctx context.Context, sess *Session) context.Context {
 func CurrentSession(ctx context.Context) *Session {
 	sessionCtxVal := ctx.Value(diagnoseSession)
 	if sessionCtxVal != nil {
-
 		return sessionCtxVal.(*Session)
-
 	}
 	return nil
 }
@@ -100,7 +93,7 @@ func (s *Session) Finalize(ctx context.Context) *Result {
 }
 
 // StartSpan starts a "diagnose" span, which is really just an OpenTelemetry Tracing span.
-func StartSpan(ctx context.Context, spanName string, options ...trace.SpanOption) (context.Context, trace.Span) {
+func StartSpan(ctx context.Context, spanName string, options ...trace.SpanStartOption) (context.Context, trace.Span) {
 	session := CurrentSession(ctx)
 	if session != nil {
 		return session.tracer.Start(ctx, spanName, options...)
@@ -190,6 +183,12 @@ func addSpotCheckResult(ctx context.Context, eventName, checkName, message strin
 }
 
 func SpotCheck(ctx context.Context, checkName string, f func() error) error {
+	sess := CurrentSession(ctx)
+	if sess.IsSkipped(checkName) {
+		SpotSkipped(ctx, checkName, "skipped as requested")
+		return nil
+	}
+
 	err := f()
 	if err != nil {
 		SpotError(ctx, checkName, err)
@@ -202,9 +201,14 @@ func SpotCheck(ctx context.Context, checkName string, f func() error) error {
 
 // Test creates a new named span, and executes the provided function within it.  If the function returns an error,
 // the span is considered to have failed.
-func Test(ctx context.Context, spanName string, function testFunction, options ...trace.SpanOption) error {
+func Test(ctx context.Context, spanName string, function testFunction, options ...trace.SpanStartOption) error {
 	ctx, span := StartSpan(ctx, spanName, options...)
 	defer span.End()
+	sess := CurrentSession(ctx)
+	if sess.IsSkipped(spanName) {
+		Skipped(ctx, "skipped as requested")
+		return nil
+	}
 
 	err := function(ctx)
 	if err != nil {
@@ -225,25 +229,21 @@ func WithTimeout(d time.Duration, f testFunction) testFunction {
 		go func() { rch <- f(ctx) }()
 		select {
 		case <-t.C:
-			return fmt.Errorf("timed out after %s", d.String())
+			return fmt.Errorf("Timeout after %s.", d.String())
 		case err := <-rch:
 			return err
 		}
 	}
 }
 
-// Skippable wraps a Test function with logic that will not run the test if the skipName
-// was in the session's skip list
-func Skippable(skipName string, f testFunction) testFunction {
-	return func(ctx context.Context) error {
-		session := CurrentSession(ctx)
-		if session != nil {
-			if !session.IsSkipped(skipName) {
-				return f(ctx)
-			} else {
-				Skipped(ctx, "skipped as requested")
-			}
-		}
-		return nil
+// CapitalizeFirstLetter returns a string with the first letter capitalized
+func CapitalizeFirstLetter(msg string) string {
+	words := strings.Split(msg, " ")
+	if len(words) == 0 {
+		return ""
 	}
+	if len(words) > 1 {
+		return strings.Title(words[0]) + " " + strings.Join(words[1:], " ")
+	}
+	return strings.Title(words[0])
 }

@@ -1,65 +1,81 @@
 <Confirm as |c|>
-<div class="popup-menu-content">
-  <div class="box">
-    <div class="menu-label">
-      {{this.auth.authData.displayName}}
-    </div>
-    <nav class="menu">
-      <ul class="menu-list">
-        {{#if this.auth.allowExpiration }}
-          <li class="action">
-            <AlertBanner @type="warning" @message="We've stopped auto-renewing your token due to inactivity.
+  <div class="popup-menu-content">
+    <div class="box">
+      <div class="menu-label">
+        {{this.auth.authData.displayName}}
+      </div>
+      <nav class="menu">
+        <ul class="menu-list">
+          {{#if this.auth.allowExpiration}}
+            <li class="action">
+              <AlertBanner
+                @type="warning"
+                @message="We've stopped auto-renewing your token due to inactivity.
                 It will expire in {{date-from-now this.auth.tokenExpirationDate interval=1000 hideSuffix=true}}.
-                On {{date-format this.auth.tokenExpirationDate 'MMMM Do yyyy, h:mm:ss a'}}" />
-          </li> 
-        {{/if}}
-        <li class="action">
-          <button type="button" class="link" onclick={{action "restartGuide"}}>
-            Restart guide
-          </button>
-        </li>
-        <li class="action">
-          <CopyButton @clipboardText={{this.auth.currentToken}} class="link" @buttonType="button" @success={{action (set-flash-message 'Token copied!')}}>
-            Copy token
-          </CopyButton>
-        </li>
-        {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
-          {{#if this.auth.authData.renewable}}
-            <li class="action">
-              <button type="button" {{action "renewToken"}} class="link button {{if this.isRenewing 'is-loading'}}">
-                Renew token
-              </button>
-            </li>
-            <li class="action">
-              <c.Message
-                @id={{get this.auth 'authData.displayName'}}
-                @title={{concat "Revoke " (get this.auth 'authData.displayName') "?"}}
-                @onConfirm={{action "revokeToken"}}
-                @message="You will not be able to log in again with this token."
-                @triggerText="Revoke token"
-                @confirmButtonText='Revoke'
-                />
-            </li>
-          {{else}}
-            <li class="action text-right">
-              <c.Message
-                @id={{get this.auth 'authData.displayName'}}
-                @title={{concat "Revoke " (get this.auth 'authData.displayName') "?"}}
-                @onConfirm={{action "revokeToken"}}
-                @message="You will not be able to log in again with this token."
-                @triggerText="Revoke token"
-                @confirmButtonText='Revoke'
-                />
+                On {{date-format this.auth.tokenExpirationDate 'MMMM do yyyy, h:mm:ss a'}}"
+              />
             </li>
           {{/if}}
-        {{/if}}
-        <li class="action">
-          <LinkTo @route="vault.cluster.logout" @model={{@activeClusterName}} @id="logout" class="is-destroy" @invokeAction={{@onLinkClick}}>
-            Sign out
-          </LinkTo>
-        </li>
-      </ul>
-    </nav>
+          {{#if this.hasEntityId}}
+            <li class="action">
+              <LinkTo @route="vault.cluster.mfa-setup" data-test-status-link="mfa">
+                Multi-factor authentication
+              </LinkTo>
+            </li>
+          {{/if}}
+          <li class="action">
+            <CopyButton
+              @clipboardText={{this.auth.currentToken}}
+              class="link"
+              @buttonType="button"
+              @success={{action (set-flash-message "Token copied!")}}
+            >
+              Copy token
+            </CopyButton>
+          </li>
+          {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
+            {{#if this.auth.authData.renewable}}
+              <li class="action">
+                <button type="button" {{on "click" this.renewToken}} class="link button {{if this.isRenewing 'is-loading'}}">
+                  Renew token
+                </button>
+              </li>
+              <li class="action">
+                <c.Message
+                  @id={{get this.auth "authData.displayName"}}
+                  @title={{concat "Revoke " (get this.auth "authData.displayName") "?"}}
+                  @onConfirm={{action "revokeToken"}}
+                  @message="You will not be able to log in again with this token."
+                  @triggerText="Revoke token"
+                  @confirmButtonText="Revoke"
+                />
+              </li>
+            {{else}}
+              <li class="action text-right">
+                <c.Message
+                  @id={{get this.auth "authData.displayName"}}
+                  @title={{concat "Revoke " (get this.auth "authData.displayName") "?"}}
+                  @onConfirm={{action "revokeToken"}}
+                  @message="You will not be able to log in again with this token."
+                  @triggerText="Revoke token"
+                  @confirmButtonText="Revoke"
+                />
+              </li>
+            {{/if}}
+          {{/if}}
+          <li class="action">
+            <LinkTo
+              @route="vault.cluster.logout"
+              @model={{@activeClusterName}}
+              id="logout"
+              class="is-destroy"
+              {{on "click" @onLinkClick}}
+            >
+              Sign out
+            </LinkTo>
+          </li>
+        </ul>
+      </nav>
+    </div>
   </div>
-</div>
 </Confirm>

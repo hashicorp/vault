@@ -1,0 +1,3 @@
+```release-note:bug
+plugins/kv: KV v2 returns 404 instead of 500 for request paths that incorrectly include a trailing slash.
+```

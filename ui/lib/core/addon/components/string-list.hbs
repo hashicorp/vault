@@ -1,0 +1,61 @@
+<div
+  class="field string-list form-section"
+  data-test-component="string-list"
+  {{did-insert this.autoSize}}
+  {{did-update this.autoSizeUpdate}}
+  data-test-input
+  ...attributes
+>
+  {{#if @label}}
+    <label class="is-label" data-test-string-list-label="true">
+      {{@label}}
+      {{#if this.helpText}}
+        <InfoTooltip>{{this.helpText}}</InfoTooltip>
+      {{/if}}
+    </label>
+    {{#if @subText}}
+      <p class="sub-text">
+        {{@subText}}
+      </p>
+    {{/if}}
+  {{/if}}
+  {{#if @warning}}
+    <AlertBanner @type="warning" @message={{@warning}} />
+  {{/if}}
+  {{#each this.inputList as |data index|}}
+    <div class="field is-grouped" data-test-string-list-row={{index}}>
+      <div class="control is-expanded">
+        <Textarea
+          data-test-string-list-input={{index}}
+          class="input"
+          @value={{data.value}}
+          name={{concat this.elementId "-" index}}
+          id={{concat this.elementId "-" index}}
+          {{on "keyup" (action "inputChanged" index)}}
+          {{on "change" (action "inputChanged" index)}}
+        />
+      </div>
+      <div class="control">
+        {{#if (eq (inc index) this.inputList.length)}}
+          <button
+            type="button"
+            class="button is-outlined is-primary"
+            data-test-string-list-button="add"
+            {{on "click" this.addInput}}
+          >
+            Add
+          </button>
+        {{else}}
+          <button
+            type="button"
+            class="button is-expanded is-icon"
+            data-test-string-list-button="delete"
+            {{on "click" (fn this.removeInput index)}}
+          >
+            <Icon @name="trash" />
+          </button>
+        {{/if}}
+      </div>
+    </div>
+  {{/each}}
+</div>

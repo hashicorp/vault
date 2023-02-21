@@ -1,0 +1,3 @@
+```release-note:bug
+core: pre-calculate namespace specific paths when tainting a route during postUnseal
+```

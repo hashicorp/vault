@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/ssh: Support for `add_before_duration` in SSH
+```

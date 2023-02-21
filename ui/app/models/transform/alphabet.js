@@ -6,13 +6,12 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const M = Model.extend({
   idPrefix: 'alphabet/',
-  idForNav: computed('id', 'idPrefix', function() {
-    let modelId = this.id || '';
+  idForNav: computed('id', 'idPrefix', function () {
+    const modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
   name: attr('string', {
-    fieldValue: 'id',
     readOnly: true,
     subText: 'The alphabet name. Keep in mind that spaces are not allowed and this cannot be edited later.',
   }),
@@ -22,8 +21,8 @@ const M = Model.extend({
       'Provide the set of valid UTF-8 characters contained within both the input and transformed value. Read more.',
   }),
 
-  attrs: computed(function() {
-    let keys = ['name', 'alphabet'];
+  attrs: computed(function () {
+    const keys = ['name', 'alphabet'];
     return expandAttributeMeta(this, keys);
   }),
 

@@ -1,4 +1,4 @@
-import { settled, currentURL, currentRouteName, visit } from '@ember/test-helpers';
+import { settled, currentURL, currentRouteName, visit, waitUntil } from '@ember/test-helpers';
 import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -17,10 +17,10 @@ const authFormComponent = create(authForm);
 const controlGroupComponent = create(controlGroup);
 const controlGroupSuccessComponent = create(controlGroupSuccess);
 
-module('Acceptance | Enterprise | control groups', function(hooks) {
+module('Acceptance | Enterprise | control groups', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
@@ -68,10 +68,10 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
 
   const ADMIN_USER = 'authorizer';
   const ADMIN_PASSWORD = 'test';
-  const setupControlGroup = async context => {
-    let userpassAccessor;
+  const setupControlGroup = async (context) => {
     await visit('/vault/secrets');
     await consoleComponent.toggle();
+    await settled();
     await consoleComponent.runCommands([
       //enable kv-v1 mount and write a secret
       'write sys/mounts/kv type=kv',
@@ -88,14 +88,14 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
       'read -field=accessor sys/internal/ui/mounts/auth/userpass',
     ]);
     await settled();
-    userpassAccessor = consoleComponent.lastTextOutput;
+    const userpassAccessor = consoleComponent.lastTextOutput;
 
     await consoleComponent.runCommands([
       // lookup entity id for our authorizer
       `write -field=id identity/lookup/entity name=${ADMIN_USER}`,
     ]);
     await settled();
-    let authorizerEntityId = consoleComponent.lastTextOutput;
+    const authorizerEntityId = consoleComponent.lastTextOutput;
     await consoleComponent.runCommands([
       // create alias for authorizor and add them to the managers group
       `write identity/alias mount_accessor=${userpassAccessor} entity_id=${authorizerEntityId} name=${ADMIN_USER}`,
@@ -111,13 +111,13 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     return this;
   };
 
-  const writeSecret = async function(backend, path, key, val) {
+  const writeSecret = async function (backend, path, key, val) {
     await listPage.visitRoot({ backend });
     await listPage.create();
     await editPage.createSecret(path, key, val);
   };
 
-  test('for v2 secrets it redirects you if you try to navigate to a Control Group restricted path', async function(assert) {
+  test('for v2 secrets it redirects you if you try to navigate to a Control Group restricted path', async function (assert) {
     await consoleComponent.runCommands([
       'write sys/mounts/kv-v2-mount type=kv-v2',
       'delete kv-v2-mount/metadata/foo',
@@ -127,32 +127,29 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     await setupControlGroup(this);
     await settled();
     await visit('/vault/secrets/kv-v2-mount/show/foo');
-    await settled();
-    assert.equal(
-      currentRouteName(),
-      'vault.cluster.access.control-group-accessor',
+
+    assert.ok(
+      await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
       'redirects to access control group route'
     );
   });
 
   const workflow = async (assert, context, shouldStoreToken) => {
-    let controlGroupToken;
-    let accessor;
-    let url = '/vault/secrets/kv/show/foo';
+    const url = '/vault/secrets/kv/show/foo';
     await setupControlGroup(context);
     await settled();
     // as the requestor, go to the URL that's blocked by the control group
     // and store the values
     await visit(url);
-    await settled();
-    accessor = controlGroupComponent.accessor;
-    controlGroupToken = controlGroupComponent.token;
+
+    const accessor = controlGroupComponent.accessor;
+    const controlGroupToken = controlGroupComponent.token;
     await authPage.logout();
     await settled();
     // log in as the admin, navigate to the accessor page,
     // and authorize the control group request
     await visit('/vault/auth?with=userpass');
-    await settled();
+
     await authFormComponent.username(ADMIN_USER);
     await settled();
     await authFormComponent.password(ADMIN_PASSWORD);
@@ -160,12 +157,12 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     await authFormComponent.login();
     await settled();
     await visit(`/vault/access/control-groups/${accessor}`);
-    await settled();
+
     // putting here to help with flaky test
     assert.dom('[data-test-authorize-button]').exists();
     await controlGroupComponent.authorize();
     await settled();
-    assert.equal(controlGroupComponent.bannerPrefix, 'Thanks!', 'text display changes');
+    assert.strictEqual(controlGroupComponent.bannerPrefix, 'Thanks!', 'text display changes');
     await settled();
     await authPage.logout();
     await settled();
@@ -184,14 +181,14 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
         })
       );
       await visit(`/vault/access/control-groups/${accessor}`);
-      await settled();
+
       assert.ok(controlGroupSuccessComponent.showsNavigateMessage, 'shows user the navigate message');
       await controlGroupSuccessComponent.navigate();
       await settled();
-      assert.equal(currentURL(), url, 'successfully loads the target url');
+      assert.strictEqual(currentURL(), url, 'successfully loads the target url');
     } else {
       await visit(`/vault/access/control-groups/${accessor}`);
-      await settled();
+
       await controlGroupSuccessComponent.token(controlGroupToken);
       await settled();
       await controlGroupSuccessComponent.unwrap();
@@ -200,24 +197,24 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     }
   };
 
-  skip('it allows the full flow to work without a saved token', async function(assert) {
+  skip('it allows the full flow to work without a saved token', async function (assert) {
     await workflow(assert, this);
     await settled();
   });
 
-  skip('it allows the full flow to work with a saved token', async function(assert) {
+  skip('it allows the full flow to work with a saved token', async function (assert) {
     await workflow(assert, this, true);
     await settled();
   });
 
-  test('it displays the warning in the console when making a request to a Control Group path', async function(assert) {
+  test('it displays the warning in the console when making a request to a Control Group path', async function (assert) {
     await setupControlGroup(this);
     await settled();
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('read kv/foo');
     await settled();
-    let output = consoleComponent.lastLogOutput;
+    const output = consoleComponent.lastLogOutput;
     assert.ok(output.includes('A Control Group was encountered at kv/foo'));
     assert.ok(output.includes('The Control Group Token is'));
     assert.ok(output.includes('The Accessor is'));

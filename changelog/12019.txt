@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/openldap: Fix bug where schema was not compatible with rotate-root [#24](https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/24)
+```

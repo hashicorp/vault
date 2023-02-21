@@ -8,11 +8,6 @@ export default ApplicationSerializer.extend({
         ...transformedPayload,
         ...payload.data.autoloaded,
       };
-    } else if (payload.data.stored) {
-      transformedPayload = {
-        ...transformedPayload,
-        ...payload.data.stored,
-      };
     }
     transformedPayload.id = transformedPayload.license_id;
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);

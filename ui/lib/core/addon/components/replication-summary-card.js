@@ -21,23 +21,23 @@ export default Component.extend({
   layout,
   title: null,
   replicationDetails: null,
-  lastDrWAL: computed('replicationDetails.dr.lastWAL', function() {
+  lastDrWAL: computed('replicationDetails.dr.lastWAL', function () {
     return this.replicationDetails.dr.lastWAL || 0;
   }),
-  lastPerformanceWAL: computed('replicationDetails.performance.lastWAL', function() {
+  lastPerformanceWAL: computed('replicationDetails.performance.lastWAL', function () {
     return this.replicationDetails.performance.lastWAL || 0;
   }),
-  merkleRootDr: computed('replicationDetails.dr.merkleRoot', function() {
+  merkleRootDr: computed('replicationDetails.dr.merkleRoot', function () {
     return this.replicationDetails.dr.merkleRoot || '';
   }),
-  merkleRootPerformance: computed('replicationDetails.performance.merkleRoot', function() {
+  merkleRootPerformance: computed('replicationDetails.performance.merkleRoot', function () {
     return this.replicationDetails.performance.merkleRoot || '';
   }),
-  knownSecondariesDr: computed('replicationDetails.dr.knownSecondaries', function() {
+  knownSecondariesDr: computed('replicationDetails.dr.knownSecondaries', function () {
     const knownSecondaries = this.replicationDetails.dr.knownSecondaries;
     return knownSecondaries.length;
   }),
-  knownSecondariesPerformance: computed('replicationDetails.performance.knownSecondaries', function() {
+  knownSecondariesPerformance: computed('replicationDetails.performance.knownSecondaries', function () {
     const knownSecondaries = this.replicationDetails.performance.knownSecondaries;
     return knownSecondaries.length;
   }),

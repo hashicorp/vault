@@ -1,4 +1,4 @@
-// +build !openbsd !arm
+//go:build !openbsd || !arm
 
 package diagnose
 
@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shirou/gopsutil/disk"
+	"github.com/dustin/go-humanize"
+	"github.com/shirou/gopsutil/v3/disk"
 )
 
 func diskUsage(ctx context.Context) error {
@@ -26,16 +27,18 @@ partLoop:
 			}
 		}
 		usage, err := disk.Usage(partition.Mountpoint)
-		testName := "disk usage"
+		testName := "Check Disk Usage"
 		if err != nil {
-			Warn(ctx, fmt.Sprintf("could not obtain partition usage for %s: %v", partition.Mountpoint, err))
+			Warn(ctx, fmt.Sprintf("Could not obtain partition usage for %s: %v.", partition.Mountpoint, err))
 		} else {
 			if usage.UsedPercent > 95 {
-				SpotWarn(ctx, testName, partition.Mountpoint+" more than 95% full")
-			} else if usage.Free < 2<<30 {
-				SpotWarn(ctx, testName, partition.Mountpoint+" less than 1GB free")
+				SpotWarn(ctx, testName, fmt.Sprintf(partition.Mountpoint+" is %.2f percent full.", usage.UsedPercent),
+					Advice("It is recommended to have more than five percent of the partition free."))
+			} else if usage.Free < 1<<30 {
+				SpotWarn(ctx, testName, fmt.Sprintf(partition.Mountpoint+" has %s free.", humanize.Bytes(usage.Free)),
+					Advice("It is recommended to have at least 1 GB of space free per partition."))
 			} else {
-				SpotOk(ctx, testName, partition.Mountpoint+" ok")
+				SpotOk(ctx, testName, partition.Mountpoint+" usage ok.")
 			}
 		}
 

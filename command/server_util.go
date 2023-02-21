@@ -5,7 +5,20 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-var adjustCoreConfigForEnt = adjustCoreConfigForEntNoop
+var (
+	adjustCoreConfigForEnt = adjustCoreConfigForEntNoop
+	storageSupportedForEnt = checkStorageTypeForEntNoop
+)
 
 func adjustCoreConfigForEntNoop(config *server.Config, coreConfig *vault.CoreConfig) {
+}
+
+var getFIPSInfoKey = getFIPSInfoKeyNoop
+
+func getFIPSInfoKeyNoop() string {
+	return ""
+}
+
+func checkStorageTypeForEntNoop(coreConfig *vault.CoreConfig) bool {
+	return true
 }

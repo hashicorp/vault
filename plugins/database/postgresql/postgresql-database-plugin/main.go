@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/vault/plugins/database/postgresql"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 )
 
 func main() {
@@ -18,12 +18,7 @@ func main() {
 
 // Run instantiates a PostgreSQL object, and runs the RPC server for the plugin
 func Run() error {
-	dbType, err := postgresql.New()
-	if err != nil {
-		return err
-	}
-
-	dbplugin.Serve(dbType.(dbplugin.Database))
+	dbplugin.ServeMultiplex(postgresql.New)
 
 	return nil
 }

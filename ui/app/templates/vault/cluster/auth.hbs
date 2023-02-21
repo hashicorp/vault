@@ -1,82 +1,138 @@
-<SplashPage as |Page|>
+<SplashPage @hasAltContent={{this.mfaErrors}} as |Page|>
+  <Page.altContent>
+    <div class="has-top-margin-xxl" data-test-mfa-error>
+      <EmptyState
+        @title="Unauthorized"
+        @message="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
+        @icon="alert-circle"
+        @bottomBorder={{true}}
+        @subTitle={{join ". " this.mfaErrors}}
+        class="is-box-shadowless"
+      >
+        <button type="button" class="button is-ghost is-transparent" {{on "click" (action "onMfaErrorDismiss")}}>
+          <Icon @name="chevron-left" />
+          Go back
+        </button>
+      </EmptyState>
+    </div>
+  </Page.altContent>
   <Page.header>
-    <h1 class="title is-3">
-      Sign in to Vault
-    </h1>
+    {{#if this.oidcProvider}}
+      <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
+        <LogoEdition aria-label="Sign in with Hashicorp Vault" />
+      </div>
+    {{else}}
+      <div class="is-flex-row">
+        {{#if this.mfaAuthData}}
+          <button type="button" class="icon-button" {{on "click" (fn (mut this.mfaAuthData) null)}}>
+            <Icon @name="arrow-left" @size="24" aria-label="Back to login" class="icon-blue" />
+          </button>
+        {{else if this.waitingForOktaNumberChallenge}}
+          <button type="button" class="icon-button" {{on "click" (action "cancelAuthentication")}}>
+            <Icon @name="arrow-left" @size="24" aria-label="Back to login" class="icon-blue" />
+          </button>
+        {{/if}}
+        <h1 class="title is-3">
+          {{if (or this.mfaAuthData this.waitingForOktaNumberChallenge) "Authenticate" "Sign in to Vault"}}
+        </h1>
+      </div>
+    {{/if}}
   </Page.header>
-  {{#if managedNamespaceRoot}}
-    <Page.sub-header>
-      <Toolbar>
-        <div class="toolbar-namespace-picker" data-test-managed-namespace-toolbar>
-          <div class="field is-horizontal">
-            <div class="field-label">
-              <label class="is-label" for="namespace">Namespace</label>
+  {{#unless this.mfaAuthData}}
+    {{#if this.managedNamespaceRoot}}
+      <Page.sub-header>
+        <Toolbar>
+          <div class="toolbar-namespace-picker" data-test-managed-namespace-toolbar>
+            <div class="field is-horizontal">
+              <div class="field-label">
+                <label class="is-label" for="namespace">Namespace</label>
+              </div>
+              <div class="field-label">
+                <span class="has-text-grey" data-test-managed-namespace-root>/{{this.managedNamespaceRoot}}</span>
+              </div>
+              <div class="field-body">
+                <div class="field">
+                  <div class="control">
+                    <input
+                      value={{this.managedNamespaceChild}}
+                      placeholder="/ (Default)"
+                      oninput={{perform this.updateManagedNamespace value="target.value"}}
+                      autocomplete="off"
+                      spellcheck="false"
+                      name="namespace"
+                      id="namespace"
+                      class="input"
+                      type="text"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="field-label">
-              <span class="has-text-grey" data-test-managed-namespace-root>/{{managedNamespaceRoot}}</span>
+          </div>
+        </Toolbar>
+      </Page.sub-header>
+    {{else if (has-feature "Namespaces")}}
+      <Page.sub-header>
+        <Toolbar class="toolbar-namespace-picker">
+          <div class="field is-horizontal" data-test-namespace-toolbar>
+            <div class="field-label is-normal">
+              <label class="is-label" for="namespace">Namespace</label>
             </div>
             <div class="field-body">
               <div class="field">
                 <div class="control">
                   <input
-                    value={{managedNamespaceChild}}
-                    placeholder="/ (Default)"
-                    oninput={{perform updateManagedNamespace value="target.value"}}
+                    value={{this.namespaceQueryParam}}
+                    placeholder="/ (Root)"
+                    oninput={{perform this.updateNamespace value="target.value"}}
                     autocomplete="off"
                     spellcheck="false"
                     name="namespace"
                     id="namespace"
                     class="input"
                     type="text"
+                    disabled={{this.oidcProvider}}
                   />
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </Toolbar>
-    </Page.sub-header>
-  {{else if (has-feature "Namespaces")}}
-    <Page.sub-header>
-      <Toolbar class="toolbar-namespace-picker">
-        <div class="field is-horizontal" data-test-namespace-toolbar>
-          <div class="field-label is-normal">
-            <label class="is-label" for="namespace">Namespace</label>
-          </div>
-          <div class="field-body">
-            <div class="field">
-              <div class="control">
-                <input
-                  value={{namespaceQueryParam}}
-                  placeholder="/ (Root)"
-                  oninput={{perform updateNamespace value="target.value"}}
-                  autocomplete="off"
-                  spellcheck="false"
-                  name="namespace"
-                  id="namespace"
-                  class="input"
-                  type="text"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </Toolbar>
-    </Page.sub-header>
-  {{/if}}
+        </Toolbar>
+      </Page.sub-header>
+    {{/if}}
+  {{/unless}}
   <Page.content>
-    <AuthForm
-      @wrappedToken={{wrappedToken}}
-      @cluster={{model}}
-      @namespace={{namespaceQueryParam}}
-      @redirectTo={{redirectTo}}
-      @selectedAuth={{authMethod}}
+    {{#if this.mfaAuthData}}
+      <Mfa::MfaForm
+        @clusterId={{this.model.id}}
+        @authData={{this.mfaAuthData}}
+        @onSuccess={{action "onMfaSuccess"}}
+        @onError={{fn (mut this.mfaErrors)}}
       />
+    {{else}}
+      <AuthForm
+        @wrappedToken={{this.wrappedToken}}
+        @cluster={{this.model}}
+        @namespace={{this.namespaceQueryParam}}
+        @redirectTo={{this.redirectTo}}
+        @selectedAuth={{this.authMethod}}
+        @onSuccess={{action "onAuthResponse"}}
+        @setOktaNumberChallenge={{fn (mut this.waitingForOktaNumberChallenge)}}
+        @waitingForOktaNumberChallenge={{this.waitingForOktaNumberChallenge}}
+        @setCancellingAuth={{fn (mut this.cancelAuth)}}
+        @cancelAuthForOktaNumberChallenge={{this.cancelAuth}}
+      />
+    {{/if}}
   </Page.content>
   <Page.footer>
     <div class="has-short-padding">
-      <p class="help has-text-grey-dark">
-        Contact your administrator for login credentials
+      <p class="help has-text-grey-dark" data-test-auth-helptext>
+        {{#if this.oidcProvider}}
+          Once you log in, you will be redirected back to your application. If you require login credentials, contact your
+          administrator.
+        {{else}}
+          Contact your administrator for login credentials
+        {{/if}}
       </p>
     </div>
   </Page.footer>

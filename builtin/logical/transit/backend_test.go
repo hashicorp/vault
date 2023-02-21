@@ -2,9 +2,13 @@ package transit
 
 import (
 	"context"
+	"crypto"
 	cryptoRand "crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"path"
@@ -15,12 +19,20 @@ import (
 	"testing"
 	"time"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
+
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -280,6 +292,35 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		"input":          plaintext,
 		"signature":      signature,
 		"hash_algorithm": "sha2-512",
+	}
+	resp, err = b.HandleRequest(context.Background(), verifyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if !resp.Data["valid"].(bool) {
+		t.Fatalf("failed to verify the RSA signature")
+	}
+
+	// Take a random hash and sign it using PKCSv1_5_NoOID.
+	hash := "P8m2iUWdc4+MiKOkiqnjNUIBa3pAUuABqqU2/KdIE8s="
+	signReq.Data = map[string]interface{}{
+		"input":               hash,
+		"hash_algorithm":      "none",
+		"signature_algorithm": "pkcs1v15",
+		"prehashed":           true,
+	}
+	resp, err = b.HandleRequest(context.Background(), signReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	signature = resp.Data["signature"].(string)
+
+	verifyReq.Data = map[string]interface{}{
+		"input":               hash,
+		"signature":           signature,
+		"hash_algorithm":      "none",
+		"signature_algorithm": "pkcs1v15",
+		"prehashed":           true,
 	}
 	resp, err = b.HandleRequest(context.Background(), verifyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -607,7 +648,7 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 			if d.MinEncryptionVersion != minEncryptionVersion {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			if d.DeletionAllowed == true {
+			if d.DeletionAllowed {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.Derived != derived {
@@ -622,7 +663,8 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 }
 
 func testAccStepEncrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -646,7 +688,8 @@ func testAccStepEncrypt(
 }
 
 func testAccStepEncryptUpsert(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.CreateOperation,
 		Path:      "encrypt/" + name,
@@ -670,7 +713,8 @@ func testAccStepEncryptUpsert(
 }
 
 func testAccStepEncryptContext(
-	t *testing.T, name, plaintext, context string, decryptData map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name, plaintext, context string, decryptData map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -696,7 +740,8 @@ func testAccStepEncryptContext(
 }
 
 func testAccStepDecrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,
@@ -724,7 +769,8 @@ func testAccStepDecrypt(
 }
 
 func testAccStepRewrap(
-	t *testing.T, name string, decryptData map[string]interface{}, expectedVer int) logicaltest.TestStep {
+	t *testing.T, name string, decryptData map[string]interface{}, expectedVer int,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "rewrap/" + name,
@@ -743,7 +789,7 @@ func testAccStepRewrap(
 			verString := splitStrings[1][1:]
 			ver, err := strconv.Atoi(verString)
 			if err != nil {
-				return fmt.Errorf("error pulling out version from verString '%s', ciphertext was %s", verString, d.Ciphertext)
+				return fmt.Errorf("error pulling out version from verString %q, ciphertext was %s", verString, d.Ciphertext)
 			}
 			if ver != expectedVer {
 				return fmt.Errorf("did not get expected version")
@@ -756,7 +802,8 @@ func testAccStepRewrap(
 
 func testAccStepEncryptVX(
 	t *testing.T, name, plaintext string, decryptData map[string]interface{},
-	ver int, encryptHistory map[int]map[string]interface{}) logicaltest.TestStep {
+	ver int, encryptHistory map[int]map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -787,7 +834,8 @@ func testAccStepEncryptVX(
 
 func testAccStepLoadVX(
 	t *testing.T, name string, decryptData map[string]interface{},
-	ver int, encryptHistory map[int]map[string]interface{}) logicaltest.TestStep {
+	ver int, encryptHistory map[int]map[string]interface{},
+) logicaltest.TestStep {
 	// This is really a no-op to allow us to do data manip in the check function
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
@@ -800,7 +848,8 @@ func testAccStepLoadVX(
 }
 
 func testAccStepDecryptExpectFailure(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,
@@ -824,7 +873,8 @@ func testAccStepRotate(t *testing.T, name string) logicaltest.TestStep {
 
 func testAccStepWriteDatakey(t *testing.T, name string,
 	noPlaintext bool, bits int,
-	dataKeyInfo map[string]interface{}) logicaltest.TestStep {
+	dataKeyInfo map[string]interface{},
+) logicaltest.TestStep {
 	data := map[string]interface{}{}
 	subPath := "plaintext"
 	if noPlaintext {
@@ -855,7 +905,7 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 				dataKeyInfo["plaintext"] = d.Plaintext
 				plainBytes, err := base64.StdEncoding.DecodeString(d.Plaintext)
 				if err != nil {
-					return fmt.Errorf("could not base64 decode plaintext string '%s'", d.Plaintext)
+					return fmt.Errorf("could not base64 decode plaintext string %q", d.Plaintext)
 				}
 				if len(plainBytes)*8 != bits {
 					return fmt.Errorf("returned key does not have correct bit length")
@@ -868,7 +918,8 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 }
 
 func testAccStepDecryptDatakey(t *testing.T, name string,
-	dataKeyInfo map[string]interface{}) logicaltest.TestStep {
+	dataKeyInfo map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,
@@ -882,7 +933,7 @@ func testAccStepDecryptDatakey(t *testing.T, name string,
 			}
 
 			if d.Plaintext != dataKeyInfo["plaintext"].(string) {
-				return fmt.Errorf("plaintext mismatch: got '%s', expected '%s', decryptData was %#v", d.Plaintext, dataKeyInfo["plaintext"].(string), resp.Data)
+				return fmt.Errorf("plaintext mismatch: got %q, expected %q, decryptData was %#v", d.Plaintext, dataKeyInfo["plaintext"].(string), resp.Data)
 			}
 			return nil
 		},
@@ -989,6 +1040,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		Data: map[string]interface{}{
 			"derived":               false,
 			"convergent_encryption": true,
+			"type":                  keyType.String(),
 		},
 	}
 	resp, err := b.HandleRequest(context.Background(), req)
@@ -1009,6 +1061,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		Data: map[string]interface{}{
 			"derived":               true,
 			"convergent_encryption": true,
+			"type":                  keyType.String(),
 		},
 	}
 	resp, err = b.HandleRequest(context.Background(), req)
@@ -1471,8 +1524,8 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				// keys start at version 1 so we want [1, latestVersion] not [0, latestVersion)
 				setVersion := (rand.Int() % latestVersion) + 1
 				fd.Raw["min_decryption_version"] = setVersion
-				fd.Schema = be.pathConfig().Fields
-				resp, err = be.pathConfigWrite(context.Background(), req, fd)
+				fd.Schema = be.pathKeysConfig().Fields
+				resp, err = be.pathKeysConfigWrite(context.Background(), req, fd)
 				if err != nil {
 					t.Errorf("got an error setting min decryption version: %v", err)
 				}
@@ -1516,4 +1569,453 @@ func TestBadInput(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
+}
+
+func TestTransit_AutoRotateKeys(t *testing.T) {
+	tests := map[string]struct {
+		isDRSecondary   bool
+		isPerfSecondary bool
+		isStandby       bool
+		isLocal         bool
+		shouldRotate    bool
+	}{
+		"primary, no local mount": {
+			shouldRotate: true,
+		},
+		"DR secondary, no local mount": {
+			isDRSecondary: true,
+			shouldRotate:  false,
+		},
+		"perf standby, no local mount": {
+			isStandby:    true,
+			shouldRotate: false,
+		},
+		"perf secondary, no local mount": {
+			isPerfSecondary: true,
+			shouldRotate:    false,
+		},
+		"perf secondary, local mount": {
+			isPerfSecondary: true,
+			isLocal:         true,
+			shouldRotate:    true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(
+			name,
+			func(t *testing.T) {
+				var repState consts.ReplicationState
+				if test.isDRSecondary {
+					repState.AddState(consts.ReplicationDRSecondary)
+				}
+				if test.isPerfSecondary {
+					repState.AddState(consts.ReplicationPerformanceSecondary)
+				}
+				if test.isStandby {
+					repState.AddState(consts.ReplicationPerformanceStandby)
+				}
+
+				sysView := logical.TestSystemView()
+				sysView.ReplicationStateVal = repState
+				sysView.LocalMountVal = test.isLocal
+
+				storage := &logical.InmemStorage{}
+
+				conf := &logical.BackendConfig{
+					StorageView: storage,
+					System:      sysView,
+				}
+
+				b, _ := Backend(context.Background(), conf)
+				if b == nil {
+					t.Fatal("failed to create backend")
+				}
+
+				err := b.Backend.Setup(context.Background(), conf)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Write a key with the default auto rotate value (0/disabled)
+				req := &logical.Request{
+					Storage:   storage,
+					Operation: logical.UpdateOperation,
+					Path:      "keys/test1",
+				}
+				resp, err := b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp != nil {
+					t.Fatal("expected nil response")
+				}
+
+				// Write a key with an auto rotate value one day in the future
+				req = &logical.Request{
+					Storage:   storage,
+					Operation: logical.UpdateOperation,
+					Path:      "keys/test2",
+					Data: map[string]interface{}{
+						"auto_rotate_period": 24 * time.Hour,
+					},
+				}
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp != nil {
+					t.Fatal("expected nil response")
+				}
+
+				// Run the rotation check and ensure none of the keys have rotated
+				b.checkAutoRotateAfter = time.Now()
+				if err = b.autoRotateKeys(context.Background(), &logical.Request{Storage: storage}); err != nil {
+					t.Fatal(err)
+				}
+				req = &logical.Request{
+					Storage:   storage,
+					Operation: logical.ReadOperation,
+					Path:      "keys/test1",
+				}
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if resp.Data["latest_version"] != 1 {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 1)
+				}
+
+				req.Path = "keys/test2"
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if resp.Data["latest_version"] != 1 {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 1)
+				}
+
+				// Update auto rotate period on one key to be one nanosecond
+				p, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
+					Storage: storage,
+					Name:    "test2",
+				}, b.GetRandomReader())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if p == nil {
+					t.Fatal("expected non-nil policy")
+				}
+				p.AutoRotatePeriod = time.Nanosecond
+				err = p.Persist(context.Background(), storage)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Run the rotation check and validate the state of key rotations
+				b.checkAutoRotateAfter = time.Now()
+				if err = b.autoRotateKeys(context.Background(), &logical.Request{Storage: storage}); err != nil {
+					t.Fatal(err)
+				}
+				req = &logical.Request{
+					Storage:   storage,
+					Operation: logical.ReadOperation,
+					Path:      "keys/test1",
+				}
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if resp.Data["latest_version"] != 1 {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 1)
+				}
+				req.Path = "keys/test2"
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				expectedVersion := 1
+				if test.shouldRotate {
+					expectedVersion = 2
+				}
+				if resp.Data["latest_version"] != expectedVersion {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], expectedVersion)
+				}
+			},
+		)
+	}
+}
+
+func TestTransit_AEAD(t *testing.T) {
+	testTransit_AEAD(t, "aes128-gcm96")
+	testTransit_AEAD(t, "aes256-gcm96")
+	testTransit_AEAD(t, "chacha20-poly1305")
+}
+
+func testTransit_AEAD(t *testing.T, keyType string) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	keyReq := &logical.Request{
+		Path:      "keys/aead",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type": keyType,
+		},
+		Storage: storage,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), keyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="                          // "the quick brown fox"
+	associated := "U3BoaW54IG9mIGJsYWNrIHF1YXJ0eiwganVkZ2UgbXkgdm93Lgo=" // "Sphinx of black quartz, judge my vow."
+
+	// Basic encrypt/decrypt should work.
+	encryptReq := &logical.Request{
+		Path:      "encrypt/aead",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"plaintext": plaintext,
+		},
+	}
+
+	resp, err = b.HandleRequest(context.Background(), encryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	ciphertext1 := resp.Data["ciphertext"].(string)
+
+	decryptReq := &logical.Request{
+		Path:      "decrypt/aead",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"ciphertext": ciphertext1,
+		},
+	}
+
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	decryptedPlaintext := resp.Data["plaintext"]
+
+	if plaintext != decryptedPlaintext {
+		t.Fatalf("bad: plaintext; expected: %q\nactual: %q", plaintext, decryptedPlaintext)
+	}
+
+	// Using associated as ciphertext should fail.
+	decryptReq.Data["ciphertext"] = associated
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
+	if err == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("bad expected error: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Redoing the above with additional data should work.
+	encryptReq.Data["associated_data"] = associated
+	resp, err = b.HandleRequest(context.Background(), encryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	ciphertext2 := resp.Data["ciphertext"].(string)
+	decryptReq.Data["ciphertext"] = ciphertext2
+	decryptReq.Data["associated_data"] = associated
+
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	decryptedPlaintext = resp.Data["plaintext"]
+	if plaintext != decryptedPlaintext {
+		t.Fatalf("bad: plaintext; expected: %q\nactual: %q", plaintext, decryptedPlaintext)
+	}
+
+	// Removing the associated_data should break the decryption.
+	decryptReq.Data = map[string]interface{}{
+		"ciphertext": ciphertext2,
+	}
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
+	if err == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("bad expected error: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Using a valid ciphertext with associated_data should also break the
+	// decryption.
+	decryptReq.Data["ciphertext"] = ciphertext1
+	decryptReq.Data["associated_data"] = associated
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
+	if err == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("bad expected error: err: %v\nresp: %#v", err, resp)
+	}
+}
+
+// Hack: use Transit as a signer.
+type transitKey struct {
+	public any
+	mount  string
+	name   string
+	t      *testing.T
+	client *api.Client
+}
+
+func (k *transitKey) Public() crypto.PublicKey {
+	return k.public
+}
+
+func (k *transitKey) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signature []byte, err error) {
+	hash := opts.(crypto.Hash)
+	if hash.String() != "SHA-256" {
+		return nil, fmt.Errorf("unknown hash algorithm: %v", opts)
+	}
+
+	resp, err := k.client.Logical().Write(k.mount+"/sign/"+k.name, map[string]interface{}{
+		"hash_algorithm":      "sha2-256",
+		"input":               base64.StdEncoding.EncodeToString(digest),
+		"prehashed":           true,
+		"signature_algorithm": "pkcs1v15",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign data: %w", err)
+	}
+	require.NotNil(k.t, resp)
+	require.NotNil(k.t, resp.Data)
+	require.NotNil(k.t, resp.Data["signature"])
+	rawSig := resp.Data["signature"].(string)
+	sigParts := strings.Split(rawSig, ":")
+
+	decoded, err := base64.StdEncoding.DecodeString(sigParts[2])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode signature (%v): %w", rawSig, err)
+	}
+
+	return decoded, nil
+}
+
+func TestTransitPKICSR(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": Factory,
+			"pki":     pki.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	vault.TestWaitActive(t, cores[0].Core)
+
+	client := cores[0].Client
+
+	// Mount transit, write a key.
+	err := client.Sys().Mount("transit", &api.MountInput{
+		Type: "transit",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("transit/keys/leaf", map[string]interface{}{
+		"type": "rsa-2048",
+	})
+	require.NoError(t, err)
+
+	resp, err := client.Logical().Read("transit/keys/leaf")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	keys := resp.Data["keys"].(map[string]interface{})
+	require.NotNil(t, keys)
+	keyData := keys["1"].(map[string]interface{})
+	require.NotNil(t, keyData)
+	keyPublic := keyData["public_key"].(string)
+	require.NotEmpty(t, keyPublic)
+
+	pemBlock, _ := pem.Decode([]byte(keyPublic))
+	require.NotNil(t, pemBlock)
+	pubKey, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
+	require.NoError(t, err)
+	require.NotNil(t, pubKey)
+
+	// Setup a new CSR...
+	var reqTemplate x509.CertificateRequest
+	reqTemplate.PublicKey = pubKey
+	reqTemplate.PublicKeyAlgorithm = x509.RSA
+	reqTemplate.Subject.CommonName = "dadgarcorp.com"
+
+	var k transitKey
+	k.public = pubKey
+	k.mount = "transit"
+	k.name = "leaf"
+	k.t = t
+	k.client = client
+
+	req, err := x509.CreateCertificateRequest(cryptoRand.Reader, &reqTemplate, &k)
+	require.NoError(t, err)
+	require.NotNil(t, req)
+
+	reqPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: req,
+	})
+	t.Logf("csr: %v", string(reqPEM))
+
+	// Mount PKI, generate a root, sign this CSR.
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+	})
+	require.NoError(t, err)
+
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "PKI Root X1",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	rootCertPEM := resp.Data["certificate"].(string)
+
+	pemBlock, _ = pem.Decode([]byte(rootCertPEM))
+	require.NotNil(t, pemBlock)
+
+	rootCert, err := x509.ParseCertificate(pemBlock.Bytes)
+	require.NoError(t, err)
+
+	resp, err = client.Logical().Write("pki/issuer/default/sign-verbatim", map[string]interface{}{
+		"csr": string(reqPEM),
+		"ttl": "10m",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	leafCertPEM := resp.Data["certificate"].(string)
+	pemBlock, _ = pem.Decode([]byte(leafCertPEM))
+	require.NotNil(t, pemBlock)
+
+	leafCert, err := x509.ParseCertificate(pemBlock.Bytes)
+	require.NoError(t, err)
+	require.NoError(t, leafCert.CheckSignatureFrom(rootCert))
+	t.Logf("root: %v", rootCertPEM)
+	t.Logf("leaf: %v", leafCertPEM)
 }

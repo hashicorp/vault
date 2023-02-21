@@ -1,8 +1,14 @@
-# Each line is a file pattern followed by one or more owners.
+# Each line is a file pattern followed by one or more owners. Being an owner
+# means those groups or individuals will be added as reviewers to PRs affecting
+# those areas of the code.
+#
 # More on CODEOWNERS files: https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
 
-
-/builtin/credential/         @hashicorp/vault-ecosystem
+# Select Auth engines are owned by Ecosystem
+/builtin/credential/aws/      @hashicorp/vault-ecosystem
+/builtin/credential/github/   @hashicorp/vault-ecosystem
+/builtin/credential/ldap/     @hashicorp/vault-ecosystem
+/builtin/credential/okta/     @hashicorp/vault-ecosystem
 
 # Secrets engines (pki, ssh, totp and transit omitted)
 /builtin/logical/aws/         @hashicorp/vault-ecosystem
@@ -16,5 +22,62 @@
 /builtin/logical/postgresql/  @hashicorp/vault-ecosystem
 /builtin/logical/rabbitmq/    @hashicorp/vault-ecosystem
 
-/command/agent/              @hashicorp/vault-ecosystem
-/plugins/                    @hashicorp/vault-ecosystem
+/plugins/                     @hashicorp/vault-ecosystem
+/vault/plugin_catalog.go      @hashicorp/vault-ecosystem
+
+/website/content/ @yhyakuna
+/website/content/docs/plugin-portal.mdx   @acahn @yhyakuna
+
+# Plugin docs
+/website/content/docs/plugins/              @fairclothjm @yhyakuna
+/website/content/docs/upgrading/plugins.mdx @fairclothjm @yhyakuna
+
+# UI code related to Vault's JWT/OIDC auth method and OIDC provider.
+# Changes to these files often require coordination with backend code,
+# so stewards of the backend code are added below for notification.
+/ui/app/components/auth-jwt.js         @austingebauer
+/ui/app/routes/vault/cluster/oidc-*.js @austingebauer
+
+# Release config; service account is required for automation tooling.
+/.release/                    @hashicorp/release-engineering @hashicorp/github-secure-vault-core @hashicorp/quality-team
+/.github/workflows/build.yml  @hashicorp/release-engineering @hashicorp/github-secure-vault-core @hashicorp/quality-team
+
+# Quality engineering
+/.github/  @hashicorp/quality-team
+/enos/     @hashicorp/quality-team
+
+# Cryptosec
+/builtin/logical/pki/                                @hashicorp/vault-crypto
+/website/content/docs/secrets/pki/                   @hashicorp/vault-crypto
+/website/content/api-docs/secret/pki.mdx             @hashicorp/vault-crypto
+/builtin/credential/cert/                            @hashicorp/vault-crypto
+/website/content/docs/auth/cert.mdx                  @hashicorp/vault-crypto
+/website/content/api-docs/auth/cert.mdx              @hashicorp/vault-crypto
+/builtin/logical/ssh/                                @hashicorp/vault-crypto
+/website/content/docs/secrets/ssh/                   @hashicorp/vault-crypto
+/website/content/api-docs/secret/ssh.mdx             @hashicorp/vault-crypto
+/builtin/logical/transit/                            @hashicorp/vault-crypto
+/website/content/docs/secrets/transit/               @hashicorp/vault-crypto
+/website/content/api-docs/secret/transit.mdx         @hashicorp/vault-crypto
+/helper/random/                                      @hashicorp/vault-crypto
+/sdk/helper/certutil/                                @hashicorp/vault-crypto
+/sdk/helper/cryptoutil/                              @hashicorp/vault-crypto
+/sdk/helper/kdf/                                     @hashicorp/vault-crypto
+/sdk/helper/keysutil/                                @hashicorp/vault-crypto
+/sdk/helper/ocsp/                                    @hashicorp/vault-crypto
+/sdk/helper/salt/                                    @hashicorp/vault-crypto
+/sdk/helper/tlsutil/                                 @hashicorp/vault-crypto
+/shamir/                                             @hashicorp/vault-crypto
+/vault/barrier*                                      @hashicorp/vault-crypto
+/vault/managed_key*                                  @hashicorp/vault-crypto
+/vault/seal*                                         @hashicorp/vault-crypto
+/vault/seal/                                         @hashicorp/vault-crypto
+/website/content/docs/configuration/seal/            @hashicorp/vault-crypto
+/website/content/docs/enterprise/sealwrap.mdx        @hashicorp/vault-crypto
+/website/content/api-docs/system/sealwrap-rewrap.mdx @hashicorp/vault-crypto
+/website/content/docs/secrets/transform/             @hashicorp/vault-crypto
+/website/content/api-docs/secret/transform.mdx       @hashicorp/vault-crypto
+/website/content/docs/secrets/kmip-profiles.mdx      @hashicorp/vault-crypto
+/website/content/docs/secrets/kmip.mdx               @hashicorp/vault-crypto
+/website/content/api-docs/secret/kmip.mdx            @hashicorp/vault-crypto
+/website/content/docs/enterprise/fips/               @hashicorp/vault-crypto

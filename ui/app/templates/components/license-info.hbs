@@ -6,42 +6,31 @@
 
 <section class="box is-sideless is-marginless is-shadowless is-fullwidth">
   <span class="title is-5">Details</span>
-    <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
-      <InfoTableRow @label="License ID" @value={{@licenseId}} @data-test-detail-row={{true}} />
-      <InfoTableRow @label="Valid from" @value={{@startTime}} @data-test-detail-row={{true}}>
-        {{date-format @startTime 'MMM dd, yyyy hh:mm:ss a'}} to {{date-format @expirationTime 'MMM dd, yyyy hh:mm:ss a'}}
-      </InfoTableRow>
-      <InfoTableRow @label="License state" @value={{if @autoloaded "Autoloaded" "Stored"}} @data-test-detail-row={{true}}>
-        {{#if @autoloaded}}
-          Autoloaded
-        {{else}}
-          Stored
-          <Icon @glyph="alert-triangle" class="has-text-highlight" /> <span class="is-size-8">Stored licenses will be deprecated in a future version of Vault. We recommend autoloading your license. Read more <a href="https://www.vaultproject.io/docs/enterprise/license" rel="noreferrer noopener" target="_blank" >here</a>.</span>
-        {{/if}}
-        </InfoTableRow>
-    </div>
+  <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
+    <InfoTableRow @label="License ID" @value={{@licenseId}} data-test-detail-row />
+    <InfoTableRow @label="Valid from" @value={{@startTime}} data-test-detail-row>
+      {{date-format @startTime "MMM dd, yyyy hh:mm:ss a"}}
+      to
+      {{date-format @expirationTime "MMM dd, yyyy hh:mm:ss a"}}
+    </InfoTableRow>
+    <InfoTableRow @label="License state" @value={{"Autoloaded"}} data-test-detail-row />
+  </div>
 </section>
 
 <section class="box is-sideless is-marginless is-shadowless is-fullwidth">
   <span class="title is-5">Features</span>
   <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
     {{#each this.featuresInfo as |info|}}
-      <InfoTableRow @label={{info.name}} @value={{if info.active "Active" "Not Active"}} @data-test-feature-row="data-test-feature-row">
+      <InfoTableRow @label={{info.name}} @value={{if info.active "Active" "Not Active"}} data-test-feature-row>
         {{#if info.active}}
-        <Icon
-          @glyph="check-circle-outline"
-          @size="l"
-          class="icon-true"
-          aria-hidden="true"
-        /><span data-test-feature-status>Active {{#if info.count}}&mdash;
-         {{info.count}} standby nodes allotted{{/if}}</span>
+          <Icon @name="check-circle" class="icon-true" />
+          <span data-test-feature-status>
+            Active
+            {{#if info.count}}&mdash; {{info.count}} standby nodes allotted{{/if}}
+          </span>
         {{else}}
-          <Icon
-            @glyph="cancel-circle-outline"
-            @size="l"
-            class="icon-false"
-            aria-hidden="true"
-          /><span data-test-feature-status>Not Active</span>
+          <Icon @name="x-circle" class="icon-false" />
+          <span data-test-feature-status>Not Active</span>
         {{/if}}
       </InfoTableRow>
     {{/each}}

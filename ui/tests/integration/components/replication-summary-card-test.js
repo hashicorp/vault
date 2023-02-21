@@ -18,16 +18,18 @@ const REPLICATION_DETAILS = {
   },
 };
 
-module('Integration | Component | replication-summary-card', function(hooks) {
+module('Integration | Component | replication-summary-card', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('replicationDetails', REPLICATION_DETAILS);
     this.set('title', TITLE);
   });
 
-  test('it renders', async function(assert) {
-    await render(hbs`<ReplicationSummaryCard @replicationDetails={{replicationDetails}} @title={{title}} />`);
+  test('it renders', async function (assert) {
+    await render(
+      hbs`<ReplicationSummaryCard @replicationDetails={{this.replicationDetails}} @title={{this.title}} />`
+    );
     assert.dom('[data-test-replication-summary-card]').exists();
     assert
       .dom('[data-test-lastWAL]')
@@ -39,9 +41,9 @@ module('Integration | Component | replication-summary-card', function(hooks) {
       .includesText(knownSecondaries, `shows the correct computed value of the known secondaries count`);
   });
 
-  test('it shows the correct lastWAL and knownSecondaries when title is Performance', async function(assert) {
+  test('it shows the correct lastWAL and knownSecondaries when title is Performance', async function (assert) {
     await render(
-      hbs`<ReplicationSummaryCard @replicationDetails={{replicationDetails}} @title="Performance" />`
+      hbs`<ReplicationSummaryCard @replicationDetails={{this.replicationDetails}} @title="Performance" />`
     );
     assert
       .dom('[data-test-lastWAL]')

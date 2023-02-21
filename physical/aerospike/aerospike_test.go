@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	aero "github.com/aerospike/aerospike-client-go"
+	aero "github.com/aerospike/aerospike-client-go/v5"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -41,9 +41,9 @@ type aerospikeConfig struct {
 
 func prepareAerospikeContainer(t *testing.T) (func(), *aerospikeConfig) {
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:     "aerospike/aerospike-server",
+		ImageRepo:     "docker.mirror.hashicorp.services/aerospike/aerospike-server",
 		ContainerName: "aerospikedb",
-		ImageTag:      "5.5.0.10",
+		ImageTag:      "5.6.0.5",
 		Ports:         []string{"3000/tcp", "3001/tcp", "3002/tcp", "3003/tcp"},
 	})
 	if err != nil {

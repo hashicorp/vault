@@ -3,10 +3,12 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { humanize } from 'vault/helpers/humanize';
+import { waitFor } from '@ember/test-waiters';
 
 export default Component.extend({
   flashMessages: service(),
   'data-test-component': 'identity-edit-form',
+  attributeBindings: ['data-test-component'],
   model: null,
 
   // 'create', 'edit', 'merge'
@@ -19,9 +21,9 @@ export default Component.extend({
    */
   onSave: () => {},
 
-  cancelLink: computed('mode', 'model.identityType', function() {
-    let { model, mode } = this;
-    let routes = {
+  cancelLink: computed('mode', 'model.identityType', function () {
+    const { model, mode } = this;
+    const routes = {
       'create-entity': 'vault.cluster.access.identity',
       'edit-entity': 'vault.cluster.access.identity.show',
       'merge-entity-merge': 'vault.cluster.access.identity',
@@ -32,14 +34,14 @@ export default Component.extend({
       'create-group-alias': 'vault.cluster.access.identity.aliases',
       'edit-group-alias': 'vault.cluster.access.identity.aliases.show',
     };
-    let key = model ? `${mode}-${model.identityType}` : 'merge-entity-alias';
+    const key = model ? `${mode}-${model.identityType}` : 'merge-entity-alias';
     return routes[key];
   }),
 
   getMessage(model, isDelete = false) {
-    let mode = this.mode;
-    let typeDisplay = humanize([model.identityType]);
-    let action = isDelete ? 'deleted' : 'saved';
+    const mode = this.mode;
+    const typeDisplay = humanize([model.identityType]);
+    const action = isDelete ? 'deleted' : 'saved';
     if (mode === 'merge') {
       return 'Successfully merged entities';
     }
@@ -49,24 +51,25 @@ export default Component.extend({
     return `Successfully ${action} ${typeDisplay}.`;
   },
 
-  save: task(function*() {
-    let model = this.model;
-    let message = this.getMessage(model);
+  save: task(
+    waitFor(function* () {
+      const model = this.model;
+      const message = this.getMessage(model);
 
-    try {
-      yield model.save();
-    } catch (err) {
-      // err will display via model state
-      return;
-    }
-    this.flashMessages.success(message);
-    yield this.onSave({ saveType: 'save', model });
-  })
-    .drop()
-    .withTestWaiter(),
+      try {
+        yield model.save();
+      } catch (err) {
+        // err will display via model state
+        return;
+      }
+      this.flashMessages.success(message);
+      yield this.onSave({ saveType: 'save', model });
+    })
+  ).drop(),
 
   willDestroy() {
-    let model = this.model;
+    this._super(...arguments);
+    const model = this.model;
     if (!model) return;
     if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
       model.rollbackAttributes();
@@ -75,8 +78,8 @@ export default Component.extend({
 
   actions: {
     deleteItem(model) {
-      let message = this.getMessage(model, true);
-      let flash = this.flashMessages;
+      const message = this.getMessage(model, true);
+      const flash = this.flashMessages;
       model.destroyRecord().then(() => {
         flash.success(message);
         return this.onSave({ saveType: 'delete', model });

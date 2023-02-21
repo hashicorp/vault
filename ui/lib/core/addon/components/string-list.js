@@ -1,75 +1,35 @@
 import ArrayProxy from '@ember/array/proxy';
-import Component from '@ember/component';
-import { set, computed } from '@ember/object';
+import Component from '@glimmer/component';
 import autosize from 'autosize';
-import layout from '../templates/components/string-list';
+import { action } from '@ember/object';
+import { set } from '@ember/object';
+import { next } from '@ember/runloop';
 
-export default Component.extend({
-  layout,
-  'data-test-component': 'string-list',
-  classNames: ['field', 'string-list', 'form-section'],
+/**
+ * @module StringList
+ *
+ * @example
+ * ```js
+ * <StringList @label={label} @onChange={{this.setAndBroadcast}} @inputValue={{this.valuePath}}/>
+ * ```
+ * @param {string} label - Text displayed in the header above all the inputs.
+ * @param {function} onChange - Function called when any of the inputs change.
+ * @param {string} inputValue - A string or an array of strings.
+ * @param {string} warning - Text displayed as a warning.
+ * @param {string} helpText - Text displayed as a tooltip.
+ * @param {string} type=array - Optional type for inputValue.
+ * @param {string} attrName - We use this to check the type so we can modify the tooltip content.
+ * @param {string} subText - Text below the label.
+ */
 
-  /*
-   * @public
-   * @param String
-   *
-   * Optional - Text displayed in the header above all of the inputs
-   *
-   */
-  label: null,
+export default class StringList extends Component {
+  constructor() {
+    super(...arguments);
 
-  /*
-   * @public
-   * @param Function
-   *
-   * Function called when any of the inputs change
-   * accepts a single param `value` that is the
-   * result of calling `toVal()`.
-   *
-   */
-  onChange: () => {},
-
-  /*
-   * @public
-   * @param String | Array
-   * A comma-separated string or an array of strings.
-   * Defaults to an empty array.
-   *
-   */
-  inputValue: computed(function() {
-    return [];
-  }),
-
-  /*
-   *
-   * @public
-   * @param String - ['array'|'string]
-   *
-   * Optional type for `inputValue` - defaults to `'array'`
-   * Needs to match type of `inputValue` because it is set by the component on init.
-   *
-   */
-  type: 'array',
-
-  /*
-   *
-   * @private
-   * @param Ember.ArrayProxy
-   *
-   * mutable array that contains objects in the form of
-   * {
-   *   value: 'somestring',
-   * }
-   *
-   * used to track the state of values bound to the various inputs
-   *
-   */
-  /* eslint-disable ember/no-side-effects */
-  inputList: computed('content', function() {
-    return ArrayProxy.create({
-      content: [],
+    this.inputList = ArrayProxy.create({
       // trim the `value` when accessing objects
-      objectAtContent: function(idx) {
+      content: [],
+      objectAtContent: function (idx) {
         const obj = this.content.objectAt(idx);
         if (obj && obj.value) {
           set(obj, 'value', obj.value.trim());
@@ -77,70 +37,78 @@ export default Component.extend({
         return obj;
       },
     });
-  }),
-
-  init() {
-    this._super(...arguments);
+    this.type = this.args.type || 'array';
     this.setType();
-    this.toList();
-    this.send('addInput');
-  },
-
-  didInsertElement() {
-    this._super(...arguments);
-    autosize(this.element.querySelector('textarea'));
-  },
-
-  didUpdate() {
-    this._super(...arguments);
-    autosize.update(this.element.querySelector('textarea'));
-  },
+    next(() => {
+      this.toList();
+      this.addInput();
+    });
+  }
 
   setType() {
     const list = this.inputList;
     if (!list) {
       return;
     }
-    this.set('type', typeof list);
-  },
-
-  toVal() {
-    const inputs = this.inputList.filter(x => x.value).mapBy('value');
-    if (this.format === 'string') {
-      return inputs.join(',');
-    }
-    return inputs;
-  },
+    this.type = typeof list;
+  }
 
   toList() {
-    let input = this.inputValue || [];
+    let input = this.args.inputValue || [];
     const inputList = this.inputList;
     if (typeof input === 'string') {
       input = input.split(',');
     }
-    inputList.addObjects(input.map(value => ({ value })));
-  },
+    inputList.addObjects(input.map((value) => ({ value })));
+  }
 
-  actions: {
-    inputChanged(idx, val) {
-      const inputObj = this.inputList.objectAt(idx);
-      const onChange = this.onChange;
-      set(inputObj, 'value', val);
-      onChange(this.toVal());
-    },
+  toVal() {
+    const inputs = this.inputList.filter((x) => x.value).mapBy('value');
+    if (this.args.type === 'string') {
+      return inputs.join(',');
+    }
+    return inputs;
+  }
 
-    addInput() {
-      const inputList = this.inputList;
-      if (inputList.get('lastObject.value') !== '') {
-        inputList.pushObject({ value: '' });
-      }
-    },
+  get helpText() {
+    if (this.args.attrName === 'tokenBoundCidrs') {
+      return 'Specifies the blocks of IP addresses which are allowed to use the generated token. One entry per row.';
+    } else {
+      return this.args.helpText;
+    }
+  }
 
-    removeInput(idx) {
-      const onChange = this.onChange;
-      const inputs = this.inputList;
-      inputs.removeObject(inputs.objectAt(idx));
-      onChange(this.toVal());
-    },
-  },
-});
+  @action
+  autoSize(element) {
+    autosize(element.querySelector('textarea'));
+  }
+
+  @action
+  autoSizeUpdate(element) {
+    autosize.update(element.querySelector('textarea'));
+  }
+
+  @action
+  inputChanged(idx, event) {
+    const inputObj = this.inputList.objectAt(idx);
+    const onChange = this.args.onChange;
+    set(inputObj, 'value', event.target.value);
+    onChange(this.toVal());
+  }
+
+  @action
+  addInput() {
+    const inputList = this.inputList;
+    if (inputList.get('lastObject.value') !== '') {
+      inputList.pushObject({ value: '' });
+    }
+  }
+
+  @action
+  removeInput(idx) {
+    const onChange = this.args.onChange;
+    const inputs = this.inputList;
+    inputs.removeObject(inputs.objectAt(idx));
+    onChange(this.toVal());
+  }
+}

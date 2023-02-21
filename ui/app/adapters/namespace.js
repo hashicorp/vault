@@ -12,12 +12,12 @@ export default ApplicationAdapter.extend({
   },
 
   urlForCreateRecord(modelName, snapshot) {
-    let id = snapshot.attr('path');
+    const id = snapshot.attr('path');
     return this.buildURL(modelName, id);
   },
 
   createRecord(store, type, snapshot) {
-    let id = snapshot.attr('path');
+    const id = snapshot.attr('path');
     return this._super(...arguments).then(() => {
       return { id };
     });
@@ -30,5 +30,8 @@ export default ApplicationAdapter.extend({
       });
     }
     return this._super(...arguments);
+  },
+  query() {
+    return this.ajax(`/${this.urlPrefix()}/namespaces?list=true`);
   },
 });

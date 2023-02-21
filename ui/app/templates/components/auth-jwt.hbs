@@ -1,7 +1,4 @@
-<form
-  id="auth-form"
-  onsubmit={{action (if this.isOIDC "startOIDCAuth" @onSubmit) (hash role=roleName jwt=jwt)}}
->
+<form id="auth-form" onsubmit={{action (if this.isOIDC "startOIDCAuth" @onSubmit) (hash role=this.roleName jwt=this.jwt)}}>
   <div class="field">
     <label for="role" class="is-label">Role</label>
     <div class="control">
@@ -19,9 +16,9 @@
       />
     </div>
     <AlertInline
-      @sizeSmall=true 
-      @paddingTop=true
-      @type="info" 
+      @sizeSmall={{true}}
+      @paddingTop={{true}}
+      @type="info"
       @message="Leave blank to sign in with the default role if one is configured"
     />
   </div>
@@ -29,19 +26,34 @@
     <div class="field">
       <label for="token" class="is-label">JWT Token</label>
       <div class="control">
-        <Input @type="password" @value={{jwt}} @name="jwt" class="input" @autocomplete="off" @spellcheck="false" data-test-jwt={{true}} />
+        <Input
+          @type="password"
+          @value={{this.jwt}}
+          name="jwt"
+          class="input"
+          autocomplete="off"
+          spellcheck="false"
+          data-test-jwt={{true}}
+        />
       </div>
     </div>
   {{/unless}}
   <div data-test-yield-content>
     {{yield}}
   </div>
-  <button data-test-auth-submit=true type="submit" disabled={{@disabled}} class="button is-primary {{if @disabled 'is-loading'}}" id="auth-submit">
+  <button
+    data-test-auth-submit={{true}}
+    type="submit"
+    disabled={{@disabled}}
+    class="button is-primary {{if @disabled 'is-loading'}}"
+    id="auth-submit"
+  >
     {{#if this.isOIDC}}
       {{#if this.role.providerButtonComponent}}
         {{component this.role.providerButtonComponent}}
       {{else}}
-      Sign in with {{or this.role.providerName 'OIDC Provider'}}
+        Sign in with
+        {{or this.role.providerName "OIDC Provider"}}
       {{/if}}
     {{else}}
       Sign In

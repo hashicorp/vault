@@ -1,18 +1,21 @@
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
-module('Integration | Component | shamir-modal-flow', function(hooks) {
+module('Integration | Component | shamir-modal-flow', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('isActive', true);
     this.set('onClose', sinon.spy());
+    this.server.get('/sys/replication/dr/secondary/generate-operation-token/attempt', () => {});
   });
 
-  test('it renders with initial content by default', async function(assert) {
+  test('it renders with initial content by default', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <ShamirModalFlow
@@ -21,8 +24,8 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="My CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>
@@ -34,7 +37,7 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
     assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Cancel', 'Shows cancel button');
   });
 
-  test('Shows correct content when started', async function(assert) {
+  test('Shows correct content when started', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <ShamirModalFlow
@@ -44,17 +47,17 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="Crazy CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>
     `);
-    assert.dom('[data-test-shamir-input]').exists('Asks for Master Key Portion');
+    assert.dom('[data-test-shamir-input]').exists('Asks for root key Portion');
     assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Cancel', 'Shows cancel button');
   });
 
-  test('Shows OTP when provided and flow started', async function(assert) {
+  test('Shows OTP when provided and flow started', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <ShamirModalFlow
@@ -64,8 +67,8 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="Crazy CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>
@@ -73,10 +76,8 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
     assert.dom('[data-test-shamir-encoded-token]').hasText('my-encoded-token', 'Shows encoded token');
     assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Close', 'Shows close button');
   });
-  /*
-  test('DR Secondary actions', async function (assert) {
+  skip('DR Secondary actions', async function () {
     // DR Secondaries cannot be tested yet, but once they can
     // we should add tests for Cancel button functionality
-  })
-  */
+  });
 });

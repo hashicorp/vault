@@ -1,20 +1,20 @@
 <aside class="menu">
-  {{#if title}}
+  {{#if this.title}}
     <p class="menu-label">
-      {{title}}
+      {{this.title}}
     </p>
   {{/if}}
   <ul class="menu-list">
     {{yield}}
   </ul>
   <div class="menu-toggle">
-    {{#if isActive}}
+    {{#if this.isActive}}
       <button type="button" class="button is-ghost" {{action "closeMenu"}}>
-        <Icon @glyph="cancel-plain" aria-label="Close menu" />
+        <Icon @name="x" aria-label="Close menu" />
       </button>
     {{else}}
       <button type="button" class="button is-ghost has-text-grey-light" {{action "openMenu"}}>
-        <Icon @glyph="more-vertical" aria-label="Open menu" />
+        <Icon @name="more-vertical" aria-label="Open menu" />
       </button>
     {{/if}}
   </div>

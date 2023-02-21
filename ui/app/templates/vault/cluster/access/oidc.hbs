@@ -1,0 +1,59 @@
+{{#if this.header}}
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3">
+        OIDC Provider
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+  <div class="box is-fullwidth is-sideless is-flex-between is-box-shadowless is-marginless" data-test-oidc-header>
+    <p>
+      Configure Vault to act as an OIDC identity provider, and offer
+      {{"Vault’s"}}
+      various authentication
+      {{#if this.isCta}}
+        <br />
+      {{/if}}
+      methods and source of identity to any client applications.
+      <DocLink @path="/vault/tutorials/auth-methods/oidc-identity-provider">
+        Learn more
+      </DocLink>
+    </p>
+    {{#if this.isCta}}
+      <button
+        type="submit"
+        class="button is-primary"
+        {{on "click" (transition-to "vault.cluster.access.oidc.clients.create")}}
+        data-test-oidc-configure
+      >
+        Create your first app
+      </button>
+    {{/if}}
+  </div>
+  {{#unless this.isCta}}
+    {{! show tab links in list routes }}
+    <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless" data-test-oidc-tabs>
+      <nav class="tabs">
+        <ul>
+          <LinkTo @route="vault.cluster.access.oidc.clients" data-test-tab="clients">
+            Applications
+          </LinkTo>
+          <LinkTo @route="vault.cluster.access.oidc.keys" data-test-tab="keys">
+            Keys
+          </LinkTo>
+          <LinkTo @route="vault.cluster.access.oidc.assignments" data-test-tab="assignments">
+            Assignments
+          </LinkTo>
+          <LinkTo @route="vault.cluster.access.oidc.providers" data-test-tab="providers">
+            Providers
+          </LinkTo>
+          <LinkTo @route="vault.cluster.access.oidc.scopes" data-test-tab="scopes">
+            Scopes
+          </LinkTo>
+        </ul>
+      </nav>
+    </div>
+  {{/unless}}
+{{/if}}
+
+{{outlet}}

@@ -1,23 +1,23 @@
 <div class="selectable-card is-rounded secondaries">
   <div class="level">
-    <h3 class="card-title title is-5">{{replicationAttrs.secondaries.length}} Known Secondaries</h3>
-    <ToolbarLink @params={{array "mode.secondaries" cluster.replicationMode}} data-test-manage-link>
+    <h3 class="card-title title is-5">{{this.replicationAttrs.secondaries.length}} Known Secondaries</h3>
+    <ToolbarLink @route="mode.secondaries" @model={{this.cluster.replicationMode}} data-test-manage-link>
       View all
     </ToolbarLink>
   </div>
   <div class="secondaries-table">
-    {{#unless replicationAttrs.secondaries}}
-      <EmptyState
-        @title="No known {{cluster.replicationMode}} secondary clusters associated with this cluster"
-        @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started." />
+    {{#if this.replicationAttrs.secondaries}}
+      <KnownSecondariesTable @secondaries={{this.replicationAttrs.secondaries}} />
     {{else}}
-      <KnownSecondariesTable @secondaries={{replicationAttrs.secondaries}} />
-    {{/unless}}
+      <EmptyState
+        @title="No known {{this.cluster.replicationMode}} secondary clusters associated with this cluster"
+        @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
+      />
+    {{/if}}
   </div>
-  {{#if cluster.canAddSecondary}}
-    {{#link-to "mode.secondaries.add" cluster.replicationMode class="link add-secondaries"}}
+  {{#if this.cluster.canAddSecondary}}
+    <LinkTo @route="mode.secondaries.add" @model={{this.cluster.replicationMode}} class="link add-secondaries">
       Add secondary
-    {{/link-to}}
+    </LinkTo>
   {{/if}}
 </div>
-

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -30,7 +31,7 @@ func TestServerWithListenerAndProperties(tb testing.TB, ln net.Listener, addr st
 	// for tests.
 	mux := http.NewServeMux()
 	mux.Handle("/_test/auth", http.HandlerFunc(testHandleAuth))
-	mux.Handle("/", Handler(props))
+	mux.Handle("/", Handler.Handler(props))
 
 	server := &http.Server{
 		Addr:     ln.Addr().String(),
@@ -41,10 +42,16 @@ func TestServerWithListenerAndProperties(tb testing.TB, ln net.Listener, addr st
 }
 
 func TestServerWithListener(tb testing.TB, ln net.Listener, addr string, core *vault.Core) {
+	ip, _, _ := net.SplitHostPort(ln.Addr().String())
+
 	// Create a muxer to handle our requests so that we can authenticate
 	// for tests.
 	props := &vault.HandlerProperties{
 		Core: core,
+		// This is needed for testing custom response headers
+		ListenerConfig: &configutil.Listener{
+			Address: ip,
+		},
 	}
 	TestServerWithListenerAndProperties(tb, ln, addr, core, props)
 }

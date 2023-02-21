@@ -43,7 +43,7 @@ export default ApplicationAdapter.extend({
   },
 
   optionsForQuery(id, action, wrapTTL) {
-    let data = {};
+    const data = {};
     if (action === 'query') {
       data.list = true;
     }
@@ -56,7 +56,7 @@ export default ApplicationAdapter.extend({
   fetchByQuery(query, action) {
     const { id, backend, wrapTTL } = query;
     return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id, action, wrapTTL)).then(
-      resp => {
+      (resp) => {
         if (wrapTTL) {
           return resp;
         }

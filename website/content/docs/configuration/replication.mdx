@@ -37,8 +37,12 @@ replication {
   is not specified, Vault will attempt to read the total amount of memory available on the host it's running on. If
   that succeeds, Vault will use 10% of the value found. If Vault is unable to read the amount of host memory, this
   defaults to 1GB.
-- `allow_forwarding_via_header` `(boolean: flase)` - Enable forwarding options for client controlled consistency,
+- `allow_forwarding_via_header` `(boolean: false)` - Enable forwarding options for client controlled consistency,
   i.e. `X-Vault-Inconsistent: forward-active-node` and `X-Vault-Forward: active-node`.
 - `best_effort_wal_wait_duration` `(duration: "2s")` - Legacy mitigation to try to prevent stale reads: when a
   write is made via RPC, i.e. the node handling the request didn't do the write itself, wait up to this much
   time to see the resulting WAL present locally before returning a response to the client.
+- `allow_forwarding_via_token` `(string: "")` - When set to `new_token`, requests sent to non-active nodes
+  are forwarded if the node does not yet have the token information in storage.
+
+Support for Server Side Consistent Tokens is now available. Refer to the [Server Side Consistent Token FAQ](/vault/docs/faq/ssct) for details.

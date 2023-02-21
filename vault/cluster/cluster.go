@@ -6,11 +6,17 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/url"
+	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -60,14 +66,26 @@ type Listener struct {
 	shutdownWg *sync.WaitGroup
 	server     *http2.Server
 
-	networkLayer NetworkLayer
-	cipherSuites []uint16
-	advertise    net.Addr
-	logger       log.Logger
-	l            sync.RWMutex
+	networkLayer              NetworkLayer
+	cipherSuites              []uint16
+	advertise                 net.Addr
+	logger                    log.Logger
+	l                         sync.RWMutex
+	tlsConnectionLoggingLevel log.Level
 }
 
 func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration) *Listener {
+	var maxStreams uint32 = math.MaxUint32
+	if override := os.Getenv("VAULT_GRPC_MAX_STREAMS"); override != "" {
+		i, err := strconv.ParseUint(override, 10, 32)
+		if err != nil {
+			logger.Warn("vault grpc max streams override must be an uint32 integer", "value", override)
+		} else {
+			maxStreams = uint32(i)
+			logger.Info("overriding grpc max streams", "value", i)
+		}
+	}
+
 	// Create the HTTP/2 server that will be shared by both RPC and regular
 	// duties. Doing it this way instead of listening via the server and gRPC
 	// allows us to re-use the same port via ALPN. We can just tell the server
@@ -76,6 +94,10 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 		// Our forwarding connections heartbeat regularly so anything else we
 		// want to go away/get cleaned up pretty rapidly
 		IdleTimeout: idleTimeout,
+
+		// By default this is 250 which can be too small on high traffic
+		// clusters with many forwarded or replication gRPC connections.
+		MaxConcurrentStreams: maxStreams,
 	}
 
 	return &Listener{
@@ -85,9 +107,10 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 		shutdownWg: &sync.WaitGroup{},
 		server:     h2Server,
 
-		networkLayer: networkLayer,
-		cipherSuites: cipherSuites,
-		logger:       logger,
+		networkLayer:              networkLayer,
+		cipherSuites:              cipherSuites,
+		logger:                    logger,
+		tlsConnectionLoggingLevel: log.LevelFromString(os.Getenv("VAULT_CLUSTER_TLS_SESSION_LOG_LEVEL")),
 	}
 }
 
@@ -359,6 +382,8 @@ func (cl *Listener) Run(ctx context.Context) error {
 					continue
 				}
 
+				cl.logTLSSessionStart(tlsConn.RemoteAddr().String(), tlsConn.ConnectionState())
+
 				// Now, set it back to unlimited
 				err = tlsConn.SetDeadline(time.Time{})
 				if err != nil {
@@ -436,9 +461,27 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		}
 
 		tlsConfig.NextProtos = []string{alpn}
-		cl.logger.Debug("creating rpc dialer", "alpn", alpn, "host", tlsConfig.ServerName)
+		cl.logger.Debug("creating rpc dialer", "address", addr, "alpn", alpn, "host", tlsConfig.ServerName)
 
-		return cl.networkLayer.Dial(addr, timeout, tlsConfig)
+		conn, err := cl.networkLayer.Dial(addr, timeout, tlsConfig)
+		if err != nil {
+			return nil, err
+		}
+		cl.logTLSSessionStart(conn.RemoteAddr().String(), conn.ConnectionState())
+		return conn, nil
+	}
+}
+
+func (cl *Listener) logTLSSessionStart(peerAddress string, state tls.ConnectionState) {
+	if cl.tlsConnectionLoggingLevel != log.NoLevel {
+		cipherName, _ := tlsutil.GetCipherName(state.CipherSuite)
+		cl.logger.Log(cl.tlsConnectionLoggingLevel, "TLS connection established", "peer", peerAddress, "negotiated_protocol", state.NegotiatedProtocol, "cipher_suite", cipherName)
+		for _, chain := range state.VerifiedChains {
+			for _, cert := range chain {
+				cl.logger.Log(cl.tlsConnectionLoggingLevel, "Peer certificate", "is_ca", cert.IsCA, "serial_number", cert.SerialNumber.String(), "subject", cert.Subject.String(),
+					"signature_algorithm", cert.SignatureAlgorithm.String(), "public_key_algorithm", cert.PublicKeyAlgorithm.String(), "public_key_size", certutil.GetPublicKeySize(cert.PublicKey))
+			}
+		}
 	}
 }
 

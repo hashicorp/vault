@@ -3,14 +3,16 @@ import { computed } from '@ember/object';
 import Controller from '@ember/controller';
 import { task } from 'ember-concurrency';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { inject as service } from '@ember/service';
 const LINKED_BACKENDS = supportedSecretBackends();
 
 export default Controller.extend({
+  flashMessages: service(),
   displayableBackends: filterBy('model', 'shouldIncludeInList'),
 
-  supportedBackends: computed('displayableBackends', 'displayableBackends.[]', function() {
+  supportedBackends: computed('displayableBackends', 'displayableBackends.[]', function () {
     return (this.displayableBackends || [])
-      .filter(backend => LINKED_BACKENDS.includes(backend.get('engineType')))
+      .filter((backend) => LINKED_BACKENDS.includes(backend.get('engineType')))
       .sortBy('id');
   }),
 
@@ -19,15 +21,12 @@ export default Controller.extend({
     'displayableBackends.[]',
     'supportedBackends',
     'supportedBackends.[]',
-    function() {
-      return (this.displayableBackends || [])
-        .slice()
-        .removeObjects(this.supportedBackends)
-        .sortBy('id');
+    function () {
+      return (this.displayableBackends || []).slice().removeObjects(this.supportedBackends).sortBy('id');
     }
   ),
 
-  disableEngine: task(function*(engine) {
+  disableEngine: task(function* (engine) {
     const { engineType, path } = engine;
     try {
       yield engine.destroyRecord();

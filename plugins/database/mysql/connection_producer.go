@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -24,12 +24,13 @@ type mySQLConnectionProducer struct {
 	MaxOpenConnections       int         `json:"max_open_connections"    mapstructure:"max_open_connections"    structs:"max_open_connections"`
 	MaxIdleConnections       int         `json:"max_idle_connections"    mapstructure:"max_idle_connections"    structs:"max_idle_connections"`
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
-
-	Username string `json:"username" mapstructure:"username" structs:"username"`
-	Password string `json:"password" mapstructure:"password" structs:"password"`
+	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
+	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
 
 	TLSCertificateKeyData []byte `json:"tls_certificate_key" mapstructure:"tls_certificate_key" structs:"-"`
 	TLSCAData             []byte `json:"tls_ca"              mapstructure:"tls_ca"              structs:"-"`
+	TLSServerName         string `json:"tls_server_name" mapstructure:"tls_server_name" structs:"tls_server_name"`
+	TLSSkipVerify         bool   `json:"tls_skip_verify" mapstructure:"tls_skip_verify" structs:"tls_skip_verify"`
 
 	// tlsConfigName is a globally unique name that references the TLS config for this instance in the mysql driver
 	tlsConfigName string
@@ -111,12 +112,12 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 	c.Initialized = true
 
 	if verifyConnection {
-		if _, err := c.Connection(ctx); err != nil {
-			return nil, fmt.Errorf("error verifying connection: %w", err)
+		if _, err = c.Connection(ctx); err != nil {
+			return nil, fmt.Errorf("error verifying - connection: %w", err)
 		}
 
 		if err := c.db.PingContext(ctx); err != nil {
-			return nil, fmt.Errorf("error verifying connection: %w", err)
+			return nil, fmt.Errorf("error verifying - ping: %w", err)
 		}
 	}
 
@@ -204,8 +205,10 @@ func (c *mySQLConnectionProducer) getTLSAuth() (tlsConfig *tls.Config, err error
 	}
 
 	tlsConfig = &tls.Config{
-		RootCAs:      rootCertPool,
-		Certificates: clientCert,
+		RootCAs:            rootCertPool,
+		Certificates:       clientCert,
+		ServerName:         c.TLSServerName,
+		InsecureSkipVerify: c.TLSSkipVerify,
 	}
 
 	return tlsConfig, nil
@@ -222,6 +225,5 @@ func (c *mySQLConnectionProducer) addTLStoDSN() (connURL string, err error) {
 	}
 
 	connURL = config.FormatDSN()
-
 	return connURL, nil
 }

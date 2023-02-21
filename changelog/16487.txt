@@ -1,0 +1,3 @@
+```release-note:improvement
+identity: Prevent possibility of data races on entity creation.
+```

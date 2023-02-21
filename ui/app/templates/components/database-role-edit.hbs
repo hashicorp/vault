@@ -1,10 +1,10 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{mode}} @root={{@root}} @showCurrent={{true}} />
+    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq @mode "create") }}
+      {{#if (eq @mode "create")}}
         Create Role
       {{else if (eq @mode "edit")}}
         Edit Role
@@ -15,75 +15,93 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq @mode 'show')}}
+{{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
       {{#if @model.canDelete}}
-      <ConfirmAction
-        @buttonClasses="toolbar-link"
-        @onConfirmAction={{action 'delete'}}
-        @confirmTitle="Delete role?"
-        @confirmMessage="This role will be permanently deleted. You will need to recreate it to use it again."
-        @confirmButtonText="Delete"
-        data-test-database-role-delete
-      >
-        Delete role
-      </ConfirmAction>
-      <div class="toolbar-separator" />
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action "delete"}}
+          @confirmTitle="Delete role?"
+          @confirmMessage="This role will be permanently deleted. You will need to recreate it to use it again."
+          @confirmButtonText="Delete"
+          data-test-database-role-delete
+        >
+          Delete role
+        </ConfirmAction>
+        <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if @model.canGenerateCredentials}}
-      <button 
-        type="button"
-        class="toolbar-link"
-        {{on 'click' (fn this.generateCreds @model.id)}}
-        data-test-database-role-generate-creds
-      >
-        Generate credentials
-      </button>
+      {{#if (and @model.canRotateRoleCredentials (eq @model.type "static"))}}
+        <button type="button" class="toolbar-link" {{on "click" (fn this.rotateRoleCred @model.id)}}>
+          Rotate credentials
+        </button>
+      {{/if}}
+      {{#if
+        (or
+          (and (eq @model.type "static") @model.canGetCredentials)
+          (and (eq @model.type "dynamic") @model.canGenerateCredentials)
+        )
+      }}
+        <button
+          type="button"
+          class="toolbar-link"
+          {{on "click" (fn this.generateCreds @model.id @model.type)}}
+          data-test-database-role-creds={{@model.type}}
+        >
+          {{if (eq @model.type "static") "Get credentials" "Generate credentials"}}
+        </button>
       {{/if}}
       {{#if @model.canEditRole}}
-      <ToolbarSecretLink
-        @secret={{concat 'role/' @model.id}}
-        @mode="edit"
-        @replace=true
-        @queryParams={{query-params itemType="role"}}
-        @data-test-edit-link=true
-      >
-        Edit role
-      </ToolbarSecretLink>
+        <ToolbarSecretLink
+          @secret={{concat "role/" @model.id}}
+          @mode="edit"
+          @replace={{true}}
+          @queryParams={{hash itemType="role"}}
+          data-test-edit-link={{true}}
+        >
+          Edit role
+        </ToolbarSecretLink>
       {{/if}}
     </ToolbarActions>
   </Toolbar>
   {{#each @model.showFields as |attr|}}
-    {{#let attr.options.defaultDisplay as |defaultDisplay|}}
+    {{#let attr.options.defaultShown as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
           @alwaysRender={{true}}
-          @defaultShown={{attr.options.defaultShown}}
+          @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{stringify (get @model attr.name)}}
+        />
+      {{else if (eq attr.options.editType "ttl")}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{format-duration (get @model attr.name)}}
+          @isLink={{eq attr.name "database"}}
         />
       {{else}}
         <InfoTableRow
           @alwaysRender={{true}}
-          @defaultShown={{attr.options.defaultShown}}
+          @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{or (get @model attr.name) defaultDisplay}}
-          @isLink={{eq attr.name 'database'}}
+          @value={{get @model attr.name}}
+          @isLink={{eq attr.name "database"}}
         />
       {{/if}}
     {{/let}}
   {{/each}}
 {{else}}
-  {{!-- Edit or Create --}}
+  {{! Edit or Create }}
   <div class="box is-sideless is-fullwidth is-marginless">
-    <form {{on 'submit' this.handleCreateEditRole}}>
+    <form {{on "submit" this.handleCreateEditRole}}>
       {{#each @model.fieldAttrs as |attr|}}
-        {{#if (eq @mode 'edit')}}
+        {{#if (eq @mode "edit")}}
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else if (not-eq attr.options.readOnly true)}}
-          {{form-field data-test-field attr=attr model=@model}}
-          {{!-- TODO: If database && !updateDB show warning --}}
+          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+          {{! TODO: If database && !updateDB show warning }}
           {{#if (get this.warningMessages attr.name)}}
             <AlertBanner @type="warning" @message={{get this.warningMessages attr.name}} />
           {{/if}}
@@ -108,7 +126,7 @@
                 disabled={{this.loading}}
                 class="button is-primary {{if this.loading 'is-loading'}}"
               >
-                {{#if (eq @mode 'create')}}
+                {{#if (eq @mode "create")}}
                   Create role
                 {{else}}
                   Save
@@ -116,26 +134,23 @@
               </button>
             {{else}}
               <ToolTip @horizontalPosition="left" as |T|>
-                <T.trigger>
-                  <button
-                    data-test-secret-save
-                    type="submit"
-                    disabled={{true}}
-                    class="button is-primary"
-                  >
+                <T.Trigger>
+                  <button data-test-secret-save type="submit" disabled={{true}} class="button is-primary">
                     Save
                   </button>
-                </T.trigger>
-                <T.content @class="tool-tip">
+                </T.Trigger>
+                <T.Content @defaultClass="tool-tip">
                   <div class="box">
-                    You don't have permissions required to {{if (eq @mode 'create') "create" "update"}} this role. See form for details.
+                    You don't have permissions required to
+                    {{if (eq @mode "create") "create" "update"}}
+                    this role. See form for details.
                   </div>
-                </T.content>
+                </T.Content>
               </ToolTip>
             {{/if}}
           </div>
           <div class="control">
-            <SecretLink @mode="list" @class="button">
+            <SecretLink @mode="list" class="button">
               Cancel
             </SecretLink>
           </div>

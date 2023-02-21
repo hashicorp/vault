@@ -1,0 +1,3 @@
+```release-note: improvements
+core/plugin: Update plugin proto to send tls.ConnectionState across gRPC boundary
+```

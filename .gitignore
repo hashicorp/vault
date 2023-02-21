@@ -28,6 +28,10 @@ _testmain.go
 /bin/
 /pkg/
 
+# Generated Web UI goes here
+/http/web_ui/*.*
+/http/web_ui/**/*.*
+
 # Vault-specific
 example.hcl
 example.vault.d
@@ -47,9 +51,22 @@ Vagrantfile
 
 # Configs
 *.hcl
+!.copywrite.hcl
+!.release/ci.hcl
+!.release/security-scan.hcl
+!.release/linux/package/etc/vault.d/vault.hcl
 !command/agent/config/test-fixtures/*.hcl
-!command/server/test-fixtures/*.hcl
+!command/server/test-fixtures/**/*.hcl
+!enos/**/*.hcl
 
+# Enos
+enos/.enos
+enos/support
+# Enos local Terraform files
+enos/.terraform/*
+enos/.terraform.lock.hcl
+enos/*.tfstate
+enos/*.tfstate.*
 
 .DS_Store
 .idea
@@ -73,7 +90,6 @@ dist/*
 ui/dist
 ui/tmp
 ui/root
-http/bindata_assetfs.go
 
 # dependencies
 ui/node_modules
@@ -109,3 +125,6 @@ website/components/node_modules
 
 .buildcache/
 .releaser/
+*.log
+
+tools/godoctests/.bin

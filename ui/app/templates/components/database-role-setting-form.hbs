@@ -1,38 +1,35 @@
 <div class="box is-sideless is-fullwidth is-marginless" data-test-role-settings-section>
   <h3 class="title is-5">Role Settings</h3>
-  {{#unless this.settingFields}}
-    <EmptyState
-      @title="No role type selected"
-      @message="Select a type of role to be able to configure it"
-    />
-  {{else}}
+  {{#if this.settingFields}}
     <div class="form-section">
       {{#each this.settingFields as |attr|}}
-        {{#if (and (eq @mode 'edit') (eq attr.name 'username'))}}
+        {{#if (and (eq @mode "edit") (eq attr.name "username"))}}
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else}}
-          {{form-field data-test-field attr=attr model=@model}}
+          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
         {{/if}}
-        
-      {{/each}}    
-    </div>
-  {{/unless}}
-</div>
 
+      {{/each}}
+    </div>
+  {{else}}
+    <EmptyState @title="No role type selected" @message="Select a type of role to be able to configure it" />
+  {{/if}}
+</div>
+{{! template-lint-configure simple-unless "warn"  }}
 {{#unless (and @roleType (not this.statementFields))}}
   <div class="box is-sideless is-fullwidth is-marginless" data-test-statements-section>
     <h3 class="title is-5">Statements</h3>
-    {{#unless this.statementFields}}
+    {{#if this.statementFields}}
+      <div class="form-section">
+        {{#each this.statementFields as |attr|}}
+          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+        {{/each}}
+      </div>
+    {{else}}
       <EmptyState
         @title="No role type selected"
         @message="Select a type of role to be able to add statements for creation, revocation, and/or rotation."
       />
-    {{else}}
-      <div class="form-section">
-        {{#each this.statementFields as |attr|}}
-          {{form-field data-test-field attr=attr model=@model}}
-        {{/each}}    
-      </div>
-    {{/unless}}
+    {{/if}}
   </div>
 {{/unless}}

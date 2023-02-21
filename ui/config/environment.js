@@ -1,21 +1,21 @@
 /* eslint-env node */
 'use strict';
 
-module.exports = function(environment) {
-  var ENV = {
+module.exports = function (environment) {
+  const ENV = {
     modulePrefix: 'vault',
-    environment: environment,
+    environment,
     rootURL: '/ui/',
     serviceWorkerScope: '/v1/sys/storage/raft/snapshot',
-    locationType: 'auto',
+    locationType: 'history',
     EmberENV: {
       FEATURES: {
         // Here you can enable experimental features on an ember canary build
         // e.g. 'with-controller': true
       },
       EXTEND_PROTOTYPES: {
-        // Prevent Ember Data from overriding Date.parse.
-        Date: false,
+        Date: false, // Prevent Ember Data from overriding Date.parse.
+        String: false, // Prevent user from using an Ember string method on string. ex: "foo".capitalize();
       },
     },
 
@@ -45,9 +45,12 @@ module.exports = function(environment) {
     ENV.APP.LOG_TRANSITIONS = true;
     // ENV.APP.LOG_TRANSITIONS_INTERNAL = true;
     // ENV.APP.LOG_VIEW_LOOKUPS = true;
-    // ENV['ember-cli-mirage'] = {
-    //   enabled: true,
-    // };
+    if (process.env.MIRAGE_DEV_HANDLER !== undefined) {
+      ENV['ember-cli-mirage'] = {
+        enabled: true,
+        handler: process.env.MIRAGE_DEV_HANDLER,
+      };
+    }
   }
 
   if (environment === 'test') {
@@ -65,16 +68,6 @@ module.exports = function(environment) {
   }
   if (environment !== 'production') {
     ENV.APP.DEFAULT_PAGE_SIZE = 15;
-    ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
-    ENV.contentSecurityPolicyMeta = true;
-    ENV.contentSecurityPolicy = {
-      'connect-src': ["'self'"],
-      'img-src': ["'self'", 'data:'],
-      'font-src': ["'self'"],
-      'form-action': ["'none'"],
-      'script-src': ["'self'"],
-      'style-src': ["'unsafe-inline'", "'self'"],
-    };
   }
 
   ENV.welcomeMessage = process.env.UI_AUTH_WELCOME;

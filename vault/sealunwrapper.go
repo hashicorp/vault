@@ -1,4 +1,4 @@
-// +build !enterprise
+//go:build !enterprise
 
 package vault
 
@@ -9,7 +9,7 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -72,7 +72,7 @@ func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, e
 	}
 
 	var performUnwrap bool
-	se := &wrapping.EncryptedBlobInfo{}
+	se := &wrapping.BlobInfo{}
 	// If the value ends in our canary value, try to decode the bytes.
 	eLen := len(entry.Value)
 	if eLen > 0 && entry.Value[eLen-1] == 's' {
@@ -109,7 +109,7 @@ func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, e
 	}
 
 	performUnwrap = false
-	se = &wrapping.EncryptedBlobInfo{}
+	se = &wrapping.BlobInfo{}
 	// If the value ends in our canary value, try to decode the bytes.
 	eLen = len(entry.Value)
 	if eLen > 0 && entry.Value[eLen-1] == 's' {

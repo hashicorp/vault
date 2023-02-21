@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/command/agent/auth"
 )
 
 func TestIngressToken(t *testing.T) {
@@ -21,18 +21,18 @@ func TestIngressToken(t *testing.T) {
 		symlinked = "symlinked"
 	)
 
-	rootDir, err := ioutil.TempDir("", "vault-agent-jwt-auth-test")
+	rootDir, err := os.MkdirTemp("", "vault-agent-jwt-auth-test")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %s", err)
 	}
 	defer os.RemoveAll(rootDir)
 
 	setupTestDir := func() string {
-		testDir, err := ioutil.TempDir(rootDir, "")
+		testDir, err := os.MkdirTemp(rootDir, "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(path.Join(testDir, file), []byte("test"), 0644)
+		err = os.WriteFile(path.Join(testDir, file), []byte("test"), 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -40,7 +40,7 @@ func TestIngressToken(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = os.Mkdir(path.Join(testDir, dir), 0755)
+		err = os.Mkdir(path.Join(testDir, dir), 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -102,6 +102,65 @@ func TestIngressToken(t *testing.T) {
 		} else {
 			if strings.Contains(logBuffer.String(), "[ERROR]") || strings.Contains(logBuffer.String(), "[WARN]") {
 				t.Fatal("logs contained unexpected error", logBuffer.String())
+			}
+		}
+	}
+}
+
+func TestDeleteAfterReading(t *testing.T) {
+	for _, tc := range map[string]struct {
+		configValue  string
+		shouldDelete bool
+	}{
+		"default": {
+			"",
+			true,
+		},
+		"explicit true": {
+			"true",
+			true,
+		},
+		"false": {
+			"false",
+			false,
+		},
+	} {
+		rootDir, err := os.MkdirTemp("", "vault-agent-jwt-auth-test")
+		if err != nil {
+			t.Fatalf("failed to create temp dir: %s", err)
+		}
+		defer os.RemoveAll(rootDir)
+		tokenPath := path.Join(rootDir, "token")
+		err = os.WriteFile(tokenPath, []byte("test"), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		config := &auth.AuthConfig{
+			Config: map[string]interface{}{
+				"path": tokenPath,
+				"role": "unusedrole",
+			},
+			Logger: hclog.Default(),
+		}
+		if tc.configValue != "" {
+			config.Config["remove_jwt_after_reading"] = tc.configValue
+		}
+
+		jwtAuth, err := NewJWTAuthMethod(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		jwtAuth.(*jwtMethod).ingressToken()
+
+		if _, err := os.Lstat(tokenPath); tc.shouldDelete {
+			if err == nil || !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
 			}
 		}
 	}

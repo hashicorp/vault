@@ -1,0 +1,67 @@
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink @route="vault.cluster.access.oidc.assignments.create" @type="add" data-test-oidc-assignment-create>
+      Create assignment
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+{{#each this.model as |model|}}
+  <LinkedBlock
+    class="list-item-row {{if (eq model.name 'allow_all') 'is-disabled'}}"
+    @params={{array "vault.cluster.access.oidc.assignments.assignment.details" model.name}}
+    @disabled={{eq model.name "allow_all"}}
+    data-test-oidc-assignment-linked-block={{model.name}}
+  >
+    <div class="level is-mobile">
+      <div class="level-left">
+        <div>
+          <Icon @name="users" class="has-text-grey-light" />
+          <span class="has-text-weight-semibold {{if (not-eq model.name 'allow_all') 'is-underline'}}">
+            {{model.name}}
+          </span>
+          {{#if (eq model.name "allow_all")}}
+            <div class="is-size-8">
+              This is a built-in assignment that cannot be modified or deleted.
+              <DocLink @path="/docs/concepts/oidc-provider#assignments">
+                Learn more
+              </DocLink>
+            </div>
+          {{/if}}
+        </div>
+      </div>
+      {{#if (not-eq model.name "allow_all")}}
+        <div class="level-right is-flex is-paddingless is-marginless">
+          <div class="level-item">
+            <PopupMenu>
+              <nav class="menu">
+                <ul class="menu-list">
+                  <li>
+                    <LinkTo
+                      @route="vault.cluster.access.oidc.assignments.assignment.details"
+                      @model={{model.name}}
+                      @disabled={{eq model.canRead false}}
+                      data-test-oidc-assignment-menu-link="details"
+                    >
+                      Details
+                    </LinkTo>
+                  </li>
+                  <li>
+                    <LinkTo
+                      @route="vault.cluster.access.oidc.assignments.assignment.edit"
+                      @model={{model.name}}
+                      @disabled={{eq model.canEdit false}}
+                      data-test-oidc-assignment-menu-link="edit"
+                    >
+                      Edit
+                    </LinkTo>
+                  </li>
+                </ul>
+              </nav>
+            </PopupMenu>
+          </div>
+        </div>
+      {{/if}}
+    </div>
+  </LinkedBlock>
+{{/each}}

@@ -9,29 +9,29 @@ description: Learn about the details of key rotation within Vault.
 Vault has multiple encryption keys that are used for various purposes. These keys support
 rotation so that they can be periodically changed or in response to a potential leak or
 compromise. It is useful to first understand the
-[high-level architecture](/docs/internals/architecture) before learning about key rotation.
+[high-level architecture](/vault/docs/internals/architecture) before learning about key rotation.
 
 As a review, Vault starts in a _sealed_ state. Vault is unsealed by providing the unseal keys.
 By default, Vault uses a technique known as [Shamir's secret sharing algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing)
-to split the master key into 5 shares, any 3 of which are required to reconstruct the master
-key. The master key is used to protect the encryption key, which is ultimately used to protect
+to split the root key into 5 shares, any 3 of which are required to reconstruct the master
+key. The root key is used to protect the encryption key, which is ultimately used to protect
 data written to the storage backend.
 
-[![Vault Shamir Secret Sharing Algorithm](/img/vault-shamir-secret-sharing.svg)](/img/vault-shamir-secret-sharing.svg)
+![Key Rotate](/img/vault-key-rotate.png)
 
-To support key rotation, we need to support changing the unseal keys, master key, and the
+To support key rotation, we need to support changing the unseal keys, root key, and the
 backend encryption key. We split this into two separate operations, `rekey` and `rotate`.
 
-The `rekey` operation is used to generate a new master key. When this is being done,
+The `rekey` operation is used to generate a new root key. When this is being done,
 it is possible to change the parameters of the key splitting, so that the number of shares
 and the threshold required to unseal can be changed. To perform a rekey a threshold of the
 current unseal keys must be provided. This is to prevent a single malicious operator from
-performing a rekey and invalidating the existing master key.
+performing a rekey and invalidating the existing root key.
 
 Performing a rekey is fairly straightforward. The rekey operation must be initialized with
 the new parameters for the split and threshold. Once initialized, the current unseal keys
 must be provided until the threshold is met. Once met, Vault will generate the new master
-key, perform the splitting, and re-encrypt the encryption key with the new master key.
+key, perform the splitting, and re-encrypt the encryption key with the new root key.
 The new unseal keys are then provided to the operator, and the old unseal keys are no
 longer usable.
 
@@ -54,20 +54,22 @@ for a few minutes enabling standby instances to do a periodic check for upgrades
 This allows standby instances to update their keys and stay in-sync with the active Vault
 without requiring operators to perform another unseal.
 
+The `rotate/config` endpoint is used to configure the number of operations or time interval
+between automatic rotations of the backend encryption key.
+
 ## NIST Rotation Guidance
 
-Period rotation of the encryption keys is recommended, even in the absence of
+Periodic rotation of the encryption keys is recommended, even in the absence of
 compromise. Due to the nature of the AES-256-GCM encryption used, keys should be
 rotated before approximately 2<sup>32</sup> encryptions have been performed, following
-the guidelines of NIST publication 800-38D. Operators can estimate the number
-of encryptions by summing the following:
+the guidelines of NIST publication 800-38D.
+
+As of Vault 1.7, Vault will automatically rotate the backend encryption key
+prior to reaching 2<sup>32</sup> encryption operations by default.
+
+Operators can estimate the number of encryptions by summing the following:
 
 - The `vault.barrier.put` telemetry metric.
 - The `vault.token.creation` metric where the `token_type` label is `batch`.
 - The `merkle.flushDirty.num_pages` metric.
 - The WAL index.
-
-The simplest strategy may be to use those metrics to determine a frequency of
-rotation and make that part of the operational process. For example, if one
-determines that the estimated rate is 40 million operations per day, then
-rotating the key every three months is sufficient.

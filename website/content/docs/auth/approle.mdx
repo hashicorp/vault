@@ -69,6 +69,10 @@ The response will contain the token at `auth.client_token`:
 }
 ```
 
+-> **Application Integration:** See the [Code Example](#code-example) section
+for a code snippet demonstrating the authentication with Vault using the
+AppRole auth method.
+
 ## Configuration
 
 Auth methods must be configured in advance before users or machines can
@@ -79,13 +83,13 @@ management tool.
 
 1. Enable the AppRole auth method:
 
-   ```text
+   ```shell-session
    $ vault auth enable approle
    ```
 
 1. Create a named role:
 
-   ```text
+   ```shell-session
    $ vault write auth/approle/role/my-role \
        secret_id_ttl=10m \
        token_num_uses=10 \
@@ -101,25 +105,26 @@ documentation.
 
 1. Fetch the RoleID of the AppRole:
 
-   ```text
+   ```shell-session
    $ vault read auth/approle/role/my-role/role-id
    role_id     db02de05-fa39-4855-059b-67221c5c2f63
    ```
 
 1. Get a SecretID issued against the AppRole:
 
-   ```text
+   ```shell-session
    $ vault write -f auth/approle/role/my-role/secret-id
    secret_id               6a174c20-f6de-a53c-74d2-6018fcceff64
    secret_id_accessor      c454f7e5-996e-7230-6074-6ef26b7bcf86
    secret_id_ttl           10m
+   secret_id_num_uses      40
    ```
 
 ### Via the API
 
 1. Enable the AppRole auth method:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -129,7 +134,7 @@ documentation.
 
 1. Create an AppRole with desired set of policies:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -139,7 +144,7 @@ documentation.
 
 1. Fetch the identifier of the role:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/auth/approle/role/my-role/role-id
@@ -157,7 +162,7 @@ documentation.
 
 1. Create a new secret identifier under the role:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -171,7 +176,8 @@ documentation.
      "data": {
        "secret_id_accessor": "45946873-1d96-a9d4-678c-9229f74386a5",
        "secret_id": "37b74931-c4cd-d49a-9246-ccc62d682a25",
-       "secret_id_ttl": 600
+       "secret_id_ttl": 600,
+       "secret_id_num_uses": 40
      }
    }
    ```
@@ -210,7 +216,7 @@ full set of client credentials (RoleID and SecretID) in order to create the
 entry, even if these are then distributed via different paths. However, in Pull
 mode, even though the RoleID must be known in order to distribute it to the
 client, the SecretID can be kept confidential from all parties except for the
-final authenticating client by using [Response Wrapping](/docs/concepts/response-wrapping).
+final authenticating client by using [Response Wrapping](/vault/docs/concepts/response-wrapping).
 
 Push mode is available for App-ID workflow compatibility, which in some
 specific cases is preferable, but in most cases Pull mode is more secure and
@@ -227,14 +233,173 @@ not require a credential, but still enforce constraints for login. For
 example, `secret_id_bound_cidrs` will only allow logins coming from IP addresses
 belonging to configured CIDR blocks on the AppRole.
 
-## Learn
+## Tutorial
 
 Refer to the [AppRole Pull
-Authentication](https://learn.hashicorp.com/vault/identity-access-management/iam-authentication)
-guide for a step-by-step tutorial.
+Authentication](/vault/tutorials/auth-methods/approle)
+tutorial to learn how to use the AppRole method to generate tokens for machines or apps.
 
 ## API
 
 The AppRole auth method has a full HTTP API. Please see the
-[AppRole API](/api/auth/approle) for more
+[AppRole API](/vault/api-docs/auth/approle) for more
 details.
+
+## Code Example
+
+The following example demonstrates AppRole authentication with response
+wrapping.
+
+<CodeTabs>
+
+<CodeBlockConfig>
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	vault "github.com/hashicorp/vault/api"
+	auth "github.com/hashicorp/vault/api/auth/approle"
+)
+
+// Fetches a key-value secret (kv-v2) after authenticating via AppRole.
+func getSecretWithAppRole() (string, error) {
+	config := vault.DefaultConfig() // modify for more granular configuration
+
+	client, err := vault.NewClient(config)
+	if err != nil {
+		return "", fmt.Errorf("unable to initialize Vault client: %w", err)
+	}
+
+	// A combination of a Role ID and Secret ID is required to log in to Vault
+	// with an AppRole.
+	// First, let's get the role ID given to us by our Vault administrator.
+	roleID := os.Getenv("APPROLE_ROLE_ID")
+	if roleID == "" {
+		return "", fmt.Errorf("no role ID was provided in APPROLE_ROLE_ID env var")
+	}
+
+	// The Secret ID is a value that needs to be protected, so instead of the
+	// app having knowledge of the secret ID directly, we have a trusted orchestrator (https://learn.hashicorp.com/tutorials/vault/secure-introduction?in=vault/app-integration#trusted-orchestrator)
+	// give the app access to a short-lived response-wrapping token (https://www.vaultproject.io/docs/concepts/response-wrapping).
+	// Read more at: https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices
+	secretID := &auth.SecretID{FromFile: "path/to/wrapping-token"}
+
+	appRoleAuth, err := auth.NewAppRoleAuth(
+		roleID,
+		secretID,
+		auth.WithWrappingToken(), // Only required if the secret ID is response-wrapped.
+	)
+	if err != nil {
+		return "", fmt.Errorf("unable to initialize AppRole auth method: %w", err)
+	}
+
+	authInfo, err := client.Auth().Login(context.Background(), appRoleAuth)
+	if err != nil {
+		return "", fmt.Errorf("unable to login to AppRole auth method: %w", err)
+	}
+	if authInfo == nil {
+		return "", fmt.Errorf("no auth info was returned after login")
+	}
+
+	// get secret from the default mount path for KV v2 in dev mode, "secret"
+	secret, err := client.KVv2("secret").Get(context.Background(), "creds")
+	if err != nil {
+		return "", fmt.Errorf("unable to read secret: %w", err)
+	}
+
+	// data map can contain more than one key-value pair,
+	// in this case we're just grabbing one of them
+	value, ok := secret.Data["password"].(string)
+	if !ok {
+		return "", fmt.Errorf("value type assertion failed: %T %#v", secret.Data["password"], secret.Data["password"])
+	}
+
+	return value, nil
+}
+```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```cs
+using System;
+using System.Collections.Generic;
+using System.IO;
+using VaultSharp;
+using VaultSharp.V1.AuthMethods;
+using VaultSharp.V1.AuthMethods.AppRole;
+using VaultSharp.V1.AuthMethods.Token;
+using VaultSharp.V1.Commons;
+
+namespace Examples
+{
+    public class ApproleAuthExample
+    {
+        const string DefaultTokenPath = "../../../path/to/wrapping-token";
+
+        /// <summary>
+        /// Fetches a key-value secret (kv-v2) after authenticating to Vault via AppRole authentication
+        /// </summary>
+        public string GetSecretWithAppRole()
+        {
+            // A combination of a Role ID and Secret ID is required to log in to Vault with an AppRole.
+	        // The Secret ID is a value that needs to be protected, so instead of the app having knowledge of the secret ID directly,
+	        // we have a trusted orchestrator (https://learn.hashicorp.com/tutorials/vault/secure-introduction?in=vault/app-integration#trusted-orchestrator)
+	        // give the app access to a short-lived response-wrapping token (https://www.vaultproject.io/docs/concepts/response-wrapping).
+	        // Read more at: https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices
+            var vaultAddr = Environment.GetEnvironmentVariable("VAULT_ADDR");
+            if(String.IsNullOrEmpty(vaultAddr))
+            {
+                throw new System.ArgumentNullException("Vault Address");
+            }
+
+            var roleId = Environment.GetEnvironmentVariable("APPROLE_ROLE_ID");
+            if(String.IsNullOrEmpty(roleId))
+            {
+                throw new System.ArgumentNullException("AppRole Role Id");
+            }
+            // Get the path to wrapping token or fall back on default path
+            string pathToToken = !String.IsNullOrEmpty(Environment.GetEnvironmentVariable("WRAPPING_TOKEN_PATH")) ? Environment.GetEnvironmentVariable("WRAPPING_TOKEN_PATH") : DefaultTokenPath;
+            string wrappingToken = File.ReadAllText(pathToToken); // placed here by a trusted orchestrator
+
+            // We need to create two VaultClient objects for authenticating via AppRole. The first is for
+            // using the unwrap utility. We need to initialize the client with the wrapping token.
+            IAuthMethodInfo wrappedTokenAuthMethod = new TokenAuthMethodInfo(wrappingToken);
+            var vaultClientSettingsForUnwrapping = new VaultClientSettings(vaultAddr, wrappedTokenAuthMethod);
+
+            IVaultClient vaultClientForUnwrapping = new VaultClient(vaultClientSettingsForUnwrapping);
+
+            // We pass null here instead of the wrapping token to avoid depleting its single usage
+            // given that we already initialized our client with the wrapping token
+            Secret<Dictionary<string, object>> secretIdData =  vaultClientForUnwrapping.V1.System
+                .UnwrapWrappedResponseDataAsync<Dictionary<string, object>>(null).Result;
+
+            var secretId = secretIdData.Data["secret_id"]; // Grab the secret_id
+
+            // We create a second VaultClient and initialize it with the AppRole auth method and our new credentials.
+            IAuthMethodInfo authMethod = new AppRoleAuthMethodInfo(roleId, secretId.ToString());
+            var vaultClientSettings = new VaultClientSettings(vaultAddr, authMethod);
+
+            IVaultClient vaultClient = new VaultClient(vaultClientSettings);
+
+            // We can retrieve the secret from VaultClient
+            Secret<SecretData> kv2Secret = null;
+            kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
+
+            var password = kv2Secret.Data.Data["password"];
+
+            return password.ToString();
+        }
+    }
+}
+```
+
+</CodeBlockConfig>
+
+</CodeTabs>

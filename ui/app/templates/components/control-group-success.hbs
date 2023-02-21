@@ -1,50 +1,59 @@
-{{#if (and controlGroupResponse.token controlGroupResponse.uiParams.url)}}
+{{#if (and this.controlGroupResponse.token this.controlGroupResponse.uiParams.url)}}
   <div class="control-group-success" data-test-navigate-message>
-    You have been granted access to <code>{{model.requestPath}}</code>. Be careful, you can only access this data once.
-    If you need access again in the future you will need to get authorized again.
+    You have been granted access to
+    <code>{{this.model.requestPath}}</code>. Be careful, you can only access this data once. If you need access again in the
+    future you will need to get authorized again.
     <div class="box is-shadowless is-fullwidth is-marginless has-slim-padding">
-      <button data-test-navigate-button type="button" class="button is-primary" {{action (perform markAndNavigate)}}>Visit</button>
+      <button data-test-navigate-button type="button" class="button is-primary" {{action (perform this.markAndNavigate)}}>
+        Visit
+      </button>
     </div>
   </div>
 {{else}}
-  {{#if unwrapData}}
-    <div class="control-group-success {{if unwrapData 'is-editor'}}">
+  {{#if this.unwrapData}}
+    <div class="control-group-success {{if this.unwrapData 'is-editor'}}">
       <div class="has-copy-button">
         <JsonEditor
           data-test-json-viewer
           @showToolbar={{false}}
-          @value={{ stringify unwrapData }}
-          @options={{hash
-          readOnly=true
-          lineNumbers=false
-          autoHeight=true
-          gutters=false
-          theme='hashi-read-only auto-height'
-          }}
-          />
-        <HoverCopyButton @copyValue={{stringify unwrapData}} />
+          @value={{stringify this.unwrapData}}
+          @readOnly={{true}}
+          @viewportMargin="Infinity"
+          @gutters={{false}}
+          @theme="hashi-read-only auto-height"
+        />
+        <HoverCopyButton @copyValue={{stringify this.unwrapData}} />
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <LinkTo @route="vault.cluster.access.control-groups" class="button">
-        <Chevron @direction="left" /> Back
+        <Chevron @direction="left" />
+        Back
       </LinkTo>
     </div>
   {{else}}
     <div class="control-group-success" data-test-unwrap-form>
-      <form {{action (perform unwrap token) on="submit"}}>
-        <MessageError @errorMessage={{error}} />
-          <p>
-          If you have the token, you can now can access <code>{{model.requestPath}}</code>
-          </p>
-          <label for="token" class="is-label">
-            Token to access data
-          </label>
-          <div class="control">
-            {{input data-test-token-input class="input" autocomplete="off" spellcheck="false" name="token" value=token}}
-          </div>
+      <form {{action (perform this.unwrap this.token) on="submit"}}>
+        <MessageError @errorMessage={{this.error}} />
+        <p>
+          If you have the token, you can now can access
+          <code>{{this.model.requestPath}}</code>
+        </p>
+        <label for="token" class="is-label">
+          Token to access data
+        </label>
+        <div class="control">
+          <Input
+            data-test-token-input
+            class="input"
+            autocomplete="off"
+            spellcheck="false"
+            name="token"
+            @value={{this.token}}
+          />
+        </div>
         <div class="field is-grouped box is-fullwidth is-bottomless">
-          <button data-test-unwrap-button type="submit" class="button is-primary" disabled={{not token}}>
+          <button data-test-unwrap-button type="submit" class="button is-primary" disabled={{not this.token}}>
             Access
           </button>
         </div>

@@ -64,15 +64,16 @@ For example, these three requests are equivalent:
 There are certain API paths that can only be called from the root namespace:
 
 - `sys/init`
-- `sys/license`
 - `sys/leader`
 - `sys/health`
 - `sys/metrics`
+- `sys/config/group-policy-application`
 - `sys/config/state`
 - `sys/host-info`
 - `sys/key-status`
 - `sys/storage`
 - `sys/storage/raft`
+- `sys/quotas`
 
 ## Architecture
 
@@ -82,7 +83,8 @@ namespace. This data includes the following:
 
 - Secret Engines
 - Auth Methods
-- Policies
+- ACL, EGP, and RGP Policies
+- Password Policies
 - Identities (Entities, Groups)
 - Tokens
 
@@ -94,9 +96,11 @@ of delegate admins.
 Child namespaces can share policies from their parent namespaces. For example, a child namespace
 may refer to parent identities (entities and groups) when writing policies that function only
 within that child namespace. Similarly, a parent namespace can have policies asserted on child
-identities.
+identities. This behavior can be configured using the [group-policy-application](/vault/api-docs/system/config-group-policy-application) API, and
+can be set to allow policies to be applied irrespective of namespace hierarchy, allowing sharing
+across any namespace.
 
-## Learn
+## Tutorial
 
-Refer to the [Secure Multi-Tenancy with Namespaces](https://learn.hashicorp.com/vault/operations/namespaces)
-guide for a step-by-step tutorial.
+Refer to the [Secure Multi-Tenancy with Namespaces](/vault/tutorials/enterprise/namespaces)
+tutorial to learn how to use Vault as a Service to allow organizations(tenants) to manage their own secrets and policies.

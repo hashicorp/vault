@@ -1,4 +1,4 @@
-// +build foundationdb
+//go:build foundationdb
 
 package foundationdb
 
@@ -122,8 +122,8 @@ func decoratePath(path string) ([]byte, error) {
 
 // Turn a decorated byte array back into a path string
 func undecoratePath(decoratedPath []byte) string {
-	ret := strings.Replace(string(decoratedPath), dirPathMarker, "/", -1)
-	ret = strings.Replace(ret, dirEntryMarker, "/", -1)
+	ret := strings.ReplaceAll(string(decoratedPath), dirPathMarker, "/")
+	ret = strings.ReplaceAll(ret, dirEntryMarker, "/")
 
 	return strings.TrimLeft(ret, "/")
 }
@@ -233,12 +233,12 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 
 	db, err := fdb.Open(fdbClusterFile, []byte("DB"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database with cluster file '%s': %w", fdbClusterFile, err)
+		return nil, fmt.Errorf("failed to open database with cluster file %q: %w", fdbClusterFile, err)
 	}
 
 	topDir, err := directory.CreateOrOpen(db, dirPath, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create/open top-level directory '%s': %w", path, err)
+		return nil, fmt.Errorf("failed to create/open top-level directory %q: %w", path, err)
 	}
 
 	// Setup the backend

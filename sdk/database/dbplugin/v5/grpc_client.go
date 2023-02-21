@@ -9,17 +9,28 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
-	_ Database = gRPCClient{}
+	_ Database                = gRPCClient{}
+	_ logical.PluginVersioner = gRPCClient{}
 
 	ErrPluginShutdown = errors.New("plugin shutdown")
 )
 
 type gRPCClient struct {
-	client  proto.DatabaseClient
-	doneCtx context.Context
+	client        proto.DatabaseClient
+	versionClient logical.PluginVersionClient
+	doneCtx       context.Context
+}
+
+func (c gRPCClient) PluginVersion() logical.PluginVersion {
+	version, _ := c.versionClient.Version(context.Background(), &logical.Empty{})
+	if version != nil {
+		return logical.PluginVersion{Version: version.PluginVersion}
+	}
+	return logical.EmptyPluginVersion
 }
 
 func (c gRPCClient) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {
@@ -81,8 +92,17 @@ func (c gRPCClient) NewUser(ctx context.Context, req NewUserRequest) (NewUserRes
 }
 
 func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
-	if req.Password == "" {
-		return nil, fmt.Errorf("missing password")
+	switch req.CredentialType {
+	case CredentialTypePassword:
+		if req.Password == "" {
+			return nil, fmt.Errorf("missing password credential")
+		}
+	case CredentialTypeRSAPrivateKey:
+		if len(req.PublicKey) == 0 {
+			return nil, fmt.Errorf("missing public key credential")
+		}
+	default:
+		return nil, fmt.Errorf("unknown credential type")
 	}
 
 	expiration, err := ptypes.TimestampProto(req.Expiration)
@@ -95,8 +115,10 @@ func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
 			DisplayName: req.UsernameConfig.DisplayName,
 			RoleName:    req.UsernameConfig.RoleName,
 		},
-		Password:   req.Password,
-		Expiration: expiration,
+		CredentialType: int32(req.CredentialType),
+		Password:       req.Password,
+		PublicKey:      req.PublicKey,
+		Expiration:     expiration,
 		Statements: &proto.Statements{
 			Commands: req.Statements.Commands,
 		},
@@ -138,6 +160,7 @@ func updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, erro
 	}
 
 	if (req.Password == nil || req.Password.NewPassword == "") &&
+		(req.PublicKey == nil || len(req.PublicKey.NewPublicKey) == 0) &&
 		(req.Expiration == nil || req.Expiration.NewExpiration.IsZero()) {
 		return nil, fmt.Errorf("missing changes")
 	}
@@ -157,10 +180,22 @@ func updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, erro
 		}
 	}
 
+	var publicKey *proto.ChangePublicKey
+	if req.PublicKey != nil && len(req.PublicKey.NewPublicKey) > 0 {
+		publicKey = &proto.ChangePublicKey{
+			NewPublicKey: req.PublicKey.NewPublicKey,
+			Statements: &proto.Statements{
+				Commands: req.PublicKey.Statements.Commands,
+			},
+		}
+	}
+
 	rpcReq := &proto.UpdateUserRequest{
-		Username:   req.Username,
-		Password:   password,
-		Expiration: expiration,
+		Username:       req.Username,
+		CredentialType: int32(req.CredentialType),
+		Password:       password,
+		PublicKey:      publicKey,
+		Expiration:     expiration,
 	}
 	return rpcReq, nil
 }
@@ -200,7 +235,7 @@ func (c gRPCClient) DeleteUser(ctx context.Context, req DeleteUserRequest) (Dele
 		if c.doneCtx.Err() != nil {
 			return DeleteUserResponse{}, ErrPluginShutdown
 		}
-		return DeleteUserResponse{}, fmt.Errorf("unable to update user: %w", err)
+		return DeleteUserResponse{}, fmt.Errorf("unable to delete user: %w", err)
 	}
 
 	return deleteUserRespFromProto(rpcResp)

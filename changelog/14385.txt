@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Systemd unit file included with the Linux packages now sets the service type to notify.
+```

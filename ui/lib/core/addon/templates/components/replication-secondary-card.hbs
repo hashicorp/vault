@@ -1,14 +1,14 @@
 <div
-  class="selectable-card is-rounded card-container {{if hasErrorClass 'has-border-danger'}}"
+  class="selectable-card is-rounded card-container {{if this.hasErrorClass 'has-border-danger'}}"
   data-test-replication-secondary-card
 >
   {{! Check if Status or Primary Cluster Card }}
-  {{#if (eq title 'Status')}}
+  {{#if (eq this.title "Status")}}
     <h3 class="title is-5 grid-item-top-left card-title">
-      {{title}}
+      {{this.title}}
     </h3>
     <div class="grid-item-left">
-      {{#if (get (cluster-states state) 'isOk')}}
+      {{#if (get (cluster-states this.state) "isOk")}}
         <h6 class="title is-6">
           state
         </h6>
@@ -23,7 +23,7 @@
       {{/if}}
     </div>
     <div class="grid-item-right">
-      {{#if (eq connection 'transient_failure')}}
+      {{#if (eq this.connection "transient_failure")}}
         <h6 class="title is-6 has-text-danger" data-test-error>
           connection_state
         </h6>
@@ -31,7 +31,7 @@
           @type="danger"
           @message="There has been some transient failure. Your cluster will eventually switch back to connection and try to establish a connection again."
         />
-      {{else if (eq connection 'shutdown')}}
+      {{else if (eq this.connection "shutdown")}}
         <h6 class="title is-6 has-text-danger" data-test-error>
           connection_state
         </h6>
@@ -49,22 +49,22 @@
       {{/if}}
     </div>
     <h2 class="title is-3 grid-item-bottom-left" data-test-state>
-      {{state}}
-      {{#if inSyncState}}
+      {{this.state}}
+      {{#if this.inSyncState}}
         <ToolTip @verticalPosition="above" as |T|>
-          <T.trigger>
-            <Icon @glyph={{'check-circle-outline'}} @size="m" class={{'has-text-success'}} data-test-glyph />
-          </T.trigger>
-          <T.content @class="tool-tip">
+          <T.Trigger>
+            <Icon @name="check-circle" class="has-text-success" data-test-glyph />
+          </T.Trigger>
+          <T.Content @defaultClass="tool-tip">
             <div class="box">
               Everything is in sync
             </div>
-          </T.content>
+          </T.Content>
         </ToolTip>
       {{/if}}
     </h2>
     <h2 class="title is-3 grid-item-bottom-right" data-test-connection>
-      {{connection}}
+      {{this.connection}}
     </h2>
     <div class="grid-item-bottom-row">
       <h6 class="title is-6">
@@ -74,23 +74,23 @@
         The last WAL index that the secondary received from the primary. Updates every 10 seconds.
       </p>
       <h2 class="title is-3">
-        {{format-number lastRemoteWAL}}
+        {{format-number this.lastRemoteWAL}}
       </h2>
     </div>
   {{else}}
     <div class="grid-item-top-left">
       <h3 class="title is-5 card-title">
-        {{title}}
+        {{this.title}}
       </h3>
     </div>
-      {{#if (and primaryUiUrl knownPrimaryClusterAddrs)}}
-        <div class="grid-item-top-right">
-          <a href={{concat primaryUiUrl '/ui/'}} class="toolbar-link" data-test-primary-link>
-            View primary cluster
-            <Icon @glyph='chevron-right' />
-          </a>
-        </div>
-      {{/if}}
+    {{#if (and this.primaryUiUrl this.knownPrimaryClusterAddrs)}}
+      <div class="grid-item-top-right">
+        <ExternalLink @href={{concat this.primaryUiUrl "/ui/"}} class="toolbar-link" data-test-primary-link>
+          View primary cluster
+          <Icon @name="chevron-right" />
+        </ExternalLink>
+      </div>
+    {{/if}}
     <div class="grid-item-second-row">
       <h6 class="title is-6">
         known_primary_cluster_addrs
@@ -100,20 +100,17 @@
       </p>
     </div>
     <div class="grid-item-third-row">
-      {{#if (is-empty knownPrimaryClusterAddrs)}}
+      {{#if (is-empty this.knownPrimaryClusterAddrs)}}
         <EmptyState
           @title="No known_primary_cluster_addrs"
-          @message="These addresses are used by the secondary to communicate with the primary cluster.  Should always be non-zero in a functioning replication setup.">
-          <LearnLink @path="/vault/operations/monitor-replication">
+          @message="These addresses are used by the secondary to communicate with the primary cluster. Should always be non-zero in a functioning replication setup."
+        >
+          <DocLink @path="/vault/tutorials/monitoring/monitor-replication">
             Learn more
-          </LearnLink>
+          </DocLink>
         </EmptyState>
       {{else}}
-        <InfoTable
-          @title="Known Primary Cluster Addrs"
-          @header="cluster_addr"
-          @items={{knownPrimaryClusterAddrs}}
-        />
+        <InfoTable @title="Known Primary Cluster Addrs" @header="cluster_addr" @items={{this.knownPrimaryClusterAddrs}} />
       {{/if}}
     </div>
   {{/if}}

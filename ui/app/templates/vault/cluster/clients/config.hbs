@@ -1,0 +1,11 @@
+<Toolbar>
+  <ToolbarActions>
+    {{#if @model.configPath.canUpdate}}
+      <LinkTo @route="vault.cluster.clients.edit" class="toolbar-link">
+        Edit configuration
+      </LinkTo>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+<Clients::Config @model={{@model}} />

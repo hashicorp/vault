@@ -6,12 +6,11 @@
     <div class="field">
       <div id="ciphertext-control" class="control">
         <JsonEditor
-            @title="Ciphertext"
-            @valueUpdated={{action (mut @ciphertext)}} 
-            @options={{hash
-              mode='ruby'
-            }}  
-            @data-test-transit-input="ciphertext" />
+          @title="Ciphertext"
+          @valueUpdated={{action (mut @ciphertext)}}
+          @mode="ruby"
+          @data-test-transit-input="ciphertext"
+        />
       </div>
     </div>
     {{#if @key.derived}}
@@ -21,7 +20,7 @@
         </label>
         <div class="field has-addons">
           <div class="control">
-            <Input @type="text" @id="context" @value={{@context}} class="input" data-test-transit-input="context" />
+            <Input @type="text" id="context" @value={{@context}} class="input" data-test-transit-input="context" />
           </div>
           <div class="control">
             <B64Toggle @value={{@context}} @data-test-transit-b64-toggle="context" />
@@ -34,7 +33,7 @@
         <label for="nonce" class="is-label">Nonce</label>
         <div class="field has-addons">
           <div class="control">
-            <Input @type="text" @id="nonce" @value={{@nonce}} class="input" data-test-transit-input="nonce" />
+            <Input @type="text" id="nonce" @value={{@nonce}} class="input" data-test-transit-input="nonce" />
           </div>
           <div class="control">
             <B64Toggle @value={{@nonce}} @data-test-transit-b64-toggle="nonce" />
@@ -46,31 +45,41 @@
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
       <button type="submit" class="button is-primary" id="decrypt" data-test-button-decrypt>
-          Decrypt
+        Decrypt
       </button>
     </div>
   </div>
 </form>
 {{#if @isModalActive}}
-<Modal @title="Copy your unwrapped data" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
-  <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
-      <h2 class="title is-6">Plaintext</h2>
-      <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="plaintext">{{@plaintext}}</code>
-        <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy" @clipboardText={{@plaintext}}
-          @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
-          <Icon @glyph="copy-action" aria-label="Copy" />
-        </CopyButton>
+  <Modal @title="Copy your unwrapped data" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
+    <section class="modal-card-body">
+      <div class="box is-shadowless is-fullwidth is-sideless">
+        <h2 class="title is-6">Plaintext</h2>
+        <div class="copy-text level">
+          <code class="level-left" data-test-encrypted-value="plaintext">{{@plaintext}}</code>
+          <CopyButton
+            class="button is-compact is-transparent level-right"
+            data-test-button="modal-copy"
+            @clipboardText={{@plaintext}}
+            @buttonType="button"
+            @success={{action (set-flash-message "Plaintext copied!")}}
+          >
+            <Icon @name="clipboard-copy" aria-label="Copy" />
+          </CopyButton>
+        </div>
+        <p class="help">Plaintext is base64 encoded</p>
       </div>
-      <p class="help">Plaintext is base64 encoded</p>
-    </div>
-  </section>
-  <footer class="modal-card-foot">
-    <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{@plaintext}}
-      @buttonType="button" @success={{action @toggleModal "Plaintext copied!"}}>
-      Copy &amp; Close
-    </CopyButton>
-  </footer>
-</Modal>
+    </section>
+    <footer class="modal-card-foot">
+      <CopyButton
+        class="button is-primary copy-close"
+        data-test-button="modal-copy-close"
+        @clipboardText={{@plaintext}}
+        @buttonType="button"
+        @success={{action @toggleModal "Plaintext copied!"}}
+      >
+        Copy &amp; Close
+      </CopyButton>
+    </footer>
+  </Modal>
 {{/if}}

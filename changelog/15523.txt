@@ -1,0 +1,3 @@
+```release-note:feature
+**KeyMgmt UI**: Add UI support for managing the Key Management Secrets Engine
+```

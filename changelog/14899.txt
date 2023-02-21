@@ -1,0 +1,3 @@
+```release-note:feature
+**Print minimum required policy for any command**: The global CLI flag `-output-policy` can now be used with any command to print out the minimum required policy HCL for that operation, including whether the given path requires the "sudo" capability.
+```

@@ -8,7 +8,7 @@ description: Azure Method for Vault Agent Auto-Auth
 
 The `azure` method reads in Azure instance credentials and uses them to
 authenticate with the [Azure Auth
-method](/docs/auth/azure). It reads most
+method](/vault/docs/auth/azure). It reads most
 parameters needed for authentication directly from instance information based
 on the value of the `resource` parameter.
 
@@ -17,3 +17,13 @@ on the value of the `resource` parameter.
 - `role` `(string: required)` - The role to authenticate against on Vault
 
 - `resource` `(string: required)` - The resource name to use when getting instance information
+
+- `object_id` `(string: optional)` - The object ID of the user-assigned managed identity to use
+  when acquiring an [access token][azure-access-token]. Only one of `object_id` or `client_id`
+  may be provided.
+
+- `client_id` `(string: optional)` - The client ID of the user-assigned managed identity to use
+  when acquiring an [access token][azure-access-token]. Only one of `object_id` or `client_id`
+  may be provided.
+
+[azure-access-token]: https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http

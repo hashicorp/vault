@@ -9,8 +9,19 @@ description: >-
 
 # Run Vault on OpenShift
 
-The following documentation describes installing, running and using
-Vault and Vault Agent Injector on OpenShift.
+@include 'helm/version.mdx'
+
+The following documentation describes installing, running, and using
+Vault and **Vault Agent Injector** on OpenShift.
+
+~> **Note:** We recommend using the Vault agent injector on Openshift
+instead of the Secrets Store CSI driver. OpenShift
+[does not recommend](https://docs.openshift.com/container-platform/4.9/storage/persistent_storage/persistent-storage-hostpath.html)
+using `hostPath` mounting in production or
+[certify Helm charts](https://github.com/redhat-certification/chart-verifier/blob/dbf89bff2d09142e4709d689a9f4037a739c2244/docs/helm-chart-checks.md#table-2-helm-chart-default-checks)
+using CSI objects because pods must run as privileged. If you would like to run the Secrets Store
+CSI driver on a development or testing cluster, refer to
+[installation instructions for the Vault CSI provider](/vault/docs/platform/k8s/csi/installation).
 
 ## Requirements
 
@@ -18,12 +29,12 @@ The following are required to install Vault and Vault Agent Injector
 on OpenShift:
 
 - Cluster Admin privileges to bind the `auth-delegator` role to Vault's service account
-- Helm v3
-- OpenShift 4.X
+- Helm v3.6+
+- OpenShift 4.3+
 - Vault Helm v0.6.0+
 - Vault K8s v0.4.0+
 
-~> **Note:** At this time, Consul does not support OpenShift. For highly available
+~> **Note:** Support for Consul on OpenShift is available since [Consul 1.9](https://www.hashicorp.com/blog/introducing-openshift-support-for-consul-on-kubernetes). However, for highly available
 deployments, Raft integrated storage is recommended.
 
 ## Additional Resources
@@ -31,8 +42,8 @@ deployments, Raft integrated storage is recommended.
 The documentation, configuration and examples for Vault Helm and Vault K8s Agent Injector
 are applicable to OpenShift installations. For more examples see the existing documentation:
 
-- [Vault Helm documentation](/docs/platform/k8s/helm)
-- [Vault K8s documentation](/docs/platform/k8s/injector)
+- [Vault Helm documentation](/vault/docs/platform/k8s/helm)
+- [Vault K8s documentation](/vault/docs/platform/k8s/injector)
 
 ## Helm Chart
 
@@ -53,8 +64,8 @@ secure and less resilient installation that is **NOT** appropriate for a
 production setup. It is highly recommended to use a [properly secured Kubernetes
 cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/),
 [learn the available configuration
-options](/docs/platform/k8s/helm/configuration), and read the [production deployment
-checklist](/docs/platform/k8s/helm/run#architecture).
+options](/vault/docs/platform/k8s/helm/configuration), and read the [production deployment
+checklist](/vault/docs/platform/k8s/helm/run#architecture).
 
 ## How-To
 
@@ -63,14 +74,7 @@ checklist](/docs/platform/k8s/helm/run#architecture).
 To use the Helm chart, add the Hashicorp helm repository and check that you have
 access to the chart:
 
-```shell-session
-$ helm repo add hashicorp https://helm.releases.hashicorp.com
-"hashicorp" has been added to your repositories
-
-$ helm search repo hashicorp/vault
-NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.13.0       	1.7.3      	Official HashiCorp Vault Chart
-```
+@include 'helm/repo.mdx'
 
 -> **Important:** The Helm chart is new and under significant development.
 Please always run Helm with `--dry-run` before any install or upgrade to verify
@@ -84,23 +88,7 @@ $ helm install vault hashicorp/vault
 
 Or install a specific version of the chart.
 
-```shell-session
-# List the available releases
-$ helm search repo hashicorp/vault -l
-NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.13.0       	1.7.3      	Official HashiCorp Vault Chart
-hashicorp/vault	0.12.0       	1.7.2      	Official HashiCorp Vault Chart
-hashicorp/vault	0.11.0       	1.7.0      	Official HashiCorp Vault Chart
-hashicorp/vault	0.10.0       	1.7.0      	Official HashiCorp Vault Chart
-hashicorp/vault	0.9.1        	1.6.2      	Official HashiCorp Vault Chart
-hashicorp/vault	0.9.0        	1.6.1      	Official HashiCorp Vault Chart
-hashicorp/vault	0.8.0        	1.5.4      	Official HashiCorp Vault Chart
-hashicorp/vault	0.7.0        	1.5.2      	Official HashiCorp Vault Chart
-hashicorp/vault	0.6.0        	1.4.2      	Official HashiCorp Vault Chart
-
-# Install version 0.13.0
-$ helm install vault hashicorp/vault --version 0.13.0
-```
+@include 'helm/install.mdx'
 
 The `helm install` command accepts parameters to override default configuration
 values inline or defined in a file. For all OpenShift deployments, `global.openshift`
@@ -213,6 +201,8 @@ $ helm install vault hashicorp/vault \
     --set "injector.externalVaultAddr=http://external-vault:8200"
 ```
 
--> **Step-by-step instructions:** The [Integrate a Kubernetes Cluster with an
-External Vault](https://learn.hashicorp.com/vault/getting-started-k8s/external-vault)
-guide demonstrates using an external Vault within a Kubernetes cluster.
+## Tutorial
+
+Refer to the [Integrate a Kubernetes Cluster with an
+External Vault](/vault/tutorials/kubernetes/kubernetes-external-vault)
+tutorial to learn how to use an external Vault within a Kubernetes cluster.

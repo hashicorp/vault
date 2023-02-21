@@ -7,8 +7,8 @@ export default ArrayProxy.extend({
     if (json && typeOf(json) !== 'object') {
       throw new Error('Vault expects data to be formatted as an JSON object.');
     }
-    let contents = Object.keys(json || []).map(key => {
-      let obj = {
+    const contents = Object.keys(json || []).map((key) => {
+      const obj = {
         name: key,
         value: json[key],
       };
@@ -38,7 +38,7 @@ export default ArrayProxy.extend({
       if (!includeBlanks && item.value === '' && item.name === '') {
         return obj;
       }
-      let val = typeof item.value === 'undefined' ? '' : item.value;
+      const val = typeof item.value === 'undefined' ? '' : item.value;
       obj[item.name || ''] = val;
       return obj;
     }, {});
@@ -49,6 +49,6 @@ export default ArrayProxy.extend({
   },
 
   isAdvanced() {
-    return this.any(item => typeof item.value !== 'string');
+    return this.any((item) => typeof item.value !== 'string');
   },
 });

@@ -32,7 +32,7 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 	}
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ContainerName: "minio",
-		ImageRepo:     "minio/minio",
+		ImageRepo:     "docker.mirror.hashicorp.services/minio/minio",
 		ImageTag:      version,
 		Env: []string{
 			"MINIO_ACCESS_KEY=" + accessKeyID,

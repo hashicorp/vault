@@ -7,52 +7,9 @@ description: >-
 
 # `/sys/internal/counters`
 
-The `/sys/internal/counters` endpoints are used to return data about the number of Http Requests, Tokens, and Entities in Vault.
+The `/sys/internal/counters` endpoints are used to return data about the number of Tokens and Entities in Vault. They return information for the entire cluster.
 
-~> **NOTE**: This endpoint is only available in Vault version 1.3+. Backwards compatibility is not guaranteed. These endpoints are subject to change or may disappear without notice.
-
-## Http Requests
-
-This endpoint lists the number of Http Requests made per month.
-
-| Method | Path                              |
-| :----- | :-------------------------------- |
-| `GET`  | `/sys/internal/counters/requests` |
-
-### Sample Request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request GET \
-    http://127.0.0.1:8200/v1/sys/internal/counters/requests
-```
-
-### Sample Response
-
-```json
-{
-  "request_id": "75cbaa46-e741-3eba-2be2-325b1ba8f03f",
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
-  "data": {
-    "counters": [
-      {
-        "start_time": "2019-05-01T00:00:00Z",
-        "total": 50
-      },
-      {
-        "start_time": "2019-04-01T00:00:00Z",
-        "total": 45
-      }
-    ]
-  },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
-}
-```
+~> **NOTE**: These endpoints are only available in Vault version 1.3+. Backwards compatibility is not guaranteed. These endpoints are subject to change or may disappear without notice.
 
 ## Entities
 
@@ -132,20 +89,245 @@ $ curl \
 
 ## Client Count
 
-This endpoint returns the number of clients per namespace, as the sum of active entities and non-entity tokens.
-An "active entity" is a distinct entity that has created one or more tokens in the given time period.
-A "non-entity token" is a token with no attached entity ID.
+This endpoint returns client activity information for a given billing
+period, which is represented by the `start_time` and `end_time` parameters.
 
-A time period may be specified; otherwise it reports on a default reporting period, such as the
-previous twelve calendar months. Reports are only available with month granularity, after each month
-has completed. The response includes the actual time period covered, which may not exactly match
-the query parameters due to the monthly granularity of the data, or missing months in the requested
-time range.
+There are a few things to keep in mind while using this API.
 
-The response will include all child namespaces of the namespace in which the request was made.
-If some namespace has subsequently been deleted, its path will be listed as "deleted namespace :ID:".
-Deleted namespaces are reported only for queries in the root namespace, because the information about
-the namespace path is unknown.
+- For Vault versions before 1.11, the activity information only accounts for 
+the activity of the latest contiguous months in the billing period. 
+For example, if the billing period is from Jan 2022 to June 2022, and the
+activity subsystem in Vault was not capturing data for the months Jan to March,
+the response will only include information for May and June. Note that if no 
+`start_time` and `end_time` parameters are specified, the billing period defaults 
+to 12 months, so the endpoint will return activity information from the end of the 
+previous month to the start of 12 months prior to that date. 
+
+- As of 1.11, this behavior has been modified to return all available data within 
+the specified billing period.
+
+- As of 1.12, the `end_time` can be the current month. 
+
+- The response contains the total activity for the billing period and the
+attributions of the total activity against specific components in Vault. This
+helps in understanding the total activity better by knowing which components in
+Vault lead to that top-level activity count. First-level of attribution
+breakdowns are by namespaces and months, under the `by_namespaces` and `months`
+JSON block, respectively.
+
+```json
+{
+   "by_namespace":[],
+   "months":[],
+}
+```
+
+- `by_namespaces` breakdowns provide attributions of each namespace to the total
+activity count. Mount level attributions further break down these namespaces
+attributions, wherein information can be found on the attributions of each mount
+path within a given namespace to the overall activity of the namespace.
+
+```json
+{
+   "by_namespace":[
+      {
+         "namespace_id":"root",
+         "namespace_path":"",
+         "counts":{},
+         "mounts":[
+            {
+               "path":"auth/up1/",
+               "counts":{}
+            },
+            {
+               "path":"auth/up2/",
+               "counts":{}
+            }
+         ]
+      }
+   ]
+}
+```
+
+- `months` breakdowns provide attributions of each month to the total activity
+count. These month-level attributions are further broken down into namespace and mount
+level attributions for each month.
+
+```json
+{
+   "months":[
+      {
+         "timestamp":"2021-05-01T00:00:00Z",
+         "counts":{},
+         "namespaces":[
+            {
+               "namespace_id":"root",
+               "namespace_path":"",
+               "counts":{},
+               "mounts":[
+                  {
+                     "path":"auth/up2/",
+                     "counts":{}
+                  },
+                  {
+                     "path":"auth/up1/",
+                     "counts":{}
+                  }
+               ]
+            },
+            {
+               "namespace_id":"s07UR",
+               "namespace_path":"ns1/",
+               "counts":{},
+               "mounts":[
+                  {
+                     "path":"auth/up1/",
+                     "counts":{}
+                  },
+                  {
+                     "path":"auth/up2/",
+                     "counts":{}
+                  }
+               ]
+            }
+         ],
+         "new_clients":{}
+      }
+   ],
+}
+```
+
+- Each entry in the `months` breakdown contains a `new_clients` block. When a
+token is first used within a billing period, it is considered a new client for
+that billing period. This means that all the active clients in the first month
+of the billing period will be considered new clients for that billing period.
+While these tokens could be generated and counted in the previous billing
+period, they are still considered new clients in the context of the given
+billing period. For each subsequent month in the same billing period, the tokens
+used in those months that were unused in previous months of the same billing
+period are considered new clients for that month. Hence, the computation of new
+clients differs for each combination of `start_time` and `end_time`.
+
+- The `new_clients` block within the `months` breakdown will also be further
+broken down by namespaces and mounts for visibility into which components in
+Vault lead to the new clients for each month.
+
+```json
+{
+   "months":[
+      {
+         "new_clients":{
+            "counts":{},
+            "namespaces":[
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"",
+                  "counts":{},
+                  "mounts":[
+                     {
+                        "path":"auth/up2/",
+                        "counts":{}
+                     },
+                     {
+                        "path":"auth/up1/",
+                        "counts":{}
+                     }
+                  ]
+               }
+            ]
+         }
+      }
+   ],
+}
+```
+
+- The `distinct_entities` field name has been deprecated since Vault 1.10. Refer to
+`entity_clients` field instead. The `distinct_entities` field is currently
+returned by the API for backward compatibility and it may be removed in the future.
+
+- The `non_entity_tokens` field name has been deprecated since Vault 1.10. Refer to
+`non_entity_clients` field instead. The `non_entity_tokens` field is currently
+returned by the API for backward compatibility, and it may be removed in the future.
+
+- If the `end_date` supplied to the API is for the current month, the activity
+information returned by this API will only be till the previous month. The
+activity system is designed to process the accumulated activity only at the end
+of the month. Since the system does not fully process the current month's
+information, it will not be added to the API response.
+
+- The response includes the actual time period covered, which may not exactly
+match the query parameters due to the month granularity of data or missing
+months in the requested time range.
+
+- Note that if the `end_date` specified is the current month, 
+the last element in the `months` response stanza, signifying the current month, will
+not have namespace attribution for the `new_clients` stanza. Furthermore, the 
+`new_clients` counts returned for the current month will be an approximation. 
+That is to say, the response will appear as follows.
+
+```json
+{
+   "months":[
+      {
+         "timestamp":"current_month_timestamp",
+         "counts":{ 
+            "distinct_entities":"exact int value",
+            "entity_clients":"exact int value",
+            "non_entity_tokens":"exact int value",
+            "non_entity_clients":"exact int value",
+            "clients":"exact int value"
+         },
+         "namespaces": [
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"path",
+                  "counts":{ 
+                     "distinct_entities":"exact int value",
+                     "entity_clients":"exact int value",
+                     "non_entity_tokens":"exact int value",
+                     "non_entity_clients":"exact int value",
+                     "clients":"exact int value"
+                  },
+                  "mounts":[
+                     {
+                        "path":"auth/up2/",
+                        "counts":{ 
+                           "distinct_entities":"exact int value",
+                           "entity_clients":"exact int value",
+                           "non_entity_tokens":"exact int value",
+                           "non_entity_clients":"exact int value",
+                           "clients":"exact int value"
+                        },
+                     },
+                  ]
+               },
+         ],
+         "new_clients":{
+            "counts":{
+               "distinct_entities":"approx int value",
+               "entity_clients":"approx int value",
+               "non_entity_tokens":"approx int value",
+               "non_entity_clients":"approx int value",
+               "clients":"approx int value"
+            },
+            "namespaces":[]
+         }
+      }
+   ],
+}
+```
+
+
+Please visit the [client count](/vault/docs/concepts/client-count) concepts page for
+more information on how clients map to these client IDs and how they are
+counted, or for more information about how the new clients for the current month 
+are estimated in a billing period.
+
+The response will include all child namespaces of the namespace in which the
+request was made. If some namespace has subsequently been deleted, its path will
+be listed as "deleted namespace :ID:." Deleted namespaces are reported only for
+queries in the root namespace because the information about the namespace path
+is unknown.
 
 This endpoint was added in Vault 1.6.
 
@@ -161,6 +343,10 @@ This endpoint was added in Vault 1.6.
 - `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
   for which client counts will be reported. If no end time is specified, the end of the previous calendar
   month will be used.
+- `limit_namespaces` `(int, optional)` - Controls the total number of by_namespace data returned. This can
+   be used to return the client counts for the specified number of namespaces having highest activity. 
+   If no `limit_namespaces` parameter is specified, client counts for all namespaces in specified usage period is returned.
+
 
 ### Sample Request
 
@@ -175,51 +361,338 @@ $ curl \
 
 ```json
 {
-  "request_id": "26be5ab9-dcac-9237-ec12-269a8ca647d5",
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
-  "data": {
-    "start_time": "2019-11-01T00:00:00Z",
-    "end_time": "2020-10-31T23:59:59Z",
-    "total": {
-      "distinct_entities": 90,
-      "non_entity_tokens": 130,
-      "clients": 220
-    },
-    "by_namespace": [
-      {
-        "namespace_id": "root",
-        "namespace_path": "",
-        "counts": {
-          "distinct_entities": 85,
-          "non_entity_tokens": 15,
-          "clients": 100
-        }
-      },
-      {
-        "namespace_id": "DochC",
-        "namespace_path": "ns2/",
-        "counts": {
-          "distinct_entities": 0,
-          "non_entity_tokens": 100,
-          "clients": 100
-        }
-      },
-      {
-        "namespace_id": "RtgpW",
-        "namespace_path": "ns1/",
-        "counts": {
-          "distinct_entities": 5,
-          "non_entity_tokens": 15,
-          "clients": 20
-        }
+   "request_id":"26be5ab9-dcac-9237-ec12-269a8ca647d5",
+   "lease_id":"",
+   "renewable":false,
+   "lease_duration":0,
+   "data":{
+      "by_namespace":[
+         {
+            "namespace_id":"root",
+            "namespace_path":"",
+            "counts":{
+               "distinct_entities":20,
+               "entity_clients":20,
+               "non_entity_tokens":10,
+               "non_entity_clients":10,
+               "clients":30
+            },
+            "mounts":[
+               {
+                  "path":"auth/up1/",
+                  "counts":{
+                     "distinct_entities":10,
+                     "entity_clients":10,
+                     "non_entity_tokens":10,
+                     "non_entity_clients":10,
+                     "clients":20
+                  }
+               },
+               {
+                  "path":"auth/up2/",
+                  "counts":{
+                     "distinct_entities":5,
+                     "entity_clients":5,
+                     "non_entity_tokens":5,
+                     "non_entity_clients":5,
+                     "clients":10
+                  }
+               }
+            ]
+         },
+         {
+            "namespace_id":"s07UR",
+            "namespace_path":"ns1/",
+            "counts":{
+               "distinct_entities":5,
+               "entity_clients":5,
+               "non_entity_tokens":5,
+               "non_entity_clients":5,
+               "clients":10
+            },
+            "mounts":[
+               {
+                  "path":"auth/up1/",
+                  "counts":{
+                     "distinct_entities":0,
+                     "entity_clients":0,
+                     "non_entity_tokens":5,
+                     "non_entity_clients":5,
+                     "clients":5
+                  }
+               },
+               {
+                  "path":"auth/up2/",
+                  "counts":{
+                     "distinct_entities":5,
+                     "entity_clients":5,
+                     "non_entity_tokens":0,
+                     "non_entity_clients":0,
+                     "clients":5
+                  }
+               }
+            ]
+         }
+      ],
+      "end_time":"2021-05-31T23:59:59Z",
+      "months":[
+         {
+            "timestamp":"2021-05-01T00:00:00Z",
+            "counts":{
+               "distinct_entities":20,
+               "entity_clients":20,
+               "non_entity_tokens":10,
+               "non_entity_clients":10,
+               "clients":30
+            },
+            "namespaces":[
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"",
+                  "counts":{
+                     "distinct_entities":15,
+                     "entity_clients":15,
+                     "non_entity_tokens":5,
+                     "non_entity_clients":5,
+                     "clients":20
+                  },
+                  "mounts":[
+                     {
+                        "path":"auth/up2/",
+                        "counts":{
+                           "distinct_entities":10,
+                           "entity_clients":10,
+                           "non_entity_tokens":5,
+                           "non_entity_clients":5,
+                           "clients":15
+                        }
+                     },
+                     {
+                        "path":"auth/up1/",
+                        "counts":{
+                           "distinct_entities":3,
+                           "entity_clients":3,
+                           "non_entity_tokens":2,
+                           "non_entity_clients":2,
+                           "clients":5
+                        }
+                     }
+                  ]
+               },
+               {
+                  "namespace_id":"s07UR",
+                  "namespace_path":"ns1/",
+                  "counts":{
+                     "distinct_entities":5,
+                     "entity_clients":5,
+                     "non_entity_tokens":5,
+                     "non_entity_clients":5,
+                     "clients":10
+                  },
+                  "mounts":[
+                     {
+                        "path":"auth/up1/",
+                        "counts":{
+                           "distinct_entities":0,
+                           "entity_clients":0,
+                           "non_entity_tokens":5,
+                           "non_entity_clients":5,
+                           "clients":5
+                        }
+                     },
+                     {
+                        "path":"auth/up2/",
+                        "counts":{
+                           "distinct_entities":5,
+                           "entity_clients":5,
+                           "non_entity_tokens":0,
+                           "non_entity_clients":0,
+                           "clients":5
+                        }
+                     }
+                  ]
+               }
+            ],
+            "new_clients":{
+               "counts":{
+                  "distinct_entities":10,
+                  "entity_clients":10,
+                  "non_entity_tokens":10,
+                  "non_entity_clients":10,
+                  "clients":20
+               },
+               "namespaces":[
+                  {
+                     "namespace_id":"root",
+                     "namespace_path":"",
+                     "counts":{
+                        "distinct_entities":5,
+                        "entity_clients":5,
+                        "non_entity_tokens":5,
+                        "non_entity_clients":5,
+                        "clients":10
+                     },
+                     "mounts":[
+                        {
+                           "path":"auth/up2/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":5,
+                              "non_entity_clients":5,
+                              "clients":5
+                           }
+                        },
+                        {
+                           "path":"auth/up1/",
+                           "counts":{
+                              "distinct_entities":5,
+                              "entity_clients":5,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "clients":5
+                           }
+                        }
+                     ]
+                  },
+                  {
+                     "namespace_id":"s07UR",
+                     "namespace_path":"ns1/",
+                     "counts":{
+                        "distinct_entities":5,
+                        "entity_clients":5,
+                        "non_entity_tokens":5,
+                        "non_entity_clients":5,
+                        "clients":10
+                     },
+                     "mounts":[
+                        {
+                           "path":"auth/up1/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":5,
+                              "non_entity_clients":5,
+                              "clients":5
+                           }
+                        },
+                        {
+                           "path":"auth/up2/",
+                           "counts":{
+                              "distinct_entities":5,
+                              "entity_clients":5,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "clients":5
+                           }
+                        }
+                     ]
+                  }
+               ]
+            }
+         },
+         {
+            "timestamp":"2021-04-01T00:00:00Z",
+            "counts":{
+               "distinct_entities":5,
+               "entity_clients":5,
+               "non_entity_tokens":5,
+               "non_entity_clients":5,
+               "clients":10
+            },
+            "namespaces":[
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"",
+                  "counts":{
+                     "distinct_entities":5,
+                     "entity_clients":5,
+                     "non_entity_tokens":5,
+                     "non_entity_clients":5,
+                     "clients":10
+                  },
+                  "mounts":[
+                     {
+                        "path":"auth/up1/",
+                        "counts":{
+                           "distinct_entities":0,
+                           "entity_clients":0,
+                           "non_entity_tokens":5,
+                           "non_entity_clients":5,
+                           "clients":5
+                        }
+                     },
+                     {
+                        "path":"auth/up2/",
+                        "counts":{
+                           "distinct_entities":5,
+                           "entity_clients":5,
+                           "non_entity_tokens":0,
+                           "non_entity_clients":0,
+                           "clients":5
+                        }
+                     }
+                  ]
+               }
+            ],
+            "new_clients":{
+               "counts":{
+                  "distinct_entities":5,
+                  "entity_clients":5,
+                  "non_entity_tokens":5,
+                  "non_entity_clients":5,
+                  "clients":10
+               },
+               "namespaces":[
+                  {
+                     "namespace_id":"root",
+                     "namespace_path":"",
+                     "counts":{
+                        "distinct_entities":5,
+                        "entity_clients":5,
+                        "non_entity_tokens":5,
+                        "non_entity_clients":5,
+                        "clients":10
+                     },
+                     "mounts":[
+                        {
+                           "path":"auth/up1/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":5,
+                              "non_entity_clients":5,
+                              "clients":5
+                           }
+                        },
+                        {
+                           "path":"auth/up2/",
+                           "counts":{
+                              "distinct_entities":5,
+                              "entity_clients":5,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "clients":5
+                           }
+                        }
+                     ]
+                  }
+               ]
+            }
+         }
+      ],
+      "start_time":"2021-01-01T00:00:00Z",
+      "total":{
+         "distinct_entities":20,
+         "entity_clients":20,
+         "non_entity_tokens":20,
+         "non_entity_clients":20,
+         "clients":40
       }
-    ]
-  },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
+   },
+   "wrap_info":null,
+   "warnings":null,
+   "auth":null
 }
 ```
 
@@ -232,16 +705,27 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2020-06-30T00%3A00%3A00Z&start_time=2020-06-01T00%3A00%3A00Z
 ```
 
+### Sample request to get client counts for top 2 namespaces with highest activity for a usage period
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2020-06-30T00%3A00%3A00Z&start_time=2020-06-01T00%3A00%3A00Z&limit_namespaces=2
+```
+
 ## Partial Month Client Count
 
-This endpoint returns the number of clients for the current month, as the sum of active entities and non-entity tokens.
-An "active entity" is a distinct entity that has created one or more tokens in the given time period.
-A "non-entity token" is a token with no attached entity ID.
+This endpoint returns the client activity in the current month. The response
+will have activity attributions per namespace, per mount within each namespaces,
+and new clients information.
 
-The time period is from the start of the current month, up until the time that this request was made.
+The time period is from the start of the current month, up until the time that
+this request was made.
 
-Note: the client count may be inaccurate in the moments following a Vault reboot, or leadership change.
-The estimate will stabilize when background loading of client data has completed.
+Note: the client count may be inaccurate in the moments following a Vault
+reboot, or leadership change. The estimate will stabilize when background
+loading of client data has completed.
 
 This endpoint was added in Vault 1.7.
 
@@ -262,18 +746,114 @@ $ curl \
 
 ```json
 {
-  "request_id": "26be5ab9-dcac-9237-ec12-269a8ca64742",
+  "request_id": "d0d37f90-96ec-28c7-b59c-b53612cbbcad",
   "lease_id": "",
-  "renewable": false,
   "lease_duration": 0,
+  "renewable": false,
   "data": {
-    "distinct_entities": 100,
-    "non_entity_tokens": 120,
-    "clients": 220
+    "by_namespace": [
+      {
+        "counts": {
+          "clients": 1,
+          "distinct_entities": 0,
+          "entity_clients": 0,
+          "non_entity_clients": 1,
+          "non_entity_tokens": 1
+        },
+        "mounts": [
+          {
+            "counts": {
+              "clients": 1,
+              "distinct_entities": 0,
+              "entity_clients": 0,
+              "non_entity_clients": 1,
+              "non_entity_tokens": 0
+            },
+            "mount_path": "auth_token_0747d59c"
+          }
+        ],
+        "namespace_id": "root",
+        "namespace_path": ""
+      }
+    ],
+    "clients": 1,
+    "distinct_entities": 0,
+    "entity_clients": 0,
+    "months": [
+      {
+        "counts": {
+          "clients": 1,
+          "distinct_entities": 0,
+          "entity_clients": 0,
+          "non_entity_clients": 1,
+          "non_entity_tokens": 0
+        },
+        "namespaces": [
+          {
+            "counts": {
+              "clients": 1,
+              "distinct_entities": 0,
+              "entity_clients": 0,
+              "non_entity_clients": 1,
+              "non_entity_tokens": 0
+            },
+            "mounts": [
+              {
+                "counts": {
+                  "clients": 1,
+                  "distinct_entities": 0,
+                  "entity_clients": 0,
+                  "non_entity_clients": 1,
+                  "non_entity_tokens": 0
+                },
+                "mount_path": "auth_token_0747d59c"
+              }
+            ],
+            "namespace_id": "root",
+            "namespace_path": ""
+          }
+        ],
+        "new_clients": {
+          "counts": {
+            "clients": 1,
+            "distinct_entities": 0,
+            "entity_clients": 0,
+            "non_entity_clients": 1,
+            "non_entity_tokens": 0
+          },
+          "namespaces": [
+            {
+              "counts": {
+                "clients": 1,
+                "distinct_entities": 0,
+                "entity_clients": 0,
+                "non_entity_clients": 1,
+                "non_entity_tokens": 0
+              },
+              "mounts": [
+                {
+                  "counts": {
+                    "clients": 1,
+                    "distinct_entities": 0,
+                    "entity_clients": 0,
+                    "non_entity_clients": 1,
+                    "non_entity_tokens": 0
+                  },
+                  "mount_path": "auth_token_0747d59c"
+                }
+              ],
+              "namespace_id": "root",
+              "namespace_path": ""
+            }
+          ]
+        },
+        "timestamp": "2022-04-01T04:00:00Z"
+      }
+    ],
+    "non_entity_clients": 1,
+    "non_entity_tokens": 1
   },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
+  "warnings": null
 }
 ```
 
@@ -349,3 +929,58 @@ $ curl \
   "warnings": null
 }
 ```
+
+## Activity Export
+
+This endpoint returns an export of the clients that had activity within the
+provided start and end times. The returned set of client information will be
+deduplicated over the time window and will show the earliest activity logged for
+each client. The output will be ordered chronologically by month of activity.
+
+~> **NOTE**: This endpoint is currently in tech preview status.
+
+There are a few things to keep in mind while using this API.
+
+- The response includes the actual time period covered, which may not exactly
+match the query parameters due to the month granularity of data or missing
+months in the requested time range.
+
+- If the `end_date` supplied to the API is for the current month, the activity
+information returned by this API will include activity for this month, however
+it may be up to 20 minutes delayed.
+
+This endpoint was added in Vault 1.11.
+
+| Method | Path                                      |
+| :----- | :---------------------------------------- |
+| `GET`  | `/sys/internal/counters/activity/export` |
+
+### Parameters
+
+- `start_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the start of the
+  period for which client counts will be reported. If no start time is specified, the `default_report_months`
+  prior to the `end_time` will be used.
+- `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
+  for which client counts will be reported. If no end time is specified, the end of the previous calendar
+  month will be used.
+- `format` `(string, optional)` - The desired format of the output file. Allowed
+    values are `csv` and `json`. If no format is provided a default of `json`
+    will be used.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/activity/export
+```
+
+### Sample Response
+
+```json
+{"client_id":"3f210722-7210-98e8-1f0d-e6a39ffb29c6","namespace_id":"root","timestamp":1653350457,"mount_accessor":"auth_userpass_bb52979d"}
+{"client_id":"X/Yed4Oj4cqODj9tSHjKwnRy5QVSBRlX3COxjjWSXyI=","namespace_id":"root","timestamp":1653350491,"non_entity":true,"mount_accessor":"auth_token_f6f2c11c"}
+{"client_id":"d93405dc-b592-b1c3-a520-14e618d359c1","namespace_id":"root","timestamp":1653350501,"mount_accessor":"auth_userpass_bb52979d"}
+```
+

@@ -1,0 +1,2 @@
+```release-note:feature
+**UI Client Count Improvements**: Show monthly client count changes for the billing period, including new clients within a single, historical month

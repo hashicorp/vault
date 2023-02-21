@@ -8,50 +8,51 @@
 
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array 'vault.cluster.settings.auth.enable'}} data-test-auth-enable>
+    <ToolbarLink @route="vault.cluster.settings.auth.enable" @type="add" data-test-auth-enable>
       Enable new method
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
 
-{{#each (sort-by "path" model) as |method|}}
-  {{#if (contains method.methodType (supported-managed-auth-backends))}}
-    <LinkedBlock @params={{array
-    "vault.cluster.access.method"
-    method.id}} class="list-item-row" data-test-auth-backend-link={{method.id}}>
-      <div class="level is-mobile">
-        <div class="level-left">
-          <div>
-            <ToolTip @horizontalPosition="left" as |T|>
-              <T.trigger>
-                <Icon @glyph={{if
-                  (or
-                    (find-by "type" method.methodType (mountable-auth-methods))
-                    (eq method.methodType "token")
-                  )
+{{#each (sort-by "path" this.model) as |method|}}
+  <LinkedBlock
+    @params={{array "vault.cluster.access.method" method.id}}
+    class="list-item-row"
+    data-test-auth-backend-link={{method.id}}
+  >
+    <div class="level is-mobile">
+      <div class="level-left">
+        <div>
+          <ToolTip @horizontalPosition="left" as |T|>
+            <T.Trigger>
+              <Icon
+                @name={{if
+                  (or (find-by "type" method.methodType (mountable-auth-methods)) (eq method.methodType "token"))
                   method.methodType
                   "auth"
-                }} @size="l" class="has-text-grey-light" />
-              </T.trigger>
-              <T.content @class="tool-tip">
-                <div class="box">
-                  {{method.methodType}}
-                </div>
-              </T.content>
-            </ToolTip>
-            <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-black">
-              {{method.path}}
-            </span>
-            <br />
-            <code class="has-text-grey is-size-8">
+                }}
+                class="has-text-grey-light"
+              />
+            </T.Trigger>
+            <T.Content @defaultClass="tool-tip">
+              <div class="box">
+                {{method.methodType}}
+              </div>
+            </T.Content>
+          </ToolTip>
+          <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-black">
+            {{method.path}}
+          </span>
+          <br />
+          <code class="has-text-grey is-size-8">
             {{method.accessor}}
-            </code>
-          </div>
+          </code>
         </div>
-        <div class="level-right is-flex is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu @name="auth-backend-nav">
-              <Confirm as |c|>
+      </div>
+      <div class="level-right is-flex is-paddingless is-marginless">
+        <div class="level-item">
+          <PopupMenu @name="auth-backend-nav">
+            <Confirm as |c|>
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
@@ -67,90 +68,23 @@
                     </li>
                   {{/if}}
 
-                  {{#if (and (not-eq method.methodType 'token') method.canDisable)}}
+                  {{#if (and (not-eq method.methodType "token") method.canDisable)}}
                     <li class="action">
-                        <c.Message
-                          @id={{method.id}}
-                          @title="Disable method?"
-                          @message="This may affect access to Vault data."
-                          @triggerText="Disable"
-                          @onConfirm={{perform disableMethod method}}>
-                          </c.Message>
+                      <c.Message
+                        @id={{method.id}}
+                        @title="Disable method?"
+                        @message="This may affect access to Vault data."
+                        @triggerText="Disable"
+                        @onConfirm={{perform this.disableMethod method}}
+                      />
                     </li>
                   {{/if}}
                 </ul>
               </nav>
-              </Confirm>
-            </PopupMenu>
-          </div>
-        </div>
-      </div>
-    </LinkedBlock>
-  {{else}}
-    <div class="list-item-row" data-test-auth-backend-link={{method.id}}>
-      <div class="level is-mobile">
-        <div class="level-left">
-          <div>
-            <ToolTip @horizontalPosition="left" as |T|>
-              <T.trigger>
-                <Icon @glyph={{if
-                      (or
-                        (find-by "type" method.methodType (mountable-auth-methods))
-                        (eq method.methodType "token")
-                      )
-                      method.methodType
-                      "auth"
-                    }} @size="l" class="has-text-grey-light" />
-              </T.trigger>
-              <T.content @class="tool-tip">
-                <div class="box">
-                  {{method.methodType}}
-                </div>
-              </T.content>
-            </ToolTip>
-            <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-grey">
-              {{method.path}}
-            </span>
-            <br />
-            <code class="has-text-grey is-size-8">
-            {{method.accessor}}
-            </code>
-          </div>
-        </div>
-        <div class="level-right is-flex is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu @name="auth-backend-nav">
-              <Confirm as |c|>
-                <nav class="menu">
-                  <ul class="menu-list">
-                    <li>
-                      <LinkTo @route="vault.cluster.access.method.section" @models={{array method.id "configuration"}}>
-                        View configuration
-                      </LinkTo>
-                    </li>
-                    {{#if method.canEdit}}
-                      <li>
-                        <LinkTo @route="vault.cluster.settings.auth.configure" @model={{method.id}}>
-                          Edit configuration
-                        </LinkTo>
-                      </li>
-                    {{/if}}
-
-                    {{#if (and (not-eq method.methodType 'token') method.canDisable)}}
-                      <li class="action">
-                        <c.Message @id={{method.id}} @title="Disable method?"
-                          @message="This may affect access to Vault data." @triggerText="Disable"
-                          @onConfirm={{perform disableMethod method}}>
-                        </c.Message>
-                      </li>
-                    {{/if}}
-                  </ul>
-                </nav>
-              </Confirm>
-            </PopupMenu>
-          </div>
+            </Confirm>
+          </PopupMenu>
         </div>
       </div>
     </div>
-    {{/if}}
+  </LinkedBlock>
 {{/each}}

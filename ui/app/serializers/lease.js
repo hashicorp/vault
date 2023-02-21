@@ -2,13 +2,13 @@ import RESTSerializer from '@ember-data/serializer/rest';
 import { decamelize } from '@ember/string';
 
 export default RESTSerializer.extend({
-  keyForAttribute: function(attr) {
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
   normalizeAll(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      const records = payload.data.keys.map(record => {
+      const records = payload.data.keys.map((record) => {
         const fullPath = payload.prefix ? payload.prefix + record : record;
         return { id: fullPath };
       });

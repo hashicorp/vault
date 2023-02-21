@@ -4,7 +4,7 @@ import { singularize } from 'ember-inflector';
 import ListRoute from 'vault/mixins/list-route';
 
 export default Route.extend(ListRoute, {
-  wizard: service(),
+  store: service(),
   pathHelp: service('path-help'),
 
   getMethodAndModelInfo() {
@@ -18,7 +18,7 @@ export default Route.extend(ListRoute, {
   model() {
     const { type, authMethodPath, itemType } = this.getMethodAndModelInfo();
     const { page, pageFilter } = this.paramsFor(this.routeName);
-    let modelType = `generated-${singularize(itemType)}-${type}`;
+    const modelType = `generated-${singularize(itemType)}-${type}`;
 
     return this.store
       .lazyPaginatedQuery(modelType, {
@@ -28,7 +28,7 @@ export default Route.extend(ListRoute, {
         type: itemType,
         id: authMethodPath,
       })
-      .catch(err => {
+      .catch((err) => {
         if (err.httpStatus === 404) {
           return [];
         } else {
@@ -36,6 +36,7 @@ export default Route.extend(ListRoute, {
         }
       });
   },
+
   actions: {
     willTransition(transition) {
       window.scrollTo(0, 0);
@@ -49,15 +50,16 @@ export default Route.extend(ListRoute, {
       this.refresh();
     },
   },
+
   setupController(controller) {
     this._super(...arguments);
     const { apiPath, authMethodPath, itemType, methodModel } = this.getMethodAndModelInfo();
     controller.set('itemType', itemType);
     controller.set('methodModel', methodModel);
-    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then(paths => {
+    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then((paths) => {
       controller.set(
         'paths',
-        paths.paths.filter(path => path.navigation && path.itemType.includes(itemType))
+        paths.paths.filter((path) => path.navigation && path.itemType.includes(itemType))
       );
     });
   },

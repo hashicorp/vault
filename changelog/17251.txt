@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/alicloud: Enables AliCloud roles to be compatible with Vault's role based quotas.
+```

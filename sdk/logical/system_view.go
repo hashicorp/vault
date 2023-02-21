@@ -54,7 +54,19 @@ type SystemView interface {
 
 	// LookupPlugin looks into the plugin catalog for a plugin with the given
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
-	LookupPlugin(context.Context, string, consts.PluginType) (*pluginutil.PluginRunner, error)
+	LookupPlugin(ctx context.Context, pluginName string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error)
+
+	// LookupPluginVersion looks into the plugin catalog for a plugin with the given
+	// name and version. Returns a PluginRunner or an error if a plugin can not be found.
+	LookupPluginVersion(ctx context.Context, pluginName string, pluginType consts.PluginType, version string) (*pluginutil.PluginRunner, error)
+
+	// ListVersionedPlugins returns information about all plugins of a certain
+	// type in the catalog, including any versioning information stored for them.
+	ListVersionedPlugins(ctx context.Context, pluginType consts.PluginType) ([]pluginutil.VersionedPlugin, error)
+
+	// NewPluginClient returns a client for managing the lifecycle of plugin
+	// processes
+	NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error)
 
 	// MlockEnabled returns the configuration setting for enabling mlock on
 	// plugins.
@@ -71,9 +83,17 @@ type SystemView interface {
 	// PluginEnv returns Vault environment information used by plugins
 	PluginEnv(context.Context) (*PluginEnvironment, error)
 
+	// VaultVersion returns the version string for the currently running Vault.
+	VaultVersion(context.Context) (string, error)
+
 	// GeneratePasswordFromPolicy generates a password from the policy referenced.
 	// If the policy does not exist, this will return an error.
 	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
+
+	// ClusterID returns the replication ClusterID, for use with path-based
+	// write forwarding (WriteForwardedPaths). This value will be templated
+	// in for the {{cluterId}} sentinel.
+	ClusterID(ctx context.Context) (string, error)
 }
 
 type PasswordPolicy interface {
@@ -101,9 +121,10 @@ type StaticSystemView struct {
 	EntityVal           *Entity
 	GroupsVal           []*Group
 	Features            license.Features
-	VaultVersion        string
 	PluginEnvironment   *PluginEnvironment
 	PasswordPolicies    map[string]PasswordGenerator
+	VersionString       string
+	ClusterUUID         string
 }
 
 type noopAuditor struct{}
@@ -152,12 +173,24 @@ func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 	return d.ReplicationStateVal
 }
 
+func (d StaticSystemView) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error) {
+	return nil, errors.New("NewPluginClient is not implemented in StaticSystemView")
+}
+
 func (d StaticSystemView) ResponseWrapData(_ context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	return nil, errors.New("ResponseWrapData is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) LookupPlugin(_ context.Context, _ string, _ consts.PluginType) (*pluginutil.PluginRunner, error) {
 	return nil, errors.New("LookupPlugin is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) LookupPluginVersion(_ context.Context, _ string, _ consts.PluginType, _ string) (*pluginutil.PluginRunner, error) {
+	return nil, errors.New("LookupPluginVersion is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) ListVersionedPlugins(_ context.Context, _ consts.PluginType) ([]pluginutil.VersionedPlugin, error) {
+	return nil, errors.New("ListVersionedPlugins is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) MlockEnabled() bool {
@@ -178,6 +211,10 @@ func (d StaticSystemView) HasFeature(feature license.Features) bool {
 
 func (d StaticSystemView) PluginEnv(_ context.Context) (*PluginEnvironment, error) {
 	return d.PluginEnvironment, nil
+}
+
+func (d StaticSystemView) VaultVersion(_ context.Context) (string, error) {
+	return d.VersionString, nil
 }
 
 func (d StaticSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
@@ -208,4 +245,8 @@ func (d *StaticSystemView) DeletePasswordPolicy(name string) (existed bool) {
 	_, existed = d.PasswordPolicies[name]
 	delete(d.PasswordPolicies, name)
 	return existed
+}
+
+func (d StaticSystemView) ClusterID(ctx context.Context) (string, error) {
+	return d.ClusterUUID, nil
 }

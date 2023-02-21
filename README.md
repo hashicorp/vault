@@ -7,7 +7,6 @@
 ----
 
 -	Website: https://www.vaultproject.io
--	IRC: `#vault-tool` on Freenode
 -	Announcement list: [Google Groups](https://groups.google.com/group/hashicorp-announce)
 -	Discussion forum: [Discuss](https://discuss.hashicorp.com/c/vault)
 - Documentation: [https://www.vaultproject.io/docs/](https://www.vaultproject.io/docs/)
@@ -37,15 +36,15 @@ The key features of Vault are:
 
 * **Data Encryption**: Vault can encrypt and decrypt data without storing
   it. This allows security teams to define encryption parameters and
-  developers to store encrypted data in a location such as SQL without
+  developers to store encrypted data in a location such as a SQL database without
   having to design their own encryption methods.
 
 * **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
-  with it. At the end of the lease, Vault will automatically revoke that
+  with them. At the end of the lease, Vault will automatically revoke that
   secret. Clients are able to renew leases via built-in renew APIs.
 
 * **Revocation**: Vault has built-in support for secret revocation. Vault
-  can revoke not only single secrets, but a tree of secrets, for example
+  can revoke not only single secrets, but a tree of secrets, for example,
   all secrets read by a specific user, or all secrets of a particular type.
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
@@ -60,6 +59,8 @@ check out our [Getting Started guides](https://learn.hashicorp.com/collections/v
 on HashiCorp's learning platform. There are also [additional guides](https://learn.hashicorp.com/vault)
 to continue your learning.
 
+For examples of how to interact with Vault from inside your application in different programming languages, see the [vault-examples](https://github.com/hashicorp/vault-examples) repo. An out-of-the-box [sample application](https://github.com/hashicorp/hello-vault-go) is also available.
+
 Show off your Vault knowledge by passing a certification exam. Visit the
 [certification page](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
 for information about exams and find [study materials](https://learn.hashicorp.com/collections/vault/certification)
@@ -69,12 +70,11 @@ Developing Vault
 --------------------
 
 If you wish to work on Vault itself or any of its built-in systems, you'll
-first need [Go](https://www.golang.org) installed on your machine. Go version
-1.16.5+ is *required*.
+first need [Go](https://www.golang.org) installed on your machine.
 
 For local dev first make sure Go is properly installed, including setting up a
 [GOPATH](https://golang.org/doc/code.html#GOPATH). Ensure that `$GOPATH/bin` is in
-your path as some distributions bundle old version of build tools. Next, clone this
+your path as some distributions bundle the old version of build tools. Next, clone this
 repository. Vault uses [Go Modules](https://github.com/golang/go/wiki/Modules),
 so it is recommended that you clone the repository ***outside*** of the GOPATH.
 You can then download any required build tools by bootstrapping your environment:
@@ -120,6 +120,21 @@ package by specifying the `TEST` variable. For example below, only
 $ make test TEST=./vault
 ...
 ```
+
+### Importing Vault
+
+This repository publishes two libraries that may be imported by other projects:
+`github.com/hashicorp/vault/api` and `github.com/hashicorp/vault/sdk`.
+
+Note that this repository also contains Vault (the product), and as with most Go
+projects, Vault uses Go modules to manage its dependencies. The mechanism to do
+that is the [go.mod](./go.mod) file. As it happens, the presence of that file
+also makes it theoretically possible to import Vault as a dependency into other
+projects. Some other projects have made a practice of doing so in order to take
+advantage of testing tooling that was developed for testing Vault itself. This
+is not, and has never been, a supported way to use the Vault project. We aren't 
+likely to fix bugs relating to failure to import `github.com/hashicorp/vault` 
+into your project.
 
 ### Acceptance Tests
 

@@ -9,11 +9,11 @@ import (
 	"sort"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -120,7 +120,7 @@ func Test(tt TestT, c TestCase) {
 	// slow and generally require some outside configuration.
 	if c.AcceptanceTest && os.Getenv(TestEnvVar) == "" {
 		tt.Skip(fmt.Sprintf(
-			"Acceptance tests skipped unless env '%s' set",
+			"Acceptance tests skipped unless env %q set",
 			TestEnvVar))
 		return
 	}
@@ -166,7 +166,7 @@ func Test(tt TestT, c TestCase) {
 	config := &vault.CoreConfig{
 		Physical:        phys,
 		DisableMlock:    true,
-		BuiltinRegistry: vault.NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 	}
 
 	if c.LogicalBackend != nil || c.LogicalFactory != nil {
@@ -445,6 +445,49 @@ func TestCheckAuth(policies []string) TestCheckFunc {
 			return fmt.Errorf("invalid policies: expected %#v, got %#v", expected, ret)
 		}
 
+		return nil
+	}
+}
+
+// TestCheckAuthEntityId is a helper to check that a request generated an
+// auth token with the expected entity_id.
+func TestCheckAuthEntityId(entity_id *string) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		if resp == nil || resp.Auth == nil {
+			return fmt.Errorf("no auth in response")
+		}
+
+		if *entity_id == "" {
+			// If we don't know what the entity_id should be, just save it
+			*entity_id = resp.Auth.EntityID
+		} else if resp.Auth.EntityID != *entity_id {
+			return fmt.Errorf("entity_id %s does not match the expected value of %s", resp.Auth.EntityID, *entity_id)
+		}
+
+		return nil
+	}
+}
+
+// TestCheckAuthEntityAliasMetadataName is a helper to check that a request generated an
+// auth token with the expected alias metadata.
+func TestCheckAuthEntityAliasMetadataName(key string, value string) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		if resp == nil || resp.Auth == nil {
+			return fmt.Errorf("no auth in response")
+		}
+
+		if key == "" || value == "" {
+			return fmt.Errorf("alias metadata key and value required")
+		}
+
+		name, ok := resp.Auth.Alias.Metadata[key]
+		if !ok {
+			return fmt.Errorf("metadata key %s does not exist, it should", key)
+		}
+
+		if name != value {
+			return fmt.Errorf("expected map value %s, got %s", value, name)
+		}
 		return nil
 	}
 }

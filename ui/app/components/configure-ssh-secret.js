@@ -18,7 +18,8 @@ import { action } from '@ember/object';
  */
 export default class ConfigureSshSecretComponent extends Component {
   @action
-  saveConfig(data) {
+  saveConfig(data, event) {
+    event.preventDefault();
     this.args.saveConfig(data);
   }
 }

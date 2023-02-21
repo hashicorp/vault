@@ -1,0 +1,23 @@
+<div class="splash-page-container section is-flex-v-centered-tablet is-flex-1 is-fullwidth">
+  <div class="columns is-centered is-gapless is-fullwidth">
+    <div class="column is-4-desktop is-6-tablet">
+      {{#if this.model.error}}
+        <div class="box is-shadowless is-flex-v-centered">
+          <LogoEdition />
+        </div>
+        <AlertBanner @type="danger" @title={{this.model.error.title}} @message={{this.model.error.message}} />
+      {{else if this.model.consent}}
+        <OidcConsentBlock
+          @code={{this.model.consent.code}}
+          @state={{this.model.consent.state}}
+          @redirect={{this.model.consent.redirect}}
+          @onSuccess={{this._handleSuccess}}
+        />
+      {{else if this.model.redirectUrl}}
+        <div data-test-oidc-redirect>{{this.model.redirectUrl}}</div>
+      {{else}}
+        <VaultLogoSpinner />
+      {{/if}}
+    </div>
+  </div>
+</div>

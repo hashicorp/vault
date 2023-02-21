@@ -12,10 +12,8 @@ label {
 }
 
 .masked-font {
-  font-family: obscure;
-  font-size: $size-medium;
+  font-family: obscure, text-security-square;
   letter-spacing: 2px;
-  color: $ui-gray-300;
 }
 
 .label {
@@ -58,6 +56,10 @@ label {
 .b-checkbox .is-label {
   display: inline;
   margin-left: $size-10;
+}
+
+.b-checkbox > .sub-text {
+  padding-left: 2rem;
 }
 
 .help {
@@ -107,11 +109,16 @@ label {
 .input.variable {
   font-family: $family-monospace;
 }
+
+.select select[disabled],
 .input[disabled],
 .textarea[disabled] {
-  border-color: $grey-lightest;
-  background-color: $white-ter;
-  color: $grey-light;
+  border-color: $grey-light;
+  background-color: $ui-gray-100;
+  color: $ui-gray-500;
+  &:hover {
+    border-color: $grey-light;
+  }
 }
 
 .control {
@@ -148,6 +155,11 @@ label {
     .select select {
       padding-right: 10em;
     }
+  }
+
+  &.is-align-end {
+    display: flex;
+    align-self: end;
   }
 }
 
@@ -324,6 +336,29 @@ fieldset.form-fieldset {
   border: none;
 }
 
-.has-error-border {
+.has-error-border,
+select.has-error-border {
   border: 1px solid $red-500;
+}
+
+.dropdown-has-error-border > div.ember-basic-dropdown-trigger {
+  border: 1px solid $red-500;
+}
+
+.autocomplete-input {
+  background: $white !important;
+  border: 1px solid $grey-light;
+  box-sizing: border-box;
+  border-radius: 3px;
+  width: 99%;
+  padding: 4px 0;
+  margin-left: 0.5%;
+  margin-top: -4px;
+}
+.autocomplete-input-option {
+  padding: 12px;
+  &:hover {
+    background-color: $grey-lightest;
+    cursor: pointer;
+  }
 }

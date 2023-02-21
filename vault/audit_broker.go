@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -91,12 +92,21 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
+	if in.Request.InboundSSCToken != "" {
+		if in.Auth != nil {
+			reqAuthToken := in.Auth.ClientToken
+			in.Auth.ClientToken = in.Request.InboundSSCToken
+			defer func() {
+				in.Auth.ClientToken = reqAuthToken
+			}()
+		}
+	}
 
 	var retErr *multierror.Error
 
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r)
+			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
 			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
 
@@ -153,12 +163,21 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
+	if in.Request.InboundSSCToken != "" {
+		if in.Auth != nil {
+			reqAuthToken := in.Auth.ClientToken
+			in.Auth.ClientToken = in.Request.InboundSSCToken
+			defer func() {
+				in.Auth.ClientToken = reqAuthToken
+			}()
+		}
+	}
 
 	var retErr *multierror.Error
 
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r)
+			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
 			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
 

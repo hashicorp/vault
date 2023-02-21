@@ -1,12 +1,21 @@
 <button type="button" class="button is-ghost console-close-button" {{action "closeConsole"}}>
-  <Icon @glyph="cancel-plain" aria-label="Close console" />
+  <Icon @name="x" aria-label="Close console" />
 </button>
 <div class="console-ui-panel-content">
   <div class="content">
     <p class="has-text-grey is-font-mono">
-      The Vault Browser CLI provides an easy way to execute the most common CLI commands, such as write, read, delete, and list.
+      The Vault Browser CLI provides an easy way to execute the most common CLI commands, such as write, read, delete, and
+      list.
     </p>
   </div>
-  <Console::OutputLog @outputLog={{cliLog}} />
-  <Console::CommandInput @isFullscreen={{isFullscreen}} @isRunning={{isRunning}} @value={{inputValue}} @onValueUpdate={{action (mut inputValue)}} @onFullscreen={{action "toggleFullscreen"}} @onExecuteCommand={{action "executeCommand"}} @onShiftCommand={{action "shiftCommandIndex"}} />
+  <Console::OutputLog @outputLog={{this.cliLog}} />
+  <Console::CommandInput
+    @isFullscreen={{this.isFullscreen}}
+    @isRunning={{this.isRunning}}
+    @value={{this.inputValue}}
+    @onValueUpdate={{action (mut this.inputValue)}}
+    @onFullscreen={{action "toggleFullscreen"}}
+    @onExecuteCommand={{action "executeCommand"}}
+    @onShiftCommand={{action "shiftCommandIndex"}}
+  />
 </div>

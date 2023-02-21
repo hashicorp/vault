@@ -3,9 +3,13 @@ package transit
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/mapstructure"
 )
 
 func TestTransit_BatchDecryption(t *testing.T) {
@@ -15,9 +19,9 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	batchEncryptionInput := []interface{}{
-		map[string]interface{}{"plaintext": ""},     // empty string
-		map[string]interface{}{"plaintext": "Cg=="}, // newline
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "", "reference": "foo"},     // empty string
+		map[string]interface{}{"plaintext": "Cg==", "reference": "bar"}, // newline
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "baz"},
 	}
 	batchEncryptionData := map[string]interface{}{
 		"batch_input": batchEncryptionInput,
@@ -37,7 +41,7 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	batchResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 	batchDecryptionInput := make([]interface{}, len(batchResponseItems))
 	for i, item := range batchResponseItems {
-		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}
+		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext, "reference": item.Reference}
 	}
 	batchDecryptionData := map[string]interface{}{
 		"batch_input": batchDecryptionInput,
@@ -55,7 +59,8 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	}
 
 	batchDecryptionResponseItems := resp.Data["batch_results"].([]DecryptBatchResponseItem)
-	expectedResult := "[{\"plaintext\":\"\"},{\"plaintext\":\"Cg==\"},{\"plaintext\":\"dGhlIHF1aWNrIGJyb3duIGZveA==\"}]"
+	// This seems fragile
+	expectedResult := "[{\"plaintext\":\"\",\"reference\":\"foo\"},{\"plaintext\":\"Cg==\",\"reference\":\"bar\"},{\"plaintext\":\"dGhlIHF1aWNrIGJyb3duIGZveA==\",\"reference\":\"baz\"}]"
 
 	jsonResponse, err := json.Marshal(batchDecryptionResponseItems)
 	if err != nil || err == nil && string(jsonResponse) != expectedResult {
@@ -64,74 +69,210 @@ func TestTransit_BatchDecryption(t *testing.T) {
 }
 
 func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
+	var req *logical.Request
 	var resp *logical.Response
 	var err error
 
 	b, s := createBackendWithStorage(t)
 
-	policyData := map[string]interface{}{
-		"derived": true,
-	}
-
-	policyReq := &logical.Request{
+	// Create a derived key.
+	req = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/existing_key",
 		Storage:   s,
-		Data:      policyData,
+		Data: map[string]interface{}{
+			"derived": true,
+		},
 	}
-
-	resp, err = b.HandleRequest(context.Background(), policyReq)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchInput := []interface{}{
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dGVzdGNvbnRleHQ="},
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dGVzdGNvbnRleHQ="},
+	// Encrypt some values for use in test cases.
+	plaintextItems := []struct {
+		plaintext, context string
+	}{
+		{plaintext: "dGhlIHF1aWNrIGJyb3duIGZveA==", context: "dGVzdGNvbnRleHQ="},
+		{plaintext: "anVtcGVkIG92ZXIgdGhlIGxhenkgZG9n", context: "dGVzdGNvbnRleHQy"},
 	}
-
-	batchData := map[string]interface{}{
-		"batch_input": batchInput,
-	}
-	batchReq := &logical.Request{
+	req = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/existing_key",
 		Storage:   s,
-		Data:      batchData,
+		Data: map[string]interface{}{
+			"batch_input": []interface{}{
+				map[string]interface{}{"plaintext": plaintextItems[0].plaintext, "context": plaintextItems[0].context},
+				map[string]interface{}{"plaintext": plaintextItems[1].plaintext, "context": plaintextItems[1].context},
+			},
+		},
 	}
-	resp, err = b.HandleRequest(context.Background(), batchReq)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchDecryptionInputItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
+	encryptedItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 
-	batchDecryptionInput := make([]interface{}, len(batchDecryptionInputItems))
-	for i, item := range batchDecryptionInputItems {
-		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext, "context": "dGVzdGNvbnRleHQ="}
+	tests := []struct {
+		name           string
+		in             []interface{}
+		want           []DecryptBatchResponseItem
+		shouldErr      bool
+		wantHTTPStatus int
+		params         map[string]interface{}
+	}{
+		{
+			name:      "nil-input",
+			in:        nil,
+			shouldErr: true,
+		},
+		{
+			name:      "empty-input",
+			in:        []interface{}{},
+			shouldErr: true,
+		},
+		{
+			name: "single-item-success",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[0].context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Plaintext: plaintextItems[0].plaintext},
+			},
+		},
+		{
+			name: "single-item-invalid-ciphertext",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": "xxx", "context": plaintextItems[0].context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "invalid ciphertext: no prefix"},
+			},
+			wantHTTPStatus: http.StatusBadRequest,
+		},
+		{
+			name: "single-item-wrong-context",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "cipher: message authentication failed"},
+			},
+			wantHTTPStatus: http.StatusBadRequest,
+		},
+		{
+			name: "batch-full-success",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[0].context},
+				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Plaintext: plaintextItems[0].plaintext},
+				{Plaintext: plaintextItems[1].plaintext},
+			},
+		},
+		{
+			name: "batch-partial-success",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "cipher: message authentication failed"},
+				{Plaintext: plaintextItems[1].plaintext},
+			},
+			wantHTTPStatus: http.StatusBadRequest,
+		},
+		{
+			name: "batch-partial-success-overridden-response",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "cipher: message authentication failed"},
+				{Plaintext: plaintextItems[1].plaintext},
+			},
+			params:         map[string]interface{}{"partial_failure_response_code": http.StatusAccepted},
+			wantHTTPStatus: http.StatusAccepted,
+		},
+		{
+			name: "batch-full-failure",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[0].context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "cipher: message authentication failed"},
+				{Error: "cipher: message authentication failed"},
+			},
+			wantHTTPStatus: http.StatusBadRequest,
+		},
+		{
+			name: "batch-full-failure-overridden-response",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[0].context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "cipher: message authentication failed"},
+				{Error: "cipher: message authentication failed"},
+			},
+			params: map[string]interface{}{"partial_failure_response_code": http.StatusAccepted},
+			// Full failure, shouldn't affect status code
+			wantHTTPStatus: http.StatusBadRequest,
+		},
 	}
 
-	batchDecryptionData := map[string]interface{}{
-		"batch_input": batchDecryptionInput,
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req = &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "decrypt/existing_key",
+				Storage:   s,
+				Data: map[string]interface{}{
+					"batch_input": tt.in,
+				},
+			}
+			for k, v := range tt.params {
+				req.Data[k] = v
+			}
+			resp, err = b.HandleRequest(context.Background(), req)
 
-	batchDecryptionReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "decrypt/existing_key",
-		Storage:   s,
-		Data:      batchDecryptionData,
-	}
-	resp, err = b.HandleRequest(context.Background(), batchDecryptionReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+			didErr := err != nil || (resp != nil && resp.IsError())
+			if didErr {
+				if !tt.shouldErr {
+					t.Fatalf("unexpected error err:%v, resp:%#v", err, resp)
+				}
+			} else {
+				if tt.shouldErr {
+					t.Fatal("expected error, but none occurred")
+				}
 
-	batchDecryptionResponseItems := resp.Data["batch_results"].([]DecryptBatchResponseItem)
+				if rawRespBody, ok := resp.Data[logical.HTTPRawBody]; ok {
+					httpResp := &logical.HTTPResponse{}
+					err = jsonutil.DecodeJSON([]byte(rawRespBody.(string)), httpResp)
+					if err != nil {
+						t.Fatalf("failed to unmarshal nested response: err:%v, resp:%#v", err, resp)
+					}
 
-	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
-	for _, item := range batchDecryptionResponseItems {
-		if item.Plaintext != plaintext {
-			t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, item.Plaintext)
-		}
+					if respStatus, ok := resp.Data[logical.HTTPStatusCode]; !ok || respStatus != tt.wantHTTPStatus {
+						t.Fatalf("HTTP response status code mismatch, want:%d, got:%d", tt.wantHTTPStatus, respStatus)
+					}
+
+					resp = logical.HTTPResponseToLogicalResponse(httpResp)
+				}
+
+				var respItems []DecryptBatchResponseItem
+				err = mapstructure.Decode(resp.Data["batch_results"], &respItems)
+				if err != nil {
+					t.Fatalf("problem decoding response items: err:%v, resp:%#v", err, resp)
+				}
+				if !reflect.DeepEqual(tt.want, respItems) {
+					t.Fatalf("response items mismatch, want:%#v, got:%#v", tt.want, respItems)
+				}
+			}
+		})
 	}
 }

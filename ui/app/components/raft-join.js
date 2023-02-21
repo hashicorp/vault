@@ -24,7 +24,8 @@ export default Component.extend({
   preference: 'join',
   showJoinForm: false,
   actions: {
-    advanceFirstScreen() {
+    advanceFirstScreen(event) {
+      event.preventDefault();
       if (this.preference !== 'join') {
         this.onDismiss();
         return;

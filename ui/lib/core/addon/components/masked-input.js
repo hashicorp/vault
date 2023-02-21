@@ -11,12 +11,14 @@ import layout from '../templates/components/masked-input';
  *  @value={{attr.options.defaultValue}}
  *  @allowCopy={{true}}
  *  @onChange={{action "someAction"}}
+ *  @onKeyUp={{action "onKeyUp"}}
  * />
  *
  * @param [value] {String} - The value to display in the input.
  * @param [allowCopy=null] {bool} - Whether or not the input should render with a copy button.
  * @param [displayOnly=false] {bool} - Whether or not to display the value as a display only `pre` element or as an input.
  * @param [onChange=Function.prototype] {Function|action} - A function to call when the value of the input changes.
+ * @param [onKeyUp=Function.prototype] {Function|action} - A function to call whenever on the dom event onkeyup. Generally passed down from higher level parent.
  * @param [isCertificate=false] {bool} - If certificate display the label and icons differently.
  *
  */
@@ -38,15 +40,21 @@ export default Component.extend({
   },
   displayOnly: false,
   onKeyDown() {},
+  onKeyUp() {},
   onChange() {},
   actions: {
     toggleMask() {
       this.toggleProperty('showValue');
     },
     updateValue(e) {
-      let value = e.target.value;
+      const value = e.target.value;
       this.set('value', value);
       this.onChange(value);
+    },
+    handleKeyUp(name, value) {
+      if (this.onKeyUp) {
+        this.onKeyUp(name, value);
+      }
     },
   },
 });

@@ -14,9 +14,10 @@ import (
 	"testing"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -31,12 +32,23 @@ var testImagePull sync.Once
 
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t testing.TB) *ExpirationManager {
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealed(benchhelpers.TBtoT(t))
+
+	// Wait until the expiration manager is out of restore mode.
+	// This was added to prevent sporadic failures of TestExpiration_unrecoverableErrorMakesIrrevocable.
+	timeout := time.Now().Add(time.Second * 10)
+	for c.expiration.inRestoreMode() {
+		if time.Now().After(timeout) {
+			t.Fatal("ExpirationManager is still in restore mode after 10 seconds")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
 	return c.expiration
 }
 
 func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
-	c, _, _ := TestCoreUnsealedBackend(t, backend)
+	c, _, _ := TestCoreUnsealedBackend(benchhelpers.TBtoT(t), backend)
 	return c, c.expiration
 }
 
@@ -312,6 +324,103 @@ func TestExpiration_TotalLeaseCount(t *testing.T) {
 	}
 }
 
+func TestExpiration_TotalLeaseCount_WithRoles(t *testing.T) {
+	// Quotas and internal lease count tracker are coupled, so this is a proxy
+	// for testing the total lease count quota
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
+
+	expectedCount := 0
+	otherNS := &namespace.Namespace{
+		ID:   "nsid",
+		Path: "foo/bar",
+	}
+	for i := 0; i < 50; i++ {
+		le := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i),
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i),
+			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
+			namespace:  namespace.RootNamespace,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now().Add(time.Hour),
+		}
+
+		otherNSle := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i) + "/blah.nsid",
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i) + "/blah.nsid",
+			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
+			namespace:  otherNS,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now().Add(time.Hour),
+		}
+
+		exp.pendingLock.Lock()
+		if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(le)
+		expectedCount++
+
+		if err := exp.persistEntry(namespace.RootContext(nil), otherNSle); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(otherNSle)
+		expectedCount++
+		exp.pendingLock.Unlock()
+	}
+
+	// add some irrevocable leases to each count to ensure they are counted too
+	// note: irrevocable leases almost certainly have an expire time set in the
+	// past, but for this exercise it should be fine to set it to whatever
+	for i := 50; i < 60; i++ {
+		le := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i+1),
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i+1),
+			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
+			namespace:  namespace.RootNamespace,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now(),
+			RevokeErr:  "some err message",
+		}
+
+		otherNSle := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i+1) + "/blah.nsid",
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i+1) + "/blah.nsid",
+			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
+			namespace:  otherNS,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now(),
+			RevokeErr:  "some err message",
+		}
+
+		exp.pendingLock.Lock()
+		if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(le)
+		expectedCount++
+
+		if err := exp.persistEntry(namespace.RootContext(nil), otherNSle); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(otherNSle)
+		expectedCount++
+		exp.pendingLock.Unlock()
+	}
+
+	exp.pendingLock.RLock()
+	count := exp.leaseCount
+	exp.pendingLock.RUnlock()
+
+	if count != expectedCount {
+		t.Errorf("bad lease count. expected %d, got %d", expectedCount, count)
+	}
+}
+
 func TestExpiration_Tidy(t *testing.T) {
 	var err error
 
@@ -465,7 +574,7 @@ func TestExpiration_Tidy(t *testing.T) {
 				"test_key": "test_value",
 			},
 		}
-		_, err := exp.Register(namespace.RootContext(nil), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -587,7 +696,7 @@ func BenchmarkExpiration_Restore_InMem(b *testing.B) {
 }
 
 func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {
-	c, _, _ := TestCoreUnsealedBackend(b, physicalBackend)
+	c, _, _ := TestCoreUnsealedBackend(benchhelpers.TBtoT(b), physicalBackend)
 	exp := c.expiration
 	noop := &NoopBackend{}
 	view := NewBarrierView(c.barrier, "logical/")
@@ -624,7 +733,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 				"secret_key": "abcd",
 			},
 		}
-		_, err = exp.Register(namespace.RootContext(nil), req, resp)
+		_, err = exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			b.Fatalf("err: %v", err)
 		}
@@ -635,6 +744,8 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 	if err != nil {
 		b.Fatalf("err: %v", err)
 	}
+	// Avoid panic due to calling exp.Stop multiple times
+	c.expiration = nil
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -654,7 +765,7 @@ func BenchmarkExpiration_Create_Leases(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	c, _, _ := TestCoreUnsealedBackend(b, inm)
+	c, _, _ := TestCoreUnsealedBackend(benchhelpers.TBtoT(b), inm)
 	exp := c.expiration
 	noop := &NoopBackend{}
 	view := NewBarrierView(c.barrier, "logical/")
@@ -686,7 +797,7 @@ func BenchmarkExpiration_Create_Leases(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		req.Path = fmt.Sprintf("prod/aws/%d", i)
-		_, err = exp.Register(namespace.RootContext(nil), req, resp)
+		_, err = exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			b.Fatalf("err: %v", err)
 		}
@@ -731,7 +842,7 @@ func TestExpiration_Restore(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(namespace.RootContext(nil), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -803,7 +914,7 @@ func TestExpiration_Register(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(namespace.RootContext(nil), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -814,6 +925,49 @@ func TestExpiration_Register(t *testing.T) {
 
 	if len(id) <= len(req.Path) {
 		t.Fatalf("bad: %s", id)
+	}
+}
+
+func TestExpiration_Register_Role(t *testing.T) {
+	exp := mockExpiration(t)
+	role := "role1"
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: time.Hour,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, role)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !strings.HasPrefix(id, req.Path) {
+		t.Fatalf("bad: %s", id)
+	}
+
+	if len(id) <= len(req.Path) {
+		t.Fatalf("bad: %s", id)
+	}
+
+	le, err := exp.loadEntry(exp.quitContext, id)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if le.LoginRole != role {
+		t.Fatalf("Login role incorrect. Expected %s, received %s", role, le.LoginRole)
 	}
 }
 
@@ -871,7 +1025,7 @@ func TestExpiration_Register_BatchToken(t *testing.T) {
 		},
 	}
 
-	leaseID, err := exp.Register(namespace.RootContext(nil), req, resp)
+	leaseID, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -940,7 +1094,7 @@ func TestExpiration_RegisterAuth(t *testing.T) {
 		Path:        "auth/github/login",
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -949,7 +1103,41 @@ func TestExpiration_RegisterAuth(t *testing.T) {
 		Path:        "auth/github/../login",
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestExpiration_RegisterAuth_Role(t *testing.T) {
+	exp := mockExpiration(t)
+	role := "role1"
+	root, err := exp.tokenStore.rootToken(context.Background())
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		LeaseOptions: logical.LeaseOptions{
+			TTL: time.Hour,
+		},
+	}
+
+	te := &logical.TokenEntry{
+		Path:        "auth/github/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, role)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	te = &logical.TokenEntry{
+		Path:        "auth/github/../login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, role)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -973,7 +1161,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 		Policies:    []string{"root"},
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1022,13 +1210,13 @@ func TestExpiration_RegisterAuth_NoTTL(t *testing.T) {
 	}
 
 	// First on core
-	err = c.RegisterAuth(ctx, 0, "auth/github/login", auth)
+	err = c.RegisterAuth(ctx, 0, "auth/github/login", auth, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	auth.TokenPolicies[0] = "default"
-	err = c.RegisterAuth(ctx, 0, "auth/github/login", auth)
+	err = c.RegisterAuth(ctx, 0, "auth/github/login", auth, "")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -1041,14 +1229,14 @@ func TestExpiration_RegisterAuth_NoTTL(t *testing.T) {
 		Policies:    []string{"root"},
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(ctx, te, auth)
+	err = exp.RegisterAuth(ctx, te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Test non-root token with zero TTL
 	te.Policies = []string{"default"}
-	err = exp.RegisterAuth(ctx, te, auth)
+	err = exp.RegisterAuth(ctx, te, auth, "")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -1086,7 +1274,7 @@ func TestExpiration_Revoke(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(namespace.RootContext(nil), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1133,7 +1321,7 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 		},
 	}
 
-	_, err = exp.Register(namespace.RootContext(nil), req, resp)
+	_, err = exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1196,7 +1384,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(namespace.RootContext(nil), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -1265,7 +1453,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(namespace.RootContext(nil), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -1280,13 +1468,23 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	time.Sleep(300 * time.Millisecond)
+	limit := time.Now().Add(3 * time.Second)
+	for time.Now().Before(limit) {
+		time.Sleep(50 * time.Millisecond)
+
+		noop.Lock()
+		currentRequests := len(noop.Requests)
+		noop.Unlock()
+
+		if currentRequests == 3 {
+			break
+		}
+	}
 
 	noop.Lock()
 	defer noop.Unlock()
-
 	if len(noop.Requests) != 3 {
-		t.Fatalf("Bad: %#v", noop.Requests)
+		t.Errorf("Noop revocation requests less than expected, expected 3, found %d", len(noop.Requests))
 	}
 	for _, req := range noop.Requests {
 		if req.Operation != logical.RevokeOperation {
@@ -1354,7 +1552,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(namespace.RootContext(nil), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -1426,7 +1624,7 @@ func TestExpiration_RenewToken(t *testing.T) {
 		Path:        "auth/token/login",
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1475,7 +1673,7 @@ func TestExpiration_RenewToken_period(t *testing.T) {
 		Path:        "auth/token/login",
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err := exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err := exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1556,7 +1754,7 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 		NamespaceID: namespace.RootNamespaceID,
 	}
 
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1613,7 +1811,7 @@ func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 		Path:        "auth/foo/login",
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1666,7 +1864,7 @@ func TestExpiration_Renew(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(namespace.RootContext(nil), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1737,7 +1935,7 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(namespace.RootContext(nil), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1754,6 +1952,7 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 		t.Fatalf("Bad: %#v", noop.Requests)
 	}
 }
+
 func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	exp := mockExpiration(t)
 	noop := &NoopBackend{}
@@ -1787,7 +1986,7 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(namespace.RootContext(nil), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1864,7 +2063,7 @@ func TestExpiration_Renew_FinalSecond(t *testing.T) {
 	}
 
 	ctx := namespace.RootContext(nil)
-	id, err := exp.Register(ctx, req, resp)
+	id, err := exp.Register(ctx, req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1939,7 +2138,7 @@ func TestExpiration_Renew_FinalSecond_Lease(t *testing.T) {
 	}
 
 	ctx := namespace.RootContext(nil)
-	id, err := exp.Register(ctx, req, resp)
+	id, err := exp.Register(ctx, req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2070,22 +2269,29 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	time.Sleep(300 * time.Millisecond)
+	limit := time.Now().Add(10 * time.Second)
+	for time.Now().Before(limit) {
+		indexEntry, err = exp.indexByToken(namespace.RootContext(nil), le)
+		if err != nil {
+			t.Fatalf("token index lookup error: %v", err)
+		}
+		if indexEntry == nil {
+			break
+		}
+
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if indexEntry != nil {
+		t.Fatalf("should not have found a secondary index entry after revocation")
+	}
 
 	out, err := exp.tokenStore.Lookup(namespace.RootContext(nil), le.ClientToken)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("error looking up client token after revocation: %v", err)
 	}
 	if out != nil {
-		t.Fatalf("bad: %v", out)
-	}
-
-	indexEntry, err = exp.indexByToken(namespace.RootContext(nil), le)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if indexEntry != nil {
-		t.Fatalf("err: should not have found a secondary index entry")
+		t.Fatalf("should not have found revoked token in tokenstore: %v", out)
 	}
 }
 
@@ -2153,9 +2359,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 	}
 }
 
-func revokeEntryRejectedCore(t *testing.T, e ExpireLeaseStrategy) {
-	t.Helper()
-
+func TestExpiration_revokeEntry_rejected_fairsharing(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	exp := core.expiration
 
@@ -2222,7 +2426,7 @@ func revokeEntryRejectedCore(t *testing.T, e ExpireLeaseStrategy) {
 		t.Fatal(err)
 	}
 
-	err = core.setupExpiration(e)
+	err = core.setupExpiration(expireLeaseStrategyFairsharing)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2245,14 +2449,6 @@ func revokeEntryRejectedCore(t *testing.T, e ExpireLeaseStrategy) {
 	if le != nil {
 		t.Fatal("lease entry not nil")
 	}
-}
-
-func TestExpiration_revokeEntry_rejected_revoke(t *testing.T) {
-	revokeEntryRejectedCore(t, expireLeaseStrategyRevoke)
-}
-
-func TestExpiration_revokeEntry_rejected_fairsharing(t *testing.T) {
-	revokeEntryRejectedCore(t, expireLeaseStrategyFairsharing)
 }
 
 func TestExpiration_renewAuthEntry(t *testing.T) {
@@ -2457,8 +2653,10 @@ func TestExpiration_RevokeForce(t *testing.T) {
 		Path:        "badrenew/creds",
 		ClientToken: root,
 	}
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
-
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
@@ -2506,8 +2704,10 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 		Path:        "badrenew/creds",
 		ClientToken: root,
 	}
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
-
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
@@ -2623,7 +2823,7 @@ func sampleToken(t *testing.T, exp *ExpirationManager, path string, expiring boo
 		Policies:    auth.Policies,
 	}
 
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2798,7 +2998,7 @@ func registerOneLease(t *testing.T, ctx context.Context, exp *ExpirationManager)
 		},
 	}
 
-	leaseID, err := exp.Register(ctx, req, resp)
+	leaseID, err := exp.Register(ctx, req, resp, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2828,7 +3028,10 @@ func TestExpiration_MarkIrrevocable(t *testing.T) {
 	}
 
 	irrevocableErr := fmt.Errorf("test irrevocable error")
+
+	exp.pendingLock.Lock()
 	exp.markLeaseIrrevocable(ctx, loadedLE, irrevocableErr)
+	exp.pendingLock.Unlock()
 
 	if !loadedLE.isIrrevocable() {
 		t.Fatalf("irrevocable lease is not irrevocable and should be")
@@ -2838,6 +3041,14 @@ func TestExpiration_MarkIrrevocable(t *testing.T) {
 	}
 	if _, ok := exp.irrevocable.Load(leaseID); !ok {
 		t.Fatalf("irrevocable lease not included in irrevocable map")
+	}
+
+	exp.pendingLock.RLock()
+	irrevocableLeaseCount := exp.irrevocableLeaseCount
+	exp.pendingLock.RUnlock()
+
+	if irrevocableLeaseCount != 1 {
+		t.Fatalf("expected 1 irrevocable lease, found %d", irrevocableLeaseCount)
 	}
 	if _, ok := exp.pending.Load(leaseID); ok {
 		t.Fatalf("irrevocable lease included in pending map")
@@ -2897,7 +3108,9 @@ func TestExpiration_FetchLeaseTimesIrrevocable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error loading lease: %v", err)
 	}
+	exp.pendingLock.Lock()
 	exp.markLeaseIrrevocable(ctx, le, fmt.Errorf("test irrevocable error"))
+	exp.pendingLock.Unlock()
 
 	irrevocableLeaseTimes, err := exp.FetchLeaseTimes(ctx, leaseID)
 	if err != nil {
@@ -2934,7 +3147,10 @@ func TestExpiration_StopClearsIrrevocableCache(t *testing.T) {
 		t.Fatalf("error loading non irrevocable lease: %v", err)
 	}
 
+	exp.pendingLock.Lock()
 	exp.markLeaseIrrevocable(ctx, le, fmt.Errorf("test irrevocable error"))
+	exp.pendingLock.Unlock()
+
 	err = c.stopExpiration()
 	if err != nil {
 		t.Fatalf("error stopping expiration manager: %v", err)
@@ -2942,6 +3158,14 @@ func TestExpiration_StopClearsIrrevocableCache(t *testing.T) {
 
 	if _, ok := exp.irrevocable.Load(leaseID); ok {
 		t.Error("expiration manager irrevocable cache should be cleared on stop")
+	}
+
+	exp.pendingLock.RLock()
+	irrevocableLeaseCount := exp.irrevocableLeaseCount
+	exp.pendingLock.RUnlock()
+
+	if irrevocableLeaseCount != 0 {
+		t.Errorf("expected 0 leases, found %d", irrevocableLeaseCount)
 	}
 }
 
@@ -3036,20 +3260,22 @@ func TestExpiration_unrecoverableErrorMakesIrrevocable(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc.job.OnFailure(tc.err)
+		t.Run(tc.err.Error(), func(t *testing.T) {
+			tc.job.OnFailure(tc.err)
 
-		le, err := exp.loadEntry(ctx, tc.job.leaseID)
-		if err != nil {
-			t.Fatalf("could not load leaseID %q: %v", tc.job.leaseID, err)
-		}
-		if le == nil {
-			t.Fatalf("nil lease for leaseID: %q", tc.job.leaseID)
-		}
+			le, err := exp.loadEntry(ctx, tc.job.leaseID)
+			if err != nil {
+				t.Fatalf("could not load leaseID %q: %v", tc.job.leaseID, err)
+			}
+			if le == nil {
+				t.Fatalf("nil lease for leaseID: %q", tc.job.leaseID)
+			}
 
-		isIrrevocable := le.isIrrevocable()
-		if isIrrevocable != tc.shouldBeIrrevocable {
-			t.Errorf("expected irrevocable: %t, got irrevocable: %t", tc.shouldBeIrrevocable, isIrrevocable)
-		}
+			isIrrevocable := le.isIrrevocable()
+			if isIrrevocable != tc.shouldBeIrrevocable {
+				t.Errorf("expected irrevocable: %t, got irrevocable: %t", tc.shouldBeIrrevocable, isIrrevocable)
+			}
+		})
 	}
 }
 
@@ -3070,14 +3296,19 @@ func TestExpiration_getIrrevocableLeaseCounts(t *testing.T) {
 			ns:   namespace.RootNamespace,
 		},
 	}
-	pathToMount := mountNoopBackends(t, c, backends)
+	pathToMount, err := mountNoopBackends(c, backends)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	exp := c.expiration
 
 	expectedPerMount := 10
 	for i := 0; i < expectedPerMount; i++ {
 		for _, backend := range backends {
-			addIrrevocableLease(t, exp, backend.path, namespace.RootNamespace)
+			if _, err := c.AddIrrevocableLease(namespace.RootContext(nil), backend.path); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 
@@ -3086,6 +3317,13 @@ func TestExpiration_getIrrevocableLeaseCounts(t *testing.T) {
 		t.Fatalf("error getting irrevocable lease counts: %v", err)
 	}
 
+	exp.pendingLock.RLock()
+	irrevocableLeaseCount := exp.irrevocableLeaseCount
+	exp.pendingLock.RUnlock()
+
+	if irrevocableLeaseCount != len(backends)*expectedPerMount {
+		t.Fatalf("incorrect lease counts. expected %d got %d", len(backends)*expectedPerMount, irrevocableLeaseCount)
+	}
 	countRaw, ok := out["lease_count"]
 	if !ok {
 		t.Fatal("no lease count")
@@ -3133,7 +3371,10 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 			ns:   namespace.RootNamespace,
 		},
 	}
-	pathToMount := mountNoopBackends(t, c, backends)
+	pathToMount, err := mountNoopBackends(c, backends)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	exp := c.expiration
 
@@ -3141,7 +3382,10 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 	expectedPerMount := 10
 	for i := 0; i < expectedPerMount; i++ {
 		for _, backend := range backends {
-			le := addIrrevocableLease(t, exp, backend.path, namespace.RootNamespace)
+			le, err := c.AddIrrevocableLease(namespace.RootContext(nil), backend.path)
+			if err != nil {
+				t.Fatal(err)
+			}
 			expectedLeases = append(expectedLeases, &basicLeaseTestInfo{
 				id:     le.id,
 				mount:  pathToMount[backend.path],
@@ -3203,7 +3447,9 @@ func TestExpiration_listIrrevocableLeases_includeAll(t *testing.T) {
 
 	expectedNumLeases := MaxIrrevocableLeasesToReturn + 10
 	for i := 0; i < expectedNumLeases; i++ {
-		addIrrevocableLease(t, exp, "foo/", namespace.RootNamespace)
+		if _, err := c.AddIrrevocableLease(namespace.RootContext(nil), "foo/"); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	dataRaw, warn, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false, MaxIrrevocableLeasesToReturn)

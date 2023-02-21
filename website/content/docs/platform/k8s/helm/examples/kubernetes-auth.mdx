@@ -8,39 +8,25 @@ description: |-
 
 # Bootstrapping Kubernetes Auth Method
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
+@include 'helm/version.mdx'
 
-In this example, we will walk through how to set up the [Kubernetes Auth Method](/docs/auth/kubernetes).
+In this example, we will walk through how to set up the [Kubernetes Auth Method](/vault/docs/auth/kubernetes).
 
 This assumes the following commands will be run inside a Vault pod running in Kubernetes.
-
-You will optionally need the following variables:
-
-```bash
-# JWT is a service account token that has access to the Kubernetes TokenReview API
-# You can retrieve this from inside a pod at: /var/run/secrets/kubernetes.io/serviceaccount/token
-JWT=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-
-# Address of Kubernetes itself as viewed from inside a running pod
-KUBERNETES_HOST=https://${KUBERNETES_PORT_443_TCP_ADDR}:443
-
-# Kubernetes internal CA
-KUBERNETES_CA_CERT=$(cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
-```
 
 Exec into the Vault pod:
 
 ```bash
-kubectl exec -it vault-0 /bin/sh
+kubectl exec -it vault-0 -- /bin/sh
 ```
 
-Then run the following command to configure the Kubernetes Auth Method:
+If you didn't set `server.dev.enabled=true`, you'll need to log in to Vault first using `vault login`.
+Then run the following commands to configure the Kubernetes Auth Method:
 
 ```bash
+vault auth enable kubernetes
 vault write auth/kubernetes/config \
-   token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-   kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
-   kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    kubernetes_host=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
 ```
 
-From here you can continue to configure Vault from the [Kubernetes Auth Method](/docs/auth/kubernetes) documentation.
+From here you can continue to configure Vault from the [Kubernetes Auth Method](/vault/docs/auth/kubernetes) documentation.

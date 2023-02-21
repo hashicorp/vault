@@ -151,10 +151,12 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 			if err := writeSink(st.sink, st.token); err != nil {
 				backoff := 2*time.Second + time.Duration(ss.random.Int63()%int64(time.Second*2)-int64(time.Second))
 				ss.logger.Error("error returned by sink function, retrying", "error", err, "backoff", backoff.String())
+				timer := time.NewTimer(backoff)
 				select {
 				case <-ctx.Done():
+					timer.Stop()
 					return nil
-				case <-time.After(backoff):
+				case <-timer.C:
 					atomic.AddInt32(ss.remaining, 1)
 					sinkCh <- st
 				}
@@ -233,14 +235,16 @@ func (s *SinkConfig) encryptToken(token string) (string, error) {
 }
 
 func (s *SinkConfig) wrapToken(client *api.Client, wrapTTL time.Duration, token string) (string, error) {
-	wrapClient, err := client.Clone()
+	wrapClient, err := client.CloneWithHeaders()
 	if err != nil {
 		return "", fmt.Errorf("error deriving client for wrapping, not writing out to sink: %w)", err)
 	}
+
 	wrapClient.SetToken(token)
 	wrapClient.SetWrappingLookupFunc(func(string, string) string {
 		return wrapTTL.String()
 	})
+
 	secret, err := wrapClient.Logical().Write("sys/wrapping/wrap", map[string]interface{}{
 		"token": token,
 	})

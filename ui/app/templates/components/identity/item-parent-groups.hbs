@@ -1,28 +1,21 @@
 {{#if @model.parentGroupIds.length}}
   {{#each @model.parentGroupIds as |gid|}}
-    {{#linked-block
-      "vault.cluster.access.identity.show"
-      "groups"
-      gid
-      details
-      class="list-item-row"
-    }}
+    <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
       <div class="columns is-mobile">
         <div class="column is-10">
-          <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="is-block has-text-black has-text-weight-semibold">
-            <Icon
-              @glyph="folder-outline"
-              class="has-text-grey-light"
-            />{{gid}}
+          <LinkTo
+            @route="vault.cluster.access.identity.show"
+            @models={{array "groups" gid "details"}}
+            class="is-block has-text-black has-text-weight-semibold"
+          >
+            <Icon @name="folder" class="has-text-grey-light" />{{gid}}
           </LinkTo>
         </div>
         <div class="column has-text-right">
         </div>
       </div>
-    {{/linked-block}}
+    </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState
-    @title="This group has no parent groups yet"
-  />
+  <EmptyState @title="This group has no parent groups yet" />
 {{/if}}

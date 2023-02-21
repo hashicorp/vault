@@ -15,7 +15,7 @@ The set of included paths is based on the permissions of the request token.
 
 The response may include Vault-specific [extensions](https://github.com/oai/openapi-specification/blob/master/versions/3.0.2.md#specification-extensions). Three are currently defined:
 
-- `x-vault-sudo` - Endpoint requires [sudo](/docs/concepts/policies#sudo) privileges.
+- `x-vault-sudo` - Endpoint requires [sudo](/vault/docs/concepts/policies#sudo) privileges.
 - `x-vault-unauthenticated` - Endpoint is unauthenticated.
 - `x-vault-create-supported` - Endpoint allows creation of new items, in addition to updating existing items.
 
@@ -31,10 +31,15 @@ This endpoint returns a single OpenAPI document describing all paths visible to 
 | :----- | :---------------------------- |
 | `GET`  | `/sys/internal/specs/openapi` |
 
+### Parameters
+
+- `generic_mount_paths` `(bool: false)` – Used to specify whether to use generic mount paths. If set, the mount paths will be replaced with a dynamic parameter: `{mountPath}`
+
+
 ### Sample Request
 
 ```shell-session
-$ curl http://127.0.0.1:8200/v1/sys/internal/specs/openapi
+$ curl http://127.0.0.1:8200/v1/sys/internal/specs/openapi?generic_mount_paths=false
 ```
 
 ### Sample Response

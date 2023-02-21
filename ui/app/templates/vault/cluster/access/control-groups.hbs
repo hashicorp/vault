@@ -6,29 +6,30 @@
       </h1>
     </p.levelLeft>
   </PageHeader>
-  {{#if model.canConfigure}}
+  {{#if this.model.canConfigure}}
     <Toolbar>
       <ToolbarActions>
-        <ToolbarLink @params={{array 'vault.cluster.access.control-groups-configure'}}>
+        <ToolbarLink @route="vault.cluster.access.control-groups-configure">
           Configure
         </ToolbarLink>
       </ToolbarActions>
     </Toolbar>
   {{/if}}
-  <form {{action (nav-to-route 'vault.cluster.access.control-group-accessor' model.id) on="submit"}}>
+  <form {{action (nav-to-route "vault.cluster.access.control-group-accessor" this.model.id) on="submit"}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <p class="has-text-grey is-size-8">
-       Control Groups add additional authorization factors to be required before satisfying a request. If you have a Control Group accessor, provide it here to view the lookup the authorization progress.
+        Control Groups add additional authorization factors to be required before satisfying a request. If you have a Control
+        Group accessor, provide it here to view the lookup the authorization progress.
       </p>
       <label for="accessor" class="is-label">
         Accessor
       </label>
       <div class="control">
-        <Input class="input" @autocomplete="off" @spellcheck="false" @name="accessor" @value={{model.id}} />
+        <Input class="input" autocomplete="off" spellcheck="false" name="accessor" @value={{this.model.id}} />
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      <button type="submit" class="button is-primary" disabled={{not model.id}}>
+      <button type="submit" class="button is-primary" disabled={{not this.model.id}}>
         Lookup
       </button>
     </div>

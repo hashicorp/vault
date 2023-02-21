@@ -1,8 +1,11 @@
 import { set } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
 
 export default Route.extend({
+  store: service(),
+
   queryParams: {
     page: {
       refreshModel: true,
@@ -25,11 +28,11 @@ export default Route.extend({
             page: params.page,
             pageFilter: params.pageFilter,
           })
-          .then(model => {
+          .then((model) => {
             this.set('has404', false);
             return model;
           })
-          .catch(err => {
+          .catch((err) => {
             if (err.httpStatus === 404 && prefix === '') {
               return [];
             } else {

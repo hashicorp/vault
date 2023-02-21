@@ -18,6 +18,9 @@ const (
 	secretIDAccessorLocalPrefix = "accessor_local/"
 )
 
+// ReportedVersion is used to report a specific version to Vault.
+var ReportedVersion = ""
+
 type backend struct {
 	*framework.Backend
 
@@ -111,8 +114,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				pathTidySecretID(b),
 			},
 		),
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeCredential,
+		Invalidate:     b.invalidate,
+		BackendType:    logical.TypeCredential,
+		RunningVersion: ReportedVersion,
 	}
 	return b, nil
 }

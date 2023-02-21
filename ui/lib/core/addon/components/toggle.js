@@ -15,29 +15,36 @@
  * @param {string} [status='normal'] - Status can be normal or success, which makes the switch have a blue background when checked=true
  */
 
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import layout from '../templates/components/toggle';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
-export default Component.extend({
-  layout,
-  tagName: '',
-  checked: false,
-  disabled: false,
-  name: '',
-  size: 'normal',
-  status: 'normal',
-  safeId: computed('name', function() {
+export default class ToggleComponent extends Component {
+  // tracked because the Input mutates the property and therefor cannot be a getter
+  @tracked
+  checked = this.args.checked || false;
+
+  get disabled() {
+    return this.args.disabled || false;
+  }
+
+  get name() {
+    return this.args.name || '';
+  }
+
+  get safeId() {
     return `toggle-${this.name.replace(/\W/g, '')}`;
-  }),
-  inputClasses: computed('size', 'status', function() {
-    const sizeClass = `is-${this.size}`;
-    const statusClass = `is-${this.status}`;
+  }
+  get inputClasses() {
+    const size = this.args.size || 'normal';
+    const status = this.args.status || 'normal';
+    const sizeClass = `is-${size}`;
+    const statusClass = `is-${status}`;
     return `toggle ${statusClass} ${sizeClass}`;
-  }),
-  actions: {
-    handleChange(value) {
-      this.onChange(value);
-    },
-  },
-});
+  }
+
+  @action
+  handleChange(e) {
+    this.args.onChange(e.target.checked);
+  }
+}

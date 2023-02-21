@@ -1,0 +1,6 @@
+```release-note:improvement
+auth/jwt: Improves detection of Windows Subsystem for Linux (WSL) for CLI-based logins. 
+```
+```release-note:improvement
+auth/jwt: Adds support for Microsoft US Gov L4 to the Azure provider for groups fetching.
+```

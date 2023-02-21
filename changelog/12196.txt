@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): namespace header included in responses, Go client uses it when displaying error messages
+```

@@ -6,8 +6,8 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import identityCapabilities from 'vault/macros/identity-capabilities';
 
 export default IdentityModel.extend({
-  formFields: computed('type', function() {
-    let fields = ['name', 'type', 'policies', 'metadata'];
+  formFields: computed('type', function () {
+    const fields = ['name', 'type', 'policies', 'metadata'];
     if (this.type === 'internal') {
       return fields.concat(['memberGroupIds', 'memberEntityIds']);
     }
@@ -34,26 +34,27 @@ export default IdentityModel.extend({
     editType: 'kv',
   }),
   policies: attr({
-    label: 'Policies',
-    editType: 'searchSelect',
-    fallbackComponent: 'string-list',
-    models: ['policy/acl', 'policy/rgp'],
+    editType: 'yield',
+    isSectionHeader: true,
   }),
   memberGroupIds: attr({
     label: 'Member Group IDs',
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     models: ['identity/group'],
   }),
   parentGroupIds: attr({
     label: 'Parent Group IDs',
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     models: ['identity/group'],
   }),
   memberEntityIds: attr({
     label: 'Member Entity IDs',
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     models: ['identity/entity'],
   }),
@@ -62,23 +63,24 @@ export default IdentityModel.extend({
     'memberEntityIds.[]',
     'memberGroupIds',
     'memberGroupIds.[]',
-    function() {
-      let { memberEntityIds, memberGroupIds } = this;
-      let numEntities = (memberEntityIds && memberEntityIds.length) || 0;
-      let numGroups = (memberGroupIds && memberGroupIds.length) || 0;
+    function () {
+      const { memberEntityIds, memberGroupIds } = this;
+      const numEntities = (memberEntityIds && memberEntityIds.length) || 0;
+      const numGroups = (memberGroupIds && memberGroupIds.length) || 0;
       return numEntities + numGroups > 0;
     }
   ),
-
+  policyPath: lazyCapabilities(apiPath`sys/policies`),
+  canCreatePolicies: alias('policyPath.canCreate'),
   alias: belongsTo('identity/group-alias', { async: false, readOnly: true }),
   updatePath: identityCapabilities(),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
 
   aliasPath: lazyCapabilities(apiPath`identity/group-alias`),
-  canAddAlias: computed('aliasPath.canCreate', 'type', 'alias', function() {
-    let type = this.type;
-    let alias = this.alias;
+  canAddAlias: computed('aliasPath.canCreate', 'type', 'alias', function () {
+    const type = this.type;
+    const alias = this.alias;
     // internal groups can't have aliases, and external groups can only have one
     if (type === 'internal' || alias) {
       return false;
