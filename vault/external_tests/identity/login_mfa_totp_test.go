@@ -65,6 +65,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	},
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
+			// RequestResponseCallback: schema.ResponseValidatingCallback(t), TODO uncomment when response is added for indentity/entity
 		})
 
 	cluster.Start()
