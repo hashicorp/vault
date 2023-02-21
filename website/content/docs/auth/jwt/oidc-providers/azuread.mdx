@@ -111,13 +111,22 @@ send `_claim_names` and `_claim_sources`. For example, returned claims might loo
 }
 ```
 
-The OIDC auth method role can be configured to include the user ID in the endpoint URL, 
-which will be used by Vault to retrieve the groups for the user:
+The OIDC auth method role can be configured to include the user ID in the endpoint URL,
+which will be used by Vault to retrieve the groups for the user. Additional API permissions
+must be added to the Azure app in order to request the additional groups from the Microsoft
+Graph API.
 
-- In Azure, under the applications **API Permissions**, grant the following permissions:
-  - Microsoft Graph API permission [Directory.Read.All](https://docs.microsoft.com/en-us/graph/permissions-reference#application-permissions-19)
+To set the proper permissions on the Azure app:
 
-- In Vault, set `"provider_config"` to Azure.
+1. Locate the application under "App Registrations" in Azure
+1. Navigate to the "API Permissions" page for the application
+1. Add a permission
+1. Select "Microsoft Graph"
+1. Select "Delegated permissions"
+1. Add the [User.Read](https://learn.microsoft.com/en-us/graph/permissions-reference#delegated-permissions-86) permission
+1. Check the "Grant admin consent for Default Directory" checkbox
+
+Next, configure the OIDC auth method in Vault by setting `"provider_config"` to Azure.
   ```shell
   vault write auth/oidc/config -<<"EOH"
   {
@@ -132,7 +141,7 @@ which will be used by Vault to retrieve the groups for the user:
   EOH
   ```
 
-- In Vault, add `"profile"` to `oidc_scopes` so the user's id comes back on the JWT.
+Finally, add `"profile"` to `oidc_scopes` so the user's ID comes back on the JWT.
   ```shell
   vault write auth/oidc/role/your_default_role \
    user_claim="email" \

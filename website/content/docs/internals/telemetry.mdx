@@ -222,10 +222,12 @@ These metrics relate to internal operations on Merkle Trees and Write Ahead Logs
 
 These metrics are emitted on standbys when talking to the active node, and in some cases by performance standbys as well.
 
-| Metric                               | Description                                                       | Unit   | Type    |
-| :----------------------------------- | :---------------------------------------------------------------- | :----- | :------ |
-| `vault.ha.rpc.client.forward`        | Time taken to forward a request from a standby to the active node | ms     | summary |
-| `vault.ha.rpc.client.forward.errors` | Number of standby requests forwarding failures                     | errors | counter |
+| Metric                               | Description                                                          | Unit   | Type    |
+| :----------------------------------- | :------------------------------------------------------------------- | :----- | :------ |
+| `vault.ha.rpc.client.forward`        | Time taken to forward a request from a standby to the active node    | ms     | summary |
+| `vault.ha.rpc.client.forward.errors` | Number of standby requests forwarding failures                       | errors | counter |
+| `vault.ha.rpc.client.echo`           | Time taken to send an echo request from a standby to the active node | ms     | summary |
+| `vault.ha.rpc.client.echo.errors`    | Number of standby echo request failures                              | errors | counter |
 
 ## Replication Metrics
 
@@ -474,6 +476,11 @@ These metrics relate to raft based [integrated storage][integrated-storage].
 | `vault.raft_storage.bolt.spill.time`                                          | Time taken spilling.                                                                                                                                                                                              | ms                                | summary |
 | `vault.raft_storage.bolt.write.count`                                         | Number of writes performed.                                                                                                                                                                                       | writes                            | gauge   |
 | `vault.raft_storage.bolt.write.time`                                          | Time taken writing to disk.                                                                                                                                                                                       | ms                                | summary |
+| `vault.raft_storage.stats.commit_index`                                       | Index of last raft log committed to disk on this node.                                                                                                                                                            | sequence number                   | gauge   |
+| `vault.raft_storage.stats.applied_index`                                      | Highest index of raft log either applied to the FSM or added to fsm_pending queue.                                                                                                                                | sequence number                   | gauge   |
+| `vault.raft_storage.stats.fsm_pending`                                        | Number of raft logs this node has queued to be applied by the FSM.                                                                                                                                                | logs                              | gauge   |
+| `vault.raft_storage.follower.applied_index_delta`                             | Delta between leader applied index and each follower's applied index reported by echoes.                                                                                                                          | logs                              | gauge   |
+| `vault.raft_storage.follower.last_heartbeat_ms`                               | Time since last echo request received by each follower.                                                                                                                                                           | ms                                | gauge   |
 
 ## Integrated Storage (Raft) Autopilot
 

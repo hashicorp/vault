@@ -298,6 +298,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLoggersRead,
+					Summary:  "Read the log level for all existing loggers.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersWrite,
 					Summary:  "Modify the log level for all existing loggers.",
@@ -322,6 +326,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameRead,
+					Summary:  "Read the log level for a single logger.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameWrite,
 					Summary:  "Modify the log level of a single logger.",

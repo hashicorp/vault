@@ -62,6 +62,7 @@ scenario "k8s" {
       image_repository  = step.load_docker_image.repository
       kubeconfig_base64 = step.create_kind_cluster.kubeconfig_base64
       vault_edition     = matrix.edition
+      vault_log_level   = var.vault_log_level
       ent_license       = matrix.edition != "oss" ? step.read_license.license : null
     }
 

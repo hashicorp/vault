@@ -361,9 +361,9 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		var desiredSuffrage string
 		switch nonVoter {
 		case true:
-			desiredSuffrage = "voter"
-		default:
 			desiredSuffrage = "non-voter"
+		default:
+			desiredSuffrage = "voter"
 		}
 
 		if b.Core.raftFollowerStates != nil {

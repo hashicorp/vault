@@ -16,11 +16,11 @@ This program is intended to be largely a self-service process with links and gui
 
 Vault is an Identity-based security solution that leverages trusted sources of identity to keep secrets and application data secured with one centralized, audited workflow for tightly controlling access to secrets across applications, systems, and infrastructure while encrypting data both in flight and at rest. For a full description of the current features please refer to the Vault [website](/).
 
-There are two main types of integrations with Vault. The first is Runtime Integrations which use Vault as part of a workflow. Many partners have integrations that use existing Vault deployments to retrieve various types of secrets for use in a partner’s application or platform. The use cases can range from Vault storing and providing secrets, issuing or managing PKI certificates or acting as an external key management system. 
+There are two main types of integrations with Vault. The first is Runtime Integrations which use Vault as part of a workflow. Many partners have integrations that use existing Vault deployments to retrieve various types of secrets for use in a partner’s application or platform. The use cases can range from Vault storing and providing secrets, issuing or managing PKI certificates or acting as an external key management system.
 
-The second type is where a partner develops a custom plugin. Vault has a secure [plugin](/docs/plugins) architecture. Vault’s plugins are completely separate, standalone applications that Vault executes and communicates with over RPC. 
+The second type is where a partner develops a custom plugin. Vault has a secure [plugin](/docs/plugins) architecture. Vault’s plugins are completely separate, standalone applications that Vault executes and communicates with over RPC.
 
-Plugins can be broken into two categories, Secrets Engines and Auth Methods. They can be built-in and bundled with the Vault binary, or be external that has to be manually registered. Built-in plugins are developed by HashiCorp, while external plugins can be developed by HashiCorp, technology partners, or the community. There is a curated collection of all plugins, both built-in and external, located on the [Plugin Portal](/docs/plugins/plugin-portal).
+Plugins can be broken into two categories, Secrets Engines and Auth Methods. They can be built-in and bundled with the Vault binary, or be external that has to be manually registered. Built-in plugins are developed by HashiCorp, while external plugins can be developed by HashiCorp, technology partners, or the community. There is a curated collection of all plugins, both built-in and external, located on the [Vault Integrations](/vault/integrations) page.
 
 The diagram below depicts the key Vault integration categories and types.
 
@@ -32,7 +32,7 @@ Main Vault categories for partners to integrate with include:
 
 **Runtime Integrations**: These types of integrations include integrations developed by partners that work with existing deployments of Vault and the partner’s product as part of the customer's identity/security workflow.
 
-Oftentimes these integrations involve modifying a partner’s product to become “Vault aware”. There are two main components that need to be considered for this type of integration: 
+Oftentimes these integrations involve modifying a partner’s product to become “Vault aware”. There are two main components that need to be considered for this type of integration:
 1. How is the application going to authenticate itself to Vault?
 1. Support of Namespaces
 
@@ -160,7 +160,7 @@ Once the integration has been verified, the partner is requested to sign the Has
 
 At this stage, it is expected that the integration is fully complete, the necessary documentation has been written, and HashiCorp has reviewed the integration.
 
-For Auth or Secret Engine plugins specifically, once the plugin has been verified by HashiCorp, it is recommended the plugin be hosted on Github so it can more easily be downloaded and installed within Vault. We also encourage partners to list their plugin on the [Vault Plugin Portal](/docs/plugins/plugin-portal). This is in addition to the listing of the plugin on the technology partners’ dedicated HashiCorp partner page. To have the plugin listed on the portal page, please do a pull request via the “edit in GitHub” link on the bottom of the page and add the plugin in the partner section.
+For Auth or Secret Engine plugins specifically, once the plugin has been verified by HashiCorp, it is recommended the plugin be hosted on Github so it can more easily be downloaded and installed within Vault. We also encourage partners to list their plugin on the [Vault Integrations](/vault/integrations) page. This is in addition to the listing of the plugin on the technology partners’ dedicated HashiCorp partner page. To have the plugin listed on the portal page, please do a pull request via the “edit in GitHub” link on the bottom of the page and add the plugin in the partner section.
 
 For HCP Vault verifications, the partner will be issued an HCP Vault Verified badge and will have this displayed on their partner page.
 

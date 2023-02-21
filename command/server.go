@@ -1266,16 +1266,6 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if allowPendingRemoval := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allowPendingRemoval != "" {
-		var err error
-		vault.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
-		if err != nil {
-			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
-				consts.VaultAllowPendingRemovalMountsEnv + " env var: " +
-				"defaulting to false."))
-		}
-	}
-
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -1382,6 +1372,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if c.flagDevFourCluster {
 		return enableFourClusterDev(c, &coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+	}
+
+	if allowPendingRemoval := os.Getenv(consts.EnvVaultAllowPendingRemovalMounts); allowPendingRemoval != "" {
+		var err error
+		coreConfig.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				consts.EnvVaultAllowPendingRemovalMounts + " env var: " +
+				"defaulting to false."))
+		}
 	}
 
 	// Initialize the separate HA storage backend, if it exists

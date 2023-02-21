@@ -2,5 +2,5 @@
 set -eu -o pipefail
 
 pushd "$(git rev-parse --show-toplevel)" > /dev/null
-make crt-get-date
+make ci-get-date
 popd > /dev/null
