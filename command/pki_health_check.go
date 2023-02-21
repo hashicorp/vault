@@ -223,20 +223,19 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 
 	// Handle listing, if necessary.
 	if c.flagList {
-		c.UI.Output("Health Checks:")
+		c.UI.Output("Default health check config:")
+		config := map[string]map[string]interface{}{}
 		for _, checker := range executor.Checkers {
-			c.UI.Output(" - " + checker.Name())
-
-			prefix := "   "
-			cfg := checker.DefaultConfig()
-			marshaled, err := json.MarshalIndent(cfg, prefix, " ")
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Failed to marshal default config for check: %v", err))
-				return pkiRetUsage
-			}
-			c.UI.Output(prefix + string(marshaled))
+			config[checker.Name()] = checker.DefaultConfig()
 		}
 
+		marshaled, err := json.MarshalIndent(config, "", "  ")
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Failed to marshal default config for check: %v", err))
+			return pkiRetUsage
+		}
+
+		c.UI.Output(string(marshaled))
 		return pkiRetOK
 	}
 
