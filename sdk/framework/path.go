@@ -224,6 +224,12 @@ type DisplayAttributes struct {
 	// Action is the verb to use for the operation.
 	Action string `json:"action,omitempty"`
 
+	// OperationPrefix is used to construct OpenAPI OperationID, if specified
+	OperationPrefix string `json:"operationPrefix"`
+
+	// OperationSuffix is used to construct OpenAPI OperationID, if specified
+	OperationSuffix string `json:"operationSuffix"`
+
 	// EditType is the optional type of form field needed for a property
 	// This is only necessary for a "textarea" or "file"
 	EditType string `json:"editType,omitempty"`
