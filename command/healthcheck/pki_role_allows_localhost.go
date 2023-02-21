@@ -115,7 +115,7 @@ func (h *RoleAllowsLocalhost) Evaluate(e *Executor) (results []*Result, err erro
 
 		ret := Result{
 			Status:   ResultWarning,
-			Endpoint: "/{{mount}}/role/" + role,
+			Endpoint: "/{{mount}}/roles/" + role,
 			Message:  fmt.Sprintf("Role currently allows localhost issuance with a non-empty allowed_domains (%v): this role is intended for issuing other hostnames and the allow_localhost=true option may be overlooked by operators. If this role is intended to issue certificates valid for localhost, consider setting allow_localhost=false and explicitly adding localhost to the list of allowed domains.", allowedDomains),
 		}
 
