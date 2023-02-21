@@ -57,7 +57,7 @@ type AuditVisibility struct {
 	UnsupportedVersion bool
 
 	IgnoredParameters map[string]bool
-	TuneData          map[string]interface{}
+	TuneData          *PathFetch
 }
 
 func NewAuditVisibilityCheck() Check {
@@ -100,27 +100,47 @@ func (h *AuditVisibility) LoadConfig(config map[string]interface{}) error {
 }
 
 func (h *AuditVisibility) FetchResources(e *Executor) error {
-	exit, _, data, err := fetchMountTune(e, func() {
+	pathFetch, err := fetchMountTune(e, func() {
 		h.UnsupportedVersion = true
 	})
-	if exit {
+	if err != nil {
 		return err
 	}
 
-	h.TuneData = data
-
+	h.TuneData = pathFetch
 	return nil
 }
 
 func (h *AuditVisibility) Evaluate(e *Executor) (results []*Result, err error) {
 	if h.UnsupportedVersion {
-		// Shouldn't happen; /certs has been around forever.
 		ret := Result{
 			Status:   ResultInvalidVersion,
-			Endpoint: "/{{mount}}/certs",
-			Message:  "This health check requires Vault 1.11+ but an earlier version of Vault Server was contacted, preventing this health check from running.",
+			Endpoint: "/sys/mounts/{{mount}}/tune",
+			Message:  "This health check requires Vault 1.9+ but an earlier version of Vault Server was contacted, preventing this health check from running.",
 		}
 		return []*Result{&ret}, nil
+	}
+
+	if h.TuneData.IsSecretPermissionsError() {
+		ret := Result{
+			Status:   ResultInsufficientPermissions,
+			Endpoint: "/sys/mounts/{{mount}}/tune",
+			Message:  "Without this information, this health check is unable to function.",
+		}
+
+		if e.Client.Token() == "" {
+			ret.Message = "No token available so unable read the tune endpoint for this mount. " + ret.Message
+		} else {
+			ret.Message = "This token lacks permission to read the tune endpoint for this mount. " + ret.Message
+		}
+
+		results = append(results, &ret)
+		return
+	}
+
+	var tuneData map[string]interface{} = nil
+	if len(h.TuneData.Secret.Data) > 0 {
+		tuneData = h.TuneData.Secret.Data
 	}
 
 	sourceMap := map[string][]string{
@@ -128,7 +148,7 @@ func (h *AuditVisibility) Evaluate(e *Executor) (results []*Result, err error) {
 		"audit_non_hmac_response_keys": VisibleRespParams,
 	}
 	for source, visibleList := range sourceMap {
-		actual, err := StringList(h.TuneData[source])
+		actual, err := StringList(tuneData[source])
 		if err != nil {
 			return nil, fmt.Errorf("error parsing %v from server: %v", source, err)
 		}
@@ -158,7 +178,7 @@ func (h *AuditVisibility) Evaluate(e *Executor) (results []*Result, err error) {
 		"audit_non_hmac_response_keys": HiddenRespParams,
 	}
 	for source, hiddenList := range sourceMap {
-		actual, err := StringList(h.TuneData[source])
+		actual, err := StringList(tuneData[source])
 		if err != nil {
 			return nil, fmt.Errorf("error parsing %v from server: %v", source, err)
 		}
