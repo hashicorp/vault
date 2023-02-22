@@ -19,4 +19,5 @@ export default class PkiCertificateBaseModel extends Model {
   importedKeys: string[];
   revokePath: string;
   get canRevoke(): boolean;
+  validate(): ModelValidations;
 }

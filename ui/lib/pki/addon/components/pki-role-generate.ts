@@ -9,10 +9,11 @@ import errorMessage from 'vault/utils/error-message';
 import FlashMessageService from 'vault/services/flash-messages';
 import DownloadService from 'vault/services/download';
 import PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';
+import PkiCertificateSignModel from 'vault/models/pki/certificate/sign';
 
 interface Args {
   onSuccess: CallableFunction;
-  model: PkiCertificateGenerateModel;
+  model: PkiCertificateGenerateModel | PkiCertificateSignModel;
   type: string;
 }
 
