@@ -4,11 +4,9 @@
       <nav class="tabs">
         <ul>
           {{#each tabs as |tab|}}
-            <li>
-              <LinkTo @route={{get tab.routeParams 0}} @model={{get tab.routeParams 1}} data-test-auth-section-tab={{true}}>
-                {{tab.label}}
-              </LinkTo>
-            </li>
+            <LinkTo @route={{get tab.routeParams 0}} @model={{get tab.routeParams 1}} data-test-auth-section-tab={{true}}>
+              {{tab.label}}
+            </LinkTo>
           {{/each}}
         </ul>
       </nav>
