@@ -11,13 +11,12 @@ import (
 type RoleNoStoreFalse struct {
 	Enabled            bool
 	UnsupportedVersion bool
-	NoPerms            bool
 
 	AllowedRoles map[string]bool
 
-	CertCounts   int
-	RoleEntryMap map[string]map[string]interface{}
-	CRLConfig    *PathFetch
+	RoleFetchIssue *PathFetch
+	RoleEntryMap   map[string]map[string]interface{}
+	CRLConfig      *PathFetch
 }
 
 func NewRoleNoStoreFalseCheck() Check {
@@ -64,7 +63,7 @@ func (h *RoleNoStoreFalse) FetchResources(e *Executor) error {
 	})
 	if exit || err != nil {
 		if f != nil && f.IsSecretPermissionsError() {
-			h.NoPerms = true
+			h.RoleFetchIssue = f
 		}
 		return err
 	}
@@ -75,7 +74,7 @@ func (h *RoleNoStoreFalse) FetchResources(e *Executor) error {
 		})
 		if skip || err != nil || entry == nil {
 			if f != nil && f.IsSecretPermissionsError() {
-				h.NoPerms = true
+				h.RoleFetchIssue = f
 			}
 			if err != nil {
 				return err
@@ -85,14 +84,6 @@ func (h *RoleNoStoreFalse) FetchResources(e *Executor) error {
 
 		h.RoleEntryMap[role] = entry
 	}
-
-	exit, _, leaves, err := pkiFetchLeavesList(e, func() {
-		h.UnsupportedVersion = true
-	})
-	if exit || err != nil {
-		return err
-	}
-	h.CertCounts = len(leaves)
 
 	// Check if the issuer is fetched yet.
 	configRet, err := e.FetchIfNotFetched(logical.ReadOperation, "/{{mount}}/config/crl")
@@ -116,10 +107,10 @@ func (h *RoleNoStoreFalse) Evaluate(e *Executor) (results []*Result, err error) 
 		return []*Result{&ret}, nil
 	}
 
-	if h.NoPerms {
+	if h.RoleFetchIssue != nil && h.RoleFetchIssue.IsSecretPermissionsError() {
 		ret := Result{
 			Status:   ResultInsufficientPermissions,
-			Endpoint: "/{{mount}}/roles",
+			Endpoint: h.RoleFetchIssue.Path,
 			Message:  "lacks permission either to list the roles or to read a specific role. This may restrict the ability to fully execute this health check",
 		}
 		if e.Client.Token() == "" {

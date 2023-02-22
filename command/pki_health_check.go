@@ -223,7 +223,15 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 
 	// Handle listing, if necessary.
 	if c.flagList {
-		c.UI.Output("Default health check config:")
+		uiFormat := Format(c.UI)
+		if uiFormat == "yaml" {
+			c.UI.Error("YAML output format is not supported by the --list command")
+			return pkiRetUsage
+		}
+
+		if uiFormat != "json" {
+			c.UI.Output("Default health check config:")
+		}
 		config := map[string]map[string]interface{}{}
 		for _, checker := range executor.Checkers {
 			config[checker.Name()] = checker.DefaultConfig()

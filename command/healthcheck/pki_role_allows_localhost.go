@@ -9,8 +9,8 @@ import (
 type RoleAllowsLocalhost struct {
 	Enabled            bool
 	UnsupportedVersion bool
-	NoPerms            bool
 
+	FetchIssue   *PathFetch
 	RoleEntryMap map[string]map[string]interface{}
 }
 
@@ -48,7 +48,7 @@ func (h *RoleAllowsLocalhost) FetchResources(e *Executor) error {
 	})
 	if exit || err != nil {
 		if f != nil && f.IsSecretPermissionsError() {
-			h.NoPerms = true
+			h.FetchIssue = f
 		}
 		return err
 	}
@@ -59,7 +59,7 @@ func (h *RoleAllowsLocalhost) FetchResources(e *Executor) error {
 		})
 		if skip || err != nil || entry == nil {
 			if f != nil && f.IsSecretPermissionsError() {
-				h.NoPerms = true
+				h.FetchIssue = f
 			}
 			if err != nil {
 				return err
@@ -83,10 +83,10 @@ func (h *RoleAllowsLocalhost) Evaluate(e *Executor) (results []*Result, err erro
 		}
 		return []*Result{&ret}, nil
 	}
-	if h.NoPerms {
+	if h.FetchIssue != nil && h.FetchIssue.IsSecretPermissionsError() {
 		ret := Result{
 			Status:   ResultInsufficientPermissions,
-			Endpoint: "/{{mount}}/roles",
+			Endpoint: h.FetchIssue.Path,
 			Message:  "lacks permission either to list the roles or to read a specific role. This may restrict the ability to fully execute this health check",
 		}
 		if e.Client.Token() == "" {
