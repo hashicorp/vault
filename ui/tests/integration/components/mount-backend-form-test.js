@@ -82,7 +82,7 @@ module('Integration | Component | mount backend form', function (hooks) {
       assert.strictEqual(component.pathValue, 'newpath', 'keeps custom path value');
     });
 
-    test('it does show token type for auth mount', async function (assert) {
+    test('it does not show a selected token type when first mounting an auth method', async function (assert) {
       await render(
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );

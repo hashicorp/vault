@@ -32,7 +32,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
     await page.fillInTextarea('description', 'This is AppRole!');
     assert
       .dom('[data-test-input="config.tokenType"]')
-      .hasValue('default-service', 'token type default-service shows as selected by default.');
+      .hasValue('default-service', 'as default the token type selected is default-service.');
     await fillIn('[data-test-input="config.tokenType"]', 'batch');
     await page.save();
     assert.strictEqual(
@@ -49,7 +49,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
     assert.strictEqual(token_type, 'batch', 'passes new token type');
     assert.ok(keys.includes('default_lease_ttl'), 'passes default_lease_ttl on tune');
     assert.ok(keys.includes('max_lease_ttl'), 'passes max_lease_ttl on tune');
-    assert.ok(keys.includes('description'), 'passes updated description tune');
+    assert.ok(keys.includes('description'), 'passes updated description on tune');
   });
 
   for (const type of ['aws', 'azure', 'gcp', 'github', 'kubernetes']) {
