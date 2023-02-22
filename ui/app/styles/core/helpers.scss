@@ -56,7 +56,8 @@
   justify-content: center;
 }
 .is-flex-v-centered-tablet {
-  @include tablet {
+  // TODO check if this is from or until
+  @include until($tablet) {
     display: flex;
     align-items: center;
     align-self: center;
@@ -208,12 +209,12 @@
 .has-background-gray-200 {
   background-color: $ui-gray-200;
 }
-@each $name, $pair in $colors {
-  $color: nth($pair, 1);
-  .has-background-#{$name} {
-    background: $color !important;
-  }
-}
+// @each $name, $pair in $colors {
+//   $color: nth($pair, 1);
+//   .has-background-#{$name} {
+//     background: $color !important;
+//   }
+// }
 .is-optional {
   color: $grey;
   font-size: $size-8;

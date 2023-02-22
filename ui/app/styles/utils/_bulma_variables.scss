@@ -1,8 +1,369 @@
+@function findColorInvert($color) {
+  @if (colorLuminance($color) > 0.55) {
+    @return rgba(#000, 0.7);
+  }
+  @return #fff;
+}
+@function findLightColor($color, $l: 96%) {
+  @if (type-of($color) == 'color') {
+    $l: 96%;
+    @if (lightness($color) > 96%) {
+      $l: lightness($color);
+    }
+    @return change-color($color, $lightness: $l);
+  }
+  @return $background;
+}
+@function findDarkColor($color, $base-l: 29%) {
+  @if (type-of($color) == 'color') {
+    $luminance: colorLuminance($color);
+    $luminance-delta: (0.53 - $luminance);
+    $target-l: round($base-l + ($luminance-delta * 53));
+    @return change-color($color, $lightness: max($base-l, $target-l));
+  }
+  @return $text-strong;
+}
+@function colorLuminance($color) {
+  // We totally shimmed this
+  @return 0.55;
+}
+$column-gap: 0.75rem !default;
+// Initial colors
+$black: hsl(0, 0%, 4%) !default;
+$black-bis: hsl(0, 0%, 7%) !default;
+$black-ter: hsl(0, 0%, 14%) !default;
+
+$grey-darker: hsl(0, 0%, 21%) !default;
+$grey-dark: hsl(0, 0%, 29%) !default;
+$grey: hsl(0, 0%, 48%) !default;
+$grey-light: hsl(0, 0%, 71%) !default;
+$grey-lighter: hsl(0, 0%, 86%) !default;
+$grey-lightest: hsl(0, 0%, 93%) !default;
+
+$white-ter: hsl(0, 0%, 96%) !default;
+$white-bis: hsl(0, 0%, 98%) !default;
+$white: hsl(0, 0%, 100%) !default;
+
+$orange: hsl(14, 100%, 53%) !default;
+$yellow: hsl(44, 100%, 77%) !default;
+$green: hsl(153, 53%, 53%) !default;
+$turquoise: hsl(171, 100%, 41%) !default;
+$cyan: hsl(207, 61%, 53%) !default;
+$blue: hsl(229, 53%, 53%) !default;
+$purple: hsl(271, 100%, 71%) !default;
+$red: hsl(348, 86%, 61%) !default;
+// Derived colors
+$primary: red !default;
+
+$info: $cyan !default;
+$success: $green !default;
+$warning: $yellow !default;
+$danger: $red !default;
+
+$light: $white-ter !default;
+$dark: $grey-darker !default;
+
+// Invert colors
+
+$orange-invert: findColorInvert($orange) !default;
+$yellow-invert: findColorInvert($yellow) !default;
+$green-invert: findColorInvert($green) !default;
+$turquoise-invert: findColorInvert($turquoise) !default;
+$cyan-invert: findColorInvert($cyan) !default;
+$blue-invert: findColorInvert($blue) !default;
+$purple-invert: findColorInvert($purple) !default;
+$red-invert: findColorInvert($red) !default;
+
+$primary-invert: findColorInvert($primary) !default;
+$primary-light: findLightColor($primary) !default;
+$primary-dark: findDarkColor($primary) !default;
+$info-invert: findColorInvert($info) !default;
+$info-light: findLightColor($info) !default;
+$info-dark: findDarkColor($info) !default;
+$success-invert: findColorInvert($success) !default;
+$success-light: findLightColor($success) !default;
+$success-dark: findDarkColor($success) !default;
+$warning-invert: findColorInvert($warning) !default;
+$warning-light: findLightColor($warning) !default;
+$warning-dark: findDarkColor($warning) !default;
+$danger-invert: findColorInvert($danger) !default;
+$danger-light: findLightColor($danger) !default;
+$danger-dark: findDarkColor($danger) !default;
+$light-invert: findColorInvert($light) !default;
+$dark-invert: findColorInvert($dark) !default;
+
+// General colors
+
+$scheme-main: $white !default;
+$scheme-main-bis: $white-bis !default;
+$scheme-main-ter: $white-ter !default;
+$scheme-invert: $black !default;
+$scheme-invert-bis: $black-bis !default;
+$scheme-invert-ter: $black-ter !default;
+
+$background: $white-ter !default;
+
+$border: $grey-lighter !default;
+$border-hover: $grey-light !default;
+$border-light: $grey-lightest !default;
+$border-light-hover: $grey-light !default;
+
+// Text colors
+
+$text: $grey-dark !default;
+$text-invert: findColorInvert($text) !default;
+$text-light: $grey !default;
+$text-strong: $grey-darker !default;
+
+// Code colors
+
+$code: darkred; // darken($red, 15%) !default;
+$code-background: $background !default;
+
+$pre: $text !default;
+$pre-background: $background !default;
+
+// Link colors
+
+$link: $blue !default;
+$link-invert: findColorInvert($link) !default;
+$link-light: findLightColor($link) !default;
+$link-dark: findDarkColor($link) !default;
+$link-visited: $purple !default;
+
+$link-hover: $grey-darker !default;
+$link-hover-border: $grey-light !default;
+
+$link-focus: $grey-darker !default;
+$link-focus-border: $blue !default;
+
+$link-active: $grey-darker !default;
+$link-active-border: $grey-dark !default;
+
+// Colors
+
+$black: hsl(0, 0%, 4%) !default;
+$black-bis: hsl(0, 0%, 7%) !default;
+$black-ter: hsl(0, 0%, 14%) !default;
+
+$grey-darker: hsl(0, 0%, 21%) !default;
+$grey-dark: hsl(0, 0%, 29%) !default;
+$grey: hsl(0, 0%, 48%) !default;
+$grey-light: hsl(0, 0%, 71%) !default;
+$grey-lighter: hsl(0, 0%, 86%) !default;
+$grey-lightest: hsl(0, 0%, 93%) !default;
+
+$white-ter: hsl(0, 0%, 96%) !default;
+$white-bis: hsl(0, 0%, 98%) !default;
+$white: hsl(0, 0%, 100%) !default;
+
+$orange: hsl(14, 100%, 53%) !default;
+$yellow: hsl(44, 100%, 77%) !default;
+$green: hsl(153, 53%, 53%) !default;
+$turquoise: hsl(171, 100%, 41%) !default;
+$cyan: hsl(207, 61%, 53%) !default;
+$blue: hsl(229, 53%, 53%) !default;
+$purple: hsl(271, 100%, 71%) !default;
+$red: hsl(348, 86%, 61%) !default;
+
+// DERIVED
+$info: $blue !default;
+$success: $green !default;
+$warning: $yellow !default;
+$danger: $red !default;
+
+$light: $white-ter !default;
+$dark: $grey-darker !default;
+
+// Invert colors
+
+$orange-invert: findColorInvert($orange) !default;
+$yellow-invert: findColorInvert($yellow) !default;
+$green-invert: findColorInvert($green) !default;
+$turquoise-invert: findColorInvert($turquoise) !default;
+$blue-invert: findColorInvert($blue) !default;
+$purple-invert: findColorInvert($purple) !default;
+$red-invert: findColorInvert($red) !default;
+
+$primary-invert: $turquoise-invert !default;
+$info-invert: $blue-invert !default;
+$success-invert: $green-invert !default;
+$warning-invert: $yellow-invert !default;
+$danger-invert: $red-invert !default;
+$light-invert: $dark !default;
+$dark-invert: $light !default;
+
+// General colors
+
+$background: $white-ter !default;
+
+$border: $grey-lighter !default;
+$border-hover: $grey-light !default;
+
+$colors: (
+  'white': (
+    $white,
+    $black,
+  ),
+  'black': (
+    $black,
+    $white,
+  ),
+  'light': (
+    $light,
+    $light-invert,
+  ),
+  'dark': (
+    $dark,
+    $dark-invert,
+  ),
+  'primary': (
+    $primary,
+    $primary-invert,
+  ),
+  'info': (
+    $info,
+    $info-invert,
+  ),
+  'success': (
+    $success,
+    $success-invert,
+  ),
+  'warning': (
+    $warning,
+    $warning-invert,
+  ),
+  'danger': (
+    $danger,
+    $danger-invert,
+  ),
+) !default;
+$shades: (
+  'black-bis': $black-bis,
+  'black-ter': $black-ter,
+  'grey-darker': $grey-darker,
+  'grey-dark': $grey-dark,
+  'grey': $grey,
+  'grey-light': $grey-light,
+  'grey-lighter': $grey-lighter,
+  'white-ter': $white-ter,
+  'white-bis': $white-bis,
+) !default;
+
+// Typography
+
+$family-sans-serif: BlinkMacSystemFont, -apple-system, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+  'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif !default;
+$family-monospace: monospace !default;
+$render-mode: optimizeLegibility !default;
+
+$size-1: 3rem !default;
+$size-2: 2.5rem !default;
+$size-3: 2rem !default;
+$size-4: 1.5rem !default;
+$size-5: 1.25rem !default;
+$size-6: 1rem !default;
+$size-7: 0.75rem !default;
+
+$weight-light: 300 !default;
+$weight-normal: 400 !default;
+$weight-medium: 500 !default;
+$weight-semibold: 600 !default;
+$weight-bold: 700 !default;
+
+// Spacing
+
+$block-spacing: 1.5rem !default;
+
+// Responsiveness
+
+// The container horizontal gap, which acts as the offset for breakpoints
+$gap: 32px !default;
+// 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
+$tablet: 769px !default;
+// 960px container + 4rem
+$desktop: 960px + (2 * $gap) !default;
+// 1152px container + 4rem
+$widescreen: 1152px + (2 * $gap) !default;
+$widescreen-enabled: true !default;
+// 1344px container + 4rem
+$fullhd: 1344px + (2 * $gap) !default;
+$fullhd-enabled: true !default;
+$breakpoints: (
+  'mobile': (
+    'until': $tablet,
+  ),
+  'tablet': (
+    'from': $tablet,
+  ),
+  'tablet-only': (
+    'from': $tablet,
+    'until': $desktop,
+  ),
+  'touch': (
+    'from': $desktop,
+  ),
+  'desktop': (
+    'from': $desktop,
+  ),
+  'desktop-only': (
+    'from': $desktop,
+    'until': $widescreen,
+  ),
+  'until-widescreen': (
+    'until': $widescreen,
+  ),
+  'widescreen': (
+    'from': $widescreen,
+  ),
+  'widescreen-only': (
+    'from': $widescreen,
+    'until': $fullhd,
+  ),
+  'until-fullhd': (
+    'until': $fullhd,
+  ),
+  'fullhd': (
+    'from': $fullhd,
+  ),
+) !default;
+
+// Miscellaneous
+
+$easing: ease-out !default;
+$radius-small: 2px !default;
+$radius: 4px !default;
+$radius-large: 6px !default;
+$radius-rounded: 9999px !default;
+$input-radius: $radius;
+$speed: 86ms !default;
+
+// Flags
+
+$variable-columns: true !default;
+$rtl: false !default;
+
+@mixin from($breakpoint) {
+  @media (min-width: $breakpoint) {
+    @content;
+  }
+}
+@mixin until($breakpoint) {
+  @media (max-width: $breakpoint) {
+    @content;
+  }
+}
+
+// Manually added
+
+$size-medium: 1.25rem;
+
+/* OVERRIDES START */
 // Color overrides
 $light: $grey-lightest;
 $primary: $grey-dark;
 $link: $blue;
-$text: $grey-darkest;
+$text: hotpink;
 $info: $blue;
 $success: $green;
 $warning: $yellow;
@@ -11,6 +372,7 @@ $black-bis: $ui-gray-900;
 $black-ter: $ui-gray-700;
 $grey-darker: $ui-gray-900;
 $grey-lighter: $ui-gray-050;
+$white: hsl(0, 0%, 100%);
 $white-ter: rgba($white, 0.5);
 $white-bis: $ui-gray-050;
 $code: $grey-dark;
@@ -27,6 +389,7 @@ $family-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto'
   'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 $family-monospace: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
 $family-primary: $family-sans;
+$family-code: $family-monospace !default;
 $body-size: 14px;
 $size-3: (24/14) + 0rem; // ~1.714rem ~27px
 $size-4: 1.5rem; // 24px
@@ -38,6 +401,9 @@ $size-10: 0.5rem; // 8px
 $size-11: 0.25rem; // 4px
 $console-spacing: 1.5rem; // 24px
 $size-small: $size-8;
+$size-normal: $size-6;
+$size-medium: $size-5;
+$size-large: $size-4;
 $font-weight-normal: 400;
 $font-weight-semibold: 600;
 $font-weight-bold: 700;
@@ -65,7 +431,6 @@ $breadcrumb-item-active-color: $black;
 $navbar-background-color: transparent;
 
 $menu-item-hover-background-color: $blue;
-$menu-item-hover-color: $white;
 
 $progress-bar-background-color: $ui-gray-050;
 

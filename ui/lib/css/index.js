@@ -22,6 +22,8 @@ module.exports = {
     }
 
     this.bulmaPath = path.dirname(require.resolve('bulma'));
+    // this.bulmaVariables = path.dirname(require.resolve('bulma'));
+    // console.log({ bulma: this.bulmaVariables });
     this.bulmaSwitchPath = path.dirname(require.resolve('bulma-switch/switch.sass'));
     this.bulmaCheckPath = path.dirname(require.resolve('cool-checkboxes-for-bulma.io'));
     this.sassSVGURIPath = path.dirname(require.resolve('sass-svg-uri'));
@@ -29,28 +31,34 @@ module.exports = {
   },
 
   treeForStyles: function () {
-    var bulma = new Funnel(this.bulmaPath, {
-      srcDir: '/',
-      destDir: 'app/styles/bulma',
-      annotation: 'Funnel (bulma)',
-    });
+    // var bulma = new Funnel(this.bulmaPath, {
+    //   srcDir: '/',
+    //   destDir: 'app/styles/bulma',
+    //   annotation: 'Funnel (bulma)',
+    // });
 
-    var bulmaSwitch = new Funnel(this.bulmaSwitchPath, {
-      srcDir: '/',
-      destDir: 'app/styles/bulma',
-      annotation: 'Funnel (bulma-switch)',
-    });
-    var bulmaCheck = new Funnel(this.bulmaCheckPath, {
-      srcDir: '/',
-      destDir: 'app/styles/bulma',
-      annotation: 'Funnel (bulma-check)',
-    });
+    // var bulmaSwitch = new Funnel(this.bulmaSwitchPath, {
+    //   srcDir: '/',
+    //   destDir: 'app/styles/bulma',
+    //   annotation: 'Funnel (bulma-switch)',
+    // });
+    // var bulmaCheck = new Funnel(this.bulmaCheckPath, {
+    //   srcDir: '/',
+    //   destDir: 'app/styles/bulma',
+    //   annotation: 'Funnel (bulma-check)',
+    // });
+    // var bulmaVariables = new Funnel(this.bulmaVariables, {
+    //   srcDir: 'sass/utilities',
+    //   destDir: 'app/styles/bulma',
+    //   annotation: 'Funnel (bulma-variables)',
+    // });
+    // console.log({ bulmaVariables });
     var sassSVGURI = new Funnel(this.sassSVGURIPath, {
       srcDir: '/',
       destDir: 'app/styles/sass-svg-uri',
       annotation: 'Sass SVG URI',
     });
 
-    return mergeTrees([bulmaCheck, bulmaSwitch, bulma, sassSVGURI], { overwrite: true });
+    return mergeTrees([sassSVGURI], { overwrite: true });
   },
 };
